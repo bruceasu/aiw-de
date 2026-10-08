@@ -1,0 +1,25 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000040-test-report-ready",
+  "human_report": "FD-005-test-decision-r40.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-005-test-report-r39.md",
+    "fd_revision": 40,
+    "fd_digest": "6a5c75228e2ad2b147a42f906722b2effffa6b2ea516d1fd0ad3686a256659c4",
+    "requirements_coverage": "69.70%",
+    "branch_coverage": "not measured",
+    "rationale": "r39 唯一授权命令 exit 1，API-16 一项实际行为测试失败；两保留角色均在模块或语法加载阶段退出，未证明注册前拒绝。累计 23/33 完整场景低于 70%。",
+    "exceptions": "无例外；失败测试与低覆盖不能接受，未测分支不视为通过。",
+    "residual_risk": "API-16 入口加载失败的具体子类别未知；另 9 项 API 场景未完整覆盖，分支未测；真实服务、远端 Git、平台 G2 与非 API 运行时未验证。",
+    "pm_identity": "host-pm-fd005-20261005",
+    "decision_time": "2026-10-05T14:42:08Z",
+    "raw_evidence": [
+      "tests/fd005/evidence-r39/diagnostic.json",
+      "tests/fd005/evidence-r39/execution.json"
+    ],
+    "failed_scenarios": ["API-16"]
+  }
+}

@@ -1,0 +1,16 @@
+target/
+data/
+*.db
+*.db-shm
+*.db-wal
+.idea/
+.vscode/
+node_modules/
+dist/
+out/
+codex-go-worker
+hs_err_pid*.log
+replay_pid*.log
+.wt/
+.ai/
+*.zip

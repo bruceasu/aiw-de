@@ -1,0 +1,85 @@
+✔ API-16 preserved roles reject through public production adapter factory (1.1699ms)
+attempt synthetic-attempt-reviewer-write: failed RESPONSES_TOOL_NOT_ALLOWED
+✔ API-17 reviewer never receives write tools and forged write has no side effect (68.52ms)
+attempt synthetic-attempt-coder-boundary: failed ATTEMPT_CANCELLED
+✔ API-18 coder write stays within assigned workspace (30.8628ms)
+✔ API-19 verifier integration alias uses integration profile and report (29.8178ms)
+attempt synthetic-attempt-cancel-model: failed OPERATION_FAILED
+✔ API-23 forced cancellation aborts model request before completion (26.0521ms)
+attempt synthetic-attempt-lease-lost: lease-lost ATTEMPT_CANCELLED
+✔ API-24 lost task lease suppresses complete and fail (47.2328ms)
+FD005_TOOL_META API-27 {"present":true,"chars":1791,"code":null,"complete":false,"truncated":true,"partial":null}
+✔ API-27 multibyte read result remains bounded and marked incomplete (35.0757ms)
+FD005_TOOL_META API-29-good {"present":true,"chars":223,"code":null,"complete":true,"truncated":false,"partial":null}
+attempt synthetic-attempt-edit-many-ambiguous: failed UNRESOLVED_TOOL_FAILURE
+FD005_TOOL_META API-29-ambiguous {"present":true,"chars":87,"code":null,"complete":false,"truncated":false,"partial":null}
+attempt synthetic-attempt-edit-many-overlap: failed UNRESOLVED_TOOL_FAILURE
+✔ API-29 edit_many preserves BOM/CRLF and refuses ambiguous edit (96.919ms)
+attempt synthetic-attempt-truncated-arguments: failed RESPONSES_TOOL_ARGUMENTS_INVALID
+✔ API-28 incomplete raw tool arguments cause no write (24.0962ms)
+✔ API-33 legacy eight-field profile and report model path remain compatible (26.6525ms)
+FD005_TOOL_META API-27-grep {"chars":3560,"complete":false,"truncated":true,"scanComplete":false,"status":"ok"}
+✔ API-27 grep reports incomplete scan separately from bounded output (78.3699ms)
+✔ API-20 independent reads retain parallel call IDs and bounded results (31.2609ms)
+✔ API-21 same-path write and edit preserve order in a single model turn (38.5574ms)
+FD005_ENTRY_META {"role":"release-readiness","exit":1,"timedOut":false,"reservedRoleMentioned":false,"networkGuardHit":false}
+✖ API-16 production entry rejects reserved roles before network registration (363.6398ms)
+✖ API-33 planner preserves legacy work-item manifest and report with model path (27.4782ms)
+attempt synthetic-attempt-evidence-write-failure: failed EVIDENCE_DIRECTORY_UNSAFE
+✔ API-31 critical evidence failure denies success and API sessions do not persist secrets or source (314.1808ms)
+attempt synthetic-attempt-queued-cancel: failed OPERATION_FAILED
+attempt synthetic-attempt-failure-recovery: failed UNRESOLVED_TOOL_FAILURE
+✔ API-22 queued write cancels while shell holds workspace; later call runs after ordinary failure (559.4155ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 15
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2608.8995
+
+✖ failing tests:
+
+test at tests\fd005\r30\worker.test.mjs:304:1
+✖ API-16 production entry rejects reserved roles before network registration (363.6398ms)
+  AssertionError [ERR_ASSERTION]: Production entry must identify the rejected reserved role
+      at TestContext.<anonymous> (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd005/r30/worker.test.mjs:326:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests\fd005\r30\worker.test.mjs:331:1
+✖ API-33 planner preserves legacy work-item manifest and report with model path (27.4782ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + null
+  - 'Synthetic plan.\n' +
+  -   '\n' +
+  -   'AIW_IMPLEMENTATION_WORK_ITEMS_V1\n' +
+  -   '\n' +
+  -   'AIW_WORK_ITEM_BEGIN endpoint\n' +
+  -   'AIW_CAPABILITIES java,maven\n' +
+  -   'Implement synthetic endpoint.\n' +
+  -   'AIW_WORK_ITEM_END\n' +
+  -   '\n' +
+  -   'AIW_IMPLEMENTATION_WORK_ITEMS_END'
+  
+      at TestContext.<anonymous> (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd005/r30/worker.test.mjs:342:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'Synthetic plan.\n\nAIW_IMPLEMENTATION_WORK_ITEMS_V1\n\nAIW_WORK_ITEM_BEGIN endpoint\nAIW_CAPABILITIES java,maven\nImplement synthetic endpoint.\nAIW_WORK_ITEM_END\n\nAIW_IMPLEMENTATION_WORK_ITEMS_END',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

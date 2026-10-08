@@ -1,0 +1,14 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-XXX",
+  "source_event": "FD-XXX-000000-work-requested",
+  "human_report": "FD-XXX-implementation-rN.md",
+  "data": {
+    "summary": "replace-with-structured-summary",
+    "changed_paths": [],
+    "commands": [],
+    "results": [],
+    "residual_risk": "replace-with-remaining-risk"
+  }
+}

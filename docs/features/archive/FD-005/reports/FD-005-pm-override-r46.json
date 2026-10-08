@@ -1,0 +1,21 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000045-changes-requested",
+  "human_report": "FD-005-pm-override-r46.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-005-test-report-r39.md",
+    "fd_revision": 46,
+    "fd_digest": "bd1ca48b6f94c40de825b18a6c0895c28c48f2d8f28d657e0151cff037b1ad6e",
+    "requirements_coverage": "69.70% (23/33)",
+    "branch_coverage": "not measured",
+    "rationale": "用户指令跳过 API-16，不追加测试；PM 接受现有测试范围继续审查。API-16 行为没有证据支持通过，Acceptance 1 保留。",
+    "exceptions": "接受低于 70% 的需求场景覆盖率及分支覆盖未测量；仅作为审查流程例外。API-16 测试跳过。",
+    "residual_risk": "API-16 保留角色拒绝注册行为未验证；9/33 场景未完整覆盖，分支未测量；真实服务、远端 Git、平台 G2 与非 API Worker 未验证。",
+    "pm_identity": "host-pm-fd005-20261006",
+    "decision_time": "2026-10-05T22:38:05Z",
+    "skipped_checks": ["API-16 behavior test"]
+  }
+}

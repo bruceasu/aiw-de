@@ -1,0 +1,30 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000014-test-rejected",
+  "human_report": "FD-002-implementation-recovery-r14.md",
+  "data": {
+    "summary": "Recovery handoff after actual93/104 passes and3 preserved failures; semantic-label observer and real-viewport screenshot corrections being prepared independently; verification records updated, new runtime unexecuted.",
+    "worker_session_ref": "fd002-worker-20261005-88571fc5",
+    "baseline_commit": "7372e13c46779ebe60817872b47348385adbb240",
+    "review_scope": "Original r5 implementation plus r8/r11 product recovery and FD-002 evidence; current recovery is verification records/test preparation only",
+    "changed_paths": [
+      "docs/features/FD-002_RUN_MISSION_DETAIL_AND_TIMELINE.md",
+      "docs/features/reports/FD-002-implementation-recovery-r14.md",
+      "docs/features/reports/FD-002-implementation-recovery-r14.json"
+    ],
+    "commands": [],
+    "results": [
+      "Read actual independent report, raw aggregate, current helper/public-markup association and existing Category failure screenshot",
+      "Latest tested implementation12:96 executed/93passed/3failed/8unrun;89.42% requirement coverage; branch not measured",
+      "Exact300 attempt IDs and timeline text filter now passed; Category selection/refresh sets and full1440 matrix remain unverified",
+      "Label observer includes nested control text causing word-boundary risk; static test correction being prepared without weakening assertions",
+      "Prepare full vertical real-viewport screenshots and scroll restoration after offscreen copy/capture failures; no new runtime result",
+      "No new production source change; no repeat compile; most recent source compile is historical r11 BUILD SUCCESS0.802s",
+      "Seven raw runs/snapshots and every failure retained; both latest authorized executions consumed",
+      "Reviewer failures0; independent review not started"
+    ],
+    "residual_risk": "Three failed scenarios need actual corrected validation;8 original uncovered; Firefox human-deferred; Chrome/commit pressure and full-page capture resource behavior; branch coverage and original Timeline full-read cost unmeasured. Any next runtime requires new explicit human budget after actual event/session/hash/script binding."
+  }
+}

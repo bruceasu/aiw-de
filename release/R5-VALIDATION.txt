@@ -1,0 +1,23 @@
+R5 validation performed in generation environment (JDK 21):
+
+PASS - Control Plane all main/test source structural javac --release 21 using minimal framework/test compile stubs
+PASS - Python worker py_compile
+PASS - JavaScript worker node --check
+PASS - TypeScript tsc structural compile using temporary dependency declarations
+PASS - Go worker go build
+PASS - Java worker javac --release 21
+PASS - SQLite V1 -> V2 -> V3 migration smoke using Python sqlite3
+PASS - domain table count remains 4
+PASS - raw Git two-worktree isolation smoke: same base / same file / independent result commits / base unchanged
+PASS - Python worker end-to-end smoke with mock Control Plane + fake Codex SDK + real Git worktree
+PASS - JavaScript worker end-to-end smoke with mock Control Plane + fake Codex SDK + real Git worktree
+PASS - TypeScript worker end-to-end smoke with mock Control Plane + fake Codex SDK + real Git worktree
+PASS - Go worker end-to-end smoke with mock Control Plane + fake Codex CLI + real Git worktree
+PASS - Java worker end-to-end smoke with mock Control Plane + fake Codex CLI + real Git worktree
+
+The five worker smokes verified: register -> claim -> start -> worktree materialization -> AI runtime -> commit -> complete(resultRevision, changedFiles) -> worktree removal.
+
+NOT RUN - authoritative `mvn verify`: Maven binary is not installed in this execution environment.
+Run locally with JDK 21:
+
+    mvn verify

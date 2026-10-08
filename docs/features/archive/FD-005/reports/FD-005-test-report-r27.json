@@ -1,0 +1,290 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000027-implementation-ready",
+  "human_report": "FD-005-test-report-r27.md",
+  "data": {
+    "implementation_event": "FD-005-000027-implementation-ready",
+    "tested_fd_revision": 27,
+    "tested_fd_digest": "dbc2bc71b3bb6d1fda4bd3fdfde2915fb68ae91a1e70baac6670f9dd31b139c7",
+    "tester_session": "fd005-tester-20261005-bdc1bff5",
+    "applicable_scenarios": 33,
+    "covered_scenarios": 20,
+    "executed_behavior_tests": 10,
+    "passed_behavior_tests": 10,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 23,
+    "requirements_coverage": "60.61%",
+    "branch_coverage": "not measured",
+    "raw_coverage_evidence": "not measured",
+    "coverage_unavailable_reason": "The authorized command did not instrument production branches; scenario counts are not branch counts.",
+    "test_files": [
+      "tests/fd005/r27/run-offline.mjs",
+      "tests/fd005/r27/register-loader.mjs",
+      "tests/fd005/r27/typescript-loader.mjs",
+      "tests/fd005/r27/worker.test.mjs"
+    ],
+    "authorization_records": [
+      "docs/features/reports/FD-005-test-authorization-r27.md"
+    ],
+    "commands": [
+      "node tests/fd005/r27/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r27.json"
+    ],
+    "recommendation": "blocked",
+    "not_applicable_reason": "All 33 API Worker scenarios apply; other runtimes are outside the user-defined test scope.",
+    "residual_risk": "Only 20/33 complete scenarios, below 70%; 13 incomplete, branches unmeasured, real model and Control Plane, remote Git, production registration, and G2 platform behavior unverified. Historical r23 failures remain recorded.",
+    "raw_execution_evidence": "tests/fd005/evidence-r27/execution.json",
+    "raw_output_evidence": "tests/fd005/evidence-r27/node-test-output.txt",
+    "historical_report": "docs/features/reports/FD-005-test-report-r19.md",
+    "scenarios": [
+      {
+        "id": "API-01",
+        "behavior": "requirements 完成正确任务",
+        "status": "passed",
+        "test_cases": [
+          "r19: ROLE-requirements"
+        ]
+      },
+      {
+        "id": "API-02",
+        "behavior": "architect 完成正确任务",
+        "status": "passed",
+        "test_cases": [
+          "r19: ROLE-architect"
+        ]
+      },
+      {
+        "id": "API-03",
+        "behavior": "planner 完成正确任务",
+        "status": "passed",
+        "test_cases": [
+          "r19: ROLE-planner"
+        ]
+      },
+      {
+        "id": "API-04",
+        "behavior": "coder 完成正确任务",
+        "status": "passed",
+        "test_cases": [
+          "r19: ROLE-coder"
+        ]
+      },
+      {
+        "id": "API-05",
+        "behavior": "integrator 完成正确任务",
+        "status": "passed",
+        "test_cases": [
+          "r19: ROLE-integrator"
+        ]
+      },
+      {
+        "id": "API-06",
+        "behavior": "reviewer 完成正确任务",
+        "status": "passed",
+        "test_cases": [
+          "r19: ROLE-reviewer"
+        ]
+      },
+      {
+        "id": "API-07",
+        "behavior": "verifier 完成正确任务",
+        "status": "passed",
+        "test_cases": [
+          "r19: ROLE-verifier"
+        ]
+      },
+      {
+        "id": "API-08",
+        "behavior": "integration-verifier 完成正确任务",
+        "status": "passed",
+        "test_cases": [
+          "r19: ROLE-integration-verifier"
+        ]
+      },
+      {
+        "id": "API-09",
+        "behavior": "repairer 完成正确任务",
+        "status": "passed",
+        "test_cases": [
+          "r19: ROLE-repairer"
+        ]
+      },
+      {
+        "id": "API-10",
+        "behavior": "reviewer 错配任务不能完成",
+        "status": "passed",
+        "test_cases": [
+          "r19: ROLE-reviewer: mismatched task"
+        ]
+      },
+      {
+        "id": "API-11",
+        "behavior": "审查报告缺失 verdict 不能完成",
+        "status": "passed",
+        "test_cases": [
+          "r19: REPORT-reviewer: absent verdict"
+        ]
+      },
+      {
+        "id": "API-12",
+        "behavior": "只读工作区变脏不能完成",
+        "status": "passed",
+        "test_cases": [
+          "r19: READONLY-reviewer"
+        ]
+      },
+      {
+        "id": "API-13",
+        "behavior": "未解决工具失败不能被完成文本掩盖",
+        "status": "passed",
+        "test_cases": [
+          "r19: TOOL-error"
+        ]
+      },
+      {
+        "id": "API-14",
+        "behavior": "完成响应未知时不重发 complete 或改发 fail",
+        "status": "passed",
+        "test_cases": [
+          "r19: REPORT-unknown"
+        ]
+      },
+      {
+        "id": "API-15",
+        "behavior": "Git 工作树删除失败不能上报成功",
+        "status": "passed",
+        "test_cases": [
+          "r19: CLEANUP-locked-worktree"
+        ]
+      },
+      {
+        "id": "API-16",
+        "behavior": "保留角色在生产注册前拒绝",
+        "status": "uncovered",
+        "reason": "r27 factory rejection passed; production index.ts pre-registration path was not executed."
+      },
+      {
+        "id": "API-17",
+        "behavior": "Reviewer 写工具被拒绝",
+        "status": "passed",
+        "test_cases": [
+          "r23: reviewer never receives write tools and forged write has no side effect",
+          "r27: API-17 repeat"
+        ]
+      },
+      {
+        "id": "API-18",
+        "behavior": "Coder 只能在指定工作区编辑",
+        "status": "passed",
+        "test_cases": [
+          "r23: coder write stays within assigned workspace",
+          "r27: API-18 repeat"
+        ]
+      },
+      {
+        "id": "API-19",
+        "behavior": "verifier 集成别名与能力路由",
+        "status": "uncovered",
+        "reason": "r27 integration alias profile and report passed; registration capability and claim routing were not executed."
+      },
+      {
+        "id": "API-20",
+        "behavior": "独立读取和不同文件有界并行",
+        "status": "uncovered"
+      },
+      {
+        "id": "API-21",
+        "behavior": "同文件编辑与 shell 冲突排队",
+        "status": "uncovered"
+      },
+      {
+        "id": "API-22",
+        "behavior": "取消排队及失败后后续操作",
+        "status": "uncovered"
+      },
+      {
+        "id": "API-23",
+        "behavior": "模型/工具超时及取消后的资源终态",
+        "status": "uncovered",
+        "reason": "r27 model cancellation passed; tool timeout and complete resource terminal state were not executed."
+      },
+      {
+        "id": "API-24",
+        "behavior": "租约丢失时抑制完成上报",
+        "status": "passed",
+        "test_cases": [
+          "r23: lost task lease suppresses complete and fail",
+          "r27: API-24 repeat"
+        ]
+      },
+      {
+        "id": "API-25",
+        "behavior": "drain 与第二次信号的强制终止",
+        "status": "uncovered"
+      },
+      {
+        "id": "API-26",
+        "behavior": "push 期间租约丢失与远端对账",
+        "status": "uncovered"
+      },
+      {
+        "id": "API-27",
+        "behavior": "多字节、截断、搜索部分完成的工具输出",
+        "status": "uncovered",
+        "reason": "r27 multibyte read truncation metadata passed; grep partial completion was not executed. Historical r23 failure remains."
+      },
+      {
+        "id": "API-28",
+        "behavior": "被长度截断的工具参数不得执行",
+        "status": "passed",
+        "test_cases": [
+          "r27: API-28 complete behavior"
+        ]
+      },
+      {
+        "id": "API-29",
+        "behavior": "多区域编辑唯一性、重叠及 BOM/CRLF",
+        "status": "passed",
+        "test_cases": [
+          "r27: API-29 complete behavior"
+        ]
+      },
+      {
+        "id": "API-30",
+        "behavior": "历史预算和可关闭的压缩",
+        "status": "uncovered"
+      },
+      {
+        "id": "API-31",
+        "behavior": "证据关键保存故障与全会话 G2 隐私",
+        "status": "uncovered"
+      },
+      {
+        "id": "API-32",
+        "behavior": "插件错误、版本、超时与权限不扩张",
+        "status": "uncovered"
+      },
+      {
+        "id": "API-33",
+        "behavior": "旧 Profile/manifest 与模型路径兼容",
+        "status": "uncovered",
+        "reason": "r27 legacy profile, report, and default model passed; manifest compatibility matrix was not executed."
+      }
+    ],
+    "static_exclusions": [
+      {
+        "scope": "Codex TypeScript、Go、Python、原生 launcher、公共核心独立入口",
+        "reason": "用户将本轮测试限定于 process-typescript-with-api"
+      },
+      {
+        "scope": "真实 Control Plane、模型端点、远端 Git、跨运行时 G2 平台认证、升级和回滚",
+        "reason": "唯一获批命令仅覆盖离线合成 API Worker 路径"
+      }
+    ],
+    "historical_reports": [
+      "docs/features/reports/FD-005-test-report-r19.md",
+      "docs/features/reports/FD-005-test-report-r23.md"
+    ]
+  }
+}

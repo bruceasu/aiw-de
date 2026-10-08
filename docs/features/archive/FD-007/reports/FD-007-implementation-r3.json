@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-007",
+  "source_event": "FD-007-000016-work-requested",
+  "human_report": "FD-007-implementation-r3.md",
+  "data": {
+    "summary": "同步 PM 对 SQLite/PostgreSQL 迁移执行验证的明确豁免，并在 FD 中保留 S21/S22 未运行状态与残余风险；本轮未修改应用源码。",
+    "changed_paths": [
+      "docs/features/FD-007_TASK_INSTRUCTION_REVISION_AND_OPERATOR_CONTROL.md"
+    ],
+    "commands": [
+      "aiw fd claim FD-007 FD-007-000016-work-requested --session fd007-worker-20261007-r3-63b7ad"
+    ],
+    "results": [
+      "已认领匹配 revision 16 和摘要的 Worker handoff。",
+      "同步 PM verification waiver 与未运行风险；未运行测试、编译、数据库迁移或应用命令。"
+    ],
+    "source_fd_revision": 16,
+    "source_fd_digest": "24b8e439da27d7b43452e65b21397ace841873a71e12f902b4bc860d1a8af553",
+    "worker_session": "fd007-worker-20261007-r3-63b7ad",
+    "residual_risk": "V19 在 SQLite/PostgreSQL 上的实际应用未验证；所有 22 个行为场景未运行。PM 豁免不等于迁移或行为通过。"
+  }
+}

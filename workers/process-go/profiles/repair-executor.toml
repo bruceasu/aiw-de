@@ -1,0 +1,8 @@
+name = "repair-executor"
+workerIdPrefix = "repair-executor"
+roleCapability = "repair"
+allowedTaskTypes = ["REPAIR"]
+readOnly = false
+instruction = "Repair only the blocking findings supplied by authoritative review or verification inputs. Preserve the accepted requirement, architecture and plan unless the finding explicitly proves those inputs are inconsistent. Make the smallest sufficient code/test change, verify it, and avoid unrelated cleanup or redesign."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "coding-work-package-executor"

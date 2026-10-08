@@ -1,0 +1,96 @@
+[
+  {
+    "groups": [
+      {
+        "label": "No matching capability\n0",
+        "total": 0,
+        "samples": [],
+        "text": "No matching capability\n0\n\nNo matching task in this detail window."
+      },
+      {
+        "label": "Worker capacity\n0",
+        "total": 0,
+        "samples": [],
+        "text": "Worker capacity\n0\n\nNo matching task in this detail window."
+      },
+      {
+        "label": "Run admission\n1",
+        "total": 1,
+        "samples": [
+          "tester-run-00-ready"
+        ],
+        "text": "Run admission\n1\ntester-run-00-ready\nIMPLEMENTATION\njava\nmaven\nRun admission blocked"
+      },
+      {
+        "label": "Fleet admission\n0",
+        "total": 0,
+        "samples": [],
+        "text": "Fleet admission\n0\n\nNo matching task in this detail window."
+      },
+      {
+        "label": "Policy\n1",
+        "total": 1,
+        "samples": [
+          "tester-run-06-ready"
+        ],
+        "text": "Policy\n1\ntester-run-06-ready\nIMPLEMENTATION\nnonexistent\nPolicy blocked\nNo matching capability"
+      }
+    ]
+  },
+  {
+    "wait": "waiting-count",
+    "elapsed_ms": 158,
+    "state": {
+      "applied": true,
+      "label": "Refresh in 5s",
+      "snapshot": "2026-10-04T22:27:15.756153300Z"
+    }
+  },
+  {
+    "open_count_change": {
+      "open": true,
+      "before": "No matching capability0",
+      "after": "No matching capability1",
+      "focus": true
+    }
+  },
+  {
+    "wait": "selection-unprotected-region",
+    "elapsed_ms": 165,
+    "state": {
+      "applied": true,
+      "label": "Focused content preserved; some facts may be older · Retry in 5s",
+      "snapshot": "2026-10-04T22:27:15.756153300Z"
+    }
+  },
+  {
+    "selection": {
+      "before": {
+        "length": 13149,
+        "middleSelected": true,
+        "regions": [
+          "overview-runs",
+          "overview-attention",
+          "overview-workers",
+          "overview-waiting",
+          "overview-activity"
+        ]
+      },
+      "after": {
+        "sameAnchor": true,
+        "sameFocus": true,
+        "sameOffsets": true,
+        "sameText": true,
+        "middleSame": true,
+        "unselectedUpdated": true,
+        "rangeRegions": [
+          "overview-runs",
+          "overview-attention",
+          "overview-workers",
+          "overview-waiting",
+          "overview-activity"
+        ]
+      }
+    }
+  }
+]

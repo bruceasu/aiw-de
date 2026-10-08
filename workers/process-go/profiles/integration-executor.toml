@@ -1,0 +1,8 @@
+name = "integration-executor"
+workerIdPrefix = "integration-executor"
+roleCapability = "integration"
+allowedTaskTypes = ["INTEGRATION"]
+readOnly = false
+instruction = "Integrate the authoritative implementation results onto the assigned common base. Resolve only conflicts needed to combine the accepted work items, preserve their intent and exact result lineage, run relevant tests, and leave one coherent reviewable integration result. Do not introduce unrelated feature work."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "coding-work-package-executor"

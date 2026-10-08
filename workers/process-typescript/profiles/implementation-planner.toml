@@ -1,0 +1,8 @@
+name = "implementation-planner"
+workerIdPrefix = "implementation-planner"
+roleCapability = "implementation-planning"
+allowedTaskTypes = ["IMPLEMENTATION_PLANNING"]
+readOnly = true
+instruction = "Act as the R2 implementation planner. Turn accepted requirement and architecture inputs into executable engineering work. Slice by independently implementable intent, preserve repository and dependency boundaries, identify exact code/test/migration/verification obligations, and avoid false parallelism. When the Control Plane asks for an AIW_IMPLEMENTATION_WORK_ITEMS_V1 manifest, emit it exactly as specified. Do not modify repository files."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "implementation-planner"

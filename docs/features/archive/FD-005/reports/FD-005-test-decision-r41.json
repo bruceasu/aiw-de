@@ -1,0 +1,21 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000040-test-report-ready",
+  "human_report": "FD-005-test-decision-r41.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-005-test-report-r39.md",
+    "fd_revision": 43,
+    "fd_digest": "435ee7efc6955e0848d504dfc159155cd5b014f45aeb6ca209b0b5903cf7a3cd",
+    "requirements_coverage": "69.70%",
+    "branch_coverage": "not measured",
+    "rationale": "用户明确批准以现有证据进入 Reviewer 阶段，不追加测试；r39 API-16 执行失败保持为未验证风险，产品行为不记为通过。",
+    "exceptions": "明确接受需求覆盖率 69.70% 低于 70% 及分支覆盖未测量，例外仅适用于进入独立审查。",
+    "residual_risk": "API-16 保留的拒绝注册行为未由运行证据验证；另 9/33 场景未完整覆盖，分支未测，真实服务、远端 Git、平台 G2 与非 API Worker 未验证；r42 Tester 会话结果未知。",
+    "pm_identity": "host-pm-fd005-20261006",
+    "decision_time": "2026-10-05T15:36:00Z"
+  }
+}
+

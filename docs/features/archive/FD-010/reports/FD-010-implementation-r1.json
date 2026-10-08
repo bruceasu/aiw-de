@@ -1,0 +1,38 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-010",
+  "source_event": "FD-010-000003-design-ready",
+  "human_report": "FD-010-implementation-r1.md",
+  "data": {
+    "summary": "Moved the sole TypeScript production runtime-core into process-typescript as an internal module and removed dual-source loading and cross-package staging while preserving runtime behavior.",
+    "changed_paths": [
+      "workers/runtime-core/",
+      "workers/process-typescript/runtime-core/",
+      "workers/process-typescript/src/",
+      "workers/process-typescript/package.json",
+      "workers/process-typescript/scripts/",
+      "workers/process-typescript/README.md",
+      "workers/WORKER_RUNTIME_CONTRACT.md",
+      "workers/WORKER_OPERATIONS.md",
+      "scripts/compile-worker-runtime.mjs",
+      "tests/fd005/",
+      "tests/fd006/",
+      "docs/features/FD-010_TYPESCRIPT_RUNTIME_CORE_WORKER.md"
+    ],
+    "commands": [
+      "git mv -- workers/runtime-core workers/process-typescript/runtime-core",
+      "git add -A -- workers/runtime-core workers/process-typescript/runtime-core workers/process-typescript/src (failed: removed source pathspec)",
+      "git add -A -- workers/process-typescript/runtime-core workers/process-typescript/src (corrected)",
+      "$env:AIW_TYPESCRIPT_COMPILER='D:\\03_projects\\AI-tools\\aiw-dev\\workers\\process-typescript\\node_modules\\typescript'; node scripts/compile.mjs",
+      "git diff --check master...HEAD"
+    ],
+    "results": [
+      "Four scoped Work Items completed in focused feature-branch commits.",
+      "Twenty runtime-core files relocated with unchanged runtime JavaScript bodies; TypeScript imports and 19 existing test imports updated.",
+      "TypeScript syntax compilation passed without artifacts; diff whitespace check passed.",
+      "Tests, type check, final build, release package, network/model and integration calls were not run."
+    ],
+    "residual_risk": "Source and release module resolution, missing-module failure, attempt behavior, type compatibility, packaging and external hard-coded old paths are not independently verified."
+  }
+}

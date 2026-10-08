@@ -1,0 +1,14 @@
+
+DevTools listening on ws://127.0.0.1:6572/devtools/browser/1be093c8-9817-46a6-a502-0a4d4dd63f41
+[30716:37664:1005/084121.055:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:75] Failed to open named pipe server process 20664: 拒绝访问。 (0x5)
+[30716:30328:1005/084123.117:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:75] Failed to open named pipe server process 37856: 拒绝访问。 (0x5)
+[30716:37664:1005/084125.173:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:75] Failed to open named pipe server process 31452: 拒绝访问。 (0x5)
+[30716:30328:1005/084127.239:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:75] Failed to open named pipe server process 31032: 拒绝访问。 (0x5)
+[30716:37664:1005/084127.316:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:75] Failed to open named pipe server process 37784: 拒绝访问。 (0x5)
+[30716:30328:1005/084129.380:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:75] Failed to open named pipe server process 33376: 拒绝访问。 (0x5)
+[30716:37664:1005/084154.114:ERROR:mojo\public\cpp\bindings\lib\validation_errors.cc:136] Invalid message: VALIDATION_ERROR_DESERIALIZATION_FAILED
+[30716:37664:1005/084154.282:ERROR:mojo\public\cpp\bindings\lib\interface_endpoint_client.cc:748] Message 1508190960 rejected by interface viz.mojom.CopyOutputResultSender
+[30716:33996:1005/084154.286:ERROR:content\browser\gpu\gpu_process_host.cc:1130] GPU process exited unexpectedly: exit_code=3
+[30716:37664:1005/084154.978:ERROR:mojo\public\cpp\bindings\lib\validation_errors.cc:136] Invalid message: VALIDATION_ERROR_DESERIALIZATION_FAILED
+[30716:37664:1005/084154.978:ERROR:mojo\public\cpp\bindings\lib\interface_endpoint_client.cc:748] Message 1508190960 rejected by interface viz.mojom.CopyOutputResultSender
+[30716:33996:1005/084154.983:ERROR:content\browser\gpu\gpu_process_host.cc:1130] GPU process exited unexpectedly: exit_code=3

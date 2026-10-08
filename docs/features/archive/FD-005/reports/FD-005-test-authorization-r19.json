@@ -1,0 +1,30 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000019-implementation-ready",
+  "human_report": "FD-005-test-authorization-r19.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-005-000019-implementation-ready",
+    "fd_revision": 19,
+    "fd_digest": "8b50c27f32a1b75e3eef572f5f96eddfa57b5cd367ddb1af7000920df8b3f84d",
+    "tester_session": "fd005-tester-20261005-58dba13b",
+    "command": "node tests/fd005/r19/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r19.json",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev",
+    "scope": "仅 API Worker 生产适配入口与九角色的 15 个离线合成场景；公共 attempt 仅经 API 适配器组合调用",
+    "expected_duration": "15–45 秒；测试子进程 30 秒截止",
+    "side_effects": "仅 OS 临时目录 fd005-r19-* 的本地 Git 仓库/worktree，以及 tests/fd005/evidence-r19/ 下以 wx 新建两份原始证据；临时路径核对后清理",
+    "risk_review": "已静态审查四个调用文件；清除 API/Worker token，禁用 fetch/net/tls/dns，无 remote、真实 CP/API、其他 Worker、launcher 或平台入口；文件或事件改变即失效",
+    "human_approval": "not required",
+    "planner_identity": "host-planner-fd005-20261005",
+    "decision_time": "2026-10-05T14:02:43.7963231Z",
+    "invoked_files_sha256": {
+      "tests/fd005/r19/run-offline.mjs": "821de5904c9d569de130261429f18713daa480a15b95a01c8a9f6720f9845fc5",
+      "tests/fd005/r19/register-loader.mjs": "f8a30fc945041c5d530f3f0e6ae6711069b4681459374793bb03f43a1af29a11",
+      "tests/fd005/r19/typescript-loader.mjs": "23d080145b31f726e5b220763feef30177e08f4b13e769c6f0674ea76e3a0266",
+      "tests/fd005/r19/worker.test.mjs": "bdb33af58ba4baa24bf143553bbbfe85a0b577596af73bb1adcabe63da82c6c1"
+    }
+  }
+}

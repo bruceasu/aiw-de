@@ -1,0 +1,23 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000008-work-requested",
+  "human_report": "FD-006-blocker-receipt-worktree-r1.md",
+  "data": {
+    "stage": "Worker implementation handoff",
+    "role": "worker",
+    "observed_symptom": "aiw fd emit rejected the source event as not matching the latest handoff in the FD worktree",
+    "confirmed_cause": "The genuine FD-006 event receipts existed only in the parent workspace .ai directory after aiw wt add",
+    "recovery_attempts": [
+      "Initial implementation-ready emit failed without creating a Tester event",
+      "Copied the existing parent receipts into the FD worktree; corrected one extra nesting level after verifying the absolute paths remained inside the worktree",
+      "Verified the source event hash matched and emitted FD-006-000009-implementation-ready"
+    ],
+    "status": "resolved",
+    "resolved_at": "2026-10-07T13:12:48Z",
+    "human_decision_need": "none",
+    "next_step_or_risk": "Sync genuine Tester and Reviewer receipts back to the parent before squash delivery; never fabricate or hand-edit an event",
+    "reusable_improvement": "Make aiw wt add inherit FD receipts or document safe receipt synchronization; add the missing blocker feedback templates"
+  }
+}

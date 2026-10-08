@@ -1,0 +1,27 @@
+AI Dev Manager R8-S8 - Fleet / Backlog Dashboard
+
+Baseline:
+- R8-S7 Fix1 accepted by user after mvn clean verify.
+
+Scope:
+- Added read-only fleet/backlog projection.
+- Added GET /api/r8/fleet/dashboard?detailLimit=N.
+- Added Worker capacity, backlog classification, capability demand, Run fleet, and active lease diagnostics.
+- No scheduling/authority behavior changed.
+- No database schema changes.
+
+Local validation in generation environment:
+- OpenJDK 21 structural compile of all new main Java classes: PASS
+- SQLite V1 -> V10 migration + exact fleet SQL smoke: PASS
+- Core CREATE TABLE count: 7
+- Flyway latest: V10
+- Failsafe integration-test methods present: 23
+- Legacy environment-prefix residue: 0
+- Fleet repository nested RowMapper JDBC queries: none; all five queries execute at top level
+
+Generation environment limitation:
+- Maven binary is unavailable here, so the authoritative Spring Boot gate must be run by the user:
+
+  mvn clean verify
+
+Expected Failsafe integration-test methods: 23

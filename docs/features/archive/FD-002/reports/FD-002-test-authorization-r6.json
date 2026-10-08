@@ -1,0 +1,30 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000006-implementation-ready",
+  "human_report": "FD-002-test-authorization-r6.md",
+  "data": {
+    "decision": "approved",
+    "basis": "human-approved",
+    "implementation_event": "FD-002-000006-implementation-ready",
+    "fd_revision": 6,
+    "fd_digest": "7869eb2108ad9ac8811e65ea339ecde7d6c08d7394add7230ab85a2e5a178c8a",
+    "tester_session": "fd002-tester-20261005-15d090a2",
+    "command": "C:/green/python312/python.exe tests/fd002/runtime.py",
+    "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+    "scope": "One offline FD-002 black-box run; 96 planned assertions from 104 observable scenarios; ADMIN/VIEWER/OPERATOR/APPROVER; 390/768/1280/1440 widths; Run/Mission, graph, attempts, Timeline cap/totals/truncation, control permissions and refresh state",
+    "expected_duration": "3–5 minutes normally; additional bounded startup, timeout and cleanup time on failure",
+    "side_effects": "Only owned temporary SQLite and Chrome profiles, loopback temporary applications and own Java/Chrome PIDs; local fixture/control writes; evidence under tests/fd002/evidence-r6-*; no downloads, external services, production DB or distributable artifacts",
+    "risk_review": "Inspected runtime.py, fixture.py, browser.mjs and scenarios.json; exact event/content/owner/authorization checks; bounded waits and evidence preservation; owned absolute temporary path cleanup; eight uncovered scenarios and unavailable branch coverage remain; Firefox deferral still pending; Timeline read cost unbounded by output cap",
+    "human_approval": "approved:conversation:20261005-auto-test-review-FD001-FD002",
+    "planner_identity": "fd002-planner-20261005-96860f94",
+    "decision_time": "2026-10-04T22:22:45+00:00",
+    "planned_requirements_coverage": "96/104 (92.31%); planned upper bound only",
+    "executed_behavior_tests": 0,
+    "branch_coverage": "unavailable",
+    "firefox_verification": "pending-human-deferral-decision",
+    "initial_run_budget": 1,
+    "corrected_retry_budget": 1
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-007",
+  "source_event": "FD-007-000006-work-requested",
+  "human_report": "FD-007-implementation-r1.md",
+  "data": {
+    "summary": "Implemented versioned task instructions, attempt fencing, cooperative stop acknowledgement, ADMIN-only force re-dispatch, task controls and history UI, and linked correction tasks.",
+    "changed_paths": [
+      "src/main/java/me/asu/aidev/execution/application/TaskClaimService.java",
+      "src/main/java/me/asu/aidev/execution/application/TaskExecutionService.java",
+      "src/main/java/me/asu/aidev/execution/domain/ExecutionAttempt.java",
+      "src/main/java/me/asu/aidev/execution/jdbc/JdbcExecutionAttemptRepository.java",
+      "src/main/java/me/asu/aidev/execution/port/ExecutionAttemptRepository.java",
+      "src/main/java/me/asu/aidev/webconsole/application/WebConsoleActionService.java",
+      "src/main/java/me/asu/aidev/webconsole/domain/WebConsoleTaskSummary.java",
+      "src/main/java/me/asu/aidev/webconsole/jdbc/JdbcWebConsoleMissionReadRepository.java",
+      "src/main/java/me/asu/aidev/webconsole/protocol/http/WebConsoleActionController.java",
+      "src/main/java/me/asu/aidev/webconsole/protocol/http/WebConsoleController.java",
+      "src/main/java/me/asu/aidev/webconsole/security/WebConsoleSecurityService.java",
+      "src/main/java/me/asu/aidev/work/application/WorkTaskService.java",
+      "src/main/java/me/asu/aidev/work/domain/TaskInstructionRevision.java",
+      "src/main/java/me/asu/aidev/work/domain/WorkTask.java",
+      "src/main/java/me/asu/aidev/work/jdbc/JdbcWorkTaskRepository.java",
+      "src/main/java/me/asu/aidev/work/port/WorkTaskRepository.java",
+      "src/main/java/me/asu/aidev/worker/protocol/http/WorkerProtocolV1Controller.java",
+      "src/main/java/me/asu/aidev/worker/runtime/TaskExecutor.java",
+      "src/main/java/me/asu/aidev/worker/runtime/WorkerRuntime.java",
+      "src/main/java/me/asu/aidev/worker/runtime/fake/FakeTaskExecutor.java",
+      "src/main/resources/db/migration/V19__task_instruction_revision_control.sql",
+      "src/main/resources/templates/ui/approval-evidence.html",
+      "src/main/resources/templates/ui/run-detail.html",
+      "docs/features/FD-007_TASK_INSTRUCTION_REVISION_AND_OPERATOR_CONTROL.md"
+    ],
+    "commands": [
+      "git diff --check",
+      "mvn -q -DskipTests compile"
+    ],
+    "results": [
+      "git diff --check passed",
+      "Maven compile did not start: mvn is unavailable; no Maven or Gradle wrapper exists"
+    ],
+    "residual_risk": "No compilation, behavior tests, or SQLite/PostgreSQL migration checks were completed. External Worker shutdown remains cooperative; ADMIN force re-dispatch can permit duplicate external side effects."
+  }
+}

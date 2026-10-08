@@ -1,0 +1,29 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-001",
+  "source_event": "FD-001-000011-implementation-ready",
+  "human_report": "FD-001-test-authorization-r11-v2.md",
+  "data": {
+    "decision": "approved",
+    "basis": "human-approved",
+    "implementation_event": "FD-001-000011-implementation-ready",
+    "fd_revision": 11,
+    "fd_digest": "bf8bbae3a950348233a32faf39393bbd4c8cd7e07aeff14464833dbd0fdb6377",
+    "tester_session": "fd001-tester-20261004-7303009b",
+    "command": "C:/green/python312/python.exe tests/fd001/runtime.py review-fixes",
+    "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+    "scope": "Same four ADMIN review-finding assertions; one corrected retry only; no matrix expansion",
+    "expected_duration": "1–2 minutes; two12s conditional observations within65s browser limit",
+    "side_effects": "Same owned local temporary application/SQLite/Chrome; output only tests/fd001/evidence-review2; bounded test JVM memory; crash files directed to evidence; no download, external service or production writes",
+    "risk_review": "Inspected source diff and initial diagnostics: fixed1200ms did not prove async refresh completion; waitApplied observes actual count or region replacement within12s without relaxing state/selection assertions; JVM heap512m/code cache96m; first failure evidence preserved; sequential retries",
+    "human_approval": "approved:conversation:20261005-auto-test-review-FD001-FD002",
+    "planner_identity": "fd001-planner-20261004-86fbb56c",
+    "decision_time": "2026-10-04T22:26:33+00:00",
+    "initial_run_budget": 0,
+    "corrected_retry_budget": 1,
+    "prior_attempt_evidence": "tests/fd001/evidence-review1/initial",
+    "branch_coverage": "not measured",
+    "firefox_verification": "user-deferred-for-FD001"
+  }
+}

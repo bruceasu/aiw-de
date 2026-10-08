@@ -1,0 +1,137 @@
+[
+  {
+    "id": "ADMIN-role",
+    "behavior": "Authenticated role displayed",
+    "passed": true
+  },
+  {
+    "id": "ADMIN-new",
+    "behavior": "New Run visibility follows role",
+    "passed": true
+  },
+  {
+    "id": "ADMIN-worker-actions",
+    "behavior": "Worker operations visibility follows role",
+    "passed": true
+  },
+  {
+    "id": "states",
+    "behavior": "Four management/lease states remain readable",
+    "passed": true
+  },
+  {
+    "id": "fleet-interval",
+    "behavior": "Fleet automatically updates read-only snapshot after 8 seconds",
+    "passed": true
+  },
+  {
+    "id": "identity",
+    "behavior": "Worker SVG identity consistent between pages",
+    "passed": true
+  },
+  {
+    "id": "run-window",
+    "behavior": "14 nonterminal runs display a 12-card window",
+    "passed": true
+  },
+  {
+    "id": "pending-old",
+    "behavior": "16 older pending approvals survive 110 newer decided rows",
+    "passed": true
+  },
+  {
+    "id": "failure-missing",
+    "behavior": "Failure reason absence is explicitly unavailable",
+    "passed": true
+  },
+  {
+    "id": "paused",
+    "behavior": "Paused control state is distinguishable",
+    "passed": true
+  },
+  {
+    "id": "waiting-labels",
+    "behavior": "Waiting category labels remain readable",
+    "passed": true
+  },
+  {
+    "id": "activity-bound",
+    "behavior": "Activity feed contains at most 20 real entries",
+    "passed": true
+  },
+  {
+    "id": "activity-stable",
+    "behavior": "Identical fixture activity order stable across two reads",
+    "passed": true
+  },
+  {
+    "id": "safe-text",
+    "behavior": "Untrusted requirement text stays escaped",
+    "passed": true
+  },
+  {
+    "id": "no-eta",
+    "behavior": "Task count does not invent engineering completion percentage or ETA",
+    "passed": true
+  },
+  {
+    "id": "overview-interval",
+    "behavior": "Overview automatically updates after 5 seconds",
+    "passed": true
+  },
+  {
+    "id": "reading-protection",
+    "behavior": "Expanded details, keyboard focus and scroll survive partial refresh",
+    "passed": true
+  },
+  {
+    "id": "width-390",
+    "behavior": "Primary content accessible at 390 pixels",
+    "passed": true
+  },
+  {
+    "id": "width-768",
+    "behavior": "Primary content accessible at 768 pixels",
+    "passed": true
+  },
+  {
+    "id": "width-1280",
+    "behavior": "Primary content accessible at 1280 pixels",
+    "passed": true
+  },
+  {
+    "id": "width-1440",
+    "behavior": "Primary content accessible at 1440 pixels",
+    "passed": true
+  },
+  {
+    "id": "motion",
+    "behavior": "Motion toggle persists across navigation",
+    "passed": true
+  },
+  {
+    "id": "reduced-motion",
+    "behavior": "System reduced motion suppresses decorative pulse with local motion on",
+    "passed": true
+  },
+  {
+    "id": "edit-pause",
+    "behavior": "Existing whole-page refresh preserves edited form and pauses",
+    "passed": true
+  },
+  {
+    "id": "reset-resume",
+    "behavior": "Reset and finishing input focus allow subsequent refresh",
+    "passed": true
+  },
+  {
+    "id": "keyboard",
+    "behavior": "Real Tab keyboard focus visibly outlined",
+    "passed": true
+  },
+  {
+    "id": "login-expiry",
+    "behavior": "Actual cookie loss stops polling and preserves snapshot",
+    "passed": true
+  }
+]

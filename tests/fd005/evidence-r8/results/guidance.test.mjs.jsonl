@@ -1,0 +1,11 @@
+{"id":"API-model-selection","outcome":"passed","duration_ms":86}
+{"id":"MODELSELECT-escalate-model","outcome":"passed","duration_ms":6}
+{"id":"MODELSELECT-escalate-output","outcome":"passed","duration_ms":5}
+{"id":"MODELSELECT-hold-tool","outcome":"passed","duration_ms":5}
+{"id":"MODELSELECT-cap-end","outcome":"passed","duration_ms":5}
+{"id":"MODELSELECT-filter","outcome":"passed","duration_ms":6}
+{"id":"MODELSELECT-deny-fast","outcome":"passed","duration_ms":10}
+{"id":"MODELSELECT-deny-provider","outcome":"passed","duration_ms":10}
+{"id":"MODELSELECT-deny-runtime","outcome":"passed","duration_ms":9}
+{"id":"MODELSELECT-deny-effort","outcome":"passed","duration_ms":9}
+{"id":"MODELSELECT-deny-empty","outcome":"passed","duration_ms":9}

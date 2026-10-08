@@ -1,0 +1,21 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-001",
+  "kind": "pm-decision",
+  "source_event": "FD-001-000005-test-report-ready",
+  "human_report": "FD-001-test-decision-r5-v1.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-001-test-r4.md",
+    "fd_revision": 5,
+    "fd_digest": "cdce99f4f7b0faba121c52fa44d55b47f61f9be45fe1ac64fcb5244f66b231e2",
+    "requirements_coverage": "0%",
+    "branch_coverage": "not measured",
+    "rationale": "Independent evidence is blocked before business assertions: 0 executed, 0 passed, 0 failed; 88 distinct applicable scenarios have no independent coverage. Four-role navigation failures are infrastructure failures, not product behavior failures. Worker regression and visual evidence remain historical corroboration but cannot justify acceptance of this blocked report.",
+    "exceptions": "No coverage exception is granted. Firefox remains explicitly deferred by the user; that decision does not waive Chromium behavior acceptance.",
+    "residual_risk": "CDP login navigation net::ERR_ABORTED remains unresolved. Requirements coverage is 0%; branch coverage unavailable; role permissions and pause/recovery behavior lack independent evidence. Existing retry budget is exhausted; any additional runtime command requires a new explicit authorization.",
+    "pm_identity": "fd001-pm-host-20261004",
+    "decision_time": "2026-10-04T14:08:36+00:00",
+    "next_action": "Return to Worker recovery without claiming completion; preserve v1/v2 evidence; prepare and statically inspect a separate bounded navigation diagnostic, then request one explicit additional runtime budget."
+  }
+}

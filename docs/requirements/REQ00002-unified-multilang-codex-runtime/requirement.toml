@@ -1,0 +1,32 @@
+id = "REQ00002-unified-multilang-codex-runtime"
+title = "统一多语言 Codex Runtime：Go 先行试点"
+parent_id = ""
+status = "DECIDED"
+created = "2026-10-09"
+updated = "2026-10-09"
+revision = 2
+
+[approval]
+status = "PENDING"
+by = ""
+at = ""
+reason = ""
+source_digest = ""
+
+[promotion]
+status = "NOT_STARTED"
+task_id = ""
+
+[conversation]
+session_id = ""
+
+[terminal]
+by = ""
+at = ""
+reason = ""
+
+[artifact]
+requirement-plan = "docs/requirements/REQ00002-unified-multilang-codex-runtime/requirement-plan.md"
+
+[digest]
+requirement-plan = "d7967913baaceddaa11956bfbf500dac332c146f142dfc3165cdb432ba234787"

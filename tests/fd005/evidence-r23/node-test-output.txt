@@ -1,0 +1,63 @@
+✔ API-16 preserved roles reject through public production adapter factory (1.021ms)
+attempt synthetic-attempt-reviewer-write: failed RESPONSES_TOOL_NOT_ALLOWED
+✔ API-17 reviewer never receives write tools and forged write has no side effect (77.3651ms)
+attempt synthetic-attempt-coder-boundary: failed ATTEMPT_CANCELLED
+✔ API-18 coder write stays within assigned workspace (31.8801ms)
+✔ API-19 verifier integration alias uses integration profile and report (30.1801ms)
+attempt synthetic-attempt-cancel-model: failed OPERATION_FAILED
+✔ API-23 forced cancellation aborts model request before completion (26.5895ms)
+attempt synthetic-attempt-lease-lost: lease-lost ATTEMPT_CANCELLED
+✔ API-24 lost task lease suppresses complete and fail (50.6961ms)
+attempt synthetic-attempt-read-bounded: failed UNRESOLVED_TOOL_FAILURE
+✖ API-27 multibyte read result remains bounded and marked incomplete (33.8964ms)
+attempt synthetic-attempt-edit-many-good: failed UNRESOLVED_TOOL_FAILURE
+✖ API-29 edit_many preserves BOM/CRLF and refuses ambiguous edit (34.533ms)
+✔ API-33 legacy eight-field profile and report model path remain compatible (34.7976ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 7
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5879.9101
+
+✖ failing tests:
+
+test at tests\fd005\r23\worker.test.mjs:154:1
+✖ API-27 multibyte read result remains bounded and marked incomplete (33.8964ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'failed'
+  - 'completed'
+  
+      at TestContext.<anonymous> (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd005/r23/worker.test.mjs:163:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'completed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\fd005\r23\worker.test.mjs:167:1
+✖ API-29 edit_many preserves BOM/CRLF and refuses ambiguous edit (34.533ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'failed'
+  - 'completed'
+  
+      at TestContext.<anonymous> (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd005/r23/worker.test.mjs:174:10)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'failed',
+    expected: 'completed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

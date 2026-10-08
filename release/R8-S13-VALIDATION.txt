@@ -1,0 +1,49 @@
+R8-S13 FIX1 RUNTIME FLEET SCHEDULING CONTROL
+============================================
+
+Accepted input baseline
+-----------------------
+R8-S12 Fix1 Fleet-level Admission Budget: user-confirmed mvn clean verify PASS.
+Java baseline: 21.
+Canonical environment prefix: AIW_.
+
+Scope
+-----
+- GET/POST /api/r8/fleet/scheduling;
+- GET /api/r8/fleet/scheduling/events;
+- runtime expansion/contraction of the global Fleet ceiling;
+- contraction never revokes existing leases;
+- new claims block until live active leases drain below the new limit;
+- AIW_FLEET_MAX_PARALLELISM becomes bootstrap-only after first persisted initialization;
+- same-value replay is idempotent;
+- append-only Fleet scheduling audit history.
+
+Persistence
+-----------
+Core/authority/audit tables: 9
+New table: fleet_admission_budget_event
+Migration: V14
+No duplicate Fleet active-slot counter is introduced.
+
+Generation-environment checks
+-----------------------------
+- SQLite V1 -> V14 migration smoke: PASS
+- fleet scheduling event insert/read smoke: PASS
+- pure Java domain/port compile: PASS
+- R8-S13 integration-test project import resolution: PASS
+- source scan for Spring-managed multi-constructor beans without @Autowired: PASS
+- legacy environment-prefix residue: 0
+- expected Failsafe integration-test methods: 29
+
+Fix1
+----
+- added the missing import for `me.asu.aidev.autonomous.application.AutonomousRunService` in `R8S13RuntimeFleetSchedulingControlIT`;
+- no production code, schema, Worker Protocol, or scheduling semantics changed.
+
+Generation environment limitation
+---------------------------------
+Maven binary is unavailable here. Authoritative acceptance remains:
+
+    mvn clean verify
+
+Expected Failsafe integration-test methods: 29.

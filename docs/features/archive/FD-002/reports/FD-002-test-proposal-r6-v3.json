@@ -1,0 +1,28 @@
+{
+  "schema": "aiw.fd.test-proposal.v1",
+  "kind": "tester-command-proposal",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000006-implementation-ready",
+  "human_report": "FD-002-test-proposal-r6-v3.md",
+  "data": {
+    "status": "pending-additional-execution-budget",
+    "fd_revision": 6,
+    "fd_digest": "7869eb2108ad9ac8811e65ea339ecde7d6c08d7394add7230ab85a2e5a178c8a",
+    "tester_session": "fd002-tester-20261005-15d090a2",
+    "command": "C:/green/python312/python.exe tests/fd002/runtime.py",
+    "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+    "expected_duration": "3–5 minutes",
+    "required_authorization": "docs/features/reports/FD-002-test-authorization-r6-v3.json",
+    "applicable_scenarios": 104,
+    "planned_scenarios": 96,
+    "planned_requirements_coverage": "96/104 (92.31%): not actual coverage",
+    "latest_requirements_coverage": "36/104 (34.62%)",
+    "branch_coverage": "unavailable",
+    "static_change": "Exclude Run identity h1 from semantic content-section title matching; keep all actual assertions",
+    "test_files": ["tests/fd002/runtime.py", "tests/fd002/fixture.py", "tests/fd002/browser.mjs", "tests/fd002/scenarios.json"],
+    "side_effects": "Fresh evidence directory plus owned temporary DB/Chrome paths and owned process trees only; loopback-only requests; no downloads or production DB writes",
+    "additional_runs_requested": 1,
+    "third_run_executed": false,
+    "test_report_ready_emitted": false
+  }
+}

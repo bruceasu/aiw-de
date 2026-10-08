@@ -1,0 +1,45 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000008-test-rejected",
+  "human_report": "FD-005-implementation-r8.md",
+  "data": {
+    "summary": "根据独立首轮失败修复元数据身份与 Runner 契约、日志期间取消和资源等待标记、native 调试环境及 RPC read 回执；将生产 API 九角色适配提取为同一入口，支持后续独立黑盒验收。",
+    "changed_paths": [
+      "workers/runtime-core/evidence.mjs",
+      "workers/runtime-core/attempt.mjs",
+      "workers/runtime-core/index.d.mts",
+      "workers/runtime-core/PUBLIC_CONTRACT.md",
+      "workers/codex-session-launcher/main.go",
+      "workers/codex-session-launcher/policy.go",
+      "workers/codex-session-launcher/README.md",
+      "workers/process-typescript-with-api/src/api-adapter.ts",
+      "workers/process-typescript-with-api/src/index.ts",
+      "workers/process-typescript-with-api/PUBLIC_INTERFACES.md",
+      "workers/WORKER_RUNTIME_CONTRACT.md",
+      "docs/features/FD-005_WORKER_PI.md"
+    ],
+    "commands": [
+      "aiw fd claim FD-005 FD-005-000008-test-rejected --session fd005-worker-20261004-2916aea6",
+      "git diff --check -- <上述本轮修改路径>"
+    ],
+    "results": [
+      "Worker 已领取实际 test-rejected 收据，未修改首轮 Tester 代码或执行原始证据。",
+      "本轮 git diff --check exit 0；Git 报 LF/CRLF 常规提示，未运行 formatter。",
+      "首轮唯一 compile-only exit 0 仍为历史证据；本轮修改未用该结果声明已编译，后续 Tester 临时编译与测试需新的精确授权。",
+      "真实 SDK/模型/业务服务/平台禁存认证/最终发布构建未运行；没有新依赖或联网操作。"
+    ],
+    "residual_risk": "首轮 138 个实际用例有 60 个失败，全分母 222 / 需求覆盖 35.14%，全部保持历史失败。新源码和公共契约尚待独立复测。真实 Codex 版本/平台的禁存验证证据未提供，新 Codex Worker 默认拒绝准入。",
+    "worker_session": "fd005-worker-20261004-2916aea6",
+    "authored_fd_revision": 8,
+    "previous_implementation_report": "docs/features/reports/FD-005-implementation-r5.md",
+    "tester_report": "docs/features/reports/FD-005-test-report-r5.md",
+    "pm_decision": "docs/features/reports/FD-005-test-decision-r5.md",
+    "public_contracts": [
+      "workers/runtime-core/PUBLIC_CONTRACT.md",
+      "workers/process-typescript-with-api/PUBLIC_INTERFACES.md",
+      "workers/codex-session-launcher/SESSION_POLICY_FORMAT.md"
+    ]
+  }
+}

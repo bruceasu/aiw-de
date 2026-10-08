@@ -1,0 +1,1 @@
+{"fdId":"FD-005","event":"FD-005-000009-implementation-ready","revision":9,"digest":"6d51664531db4418fe20c5f05dbd0ddf797ce64f8689e48d096221970330627b","session":"fd005-tester-20261005-7865d383","exactCommand":"node tests/fd005/r8/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r8.json","syntheticTestOnly":true}

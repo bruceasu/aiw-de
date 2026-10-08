@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"><body>
+<svg th:fragment="avatar(w, identity)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"
+     class="worker-avatar" aria-hidden="true" focusable="false"
+     th:attr="data-state=${w.status},data-busy=${w.activeLeases > 0},data-shape=${identity.silhouette}"
+     th:style="${'--identity-hue:' + identity.hue}">
+  <path class="avatar-frame" d="M16 30 30 16H70L84 30V70L70 84H30L16 70Z"/>
+  <path class="avatar-shell" th:if="${identity.silhouette == 0}" d="M30 34 42 25H58L70 34V65L59 75H41L30 65Z"/>
+  <path class="avatar-shell" th:if="${identity.silhouette == 1}" d="M27 28H73L68 72 50 82 32 72Z"/>
+  <path class="avatar-shell" th:if="${identity.silhouette == 2}" d="M23 43 38 25H62L77 43 68 73H32Z"/>
+  <path class="avatar-shell" th:if="${identity.silhouette == 3}" d="M25 35 50 19 75 35V67L50 80 25 67Z"/>
+  <path class="avatar-lines" d="M10 45H23M77 45H90M35 86V93M65 86V93M35 34V42M65 34V42"/>
+  <path class="avatar-visor" d="M33 44H67L61 54H39Z"/>
+  <circle class="avatar-core" cx="50" cy="63" r="5"/>
+  <text class="avatar-mark" x="50" y="99" text-anchor="middle" th:text="${identity.mark}">ID</text>
+</svg>
+</body></html>

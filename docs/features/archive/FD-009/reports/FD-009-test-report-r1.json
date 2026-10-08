@@ -1,0 +1,206 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-009",
+  "source_event": "FD-009-000008-implementation-ready",
+  "human_report": "FD-009-test-report-r1.md",
+  "data": {
+    "implementation_event": "FD-009-000008-implementation-ready",
+    "tested_fd_revision": 8,
+    "tested_fd_digest": "60a1e95a3683465fc204f25f20ece6feae8f0c31d1f6043e14d508b9474549d5",
+    "tester_session": "fd009-tester-20261007-f817be",
+    "applicable_scenarios": 25,
+    "covered_scenarios": 0,
+    "executed_behavior_tests": 0,
+    "passed_behavior_tests": 0,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 25,
+    "requirements_coverage": "0%",
+    "branch_coverage": "not measured",
+    "raw_coverage_evidence": "not available",
+    "coverage_unavailable_reason": "Node --test runner failed to spawn a child process (EPERM) before loading any test case; no executable Worker dist and no branch instrumentation.",
+    "test_files": [
+      "tests/fd009/cli-contract.test.mjs"
+    ],
+    "authorization_records": [
+      "docs/features/reports/FD-009-test-authorization-r1.md"
+    ],
+    "commands": [
+      {
+        "command": "node --test tests/fd009/cli-contract.test.mjs",
+        "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\.wt\\FD-009",
+        "exit_code": 1,
+        "result": "Runner-level spawn EPERM before any case; 0 behavior assertions executed."
+      }
+    ],
+    "recommendation": "blocked",
+    "not_applicable_reason": "",
+    "residual_risk": "Two runtime paths, authorization boundaries, attempt lifecycle, evidence and compatibility remain behaviorally unverified; runner cannot spawn in this environment.",
+    "scenarios": [
+      {
+        "id": "S01",
+        "behavior": "显式选择 codex-sdk 后端并完成 Worker 注册",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S02",
+        "behavior": "显式选择 openai-agents 后端并完成 Worker 注册",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S03",
+        "behavior": "requirements、architect、planner、coder、integrator、reviewer、verifier、integration-verifier、repairer 映射到原任务类型",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S04",
+        "behavior": "verifier 执行 INTEGRATION_VERIFICATION 时使用专用 Profile",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S05",
+        "behavior": "两个后端保持各自 runtime 注册标签和默认 Worker ID",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S06",
+        "behavior": "已批准 AI policy 与选择的 runtime 匹配",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S07",
+        "behavior": "角色启动脚本拒绝缺失 runtime",
+        "status": "blocked",
+        "test_cases": [
+          "tests/fd009/cli-contract.test.mjs"
+        ]
+      },
+      {
+        "id": "S08",
+        "behavior": "角色启动脚本拒绝未知 runtime",
+        "status": "blocked",
+        "test_cases": [
+          "tests/fd009/cli-contract.test.mjs"
+        ]
+      },
+      {
+        "id": "S09",
+        "behavior": "统一入口拒绝冲突 runtime 配置且不自动回退",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S10",
+        "behavior": "Agents 缺失 OPENAI_API_KEY 时在注册或领取前拒绝",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S11",
+        "behavior": "Codex 缺失有效 launcher 时在注册或领取前拒绝",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S12",
+        "behavior": "Codex 只读角色强制只读 sandbox 并执行审批约束",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S13",
+        "behavior": "Agents 只读角色无法使用写入或 shell 工具",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S14",
+        "behavior": "Agents 可写角色工具范围及 shell 开关符合授权",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S15",
+        "behavior": "两个后端保持模型选择、预算和工具超时约束",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S16",
+        "behavior": "缺少可验证能力时拒绝运行且不伪造 resume、approval 或 usage",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S17",
+        "behavior": "成功执行生成兼容 attempt 结果与证据",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S18",
+        "behavior": "后端错误生成兼容失败类别和证据",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S19",
+        "behavior": "无效终态生成兼容失败结果",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S20",
+        "behavior": "attempt 超时触发取消、清理和兼容失败结果",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S21",
+        "behavior": "显式取消触发终止与兼容证据",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S22",
+        "behavior": "lease 丢失或终止不确定时 drain 并保留工作区",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S23",
+        "behavior": "资源终态不确定时停止领取且不误报完成",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S24",
+        "behavior": "Pull、lease、attempt 与 Control Plane 协议保持原有行为",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S25",
+        "behavior": "角色报告和代码任务 workspaceResult 符合公开契约",
+        "status": "uncovered",
+        "test_cases": []
+      }
+    ],
+    "static_exclusions": [
+      {
+        "behavior": "旧 process-typescript-with-api 包不存在",
+        "reason": "Pure repository path assertion is static evidence, not an execution scenario; prepared test was never loaded."
+      },
+      {
+        "behavior": "SPI/SDK import isolation and documentation references",
+        "reason": "Static architecture/documentation checks are owned by Worker/Reviewer, excluded from black-box behavior coverage."
+      }
+    ]
+  }
+}

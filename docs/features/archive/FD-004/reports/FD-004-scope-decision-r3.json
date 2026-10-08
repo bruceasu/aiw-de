@@ -1,0 +1,15 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "human-decision",
+  "fd_id": "FD-004",
+  "source_event": "FD-004-000003-needs-decision",
+  "human_report": "FD-004-scope-decision-r3.md",
+  "data": {
+    "decision": "stored-evidence-and-bounded-recent-history",
+    "approved_source": "user-message-20261005",
+    "stored_summary_verdict_revision_only": true,
+    "full_history_pagination": false,
+    "external_full_text_or_download": false,
+    "tests_authorized": false
+  }
+}

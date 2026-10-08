@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"><body>
+<nav class="sidebar" th:fragment="nav(active)">
+  <div class="brand"><div class="brand-mark">AIW</div><div><strong>AI Dev Manager</strong><span>Web Console · R9</span></div></div>
+  <a th:classappend="${active == 'dashboard' ? 'active' : ''}" href="/ui">Overview</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'new-run' ? 'active' : ''}" href="/ui/runs/new">New Run</a>
+  <a th:classappend="${active == 'runs' ? 'active' : ''}" href="/ui/runs">Runs</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'workspaces' ? 'active' : ''}" href="/ui/workspaces">Workspaces</a>
+  <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Fleet</a>
+  <a th:classappend="${active == 'approvals' ? 'active' : ''}" href="/ui/approvals">Approvals</a>
+  <a th:classappend="${active == 'system' ? 'active' : ''}" href="/ui/system">System</a>
+  <div class="sidebar-note"><strong th:text="${consolePrincipal}">local-console</strong><br/><span th:text="${consoleRole}">ADMIN</span><br/>Authority remains in the Control Plane.</div>
+</nav>
+<header class="topbar" th:fragment="topbar(title, subtitle)">
+  <div><h1 th:text="${title}">Title</h1><p th:text="${subtitle}">Subtitle</p></div>
+  <div class="topbar-actions">
+    <span class="pill neutral" th:text="${consoleRole}">ADMIN</span>
+    <button class="btn ghost small-btn" type="button" data-motion-toggle aria-pressed="false">Motion: on</button>
+    <form th:if="${consoleAuthEnabled}" action="/ui/logout" method="post" class="inline-form">
+      <input type="hidden" name="_csrf" th:value="${csrfToken}"/>
+      <button class="btn ghost small-btn" type="submit">Sign out</button>
+    </form>
+  </div>
+</header>
+<div th:fragment="flash" class="flash-stack">
+  <div th:if="${successMessage}" class="flash success" th:text="${successMessage}"></div>
+  <div th:if="${errorMessage}" class="flash error" th:text="${errorMessage}"></div>
+</div>
+</body></html>

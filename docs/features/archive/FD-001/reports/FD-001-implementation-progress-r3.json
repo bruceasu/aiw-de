@@ -1,0 +1,23 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-001",
+  "kind": "implementation-progress",
+  "source_event": "FD-001-000003-design-ready",
+  "human_report": "FD-001-implementation-progress-r3.md",
+  "data": {
+    "worker_session": "fd001-worker-20261004-b2aa6c85",
+    "status": "waiting-for-focused-runtime-authorization",
+    "source_changes": "Overview bounded read projection, shared dark UI, deterministic Worker SVG, protected partial polling, bilingual guides",
+    "compile_command": "$env:JAVA_HOME='C:/green/jdk-21.0.8'; & 'C:/green/apache-maven-3.9.9/bin/mvn.cmd' -o -DskipTests compile",
+    "compile_result": "BUILD SUCCESS; Java release 21; 175 sources; 7.891 seconds",
+    "baseline_tests": "4 executed; 4 passed; 0 failures; 0 errors; 0 skipped; 14.166 seconds",
+    "browser_results": "Third authorized run: 30 executed; 29 passed; 1 failed (programmatic form focus joint assertion); process exit 1",
+    "browser_evidence": "FD-001-visual-evidence/worker-browser-results.json; 18 PNG screenshots; earlier two invalid window assertion results preserved",
+    "checks_not_run": ["Firefox (user deferred)", "coverage", "formatters", "linters", "typechecks", "final-artifact builds", "external network"],
+    "work_items_with_complete_evidence": ["1.1"],
+    "work_items_with_pending_evidence": ["1.2", "1.3", "1.4", "1.5", "1.6"],
+    "pending_stages": ["runtime acceptance evidence", "Independent Tester", "PM test decision", "Independent Reviewer"],
+    "reviewer_failed_outcomes": 0,
+    "residual_risks": ["form focus joint assertion failed; not accepted", "hidden/edit pause/resume and complete role matrix not fully verified", "Firefox deferred by user", "independent Tester/Reviewer still pending", "query cost at scale unmeasured"]
+  }
+}

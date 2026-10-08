@@ -1,0 +1,65 @@
+{
+  "diagnostics": [
+    {
+      "target_selection": {
+        "strategy": "reuse unique initial blank page",
+        "candidates": [
+          {
+            "id": "35F4C515D045C965F98E1E3A6302CBCD",
+            "type": "page",
+            "url": "about:blank"
+          }
+        ]
+      }
+    },
+    {
+      "route": "/ui/login",
+      "url": "http://127.0.0.1:6621/ui/login"
+    },
+    {
+      "route": "/ui/runs/fd2-action",
+      "url": "http://127.0.0.1:6621/ui/runs/fd2-action"
+    },
+    {
+      "screenshot": {
+        "name": "role-APPROVER",
+        "width": 743,
+        "total_height": 3670,
+        "device_pixel_ratio": 1,
+        "max_segment_height": 2000,
+        "pixel_budget": 4000000,
+        "segments": [
+          {
+            "filename": "role-APPROVER.png",
+            "clip": {
+              "x": 0,
+              "y": 0,
+              "width": 743,
+              "height": 2000,
+              "scale": 1
+            },
+            "status": "saved",
+            "pixel_width": 743,
+            "pixel_height": 2000
+          },
+          {
+            "filename": "role-APPROVER-part-002.png",
+            "clip": {
+              "x": 0,
+              "y": 2000,
+              "width": 743,
+              "height": 1670,
+              "scale": 1
+            },
+            "status": "saved",
+            "pixel_width": 743,
+            "pixel_height": 1670
+          }
+        ],
+        "status": "complete"
+      }
+    }
+  ],
+  "external_requests": [],
+  "runtime_errors": []
+}

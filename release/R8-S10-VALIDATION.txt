@@ -1,0 +1,47 @@
+R8-S10 RUN CONCURRENCY BUDGET / ADMISSION CONTROL
+=================================================
+
+Accepted input baseline
+-----------------------
+R8-S9 Scheduling Policy / Fairness / Priority: user-confirmed mvn clean verify PASS.
+Java baseline: 21.
+Canonical environment prefix: AIW_.
+
+Scope
+-----
+- per-Autonomous-Run maxParallelism (0 = unlimited);
+- configurable default via AIW_RUN_DEFAULT_MAX_PARALLELISM;
+- optional per-requirement intake override;
+- atomic database-backed active_slots semaphore;
+- slot release on complete/fail/lease recovery/pause/cancel;
+- Run/Fleet accounting diagnostics;
+- Fleet admissionBlockedReady classification;
+- Worker Pull preserved; no push scheduler.
+
+Persistence
+-----------
+Core business tables: 7 (unchanged)
+New tables: 0
+Migration: V11
+New autonomous_run columns:
+- max_parallelism
+- active_slots
+
+Generation-environment checks
+-----------------------------
+- all main Java source structural javac --release 21 with minimal framework stubs: PASS
+- R8S10RunConcurrencyBudgetIT structural javac --release 21: PASS
+- SQLite V1 -> V11 migration smoke: PASS
+- SQLite atomic reserve/reject/release semaphore smoke: PASS
+- R8-S9 -> R8-S10 upgrade backfill with persisted RUNNING task: PASS (active_slots=1)
+- core business table count: 7
+- runtime/config/docs/workers legacy environment prefix scan: PASS (0)
+- Maven binary is unavailable in the generation environment.
+
+Authoritative acceptance
+------------------------
+Run from a fresh/extracted source tree with JDK 21:
+
+    mvn clean verify
+
+Expected Failsafe integration-test methods: 26.

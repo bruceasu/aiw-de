@@ -1,0 +1,40 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000012-implementation-ready",
+  "human_report": "FD-002-test-authorization-r12-v2.md",
+  "data": {
+    "decision": "approved",
+    "basis": "human-approved",
+    "implementation_event": "FD-002-000012-implementation-ready",
+    "fd_revision": 12,
+    "fd_digest": "8a272107c44241a585978e51becdf1d769f5d17736f122b276fea088bb6178b9",
+    "tester_session": "fd002-tester-20261005-15d090a2",
+    "command": "C:/green/python312/python.exe tests/fd002/runtime.py",
+    "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+    "scope": "Same104 inventory/96 planned assertions/four roles/four Chromium widths and complete bounded vertical screenshot segments; related environment correction only",
+    "expected_duration": "4-8 minutes including complete long-page segments; depends on local memory/capture cost",
+    "side_effects": "Owned loopback temporary application/Chromium/SQLite/profile/PID and unique evidence-r12-* only; no download/external service/production write/release artifact; cleanup restricted to owned PIDs and validated direct TEMP paths",
+    "risk_review": "Scoped actual diff/SHA256 inspected: one Chrome disable-gpu addition absent from executed v1 snapshot, reuse unique initial blank page without new-tab fallback, CDP operation labels, and v2 authorization pointer only. Business assertions, roles, fixture, inventory, screenshot matrix and all original timeouts unchanged. GPU exit34 is correlated evidence, not confirmed sole cause; native commit/resource risk and production GPU/performance limits remain.",
+    "human_approval": "approved:conversation:call_91WOuZ4AVFLiYni2IuZLDKaE",
+    "planner_identity": "fd002-planner-20261005-96860f94",
+    "decision_time": "2026-10-04T23:40:26+00:00",
+    "initial_run_budget": 0,
+    "corrected_retry_budget": 1,
+    "previous_authorization": "docs/features/reports/FD-002-test-authorization-r12-v1.md",
+    "consumed_initial_run": "tests/fd002/evidence-r12-20261005-083112-13176",
+    "current_report": "docs/features/reports/FD-002-test-report-r12-attempt1.md",
+    "tester_proposal": "docs/features/reports/FD-002-test-proposal-r12-v2.md",
+    "current_requirements_coverage": "2.88%",
+    "branch_coverage": "not measured",
+    "planned_requirements_coverage": "92.31%: planned upper bound only",
+    "firefox_verification": "human-deferred:call_GbKQIKiYeysoTKpcQOL96T3G",
+    "script_sha256": {
+      "tests/fd002/runtime.py": "77a08ccccab06c955d9d84a271d49ab2fe73e2591a4121bcab2dd4688286530e",
+      "tests/fd002/browser.mjs": "ab434e6e9388531f0e6af1b92f048124cc8af0ced6a534f8e7eabcb6cb88a89b",
+      "tests/fd002/fixture.py": "f054fedc66c2cd095e8582377a12afca9e6df8477f4188ddb86b88494ecc68b2",
+      "tests/fd002/scenarios.json": "b4284ae444e58abb1768d7bfbf6196b0bd29d85a4c91a5d8f5e7d863e30db954"
+    }
+  }
+}

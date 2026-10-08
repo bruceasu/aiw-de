@@ -1,0 +1,32 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000006-implementation-ready",
+  "human_report": "FD-002-test-authorization-r6-v3.md",
+  "data": {
+    "decision": "approved",
+    "basis": "human-approved",
+    "implementation_event": "FD-002-000006-implementation-ready",
+    "fd_revision": 6,
+    "fd_digest": "7869eb2108ad9ac8811e65ea339ecde7d6c08d7394add7230ab85a2e5a178c8a",
+    "tester_session": "fd002-tester-20261005-15d090a2",
+    "command": "C:/green/python312/python.exe tests/fd002/runtime.py",
+    "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+    "scope": "Same104 scenario inventory/96 planned assertions, four roles/four widths; request one additional run only after content-heading locator fix; no new parameters or modes",
+    "expected_duration": "3–5 minutes normally; existing bounded startup/browser/cleanup limits",
+    "side_effects": "Only owned loopback temporary applications, SQLite, Chrome profile/PID; unique tests/fd002/evidence-r6 directory; no downloads, external services, production writes or release artifacts",
+    "risk_review": "Actual browser/runtime diff inspected: h1 Run identity excluded from content-section matching; assertions unchanged; prior memory cap and closing preserved. Initial and corrected retry already used; repository rules require new human budget despite focused low-risk code.",
+    "human_approval": "approved:conversation:call_f5f0M7Pjmeh3oz6wSaJcGAno",
+    "planner_identity": "fd002-planner-20261005-96860f94",
+    "decision_time": "2026-10-04T22:36:24+00:00",
+    "initial_run_budget": 0,
+    "corrected_retry_budget": 0,
+    "additional_run_budget": 1,
+    "prior_attempt_evidence": "tests/fd002/evidence-r6-20261005-072852-34372",
+    "current_requirements_coverage": "36/104 (34.62%)",
+    "planned_requirements_coverage": "96/104 (92.31%); planned upper bound only",
+    "branch_coverage": "unavailable",
+    "firefox_verification": "human-deferred:call_GbKQIKiYeysoTKpcQOL96T3G"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000033-implementation-ready",
+  "human_report": "FD-005-test-authorization-r33.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-005-000033-implementation-ready",
+    "fd_revision": 33,
+    "fd_digest": "b221e8017434890b39232c406446065ef4e24c777f51697c135484d56895b005",
+    "tester_session": "fd005-tester-20261005-r33-7e49c2",
+    "command": "node tests/fd005/r33/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r33.json",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev",
+    "scope": "仅 API Worker 公开组合路径；复测 API-16 生产入口注册前角色拒绝和 API-33 manifest/报告/模型兼容",
+    "expected_duration": "少于 45 秒；测试子进程 45 秒截止，生产入口子进程各 5 秒截止",
+    "side_effects": "OS 临时目录 fd005-r33-* 合成工作区及 tests/fd005/evidence-r33/ 下两个 wx 原始证据文件，临时路径核验后删除",
+    "risk_review": "静态检查五份文件与摘要；清除真实 token，限定合成 fetch 并禁用 net/tls/dns；生产入口错误只保存允许名单类别，无真实服务或越界写入",
+    "human_approval": "not required",
+    "planner_identity": "host-planner-fd005-20261005",
+    "decision_time": "2026-10-05T14:29:51Z",
+    "invoked_files_sha256": {
+      "tests/fd005/r33/entry-guard.mjs": "c9d6792cdedcec2936bf0cb12ef4b6707149abb29da9691757720635b7feaacc",
+      "tests/fd005/r33/register-loader.mjs": "8b91e55cfbd7e83b1f2d180521307fee38ffcfd600df061029228ff3ebf9fdc4",
+      "tests/fd005/r33/run-offline.mjs": "119aad743d0be9a26e0b054651ea024c5d4da65731089886b4ad87bd45796afc",
+      "tests/fd005/r33/typescript-loader.mjs": "4fc46aa93fa3c0b0977efc6b42f2814eb475d484e2a34ec4cce11b7e739bd712",
+      "tests/fd005/r33/worker.test.mjs": "ef086824791bcf1ea64983f6307cc078978f97a65954052cdb7ea5aa28648c65"
+    }
+  }
+}

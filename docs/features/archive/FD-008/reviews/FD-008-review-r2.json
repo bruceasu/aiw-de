@@ -1,0 +1,37 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-008",
+  "source_event": "FD-008-000013-review-requested",
+  "human_report": "FD-008-review-r2.md",
+  "data": {
+    "reviewer_session": "fd008-reviewer-r2-20261007-1a7c43",
+    "fd_revision": 13,
+    "fd_digest": "9e1026cd3a149519b29a221d93bfbd4ce7d13b3abb231bf46dc1e1f12cf5c27c",
+    "diff_base": "986937483b4942d59eb407635d4c6ff7ab3d61e7",
+    "reviewed_commit": "7890b65dd1f3ba3712a77a25ec88c013a3f6dbb9",
+    "focused_fix_commit": "cc513c98a95c375a7942af15a51607a0cc9a0998",
+    "decision": "verification-passed",
+    "findings": [],
+    "resolved_prior_findings": [
+      {"id": "F-01", "status": "resolved_by_static_review", "evidence": "ACK compares captured source_instruction_revision, while heartbeat changes only task version; changed instruction leads to CONFLICT without replacement.", "paths": ["src/main/java/me/asu/aidev/work/application/TaskWorkspaceReplacementService.java", "src/main/java/me/asu/aidev/work/jdbc/JdbcWorkTaskRepository.java"]},
+      {"id": "F-02", "status": "resolved_by_static_review", "evidence": "Replacement audit persists ACK time and Run template distinguishes awaiting, acknowledged, absent ACK, and no ACK required.", "paths": ["src/main/resources/db/migration/V20__task_workspace_replacement.sql", "src/main/java/me/asu/aidev/work/application/TaskWorkspaceReplacementService.java", "src/main/resources/templates/ui/run-detail.html"]}
+    ],
+    "test_evidence": {
+      "applicable_scenarios": 38,
+      "covered_scenarios": 0,
+      "executed_behavior_tests": 0,
+      "passed_behavior_tests": 0,
+      "failed_behavior_tests": 0,
+      "unrun_behavior_tests": 38,
+      "requirements_coverage": "0%",
+      "branch_coverage": "not measured",
+      "raw_coverage_evidence": "unavailable; no behavior tests or coverage commands ran",
+      "pm_exception": "PM accepted the explicit user test waiver for this review; no behavior requirement was waived."
+    },
+    "migration_review": {"sqlite": "static SQL review only; not run; unverified", "postgresql": "static SQL review only; not run; unverified"},
+    "commands_run": ["Get-Content", "rg", "git log -6 --oneline", "git status --short", "git show cc513c9 -- <fix paths>", "git diff --stat c7f95f9..HEAD", "git rev-parse HEAD", "git rev-parse master", "aiw fd claim FD-008 FD-008-000013-review-requested --session fd008-reviewer-r2-20261007-1a7c43"],
+    "commands_skipped": ["tests", "compile/build", "SQLite migration", "PostgreSQL migration", "coverage", "application runtime", "formatter", "network"],
+    "residual_risk": "38 behavior scenarios have no runtime evidence; Java compilation did not complete; ACK races, UI rendering, Worker cleanup, lease fencing and SQLite/PostgreSQL migration remain unverified."
+  }
+}

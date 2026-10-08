@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Run Mission · AI Dev Manager</title><link rel="stylesheet" href="/ui/console.css">
+</head>
+<body>
+<div class="app mission-page" data-auto-refresh="5" data-refresh-mode="partial" th:attr="data-console-role=${consoleRole}">
+  <nav th:replace="~{ui/fragments :: nav('runs')}"></nav>
+  <main class="main">
+    <header th:replace="~{ui/fragments :: topbar('Run Mission','Autonomous run authority, execution and audit')}"></header>
+    <div class="content">
+      <div th:replace="~{ui/fragments :: flash}"></div>
+      <div class="mission-heading">
+        <div><span class="eyebrow">MISSION / RUN</span><h2 class="mono" th:text="${run.runId}"></h2><p class="muted">One Run, its actual tasks and recorded history.</p></div>
+        <a class="btn ghost" href="/ui/runs">All Runs</a>
+      </div>
+      <div class="snapshot-bar">
+        <span>Snapshot <time data-snapshot-time th:text="${mission.snapshotAt}"></time></span>
+        <button class="btn ghost small-btn" type="button" data-refresh-now>Refresh facts</button>
+        <span class="refresh" data-refresh-label>Refresh in 5s</span>
+      </div>
+
+      <section id="mission-context" data-refresh-region>
+        <div class="card mission-requirement">
+          <div class="section-title"><h2>Original requirement</h2><span class="pill neutral">SAVED CONTEXT</span></div>
+          <div class="small muted mono" th:text="${mission.requirement.taskId}"></div>
+          <details th:if="${mission.requirement.available}" data-detail-key="original-requirement" open>
+            <summary>Read full requirement</summary><p class="mission-fulltext" th:text="${mission.requirement.instruction}"></p>
+          </details>
+          <p th:unless="${mission.requirement.available}" class="empty compact-empty">Requirement unavailable: associated task is missing or belongs to a different Run.</p>
+        </div>
+        <div class="grid cards section">
+          <div class="card"><div class="metric-label">Phase</div><div class="metric compact-metric" th:text="${run.phase}"></div><p class="small muted">Recorded task progress; no ETA estimate.</p></div>
+          <div class="card"><div class="metric-label">Effective status</div><div class="metric compact-metric" th:text="${run.effectiveStatus}"></div><dl class="mission-status"><dt>Lifecycle</dt><dd th:text="${run.lifecycleStatus}"></dd><dt>Control</dt><dd th:text="${run.controlState}"></dd></dl></div>
+          <div class="card"><div class="metric-label">Completed / current tasks</div><div class="metric" th:text="${run.tasks.completed + ' / ' + run.tasks.total}"></div><div class="metric-detail" th:text="${run.tasks.running + ' running · ' + run.tasks.ready + ' ready · ' + run.tasks.blocked + ' blocked'}"></div><div class="metric-detail" th:text="${run.tasks.failed + ' failed · ' + run.tasks.cancelled + ' cancelled'}"></div></div>
+          <div class="card"><div class="metric-label">Active / allowed slots</div><div class="metric" th:text="${run.scheduling.activeSlots + ' / ' + (run.scheduling.maxParallelism == 0 ? '∞' : run.scheduling.maxParallelism)}"></div><div class="metric-detail" th:text="${'Peak ' + run.execution.peakParallelism + ' · retries ' + run.execution.retries}"></div><div th:if="${run.scheduling.overcommittedSlots > 0}" class="callout warn-callout" th:text="${'Draining: ' + run.scheduling.overcommittedSlots + ' slots over limit. Existing leases continue.'}"></div></div>
+        </div>
+        <div class="grid two section" th:class="${canApprove ? 'section' : 'grid two section'}">
+          <div class="card"><h2>Run Authority</h2><dl class="kv">
+            <dt>Started</dt><dd th:text="${run.startedAt}"></dd><dt>Updated</dt><dd th:text="${run.statusUpdatedAt}"></dd>
+            <dt>Completed</dt><dd th:text="${run.completedAt == null ? 'Not completed' : run.completedAt}"></dd>
+            <dt>Elapsed</dt><dd th:text="${run.elapsedMillis + ' ms'}"></dd>
+            <dt>Failures / Recoveries</dt><dd th:text="${run.failureCount + ' / ' + run.recoveryCount}"></dd>
+            <dt>Pause / Resume</dt><dd th:text="${run.pauseCount + ' / ' + run.resumeCount}"></dd>
+            <dt>Slot accounting delta</dt><dd th:text="${run.scheduling.accountingDelta}"></dd>
+          </dl></div>
+          <div class="card" th:if="${!canApprove}"><h2>Approval</h2>
+            <div th:if="${run.approval == null}" class="empty compact-empty">No approval request associated with this run.</div>
+            <dl class="kv" th:unless="${run.approval == null}">
+              <dt>Request</dt><dd class="mono" th:text="${run.approval.requestId}"></dd><dt>Status</dt><dd><span class="badge" th:attr="data-status=${run.approval.status}" th:text="${run.approval.status}"></span></dd>
+              <dt>Requested by</dt><dd th:text="${run.approval.requestedBy}"></dd><dt>Decided by</dt><dd th:text="${run.approval.decidedBy == null ? 'Not recorded' : run.approval.decidedBy}"></dd>
+              <dt>Requested</dt><dd th:text="${run.approval.requestedAt}"></dd><dt>Decided</dt><dd th:text="${run.approval.decidedAt == null ? 'Not decided' : run.approval.decidedAt}"></dd>
+            </dl>
+            <th:block th:if="${approvalEvidence != null}"><div th:replace="~{ui/approval-evidence :: card(${approvalEvidence})}"></div></th:block>
+            <p th:if="${run.approval != null and approvalEvidence == null}" class="callout bad-callout">Saved approval evidence is unavailable for this Run.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section mission-actions" th:if="${canOperate or canApprove}">
+        <div class="section-title"><h2>Actions</h2><a th:href="@{/ui/runs/{id}(id=${run.runId})}">Reload action availability</a></div>
+        <p class="scope-note">Action availability is from page load. Refreshed facts may be newer; every submission checks current permissions and Run state.</p>
+        <div class="grid two" th:if="${canOperate}">
+          <div class="card"><h2>Operator Control</h2><div class="control-grid">
+            <form th:if="${run.lifecycleStatus == 'RUNNING' and run.controlState == 'ACTIVE'}" th:action="@{/ui/runs/{id}/pause(id=${run.runId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><label>Pause reason<input name="reason" class="input" placeholder="Optional"></label><p class="help">Pause revokes active leases and blocks new claims.</p><button class="btn warn-btn" type="submit">Pause</button></form>
+            <form th:if="${run.lifecycleStatus == 'RUNNING' and run.controlState == 'PAUSED'}" th:action="@{/ui/runs/{id}/resume(id=${run.runId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><label>Resume reason<input name="reason" class="input" placeholder="Optional"></label><button class="btn primary" type="submit">Resume</button></form>
+            <form th:if="${run.lifecycleStatus == 'FAILED' and run.controlState == 'ACTIVE'}" th:action="@{/ui/runs/{id}/recover(id=${run.runId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><p class="help">Manual recovery requeues this Run's failed tasks.</p><button class="btn primary" data-confirm="Requeue all failed tasks in this run?" type="submit">Recover Failed Run</button></form>
+            <form th:if="${!run.terminal and run.controlState != 'CANCELLED'}" th:action="@{/ui/runs/{id}/cancel(id=${run.runId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><label>Cancellation reason<input name="reason" class="input" required placeholder="Required"></label><p class="help">Cancellation is irreversible.</p><button class="btn danger" data-confirm="Cancel this run? Cancellation is irreversible." type="submit">Cancel Run</button></form>
+          </div></div>
+          <div class="card"><h2>Run Scheduling</h2><p class="muted small">Shrinking below active slots pauses new claims until natural drain; existing leases continue.</p>
+            <form th:if="${run.controlState != 'CANCELLED' and (run.lifecycleStatus == 'RUNNING' or run.lifecycleStatus == 'FAILED')}" th:action="@{/ui/runs/{id}/scheduling(id=${run.runId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}">
+              <div class="field"><label for="mission-parallelism">Max Parallelism</label><input id="mission-parallelism" type="number" name="maxParallelism" min="0" max="1024" th:value="${run.scheduling.maxParallelism}" required><div class="help">0 = unlimited</div></div>
+              <div class="field"><label for="mission-budget-reason">Reason</label><input id="mission-budget-reason" name="reason" placeholder="Why are you changing this budget?"></div><button class="btn primary" type="submit">Update Run Limit</button>
+            </form>
+          </div>
+        </div>
+        <div id="mission-approval-actions" data-refresh-region th:if="${canApprove}"><div class="card top-gap">
+          <h2>Approval actions</h2>
+          <div th:if="${run.approval == null}" class="empty compact-empty">No approval request associated with this run.</div>
+          <dl class="kv" th:unless="${run.approval == null}">
+            <dt>Request</dt><dd class="mono" th:text="${run.approval.requestId}"></dd><dt>Status</dt><dd><span class="badge" th:attr="data-status=${approvalEvidence == null ? run.approval.status : approvalEvidence.status}" th:text="${approvalEvidence == null ? run.approval.status : approvalEvidence.status}"></span></dd>
+            <dt>Requested by</dt><dd th:text="${approvalEvidence == null ? run.approval.requestedBy : approvalEvidence.requestedBy}"></dd><dt>Decided by</dt><dd th:text="${approvalEvidence == null ? (run.approval.decidedBy == null ? 'Not recorded' : run.approval.decidedBy) : (approvalEvidence.decidedBy == null ? 'Not recorded' : approvalEvidence.decidedBy)}"></dd>
+            <dt>Requested</dt><dd th:text="${approvalEvidence == null ? run.approval.requestedAt : approvalEvidence.requestedAt}"></dd><dt>Decided</dt><dd th:text="${approvalEvidence == null ? (run.approval.decidedAt == null ? 'Not decided' : run.approval.decidedAt) : (approvalEvidence.decidedAt == null ? 'Not decided' : approvalEvidence.decidedAt)}"></dd>
+          </dl>
+          <th:block th:if="${approvalEvidence != null}"><div th:replace="~{ui/approval-evidence :: card(${approvalEvidence})}"></div></th:block>
+          <p th:if="${run.approval != null and approvalEvidence == null}" class="callout bad-callout">Saved approval evidence is unavailable for this Run.</p>
+          <p th:if="${run.approval != null}" class="scope-note">Approval status, evidence and forms refresh together unless you are editing or focusing this panel. Decisions are irreversible and checked against current server state.</p>
+          <form th:if="${run.approval == null and run.lifecycleStatus == 'ENGINEERING_PASSED'}" th:action="@{/ui/runs/{id}/approval(id=${run.runId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="btn primary" type="submit">Request Approval</button></form>
+          <div th:if="${approvalEvidence != null and approvalEvidence.status == 'PENDING'}" class="approval-actions">
+            <form th:action="@{/ui/approvals/{id}/approve(id=${approvalEvidence.approvalRequestId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><input type="hidden" name="runId" th:value="${run.runId}"><label>Approval note<input name="note" class="input compact-input" placeholder="Optional"></label><button class="btn success-btn" data-confirm="Approve this saved result revision? This cannot be reversed." type="submit">Approve</button></form>
+            <form th:action="@{/ui/approvals/{id}/reject(id=${approvalEvidence.approvalRequestId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><input type="hidden" name="runId" th:value="${run.runId}"><label>Rejection reason<input name="note" class="input compact-input"></label><button class="btn danger" data-confirm="Reject this saved result revision? This cannot be reversed." type="submit">Reject</button></form>
+          </div>
+          <p th:unless="${(run.approval == null and run.lifecycleStatus == 'ENGINEERING_PASSED') or (approvalEvidence != null and approvalEvidence.status == 'PENDING')}" class="small muted">No approval action available in this page-load snapshot. Reload if the saved approval evidence is unavailable.</p>
+        </div></div>
+      </section>
+
+      <div class="section-title section"><h2>Dependencies and tasks</h2><button class="btn ghost small-btn" type="button" data-graph-toggle aria-pressed="false" hidden>Hide graph</button></div>
+      <section id="mission-tasks" data-refresh-region>
+        <div class="scope-note mission-window" th:attr="data-total=${mission.taskWindow.total},data-returned=${mission.taskWindow.returned},data-truncated=${mission.taskWindow.truncated}">
+          <span th:text="${mission.taskWindow.returned + ' / ' + mission.taskWindow.total + ' tasks · latest ' + mission.taskWindow.limit + ' maximum'}"></span>
+          <strong th:if="${mission.taskWindow.truncated}"> · Truncated task window</strong>
+        </div>
+        <p class="scope-note" th:text="${mission.dependencyWindow.returned + ' / ' + mission.dependencyWindow.total + ' Run dependencies returned · ' + mission.displayedTaskDependencyCount + ' belong to displayed tasks · maximum ' + mission.dependencyWindow.limit}"></p>
+        <div th:if="${mission.graph.incomplete}" class="callout warn-callout">Partial graph: tasks or edges are outside the window, or prerequisites belong to another Run/subject. The table preserves returned IDs; missing edges are not inferred.</div>
+        <div th:if="${mission.graph.cyclic}" class="callout bad-callout">Dependency cycle or unlayerable tasks detected. This is not a valid DAG; inspect the actual prerequisite table.</div>
+        <div th:if="${#lists.isEmpty(mission.tasks)}" class="empty">No tasks associated with this Run.</div>
+        <div class="mission-graph-panel top-gap" th:unless="${#lists.isEmpty(mission.tasks)}">
+          <p class="small muted">Prerequisite → dependent. Open a node to read its full task. Scroll inside the graph; the task table is also available below.</p>
+          <div class="mission-graph-viewport" tabindex="0" aria-label="Scrollable dependency graph">
+            <svg class="mission-graph" role="img" aria-labelledby="mission-graph-title mission-graph-description" th:attr="width=${mission.graph.width},height=${mission.graph.height},viewBox=${'0 0 ' + mission.graph.width + ' ' + mission.graph.height}">
+              <title id="mission-graph-title">Actual task dependencies</title><desc id="mission-graph-description">Edges point from prerequisite to dependent. The task table contains full IDs and prerequisite relationships.</desc>
+              <defs><marker id="mission-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker></defs>
+              <path th:each="edge : ${mission.graph.edges}" class="mission-edge" th:attr="d=${edge.path},data-prerequisite=${edge.prerequisiteId},data-dependent=${edge.taskId}" marker-end="url(#mission-arrow)"><title th:text="${edge.prerequisiteId + ' → ' + edge.taskId}"></title></path>
+              <a th:each="node : ${mission.graph.nodes}" th:href="${'#' + node.anchor}" th:attr="aria-label=${node.taskType + ' ' + node.taskId + ' ' + node.state}">
+                <g class="mission-node" th:attr="transform=${'translate(' + node.x + ',' + node.y + ')'},data-status=${node.state},data-task-id=${node.taskId}">
+                  <title th:text="${node.taskId + ' · ' + node.taskType + ' · ' + node.state}"></title><rect width="242" height="80" rx="5"></rect>
+                  <text x="12" y="22" class="mission-node-type" th:text="${node.taskType}"></text><text x="12" y="43" class="mission-node-id" th:text="${node.shortId}"></text><text x="12" y="64" class="mission-node-state" th:text="${node.state}"></text>
+                </g>
+              </a>
+            </svg>
+          </div>
+        </div>
+        <div class="table-wrap top-gap" th:unless="${#lists.isEmpty(mission.tasks)}">
+          <table class="mission-table"><caption>Actual tasks and prerequisites · same task window as the graph</caption><thead><tr><th>Task / instruction</th><th>State / execution</th><th>Prerequisites</th><th>Context</th></tr></thead><tbody>
+            <tr th:each="row : ${mission.tasks}" th:with="t=${row.task}" th:id="${row.anchor}" th:attr="data-task-id=${t.taskId}">
+              <td><strong th:text="${t.taskType}"></strong><div class="mono" th:text="${t.taskId}"></div><details th:attr="data-detail-key=${row.anchor}"><summary>Current instruction, revision <span th:text="${t.instructionRevision}"></span></summary><p class="mission-fulltext" th:text="${t.instruction == null ? 'Instruction unavailable' : t.instruction}"></p></details>
+                <details><summary>Instruction revision history</summary><ol class="small"><li th:each="rev : ${t.instructionHistory}"><strong th:text="${'Revision ' + rev.revision}"></strong> · <span th:text="${rev.actor}"></span> · <time th:text="${rev.createdAt}"></time><p th:text="${rev.reason}"></p><pre class="mission-fulltext" th:text="${rev.instruction}"></pre></li></ol></details>
+                <div th:each="correctionId : ${t.correctionTaskIds}" class="small">Correction task: <span class="mono" th:text="${correctionId}"></span></div>
+                <details th:if="${canOperate and (t.state == 'BLOCKED' or t.state == 'READY' or t.state == 'CLAIMED' or t.state == 'RUNNING')}"><summary>Revise task instruction</summary><form th:action="@{/ui/runs/{runId}/tasks/{taskId}/instruction(runId=${run.runId},taskId=${t.taskId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><input type="hidden" name="expectedVersion" th:value="${t.version}"><input type="hidden" name="expectedRevision" th:value="${t.instructionRevision}"><label>Replacement instruction<textarea name="instruction" rows="5" required th:text="${t.instruction}"></textarea></label><label>Reason<input name="reason" required></label><p class="help" th:if="${t.state == 'RUNNING'}">Saving a revision requests the active Worker to stop. The task is not re-dispatched until it acknowledges.</p><button class="btn primary" type="submit">Save instruction revision</button></form></details>
+                <details th:if="${canOperate and t.state != 'COMPLETED' and !#lists.isEmpty(workspaceTargets)}" th:attr="data-detail-key=${'replace-' + t.taskId}"><summary>Replace Workspace</summary>
+                  <form th:action="@{/ui/runs/{runId}/tasks/{taskId}/workspace-replacement(runId=${run.runId},taskId=${t.taskId})}" method="post">
+                    <input type="hidden" name="_csrf" th:value="${csrfToken}"><input type="hidden" name="expectedVersion" th:value="${t.version}">
+                    <label>Registered target<select class="input" name="repositoryRef" required><option value="">Choose a Workspace repository</option><option th:each="target : ${workspaceTargets}" th:value="${target.repositoryRef}" th:text="${target.workspaceName + ' · ' + target.repoId + ' · ' + target.repositoryPath}"></option></select></label>
+                    <label>Execution mode<select class="input" name="mode"><option value="DIRECT">Direct directory</option><option value="GIT">Git commit</option></select></label>
+                    <label>Git revision<input class="input" name="revision" placeholder="Branch, tag or commit; blank uses HEAD in Git mode"></label>
+                    <label>Reason<input class="input" name="reason" required placeholder="Why must this task use another Workspace?"></label>
+                    <p class="help">The original task and attempts remain in the audit. Active Workers must acknowledge stop before a replacement task is created.</p>
+                    <button class="btn warn-btn" type="submit" data-confirm="Cancel this task and create a replacement after any active Worker confirms stop?">Request replacement</button>
+                  </form>
+                </details>
+                <details th:if="${canOperate and t.state == 'COMPLETED'}"><summary>Create linked correction task</summary><form th:action="@{/ui/runs/{runId}/tasks/{taskId}/correction(runId=${run.runId},taskId=${t.taskId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><label>Correction instruction<textarea name="instruction" rows="5" required></textarea></label><label>Reason<input name="reason" required></label><button class="btn primary" type="submit">Create correction task</button></form></details>
+              </td>
+              <td><span class="badge" th:attr="data-status=${t.state}" th:text="${t.state}"></span><div class="small" th:text="${'Current attempt number: ' + t.attemptNo}"></div>
+                <div class="small" th:text="${t.executingInstructionRevision == null ? 'No active attempt' : 'Active attempt instruction revision: ' + t.executingInstructionRevision}"></div>
+                <div class="small" th:if="${t.stopRequestedAt != null}" th:text="${t.stopAcknowledgedAt == null ? 'Stop requested; awaiting Worker acknowledgement' : 'Stop acknowledged at ' + t.stopAcknowledgedAt}"></div>
+                <a th:if="${t.currentWorkerId != null}" href="/ui/workers" class="mono" th:text="${t.currentWorkerId}"></a><div th:if="${t.currentWorkerId == null}" class="small muted">No current Worker lease</div>
+                <form th:if="${canOperate and t.state == 'RUNNING'}" th:action="@{/ui/runs/{runId}/tasks/{taskId}/stop(runId=${run.runId},taskId=${t.taskId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><label>Stop reason<input name="reason" required></label><button class="btn danger" type="submit">Request Worker stop</button></form>
+                <form th:if="${isAdmin and t.state == 'RUNNING' and t.stopRequestedAt != null and t.stopAcknowledgedAt == null}" th:action="@{/ui/runs/{runId}/tasks/{taskId}/force-requeue(runId=${run.runId},taskId=${t.taskId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><label>Reason for force re-dispatch<input name="reason" required></label><label><input type="checkbox" name="warningConfirmed" value="true" required> I understand the old Worker may still cause duplicate external side effects.</label><button class="btn danger" type="submit">ADMIN force re-dispatch</button></form>
+                <a class="small" href="#mission-attempts">Read attempt history</a><div class="small muted" th:text="${'Updated ' + t.updatedAt}"></div>
+              </td>
+              <td><div th:each="p : ${row.prerequisites}" class="mission-prerequisite"><a th:if="${p.anchor != null}" th:href="${'#' + p.anchor}" class="mono" th:text="${p.taskId}"></a><span th:if="${p.anchor == null}" class="mono" th:text="${p.taskId}"></span><span class="small muted" th:text="${p.scope}"></span></div>
+                <span th:if="${#lists.isEmpty(row.prerequisites) and !row.dependenciesIncomplete}" class="small muted">No recorded prerequisites</span><span th:if="${row.dependenciesIncomplete}" class="small muted">Dependency window truncated; this list may be incomplete.</span>
+              </td>
+              <td><div class="capabilities"><span th:each="c : ${t.requiredCapabilities}" th:text="${c}"></span></div><div class="small" th:text="${t.repositoryRef == null ? 'Repository not recorded' : t.repositoryRef}"></div><div class="mono" th:text="${t.baseRevision == null ? 'Base revision not recorded' : t.baseRevision}"></div><div class="small muted" th:text="${'Created ' + t.createdAt}"></div></td>
+            </tr>
+          </tbody></table>
+        </div>
+        <div class="card top-gap" th:unless="${#lists.isEmpty(workspaceReplacements)}">
+          <div class="section-title"><h3>Workspace replacement history</h3><span class="pill neutral">AUDIT</span></div>
+          <div class="table-wrap"><table class="mission-table"><caption>Replacement requests for this Run</caption><thead><tr><th>Source / replacement</th><th>Status</th><th>Workspace</th><th>Operator and reason</th></tr></thead><tbody>
+            <tr th:each="replacement : ${workspaceReplacements}">
+              <td><a class="mono" th:if="${taskAnchors.containsKey(replacement.sourceTaskId)}" th:href="${'#' + taskAnchors.get(replacement.sourceTaskId)}" th:text="${replacement.sourceTaskId}"></a><span class="mono" th:unless="${taskAnchors.containsKey(replacement.sourceTaskId)}" th:text="${replacement.sourceTaskId}"></span><div th:if="${replacement.replacementTaskId != null}">Replacement: <a class="mono" th:if="${taskAnchors.containsKey(replacement.replacementTaskId)}" th:href="${'#' + taskAnchors.get(replacement.replacementTaskId)}" th:text="${replacement.replacementTaskId}"></a><span class="mono" th:unless="${taskAnchors.containsKey(replacement.replacementTaskId)}" th:text="${replacement.replacementTaskId}"></span></div></td>
+              <td><span class="badge" th:attr="data-status=${replacement.status}" th:text="${replacement.status}"></span><div class="small muted" th:if="${replacement.conflictReason != null}" th:text="${replacement.conflictReason}"></div><div class="small" th:if="${replacement.status == 'REJECTED'}">Rejected before stop handling</div><div class="small" th:if="${replacement.status != 'REJECTED' and !replacement.workerStopRequired}">No active Worker lease; stop acknowledgement not required</div><div class="small" th:if="${replacement.workerStopRequired and replacement.stopAcknowledgedAt == null}" th:text="${replacement.status == 'PENDING_STOP' ? 'Awaiting Worker stop acknowledgement' : 'No Worker stop acknowledgement recorded'}"></div><div class="small" th:if="${replacement.stopAcknowledgedAt != null}" th:text="${'Worker stop acknowledged at ' + replacement.stopAcknowledgedAt}"></div></td>
+              <td><div class="mono" th:text="${replacement.oldRepositoryRef + ' → ' + replacement.newRepositoryRef}"></div><div class="small" th:text="${(replacement.oldBaseRevision == null ? 'DIRECT' : replacement.oldBaseRevision) + ' → ' + (replacement.newBaseRevision == null ? 'DIRECT' : replacement.newBaseRevision)}"></div></td>
+              <td><div th:text="${replacement.actor}"></div><p class="small" th:text="${replacement.reason}"></p><time class="small muted" th:text="${replacement.requestedAt}"></time></td>
+            </tr>
+          </tbody></table></div>
+        </div>
+      </section>
+
+      <section id="mission-attempts" class="section" data-refresh-region>
+        <div class="section-title"><h2>Execution attempts</h2><span class="small muted" th:text="${mission.attemptWindow.returned + ' / ' + mission.attemptWindow.total + ' attempts'}"></span></div>
+        <p class="scope-note">Latest 300 attempts for this Run. Historical Workers identify past execution and do not imply a current lease. Worker links open Fleet.</p>
+        <div th:if="${mission.attemptWindow.truncated}" class="callout warn-callout">Truncated attempt window; earlier execution history is not displayed.</div>
+        <div th:if="${#lists.isEmpty(mission.attempts)}" class="empty">No execution attempts recorded.</div>
+        <div th:unless="${#lists.isEmpty(mission.attempts)}" class="table-wrap"><table class="mission-table"><caption>Historical attempts, newest first</caption><thead><tr><th>Attempt / task</th><th>Worker / state</th><th>Actual times</th><th>Recorded outcome</th></tr></thead><tbody>
+          <tr th:each="a : ${mission.attempts}" th:id="${a.anchor}" th:attr="data-attempt-id=${a.attemptId},data-task-id=${a.taskId},data-attempt-no=${a.attemptNo}">
+            <td><div class="mono" th:text="${a.attemptId}"></div><div th:text="${'Attempt ' + a.attemptNo}"></div><a th:if="${a.taskAnchor != null}" th:href="${'#' + a.taskAnchor}" class="mono" th:text="${a.taskId}"></a><span th:if="${a.taskAnchor == null}" class="mono" th:text="${a.taskId}"></span><div th:if="${a.taskAnchor == null}" class="small muted">Task outside displayed window</div></td>
+            <td><a href="/ui/workers" class="mono" th:text="${a.workerId}"></a><div><span class="badge" th:attr="data-status=${a.state}" th:text="${a.state}"></span></div></td>
+            <td><dl class="mission-status"><dt>Created</dt><dd th:text="${a.createdAt}"></dd><dt>Started</dt><dd th:text="${a.startedAt == null ? 'Not recorded' : a.startedAt}"></dd><dt>Finished</dt><dd th:text="${a.finishedAt == null ? 'Not recorded' : a.finishedAt}"></dd></dl></td>
+            <td><div th:text="${'Failure category: ' + (a.failureCategory == null ? 'Not recorded' : a.failureCategory)}"></div><div th:text="${'Termination reason: ' + (a.terminationReason == null ? 'Not recorded' : a.terminationReason)}"></div><div th:if="${a.completionVerdict != null}" th:text="${'Verdict: ' + a.completionVerdict}"></div><details th:if="${a.completionSummary != null}" th:attr="data-detail-key=${a.anchor}"><summary>Completion report summary</summary><p class="mission-fulltext" th:text="${a.completionSummary}"></p></details></td>
+          </tr>
+        </tbody></table></div>
+      </section>
+
+      <section id="mission-recovery" class="section" data-refresh-region>
+        <div class="section-title"><h2>Failure and recovery</h2><span class="small muted" th:text="${mission.signalWindow.returned + ' / ' + mission.signalWindow.total + ' Run failure/recovery events'}"></span></div>
+        <div class="grid two">
+          <div class="card error-card"><h3>Latest recorded Run failure</h3>
+            <div th:if="${mission.latestFailure == null}" class="small muted"><p th:text="${run.lastFailureReason == null ? 'No Run failure recorded.' : run.lastFailureReason}"></p><p>Failure event time and association unavailable.</p></div>
+            <dl th:unless="${mission.latestFailure == null}" th:with="f=${mission.latestFailure}" class="kv"><dt>Actual time</dt><dd th:text="${f.occurredAt}"></dd><dt>Task</dt><dd><a th:if="${f.taskAnchor != null}" th:href="${'#' + f.taskAnchor}" class="mono" th:text="${f.taskId}"></a><span th:if="${f.taskAnchor == null}" class="mono" th:text="${f.taskId == null ? 'Not recorded' : f.taskId}"></span></dd><dt>Actor</dt><dd th:text="${f.actor == null ? 'Not recorded' : f.actor}"></dd><dt>Reason</dt><dd class="mission-fulltext" th:text="${f.detail == null ? 'Not recorded' : f.detail}"></dd></dl>
+          </div>
+          <div class="card"><h3>Recovery semantics</h3><p class="small">Automatic lease recovery requeues tasks after lease expiry. EXPIRED also covers operator pause/cancel; a missing termination reason does not identify which path ran.</p><p class="small">Manual recover follows an explicit Run failure and is recorded as RECOVERED with its own time and actor. It requeues failed tasks.</p><p class="small muted">Attempt state, failure category and termination reason above are saved evidence. A Run event does not record an attempt or Worker association; these are not inferred. Later attempts show subsequent execution, not an invented recovery time.</p></div>
+        </div>
+        <p th:if="${mission.signalWindow.truncated}" class="scope-note top-gap">Truncated: only the latest 20 Run failure/recovery events are shown; the latest FAILED event is read separately above.</p>
+        <div th:if="${#lists.isEmpty(mission.signals)}" class="empty top-gap">No Run failure/recovery events recorded.</div>
+        <ol th:unless="${#lists.isEmpty(mission.signals)}" class="mission-signals">
+          <li th:each="s : ${mission.signals}"><details th:attr="data-detail-key=${'signal-' + s.sequence}"><summary><strong th:text="${s.eventType}"></strong> <time class="small muted" th:text="${s.occurredAt}"></time></summary><p class="small" th:text="${'Actor: ' + (s.actor == null ? 'Not recorded' : s.actor)}"></p><a th:if="${s.taskAnchor != null}" th:href="${'#' + s.taskAnchor}" class="mono" th:text="${s.taskId}"></a><p th:if="${s.taskAnchor == null}" class="mono" th:text="${s.taskId == null ? 'Task not recorded' : s.taskId}"></p><p class="mission-fulltext" th:text="${s.detail == null ? 'Detail not recorded' : s.detail}"></p></details></li>
+        </ol>
+      </section>
+
+      <div class="section-title section"><h2>Timeline</h2><span class="small muted">Chronological · UTC</span></div>
+      <div class="mission-filters" data-timeline-controls hidden>
+        <label for="mission-category">Category<select id="mission-category" class="input"><option value="">All categories</option></select></label>
+        <label for="mission-search">Search returned entries<input id="mission-search" class="input" type="search" placeholder="Task, Worker, actor or detail"></label>
+        <button class="btn ghost small-btn" type="button" data-timeline-reset>Reset filters</button><span class="small muted" data-timeline-count aria-live="polite"></span>
+      </div>
+      <noscript><p class="scope-note">All returned entries are available below. Enable JavaScript to filter this window.</p></noscript>
+      <section id="mission-timeline" data-refresh-region>
+        <div class="scope-note mission-window" th:attr="data-total=${mission.timelineWindow.total},data-returned=${mission.timelineWindow.returned},data-truncated=${mission.timelineWindow.truncated}">
+          <span th:text="${mission.timelineWindow.returned + ' / ' + mission.timelineWindow.total + ' entries · latest 300 maximum'}"></span><strong th:if="${mission.timelineWindow.truncated}"> · Truncated: earlier entries are outside this window</strong><span th:unless="${mission.timelineWindow.truncated}"> · All currently recorded entries returned</span>
+        </div>
+        <p class="scope-note" th:if="${mission.timelineFrom != null}" th:text="${'Viewing ' + mission.timelineFrom + ' through ' + mission.timelineTo + ' · filters search this returned window only'}"></p>
+        <div th:if="${#lists.isEmpty(mission.timelineDays)}" class="empty">No timeline entries recorded.</div>
+        <div class="card mission-timeline-day" th:each="day : ${mission.timelineDays}">
+          <h3 th:text="${day.date + ' · UTC'}"></h3><div class="timeline">
+            <article class="timeline-item" data-timeline-entry th:each="event : ${day.entries}" th:with="e=${event.entry}" th:attr="data-category=${e.category}">
+              <span class="timeline-dot"></span><details th:attr="data-detail-key=${event.key}">
+                <summary><span class="timeline-title" th:text="${e.eventType}"></span> <span class="pill neutral" th:text="${e.category}"></span><time class="timeline-meta" th:text="${e.occurredAt}"></time></summary>
+                <dl class="kv top-gap">
+                  <dt>Task</dt><dd><a th:if="${event.taskAnchor != null}" th:href="${'#' + event.taskAnchor}" class="mono" th:text="${e.taskId}"></a><span th:if="${event.taskAnchor == null}" class="mono" th:text="${e.taskId == null ? 'Not recorded' : e.taskId}"></span><div th:if="${e.taskId != null and event.taskAnchor == null}" class="small muted">Task not in displayed window</div></dd>
+                  <dt>Attempt</dt><dd><a th:if="${event.attemptAnchor != null}" th:href="${'#' + event.attemptAnchor}" th:text="${e.attemptNo}"></a><span th:if="${event.attemptAnchor == null}" th:text="${e.attemptNo == null ? 'Not recorded' : e.attemptNo}"></span></dd>
+                  <dt>Worker</dt><dd><a th:if="${e.workerId != null}" href="/ui/workers" class="mono" th:text="${e.workerId}"></a><span th:if="${e.workerId == null}">Not recorded</span></dd>
+                  <dt>Actor</dt><dd th:text="${e.actor == null ? 'Not recorded' : e.actor}"></dd><dt>State</dt><dd th:text="${e.state == null ? 'Not recorded' : e.state}"></dd><dt>Task type</dt><dd th:text="${e.taskType == null ? 'Not recorded' : e.taskType}"></dd>
+                  <dt>Approval</dt><dd class="mono" th:text="${e.approvalRequestId == null ? 'Not recorded' : e.approvalRequestId}"></dd><dt>Result revision</dt><dd class="mono" th:text="${e.resultRevision == null ? 'Not recorded' : e.resultRevision}"></dd><dt>Publication ref</dt><dd class="mono" th:text="${e.publicationRef == null ? 'Not recorded' : e.publicationRef}"></dd>
+                </dl><p class="mission-fulltext" th:text="${e.detail == null ? 'Detail not recorded' : e.detail}"></p>
+              </details>
+            </article>
+          </div>
+        </div>
+        <p class="empty top-gap" data-timeline-empty hidden>No entries match the filters in this returned window.</p>
+      </section>
+      <div class="footer-note">Web Console actions remain subject to current Control Plane authority. <span data-refresh-label>Refresh in 5s</span></div>
+    </div>
+  </main>
+</div>
+<script src="/ui/mission.js"></script><script src="/ui/console.js"></script>
+</body>
+</html>

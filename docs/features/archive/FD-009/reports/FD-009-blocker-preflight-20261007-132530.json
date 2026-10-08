@@ -1,0 +1,22 @@
+{
+  "schema": "aiw.fd.blocker.v1",
+  "fd_id": "FD-009",
+  "stage": "preflight",
+  "role": "pm-worker-host",
+  "source_event": "FD-009-000006-work-requested",
+  "human_report": "FD-009-blocker-preflight-20261007-132530.md",
+  "status": "resolved",
+  "observed_at": "2026-10-07T13:25:30Z",
+  "symptom": "Parent workspace has unrelated .agents/skills deletions and git add/commit cannot create .git/index.lock: Permission denied.",
+  "cause": "Git metadata is read-only in this environment; .agents/skills paths also return Permission denied.",
+  "attempts": [
+    "Read current FD receipt and parent worktree status.",
+    "Confirmed .wt/ and .ai/ ignore rules.",
+    "Path-scoped git add and git commit failed creating .git/index.lock."
+  ],
+  "human_decision_need": "Restore Git metadata write access and resolve or authorize handling of unrelated .agents/skills changes.",
+  "next_step": "Retry Auto preflight against the current receipt before claiming Worker handoff.",
+  "reusable_improvement": "Add explicit Git metadata and protected-path preflight checks; restore blocker feedback templates.",
+  "resolved_at": "2026-10-07T13:28:28Z",
+  "resolution": "After user requested continuation, auto-reviewed Git access showed a clean parent worktree and commit 4b4ec91 containing the FD plan and blocker record. Earlier deletion and index.lock errors were confined to the restricted execution view; resume preflight."
+}

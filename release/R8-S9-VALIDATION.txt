@@ -1,0 +1,57 @@
+AI Dev Manager R8-S9 - Worker-Pull Scheduling / Fairness / Priority
+
+Accepted input baseline:
+- R8-S8 Fleet / Backlog Dashboard: user-confirmed mvn clean verify PASS.
+- Java baseline: 21.
+- Canonical environment prefix: AIW_.
+
+Scope:
+- worker pull model remains unchanged;
+- worker capability compatibility remains a hard eligibility rule;
+- READY candidates receive read-time effective priority with wait-time aging;
+- equal-effective-priority work prefers subjects/runs with fewer active leases;
+- run-level TaskClaimPolicy authority still gates paused/failed/cancelled runs;
+- claim ownership still comes only from atomic READY -> CLAIMED transition;
+- no central push scheduler, assignment queue, round-robin cursor, or scheduler table.
+
+Scheduling order:
+1. effective priority descending;
+2. active leases for (subject_type, subject_id) ascending;
+3. READY timestamp ascending;
+4. created timestamp ascending;
+5. task id ascending.
+
+Aging:
+- +1 effective-priority point per 10 minutes READY waiting;
+- maximum aging boost +100;
+- persisted task priority is never rewritten.
+
+Persistence:
+- core business tables: 7 (unchanged)
+- new tables: 0
+- new columns: 0
+- new migrations: 0
+- Flyway remains V1-V10.
+
+Generation-environment checks:
+- PullSchedulingPolicy/domain javac --release 21: PASS
+- TaskClaimService + JdbcWorkTaskRepository structural javac --release 21 with minimal Spring/JDBC stubs: PASS
+- executable scheduling-policy harness: PASS
+- SQLite V1 -> V10 plus scheduling candidate SQL smoke: PASS
+- active lease count per scheduling subject: PASS
+- runtime/config/docs environment-prefix scan outside historical release notes: 0 legacy prefixes
+- expected Failsafe integration-test methods: 24
+
+New authoritative integration test:
+- me.asu.aidev.autonomous.R8S9SchedulingPolicyIT
+  - CRITICAL beats older NORMAL work;
+  - equal priority spreads consecutive leases across two runs;
+  - sufficiently aged LOW work eventually beats recent HIGH work.
+
+Generation environment limitation:
+- Maven binary is unavailable here.
+- Authoritative acceptance gate remains:
+
+  mvn clean verify
+
+Expected Failsafe integration-test methods: 24

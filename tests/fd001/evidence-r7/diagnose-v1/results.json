@@ -1,0 +1,8 @@
+[
+  {
+    "id": "navigation-diagnostic",
+    "behavior": "Infrastructure navigation diagnostic, not product behavior",
+    "passed": true,
+    "detail": "new page reached login"
+  }
+]

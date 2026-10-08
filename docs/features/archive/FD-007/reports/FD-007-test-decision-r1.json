@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-007",
+  "source_event": "FD-007-000008-test-report-ready",
+  "human_report": "FD-007-test-decision-r1.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-007-test-report-r1.md",
+    "fd_revision": 8,
+    "fd_digest": "8ddfb45fd003977fee365f0d941b51a45076165f32f30857ff8a14a3d1d3a916",
+    "requirements_coverage": "0%",
+    "branch_coverage": "not measured",
+    "rationale": "PM 明确豁免覆盖门槛并接受未执行行为测试、编译和数据库迁移验证的风险，仅推进至独立静态 Reviewer；不是测试通过或实现行为验证。",
+    "exceptions": "明确豁免 70% 需求覆盖率门槛与未测分支覆盖；14/14 场景未运行。未执行编译（Maven 不可用且无 wrapper）、SQLite/PostgreSQL 迁移检查。",
+    "residual_risk": "授权、版本并发、旧 attempt 隔离、停止/确认、ADMIN 强制重派审计、完成任务修正、UI 权限状态、协议兼容和双数据库迁移均无行为证据；Worker 停止为协作式，外部副作用可能在强制重派后继续。需要 Reviewer 静态检查，且不应把未执行场景报告为通过。",
+    "pm_identity": "主控代理（PM override；aiw fd claim 拒绝 agent session 领取 PM handoff）",
+    "decision_time": "2026-10-07T01:20:00+09:00"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000015-changes-requested",
+  "human_report": "FD-006-implementation-r3.md",
+  "data": {
+    "summary": "修复不同 repositoryRef 指向同一物理目录时的目录模式并发 claim；统一 admission 锁并比较真实路径。",
+    "changed_paths": [
+      "src/main/java/me/asu/aidev/workspace/application/DirectWorkspaceConcurrencyBudget.java",
+      "docs/features/FD-006_WORKSPACE_GIT.md",
+      "docs/features/reports/FD-006-implementation-r3.md",
+      "docs/features/reports/FD-006-implementation-r3.json"
+    ],
+    "commands": [
+      "JAVA_HOME=D:/green/jdk-21.0.8 D:/green/apache-maven-3.9.9/bin/mvn.cmd -o -q -DskipTests compile (exit 0)"
+    ],
+    "results": [
+      "Java main-source compile passed offline",
+      "Direct claim serializes admission and compares real paths of active directory tasks",
+      "Worker did not run a concurrency behavior test; independent retest required"
+    ],
+    "residual_risk": "Claim throughput is serialized briefly; missing active paths fail closed. Real concurrent scheduling, UI/API, migrations and prior untested scenarios still lack runtime evidence."
+  }
+}

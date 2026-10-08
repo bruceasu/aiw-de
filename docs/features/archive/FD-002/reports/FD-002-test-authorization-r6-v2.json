@@ -1,0 +1,30 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000006-implementation-ready",
+  "human_report": "FD-002-test-authorization-r6-v2.md",
+  "data": {
+    "decision": "approved",
+    "basis": "human-approved",
+    "implementation_event": "FD-002-000006-implementation-ready",
+    "fd_revision": 6,
+    "fd_digest": "7869eb2108ad9ac8811e65ea339ecde7d6c08d7394add7230ab85a2e5a178c8a",
+    "tester_session": "fd002-tester-20261005-15d090a2",
+    "command": "C:/green/python312/python.exe tests/fd002/runtime.py",
+    "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+    "scope": "One corrected FD-002 run of the unchanged96 planned assertions from104 scenarios; four roles and four widths; no scope expansion",
+    "expected_duration": "3–5 minutes normally; bounded startup/role-browser deadlines and own-process cleanup",
+    "side_effects": "Only owned loopback temporary applications/SQLite/Chrome and own PID cleanup; unique evidence-r6 path; bounded test JVM heap/code cache; crash files in evidence; no download, external services, production writes or release artifacts",
+    "risk_review": "Inspected initial native malloc crash and actual runtime/fixture diff: Xms64m Xmx512m ReservedCodeCacheSize96m, role-scoped ErrorFile/ReplayDataFile; closing for migration/seed/mutate connections with transaction semantics preserved; sequential retries; initial24/104 evidence and unavailable coverage retained",
+    "human_approval": "approved:conversation:20261005-auto-test-review-FD001-FD002",
+    "planner_identity": "fd002-planner-20261005-96860f94",
+    "decision_time": "2026-10-04T22:28:10+00:00",
+    "initial_run_budget": 0,
+    "corrected_retry_budget": 1,
+    "prior_attempt_evidence": "tests/fd002/evidence-r6-20261005-072411-32980",
+    "planned_requirements_coverage": "96/104 (92.31%); planned upper bound only",
+    "branch_coverage": "unavailable",
+    "firefox_verification": "pending-human-deferral-decision"
+  }
+}

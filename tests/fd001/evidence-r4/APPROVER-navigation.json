@@ -1,0 +1,11 @@
+[
+  {
+    "requested": "http://127.0.0.1:7180/ui/login",
+    "result": {
+      "frameId": "82FBC3C39404A8551F36C466A6A052AE",
+      "loaderId": "F658FAE2EE3057F1A80725E71CACD2D3",
+      "errorText": "net::ERR_ABORTED",
+      "isDownload": false
+    }
+  }
+]

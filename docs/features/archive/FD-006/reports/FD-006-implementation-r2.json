@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000011-test-rejected",
+  "human_report": "FD-006-implementation-r2.md",
+  "data": {
+    "summary": "修复独立 DIRECT Workspace 用例暴露的 EvidenceRecorder 字段白名单缺口；保留上一轮实施内容，待新版本独立复测。",
+    "changed_paths": [
+      "workers/runtime-core/evidence.mjs",
+      "docs/features/reports/FD-006-implementation-r2.md",
+      "docs/features/reports/FD-006-implementation-r2.json"
+    ],
+    "commands": [
+      "node --check workers/runtime-core/evidence.mjs (exit 0)"
+    ],
+    "results": [
+      "repositoryRef is now an allowed evidence metadata field",
+      "Java code unchanged after the prior offline compile-only pass",
+      "Behavior tests not rerun by Worker; independent Tester retest required"
+    ],
+    "residual_risk": "DIRECT behavior still requires independent retest; 31 other scenarios, branch coverage, migrations, UI, Git Clone, concurrency and file protection remain unverified at runtime."
+  }
+}

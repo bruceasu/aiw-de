@@ -1,0 +1,30 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000025-test-rejected",
+  "human_report": "FD-005-implementation-r26.md",
+  "data": {
+    "summary": "r23 API-27/29 失败的静态夹具诊断：测试直接构造 ApiRuntime 使用 256 字节输出预算，低于生产至少 512 的门槛，可能触发 STRUCTURED_OUTPUT_TOO_LARGE 并留下 UNRESOLVED_TOOL_FAILURE。无生产源码或历史测试改动，待独立 Tester 用合法预算复核。",
+    "changed_paths": [
+      "docs/features/FD-005_WORKER_PI.md",
+      "docs/features/reports/FD-005-implementation-r26.md",
+      "docs/features/reports/FD-005-implementation-r26.json"
+    ],
+    "commands": [
+      "aiw fd claim FD-005 FD-005-000025-test-rejected --session fd005-worker-20261005-69fe2eb5",
+      "定向静态读取 API 工具模式、生产配置门槛、结构化输出与 ToolHost 失败路径、r23 测试和原始输出"
+    ],
+    "results": [
+      "r23 唯一命令 exit 1，9 项中新 7 通过、2 失败；本轮未重跑。",
+      "r23 工具名称/参数模式与 API 工具定义一致，但 256 的 maxOutputChars 低于生产至少 512 的校验；预算不足是待验证的静态原因判断。",
+      "本轮无生产代码改动，也未运行新的编译或测试。"
+    ],
+    "residual_risk": "API-27/29 失败根因尚未由新执行确认；API 场景仅 18/33 完整覆盖，分支未测；真实服务、平台 G2 和非 API 运行时未获本轮行为证明。",
+    "worker_session": "fd005-worker-20261005-69fe2eb5",
+    "authored_fd_revision": 26,
+    "source_fd_sha256": "7e81dc5b2fb85f9bbb2aab9c6f6aebc5d15a1eb4026c8116ec898c9c538654de",
+    "previous_tester_report": "docs/features/reports/FD-005-test-report-r23.md",
+    "previous_pm_decision": "docs/features/reports/FD-005-test-decision-r24.md"
+  }
+}

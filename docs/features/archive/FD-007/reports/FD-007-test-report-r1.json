@@ -1,0 +1,49 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-007",
+  "source_event": "FD-007-000007-implementation-ready",
+  "human_report": "FD-007-test-report-r1.md",
+  "data": {
+    "implementation_event": "FD-007-000007-implementation-ready",
+    "tested_fd_revision": 7,
+    "tested_fd_digest": "412649fb6c01bf3a875bc346ca7a377766dc7e07306a8fdaa71c9375f66329e5",
+    "tester_session": "fd007-tester-20261007-b6e91d",
+    "applicable_scenarios": 14,
+    "covered_scenarios": 0,
+    "executed_behavior_tests": 0,
+    "passed_behavior_tests": 0,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 14,
+    "requirements_coverage": "0%",
+    "branch_coverage": "not measured",
+    "raw_coverage_evidence": "not measured; no tests or coverage commands were run",
+    "coverage_unavailable_reason": "Repository execution budget is zero for tests; handoff explicitly prohibits test, build, coverage, and migration commands.",
+    "test_files": [],
+    "authorization_records": [],
+    "commands": [],
+    "recommendation": "blocked",
+    "not_applicable_reason": "All 14 listed scenarios apply to the FD acceptance criteria.",
+    "residual_risk": "No behavioral evidence for permissions, revision concurrency, stale attempt fencing, cooperative stop/acknowledgement, ADMIN forced redispatch audit, completed-task correction, UI state/role behavior, legacy protocol compatibility, or SQLite/PostgreSQL migration compatibility. External side effects may continue after an ADMIN force redispatch.",
+    "scenarios": [
+      {"id":"S01","behavior":"Initial instruction revision is recorded; later revisions preserve predecessor, actor, reason, and time.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S02","behavior":"BLOCKED and READY tasks accept a revision using the current expected version and create a new version.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S03","behavior":"A stale expected version is rejected without overwriting the current instruction.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S04","behavior":"Unauthorized actors cannot revise, stop, or redispatch; task-control actions require a reason.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S05","behavior":"Revising a CLAIMED task revokes the old lease before the revised task is claimable again.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S06","behavior":"A RUNNING task receives a stop request, remains not-stopped until acknowledgement, and is not normally redispatched before acknowledgement.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S07","behavior":"Worker stop acknowledgement is idempotent; acknowledgement allows the task to return to the eligible claim state.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S08","behavior":"A revoked lease or stale revision cannot start, heartbeat, complete, submit results, or trigger dependent work.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S09","behavior":"Before acknowledgement, only ADMIN can force redispatch after confirming the duplicate-side-effect warning and supplying a reason; the action is audited.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S10","behavior":"OPERATOR cannot force redispatch without stop acknowledgement.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S11","behavior":"Completed task instruction and result remain unchanged, and correction work links to the completed task.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S12","behavior":"Task detail exposes current revision, active attempt revision, Worker, lease, stop acknowledgement, and revision history.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S13","behavior":"Empty, active, stopped, and completed task views and role-specific controls match task state and authorization.","status":"blocked","test_cases":[],"reason":"Not executed; no behavioral evidence."},
+      {"id":"S14","behavior":"Unrevised Worker claim/complete behavior remains compatible and migrations apply on SQLite and PostgreSQL.","status":"blocked","test_cases":[],"reason":"Not executed; no protocol or migration evidence."}
+    ],
+    "static_exclusions": [
+      "Did not read implementation source; scenarios were derived from FD acceptance, public protocol/UI contracts, and implementation report statements.",
+      "Did not run tests, builds, coverage, database migrations, or network commands."
+    ]
+  }
+}

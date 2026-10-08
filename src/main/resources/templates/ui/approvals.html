@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Approvals · AI Dev Manager</title><link rel="stylesheet" href="/ui/console.css"></head>
+<body><div class="app" data-auto-refresh="8"><nav th:replace="~{ui/fragments :: nav('approvals')}"></nav><main class="main">
+  <header th:replace="~{ui/fragments :: topbar('Approvals','Saved engineering evidence and immutable decisions')}"></header>
+  <div class="content"><div th:replace="~{ui/fragments :: flash}"></div>
+    <div class="snapshot-bar"><span>Approval records from the Control Plane</span><span data-refresh-label>Refresh in 8s</span></div>
+    <section class="section"><div class="section-title"><h2>Pending decisions</h2><span class="badge" th:text="${inbox.pendingTotal + ' total'}"></span></div>
+      <p class="scope-note" th:text="${inbox.pending.size() + ' shown · latest ' + inbox.limit + ' maximum · total is counted separately'}"></p>
+      <div th:if="${#lists.isEmpty(inbox.pending)}" class="empty compact-empty">No pending approvals.</div>
+      <article th:each="a : ${inbox.pending}" class="card approval-record">
+        <div class="approval-record-heading"><div><span class="eyebrow">PENDING APPROVAL</span><h3 class="mono" th:text="${a.approvalRequestId}"></h3></div><span class="badge" data-status="PENDING">PENDING</span></div>
+        <p class="small">Run <a class="mono" th:href="@{/ui/runs/{id}(id=${a.runId})}" th:text="${a.runId}"></a> · Requested <time th:text="${a.requestedAt}"></time> by <span th:text="${a.requestedBy}"></span></p>
+        <div th:replace="~{ui/approval-evidence :: card(${a})}"></div>
+        <div th:if="${canApprove}" class="approval-decision">
+          <p class="scope-note">This decision is irreversible. The service checks the current request state when submitted. A missing evidence display does not change approval policy.</p>
+          <form th:action="@{/ui/approvals/{id}/approve(id=${a.approvalRequestId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><input type="hidden" name="runId" th:value="${a.runId}"><label>Approval note<input class="input compact-input" name="note" placeholder="Optional"></label><button class="btn success-btn" data-confirm="Approve this saved result revision? This cannot be reversed." type="submit">Approve</button></form>
+          <form th:action="@{/ui/approvals/{id}/reject(id=${a.approvalRequestId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><input type="hidden" name="runId" th:value="${a.runId}"><label>Rejection note<input class="input compact-input" name="note" placeholder="Optional"></label><button class="btn danger" data-confirm="Reject this saved result revision? This cannot be reversed." type="submit">Reject</button></form>
+        </div>
+      </article>
+    </section>
+    <section class="section"><div class="section-title"><h2>Recent decisions</h2></div>
+      <p class="scope-note" th:text="${inbox.decided.size() + ' shown · latest ' + inbox.limit + ' decisions maximum · older decisions are outside this window'}"></p>
+      <div th:if="${#lists.isEmpty(inbox.decided)}" class="empty compact-empty">No decided approvals in this window.</div>
+      <article th:each="a : ${inbox.decided}" class="card approval-record">
+        <div class="approval-record-heading"><div><span class="eyebrow">IMMUTABLE DECISION</span><h3 class="mono" th:text="${a.approvalRequestId}"></h3></div><span class="badge" th:attr="data-status=${a.status}" th:text="${a.status}"></span></div>
+        <p class="small">Run <a class="mono" th:href="@{/ui/runs/{id}(id=${a.runId})}" th:text="${a.runId}"></a> · Decided <time th:text="${a.decidedAt}"></time> by <span th:text="${a.decidedBy}"></span></p>
+        <div th:replace="~{ui/approval-evidence :: card(${a})}"></div>
+      </article>
+    </section>
+    <div class="footer-note">Only saved evidence is shown. Publication references do not fetch external files. <span data-refresh-label>Refresh in 8s</span></div>
+  </div>
+</main></div><script src="/ui/console.js"></script></body></html>

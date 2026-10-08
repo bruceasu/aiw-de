@@ -1,0 +1,98 @@
+[
+  {
+    "requested": "http://127.0.0.1:7317/ui/login",
+    "result": {
+      "frameId": "23BB5279CDD159385E66681EDBCAEEA5",
+      "loaderId": "6889A5D537135E4821ED904F67DA2C9F",
+      "isDownload": false
+    }
+  },
+  {
+    "route": "/ui/login",
+    "url": "http://127.0.0.1:7317/ui/login",
+    "ready": "complete"
+  },
+  {
+    "route": "/ui",
+    "url": "http://127.0.0.1:7317/ui",
+    "ready": "complete"
+  },
+  {
+    "requested": "http://127.0.0.1:7317/ui/workers",
+    "result": {
+      "frameId": "23BB5279CDD159385E66681EDBCAEEA5",
+      "loaderId": "89BEB617A53670EBD49003E1F1B637A0",
+      "isDownload": false
+    }
+  },
+  {
+    "route": "/ui/workers",
+    "url": "http://127.0.0.1:7317/ui/workers",
+    "ready": "complete"
+  },
+  {
+    "requested": "http://127.0.0.1:7317/ui",
+    "result": {
+      "frameId": "23BB5279CDD159385E66681EDBCAEEA5",
+      "loaderId": "3EE0EB40A2479B150BE67F5132F6E09C",
+      "isDownload": false
+    }
+  },
+  {
+    "route": "/ui",
+    "url": "http://127.0.0.1:7317/ui",
+    "ready": "complete"
+  },
+  {
+    "requested": "http://127.0.0.1:7317/ui/workers",
+    "result": {
+      "frameId": "23BB5279CDD159385E66681EDBCAEEA5",
+      "loaderId": "F2A9BF7766E04870D4EF5F4C7F4E5DC5",
+      "isDownload": false
+    }
+  },
+  {
+    "route": "/ui/workers",
+    "url": "http://127.0.0.1:7317/ui/workers",
+    "ready": "complete"
+  },
+  {
+    "requested": "http://127.0.0.1:7317/ui/system",
+    "result": {
+      "frameId": "23BB5279CDD159385E66681EDBCAEEA5",
+      "loaderId": "868D9B8019DB9BBC34A05128C0C6D5C6",
+      "isDownload": false
+    }
+  },
+  {
+    "route": "/ui/system",
+    "url": "http://127.0.0.1:7317/ui/system",
+    "ready": "complete"
+  },
+  {
+    "requested": "http://127.0.0.1:7317/ui/runs/new",
+    "result": {
+      "frameId": "23BB5279CDD159385E66681EDBCAEEA5",
+      "loaderId": "18ED9EC6EB452F149A9A57C51C48B4A9",
+      "isDownload": false
+    }
+  },
+  {
+    "route": "/ui/runs/new",
+    "url": "http://127.0.0.1:7317/ui/runs/new",
+    "ready": "complete"
+  },
+  {
+    "requested": "http://127.0.0.1:7317/ui",
+    "result": {
+      "frameId": "23BB5279CDD159385E66681EDBCAEEA5",
+      "loaderId": "44D259D98F57E922DB250ACE37EC8781",
+      "isDownload": false
+    }
+  },
+  {
+    "route": "/ui",
+    "url": "http://127.0.0.1:7317/ui",
+    "ready": "complete"
+  }
+]

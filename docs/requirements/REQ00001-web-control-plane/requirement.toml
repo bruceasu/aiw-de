@@ -1,0 +1,32 @@
+id = "REQ00001-web-control-plane"
+title = "Beautiful Web Control Plane"
+parent_id = ""
+status = "APPROVED"
+created = "2026-10-02"
+updated = "2026-10-04"
+revision = 3
+
+[approval]
+status = "APPROVED"
+by = "user"
+at = "2026-10-04T22:01:04+09:00"
+reason = "用户在当前会话确认批准REQ00001并仅将M1交接到FD；M2-M4及自动健康分级、完整历史、外部制品全文保留为后续未决范围；本次不启动UI实现。"
+source_digest = "bbbbe779d44fc42d8a814e761a6a03c8f50092e57b4ae166f9806fe79a54bd41"
+
+[promotion]
+status = "NOT_STARTED"
+task_id = ""
+
+[conversation]
+session_id = ""
+
+[terminal]
+by = ""
+at = ""
+reason = ""
+
+[artifact]
+requirement-plan = "docs/requirements/REQ00001-web-control-plane/requirement-plan.md"
+
+[digest]
+requirement-plan = "36ef3c6c4728b972ee4e58105634ada4c2ef1b35a1d5e716a43fc4da4bb62878"

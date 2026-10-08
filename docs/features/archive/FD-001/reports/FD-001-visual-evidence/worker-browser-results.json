@@ -1,0 +1,126 @@
+{
+  "checks": [
+    {
+      "name": "empty overview: zero values and real empty state",
+      "passed": true
+    },
+    {
+      "name": "active count separate from 12-card window",
+      "passed": true
+    },
+    {
+      "name": "pending exact count and 8-row window",
+      "passed": true
+    },
+    {
+      "name": "activity bounded to 20 and escaped fixture text",
+      "passed": true
+    },
+    {
+      "name": "worker window explicit; existing 100-row Fleet boundary respected",
+      "passed": true
+    },
+    {
+      "name": "105-worker fixture has a 100-card Fleet detail window",
+      "passed": true
+    },
+    {
+      "name": "compact fixture includes four Worker states on overview",
+      "passed": true
+    },
+    {
+      "name": "overview page fits 1440px",
+      "passed": true
+    },
+    {
+      "name": "overview page fits 1280px",
+      "passed": true
+    },
+    {
+      "name": "overview page fits 768px",
+      "passed": true
+    },
+    {
+      "name": "overview page fits 390px",
+      "passed": true
+    },
+    {
+      "name": "refresh preserves focused link, scroll and open details",
+      "passed": true
+    },
+    {
+      "name": "subsequent refresh retains expanded details",
+      "passed": true
+    },
+    {
+      "name": "system reduced motion removes pulse",
+      "passed": true
+    },
+    {
+      "name": "local motion toggle removes pulse",
+      "passed": true
+    },
+    {
+      "name": "failed refresh retains facts and reports failure",
+      "passed": true
+    },
+    {
+      "name": "single request and 10-second timeout",
+      "passed": true
+    },
+    {
+      "name": "unexpected HTML stops polling and retains facts",
+      "passed": true
+    },
+    {
+      "name": "last successful snapshot becomes stale after 30 seconds",
+      "passed": true
+    },
+    {
+      "name": "same worker identity on overview and Fleet",
+      "passed": true
+    },
+    {
+      "name": "compact Fleet facts and operation controls outside refresh",
+      "passed": true
+    },
+    {
+      "name": "Fleet exposes idle, executing, draining and offline facts",
+      "passed": true
+    },
+    {
+      "name": "motion preference persists across navigation",
+      "passed": true
+    },
+    {
+      "name": "Fleet fits 390px",
+      "passed": true
+    },
+    {
+      "name": "shared style page fits /ui/runs",
+      "passed": true
+    },
+    {
+      "name": "shared style page fits /ui/runs/visual-run-00",
+      "passed": true
+    },
+    {
+      "name": "shared style page fits /ui/approvals",
+      "passed": true
+    },
+    {
+      "name": "shared style page fits /ui/system",
+      "passed": true
+    },
+    {
+      "name": "shared style page fits /ui/runs/new",
+      "passed": true
+    },
+    {
+      "name": "form input remains editable with visible focus",
+      "passed": false
+    }
+  ],
+  "firefox": "not available; not run",
+  "scope": "local fixture; Chromium"
+}

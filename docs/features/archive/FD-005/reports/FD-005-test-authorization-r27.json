@@ -1,0 +1,30 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000027-implementation-ready",
+  "human_report": "FD-005-test-authorization-r27.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-005-000027-implementation-ready",
+    "fd_revision": 27,
+    "fd_digest": "dbc2bc71b3bb6d1fda4bd3fdfde2915fb68ae91a1e70baac6670f9dd31b139c7",
+    "tester_session": "fd005-tester-20261005-bdc1bff5",
+    "command": "node tests/fd005/r27/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r27.json",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev",
+    "scope": "仅 API Worker 的适配入口/真实 SDK 离线 Responses 路径；复核 r23 的 API-27/29 并新增 API-28，其他场景据实计数",
+    "expected_duration": "5–45 秒；测试子进程 45 秒截止",
+    "side_effects": "OS 临时目录 fd005-r27-* 的合成文件及 tests/fd005/evidence-r27/ 下两个 wx 原始证据文件，临时路径核对后清理",
+    "risk_review": "静态审查四份调用文件和摘要；清除 API/Worker token，合成 fetch origin 限定且禁用 net/tls/dns，无 Git、真实服务、其他 Worker 或生产目录写入",
+    "human_approval": "not required",
+    "planner_identity": "host-planner-fd005-20261005",
+    "decision_time": "2026-10-05T14:16:18.9525546Z",
+    "invoked_files_sha256": {
+      "tests/fd005/r27/run-offline.mjs": "a92209e77ef16f2468e1f845a4decbc111d95dd0b20ba27830227138fda44bbc",
+      "tests/fd005/r27/register-loader.mjs": "7971caa0b91e4d37613adda5c5a02d6ff8c913eea30c58f996605dffc9722547",
+      "tests/fd005/r27/typescript-loader.mjs": "eddb7d227199a1c8a071f53a1fd35e65f0fb6d19178a65e6bebbc07903cc91d1",
+      "tests/fd005/r27/worker.test.mjs": "11627a0a5984a31f4c06fbe76872f744d5785a86ff5347d90dbf94d86834b906"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000013-test-report-ready",
+  "human_report": "FD-002-test-decision-r13-v1.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-002-test-report-r12-attempt2.md",
+    "fd_revision": 13,
+    "fd_digest": "8f2c6ffdc2bc37b6ba9f127e31fb9990ccb5eb19397f32cb3cd8b0d83e14603c",
+    "requirements_coverage": "89.42%",
+    "branch_coverage": "not measured",
+    "rationale": "Actual96 executed/93 passed/3 failed/8 unrun, exit1. Two Category observer errors occurred before nonempty category/narrowing/refresh assertions; visible-control screenshot prevents claiming a missing product control. Width1440 capture failed after its layout assertion, with incomplete dense/long-ID screenshot matrix. Executed failures cannot be accepted or changed to passes. Read actual report, raw aggregate and Category screenshot. No historical accumulation.",
+    "exceptions": "none; no failed-test or branch-coverage exception granted by this rejection; prior independent Firefox deferral remains applicable and uncovered",
+    "residual_risk": "Category filtering/refresh sets and complete1440 screenshot matrix unverified. Eight original gaps remain in104 denominator; branch not measured; production Timeline full-read cost and GPU/commit behavior unverified. Seven raw runs/snapshots and previous failures retained. Both budgets from call_91WOuZ4AVFLiYni2IuZLDKaE consumed; any new execution requires new explicit authorization bound to a real Tester event.",
+    "pm_identity": "fd002-pm-host-20261005",
+    "decision_time": "2026-10-04T23:49:40+00:00"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-001",
+  "kind": "planner-authorization",
+  "source_event": "FD-001-000004-implementation-ready",
+  "human_report": "FD-001-test-authorization-r4-v2.md",
+  "data": {
+    "decision": "approved",
+    "implementation_event": "FD-001-000004-implementation-ready",
+    "fd_revision": 4,
+    "fd_digest": "2afb5c00dbfab6f9e7060aa8b71e08188cd4de190d3024e33271e113a4c849e5",
+    "tester_session": "fd001-tester-20261004-7303009b",
+    "command": "C:/green/python312/python.exe tests/fd001/runtime.py",
+    "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+    "scope": "One corrected infrastructure retry of the v1 focused local Chromium black-box command; same FD-001 role visibility, snapshot polling, reading/edit/reset protection, pending windows, identity/states/motion, four widths and cookie expiry; uncovered behaviors remain explicit",
+    "expected_duration": "100-150 seconds",
+    "side_effects": "Four sequential loopback JVMs with disposable SQLite databases and Chrome profiles; write tests/fd001/evidence-r4 logs/screenshots/JSON; preserve attempt1; terminate owned processes and guard temporary profile cleanup; no production data, dependency download, external service, package or deployment",
+    "basis": "human-approved",
+    "human_approval": "approved:conversation:call_FNlbt5rJg8Skp20kkHAKYv6m",
+    "risk_review": "Statically inspected v2 explicit SQLite connection close, native form submission, bounded navigation URL/readyState checks and narrowly handled context-destroyed navigation transients, saved diagnostics, late CDP response guard and cleanup-error preservation. V1 failed before any business assertion; all raw evidence is retained in attempt1. Validation runtime budget permits this one retry after relevant infrastructure changes. No further equivalent retry is authorized.",
+    "planner_identity": "fd001-planner-host-20261004",
+    "decision_time": "2026-10-04T14:05:56+00:00"
+  }
+}

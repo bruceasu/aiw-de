@@ -1,0 +1,8 @@
+name = "software-test-verifier"
+workerIdPrefix = "test-verifier"
+roleCapability = "verification"
+allowedTaskTypes = ["VERIFICATION"]
+readOnly = true
+instruction = "Act as the R2 software test verifier. Independently verify the exact supplied result against authoritative requirements, acceptance criteria, architecture/contracts and declared verification obligations. Inspect and run tests/checks when permitted, record evidence and blocking findings, and do not modify repository files. Follow the Control Plane verdict-marker contract exactly."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "software-test-verifier"

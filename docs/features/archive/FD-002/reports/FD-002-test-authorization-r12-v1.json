@@ -1,0 +1,42 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000012-implementation-ready",
+  "human_report": "FD-002-test-authorization-r12-v1.md",
+  "data": {
+    "decision": "approved",
+    "basis": "human-approved",
+    "implementation_event": "FD-002-000012-implementation-ready",
+    "fd_revision": 12,
+    "fd_digest": "8a272107c44241a585978e51becdf1d769f5d17736f122b276fea088bb6178b9",
+    "tester_session": "fd002-tester-20261005-15d090a2",
+    "command": "C:/green/python312/python.exe tests/fd002/runtime.py",
+    "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+    "scope": "Same104-scenario inventory/96 planned assertions/four roles/four Chromium widths after timeline marker and exact-ID/visibility/resource/screenshot corrections",
+    "expected_duration": "4-8 minutes including complete long-page segments; depends on local memory/capture cost",
+    "side_effects": "Owned loopback temporary application/Chromium/SQLite/profile/PID and unique evidence-r12-* only; bounded screenshot segments preserve full vertical page; no download/external service/production write/release artifact",
+    "risk_review": "Final scoped static diff and SHA256 review completed: exact all300 IDs, semantic Category and ancestor/layout visibility, before/after entry sets, full vertical bounded clips with per-segment persistence, Node flags before script, unchanged fixture/inventory/roles/timeouts, and actual event12/revision12/digest/session/pending auth binding. No runtime result for r12. Existing native commit failures remain environmental risk; changes do not establish production performance.",
+    "human_approval": "approved:conversation:call_91WOuZ4AVFLiYni2IuZLDKaE",
+    "planner_identity": "fd002-planner-20261005-96860f94",
+    "decision_time": "2026-10-04T23:30:28+00:00",
+    "tester_proposal": "docs/features/reports/FD-002-test-proposal-r12-v1.md",
+    "script_sha256": {
+      "tests/fd002/runtime.py": "6c00906093b69ee821f1ccc084551b7951bbb3e93909316a4fc38af232e38f6b",
+      "tests/fd002/browser.mjs": "224aa585ced9d8e19881fa1c57f0d3aa78875da71adb11949f44032b40fe559a",
+      "tests/fd002/fixture.py": "f054fedc66c2cd095e8582377a12afca9e6df8477f4188ddb86b88494ecc68b2",
+      "tests/fd002/scenarios.json": "b4284ae444e58abb1768d7bfbf6196b0bd29d85a4c91a5d8f5e7d863e30db954"
+    },
+    "initial_run_budget": 1,
+    "corrected_retry_budget": 1,
+    "requested_initial_run_budget": 1,
+    "requested_corrected_retry_budget": 1,
+    "current_requirements_coverage": "not measured",
+    "previous_revision": 9,
+    "previous_revision_requirements_coverage": "71.15%",
+    "previous_revision_failed_behavior_tests": 4,
+    "planned_requirements_coverage": "92.31%: planned upper bound only",
+    "branch_coverage": "not measured",
+    "firefox_verification": "human-deferred:call_GbKQIKiYeysoTKpcQOL96T3G"
+  }
+}

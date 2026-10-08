@@ -1,0 +1,27 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-001",
+  "kind": "worker-report",
+  "source_event": "FD-001-000006-test-rejected",
+  "human_report": "FD-001-implementation-recovery-r6.md",
+  "data": {
+    "worker_session": "fd001-worker-20261004-b2aa6c85",
+    "diff_base": "d33dbbd12dd8aa906633fe4b518f73d14ee283ee",
+    "implementation_commit": "7723a37",
+    "scope": "REQ00001 M1 implementation unchanged; recovery of independent browser test infrastructure",
+    "changes": [
+      "FD Verification/TODO reconciled with real blocked Tester report and rejected PM decision",
+      "Tester prepared a bounded ADMIN-only navigation diagnostic; current business browser uses explicit new page target with timeout; remains unexecuted",
+      "Historical r4 logs/results preserved; reconstructed script versions explicitly labeled rather than presented as immutable execution-time snapshots"
+    ],
+    "actual_runtime": "No additional runtime command executed in this recovery stage; previous r4 v1/v2 had zero business assertions",
+    "compile": "Not rerun: no Java implementation changes in recovery",
+    "risk": "net::ERR_ABORTED root cause unproven; 88 independent scenarios not covered; additional diagnostic plus one conditional same-scope behavior run requires explicit new budget",
+    "test_scripts": [
+      "tests/fd001/runtime.py",
+      "tests/fd001/browser.mjs",
+      "tests/fd001/diagnose.mjs"
+    ],
+    "reviewer_failed_outcomes": 0
+  }
+}

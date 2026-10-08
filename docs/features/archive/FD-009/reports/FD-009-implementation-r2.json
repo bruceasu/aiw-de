@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-009",
+  "source_event": "FD-009-000011-changes-requested",
+  "human_report": "FD-009-implementation-r2.md",
+  "data": {
+    "summary": "Repaired Work Item 1.6: both role launchers now reject a conflicting preexisting AIW_AGENT_RUNTIME before changing role or starting the Worker.",
+    "changed_paths": [
+      "workers/process-typescript/scripts/run-role.sh",
+      "workers/process-typescript/scripts/run-role.ps1",
+      "docs/features/FD-009_TYPESCRIPT_WORKER_AGENTRUNTIME_SPI.md"
+    ],
+    "commands": [
+      "git diff --check"
+    ],
+    "results": [
+      "Shell and PowerShell scripts compare a nonempty existing runtime against the selected runtime and exit 2 on mismatch before altering process role or launching Node.",
+      "Static diff whitespace check exited 0; no behavior test ran in this repair round.",
+      "Prior Tester report covered 0/25 scenarios because Node runner failed with spawn EPERM before loading tests; PM recorded an explicit coverage exception."
+    ],
+    "residual_risk": "Launcher conflict rejection and both backends' runtime behavior remain without executable evidence; type compatibility and live CLI/API integration are unverified."
+  }
+}

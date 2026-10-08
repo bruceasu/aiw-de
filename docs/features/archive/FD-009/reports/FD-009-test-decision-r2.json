@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-009",
+  "source_event": "FD-009-000013-test-report-ready",
+  "human_report": "FD-009-test-decision-r2.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-009-test-report-r2.md",
+    "fd_revision": 13,
+    "fd_digest": "da10ac9c39aecc8b3b95f6756c83494d3dec3e7c5e7bd8d2f91994793c0520cd",
+    "requirements_coverage": "7.69%",
+    "branch_coverage": "not measured",
+    "rationale": "Two authorized direct launcher calls produced the expected conflict diagnostics. The FD does not require a particular exit code; observed code 1 differs from Worker report's code 2 and remains a review item, with no assertion that Node absence was independently traced.",
+    "exceptions": "Explicit exception for requirements coverage 2/26 (7.69%) and unavailable branch coverage; prior Node runner failed with spawn EPERM and the other 24 behavioral scenarios were not executed.",
+    "residual_risk": "Exit code 2 and absence of Node process were not independently verified; both backends' registration, permissions, attempt lifecycle, lease and Control Plane compatibility lack runtime evidence.",
+    "pm_identity": "FD-009 host PM",
+    "decision_time": "2026-10-07T14:01:55+00:00"
+  }
+}

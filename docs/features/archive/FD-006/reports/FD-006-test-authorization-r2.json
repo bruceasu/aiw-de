@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000012-implementation-ready",
+  "human_report": "FD-006-test-authorization-r2.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-006-000012-implementation-ready",
+    "fd_revision": 12,
+    "fd_digest": "4bdec80bc23b463d175d189a2e6ff844f73b884e21aada26f469b7bbd78b23db",
+    "tester_session": "fd006-tester-20261007-r2-da1c0478",
+    "command": "node --test tests/fd006/direct-workspace.test.mjs",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\.wt\\FD-006",
+    "scope": "Four black-box DIRECT and GIT_WORKTREE assignment scenarios using test-owned temporary paths and local Git only.",
+    "expected_duration": "5-30 seconds",
+    "side_effects": "Creates and normally removes test-owned OS temporary directories, local Git repositories, worktrees and evidence; on failure may retain a test-owned directory; no network, service launch or repository user-file writes.",
+    "risk_review": "Inspected test path bounds, local Git arguments, cleanup and imported runtime; side effects are confined to OS temporary paths.",
+    "human_approval": "not required",
+    "planner_identity": "FD-006 Planner",
+    "decision_time": "2026-10-07T13:20:24Z"
+  }
+}

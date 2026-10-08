@@ -1,0 +1,26 @@
+{
+  "checks": [
+    {
+      "name": "empty overview: zero values and real empty state",
+      "passed": true
+    },
+    {
+      "name": "active count separate from 12-card window",
+      "passed": true
+    },
+    {
+      "name": "pending exact count and 8-row window",
+      "passed": true
+    },
+    {
+      "name": "activity bounded to 20 and escaped fixture text",
+      "passed": true
+    },
+    {
+      "name": "worker window explicit; busy and ACTIVE workers prioritized",
+      "passed": false
+    }
+  ],
+  "firefox": "not available; not run",
+  "scope": "local fixture; Chromium"
+}

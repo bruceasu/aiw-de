@@ -1,0 +1,30 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000021-test-rejected",
+  "human_report": "FD-005-implementation-r22.md",
+  "data": {
+    "summary": "PM r20 因 API 场景覆盖 15/33、分支未测而退回；15 个已执行用例全部通过，无具体生产代码失败，本轮无生产源码改动，交给下一轮独立 Tester 扩充 API 证据。",
+    "changed_paths": [
+      "docs/features/FD-005_WORKER_PI.md",
+      "docs/features/reports/FD-005-implementation-r22.md",
+      "docs/features/reports/FD-005-implementation-r22.json"
+    ],
+    "commands": [
+      "aiw fd claim FD-005 FD-005-000021-test-rejected --session fd005-worker-20261005-69fe2eb5",
+      "定向静态读取 FD-005-test-report-r19、FD-005-test-decision-r20、tests/fd005/evidence-r19/execution.json 和 API Worker 公开契约"
+    ],
+    "results": [
+      "r19 唯一授权命令 exit 0，15/15 通过；适用 API 场景覆盖 15/33=45.45%，分支未测。",
+      "PM r20 未给予覆盖例外；没有新失败断言要求生产源码修复，历史通过结果与原始证据保持不变。",
+      "本轮未运行新的编译、测试或网络命令。"
+    ],
+    "residual_risk": "18 个 API 场景未覆盖，分支未测；真实 Agents SDK/Control Plane、远端 Git、平台 G2 和非 API 运行时行为无本轮测试证据。",
+    "worker_session": "fd005-worker-20261005-69fe2eb5",
+    "authored_fd_revision": 22,
+    "source_fd_sha256": "bd4721c549fb3836badef0ef54d4be82e91b0c36d341d94cb05c1d3ddba53228",
+    "previous_tester_report": "docs/features/reports/FD-005-test-report-r19.md",
+    "previous_pm_decision": "docs/features/reports/FD-005-test-decision-r20.md"
+  }
+}

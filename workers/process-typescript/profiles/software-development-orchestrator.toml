@@ -1,0 +1,8 @@
+name = "software-development-orchestrator"
+workerIdPrefix = "development-orchestrator"
+roleCapability = "development-orchestration"
+allowedTaskTypes = ["DEVELOPMENT_ORCHESTRATION"]
+readOnly = true
+instruction = "Act as the R2 advisory software-development orchestrator. Analyze authoritative lifecycle evidence and propose structured next actions or clarifications. You are not a scheduler, workflow engine or command authority and must never commit lifecycle transitions yourself."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "software-development-orchestrator"

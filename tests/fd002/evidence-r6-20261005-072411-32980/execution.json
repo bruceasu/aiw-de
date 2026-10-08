@@ -1,0 +1,11 @@
+{
+  "tester_session": "fd002-tester-20261005-15d090a2",
+  "source_event": "FD-002-000006-implementation-ready",
+  "fd_revision": 6,
+  "fd_digest": "7869eb2108ad9ac8811e65ea339ecde7d6c08d7394add7230ab85a2e5a178c8a",
+  "command": "C:/green/python312/python.exe tests/fd002/runtime.py",
+  "cwd": "D:\\03_projects\\AI-tools\\aiw-dev",
+  "authorization": "D:\\03_projects\\AI-tools\\aiw-dev\\docs\\features\\reports\\FD-002-test-authorization-r6.json",
+  "branch_coverage": "unavailable",
+  "branch_reason": "no bytecode coverage instrumentation in this offline black-box command"
+}

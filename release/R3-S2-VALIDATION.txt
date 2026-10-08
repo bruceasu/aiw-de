@@ -1,0 +1,26 @@
+R3-S2 ACCEPTED BASELINE
+=======================
+
+Java baseline: 21
+Architecture: clean-slate R3; no R1/R2 compatibility requirement
+Domain tables: 4
+Tables: worker, work_task, work_task_dependency, execution_attempt
+Separate lease table: intentionally absent
+
+Accepted capabilities
+---------------------
+- dynamic worker registration
+- capability matching
+- pull claim
+- atomic READY -> CLAIMED ownership
+- max-concurrency accounting
+- CLAIMED -> RUNNING
+- lease heartbeat
+- lease expiry recovery
+- execution attempt history
+- dependency release on completion
+
+Final verification
+------------------
+User confirmed on 2026-09-26 that `mvn verify` passes for the R3-S2 Fix3 baseline.
+This accepted state is the input baseline for R3-S3.

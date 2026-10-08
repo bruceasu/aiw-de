@@ -1,0 +1,3 @@
+interface:
+  display_name: "Finance Release Gate"
+  short_description: "Assess implementation and operational evidence for a planned financial release."

@@ -1,0 +1,1176 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-001",
+  "source_event": "FD-001-000011-implementation-ready",
+  "human_report": "FD-001-test-r11.md",
+  "data": {
+    "implementation_event": "FD-001-000011-implementation-ready",
+    "tested_fd_revision": 11,
+    "tested_fd_digest": "bf8bbae3a950348233a32faf39393bbd4c8cd7e07aeff14464833dbd0fdb6377",
+    "tester_session": "fd001-tester-20261004-7303009b",
+    "applicable_scenarios": 91,
+    "covered_scenarios": 5,
+    "executed_behavior_tests": 4,
+    "passed_behavior_tests": 4,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 0,
+    "requirements_coverage": "5.49%",
+    "branch_coverage": "not measured",
+    "coverage_unavailable_reason": "公开UI黑盒精简修复复验，未运行Java/JS源码coverage插桩或工具；4断言通过不等于源码分支覆盖。",
+    "raw_coverage_evidence": "tests/fd001/evidence-review2/results.json、review-diagnostics.json、review-fixes.png；历史初验tests/fd001/evidence-review1/initial/完整保留。data.scenarios去重后5/91。",
+    "test_files": [
+      "tests/fd001/runtime.py",
+      "tests/fd001/review-fixes.mjs",
+      "tests/fd001/fixture_edit.py"
+    ],
+    "commands": [
+      "C:/green/python312/python.exe tests/fd001/runtime.py review-fixes",
+      "C:/green/python312/python.exe tests/fd001/runtime.py review-fixes"
+    ],
+    "authorization_records": [
+      "docs/features/reports/FD-001-test-authorization-r11-v1.md",
+      "docs/features/reports/FD-001-test-authorization-r11-v2.md"
+    ],
+    "recommendation": "pass",
+    "residual_risk": "当前只验证三项Reviewer修复，requirements5/91=5.49%、branch未测；86场景未在revision11重跑。r7历史36/36和42/88另列支持，不能冒充当前执行。初验2失败由相关验证时序/资源修正后当前4断言通过解决，前次唯一根因未被证明。Firefox延期，>5条截断及其他等待正值分支未覆盖。",
+    "scenarios": [
+      {
+        "id": "S001",
+        "acceptance": "AC06",
+        "behavior": "ADMIN角色显示",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "ADMIN-role"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S002",
+        "acceptance": "AC06",
+        "behavior": "ADMIN新建Run入口",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "ADMIN-new"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S003",
+        "acceptance": "AC06",
+        "behavior": "ADMIN Worker操作入口",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "ADMIN-worker-actions"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S004",
+        "acceptance": "AC06",
+        "behavior": "VIEWER角色显示",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "VIEWER-role"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S005",
+        "acceptance": "AC06",
+        "behavior": "VIEWER新建Run入口隐藏",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "VIEWER-new"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S006",
+        "acceptance": "AC06",
+        "behavior": "VIEWER Worker操作入口隐藏",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "VIEWER-worker-actions"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S007",
+        "acceptance": "AC06",
+        "behavior": "OPERATOR角色显示",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "OPERATOR-role"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S008",
+        "acceptance": "AC06",
+        "behavior": "OPERATOR新建Run入口",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "OPERATOR-new"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S009",
+        "acceptance": "AC06",
+        "behavior": "OPERATOR Worker操作入口",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "OPERATOR-worker-actions"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S010",
+        "acceptance": "AC06",
+        "behavior": "APPROVER角色显示",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "APPROVER-role"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S011",
+        "acceptance": "AC06",
+        "behavior": "APPROVER新建Run入口隐藏",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "APPROVER-new"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S012",
+        "acceptance": "AC06",
+        "behavior": "APPROVER Worker操作入口隐藏",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "APPROVER-worker-actions"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S013",
+        "acceptance": "AC04",
+        "behavior": "ACTIVE零租约显示Idle",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "states"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S014",
+        "acceptance": "AC04",
+        "behavior": "ACTIVE有租约显示Executing",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "states"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S015",
+        "acceptance": "AC04",
+        "behavior": "DRAINING有租约正确区分",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "states"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S016",
+        "acceptance": "AC04",
+        "behavior": "OFFLINE文字可读",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "states"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S017",
+        "acceptance": "AC04",
+        "behavior": "相同Worker跨Overview和Fleet身份稳定",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "identity"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S018",
+        "acceptance": "AC07",
+        "behavior": "Fleet 8秒局部快照更新",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "fleet-interval"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S019",
+        "acceptance": "AC02",
+        "behavior": "非终态Run总量14与12卡片截断分别显示",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "run-window"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S020",
+        "acceptance": "AC09",
+        "behavior": "110条新决定记录不淹没16条旧PENDING",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "pending-old"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S021",
+        "acceptance": "AC09",
+        "behavior": "PENDING明细8与总量16分别显示",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "pending-old"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S022",
+        "acceptance": "AC05",
+        "behavior": "缺失失败原因显示unavailable",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "failure-missing"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S023",
+        "acceptance": "AC02",
+        "behavior": "暂停状态可区分",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "paused"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S024",
+        "acceptance": "AC02",
+        "behavior": "等待分类标题可读",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "waiting-labels"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S025",
+        "acceptance": "AC05",
+        "behavior": "活动明细最多20条",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "activity-bound"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S026",
+        "acceptance": "AC05",
+        "behavior": "相同时间fixture活动顺序重复读取稳定",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "activity-stable"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S027",
+        "acceptance": "AC01",
+        "behavior": "恶意requirement文本按文本显示",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "safe-text"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S028",
+        "acceptance": "AC03",
+        "behavior": "任务计数不声明ETA或工程完成百分比",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "no-eta"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S029",
+        "acceptance": "AC07",
+        "behavior": "Overview 5秒局部快照更新",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "overview-interval"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S030",
+        "acceptance": "AC07",
+        "behavior": "Overview Run摘要展开状态保持（历史reading-protection范围）",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "reading-protection"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json",
+        "original_behavior": "展开详情保持"
+      },
+      {
+        "id": "S031",
+        "acceptance": "AC07",
+        "behavior": "阅读焦点保持",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "reading-protection"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S032",
+        "acceptance": "AC07",
+        "behavior": "页面滚动位置保持",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "reading-protection"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S033",
+        "acceptance": "AC08",
+        "behavior": "390px主要内容无页面横溢",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "width-390"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S034",
+        "acceptance": "AC08",
+        "behavior": "768px主要内容无页面横溢",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "width-768"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S035",
+        "acceptance": "AC08",
+        "behavior": "1280px主要内容无页面横溢",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "width-1280"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S036",
+        "acceptance": "AC08",
+        "behavior": "1440px主要内容无页面横溢",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "width-1440"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S037",
+        "acceptance": "AC08",
+        "behavior": "动效开关本地持久",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "motion"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S038",
+        "acceptance": "AC08",
+        "behavior": "系统减少动效独立关闭脉冲",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "reduced-motion"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S039",
+        "acceptance": "AC07",
+        "behavior": "System旧整页刷新保持编辑输入",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "edit-pause"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S040",
+        "acceptance": "AC07",
+        "behavior": "reset并结束编辑焦点后恢复刷新",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "reset-resume"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S041",
+        "acceptance": "AC08",
+        "behavior": "真实Tab键焦点outline可见",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "keyboard"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S042",
+        "acceptance": "AC07",
+        "behavior": "真实cookie失效停止刷新并保留快照",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "revision7历史通过，本revision11未重跑，不计本轮覆盖。",
+        "historical_status": "passed",
+        "historical_test_cases": [
+          "login-expiry"
+        ],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S043",
+        "acceptance": "AC01",
+        "behavior": "实际零数据空态且不注入演示数据",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S044",
+        "acceptance": "AC01",
+        "behavior": "主区域战术视觉人工检查",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S045",
+        "acceptance": "AC01",
+        "behavior": "活跃Run和关注事项详情链接可进入真实对象",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S046",
+        "acceptance": "AC02",
+        "behavior": "超过recent创建窗口仍显示旧活跃Run",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S047",
+        "acceptance": "AC02",
+        "behavior": "失败状态与审批状态分开",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S048",
+        "acceptance": "AC02",
+        "behavior": "无匹配能力条件准确总量及5条例子：正值达到/超过5条时准确总数与5条截断样例",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本轮仅0/1任务样本，不能覆盖5条样例/截断分支；0/1实际观察单列S090/S091。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json",
+        "original_behavior": "无匹配能力条件准确总量及5条例子"
+      },
+      {
+        "id": "S049",
+        "acceptance": "AC02",
+        "behavior": "容量耗尽条件准确总量及5条例子：正值达到/超过5条时准确总数与5条截断样例",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本轮仅0/1任务样本，不能覆盖5条样例/截断分支；0/1实际观察单列S090/S091。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json",
+        "original_behavior": "容量耗尽条件准确总量及5条例子"
+      },
+      {
+        "id": "S050",
+        "acceptance": "AC02",
+        "behavior": "Run admission阻塞准确总量及例子：正值达到/超过5条时准确总数与5条截断样例",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本轮仅0/1任务样本，不能覆盖5条样例/截断分支；0/1实际观察单列S090/S091。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json",
+        "original_behavior": "Run admission阻塞准确总量及例子"
+      },
+      {
+        "id": "S051",
+        "acceptance": "AC02",
+        "behavior": "Fleet admission阻塞准确总量及例子：正值达到/超过5条时准确总数与5条截断样例",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本轮仅0/1任务样本，不能覆盖5条样例/截断分支；0/1实际观察单列S090/S091。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json",
+        "original_behavior": "Fleet admission阻塞准确总量及例子"
+      },
+      {
+        "id": "S052",
+        "acceptance": "AC02",
+        "behavior": "policy阻塞准确总量及例子：正值达到/超过5条时准确总数与5条截断样例",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本轮仅0/1任务样本，不能覆盖5条样例/截断分支；0/1实际观察单列S090/S091。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json",
+        "original_behavior": "policy阻塞准确总量及例子"
+      },
+      {
+        "id": "S053",
+        "acceptance": "AC02",
+        "behavior": "同一READY任务同时Policy不准入且能力不匹配时，仅归Policy主分类，同时展示两个条件",
+        "status": "passed",
+        "test_cases": [
+          "waiting-overlap"
+        ],
+        "evidence": "tests/fd001/evidence-review2/results.json#waiting-overlap；review-diagnostics.json.groups中的Policy样例",
+        "reason": "revision11唯一修正复验真实观察通过；不推断未执行的其他分支。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json",
+        "original_behavior": "同一任务多个等待条件重叠"
+      },
+      {
+        "id": "S054",
+        "acceptance": "AC03",
+        "behavior": "已完成/当前任务数和阶段独立正确",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S055",
+        "acceptance": "AC03",
+        "behavior": "repair或新增任务改变分母仍不声明完成度",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S056",
+        "acceptance": "AC04",
+        "behavior": "任务失败不将Worker标记故障",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S057",
+        "acceptance": "AC04",
+        "behavior": "完整Worker ID/runtime/capability可读",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S058",
+        "acceptance": "AC04",
+        "behavior": "Worker大于100与首页8的范围标明",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S059",
+        "acceptance": "AC05",
+        "behavior": "Run开始/终止权威事件来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S060",
+        "acceptance": "AC05",
+        "behavior": "task创建权威事件来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S061",
+        "acceptance": "AC05",
+        "behavior": "attempt claimed/started/finished/gate权威来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S062",
+        "acceptance": "AC05",
+        "behavior": "approval requested/decided权威来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S063",
+        "acceptance": "AC05",
+        "behavior": "Run control事件权威来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S064",
+        "acceptance": "AC05",
+        "behavior": "缺失对象关联明确",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S065",
+        "acceptance": "AC05",
+        "behavior": "活动对象链接真实可进入且不冒充完整审计",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S066",
+        "acceptance": "AC06",
+        "behavior": "APPROVER/ADMIN审批入口权限矩阵",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S067",
+        "acceptance": "AC06",
+        "behavior": "VIEWER/OPERATOR审批入口隐藏",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S068",
+        "acceptance": "AC06",
+        "behavior": "服务器拒绝无权直接操作",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S069",
+        "acceptance": "AC06",
+        "behavior": "CSRF保护",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S070",
+        "acceptance": "AC06",
+        "behavior": "提交错误反馈",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S071",
+        "acceptance": "AC06",
+        "behavior": "状态竞态服务器拒绝反馈",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S072",
+        "acceptance": "AC07",
+        "behavior": "一次请求在途上限",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S073",
+        "acceptance": "AC07",
+        "behavior": "10秒请求超时保留快照",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S074",
+        "acceptance": "AC07",
+        "behavior": "失败不立即连续重试",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S075",
+        "acceptance": "AC07",
+        "behavior": "30秒陈旧反馈",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S076",
+        "acceptance": "AC07",
+        "behavior": "真实隐藏暂停并恢复可见立即更新",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S077",
+        "acceptance": "AC07",
+        "behavior": "局部页面编辑和恢复",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S078",
+        "acceptance": "AC07",
+        "behavior": "选区跨5个刷新区域，在未选metrics实际替换时保留端点/偏移/文字和中间节点",
+        "status": "passed",
+        "test_cases": [
+          "selection-multi-region"
+        ],
+        "evidence": "tests/fd001/evidence-review2/results.json#selection-multi-region；review-diagnostics.json.selection与selection-unprotected-region",
+        "reason": "revision11唯一修正复验真实观察通过；不推断未执行的其他分支。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json",
+        "original_behavior": "文本选择不被刷新破坏"
+      },
+      {
+        "id": "S079",
+        "acceptance": "AC07",
+        "behavior": "非预期HTML停止刷新",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S080",
+        "acceptance": "AC07",
+        "behavior": "真实角色变化停止刷新",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S081",
+        "acceptance": "AC07",
+        "behavior": "失败后下个周期可恢复",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S082",
+        "acceptance": "AC08",
+        "behavior": "长ID和长需求全文可访问",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S083",
+        "acceptance": "AC08",
+        "behavior": "关闭动效仍可辨识身份和状态",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S084",
+        "acceptance": "AC08",
+        "behavior": "Firefox 1440/1280兼容验证（用户明确延期）",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S085",
+        "acceptance": "AC09",
+        "behavior": "批量读取而非遍历全部Run timeline的性能边界",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S086",
+        "acceptance": "AC10",
+        "behavior": "所有既有页面共享样式不损坏操作",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S087",
+        "acceptance": "AC10",
+        "behavior": "中英文指南新鲜度/范围/阶段准确",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S088",
+        "acceptance": "AC10",
+        "behavior": "M1不将M2–M4或整需求标记完成",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "既有独立未覆盖场景，本轮仍未执行。",
+        "historical_status": "uncovered",
+        "historical_test_cases": [],
+        "historical_source": "docs/features/reports/FD-001-test-r7.json"
+      },
+      {
+        "id": "S089",
+        "acceptance": "AC07",
+        "behavior": "等待组计数0→1真实刷新、焦点在组外时保持展开和外部焦点",
+        "status": "passed",
+        "test_cases": [
+          "waiting-open-count-change"
+        ],
+        "evidence": "tests/fd001/evidence-review2/results.json#waiting-open-count-change；review-diagnostics.json.open_count_change与waiting-count",
+        "reason": "区别于S030的Run摘要，等待summary文本随计数变化的独立观察。"
+      },
+      {
+        "id": "S090",
+        "acceptance": "AC02",
+        "behavior": "No matching/Worker capacity/Fleet admission零计数均不显示任务样例",
+        "status": "passed",
+        "test_cases": [
+          "waiting-count-samples"
+        ],
+        "evidence": "tests/fd001/evidence-review2/results.json#waiting-count-samples：三组total=0/samples=[]",
+        "reason": "从原S048/S049/S051的宽泛准确性要求拆出零值分支；其5条截断分支仍未覆盖。"
+      },
+      {
+        "id": "S091",
+        "acceptance": "AC02",
+        "behavior": "Run admission与Policy各总数1、各1任务样例，与主分类一致",
+        "status": "passed",
+        "test_cases": [
+          "waiting-count-samples"
+        ],
+        "evidence": "tests/fd001/evidence-review2/results.json#waiting-count-samples：Run admission和Policy各total=1/samples.length=1",
+        "reason": "从原S050/S052拆出单样例分支；其5条截断分支仍未覆盖。"
+      }
+    ],
+    "history_baseline": {
+      "source": "docs/features/reports/FD-001-test-r7.json",
+      "fd_revision": 7,
+      "executed_behavior_tests": 36,
+      "passed_behavior_tests": 36,
+      "covered_scenarios": 42,
+      "applicable_scenarios": 88,
+      "requirements_coverage": "47.73%",
+      "role": "仅历史支持，本revision未重跑且不计当前coverage"
+    },
+    "attempts": [
+      {
+        "attempt": "r11-initial",
+        "exit_code": 1,
+        "executed_behavior_assertions": 4,
+        "passed": 2,
+        "failed": 2,
+        "runner_failures": 1,
+        "reason": "等待仅1200ms未观察到实际刷新；计数未变、未选metrics未替换，因此两断言失败且不可算通过",
+        "evidence": "tests/fd001/evidence-review1/initial"
+      },
+      {
+        "attempt": "r11-corrected",
+        "exit_code": 0,
+        "executed_behavior_assertions": 4,
+        "passed": 4,
+        "failed": 0,
+        "runner_failures": 0,
+        "reason": "仅相关脚本/测试JVM环境修正，12s有界等实际更新；全部原行为要求保留，158/165ms看到更新",
+        "evidence": "tests/fd001/evidence-review2"
+      }
+    ],
+    "counts_semantics": "计数为本次最终有效执行的4个唯一行为case；两轮合计8次断言执行，初验2fail在attempts如实留存，当前修正复验4pass/0fail，不改写旧结果。",
+    "total_assertion_executions": 8,
+    "initial_failed_behavior_assertions": 2,
+    "scenario_inventory_reconciliation": "原S053/S078对应Policy重叠与选区，直接复用；原S030明确历史Run摘要，新增S089等待summary计数变化；原S048–S052明确>=5/截断分支，0/1值拆S090/S091，因此88+3=91而非重复93。",
+    "verification_budget": "本轮初验及相关修正复验已耗尽，未运行其他矩阵/Maven/下载/额外测试。"
+  }
+}

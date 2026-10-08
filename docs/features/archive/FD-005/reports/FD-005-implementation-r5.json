@@ -1,0 +1,30 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000005-design-ready",
+  "human_report": "FD-005-implementation-r5.md",
+  "data": {
+    "summary": "十二项源码与契约已实施，compile-only 一次通过；提交独立验证，未宣称真实禁存或部署通过。",
+    "worker_session": "fd005-worker-20261004-2916aea6",
+    "fd_revision": 5,
+    "changed_paths": ["workers/runtime-core/", "workers/codex-session-launcher/", "workers/process-typescript-with-api/", "workers/process-typescript/", "workers/process-go/main.go", "workers/process-go/worker_runtime.go", "workers/process-go/process_windows.go", "workers/process-go/process_unix.go", "workers/process-go/session_policy.go", "workers/process-python/process_worker.py", "workers/process-python/worker_runtime.py", "workers/process-python/session_policy.py", "workers/WORKER_RUNTIME_CONTRACT.md", "workers/SDK_CAPABILITIES.md", "workers/WORKER_OPERATIONS.md", "workers/runtime-contract.examples.json", "docs/worker-codex-no-store-design.md", "scripts/compile-worker-runtime.mjs"],
+    "commands": [
+      {"command": "npm install --ignore-scripts --no-audit --no-fund", "cwd": "workers/process-typescript-with-api", "count": 2, "result": "success", "authority": "conversation-user: dependency install and direct OpenAI 6.x alignment"},
+      {"command": "codex exec --help; codex app-server --help", "result": "help read, no session started"},
+      {"command": "python -m pip download --no-deps --only-binary=:all: --no-cache-dir --dest <FD-005 dedicated temporary directory> openai-codex==0.157.0", "result": "success; only wheel downloaded; no install or SDK import", "authority": "conversation-user: fixed package source inspection"},
+      {"command": "node scripts/compile-worker-runtime.mjs", "cwd": ".", "exit_code": 0, "count": 1, "raw_evidence": "docs/features/reports/FD-005-compile-r5.log"},
+      {"command": "git status --short -- <FD scoped paths>", "result": "scoped dirty state inspected; no reset/staging/commit"}
+    ],
+    "results": [
+      {"check": "typescript-syntax", "status": "passed", "limitation": "in-memory transpile, no semantic type check"},
+      {"check": "javascript-syntax", "status": "passed"},
+      {"check": "python-syntax", "status": "passed", "limitation": "SDK not imported"},
+      {"check": "go-compiler", "status": "passed", "limitation": "current platform only; temporary artifacts deleted"},
+      {"check": "behavior-tests-and-coverage", "status": "not-run", "reason": "independent Tester pending authorization"},
+      {"check": "native-all-session-no-store", "status": "unverified", "behavior": "Codex refuses registration without pinned deployment evidence"},
+      {"check": "models-endpoints-plugins-release", "status": "not-run"}
+    ],
+    "residual_risk": "实际 Codex/平台/配置禁存尚未证明且默认拒绝准入；内层工具、取消终态、G1 竞争、摘要及算法行为待独立验证，未发布最终产物。"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000036-implementation-ready",
+  "human_report": "FD-005-test-authorization-r36.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-005-000036-implementation-ready",
+    "fd_revision": 36,
+    "fd_digest": "c91c8ebc64fedf695d33612b045483f5ece5e1b0c075f962f7472ad3d27518c1",
+    "tester_session": "fd005-tester-20261005-r36-a4d7c9",
+    "command": "node tests/fd005/r36/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r36.json",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev",
+    "scope": "仅 API Worker src/index.ts 入口，脱敏定位并验证 API-16 两个保留角色注册前拒绝",
+    "expected_duration": "少于 15 秒；总子进程 45 秒截止，每角色入口 5 秒截止",
+    "side_effects": "OS 临时目录 fd005-r36-* 和 tests/fd005/evidence-r36/ 下两个 wx 脱敏证据文件；临时路径核验后删除",
+    "risk_review": "静态审查五份调用文件和摘要；真实 token 移除、网络拦截、原始 stderr 不写盘，只保存允许名单错误码/类别和安全 basename；无其他 Worker、真实服务或越界写入",
+    "human_approval": "not required",
+    "planner_identity": "host-planner-fd005-20261005",
+    "decision_time": "2026-10-05T14:35:30Z",
+    "invoked_files_sha256": {
+      "tests/fd005/r36/entry-guard.mjs": "c9d6792cdedcec2936bf0cb12ef4b6707149abb29da9691757720635b7feaacc",
+      "tests/fd005/r36/register-loader.mjs": "e4a42925422b3d824984f2cbabd6565855e25278ae32923cf4165648c253f49a",
+      "tests/fd005/r36/run-offline.mjs": "a099c28d415f5cb2345cbe8aaec28f6d8f8f63dca56c4abec2c0452017eac79f",
+      "tests/fd005/r36/typescript-loader.mjs": "4fc46aa93fa3c0b0977efc6b42f2814eb475d484e2a34ec4cce11b7e739bd712",
+      "tests/fd005/r36/worker.test.mjs": "3474b30e6f492dc9d35258224d11a2b57ab854d8ae0b629c33dc3eacbe545c4c"
+    }
+  }
+}

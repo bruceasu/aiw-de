@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000016-test-report-ready",
+  "human_report": "FD-002-test-decision-r14-v1.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-002-test-report-r15-not-run.md",
+    "fd_revision": 16,
+    "fd_digest": "e747cc320b87d12abfb127c7f2260533d06f4dd0973401c5255358324e002f2f",
+    "requirements_coverage": "0.00%",
+    "branch_coverage": "not measured",
+    "rationale": "The user explicitly stopped testing because it takes too long. Revision 15 has zero executed scenarios and zero evidence for its static test harness corrections. The r12 historical 3 failures remain unresolved and cannot be accepted or accumulated as current coverage.",
+    "exceptions": "No coverage exception: user declined runtime validation. Firefox graph/refresh remain separately user-deferred; the other six original uncovered scenarios remain uncovered.",
+    "residual_risk": "All 104 scenarios are unrun in this revision. Historical timeline-category-filter, refresh-filter, and width-1440 failures remain unverified. Static label-observer, viewport screenshot, and scroll-restoration changes have no runtime evidence. Branch coverage, timeline full-read cost, Chrome/GPU/system-resource stability, and production performance remain unverified. Do not advance to independent Reviewer or Complete.",
+    "pm_identity": "fd002-pm-host-20261005",
+    "decision_time": "2026-10-05T12:38:40+00:00"
+  }
+}

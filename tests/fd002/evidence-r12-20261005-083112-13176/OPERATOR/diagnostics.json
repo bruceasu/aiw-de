@@ -1,0 +1,66 @@
+{
+  "diagnostics": [
+    {
+      "route": "/ui/login",
+      "url": "http://127.0.0.1:3449/ui/login"
+    },
+    {
+      "route": "/ui/runs/fd2-action",
+      "url": "http://127.0.0.1:3449/ui/runs/fd2-action"
+    },
+    {
+      "screenshot": {
+        "name": "role-OPERATOR",
+        "width": 743,
+        "total_height": 4343,
+        "device_pixel_ratio": 1,
+        "max_segment_height": 2000,
+        "pixel_budget": 4000000,
+        "segments": [
+          {
+            "filename": "role-OPERATOR.png",
+            "clip": {
+              "x": 0,
+              "y": 0,
+              "width": 743,
+              "height": 2000,
+              "scale": 1
+            },
+            "status": "saved",
+            "pixel_width": 743,
+            "pixel_height": 2000
+          },
+          {
+            "filename": "role-OPERATOR-part-002.png",
+            "clip": {
+              "x": 0,
+              "y": 2000,
+              "width": 743,
+              "height": 2000,
+              "scale": 1
+            },
+            "status": "saved",
+            "pixel_width": 743,
+            "pixel_height": 2000
+          },
+          {
+            "filename": "role-OPERATOR-part-003.png",
+            "clip": {
+              "x": 0,
+              "y": 4000,
+              "width": 743,
+              "height": 343,
+              "scale": 1
+            },
+            "status": "saved",
+            "pixel_width": 743,
+            "pixel_height": 343
+          }
+        ],
+        "status": "complete"
+      }
+    }
+  ],
+  "external_requests": [],
+  "runtime_errors": []
+}

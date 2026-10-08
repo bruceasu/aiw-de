@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000053-changes-requested",
+  "human_report": "FD-005-pm-override-r54.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-005-test-report-r39.md",
+    "fd_revision": 54,
+    "fd_digest": "14d3117a262cd0cde4de7380b90be37601aae89cb0c85c6183f61d86b29d92d8",
+    "requirements_coverage": "69.70% (23/33)",
+    "branch_coverage": "not measured",
+    "rationale": "PM 按用户授权直接覆盖三次 Reviewer failure 后的通常暂停门槛；r52 唯一 finding 是一处陈旧历史计数，PM 已将其标为历史快照并保留 r52 原始结果。恢复 Pending Verification 并请求新的独立复核。",
+    "exceptions": "覆盖常规三次 Reviewer failure 后暂停 Worker 的门槛；不覆盖 Reviewer 结果或测试证据事实。",
+    "residual_risk": "API-16/Acceptance 1 行为未验证；r39 exit 1 保持；需求覆盖 69.70%（23/33），分支覆盖未测量；r44/r47/r52 均为 changes-requested 历史结果；其他平台与运行时仍未由本轮验证。",
+    "pm_identity": "host-pm-fd005-20261006",
+    "decision_time": "2026-10-06T00:00:00+09:00"
+  }
+}

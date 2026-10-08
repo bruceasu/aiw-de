@@ -1,0 +1,70 @@
+{
+  "events": [
+    {
+      "method": "Network.responseReceived",
+      "url": "http://127.0.0.1:7281/ui/login",
+      "status": 200,
+      "mime_type": "text/html",
+      "content_type": "text/html;charset=UTF-8"
+    },
+    {
+      "method": "Page.frameNavigated",
+      "params": {
+        "frame": {
+          "id": "9FDC269D607569B3D843A04129C10FB4",
+          "loaderId": "3FD264F2399BC4B4C9DF45A1A93D8186",
+          "url": "http://127.0.0.1:7281/ui/login",
+          "domainAndRegistry": "",
+          "securityOrigin": "http://127.0.0.1:7281",
+          "securityOriginDetails": {
+            "isLocalhost": true
+          },
+          "mimeType": "text/html",
+          "adFrameStatus": {
+            "adFrameType": "none"
+          },
+          "secureContextType": "SecureLocalhost",
+          "crossOriginIsolatedContextType": "NotIsolated",
+          "gatedAPIFeatures": []
+        },
+        "type": "Navigation"
+      }
+    },
+    {
+      "method": "Network.responseReceived",
+      "url": "http://127.0.0.1:7281/ui/console.css",
+      "status": 200,
+      "mime_type": "text/css",
+      "content_type": "text/css"
+    },
+    {
+      "method": "Page.frameStoppedLoading",
+      "params": {
+        "frameId": "9FDC269D607569B3D843A04129C10FB4"
+      }
+    },
+    {
+      "method": "Network.responseReceived",
+      "url": "http://127.0.0.1:7281/favicon.ico",
+      "status": 404,
+      "mime_type": "application/json",
+      "content_type": "application/json"
+    }
+  ],
+  "target": {
+    "id": "9FDC269D607569B3D843A04129C10FB4",
+    "type": "page",
+    "url": "about:blank"
+  },
+  "navigate": {
+    "frameId": "9FDC269D607569B3D843A04129C10FB4",
+    "loaderId": "3FD264F2399BC4B4C9DF45A1A93D8186",
+    "isDownload": false
+  },
+  "final_state": {
+    "url": "http://127.0.0.1:7281/ui/login",
+    "ready": "complete",
+    "title": "Sign in · AI Dev Manager",
+    "bodyExcerpt": "AIW\nAI Dev Manager\n\nWeb Console\n\nSign in\n\nAuthentication is enabled for the browser console.\n\nUsername\nPassword\nSign in\nThe management REST APIs have their own trust boundary; keep the Control Plane o"
+  }
+}

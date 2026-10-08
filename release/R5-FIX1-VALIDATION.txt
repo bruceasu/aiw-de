@@ -1,0 +1,24 @@
+R5 FIX1 - Protocol integration test JSON mapper injection
+Date: 2026-09-26
+Java baseline: 21
+
+Observed Maven/Failsafe failure:
+- R4WorkerProtocolIT could not autowire com.fasterxml.jackson.databind.ObjectMapper
+- R5WorkspaceProtocolIT could not autowire com.fasterxml.jackson.databind.ObjectMapper
+
+Root cause:
+The integration tests treated the Jackson 2 ObjectMapper as an application Spring bean.
+The current Spring Boot 4 application context does not expose that type as an autowire candidate.
+Production HTTP JSON serialization was not the failing component.
+
+Fix:
+- R4WorkerProtocolIT now owns a test-local `new ObjectMapper()`.
+- R5WorkspaceProtocolIT now owns a test-local `new ObjectMapper()`.
+- No production bean/configuration/dependency/schema changes.
+
+Static checks performed:
+- no remaining `@Autowired ObjectMapper` in src/test
+- only the two protocol ITs use ObjectMapper and both now instantiate it locally
+
+Authoritative gate still required:
+  mvn verify

@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-008",
+  "source_event": "FD-008-000011-test-report-ready",
+  "human_report": "FD-008-test-decision-r2.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-008-test-report-r2.md",
+    "fd_revision": 11,
+    "fd_digest": "abe295fb8815ad50eb9877868b43489be08f60f85f1fab65b4c0e6d1b7fabb14",
+    "requirements_coverage": "0%",
+    "branch_coverage": "not measured",
+    "rationale": "独立 Tester r2 记录 38 个适用场景 0 执行、0 通过、0 失败；用户明确豁免 FD-008 本轮测试。接受覆盖例外并交独立 Reviewer 静态审查，不认定行为通过。",
+    "exceptions": "用户在本会话要求内存紧张时豁免测试；38 个场景覆盖率 0% 低于 70%，业务分支覆盖未测量。例外不豁免行为要求。",
+    "residual_risk": "Java 源码未编译；F-01/F-02 修复、Worker 停止确认、权限、旧租约隔离及 SQLite/PostgreSQL 迁移均无运行证据。",
+    "pm_identity": "fd008-pm-r2-20261007-1c6e72",
+    "decision_time": "2026-10-07T14:06:28+00:00"
+  }
+}

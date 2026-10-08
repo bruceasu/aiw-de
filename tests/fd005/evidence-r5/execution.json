@@ -1,0 +1,3236 @@
+{
+  "fdId": "FD-005",
+  "event": "FD-005-000006-implementation-ready",
+  "revision": 6,
+  "digest": "f29cb07ce849cbbc92c64095bcac4e37ce873ef160d3d3ff6fcf819b38ee5015",
+  "session": "fd005-tester-20261005-7865d383",
+  "exact_command": "node tests/fd005/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r5.json",
+  "authorization": "docs/features/reports/FD-005-test-authorization-r5.json",
+  "started_at": "2026-10-04T22:39:38.925Z",
+  "finished_at": "2026-10-04T22:39:54.149Z",
+  "synthetic_test_only": true,
+  "test_file_sha256": {
+    "cases.mjs": "5b17176fbc4c20865243344482137bf18708d2cb895569e19228228445016829",
+    "harness.mjs": "6e75653329293519b5291354a59efa219b7f6739b5ac38aa246e616eb437e038",
+    "core.test.mjs": "b5ddea08d3c6632b9e89ee3ea310c5e169298c4069239a01142eb719d2d78707",
+    "session-fixture.mjs": "d621674e6d4bae2ac2df295ae57038a64d1872c435aa26400e56cea93099e81d",
+    "session.test.mjs": "0e975f30ca9c689fd6184c06269a5b1f79938a97627dd58ce22759aca491617c",
+    "reporter.mjs": "25585321caa75181d88e170efd57a83df44e28f89a1689c7d3e3270ec50b6877",
+    "fake-native.go": "6efd52db6c53e74de8981f8f6d89f627bd8da702a83ba6d3cea36cbb7d24d526",
+    "run-offline.mjs": "86263729139b3f09a38feb47e0d632b5ce24276a670cb0aba57b75d7d8daf257"
+  },
+  "invoked_commands": [
+    {
+      "executable": "go",
+      "args": [
+        "build",
+        "-o",
+        "D:\\03_projects\\AI-tools\\aiw-dev\\tests\\fd005\\.tmp-fd005-tester-20261005-7865d383-8640da40-5afc-40bf-806c-0c31014921a4\\programs\\fake-native.exe",
+        "D:\\03_projects\\AI-tools\\aiw-dev\\tests\\fd005\\fake-native.go"
+      ],
+      "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\tests\\fd005",
+      "exit_code": 0,
+      "signal": null,
+      "timed_out": false,
+      "duration_ms": 7146,
+      "raw_output": "tests/fd005/evidence-r5/compile-fake-native.log"
+    },
+    {
+      "executable": "go",
+      "args": [
+        "build",
+        "-o",
+        "D:\\03_projects\\AI-tools\\aiw-dev\\tests\\fd005\\.tmp-fd005-tester-20261005-7865d383-8640da40-5afc-40bf-806c-0c31014921a4\\programs\\launcher.exe",
+        "."
+      ],
+      "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\codex-session-launcher",
+      "exit_code": 0,
+      "signal": null,
+      "timed_out": false,
+      "duration_ms": 906,
+      "raw_output": "tests/fd005/evidence-r5/compile-launcher.log"
+    },
+    {
+      "executable": "C:\\green\\nodejs\\node.exe",
+      "args": [
+        "--experimental-test-coverage",
+        "--test",
+        "--test-concurrency=1",
+        "--test-reporter=./tests/fd005/reporter.mjs",
+        "tests/fd005/core.test.mjs",
+        "tests/fd005/session.test.mjs"
+      ],
+      "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev",
+      "exit_code": 1,
+      "signal": null,
+      "timed_out": false,
+      "duration_ms": 7159,
+      "raw_output": "tests/fd005/evidence-r5/node-test-events.jsonl"
+    }
+  ],
+  "exit_code": 1,
+  "setup_error": "Focused child command failed: node-test-events.jsonl",
+  "resource_uncertain": false,
+  "applicable_scenarios": 222,
+  "prepared_scenarios": 138,
+  "passed": 78,
+  "failed": 60,
+  "blocked": 0,
+  "scenarios": [
+    {
+      "id": "ROLE-requirements-tool-success",
+      "behavior": "requirements 的已授权读取有合法完整结果",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-requirements-tool-success",
+        "outcome": "failed",
+        "duration_ms": 13,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-requirements-tool-failure",
+      "behavior": "requirements 的工具失败不能被后续成功文本掩盖",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-requirements-tool-failure",
+        "outcome": "failed",
+        "duration_ms": 3,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-requirements-access",
+      "behavior": "requirements 的写入被拒绝且文件不变",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-requirements-access",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-requirements-cancel",
+      "behavior": "requirements 的取消后新工具不执行",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-requirements-cancel",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "API-requirements-success",
+      "behavior": "requirements 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-requirements-failure",
+      "behavior": "requirements 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-requirements-capability-reject",
+      "behavior": "requirements 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-requirements-report",
+      "behavior": "requirements 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-requirements-cancel",
+      "behavior": "requirements 的实际 API Worker 取消后无过期 complete",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "ROLE-architect-tool-success",
+      "behavior": "architect 的已授权读取有合法完整结果",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-architect-tool-success",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-architect-tool-failure",
+      "behavior": "architect 的工具失败不能被后续成功文本掩盖",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-architect-tool-failure",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-architect-access",
+      "behavior": "architect 的写入被拒绝且文件不变",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-architect-access",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-architect-cancel",
+      "behavior": "architect 的取消后新工具不执行",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-architect-cancel",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "API-architect-success",
+      "behavior": "architect 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-architect-failure",
+      "behavior": "architect 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-architect-capability-reject",
+      "behavior": "architect 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-architect-report",
+      "behavior": "architect 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-architect-cancel",
+      "behavior": "architect 的实际 API Worker 取消后无过期 complete",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "ROLE-planner-tool-success",
+      "behavior": "planner 的已授权读取有合法完整结果",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-planner-tool-success",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-planner-tool-failure",
+      "behavior": "planner 的工具失败不能被后续成功文本掩盖",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-planner-tool-failure",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-planner-access",
+      "behavior": "planner 的写入被拒绝且文件不变",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-planner-access",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-planner-cancel",
+      "behavior": "planner 的取消后新工具不执行",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-planner-cancel",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "API-planner-success",
+      "behavior": "planner 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-planner-failure",
+      "behavior": "planner 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-planner-capability-reject",
+      "behavior": "planner 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-planner-report",
+      "behavior": "planner 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-planner-cancel",
+      "behavior": "planner 的实际 API Worker 取消后无过期 complete",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "ROLE-coder-tool-success",
+      "behavior": "coder 的已授权读取有合法完整结果",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-coder-tool-success",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-coder-tool-failure",
+      "behavior": "coder 的工具失败不能被后续成功文本掩盖",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-coder-tool-failure",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-coder-access",
+      "behavior": "coder 的编辑只修改指定工作区内文件",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-coder-access",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-coder-cancel",
+      "behavior": "coder 的取消后新工具不执行",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-coder-cancel",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "API-coder-success",
+      "behavior": "coder 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-coder-failure",
+      "behavior": "coder 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-coder-capability-reject",
+      "behavior": "coder 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-coder-report",
+      "behavior": "coder 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-coder-cancel",
+      "behavior": "coder 的实际 API Worker 取消后无过期 complete",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "ROLE-integrator-tool-success",
+      "behavior": "integrator 的已授权读取有合法完整结果",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-integrator-tool-success",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-integrator-tool-failure",
+      "behavior": "integrator 的工具失败不能被后续成功文本掩盖",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-integrator-tool-failure",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-integrator-access",
+      "behavior": "integrator 的编辑只修改指定工作区内文件",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-integrator-access",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-integrator-cancel",
+      "behavior": "integrator 的取消后新工具不执行",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-integrator-cancel",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "API-integrator-success",
+      "behavior": "integrator 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-integrator-failure",
+      "behavior": "integrator 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-integrator-capability-reject",
+      "behavior": "integrator 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-integrator-report",
+      "behavior": "integrator 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-integrator-cancel",
+      "behavior": "integrator 的实际 API Worker 取消后无过期 complete",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "ROLE-reviewer-tool-success",
+      "behavior": "reviewer 的已授权读取有合法完整结果",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-reviewer-tool-success",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-reviewer-tool-failure",
+      "behavior": "reviewer 的工具失败不能被后续成功文本掩盖",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-reviewer-tool-failure",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-reviewer-access",
+      "behavior": "reviewer 的写入被拒绝且文件不变",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-reviewer-access",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-reviewer-cancel",
+      "behavior": "reviewer 的取消后新工具不执行",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-reviewer-cancel",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "API-reviewer-success",
+      "behavior": "reviewer 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-reviewer-failure",
+      "behavior": "reviewer 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-reviewer-capability-reject",
+      "behavior": "reviewer 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-reviewer-report",
+      "behavior": "reviewer 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-reviewer-cancel",
+      "behavior": "reviewer 的实际 API Worker 取消后无过期 complete",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "ROLE-verifier-tool-success",
+      "behavior": "verifier 的已授权读取有合法完整结果",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-verifier-tool-success",
+        "outcome": "failed",
+        "duration_ms": 3,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-verifier-tool-failure",
+      "behavior": "verifier 的工具失败不能被后续成功文本掩盖",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-verifier-tool-failure",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-verifier-access",
+      "behavior": "verifier 的写入被拒绝且文件不变",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-verifier-access",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-verifier-cancel",
+      "behavior": "verifier 的取消后新工具不执行",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-verifier-cancel",
+        "outcome": "failed",
+        "duration_ms": 3,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "API-verifier-success",
+      "behavior": "verifier 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-verifier-failure",
+      "behavior": "verifier 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-verifier-capability-reject",
+      "behavior": "verifier 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-verifier-report",
+      "behavior": "verifier 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-verifier-cancel",
+      "behavior": "verifier 的实际 API Worker 取消后无过期 complete",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "ROLE-integration-verifier-tool-success",
+      "behavior": "integration-verifier 的已授权读取有合法完整结果",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-integration-verifier-tool-success",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-integration-verifier-tool-failure",
+      "behavior": "integration-verifier 的工具失败不能被后续成功文本掩盖",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-integration-verifier-tool-failure",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-integration-verifier-access",
+      "behavior": "integration-verifier 的写入被拒绝且文件不变",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-integration-verifier-access",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-integration-verifier-cancel",
+      "behavior": "integration-verifier 的取消后新工具不执行",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-integration-verifier-cancel",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "API-integration-verifier-success",
+      "behavior": "integration-verifier 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-integration-verifier-failure",
+      "behavior": "integration-verifier 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-integration-verifier-capability-reject",
+      "behavior": "integration-verifier 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-integration-verifier-report",
+      "behavior": "integration-verifier 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-integration-verifier-cancel",
+      "behavior": "integration-verifier 的实际 API Worker 取消后无过期 complete",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "ROLE-repairer-tool-success",
+      "behavior": "repairer 的已授权读取有合法完整结果",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-repairer-tool-success",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-repairer-tool-failure",
+      "behavior": "repairer 的工具失败不能被后续成功文本掩盖",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-repairer-tool-failure",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-repairer-access",
+      "behavior": "repairer 的编辑只修改指定工作区内文件",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-repairer-access",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "ROLE-repairer-cancel",
+      "behavior": "repairer 的取消后新工具不执行",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ROLE-repairer-cancel",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "API-repairer-success",
+      "behavior": "repairer 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-repairer-failure",
+      "behavior": "repairer 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-repairer-capability-reject",
+      "behavior": "repairer 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-repairer-report",
+      "behavior": "repairer 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+      "acceptance": [
+        1,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-repairer-cancel",
+      "behavior": "repairer 的实际 API Worker 取消后无过期 complete",
+      "acceptance": [
+        1,
+        3
+      ],
+      "prepared": false,
+      "plane": "runtime-adapter",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "PATH-outside",
+      "behavior": "工作区外路径被拒绝",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "PATH-outside",
+        "outcome": "passed",
+        "duration_ms": 6
+      }
+    },
+    {
+      "id": "PATH-git",
+      "behavior": "Git 内部路径被拒绝",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "PATH-git",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "PATH-link",
+      "behavior": "链接路径不能越过工作区策略",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "PATH-link",
+        "outcome": "passed",
+        "duration_ms": 2
+      }
+    },
+    {
+      "id": "PATH-hardlink",
+      "behavior": "危险硬链接写入被拒绝",
+      "acceptance": [
+        1
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "PATH-hardlink",
+        "outcome": "passed",
+        "duration_ms": 5
+      }
+    },
+    {
+      "id": "RESOURCE-independent",
+      "behavior": "独立文件操作可以并行",
+      "acceptance": [
+        2
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "RESOURCE-independent",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "RESOURCE-readers",
+      "behavior": "多个读取可以并行",
+      "acceptance": [
+        2
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "RESOURCE-readers",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "RESOURCE-same-file",
+      "behavior": "同文件修改按读改写全过程串行",
+      "acceptance": [
+        2
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "RESOURCE-same-file",
+        "outcome": "passed",
+        "duration_ms": 38
+      }
+    },
+    {
+      "id": "RESOURCE-read-write",
+      "behavior": "同文件读取与修改保持一致性",
+      "acceptance": [
+        2
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "RESOURCE-read-write",
+        "outcome": "passed",
+        "duration_ms": 31
+      }
+    },
+    {
+      "id": "RESOURCE-shell",
+      "behavior": "未声明范围的 shell 与工作区修改互斥",
+      "acceptance": [
+        2
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "RESOURCE-shell",
+        "outcome": "passed",
+        "duration_ms": 30
+      }
+    },
+    {
+      "id": "RESOURCE-limit",
+      "behavior": "活动操作数量不超过并发上限",
+      "acceptance": [
+        2
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "RESOURCE-limit",
+        "outcome": "passed",
+        "duration_ms": 32
+      }
+    },
+    {
+      "id": "RESOURCE-cancel-wait",
+      "behavior": "排队等待取消后不启动操作",
+      "acceptance": [
+        2,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "RESOURCE-cancel-wait",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "RESOURCE-active-cancel",
+      "behavior": "活动 I/O 未结束时取消不能提前释放资源",
+      "acceptance": [
+        2,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "RESOURCE-active-cancel",
+        "outcome": "passed",
+        "duration_ms": 30
+      }
+    },
+    {
+      "id": "RESOURCE-failure-release",
+      "behavior": "失败后下一操作取得资源",
+      "acceptance": [
+        2
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "RESOURCE-failure-release",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "TOOL-parameters",
+      "behavior": "非法参数在副作用前失败",
+      "acceptance": [
+        2,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "TOOL-parameters",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "TOOL-shell-denied",
+      "behavior": "缺少 shell 授权时不执行命令",
+      "acceptance": [
+        1,
+        9
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "TOOL-shell-denied",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "TOOL-nested",
+      "behavior": "嵌套工具调用经过相同边界并保留关联 ID",
+      "acceptance": [
+        2,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "TOOL-nested",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "TOOL-partial",
+      "behavior": "未完成搜索的模型可见结果明确为不完整",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "TOOL-partial",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "TOOL-output-bound",
+      "behavior": "工具结果 envelope 与截断提示一同受字节上限约束",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "TOOL-output-bound",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "TOOL-timeout-active",
+      "behavior": "操作超时后仍等待活动 I/O 终态",
+      "acceptance": [
+        2,
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "TOOL-timeout-active",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "OUTPUT-short",
+      "behavior": "未超限文本完整返回",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "OUTPUT-short",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "OUTPUT-chinese",
+      "behavior": "中文和 emoji 预算按 UTF-8 字节计算",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "OUTPUT-chinese",
+        "outcome": "failed",
+        "duration_ms": 0,
+        "error": "OUTPUT_BUDGET_INVALID"
+      }
+    },
+    {
+      "id": "OUTPUT-long-line",
+      "behavior": "长单行截断不产生无效 Unicode",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "OUTPUT-long-line",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "OUTPUT-lines",
+      "behavior": "行数上限包含截断提示",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "OUTPUT-lines",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "JSON-complete",
+      "behavior": "合法完整 JSON 原样解析",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "JSON-complete",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "JSON-too-large",
+      "behavior": "超限 JSON 明确拒绝，不返回半个结构",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "JSON-too-large",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "JSON-invalid",
+      "behavior": "非法或不符合 schema 的 JSON 明确拒绝",
+      "acceptance": [
+        5,
+        9
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "JSON-invalid",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "EDIT-multiple",
+      "behavior": "多区域计划一次生成全部修改",
+      "acceptance": [
+        6
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EDIT-multiple",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "EDIT-missing",
+      "behavior": "缺少匹配时拒绝且不写任何部分修改",
+      "acceptance": [
+        6
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EDIT-missing",
+        "outcome": "passed",
+        "duration_ms": 9
+      }
+    },
+    {
+      "id": "EDIT-duplicate-match",
+      "behavior": "重复匹配时拒绝且原文件不变",
+      "acceptance": [
+        6
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EDIT-duplicate-match",
+        "outcome": "passed",
+        "duration_ms": 6
+      }
+    },
+    {
+      "id": "EDIT-overlap",
+      "behavior": "重叠编辑在写入前拒绝",
+      "acceptance": [
+        6
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EDIT-overlap",
+        "outcome": "passed",
+        "duration_ms": 6
+      }
+    },
+    {
+      "id": "EDIT-duplicate-plan",
+      "behavior": "重复编辑区域在写入前拒绝",
+      "acceptance": [
+        6
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EDIT-duplicate-plan",
+        "outcome": "passed",
+        "duration_ms": 6
+      }
+    },
+    {
+      "id": "EDIT-format",
+      "behavior": "修改保留 BOM 与 CRLF",
+      "acceptance": [
+        6
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EDIT-format",
+        "outcome": "passed",
+        "duration_ms": 16
+      }
+    },
+    {
+      "id": "EDIT-baseline",
+      "behavior": "基线摘要变化时拒绝原子写入",
+      "acceptance": [
+        6
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EDIT-baseline",
+        "outcome": "passed",
+        "duration_ms": 6
+      }
+    },
+    {
+      "id": "EDIT-diff-bound",
+      "behavior": "编辑结果 diff 受字节预算约束",
+      "acceptance": [
+        6
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EDIT-diff-bound",
+        "outcome": "passed",
+        "duration_ms": 9
+      }
+    },
+    {
+      "id": "EDIT-cancel",
+      "behavior": "写入前取消不会修改文件",
+      "acceptance": [
+        3,
+        6
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EDIT-cancel",
+        "outcome": "passed",
+        "duration_ms": 2
+      }
+    },
+    {
+      "id": "CONTEXT-sources",
+      "behavior": "输入来源具有路径、版本摘要与字节记录",
+      "acceptance": [
+        7,
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "CONTEXT-sources",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "CONTEXT-required",
+      "behavior": "必需规则、验收和冻结材料均保留",
+      "acceptance": [
+        7
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "CONTEXT-required",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "CONTEXT-overflow",
+      "behavior": "首轮超限明确失败而非删除必需输入",
+      "acceptance": [
+        7
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "CONTEXT-overflow",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "CONTEXT-skills",
+      "behavior": "原 Skill 主文、references 与 agents 展开兼容",
+      "acceptance": [
+        7,
+        10
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "CONTEXT-skills",
+        "outcome": "passed",
+        "duration_ms": 8
+      }
+    },
+    {
+      "id": "HISTORY-off",
+      "behavior": "关闭历史压缩时不调用摘要模型且原输入保留",
+      "acceptance": [
+        7
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "HISTORY-off",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "HISTORY-budget",
+      "behavior": "启用摘要必须具有显式预算",
+      "acceptance": [
+        7
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "HISTORY-budget",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "HISTORY-derived",
+      "behavior": "摘要是派生输入且原始来源可回查",
+      "acceptance": [
+        7
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "HISTORY-derived",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "HISTORY-pairs",
+      "behavior": "压缩不拆散工具调用和结果",
+      "acceptance": [
+        7
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "HISTORY-pairs",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "HISTORY-cancel",
+      "behavior": "摘要取消后无新增摘要和无限重试",
+      "acceptance": [
+        3,
+        7
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "HISTORY-cancel",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "HISTORY-failure",
+      "behavior": "摘要失败不进行无界重试",
+      "acceptance": [
+        7
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "HISTORY-failure",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "HISTORY-max-two",
+      "behavior": "同一历史压缩器最多生成两次摘要",
+      "acceptance": [
+        7
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "HISTORY-max-two",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "EVIDENCE-outside",
+      "behavior": "关键证据目录位于 Git 工作区之外",
+      "acceptance": [
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EVIDENCE-outside",
+        "outcome": "failed",
+        "duration_ms": 3,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "EVIDENCE-forbidden-root",
+      "behavior": "证据根在工作区内时拒绝",
+      "acceptance": [
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EVIDENCE-forbidden-root",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "EVIDENCE-correlation",
+      "behavior": "工具与输入/结果版本可以关联追踪",
+      "acceptance": [
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EVIDENCE-correlation",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "EVIDENCE-redaction",
+      "behavior": "正文、密钥和 leaseToken 不进入元数据",
+      "acceptance": [
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EVIDENCE-redaction",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "EVIDENCE-capacity",
+      "behavior": "关键元数据超限后健康校验失败",
+      "acceptance": [
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EVIDENCE-capacity",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "EVIDENCE-write-failure",
+      "behavior": "关键写入失败后健康校验失败",
+      "acceptance": [
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EVIDENCE-write-failure",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "EVIDENCE-terminal-expiry",
+      "behavior": "拥有且已终态的日志在30天后可清理",
+      "acceptance": [
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EVIDENCE-terminal-expiry",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "EVIDENCE-active-retain",
+      "behavior": "活动日志即使很旧也不自动删除",
+      "acceptance": [
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EVIDENCE-active-retain",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "EVIDENCE-foreign-retain",
+      "behavior": "不带所有权标记的目录不自动删除",
+      "acceptance": [
+        8
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "EVIDENCE-foreign-retain",
+        "outcome": "passed",
+        "duration_ms": 6
+      }
+    },
+    {
+      "id": "ATTEMPT-cancel-prepare",
+      "behavior": "准备阶段取消后不执行下一阶段",
+      "acceptance": [
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ATTEMPT-cancel-prepare",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "Expected values to be strictly equal:\n\nfalse !== true\n"
+      }
+    },
+    {
+      "id": "ATTEMPT-cancel-model",
+      "behavior": "模型阶段取消后不启动工具或发布",
+      "acceptance": [
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ATTEMPT-cancel-model",
+        "outcome": "failed",
+        "duration_ms": 0,
+        "error": "Expected values to be strictly equal:\n\nfalse !== true\n"
+      }
+    },
+    {
+      "id": "ATTEMPT-cancel-tool",
+      "behavior": "工具阶段取消后不启动发布",
+      "acceptance": [
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ATTEMPT-cancel-tool",
+        "outcome": "failed",
+        "duration_ms": 0,
+        "error": "Expected values to be strictly equal:\n\nfalse !== true\n"
+      }
+    },
+    {
+      "id": "ATTEMPT-cancel-publish",
+      "behavior": "发布阶段取消后不回报有效完成",
+      "acceptance": [
+        3,
+        4
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ATTEMPT-cancel-publish",
+        "outcome": "failed",
+        "duration_ms": 0,
+        "error": "Expected values to be strictly equal:\n\nfalse !== true\n"
+      }
+    },
+    {
+      "id": "ATTEMPT-timeout",
+      "behavior": "整体期限覆盖执行阶段并传出取消",
+      "acceptance": [
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ATTEMPT-timeout",
+        "outcome": "failed",
+        "duration_ms": 1,
+        "error": "Expected values to be strictly equal:\n\nfalse !== true\n"
+      }
+    },
+    {
+      "id": "ATTEMPT-cleanup-wait",
+      "behavior": "独立清理预算不能把活动资源写成已结束",
+      "acceptance": [
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ATTEMPT-cleanup-wait",
+        "outcome": "failed",
+        "duration_ms": 2010,
+        "error": "Synthetic test deadline exceeded"
+      }
+    },
+    {
+      "id": "MODEL-completed",
+      "behavior": "已完成且完整的模型响应可接受",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "MODEL-completed",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "MODEL-incomplete",
+      "behavior": "长度截断的模型响应在工具执行前拒绝",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "MODEL-incomplete",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "MODEL-unknown",
+      "behavior": "未知响应终态明确失败",
+      "acceptance": [
+        5,
+        10
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "MODEL-unknown",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "MODEL-invalid-call",
+      "behavior": "不完整工具参数即使部分 JSON 可解析也不得执行",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "MODEL-invalid-call",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "MODEL-truncated-call",
+      "behavior": "残余参数 JSON 可解析的长度截断响应仍不得执行工具",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "MODEL-truncated-call",
+        "outcome": "passed",
+        "duration_ms": 0
+      }
+    },
+    {
+      "id": "MODEL-stream-incomplete",
+      "behavior": "流结束没有完整终态时拒绝",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "MODEL-stream-incomplete",
+        "outcome": "failed",
+        "duration_ms": 3,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "MODEL-usage-unknown",
+      "behavior": "缺少实际 usage 不能当作精确零值",
+      "acceptance": [
+        7,
+        10
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "MODEL-usage-unknown",
+        "outcome": "failed",
+        "duration_ms": 2,
+        "error": "EVIDENCE_FIELD_FORBIDDEN"
+      }
+    },
+    {
+      "id": "PROCESS-success",
+      "behavior": "离线子进程退出、输出和完整性可观察",
+      "acceptance": [
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "PROCESS-success",
+        "outcome": "passed",
+        "duration_ms": 66
+      }
+    },
+    {
+      "id": "PROCESS-overflow",
+      "behavior": "子进程结构化输出超限明确失败",
+      "acceptance": [
+        5
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "PROCESS-overflow",
+        "outcome": "passed",
+        "duration_ms": 56
+      }
+    },
+    {
+      "id": "PROCESS-cancel",
+      "behavior": "子进程取消返回终态并停止输出",
+      "acceptance": [
+        3
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "PROCESS-cancel",
+        "outcome": "passed",
+        "duration_ms": 156
+      }
+    },
+    {
+      "id": "ENV-minimum",
+      "behavior": "插件/工具子进程不取得 CP、模型密钥与 leaseToken",
+      "acceptance": [
+        8,
+        9
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "ENV-minimum",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "PLUGIN-disabled",
+      "behavior": "没有 catalog 时插件默认关闭",
+      "acceptance": [
+        9
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "PLUGIN-disabled",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "PLUGIN-malformed",
+      "behavior": "非法 catalog 格式被拒绝",
+      "acceptance": [
+        9
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "PLUGIN-malformed",
+        "outcome": "passed",
+        "duration_ms": 6
+      }
+    },
+    {
+      "id": "PLUGIN-missing",
+      "behavior": "不存在的插件入口明确失败",
+      "acceptance": [
+        9
+      ],
+      "prepared": true,
+      "plane": "public-core",
+      "execution": {
+        "id": "PLUGIN-missing",
+        "outcome": "passed",
+        "duration_ms": 1
+      }
+    },
+    {
+      "id": "SESSION-missing",
+      "behavior": "缺少禁存清单时在会话前拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "SESSION-missing",
+        "outcome": "passed",
+        "duration_ms": 31
+      }
+    },
+    {
+      "id": "SESSION-unverified",
+      "behavior": "未验证证据不能使会话准入",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "SESSION-unverified",
+        "outcome": "passed",
+        "duration_ms": 57
+      }
+    },
+    {
+      "id": "SESSION-sdk-mismatch",
+      "behavior": "SDK 版本绑定不一致时拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "SESSION-sdk-mismatch",
+        "outcome": "passed",
+        "duration_ms": 42
+      }
+    },
+    {
+      "id": "SESSION-native-digest",
+      "behavior": "native 摘要不符时拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "SESSION-native-digest",
+        "outcome": "passed",
+        "duration_ms": 44
+      }
+    },
+    {
+      "id": "SESSION-launcher-digest",
+      "behavior": "launcher 摘要不符时拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "SESSION-launcher-digest",
+        "outcome": "passed",
+        "duration_ms": 48
+      }
+    },
+    {
+      "id": "SESSION-proof-digest",
+      "behavior": "证据摘要不符时拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "SESSION-proof-digest",
+        "outcome": "passed",
+        "duration_ms": 42
+      }
+    },
+    {
+      "id": "SESSION-control-missing",
+      "behavior": "十项通道证据缺失时拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "SESSION-control-missing",
+        "outcome": "passed",
+        "duration_ms": 54
+      }
+    },
+    {
+      "id": "SESSION-config-change",
+      "behavior": "固定配置源发生变化后拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "SESSION-config-change",
+        "outcome": "passed",
+        "duration_ms": 41
+      }
+    },
+    {
+      "id": "SESSION-workspace-file",
+      "behavior": "任务可写根中的清单不能授予准入",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "SESSION-workspace-file",
+        "outcome": "passed",
+        "duration_ms": 41
+      }
+    },
+    {
+      "id": "SESSION-raw-evidence",
+      "behavior": "rawEvidence 摘要不符时拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "SESSION-raw-evidence",
+        "outcome": "passed",
+        "duration_ms": 44
+      }
+    },
+    {
+      "id": "SESSION-fake-admission",
+      "behavior": "只绑定假 native 的合成政策可以验证准入适配",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "SESSION-fake-admission",
+        "outcome": "passed",
+        "duration_ms": 43
+      }
+    },
+    {
+      "id": "LAUNCHER-preflight",
+      "behavior": "preflight 不启动假 native 或发送提示词",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "LAUNCHER-preflight",
+        "outcome": "passed",
+        "duration_ms": 183
+      }
+    },
+    {
+      "id": "LAUNCHER-exec",
+      "behavior": "首次 exec 强制 ephemeral、stdin 与原模型参数",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "LAUNCHER-exec",
+        "outcome": "passed",
+        "duration_ms": 253
+      }
+    },
+    {
+      "id": "LAUNCHER-resume",
+      "behavior": "通过准入后仍拒绝 resume",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "LAUNCHER-resume",
+        "outcome": "passed",
+        "duration_ms": 93
+      }
+    },
+    {
+      "id": "LAUNCHER-save-output",
+      "behavior": "通过准入后仍拒绝输出文件参数",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "LAUNCHER-save-output",
+        "outcome": "passed",
+        "duration_ms": 93
+      }
+    },
+    {
+      "id": "LAUNCHER-prompt-argv",
+      "behavior": "通过准入后仍拒绝正文 argv",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "LAUNCHER-prompt-argv",
+        "outcome": "passed",
+        "duration_ms": 95
+      }
+    },
+    {
+      "id": "LAUNCHER-conflict",
+      "behavior": "通过准入后仍拒绝隐私配置冲突",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "LAUNCHER-conflict",
+        "outcome": "passed",
+        "duration_ms": 94
+      }
+    },
+    {
+      "id": "LAUNCHER-environment",
+      "behavior": "假 native 不取得适配器/CP/调试环境",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "LAUNCHER-environment",
+        "outcome": "failed",
+        "duration_ms": 128,
+        "error": "Expected values to be strictly equal:\n\ntrue !== false\n"
+      }
+    },
+    {
+      "id": "LAUNCHER-stderr",
+      "behavior": "假 native 的原始 stderr 正文不向主机泄漏",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "LAUNCHER-stderr",
+        "outcome": "passed",
+        "duration_ms": 143
+      }
+    },
+    {
+      "id": "RPC-ephemeral",
+      "behavior": "thread/start 必须显式 ephemeral true",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "RPC-ephemeral",
+        "outcome": "passed",
+        "duration_ms": 131
+      }
+    },
+    {
+      "id": "RPC-valid-turn",
+      "behavior": "已核验 ephemeral 线程可接收合成正文 turn",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "RPC-valid-turn",
+        "outcome": "passed",
+        "duration_ms": 124
+      }
+    },
+    {
+      "id": "RPC-receipt",
+      "behavior": "非 ephemeral 或有磁盘 path 的回执在正文前被拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "RPC-receipt",
+        "outcome": "passed",
+        "duration_ms": 1635
+      }
+    },
+    {
+      "id": "RPC-read-receipt",
+      "behavior": "公开 thread/read 回执的磁盘 path 冲突在正文前被拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "RPC-read-receipt",
+        "outcome": "failed",
+        "duration_ms": 140,
+        "error": "Expected \"actual\" to be strictly unequal to: 0"
+      }
+    },
+    {
+      "id": "RPC-turn-order",
+      "behavior": "turn 只允许已核验的 ephemeral 线程",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "RPC-turn-order",
+        "outcome": "passed",
+        "duration_ms": 129
+      }
+    },
+    {
+      "id": "RPC-resume",
+      "behavior": "持久化 resume/fork RPC 被拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "RPC-resume",
+        "outcome": "passed",
+        "duration_ms": 140
+      }
+    },
+    {
+      "id": "RPC-disk-fork",
+      "behavior": "持久化 fork RPC 被拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "RPC-disk-fork",
+        "outcome": "passed",
+        "duration_ms": 126
+      }
+    },
+    {
+      "id": "RPC-approval",
+      "behavior": "SDK 默认 accept 审批回复不能取得宿主授权",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": true,
+      "plane": "synthetic-launcher",
+      "execution": {
+        "id": "RPC-approval",
+        "outcome": "passed",
+        "duration_ms": 128
+      }
+    },
+    {
+      "id": "ROLE-preserved-reject",
+      "behavior": "release-readiness 与 orchestrator 在注册前拒绝",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "ROLE-verifier-alias",
+      "behavior": "verifier 的集成任务使用既有 integration-verifier Profile 与能力",
+      "acceptance": [
+        1,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "REPORT-semantic-empty",
+      "behavior": "前三个语义角色的空报告拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "REPORT-verdict-missing",
+      "behavior": "审查/验证缺少末行 verdict 时拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "REPORT-verdict-final",
+      "behavior": "verdict 后有正文或 verdict 非法时拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "REPORT-readonly-dirty",
+      "behavior": "只读工作区变脏时不回报成功",
+      "acceptance": [
+        1,
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "REPORT-manifest",
+      "behavior": "规划 manifest 和代码 workspaceResult 的既有契约保持兼容",
+      "acceptance": [
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "LEASE-lost",
+      "behavior": "真实角色适配的租约丢失停止新增副作用并拒绝过期结果",
+      "acceptance": [
+        3,
+        4
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "PUBLISH-completed-race",
+      "behavior": "发布已经完成的租约竞争记录引用、版本和对账状态",
+      "acceptance": [
+        4
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "PUBLISH-unknown-race",
+      "behavior": "发布结果未知的租约竞争不声称回滚或无写入",
+      "acceptance": [
+        4
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "COMPLETE-response-lost",
+      "behavior": "CP complete 响应丢失不重跑整个业务 attempt",
+      "acceptance": [
+        3,
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "DRAIN-inflight",
+      "behavior": "drain 停止领取且允许在途 attempt 结束",
+      "acceptance": [
+        3,
+        11
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "DRAIN-force",
+      "behavior": "第二次终止取消在途任务并有资源终态",
+      "acceptance": [
+        3,
+        11
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "PLUGIN-version",
+      "behavior": "插件/解释器版本或摘要不一致时拒绝",
+      "acceptance": [
+        9
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "PLUGIN-timeout",
+      "behavior": "实际固定查询插件超时明确失败",
+      "acceptance": [
+        9
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "PLUGIN-output",
+      "behavior": "插件超限/非法输出明确失败",
+      "acceptance": [
+        9
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "PLUGIN-network",
+      "behavior": "未有网络授权的 GitHub 查询在外部请求前拒绝",
+      "acceptance": [
+        9
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-store-false",
+      "behavior": "API 实际 SDK 正常与摘要请求均 store false 且 tracing/logging 关闭",
+      "acceptance": [
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "API-parallel-setting",
+      "behavior": "API 实际 SDK 保持并行工具设置与关联",
+      "acceptance": [
+        2,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "CODEX-TS-bridge",
+      "behavior": "Codex TS 的公开 SDK 入口保留模型政策并覆盖公共生命周期",
+      "acceptance": [
+        3,
+        7,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "GO-admission",
+      "behavior": "Go Worker 无准入证据时在注册/领取前拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "PYTHON-admission",
+      "behavior": "Python Worker 无准入证据时在注册/领取前拒绝",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "GO-lifecycle",
+      "behavior": "Go Worker 的期限、取消、证据、工作区和报告端到端对齐",
+      "acceptance": [
+        3,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "PYTHON-lifecycle",
+      "behavior": "Python Worker 的期限、取消、证据、工作区和报告端到端对齐",
+      "acceptance": [
+        3,
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "PYTHON-sdk-receipt",
+      "behavior": "真实固定 Python SDK 在送正文前核对公开 thread/read 回执",
+      "acceptance": [
+        8,
+        10
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "NS-roles-slots-attempts",
+      "behavior": "九角色、两个 slot、多 attempt 和 CP 重试全部经过实际禁存入口",
+      "acceptance": [
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "NS-normal-no-body",
+      "behavior": "实际正常会话在全过程监测中无正文落盘",
+      "acceptance": [
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "NS-tool-failure-no-body",
+      "behavior": "实际工具失败会话在全过程监测中无正文落盘",
+      "acceptance": [
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "NS-model-failure-no-body",
+      "behavior": "实际模型失败会话在全过程监测中无正文落盘",
+      "acceptance": [
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "NS-timeout-no-body",
+      "behavior": "实际超时会话在全过程监测中无正文落盘",
+      "acceptance": [
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "NS-cancel-no-body",
+      "behavior": "实际显式取消会话在全过程监测中无正文落盘",
+      "acceptance": [
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "NS-lease-no-body",
+      "behavior": "实际租约丢失会话在全过程监测中无正文落盘",
+      "acceptance": [
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "NS-termination-tree",
+      "behavior": "实际父进程强杀和逃逸子进程不突破禁存/资源终态",
+      "acceptance": [
+        3,
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "NS-other-channels",
+      "behavior": "实际 memory/state-cache/hooks/plugins/trace/诊断均无正文写入或导出",
+      "acceptance": [
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "NS-derived",
+      "behavior": "实际子 Agent、fork 和压缩继承禁存或在创建前拒绝",
+      "acceptance": [
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "NS-host-auth",
+      "behavior": "实际认证缓存与主机介质符合部署 G2 政策",
+      "acceptance": [
+        8
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "UPGRADE-order",
+      "behavior": "升级先 drain，并按只读至可写角色分批接入",
+      "acceptance": [
+        11
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "ROLLBACK-policy",
+      "behavior": "旧包/配置回退仍满足 G2，未完成 attempt 与远端副作用分别恢复对账",
+      "acceptance": [
+        8,
+        11
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    },
+    {
+      "id": "ROLLBACK-old-directory",
+      "behavior": "回滚和历史清理不自动删除其他用户共享目录",
+      "acceptance": [
+        8,
+        11
+      ],
+      "prepared": false,
+      "plane": "runtime-or-deployment",
+      "execution": {
+        "outcome": "uncovered"
+      }
+    }
+  ]
+}

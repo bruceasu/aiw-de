@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000007-test-report-ready",
+  "human_report": "FD-005-test-decision-r5.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-005-test-report-r5.md",
+    "fd_revision": 7,
+    "fd_digest": "b4743e932138cf6777361d75811118aa65b44e5d68deef3d4bd5c274399f1bb0",
+    "requirements_coverage": "35.14%",
+    "branch_coverage": "not measured",
+    "rationale": "138 个实际用例中 60 个失败，无法接受。两项目标断言揭示 native 调试环境剥离与 thread/read 禁存回执检查缺口；51 个证据初始化前置失败和 7 个部分执行需先明确公开字段、预算与 Runner 前置契约后独立复测。",
+    "exceptions": "无验收豁免。本轮低覆盖率和完整 FD 分支未测均为退回原因；runtime-core 278/393=70.74% 仅为局部引擎计数，不代替完整 FD 分支。",
+    "residual_risk": "222 个适用场景仅 78 个通过，84 个未运行；真实四类 Worker、九角色 SDK 路由、禁存全过程及跨语言生命周期未证明。原始失败与既有授权保留，未重跑测试，不启用真实部署。",
+    "pm_identity": "fd005-pm-20261005-b698602d",
+    "decision_time": "2026-10-04T22:48:27.169Z"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-008",
+  "source_event": "FD-008-000008-review-requested",
+  "human_report": "FD-008-review-r1.md",
+  "data": {
+    "reviewer_session": "fd008-reviewer-20261007-7c9e42",
+    "fd_revision": 8,
+    "fd_digest": "521325d14577d9dac9cbad0b4c7a516cccb00df7c3da23f0dc366d67bc6c6eae",
+    "diff_base": "master",
+    "reviewed_commit": "2df52c7",
+    "decision": "changes-requested",
+    "findings": [
+      {
+        "id": "F-01",
+        "severity": "high",
+        "summary": "ACK 后未核对待停止请求受理时的 source_version；RUNNING 指令修订会被静默带入替代任务",
+        "paths": ["src/main/java/me/asu/aidev/work/application/TaskWorkspaceReplacementService.java", "src/main/java/me/asu/aidev/execution/application/TaskExecutionService.java"]
+      },
+      {
+        "id": "F-02",
+        "severity": "medium",
+        "summary": "Run 页面及审计未明确展示是否有 Worker stop acknowledgement",
+        "paths": ["src/main/java/me/asu/aidev/work/application/TaskWorkspaceReplacementService.java", "src/main/resources/db/migration/V20__task_workspace_replacement.sql", "src/main/resources/templates/ui/run-detail.html"]
+      }
+    ],
+    "test_evidence": {
+      "applicable_scenarios": 36,
+      "covered_scenarios": 0,
+      "executed_behavior_tests": 0,
+      "passed_behavior_tests": 0,
+      "failed_behavior_tests": 0,
+      "unrun_behavior_tests": 36,
+      "requirements_coverage": "0%",
+      "branch_coverage": "not measured",
+      "raw_coverage_evidence": "unavailable; no tests or coverage commands were run",
+      "pm_exception": "User explicitly waived tests under memory pressure; PM accepted only this round's coverage exception, not unmet behavior."
+    },
+    "commands_run": ["Get-Content", "rg", "git status --short", "git log -6 --oneline", "git diff --stat master...HEAD", "git diff master...HEAD -- <implementation paths>", "git rev-parse HEAD", "git rev-parse master", "aiw fd claim FD-008 FD-008-000008-review-requested --session fd008-reviewer-20261007-7c9e42"],
+    "commands_skipped": ["tests", "compile/build", "SQLite migration", "PostgreSQL migration", "coverage", "application runtime", "network"],
+    "residual_risk": "All 36 behavior scenarios lack runtime evidence; Java compile did not start because of native memory shortage; SQLite/PostgreSQL migration and existing-data compatibility remain unverified."
+  }
+}

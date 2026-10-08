@@ -1,0 +1,40 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000011-test-rejected",
+  "human_report": "FD-002-implementation-recovery-r11.md",
+  "data": {
+    "summary": "Timeline item marker changed to a static HTML attribute after visible filtering defect; compile-only succeeds; independent test observer/resource/screenshot corrections being prepared, runtime unexecuted.",
+    "worker_session_ref": "fd002-worker-20261005-88571fc5",
+    "baseline_commit": "7372e13c46779ebe60817872b47348385adbb240",
+    "review_scope": "Original r5 implementation paths plus r8/r11 recovery and FD-002 evidence only; unrelated concurrent changes excluded",
+    "changed_paths": [
+      "src/main/resources/templates/ui/run-detail.html",
+      "tests/fd002/browser.mjs",
+      "tests/fd002/runtime.py",
+      "tests/fd002/README.md",
+      "docs/features/FD-002_RUN_MISSION_DETAIL_AND_TIMELINE.md",
+      "docs/features/reports/FD-002-implementation-recovery-r11.md",
+      "docs/features/reports/FD-002-implementation-recovery-r11.json"
+    ],
+    "commands": [
+      {
+        "command": "C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests compile",
+        "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+        "exit_code": 0,
+        "jdk": 21,
+        "elapsed_seconds": 0.802,
+        "evidence": ".ai/fd/FD-002/compile-recovery-r11.txt"
+      }
+    ],
+    "results": [
+      "compile-only BUILD SUCCESS; Java classes up to date;2+31 resources copied",
+      "Latest actual r9 attempt2:78 executed/74passed/4failed/26unrun;71.15% requirement coverage; branch not measured",
+      "Timeline marker correction authored; new runtime not run",
+      "Five historical runs and all failures retained; last two approved execution budgets consumed",
+      "Reviewer failures0; independent review not started"
+    ],
+    "residual_risk": "Four failed scenarios still need actual correction validation;18 planned unrun and8 uncovered; Firefox human-deferred; Node/system commit pressure; branch coverage and original Timeline full-read cost unmeasured. New command needs new human budget after exact event/session binding."
+  }
+}

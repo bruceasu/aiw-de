@@ -1,0 +1,8 @@
+{
+  "event": "FD-005-000030-implementation-ready",
+  "session": "fd005-tester-20261005-e8931791",
+  "command": "node tests/fd005/r30/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r30.json",
+  "exit_code": 1,
+  "timed_out": false,
+  "raw_output": "tests/fd005/evidence-r30/node-test-output.txt"
+}

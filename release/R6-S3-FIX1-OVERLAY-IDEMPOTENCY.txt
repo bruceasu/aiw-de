@@ -1,0 +1,21 @@
+R6-S3 Fix1 - completion handler overlay/idempotency correction
+
+Root cause observed in external mvn clean verify:
+- R6-S3 renamed/replaced CodeChangeCompletedHandler with CodeChangeCompletedHandler.
+- Extracting the new ZIP over an existing project directory does not delete removed source files.
+- The historical CodeChangeCompletedHandler.java therefore remained in src/main/java and was
+  compiled together with CodeChangeCompletedHandler.
+- Both Spring components reacted to IMPLEMENTATION completion and generated the same deterministic
+  review/verification task IDs, causing primary-key violations and cascading HTTP/runtime failures.
+
+Fix:
+1. The historical CodeChangeCompletedHandler.java path is restored as a non-Spring compatibility
+   tombstone. Overlay extraction now overwrites the old @Component source instead of leaving it active.
+2. Completion-generated tasks use WorkTaskService.createIfAbsent().
+3. JDBC task/dependency repositories use INSERT ... ON CONFLICT DO NOTHING for idempotent materialization.
+4. Existing generated tasks are compatibility-checked before reuse.
+5. R6S2Integration test replays CodeChangeCompletedHandler and asserts exactly one review and one
+   verification task remain.
+
+No schema change. Database remains four domain tables and Flyway V1-V5.
+Canonical environment prefix remains AIW_.

@@ -1,0 +1,25 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000020-test-report-ready",
+  "human_report": "FD-005-test-decision-r20.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-005-test-report-r19.md",
+    "fd_revision": 20,
+    "fd_digest": "944da1b2cf1197140c6a47604ed6177dab783f192621d760e0d73055647caccc",
+    "requirements_coverage": "45.45%",
+    "branch_coverage": "not measured",
+    "rationale": "唯一获批命令 exit 0，15/15 已执行用例通过，含真实本地 Git 工作树清理失败场景；但 33 个适用 API 场景仅覆盖 15 个，角色准入、工具权限、租约丢失、取消终态和兼容性等关键行为缺证据，不能接受完整测试验收。",
+    "exceptions": "无覆盖率例外；45.45% 低于 70%，业务代码分支未测量。18 个未覆盖 API 场景保留在分母。",
+    "residual_risk": "18 个 API 行为未覆盖；真实 Agents SDK、Control Plane、远端 Git、生产入口进程与全会话 G2 平台效果未证明。非 API 运行时不在本轮测试范围，仍需在审查中列明。",
+    "pm_identity": "fd005-pm-20261005-175b6dfd",
+    "decision_time": "2026-10-05T14:05:40Z",
+    "raw_evidence": [
+      "tests/fd005/evidence-r19/node-test-output.txt",
+      "tests/fd005/evidence-r19/execution.json"
+    ],
+    "requested_api_scenarios": ["API-16", "API-17", "API-18", "API-19", "API-23", "API-24", "API-27", "API-29", "API-33"]
+  }
+}

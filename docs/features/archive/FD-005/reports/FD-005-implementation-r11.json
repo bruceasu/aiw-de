@@ -1,0 +1,62 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000011-test-rejected",
+  "human_report": "FD-005-implementation-r11.md",
+  "data": {
+    "summary": "修正 Agents 0.3.9 工具错误选项和原始 JSON 参数验证；补齐 TS 公共 slot、整个 attempt 的期限与终态记录、终止未知的租约保留和停止领取。保留 r5/r8 失败与诊断缺口，新的独立验证尚未执行。",
+    "changed_paths": [
+      "workers/runtime-core/attempt.mjs",
+      "workers/runtime-core/resources.mjs",
+      "workers/runtime-core/process.mjs",
+      "workers/runtime-core/workspace.mjs",
+      "workers/runtime-core/errors.mjs",
+      "workers/runtime-core/tool-host.mjs",
+      "workers/runtime-core/index.d.mts",
+      "workers/runtime-core/PUBLIC_CONTRACT.md",
+      "workers/process-typescript-with-api/src/hosted-tool.ts",
+      "workers/process-typescript-with-api/src/tools.ts",
+      "workers/process-typescript-with-api/src/aiw-tools.ts",
+      "workers/process-typescript-with-api/src/api-runtime.ts",
+      "workers/process-typescript-with-api/src/api-adapter.ts",
+      "workers/process-typescript-with-api/src/index.ts",
+      "workers/process-typescript-with-api/PUBLIC_INTERFACES.md",
+      "workers/process-typescript/src/index.ts",
+      "workers/SDK_CAPABILITIES.md",
+      "workers/WORKER_RUNTIME_CONTRACT.md",
+      "docs/features/FD-005_WORKER_PI.md"
+    ],
+    "commands": [
+      "aiw fd claim FD-005 FD-005-000011-test-rejected --session fd005-worker-20261004-2916aea6",
+      "定向静态读取公共核心、两个 TS 入口、已安装 Agents 0.3.9 tool.mjs、FD、r8 测试/PM 证据与模板"
+    ],
+    "results": [
+      "合法领取实际 Worker 事件；未修改 r5/r8 用例、报告、授权或原始证据。",
+      "新增 hosted-tool 适配器统一验证原始 JSON，并采用实际 SDK 的 errorFunction=null。旧 toolErrorFunction 选项不由固定 SDK 消费，不能用它声称错误传播已生效。",
+      "两个 TS 生产入口共用公开 runWorkerSlot；资源未知后永久退役，不因观察回调或 drain 失败再次领取。",
+      "Evidence 初始化、阶段日志、准备、报告验证、发布、成功准备均受整体期限；catch/finally 共用独立有界窗口。正常成功不追加虚假的 PROCESS_TREE_UNCERTAIN。",
+      "未知终止保留协调器及租约，拒绝后续操作；清理取得排他租约，未知时保留工作区；adapter 未确认结束时不 clear。runCommand 取消后的结束等待最多 5000ms。",
+      "TIMEOUT 保留内部 RuntimeFault 信息，向控制平面映射为既有 TOOL_ERROR，不改变公开枚举。",
+      "本轮未执行新的编译、类型检查、测试、覆盖、格式化、网络、安装或发布构建；首轮 compile-only 与 r8 临时编译仅为历史证据。",
+      "FD 文本更新的两个 Python 管道脚本因 PowerShell 输入编码匹配失败而未写入；随后已改用 apply_patch 完成文本编辑，没有继续重试该失败命令。"
+    ],
+    "residual_risk": "r8 实际 261 个用例中 5 个失败，完整覆盖 255/285=89.47%；两个摘要与 Git finalize 前置/诊断问题仍待新的独立结果，不能靠静态判断关闭。24 个真实或跨语言场景及 REPORT-manifest 部分场景保留在分母，全 FD 分支未测。真实 Codex 平台/版本的全会话禁存未认证，生产准入默认拒绝；无真实模型、端点、平台认证或最终产物。",
+    "worker_session": "fd005-worker-20261004-2916aea6",
+    "authored_fd_revision": 11,
+    "source_fd_sha256": "eab06b4b8aa4a940bba0b4df48d5fc32b92a3c820e1eaf50430e81a37e6008ba",
+    "previous_implementation_reports": [
+      "docs/features/reports/FD-005-implementation-r5.md",
+      "docs/features/reports/FD-005-implementation-r8.md"
+    ],
+    "tester_report": "docs/features/reports/FD-005-test-report-r8.md",
+    "pm_decision": "docs/features/reports/FD-005-test-decision-r8.md",
+    "full_fd_scope_report": "docs/features/reports/FD-005-implementation-r5.md",
+    "public_contracts": [
+      "workers/runtime-core/PUBLIC_CONTRACT.md",
+      "workers/process-typescript-with-api/PUBLIC_INTERFACES.md",
+      "workers/codex-session-launcher/SESSION_POLICY_FORMAT.md"
+    ],
+    "validation_status": "新源码静态落实；尚未执行新的授权验证。Reviewer 必须结合 r5 全范围报告与后续修复，不以当前未提交 diff 代替整个 FD 范围。"
+  }
+}

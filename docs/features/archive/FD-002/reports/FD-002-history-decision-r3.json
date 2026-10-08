@@ -1,0 +1,15 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "human-decision",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000003-needs-decision",
+  "human_report": "FD-002-history-decision-r3.md",
+  "data": {
+    "decision": "latest-300-with-total-and-truncation",
+    "approved_source": "user-message-20261005",
+    "user_statement": "最近 300 条，明确显示总数和截断",
+    "timeline_limit": 300,
+    "full_history_pagination": false,
+    "runtime_authorized": false
+  }
+}

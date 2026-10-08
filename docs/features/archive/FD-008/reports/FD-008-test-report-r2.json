@@ -1,0 +1,304 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-008",
+  "source_event": "FD-008-000010-implementation-ready",
+  "human_report": "FD-008-test-report-r2.md",
+  "data": {
+    "implementation_event": "FD-008-000010-implementation-ready",
+    "tested_fd_revision": 10,
+    "tested_fd_digest": "28091baa45b02f30b1ed5ce454be199e062508d4c1f514b2ade400f9f6f147bd",
+    "tester_session": "fd008-tester-r2-20261007-2bb58e",
+    "applicable_scenarios": 38,
+    "covered_scenarios": 0,
+    "executed_behavior_tests": 0,
+    "passed_behavior_tests": 0,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 38,
+    "requirements_coverage": "0%",
+    "branch_coverage": "not measured",
+    "raw_coverage_evidence": "not available; no test or coverage command was run",
+    "coverage_unavailable_reason": "User explicitly waived tests due current memory pressure. Worker compile-only twice failed before source compilation because Maven JVM could not start; no isolated service or fixture is available.",
+    "test_files": [
+      "tests/fd008/workspace-replacement.test.mjs"
+    ],
+    "authorization_records": [],
+    "commands": [],
+    "recommendation": "blocked",
+    "not_applicable_reason": "All 38 scenarios apply to FD-008 revision 10, including Reviewer r1 findings F-01 and F-02.",
+    "residual_risk": "No post-fix behavioral evidence for instruction-revision versus stop ACK conflict, stop acknowledgement UI evidence, task state transitions, stale lease fencing, dependency rewiring, audit, permissions, or SQLite/PostgreSQL migrations. Compile-only also never reached source.",
+    "scenarios": [
+      {
+        "id": "S01",
+        "behavior": "源任务 repositoryRef 与 baseRevision 保持原值，旧任务继续可追溯",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S02",
+        "behavior": "源任务的 attempt、Worker、lease 与结果证据保持原值",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S03",
+        "behavior": "源任务的 instruction revision 历史保持原值",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S04",
+        "behavior": "BLOCKED 且无活动 lease 的任务立即取消并创建替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S05",
+        "behavior": "READY 且无活动 lease 的任务立即取消并创建替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S06",
+        "behavior": "FAILED 且无活动 lease 的任务可创建替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S07",
+        "behavior": "CANCELLED 且无活动 lease 的任务可创建替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S08",
+        "behavior": "COMPLETED 任务拒绝 Workspace 替换并保留 linked correction 入口",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S09",
+        "behavior": "目标必须是已登记且启用的 Workspace repository",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S10",
+        "behavior": "无效的显式 Git revision 被拒绝且不回退到目录模式",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S11",
+        "behavior": "Git revision 留空时在受理时解析并固定目标 HEAD commit",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S12",
+        "behavior": "目录模式替代任务的 baseRevision 为空",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S13",
+        "behavior": "替代任务复制类型、subject、指令、skill/profile 与 priority，并有自己的初始指令版本",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S14",
+        "behavior": "替代任务同步 repo capability 并保留非 repository capability",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S15",
+        "behavior": "替代任务复制源任务的前置依赖",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S16",
+        "behavior": "未领取的下游任务依赖改接到替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S17",
+        "behavior": "已推进的下游任务导致整体拒绝且依赖图不发生部分写入",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S18",
+        "behavior": "过期 expectedVersion 被拒绝且不修改任务图",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S19",
+        "behavior": "旧 lease 或不匹配的租约身份不能发起有效替换或停止确认",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S20",
+        "behavior": "重复提交只得到一个替代任务和一个有效关系",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S21",
+        "behavior": "CLAIMED 任务在停止确认前只产生待处理请求且替代任务不可领取",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S22",
+        "behavior": "RUNNING 任务在停止确认前保持未停止且替代任务不可领取",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S23",
+        "behavior": "正确 Worker/lease ACK 后同一事务终结旧尝试、取消源任务、创建替代任务并重接依赖",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S24",
+        "behavior": "错误 task、Worker 或 lease 的 ACK 被拒绝",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S25",
+        "behavior": "相同身份重复 ACK 不重复创建、释放资源或更改依赖",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S26",
+        "behavior": "ACK 前自然完成胜出时请求变为冲突且没有替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S27",
+        "behavior": "ACK 前自然失败胜出时请求变为冲突且没有替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S28",
+        "behavior": "租约过期、回收、暂停或取消胜出时请求变为冲突且不自动重试",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S29",
+        "behavior": "已取消来源的旧 attempt/lease 不能发布结果、完成任务或触发下游",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S30",
+        "behavior": "成功和待处理替换记录操作者、原因、时间及前后 Workspace/任务关联",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S31",
+        "behavior": "被拒绝的替换请求记录操作者、原因、时间和拒绝原因",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S32",
+        "behavior": "Run 页面显示待停止、完成、冲突状态、停止确认与新旧任务链接",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S33",
+        "behavior": "只有 OPERATOR/ADMIN 可提交；其他角色及缺少原因的请求被拒绝",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；本场景未执行，Worker 静态修复不计为行为通过。"
+      },
+      {
+        "id": "S34",
+        "behavior": "V20 增量迁移在 SQLite 成功应用",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；迁移及旧数据读取未执行。"
+      },
+      {
+        "id": "S35",
+        "behavior": "V20 增量迁移在 PostgreSQL 成功应用",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；迁移及旧数据读取未执行。"
+      },
+      {
+        "id": "S36",
+        "behavior": "两个方言迁移后既有任务与 attempt 数据仍可读取",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户豁免本轮测试；迁移及旧数据读取未执行。"
+      },
+      {
+        "id": "S37",
+        "behavior": "PENDING_STOP 期间源任务指令修订后，原 Worker ACK 将请求置为 CONFLICT，不创建替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "Worker r2 报告静态修复，但用户豁免测试；没有执行 ACK 与指令修订竞争用例。"
+      },
+      {
+        "id": "S38",
+        "behavior": "Run 页面能区分待停止、已 ACK、未收到 ACK 和无活动租约无需 ACK，并保留确认时间证据",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "Worker r2 报告静态修复，但用户豁免测试；没有渲染或查询运行证据。"
+      }
+    ],
+    "static_exclusions": [
+      "Scenarios derive from FD-008 revision 10 acceptance, public Web Console contract, Worker r2 report, Tester r1 matrix, and Reviewer r1 findings; implementation source was not read.",
+      "User waived tests for current memory pressure; no test, migration, coverage, service startup, compile, or network command was run by this Tester.",
+      "Worker r2's static patch check and repair claims do not count as behavioral validation."
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+[
+  {
+    "requested": "http://127.0.0.1:7339/ui/login",
+    "result": {
+      "frameId": "317EEBE7E86D60CB2525C2BD707CC22C",
+      "loaderId": "8A0F9D58967CF75A94440E3DEE9F12E9",
+      "isDownload": false
+    }
+  },
+  {
+    "route": "/ui/login",
+    "url": "http://127.0.0.1:7339/ui/login",
+    "ready": "complete"
+  },
+  {
+    "route": "/ui",
+    "url": "http://127.0.0.1:7339/ui",
+    "ready": "complete"
+  },
+  {
+    "requested": "http://127.0.0.1:7339/ui/workers",
+    "result": {
+      "frameId": "317EEBE7E86D60CB2525C2BD707CC22C",
+      "loaderId": "637910545C71AF04B1A9B9D685EDD0DC",
+      "isDownload": false
+    }
+  },
+  {
+    "route": "/ui/workers",
+    "url": "http://127.0.0.1:7339/ui/workers",
+    "ready": "complete"
+  }
+]

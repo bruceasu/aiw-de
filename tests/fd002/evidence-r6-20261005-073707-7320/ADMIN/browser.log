@@ -1,0 +1,36 @@
+PASS ADMIN-permission
+PASS requirement-original
+PASS requirement-long
+PASS requirement-escaped
+PASS status-lifecycle
+PASS status-control
+PASS status-effective
+PASS dashboard-phase
+PASS task-counts
+PASS no-eta
+PASS single-edges
+PASS single-direction
+PASS graph-node-link
+PASS graph-hide
+PASS parallel-edges
+PASS parallel-levels
+PASS final-review-level
+PASS verification-level
+PASS repair-added
+PASS repair-history
+PASS no-inferred-edge
+PASS cycle-warning
+PASS cycle-table
+PASS tasks-cap
+PASS tasks-order
+PASS requirement-window-outside
+PASS outside-prerequisite
+PASS outside-no-anchor
+PASS cross-run-edge
+PASS cross-subject-edge
+PASS edges-cap
+PASS edges-total
+PASS partial-graph
+INFRASTRUCTURE Error: {"exceptionId":1,"text":"Uncaught","lineNumber":19,"columnNumber":7,"scriptId":"4","stackTrace":{"callFrames":[{"functionName":"content","scriptId":"4","url":"","lineNumber":19,"columnNumber":13},{"functionName":"sections","scriptId":"4","url":"","lineNumber":21,"columnNumber":33},{"functionName":"","scriptId":"33","url":"","lineNumber":0,"columnNumber":13}]},"exception":{"type":"object","subtype":"error","className":"Error","description":"Error: associated public section unavailable fd2-attempt-window\n    at content (<anonymous>:20:14)\n    at Array.map (<anonymous>)\n    at Object.sections (<anonymous>:22:34)\n    at <anonymous>:1:14","objectId":"3324219262315993352.11.2"}}
+    at ev (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd002/browser.mjs:30:147)
+    at async file:///D:/03_projects/AI-tools/aiw-dev/tests/fd002/browser.mjs:155:58

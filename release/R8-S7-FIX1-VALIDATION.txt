@@ -1,0 +1,10 @@
+R8-S7 Fix1 validation
+
+Root cause: nested JdbcTemplate query inside active-task RowMapper exhausted SQLite Hikari pool (maximumPoolSize=1).
+Fix: single LEFT JOIN to execution_attempt for started_at_epoch_ms.
+SQLite V1-V10 schema smoke: PASS
+Active execution JOIN smoke: PASS
+Core business tables: 7
+Schema migration change: none
+Expected Failsafe integration-test methods: 22
+Authoritative Maven gate: mvn clean verify

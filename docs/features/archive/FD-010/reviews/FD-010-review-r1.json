@@ -1,0 +1,36 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-010",
+  "source_event": "FD-010-000007-test-accepted",
+  "human_report": "FD-010-review-r1.md",
+  "data": {
+    "reviewer_session": "fd010-reviewer-20261007-a63de4",
+    "fd_revision": 7,
+    "fd_digest": "b3b1141690c661c2a085d2b4a9694dd086a88a55a3e857acafb8d159838d296e",
+    "review_base": "de04beced35168c34a57b536c70c3b82acea1425",
+    "reviewed_commit": "844d1d4dce9043fdd73a43cbe7c066a6b42483d9",
+    "result": "verification-passed",
+    "findings": [],
+    "nonblocking_observations": ["The current git diff --check reports an extra EOF blank line in the Tester Markdown and JSON reports; Worker checked whitespace before those reports were added."],
+    "tester_evidence": {
+      "authorization": "docs/features/reports/FD-010-test-authorization-r1.md",
+      "report": "docs/features/reports/FD-010-test-report-r1.md",
+      "pm_decision": "docs/features/reports/FD-010-test-decision-r1.md",
+      "implementation_event": "FD-010-000005-implementation-ready",
+      "tested_fd_revision": 5,
+      "tested_fd_digest": "a811fce4969b6c1306b3e23e5ebb3a2ba081b7941b8d467d8870893aa93f2fdd",
+      "tester_session": "fd010-tester-20261007-11617f",
+      "authorized_command": "node tests/fd010/package-contract.mjs",
+      "applicable_scenarios": 19,
+      "passed_behavior_scenarios": 4,
+      "unrun_behavior_scenarios": 15,
+      "requirements_coverage": "21.05%",
+      "branch_coverage": "not measured",
+      "pm_exception_respected": true
+    },
+    "checks_run": ["static diff and package-path review", "git diff --check master...HEAD (reports two Tester evidence EOF blank lines)", "Tester authorization, command, report and PM decision cross-check"],
+    "checks_not_run": ["tests", "build", "type check", "release package", "network", "live backends or Control Plane"],
+    "residual_risk": "Source and release Worker startup, both backend integrations, registration/lease protocol and full attempt lifecycle are not independently executed; external users of the old repository path require migration."
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-008",
+  "source_event": "FD-008-000004-work-requested",
+  "human_report": "FD-008-implementation-r1.md",
+  "data": {
+    "summary": "实现持久化 Workspace 替换、旧 lease 停止确认、依赖重接和 Run 页面入口；编译因 JVM 原生内存不足未进入源码阶段",
+    "changed_paths": [
+      "src/main/resources/db/migration/V20__task_workspace_replacement.sql",
+      "src/main/java/me/asu/aidev/work/application/TaskWorkspaceReplacementService.java",
+      "src/main/java/me/asu/aidev/work/jdbc/JdbcWorkTaskRepository.java",
+      "src/main/java/me/asu/aidev/execution/application/TaskExecutionService.java",
+      "src/main/java/me/asu/aidev/execution/jdbc/JdbcExecutionAttemptRepository.java",
+      "src/main/java/me/asu/aidev/worker/runtime/WorkerRuntime.java",
+      "workers/runtime-core/attempt.mjs",
+      "workers/codex-python/codex_worker.py",
+      "workers/process-go/main.go",
+      "src/main/java/me/asu/aidev/webconsole/application/WebConsoleActionService.java",
+      "src/main/java/me/asu/aidev/webconsole/protocol/http/WebConsoleActionController.java",
+      "src/main/java/me/asu/aidev/webconsole/protocol/http/WebConsoleController.java",
+      "src/main/resources/templates/ui/run-detail.html",
+      "docs/current-zh/15-WEB-CONSOLE.md"
+    ],
+    "commands": [
+      "git diff --check",
+      "mvn -o -q -DskipTests compile",
+      "MAVEN_OPTS=-Xmx256m -XX:ReservedCodeCacheSize=64m -XX:MaxMetaspaceSize=160m mvn -o -q -DskipTests compile"
+    ],
+    "results": [
+      "静态 diff 检查通过",
+      "两次 compile-only 都在 JVM 启动时因原生内存不足失败，未编译源码",
+      "未运行测试、迁移、UI 渲染或运行时验证"
+    ],
+    "residual_risk": "Java/Go/Python/JavaScript 编译和运行、SQLite/PostgreSQL 迁移及 ACK 竞争均无通过证据"
+  }
+}

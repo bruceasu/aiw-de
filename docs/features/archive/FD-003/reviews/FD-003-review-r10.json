@@ -1,0 +1,40 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-003",
+  "source_event": "FD-003-000010-test-accepted",
+  "human_report": "FD-003-review-r10.md",
+  "data": {
+    "reviewer_session": "fd003-reviewer-20261005-9c7e4d2b",
+    "reviewed_fd_revision": 10,
+    "reviewed_fd_digest": "efe203a84dc76ae93d0e67c89c2ff4f585b5a0ccd1fac7427e2e602c2ad3e8d3",
+    "review_base": "d8dd6c5",
+    "worker_commit": "552ea0a",
+    "reviewed_commit": "caa98a0",
+    "outcome": "verification-passed",
+    "findings": [],
+    "acceptance_review": {
+      "AC01": "权威 Worker 身份、状态、容量和租约事实静态匹配",
+      "AC02": "互斥汇总、并列限制和 Run 存在性链接静态匹配",
+      "AC03": "自然排空、drain、pause、cancel 语义静态匹配",
+      "AC04": "权限、CSRF、服务端状态检查和失败反馈沿用既有路径",
+      "AC05": "有界范围、排序、缺失关联及刷新边界静态匹配",
+      "AC06": "空态、长值、容量和减少动效有静态实现依据"
+    },
+    "worker_report": "docs/features/reports/FD-003-implementation-r7.md",
+    "tester_report": "docs/features/reports/FD-003-test-report-r8.md",
+    "pm_decision": "docs/features/reports/FD-003-test-decision-r9-v1.md",
+    "requirements_coverage": "0.00%",
+    "branch_coverage": "not measured",
+    "applicable_scenarios": 50,
+    "executed_behavior_tests": 0,
+    "passed_behavior_tests": 0,
+    "failed_behavior_tests": 0,
+    "authorization_records": [],
+    "coverage_exception": "PM 依据用户明确不用做测试的要求接受 0% 需求覆盖和未测分支覆盖；行为验收未获豁免",
+    "commands": ["aiw fd resume/show/--help", "aiw fd claim FD-003 FD-003-000010-test-accepted --session fd003-reviewer-20261005-9c7e4d2b", "git status --short", "git diff --stat d8dd6c5..caa98a0", "git diff d8dd6c5..caa98a0 -- scoped paths", "git log --oneline -5", "targeted Get-Content and rg static reads"],
+    "skipped_checks": "未运行测试、浏览器、覆盖率、编译、模板渲染、网络、格式器、lint、类型检查、最终构建或部署",
+    "residual_risk": "50 个行为场景均未运行；模板渲染、并发竞争、窄窗口和减少动效的实际交互缺少运行证据",
+    "scope": "独立静态审查与 FD Verification；没有修改实现源码、Tester 或 PM 报告"
+  }
+}

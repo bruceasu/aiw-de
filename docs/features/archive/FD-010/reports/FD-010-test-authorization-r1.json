@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-010",
+  "source_event": "FD-010-000005-implementation-ready",
+  "human_report": "FD-010-test-authorization-r1.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-010-000005-implementation-ready",
+    "fd_revision": 5,
+    "fd_digest": "a811fce4969b6c1306b3e23e5ebb3a2ba081b7941b8d467d8870893aa93f2fdd",
+    "tester_session": "fd010-tester-20261007-11617f",
+    "command": "node tests/fd010/package-contract.mjs",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\.wt\\FD-010",
+    "scope": "Four offline black-box checks: package-local ESM exports, removed top-level import failure, evidence-required attempt rejection, and UTF-8 output budget",
+    "expected_duration": "under 5 seconds",
+    "side_effects": "Read-only module imports and in-memory assertions; no file writes, subprocesses, network calls, dependency installation, or build artifacts",
+    "risk_review": "Focused local module contract command; does not exercise Worker startup, release packaging, SDK backends, or full attempt lifecycle",
+    "human_approval": "not required",
+    "planner_identity": "FD-010 host Planner",
+    "decision_time": "2026-10-07T14:36:49+00:00"
+  }
+}

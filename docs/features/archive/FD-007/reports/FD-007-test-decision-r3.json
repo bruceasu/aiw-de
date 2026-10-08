@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-007",
+  "source_event": "FD-007-000018-test-report-ready",
+  "human_report": "FD-007-test-decision-r3.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-007-test-report-r3.md",
+    "fd_revision": 18,
+    "fd_digest": "0d8c998ef4684cc50b4ff635f4233dd3776afb02ec2585a7a0abb84f6c42194b",
+    "requirements_coverage": "0%",
+    "branch_coverage": "not measured",
+    "rationale": "PM 豁免覆盖门槛，仅推进到本实现周期最后一次独立静态 Reviewer；22 个场景全部未运行，不是测试通过。",
+    "exceptions": "豁免 70% 需求覆盖率和未测分支覆盖。依据 FD-007-verification-decision-r1.md，另明确豁免 SQLite/PostgreSQL 迁移执行检查 S21/S22；两项仍未验证、未通过。",
+    "residual_risk": "全部 22 个场景无行为证据；V19 未在 SQLite/PostgreSQL 实际应用。运行时权限、状态/并发、旧 attempt、停止和 ACK、资源会计、UI、迁移 runner/数据库版本配置/既有数据均未验证。协作式停止和 ADMIN 强制重派仍有外部副作用风险。",
+    "pm_identity": "主控代理（fd-workflow PM verification-stage override）",
+    "decision_time": "2026-10-07T07:22:00+09:00"
+  }
+}

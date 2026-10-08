@@ -1,0 +1,19 @@
+{
+  "schema": "aiw.fd.blocker-feedback.v1",
+  "fd_id": "FD-008",
+  "stage": "PM Test Report Decision",
+  "role": "pm",
+  "source_event": "FD-008-000006-test-report-ready",
+  "symptom": "Java compile-only 在 JVM 启动时内存不足；独立 Tester 36 个场景 0 个执行",
+  "confirmed_cause": "主机原生内存不足，且没有隔离测试服务与可修改 fixture",
+  "attempts": [
+    "mvn -o -q -DskipTests compile：JVM 原生内存分配失败",
+    "降低 Maven JVM 内存后的同一 compile-only：JVM 原生内存分配失败",
+    "Tester 准备黑盒 HTTP 用例；因缺少隔离 fixture 未获授权且未运行"
+  ],
+  "status": "resolved_by_user_test_waiver_with_residual_risk",
+  "human_decision_need": "释放内存并提供隔离测试环境后继续，或保留 FD-008 未合并",
+  "next_step": "PM 接受测试覆盖例外交独立 Reviewer 静态审查；源码编译、行为测试与双数据库迁移仍未验证",
+  "resolution": "用户于 2026-10-07 要求内存紧张时豁免测试；仅解除本轮测试覆盖 Gate，不豁免行为验收要求或将未执行检查视为通过",
+  "reusable_improvement": "提供可重建的 FD 集成测试 fixture 和编译前内存检查"
+}

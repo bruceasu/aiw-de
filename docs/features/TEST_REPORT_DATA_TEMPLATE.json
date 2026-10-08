@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-XXX",
+  "source_event": "FD-XXX-000000-implementation-ready",
+  "human_report": "FD-XXX-test-report-rN.md",
+  "data": {
+    "implementation_event": "FD-XXX-000000-implementation-ready",
+    "tested_fd_revision": 0,
+    "tested_fd_digest": "replace-with-receipt-digest",
+    "tester_session": "replace-with-claim-session",
+    "applicable_scenarios": 0,
+    "covered_scenarios": 0,
+    "executed_behavior_tests": 0,
+    "passed_behavior_tests": 0,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 0,
+    "requirements_coverage": "not applicable",
+    "branch_coverage": "not measured",
+    "raw_coverage_evidence": "not measured",
+    "coverage_unavailable_reason": "replace-if-coverage-unavailable",
+    "test_files": [],
+    "authorization_records": [],
+    "commands": [],
+    "recommendation": "blocked",
+    "not_applicable_reason": "replace-if-zero-applicable-scenarios",
+    "residual_risk": "replace-with-observed-risk",
+    "scenarios": [],
+    "static_exclusions": []
+  }
+}

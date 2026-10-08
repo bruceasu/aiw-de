@@ -1,0 +1,31 @@
+R6-S2 DEVELOPMENT COMPLETION HANDLERS
+
+Baseline:
+- R6-S1 Fix3 accepted by user with mvn clean verify PASS
+- Java baseline: 21
+- canonical environment prefix: AIW_
+
+Changes:
+- generic TaskCompletionHandler SPI
+- TaskCompletionDispatcher
+- CodeChangeCompletedHandler
+- automatic CODE_REVIEW + VERIFICATION task generation
+- downstream repository base revision = implementation resultRevision
+- completion response exposes generatedTaskIds
+
+Persistence:
+- domain tables: 4
+- new tables: 0
+- new columns: 0
+- Flyway remains V1..V4
+
+Local validation in generation environment:
+- selected R6-S2 Java sources javac --release 21: PASS
+- in-memory completion-handler harness: PASS
+  generated=[IMPL-1~review, IMPL-1~verify]
+- canonical AIW_ environment prefix scan: PASS
+
+Authoritative acceptance still required in user environment:
+  mvn clean verify
+
+Expected integration tests: 10

@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000038-test-rejected",
+  "human_report": "FD-005-implementation-r39.md",
+  "data": {
+    "summary": "r36 命令失败且脱敏输出为空。静态发现过滤器只收 # 前缀元数据/TAP 行，而 r33 实际为无 # 元数据及 ✔/✖ 风格；可能丢掉诊断。未改生产代码，交新独立 Tester 以受控 JSON 保存脱敏结果。",
+    "changed_paths": [
+      "docs/features/FD-005_WORKER_PI.md",
+      "docs/features/reports/FD-005-implementation-r39.md",
+      "docs/features/reports/FD-005-implementation-r39.json"
+    ],
+    "commands": [
+      "aiw fd claim FD-005 FD-005-000038-test-rejected --session fd005-worker-20261005-69fe2eb5",
+      "git diff --check",
+      "定向静态对照 r36 过滤器、r33 原始 Node 输出和 r36 证据"
+    ],
+    "results": [
+      "r36 唯一授权命令 exit 1，脱敏输出为空；无法确认新行为断言。",
+      "过滤器前缀/TAP 假设与历史实际 Node 输出不符；丢弃诊断是静态推断。",
+      "未修改生产源码，也未运行编译或测试。"
+    ],
+    "residual_risk": "API-16 实际入口失败阶段未知；累计 23/33 完整场景、分支未测；真实服务、远端 Git、平台 G2 与非 API 运行时未验证。",
+    "worker_session": "fd005-worker-20261005-69fe2eb5",
+    "authored_fd_revision": 38,
+    "source_fd_sha256": "32b720803b313bb5ec3b312d7d42e3a7898a43da850876f5f657617d0fad2035",
+    "previous_tester_report": "docs/features/reports/FD-005-test-report-r36.md",
+    "previous_pm_decision": "docs/features/reports/FD-005-test-decision-r37.md"
+  }
+}

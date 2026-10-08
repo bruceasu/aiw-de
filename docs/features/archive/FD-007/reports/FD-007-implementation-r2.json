@@ -1,0 +1,34 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-007",
+  "source_event": "FD-007-000010-changes-requested",
+  "human_report": "FD-007-implementation-r2.md",
+  "data": {
+    "summary": "修复停止确认语义：旧式 executor 的正常返回不会确认停止；只有显式返回 STOPPED 才可确认。重复 stop acknowledgement 对同一 task、worker、lease 幂等成功，不重复重派或释放资源。",
+    "changed_paths": [
+      "src/main/java/me/asu/aidev/worker/runtime/TaskExecutor.java",
+      "src/main/java/me/asu/aidev/worker/runtime/WorkerRuntime.java",
+      "src/main/java/me/asu/aidev/worker/runtime/fake/FakeTaskExecutor.java",
+      "src/main/java/me/asu/aidev/execution/port/ExecutionAttemptRepository.java",
+      "src/main/java/me/asu/aidev/execution/jdbc/JdbcExecutionAttemptRepository.java",
+      "src/main/java/me/asu/aidev/execution/application/TaskExecutionService.java",
+      "docs/features/FD-007_TASK_INSTRUCTION_REVISION_AND_OPERATOR_CONTROL.md"
+    ],
+    "commands": [
+      "aiw fd claim FD-007 FD-007-000010-changes-requested --session fd007-worker-20261007-r2-31d7c9",
+      "Get-Content / rg targeted static reads of WorkerRuntime, TaskExecutor, TaskExecutionService, and repository methods",
+      "git diff --check"
+    ],
+    "results": [
+      "Claimed the exact pending Worker handoff.",
+      "Static source inspection located the stop acknowledgement and lease state paths.",
+      "git diff --check passed.",
+      "Tests, compile, and SQLite/PostgreSQL migration checks were not run."
+    ],
+    "source_fd_revision": 10,
+    "source_fd_digest": "e7e98c1b1824eba5c564a2cfce26f08d7bdc8bc3989f104e1df41db13bd3ba80",
+    "worker_session": "fd007-worker-20261007-r2-31d7c9",
+    "residual_risk": "Cooperative stop remains executor-dependent. Legacy executors that cannot explicitly report STOPPED remain unacknowledged and require explicit administrative handling. No behavioral, concurrency, compile, or dual-database migration evidence was obtained."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000016-implementation-ready",
+  "human_report": "FD-006-test-authorization-r4.md",
+  "data": {
+    "decision": "approved",
+    "basis": "human-approved",
+    "implementation_event": "FD-006-000016-implementation-ready",
+    "fd_revision": 16,
+    "fd_digest": "fdc97a28f228774cd652e4922886dda98698b856f00184b0ac72df956cb0670c",
+    "tester_session": "fd006-tester-20261007-r3-805960c9",
+    "command": "node --test tests/fd006/claim-alias.test.mjs",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\.wt\\FD-006",
+    "scope": "One offline local Spring/SQLite HTTP integration test of alias repositoryRefs and direct-directory claim serialization.",
+    "expected_duration": "10-120 seconds",
+    "side_effects": "Starts/stops a localhost Spring/Maven/Java process tree, applies migrations to a test-owned temporary SQLite DB, may update ignored target/ compile output; cleans test-owned temp paths after process and port stop, with failure residue possible.",
+    "risk_review": "Inspected fixture, isolated SQLite URL, loopback binding, token and process cleanup; exceeds Planner low-risk scope, so explicit user authorization was obtained.",
+    "human_approval": "approved:conversation:call_7fc9a5953d29450a8f37db403a1ff6dc",
+    "planner_identity": "FD-006 Planner",
+    "decision_time": "2026-10-07T13:29:49Z"
+  }
+}

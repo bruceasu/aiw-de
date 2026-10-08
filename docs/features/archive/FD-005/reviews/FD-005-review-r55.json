@@ -1,0 +1,74 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000055-review-requested",
+  "human_report": "FD-005-review-r55.md",
+  "data": {
+    "reviewer_session": "fd005-reviewer-20261006-r55-7ab31c",
+    "reviewed_fd_revision": 55,
+    "reviewed_fd_digest": "137f790f665fc3abeaf14aa7ed32f3fcac6bfcf8d25b26a9076736814cd0f4e4",
+    "review_base": "5b1a48baa9c3dd7ca575bab25c11d452f3cce912 (current HEAD)",
+    "worker_commit": "No production source changes identified relative to review base; Worker r42 report says no source edits.",
+    "outcome": "verification-passed",
+    "findings": [],
+    "applicable_scenarios": 33,
+    "executed_behavior_tests": 1,
+    "passed_behavior_tests": 0,
+    "failed_behavior_tests": 1,
+    "unrun_behavior_tests": 32,
+    "authorization_records": [
+      "docs/features/reports/FD-005-test-authorization-r39.md",
+      "docs/features/reports/FD-005-test-authorization-r39.json"
+    ],
+    "coverage_exception": "PM r50 接受 69.70% 场景覆盖率及未测分支；API-16 行为验证门槛对本次处置豁免，但行为仍未验证。",
+    "worker_report": "docs/features/reports/FD-005-implementation-r42.md",
+    "tester_report": "docs/features/reports/FD-005-test-report-r39.md",
+    "pm_decision": "docs/features/reports/FD-005-pm-override-r50.md",
+    "pm_decision_summary": "PM r50 expressly waived the API-16 behavior-evidence gate for this FD disposition and accepted the documented coverage exceptions. PM r54 expressly overrode the usual pause after three changes-requested reviews and requested this fresh independent review. Neither decision rewrites historical results or claims an unrun test passed.",
+    "acceptance_review": {
+      "acceptance_1_api_16": "PM waived runtime evidence for this disposition. Static source places assertExecutableRole before client.register and explicitly rejects both reserved roles. Runtime behavior remains unverified; r39 exit 1 is preserved.",
+      "requirements_coverage": "69.70% (23/33); accepted PM exception; 10 scenarios not fully covered.",
+      "branch_coverage": "not measured; accepted PM exception.",
+      "r39_execution": "Authorized command exit 1; assertion reached; one behavior case failed; both reserved-role subprocesses exited during module or syntax loading.",
+      "authorized_invocation_hashes_match": true,
+      "r42_tester_handoff": "No result report/log found. Event #42 was superseded by #43, then #43 by #44; no outcome inferred."
+    },
+    "reviewed_artifacts": [
+      "docs/features/FD-005_WORKER_PI.md revision 55",
+      "docs/features/reports/FD-005-pm-override-r50.md and JSON",
+      "docs/features/reports/FD-005-pm-override-r54.md and JSON",
+      "docs/features/reports/FD-005-implementation-r42.md",
+      "docs/features/reports/FD-005-test-report-r39.md and JSON",
+      "docs/features/reports/FD-005-test-authorization-r39.md and JSON",
+      "tests/fd005/evidence-r39/execution.json and diagnostic.json",
+      "docs/features/reviews/FD-005-review-r44.md and JSON",
+      "docs/features/reviews/FD-005-review-r47.md and JSON",
+      "docs/features/reviews/FD-005-review-r52.md and JSON",
+      ".ai/fd/FD-005/events/000042-implementation-ready.json through 000055-review-requested.json",
+      "workers/process-typescript-with-api/src/index.ts",
+      "workers/process-typescript-with-api/src/profiles.ts",
+      "workers/process-typescript-with-api/src/api-adapter.ts"
+    ],
+    "commands": [
+      "aiw fd resume FD-005",
+      "aiw fd claim FD-005 FD-005-000055-review-requested --session fd005-reviewer-20261006-r55-7ab31c",
+      "aiw fd emit --help",
+      "Get-Content -Encoding utf8 and Select-String targeted reads of FD, reports, receipts, raw evidence and source",
+      "rg -n --hidden targeted search for the r42 Tester session and event",
+      "git rev-parse HEAD",
+      "git branch --show-current",
+      "git diff --name-status HEAD -- workers/process-typescript-with-api/src/index.ts workers/process-typescript-with-api/src/profiles.ts workers/process-typescript-with-api/src/api-adapter.ts tests/fd005/r39 tests/fd005/evidence-r39",
+      "Get-FileHash -Algorithm SHA256 for the five r39 authorized invocation files and current FD; compared hashes with Planner authorization and event #55"
+    ],
+    "skipped_checks": [
+      "tests",
+      "coverage",
+      "compile",
+      "build",
+      "formatting",
+      "network and runtime checks"
+    ],
+    "residual_risk": "API-16 behavior has no runtime proof and r39's loading failure remains undiagnosed; 10/33 scenarios are not fully covered; branch coverage is unmeasured; real services, remote Git, platform G2, and non-API Worker behavior were not runtime verified. PM accepted these risks for this disposition."
+  }
+}

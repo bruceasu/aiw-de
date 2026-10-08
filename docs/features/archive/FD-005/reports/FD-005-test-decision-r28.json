@@ -1,0 +1,27 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000028-test-report-ready",
+  "human_report": "FD-005-test-decision-r28.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-005-test-report-r27.md",
+    "fd_revision": 28,
+    "fd_digest": "2315a5b735829fe99a8426b5909d2ee536dff8aa86e27a81a2996d1a0e59a378",
+    "requirements_coverage": "60.61%",
+    "branch_coverage": "not measured",
+    "rationale": "r27 唯一授权命令 exit 0 且 10/10 通过，但累计仅 20/33 个 API Worker 场景完整覆盖，低于 70% 门槛；API-16/19/23/27/33 局部通过不计入覆盖。",
+    "exceptions": "无例外；不批准低于 70% 的场景覆盖，也不将未测分支描述为已覆盖。",
+    "residual_risk": "13 个 API 场景未完整覆盖，业务代码分支未测量；真实 Control Plane、模型端点、远端 Git 和平台 G2 未运行。r23 两项失败仍保留为历史事实。",
+    "pm_identity": "host-pm-fd005-20261005",
+    "decision_time": "2026-10-05T14:19:30Z",
+    "raw_evidence": [
+      "tests/fd005/evidence-r27/node-test-output.txt",
+      "tests/fd005/evidence-r27/execution.json",
+      "tests/fd005/evidence-r23/node-test-output.txt",
+      "tests/fd005/evidence-r23/execution.json"
+    ],
+    "failed_scenarios": []
+  }
+}

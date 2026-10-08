@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000039-implementation-ready",
+  "human_report": "FD-005-test-authorization-r39.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-005-000039-implementation-ready",
+    "fd_revision": 39,
+    "fd_digest": "2dc44b6b895a1c1aeece81a568c214c94f9c78b96486d25b4b32abf920e9e770",
+    "tester_session": "fd005-tester-20261005-r39-f5c82a",
+    "command": "node tests/fd005/r39/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r39.json",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev",
+    "scope": "仅 API Worker src/index.ts 入口的 API-16 双保留角色注册前拒绝与脱敏启动诊断",
+    "expected_duration": "少于 15 秒；总进程 45 秒截止，每角色入口 5 秒截止",
+    "side_effects": "OS 临时目录 fd005-r39-*，以及 tests/fd005/evidence-r39/ 下两个 wx 受控 JSON 证据文件；临时路径核验后删除",
+    "risk_review": "五文件静态审查及摘要绑定；原始 stdout/stderr 不落盘，仅允许字段重建诊断；真实 token 移除、网络拦截，无其他 Worker、真实服务或越界写入",
+    "human_approval": "not required",
+    "planner_identity": "host-planner-fd005-20261005",
+    "decision_time": "2026-10-05T14:40:05Z",
+    "invoked_files_sha256": {
+      "tests/fd005/r39/entry-guard.mjs": "c9d6792cdedcec2936bf0cb12ef4b6707149abb29da9691757720635b7feaacc",
+      "tests/fd005/r39/register-loader.mjs": "619a5b0fe3a736c49184d1944a3bee2e283988897235bb5fec80c0ba471e9a90",
+      "tests/fd005/r39/run-offline.mjs": "ab9c50b1a0f5ecc5d41bbc9954c6423bb2838ffe9c5305d33c5577dcf4d45aae",
+      "tests/fd005/r39/typescript-loader.mjs": "4fc46aa93fa3c0b0977efc6b42f2814eb475d484e2a34ec4cce11b7e739bd712",
+      "tests/fd005/r39/worker.test.mjs": "e442937fb35a1ab5b9d90ce2dd8de6cd75b2729160191687beee69831d4c7336"
+    }
+  }
+}

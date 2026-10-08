@@ -1,0 +1,67 @@
+server:
+  address: ${AIW_BIND_ADDRESS:127.0.0.1}
+  port: ${AIW_PORT:8080}
+  servlet:
+    session:
+      timeout: ${AIW_WEB_CONSOLE_SESSION_TIMEOUT:8h}
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${AIW_WEB_CONSOLE_COOKIE_SECURE:false}
+
+spring:
+  profiles:
+    default: sqlite
+  application:
+    name: ai-dev-manager-r9
+  datasource:
+    url: ${AIW_DB_URL:jdbc:postgresql://localhost:5432/aidev_r3}
+    username: ${AIW_DB_USER:aidev}
+    password: ${AIW_DB_PASSWORD:aidev}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+aidev:
+  database:
+    mode: postgresql
+  # Local, single-machine Workspace registry. repositoryRef values must be unique across Workspaces.
+  workspaces:
+    local:
+      repositories: {}
+      # Add repository mappings here, for example: core: D:/projects/core
+  worker-protocol:
+    token: ${AIW_WORKER_TOKEN:}
+  lease-recovery:
+    enabled: ${AIW_LEASE_RECOVERY_ENABLED:true}
+    interval-ms: ${AIW_LEASE_RECOVERY_INTERVAL_MS:5000}
+    batch-size: ${AIW_LEASE_RECOVERY_BATCH_SIZE:100}
+
+  autonomous:
+    default-max-parallelism: ${AIW_RUN_DEFAULT_MAX_PARALLELISM:0}
+
+  fleet:
+    max-parallelism: ${AIW_FLEET_MAX_PARALLELISM:0}
+
+
+  web-console:
+    auth:
+      enabled: ${AIW_WEB_CONSOLE_AUTH_ENABLED:false}
+      username: ${AIW_WEB_CONSOLE_USERNAME:admin}
+      password: ${AIW_WEB_CONSOLE_PASSWORD:}
+      role: ${AIW_WEB_CONSOLE_ROLE:ADMIN}
+
+  approval:
+    policy:
+      mode: ${AIW_APPROVAL_POLICY:MANUAL}
+      requested-by: ${AIW_APPROVAL_REQUESTED_BY:control-plane:approval-policy}
+      channel: ${AIW_APPROVAL_CHANNEL:API}
+      channel-ref: ${AIW_APPROVAL_CHANNEL_REF:}
+    telegram:
+      enabled: ${AIW_TELEGRAM_ENABLED:false}
+      token: ${AIW_TELEGRAM_BOT_TOKEN:}
+      api-base: ${AIW_TELEGRAM_API_BASE:https://api.telegram.org}
+      default-chat-id: ${AIW_TELEGRAM_CHAT_ID:}
+      allowed-user-ids: ${AIW_TELEGRAM_ALLOWED_USER_IDS:}
+      poll-timeout-seconds: ${AIW_TELEGRAM_POLL_TIMEOUT_SECONDS:30}
+      backoff-ms: ${AIW_TELEGRAM_BACKOFF_MS:1000}

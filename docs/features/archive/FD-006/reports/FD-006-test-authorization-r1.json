@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000009-implementation-ready",
+  "human_report": "FD-006-test-authorization-r1.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-006-000009-implementation-ready",
+    "fd_revision": 9,
+    "fd_digest": "50f9e057844a7f9334c21b3afdbbf7cc176f5204cbff6a91bbd502e9e4e1c596",
+    "tester_session": "fd006-tester-20261007-4c865139",
+    "command": "node --test tests/fd006/direct-workspace.test.mjs",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\.wt\\FD-006",
+    "scope": "FD-006 DIRECT Workspace black-box assignment, finalize and cleanup",
+    "expected_duration": "5-20 seconds",
+    "side_effects": "Creates and normally removes test-owned directory and evidence under the OS temporary directory; on failure may retain it for investigation; no network or repository user-file writes.",
+    "risk_review": "Inspected the focused test and imported runtime paths; temporary-directory effects are confined and low risk.",
+    "human_approval": "not required",
+    "planner_identity": "FD-006 Planner",
+    "decision_time": "2026-10-07T13:15:27Z"
+  }
+}

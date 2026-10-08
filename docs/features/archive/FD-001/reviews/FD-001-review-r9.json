@@ -1,0 +1,80 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-001",
+  "kind": "reviewer-report",
+  "source_event": "FD-001-000009-test-accepted",
+  "human_report": "FD-001-review-r9.md",
+  "data": {
+    "reviewer_session": "fd001-reviewer-20261004-9195c0ad",
+    "reviewed_fd_revision": 9,
+    "reviewed_fd_digest": "46803d98b1fd2563f5680d6181b5154a158cb1c836dd1b6f91c815a3297742d5",
+    "review_base": "d33dbbd12dd8aa906633fe4b518f73d14ee283ee",
+    "reviewed_commit": "ae19d463436fe9730b07e7106ecbdfacfab98845",
+    "outcome": "changes-requested",
+    "failed_review_count": 1,
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "P2",
+        "acceptance": "AC02",
+        "path": "src/main/java/me/asu/aidev/webconsole/application/WebConsoleQueryService.java",
+        "line": 67,
+        "title": "等待类别总量与示例使用不同口径",
+        "evidence": "Fleet JdbcFleetDashboardRepository.java:205-209 使用 policy/run admission/capability/capacity/fleet 的互斥优先级计数；QueryService按独立条件筛选。PAUSED且无兼容Worker的READY task计入Policy却被列入No matching capability，可能总量0仍有示例。",
+        "requested_fix": "保留Fleet权威计数，将示例五组谓词对齐互斥优先级；在模板/双语指南明确类别口径。额外重叠事实需单独标注。",
+        "evidence_type": "static source trace; no Reviewer runtime"
+      },
+      {
+        "id": "F2",
+        "severity": "P2",
+        "acceptance": "AC07",
+        "path": "src/main/resources/templates/ui/dashboard.html",
+        "line": 44,
+        "title": "等待组计数变化后丢失展开状态",
+        "evidence": "waiting-group details没有稳定key；console.js:71 fallback summary.textContent含动态total，:102-104旧key与新key不匹配时关闭details。",
+        "requested_fix": "给waiting-group details添加仅依赖类别身份的data-detail-key，例如g.label。",
+        "evidence_type": "static source trace; no Reviewer runtime"
+      },
+      {
+        "id": "F3",
+        "severity": "P2",
+        "acceptance": "AC07",
+        "path": "src/main/resources/static/ui/console.js",
+        "line": 98,
+        "title": "跨区域选区未完整保护",
+        "evidence": "仅判断selection.anchorNode所在区域；其他与Range相交的刷新区域仍replaceWith，破坏跨区域文本选择。",
+        "requested_fix": "用Selection各Range.intersectsNode(region)保留所有相交区域，沿用原焦点保护与部分陈旧提示。",
+        "evidence_type": "static source trace; no Reviewer runtime"
+      }
+    ],
+    "test_report": "docs/features/reports/FD-001-test-r7.md",
+    "pm_decision": "docs/features/reports/FD-001-test-decision-r8-v1.md",
+    "requirements_coverage": "47.73%",
+    "branch_coverage": "not measured",
+    "executed_behavior_tests": 36,
+    "passed_behavior_tests": 36,
+    "failed_behavior_tests": 0,
+    "applicable_scenarios": 88,
+    "covered_scenarios": 42,
+    "uncovered_scenarios": 46,
+    "authorization_records": [
+      "docs/features/reports/FD-001-test-authorization-r7-v1.md",
+      "docs/features/reports/FD-001-test-authorization-r7-v2.md"
+    ],
+    "authorization_result": "Exact commands, cwd, event7/revision7/digest, Tester session and human approval match. Host confirmation of diagnostic login precondition precedes matrix. Independent Reviewer has a distinct claimed session.",
+    "exceptions_respected": "PM explicitly permits below70 requirements coverage and unavailable branch coverage. User permits Firefox defer. These do not waive F1-F3 behavior defects. Historical failed evidence retained and Worker evidence excluded from Tester counts.",
+    "static_results": "Read-only private projections, parameterization, per-source bounded activity, timeline authority, deterministic identity, original security/action boundaries and M1 phase boundary inspected. Existing 1440/390 screenshots inspected; no new runtime.",
+    "commands": [
+      "C:/green/aiw/aiw.exe fd claim FD-001 FD-001-000009-test-accepted --session fd001-reviewer-20261004-9195c0ad",
+      "git diff d33dbbd12dd8aa906633fe4b518f73d14ee283ee ae19d463436fe9730b07e7106ecbdfacfab98845 --stat",
+      "git diff d33dbbd12dd8aa906633fe4b518f73d14ee283ee ae19d463436fe9730b07e7106ecbdfacfab98845 -- targeted webconsole Java and bilingual guides",
+      "Targeted rg, Get-Content -Encoding UTF8 and FD Get-FileHash; view_image existing tester-1440.png and tester-390.png",
+      "C:/green/aiw/aiw.exe fd emit --help",
+      "One scoped post-edit static report/FD read",
+      "C:/green/aiw/aiw.exe fd emit FD-001 changes-requested --producer reviewer --artifact docs/features/reviews/FD-001-review-r9.md --source-event FD-001-000009-test-accepted"
+    ],
+    "skipped_checks": "No tests/browser/Maven/compile/coverage/formatter/lint/typecheck/verification scripts/network/final builds/deployment; no additional Reviewer runtime authorization.",
+    "residual_risk": "46 independent uncovered scenarios, source branch unavailable, high-volume query cost, Firefox. Future archive requires checking relative external image links; no current archive defect claimed.",
+    "next_step": "Worker fixes F1-F3 without expanding authority/schema/contracts, provides revision-bound evidence and returns for independent review. Failed review count1/3; no close/archive on current result."
+  }
+}

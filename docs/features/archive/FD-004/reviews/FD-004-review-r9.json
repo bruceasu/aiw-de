@@ -1,0 +1,39 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-004",
+  "source_event": "FD-004-000009-test-accepted",
+  "human_report": "FD-004-review-r9.md",
+  "data": {
+    "reviewer_session": "fd004-reviewer-20261005-00570883",
+    "reviewed_fd_revision": 9,
+    "reviewed_fd_digest": "310410946926daa174c1c0b48195d0b80f12810bcf196ad471b140254af600ec",
+    "review_base": "00815ac",
+    "worker_commit": "0453efc",
+    "outcome": "changes-requested",
+    "findings": [
+      {
+        "severity": "high",
+        "acceptance": "AC04",
+        "paths": ["src/main/resources/templates/ui/run-detail.html:24", "src/main/resources/templates/ui/run-detail.html:78", "src/main/resources/static/ui/console.js:88"],
+        "summary": "Run 页局部刷新只更新审批状态区域，证据及审批表单留在区域外，导致新状态和旧表单同时展示。",
+        "requested_change": "让同一 approval ID 的审批证据和操作表单随局部刷新成组更新，并保留编辑保护。"
+      }
+    ],
+    "worker_report": "docs/features/reports/FD-004-implementation-r6.md",
+    "tester_report": "docs/features/reports/FD-004-test-report-r8.md",
+    "pm_decision": "docs/features/reports/FD-004-test-decision-r8-v1.md",
+    "requirements_coverage": "3.45%",
+    "branch_coverage": "not measured",
+    "applicable_scenarios": 29,
+    "executed_behavior_tests": 1,
+    "passed_behavior_tests": 1,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 28,
+    "authorization_records": ["docs/features/reports/FD-004-test-authorization-r7.md", "docs/features/reports/FD-004-test-authorization-r7-v2.md"],
+    "coverage_exception": "PM 接受低覆盖率检查例外，不豁免 AC01–AC06 行为。",
+    "commands": ["aiw fd resume FD-004", "aiw fd claim FD-004 FD-004-000009-test-accepted --session fd004-reviewer-20261005-00570883", "git status --short", "git diff --stat 00815ac..0453efc", "git diff 00815ac..0453efc -- scoped source paths", "targeted rg and Get-Content static reads"],
+    "skipped_checks": "未运行测试、浏览器、SQL、模板渲染、网络、覆盖率、编译、格式器和最终构建。",
+    "residual_risk": "28 个场景未运行，精确历史关联、缺失矩阵、并发刷新、窄窗口与外部读取边界缺少运行证据。"
+  }
+}

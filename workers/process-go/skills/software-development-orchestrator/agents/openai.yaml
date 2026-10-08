@@ -1,0 +1,3 @@
+interface:
+  display_name: "Software Development Orchestrator"
+  short_description: "Propose safe next lifecycle work without owning Control Plane state."

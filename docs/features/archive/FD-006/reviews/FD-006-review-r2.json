@@ -1,0 +1,60 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000018-test-accepted",
+  "human_report": "FD-006-review-r2.md",
+  "data": {
+    "reviewer_session": "fd006-reviewer-20261007-r2-9be8407c",
+    "fd_revision": 18,
+    "fd_digest": "20726077ae34ba037c81a4c101d82e9b7a7e7bf5ed0ee37a2524c2d20d0edf22",
+    "diff_base": "0312f09d5a68c1afa0a3f1f7e3ec22351b86e50f",
+    "focused_fix_base": "ff090b7",
+    "reviewed_commit": "a73c74cbc38ce1bcced5680e3ad44d01cdab8a47",
+    "worker_session": "fd006-worker-20261007-r3-f7612a",
+    "tester_session": "fd006-tester-20261007-r3-805960c9",
+    "pm_test_decision": "docs/features/reports/FD-006-test-decision-r3.md",
+    "decision": "verification-passed",
+    "findings": [],
+    "resolved_prior_findings": [
+      {
+        "id": "F-01",
+        "status": "resolved_by_static_review_runtime_unverified",
+        "evidence": "TaskClaimService.claimNext holds a transaction across shared admission row lock, physical path comparison, and CLAIMED state write. toRealPath coalesces duplicate roots and symlink/junction aliases; unresolved paths fail closed. Distinct paths may run concurrently after admission.",
+        "paths": [
+          "src/main/java/me/asu/aidev/workspace/application/DirectWorkspaceConcurrencyBudget.java",
+          "src/main/java/me/asu/aidev/execution/application/TaskClaimService.java",
+          "src/main/java/me/asu/aidev/autonomous/application/WorkspaceRegistry.java"
+        ]
+      }
+    ],
+    "test_evidence": {
+      "applicable_scenarios": 32,
+      "covered_scenarios": 2,
+      "executed_behavior_tests": 4,
+      "passed_behavior_tests": 4,
+      "failed_behavior_tests": 0,
+      "requirements_coverage": "6.25%",
+      "branch_coverage": "not measured",
+      "raw_worker_output": "tests/fd006/evidence-r3/node-test-output.txt",
+      "raw_integration_output": "tests/fd006/evidence-r3/claim-alias-test-output.txt",
+      "integration_status": "environment-blocked before Spring startup and before HTTP claim assertions; Maven JVM native memory allocation failure; AC11 not run or passed",
+      "authorizations": [
+        "docs/features/reports/FD-006-test-authorization-r3.md",
+        "docs/features/reports/FD-006-test-authorization-r4.md"
+      ],
+      "human_approval_reference": "approved:conversation:call_7fc9a5953d29450a8f37db403a1ff6dc",
+      "pm_exception": "PM r3 explicitly accepted 2/32 coverage, unmeasured branch coverage, and AC11 environment block for static review only."
+    },
+    "commands_run": [
+      "aiw fd claim FD-006 FD-006-000018-test-accepted --session fd006-reviewer-20261007-r2-9be8407c",
+      "git status --short",
+      "git log --oneline ff090b7..HEAD",
+      "git diff ff090b7..HEAD -- DirectWorkspaceConcurrencyBudget.java and FD",
+      "git rev-parse HEAD",
+      "PowerShell Get-Content and rg static reads of claim flow, WorkspaceRegistry, tests, raw output, authorizations and PM decision"
+    ],
+    "commands_skipped": ["new tests", "compile/build", "SQLite/PostgreSQL migrations", "coverage", "application runtime", "network"],
+    "residual_risk": "AC11 true concurrency has no running assertion due Maven JVM native-memory failure. UI/API, Clone, registration file safety, migration and other Worker adapters lack independent runtime evidence; filesystem and database registration are non-atomic. Ignored JVM crash logs need worktree cleanup."
+  }
+}

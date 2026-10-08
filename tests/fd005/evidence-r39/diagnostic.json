@@ -1,0 +1,38 @@
+{
+  "testProcessExit": 1,
+  "timedOut": false,
+  "testStarted": true,
+  "assertionsReached": true,
+  "roles": [
+    {
+      "role": "release-readiness",
+      "exit": 1,
+      "timedOut": false,
+      "category": "module-or-syntax-load-error",
+      "nodeErrorCode": null,
+      "moduleCategory": null,
+      "moduleBasename": null
+    },
+    {
+      "role": "orchestrator",
+      "exit": 1,
+      "timedOut": false,
+      "category": "module-or-syntax-load-error",
+      "nodeErrorCode": null,
+      "moduleCategory": null,
+      "moduleBasename": null
+    }
+  ],
+  "startup": {
+    "nodeErrorCode": "ERR_ASSERTION",
+    "moduleCategory": null,
+    "moduleBasename": null
+  },
+  "reporter": {
+    "tests": 1,
+    "pass": 0,
+    "fail": 1,
+    "cancelled": 0,
+    "skipped": 0
+  }
+}

@@ -1,0 +1,32 @@
+id = "ISSUE-001"
+title = "Worker 公共执行基础与 pi 机制融合"
+parent_id = ""
+status = "APPROVED"
+created = "2026-10-04"
+updated = "2026-10-04"
+revision = 4
+
+[approval]
+status = "APPROVED"
+by = "conversation-user"
+at = "2026-10-04T22:52:30+09:00"
+reason = "用户于 2026-10-04 明确批准 G1/G2 政策并要求整体 Issue 交接 FD 设计；批准原文见 requirement-plan.md 的提升决策。"
+source_digest = "7ff4e1c8aff561ac06e4303ae0b911afc1d674c52c9dfb18766ecacc6881f835"
+
+[promotion]
+status = "NOT_STARTED"
+task_id = ""
+
+[conversation]
+session_id = ""
+
+[terminal]
+by = ""
+at = ""
+reason = ""
+
+[artifact]
+requirement-plan = "docs/requirements/ISSUE-001/requirement-plan.md"
+
+[digest]
+requirement-plan = "fbd09ddac173968bf34c6aa233c99823b1ee8a91976fe11f373f07f5d7a942bc"

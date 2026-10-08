@@ -1,0 +1,432 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-003",
+  "source_event": "FD-003-000008-implementation-ready",
+  "human_report": "FD-003-test-report-r8.md",
+  "data": {
+    "implementation_event": "FD-003-000008-implementation-ready",
+    "tested_fd_revision": 8,
+    "tested_fd_digest": "d558c9409d4a0e1af7a5c6207dd66c5c00e88e507b3e8463b86259d0b78889ad",
+    "tester_session": "fd003-tester-20261005-ad16f437",
+    "applicable_scenarios": 50,
+    "covered_scenarios": 0,
+    "executed_behavior_tests": 0,
+    "passed_behavior_tests": 0,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 50,
+    "requirements_coverage": "0.00%",
+    "branch_coverage": "not measured",
+    "raw_coverage_evidence": "not measured",
+    "coverage_unavailable_reason": "用户明确要求 FD-003 本轮不做测试；未运行测试、浏览器或分支覆盖率命令，也没有运行结果。",
+    "test_files": [],
+    "authorization_records": [],
+    "commands": [],
+    "recommendation": "blocked",
+    "not_applicable_reason": "全部场景适用；未执行不从分母排除。",
+    "residual_risk": "所有 Fleet 页面行为均未运行验证：模板渲染、Run 关联、READY 分类与并列限制、100 条范围、权限和 CSRF、状态竞争、租约自然排空、刷新、窄窗口及减少动效。PM 需记录 0% 覆盖例外。",
+    "scenarios": [
+      {
+        "id": "worker-identity",
+        "acceptance": "AC01",
+        "behavior": "同一 Worker 在 Overview、Fleet 与执行入口保持相同机械身份，并能看到真实 Worker ID",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "worker-status-active-idle",
+        "acceptance": "AC01",
+        "behavior": "ACTIVE 且没有活动租约时，管理状态与待命占用分别可读",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "worker-status-executing",
+        "acceptance": "AC01",
+        "behavior": "ACTIVE 且有活动租约时，管理状态与实际占用分别可读",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "worker-status-draining",
+        "acceptance": "AC01",
+        "behavior": "DRAINING 时说明停止新领取且现有执行继续",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "worker-status-offline",
+        "acceptance": "AC01",
+        "behavior": "OFFLINE 时状态文字、身份和工作事实仍可读",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "worker-metadata",
+        "acceptance": "AC01",
+        "behavior": "有记录的 runtime 与 capabilities 原样显示，长值可完整阅读",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "worker-metadata-missing",
+        "acceptance": "AC01",
+        "behavior": "缺少 runtime/node 信息时明确未知，不虚构角色或节点",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "worker-lease-link",
+        "acceptance": "AC01",
+        "behavior": "活动租约显示真实 task、Worker、attempt、过期时间及可用 Run 入口",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "worker-lease-missing",
+        "acceptance": "AC01",
+        "behavior": "租约的可选字段缺失时显示未知，不推断历史 claim 原因",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "ready-primary-policy",
+        "acceptance": "AC02",
+        "behavior": "policy 阻挡优先归入 policy 主原因，完整总数与 Backlog 一致",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "ready-primary-run",
+        "acceptance": "AC02",
+        "behavior": "无 policy 阻挡而 Run 准入受限时归入 Run admission",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "ready-primary-capability",
+        "acceptance": "AC02",
+        "behavior": "前两项允许而无兼容 Worker 时归入 capability，不能误写容量限制",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "ready-primary-capacity",
+        "acceptance": "AC02",
+        "behavior": "存在兼容 Worker 但无可领取 Worker 时归入 Worker capacity",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "ready-primary-fleet",
+        "acceptance": "AC02",
+        "behavior": "前述条件允许而 Fleet 准入受限时归入 Fleet admission",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "ready-claimable",
+        "acceptance": "AC02",
+        "behavior": "所有当前准入条件允许时显示可领取",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "ready-overlap",
+        "acceptance": "AC02",
+        "behavior": "一个 READY 任务同时受多个条件限制时并列显示全部当前事实，主分类仍互斥",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "ready-evidence-unknown",
+        "acceptance": "AC02",
+        "behavior": "Run 或关联证据缺失时标记未知，不猜测阻挡原因",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "ready-current-only",
+        "acceptance": "AC02",
+        "behavior": "READY 分类和限制说明明确是当前快照，不冒充历史 claim 决策",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "ready-task-scope",
+        "acceptance": "AC02",
+        "behavior": "从积压分类可定位受影响的真实任务，详情筛选明确仅在返回窗口内生效",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "run-link-valid",
+        "acceptance": "AC02",
+        "behavior": "AUTONOMOUS_REQUIREMENT subject 且保存的 Run 存在时链接正确 Run",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "run-link-missing",
+        "acceptance": "AC02",
+        "behavior": "AUTONOMOUS_REQUIREMENT subject 对应 Run 缺失时保留原始 ID 并显示 Run unavailable",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "run-link-other-subject",
+        "acceptance": "AC02",
+        "behavior": "其他 subject 类型只显示原始类型和 ID，不生成 Run 链接",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "fleet-limit-unlimited",
+        "acceptance": "AC03",
+        "behavior": "Fleet 或 Run 限额为 0 时明确表示无限，并展示实际占用与可用槽位",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "fleet-limit-saturated",
+        "acceptance": "AC03",
+        "behavior": "使用量达到限额时显示无可用槽位和相应新 claim 限制",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "fleet-limit-overcommitted",
+        "acceptance": "AC03",
+        "behavior": "占用超过新限额时显示 overcommitted，已有租约仍继续",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "fleet-limit-contraction",
+        "acceptance": "AC03",
+        "behavior": "把限额调低到占用以下时提交前说明自然排空，成功后呈现真实限制",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "worker-drain",
+        "acceptance": "AC03",
+        "behavior": "对 ACTIVE Worker 提交 drain 后停止新领取且已有租约继续",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "pause-effect",
+        "acceptance": "AC03",
+        "behavior": "Run pause 明确区别于自然排空，活动租约按现有规则撤销",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "cancel-effect",
+        "acceptance": "AC03",
+        "behavior": "Run cancel 显示不可逆后果，不写成自然排空",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "role-viewer",
+        "acceptance": "AC04",
+        "behavior": "VIEWER 无管理动作入口，有效 POST 也被服务端拒绝",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "role-operator-admin",
+        "acceptance": "AC04",
+        "behavior": "有权限角色只看到当前可用动作，提交后以实际结果反馈",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "csrf",
+        "acceptance": "AC04",
+        "behavior": "缺少 CSRF 的写入请求被拒绝，状态不变且不显示成功",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "offline-precondition",
+        "acceptance": "AC04",
+        "behavior": "有活动租约的 Worker 不能 offline，服务端拒绝并反馈真实原因",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "stale-action",
+        "acceptance": "AC04",
+        "behavior": "页面打开后状态变化导致动作不再可用时，POST 反馈竞争错误而非假成功",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "action-feedback",
+        "acceptance": "AC04",
+        "behavior": "成功与失败均通过 redirect/flash 显示，并与重新读取的状态一致",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "fleet-worker-limit",
+        "acceptance": "AC05",
+        "behavior": "Worker 详情超过 100 条时显示前 100、真实总数和当前快照范围",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "fleet-ready-limit",
+        "acceptance": "AC05",
+        "behavior": "READY 详情超过 100 条时显示前 100、真实 Backlog 总数和局部筛选范围",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "fleet-lease-limit",
+        "acceptance": "AC05",
+        "behavior": "活动租约超过 100 条时显示前 100、真实总数和当前快照范围",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "ready-order",
+        "acceptance": "AC05",
+        "behavior": "READY 详情按优先级降序、创建时间升序、task ID 升序稳定显示",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "lease-order",
+        "acceptance": "AC05",
+        "behavior": "活动租约按过期时间升序、task ID 升序稳定显示",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "worker-order",
+        "acceptance": "AC05",
+        "behavior": "Worker 列表按管理状态、Worker ID 稳定显示",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "heartbeat-fact",
+        "acceptance": "AC05",
+        "behavior": "显示心跳时间与 capturedAt；过期或缺失数据不自动评为健康或故障",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "refresh-edit",
+        "acceptance": "AC05",
+        "behavior": "编辑限额等表单时自动刷新保留输入、焦点和操作提示",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "refresh-stale",
+        "acceptance": "AC05",
+        "behavior": "刷新中断或快照陈旧时保留最后一次成功快照并给出新鲜度提示",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "empty-fleet",
+        "acceptance": "AC06",
+        "behavior": "无 Worker、READY 任务或租约时显示真实零值和有意义空态",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "long-values",
+        "acceptance": "AC06",
+        "behavior": "长 Worker/task/Run ID 与 capability 在窄窗口仍可阅读和复制",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "no-capacity",
+        "acceptance": "AC06",
+        "behavior": "可用容量为零时数字、限制语义和可用动作仍清楚",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "reduced-motion",
+        "acceptance": "AC06",
+        "behavior": "关闭动效或系统减少动效时身份、状态、占用与动作仍可辨认",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "keyboard-focus",
+        "acceptance": "AC06",
+        "behavior": "键盘导航能到达主要链接和操作，焦点可见",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      },
+      {
+        "id": "narrow-window",
+        "acceptance": "AC06",
+        "behavior": "窄窗口中主要 Fleet 内容和操作无需页面级横向溢出即可访问",
+        "status": "blocked",
+        "test_cases": [],
+        "reason": "用户要求 FD-003 本轮不做测试；本场景仅列入验收库存，未执行，也没有运行证据。"
+      }
+    ],
+    "static_exclusions": []
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-001",
+  "source_event": "FD-001-000012-test-report-ready",
+  "human_report": "FD-001-test-decision-r12-v1.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-001-test-r11.md",
+    "fd_revision": 12,
+    "fd_digest": "5ac8b7c4407f36ec6561c9e80bf120376be9c012ea6d1f7f6cdb3ec9a60a9414",
+    "requirements_coverage": "5.49%",
+    "branch_coverage": "not measured",
+    "rationale": "Final corrected run exit0: four unique business assertions passed with actual waiting count0to1 update and unprotected region replacement; all open/focus/Selection endpoints, offsets, text and intermediate nodes preserved. The current report targets three concrete Reviewer findings; raw results and authorizations inspected. Initial2 business failures preserved separately and not accepted; no claim about their unique cause. Prior accepted r7/IT/visual evidence supports unchanged baseline only.",
+    "exceptions": "Explicit scoped exception to70% requirements threshold: current5/91=5.49%,86not rerun. Explicit exception for unavailable source branch coverage. Legacy42/88 and36/36 are historical support, excluded from current counts. No behavior requirements waived. FD001 Firefox remains human-deferred. Reviewer must independently assess all stated requirements and actual residual defects.",
+    "residual_risk": "Current run does not cover >=5 samples/truncation, other waiting combinations, full event/missing-association or server role/CSRF/race matrix, hidden/timeout/stale behavior, scale cost or Firefox. Very low current coverage is acceptable only for repair review with recorded prior evidence; it is not whole-FD runtime or release assurance.",
+    "pm_identity": "fd001-pm-host-20261005",
+    "decision_time": "2026-10-04T22:31:12+00:00",
+    "executed_behavior_tests": 4,
+    "passed_behavior_tests": 4,
+    "failed_behavior_tests": 0,
+    "covered_scenarios": 5,
+    "applicable_scenarios": 91,
+    "historical_test_report": "docs/features/reports/FD-001-test-r7.md",
+    "initial_attempt_evidence": "tests/fd001/evidence-review1/initial",
+    "current_raw_evidence": "tests/fd001/evidence-review2",
+    "reviewer_failed_outcomes": 1
+  }
+}

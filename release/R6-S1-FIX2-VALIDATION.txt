@@ -1,0 +1,21 @@
+R6-S1 FIX2 VALIDATION
+
+Purpose
+- Preserve Fix1 creation-time dependency readiness correction.
+- Make stale target/test-classes immediately visible.
+- Align Maven project metadata with R6.
+- Add direct readiness/capability assertions before downstream claim.
+
+Expected integration test count
+- R3S1WorkTaskGraphIT: 2
+- R3S2WorkerLeaseIT: 1
+- R3S3FakeWorkerRuntimeIT: 2
+- R4WorkerProtocolIT: 2
+- R5WorkspaceProtocolIT: 1
+- R6ResultHandoffIT: 1
+TOTAL: 9
+
+Authoritative local gate
+  mvn clean verify
+
+If Maven reports only 8 integration tests, stale build output or an older source tree is being executed.

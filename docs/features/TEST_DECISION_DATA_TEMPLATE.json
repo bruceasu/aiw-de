@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-XXX",
+  "source_event": "FD-XXX-000000-test-report-ready",
+  "human_report": "FD-XXX-test-decision-rN.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-XXX-test-report-rN.md",
+    "fd_revision": 0,
+    "fd_digest": "replace-with-test-report-ready-receipt-digest",
+    "requirements_coverage": "not measured",
+    "branch_coverage": "not measured",
+    "rationale": "replace-with-PM-decision",
+    "exceptions": "none",
+    "residual_risk": "replace-with-remaining-risk",
+    "pm_identity": "replace-with-decision-owner",
+    "decision_time": "2026-10-02T00:00:00+00:00"
+  }
+}

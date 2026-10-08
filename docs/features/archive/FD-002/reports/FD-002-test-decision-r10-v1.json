@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000010-test-report-ready",
+  "human_report": "FD-002-test-decision-r10-v1.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-002-test-report-r9-attempt2.md",
+    "fd_revision": 10,
+    "fd_digest": "48bb3034ba479f9412e11c76cd1f7fc994651883b2d67c66bb6df5082152f09f",
+    "requirements_coverage": "71.15%",
+    "branch_coverage": "not measured",
+    "rationale": "78 executed/74passed/4failed/26unrun; requirement threshold does not permit acceptance of failures. Existing screenshot shows7/7 total but0/0 matches and no visible timeline entries. Exact300 attempt ID set not proved; whole DOM text boundary counting may be defective. Node native commit failure aborts before18 planned width/action/focus scenarios. Preserve all failures and prior attempts; return Worker for concrete repairs and new independently authorized test handoff.",
+    "exceptions": "No requirement or branch coverage exception; user FD002 Firefox deferral applies only to2 of8 uncovered scenarios, all remain in104 denominator; no other behavior waiver.",
+    "residual_risk": "Timeline reading/filtering defective; attempt count attribution unresolved;18 planned unrun and8 uncovered; Node/system commit pressure; original Timeline full-read cost and source branch coverage unmeasured. Both newly approved executions consumed; next run needs new human budget.",
+    "pm_identity": "fd002-pm-host-20261005",
+    "decision_time": "2026-10-04T23:08:57+00:00"
+  }
+}

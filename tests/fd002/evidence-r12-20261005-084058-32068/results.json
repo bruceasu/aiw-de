@@ -1,0 +1,4662 @@
+{
+  "tester_session": "fd002-tester-20261005-15d090a2",
+  "source_event": "FD-002-000012-implementation-ready",
+  "fd_revision": 12,
+  "fd_digest": "8a272107c44241a585978e51becdf1d769f5d17736f122b276fea088bb6178b9",
+  "command": "C:/green/python312/python.exe tests/fd002/runtime.py",
+  "cwd": "D:\\03_projects\\AI-tools\\aiw-dev",
+  "authorization": "D:\\03_projects\\AI-tools\\aiw-dev\\docs\\features\\reports\\FD-002-test-authorization-r12-v2.json",
+  "branch_coverage": "unavailable",
+  "branch_reason": "no bytecode coverage instrumentation in this offline black-box command",
+  "applicable_scenarios": 104,
+  "covered_scenarios": 93,
+  "executed_behavior_tests": 96,
+  "passed_behavior_tests": 93,
+  "failed_behavior_tests": 3,
+  "unrun_behavior_tests": 8,
+  "requirements_coverage": "93/104 (89.42%)",
+  "infrastructure_issues": [
+    {
+      "role": "ADMIN",
+      "error": "browser command exit 1"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "requirement-original",
+      "ac": "AC01",
+      "behavior": "需求来自 Run 保存的 requirementTaskId，非首个展示任务",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "requirement-original"
+      ],
+      "evidence": {
+        "id": "requirement-original",
+        "behavior": "需求来自 Run 保存的 requirementTaskId，非首个展示任务",
+        "passed": true,
+        "detail": "saved requirementTaskId input matched"
+      }
+    },
+    {
+      "id": "requirement-long",
+      "ac": "AC01/AC06",
+      "behavior": "完整长需求可阅读且保留末尾文本",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "requirement-long"
+      ],
+      "evidence": {
+        "id": "requirement-long",
+        "behavior": "完整长需求可阅读且保留末尾文本",
+        "passed": true
+      }
+    },
+    {
+      "id": "requirement-escaped",
+      "ac": "AC01/AC06",
+      "behavior": "需求 HTML/script 作为转义文本呈现",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "requirement-escaped"
+      ],
+      "evidence": {
+        "id": "requirement-escaped",
+        "behavior": "需求 HTML/script 作为转义文本呈现",
+        "passed": true
+      }
+    },
+    {
+      "id": "requirement-window-outside",
+      "ac": "AC01",
+      "behavior": "需求 task 在200窗口外仍读取原始关联指令",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "requirement-window-outside"
+      ],
+      "evidence": {
+        "id": "requirement-window-outside",
+        "behavior": "需求 task 在200窗口外仍读取原始关联指令",
+        "passed": true
+      }
+    },
+    {
+      "id": "requirement-cross-run",
+      "ac": "AC01/AC04",
+      "behavior": "需求关联归属异常时 unavailable，不能采用其他Run指令",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "requirement-cross-run"
+      ],
+      "evidence": {
+        "id": "requirement-cross-run",
+        "behavior": "需求关联归属异常时 unavailable，不能采用其他Run指令",
+        "passed": true
+      }
+    },
+    {
+      "id": "requirement-missing",
+      "ac": "AC01/AC06",
+      "behavior": "需求关联缺失时明确 unavailable",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "requirement-missing"
+      ],
+      "evidence": {
+        "id": "requirement-missing",
+        "behavior": "需求关联缺失时明确 unavailable",
+        "passed": true
+      }
+    },
+    {
+      "id": "status-lifecycle",
+      "ac": "AC01",
+      "behavior": "生命周期与公开 Run API 保存状态一致",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "status-lifecycle"
+      ],
+      "evidence": {
+        "id": "status-lifecycle",
+        "behavior": "生命周期与公开 Run API 保存状态一致",
+        "passed": true
+      }
+    },
+    {
+      "id": "status-control",
+      "ac": "AC01",
+      "behavior": "控制状态与公开 Run API 分别可阅读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "status-control"
+      ],
+      "evidence": {
+        "id": "status-control",
+        "behavior": "控制状态与公开 Run API 分别可阅读",
+        "passed": true
+      }
+    },
+    {
+      "id": "status-effective",
+      "ac": "AC01",
+      "behavior": "有效状态与公开 Run API 分别可阅读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "status-effective"
+      ],
+      "evidence": {
+        "id": "status-effective",
+        "behavior": "有效状态与公开 Run API 分别可阅读",
+        "passed": true,
+        "detail": {
+          "effective": "RUNNING"
+        }
+      }
+    },
+    {
+      "id": "dashboard-phase",
+      "ac": "AC01",
+      "behavior": "当前阶段与公开 Dashboard 事实一致",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "dashboard-phase"
+      ],
+      "evidence": {
+        "id": "dashboard-phase",
+        "behavior": "当前阶段与公开 Dashboard 事实一致",
+        "passed": true,
+        "detail": {
+          "phases": [
+            "ENGINEERING_GATE"
+          ]
+        }
+      }
+    },
+    {
+      "id": "task-counts",
+      "ac": "AC01",
+      "behavior": "完整 Run task计数与 Dashboard一致",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "task-counts"
+      ],
+      "evidence": {
+        "id": "task-counts",
+        "behavior": "完整 Run task计数与 Dashboard一致",
+        "passed": true,
+        "detail": {
+          "expected": 4,
+          "publicTotals": [
+            {
+              "field": "tasks.total",
+              "value": 4
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "no-eta",
+      "ac": "AC01",
+      "behavior": "任务完成数不生成 ETA 或工程完成百分比",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "no-eta"
+      ],
+      "evidence": {
+        "id": "no-eta",
+        "behavior": "任务完成数不生成 ETA 或工程完成百分比",
+        "passed": true
+      }
+    },
+    {
+      "id": "single-edges",
+      "ac": "AC02",
+      "behavior": "单实施图边与保存的依赖完全一致",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "single-edges"
+      ],
+      "evidence": {
+        "id": "single-edges",
+        "behavior": "单实施图边与保存的依赖完全一致",
+        "passed": true
+      }
+    },
+    {
+      "id": "single-direction",
+      "ac": "AC02",
+      "behavior": "单实施 SVG 从前置任务指向 dependent",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "single-direction"
+      ],
+      "evidence": {
+        "id": "single-direction",
+        "behavior": "单实施 SVG 从前置任务指向 dependent",
+        "passed": true
+      }
+    },
+    {
+      "id": "parallel-edges",
+      "ac": "AC02",
+      "behavior": "并行分支和 integration 真实边完全一致",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "parallel-edges"
+      ],
+      "evidence": {
+        "id": "parallel-edges",
+        "behavior": "并行分支和 integration 真实边完全一致",
+        "passed": true
+      }
+    },
+    {
+      "id": "parallel-levels",
+      "ac": "AC02",
+      "behavior": "同层并行 task，integration 位于分支后方",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "parallel-levels"
+      ],
+      "evidence": {
+        "id": "parallel-levels",
+        "behavior": "同层并行 task，integration 位于分支后方",
+        "passed": true
+      }
+    },
+    {
+      "id": "final-review-level",
+      "ac": "AC02",
+      "behavior": "最终 CODE_REVIEW 位于 integration 后方",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "final-review-level"
+      ],
+      "evidence": {
+        "id": "final-review-level",
+        "behavior": "最终 CODE_REVIEW 位于 integration 后方",
+        "passed": true
+      }
+    },
+    {
+      "id": "verification-level",
+      "ac": "AC02",
+      "behavior": "INTEGRATION_VERIFICATION 位于 integration 后方",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "verification-level"
+      ],
+      "evidence": {
+        "id": "verification-level",
+        "behavior": "INTEGRATION_VERIFICATION 位于 integration 后方",
+        "passed": true
+      }
+    },
+    {
+      "id": "no-inferred-edge",
+      "ac": "AC02",
+      "behavior": "同Run taskType/列表顺序不会生成未保存的边",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "no-inferred-edge"
+      ],
+      "evidence": {
+        "id": "no-inferred-edge",
+        "behavior": "同Run taskType/列表顺序不会生成未保存的边",
+        "passed": true
+      }
+    },
+    {
+      "id": "repair-added",
+      "ac": "AC02",
+      "behavior": "新增 repair 在局部刷新后显示真实 task 和边",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "repair-added"
+      ],
+      "evidence": {
+        "id": "repair-added",
+        "behavior": "新增 repair 在局部刷新后显示真实 task 和边",
+        "passed": true
+      }
+    },
+    {
+      "id": "repair-history",
+      "ac": "AC02",
+      "behavior": "repair 新增后原任务与原依赖仍保留",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "repair-history"
+      ],
+      "evidence": {
+        "id": "repair-history",
+        "behavior": "repair 新增后原任务与原依赖仍保留",
+        "passed": true
+      }
+    },
+    {
+      "id": "cycle-warning",
+      "ac": "AC02/AC06",
+      "behavior": "循环依赖明确异常而不标完整 DAG",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "cycle-warning"
+      ],
+      "evidence": {
+        "id": "cycle-warning",
+        "behavior": "循环依赖明确异常而不标完整 DAG",
+        "passed": true
+      }
+    },
+    {
+      "id": "cycle-table",
+      "ac": "AC02",
+      "behavior": "循环的两条保存边仍可从文本/表格阅读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "cycle-table"
+      ],
+      "evidence": {
+        "id": "cycle-table",
+        "behavior": "循环的两条保存边仍可从文本/表格阅读",
+        "passed": true,
+        "detail": [
+          "\n              IMPLEMENTATIONfd2-c-aFull instructionFixture instruction for fd2-c-a\n              COMPLETEDCurrent attempt number: 0\n                No current Worker lease\n                Read attempt historyUpdated 2025-10-02T00:00:00.100Z\n              \n              fd2-c-bDisplayed\n                \n              \n              local-testfixture1111111111111111111111111111111111111111Created 2025-10-02T00:00:00Z\n            ",
+          "\n              IMPLEMENTATIONfd2-c-bFull instructionFixture instruction for fd2-c-b\n              COMPLETEDCurrent attempt number: 0\n                No current Worker lease\n                Read attempt historyUpdated 2025-10-02T00:00:00.101Z\n              \n              fd2-c-aDisplayed\n                \n              \n              local-testfixture1111111111111111111111111111111111111111Created 2025-10-02T00:00:00.001Z\n            "
+        ]
+      }
+    },
+    {
+      "id": "tasks-cap",
+      "ac": "AC02/AC04",
+      "behavior": "201 task返回最近200并显示完整总量",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "tasks-cap"
+      ],
+      "evidence": {
+        "id": "tasks-cap",
+        "behavior": "201 task返回最近200并显示完整总量",
+        "passed": true,
+        "detail": [
+          "fd2-b-000",
+          "fd2-b-001",
+          "fd2-b-002",
+          "fd2-b-003",
+          "fd2-b-004",
+          "fd2-b-005",
+          "fd2-b-006",
+          "fd2-b-007",
+          "fd2-b-008",
+          "fd2-b-009",
+          "fd2-b-010",
+          "fd2-b-011",
+          "fd2-b-012",
+          "fd2-b-013",
+          "fd2-b-014",
+          "fd2-b-015",
+          "fd2-b-016",
+          "fd2-b-017",
+          "fd2-b-018",
+          "fd2-b-019",
+          "fd2-b-020",
+          "fd2-b-021",
+          "fd2-b-022",
+          "fd2-b-023",
+          "fd2-b-024",
+          "fd2-b-025",
+          "fd2-b-026",
+          "fd2-b-027",
+          "fd2-b-028",
+          "fd2-b-029",
+          "fd2-b-030",
+          "fd2-b-031",
+          "fd2-b-032",
+          "fd2-b-033",
+          "fd2-b-034",
+          "fd2-b-035",
+          "fd2-b-036",
+          "fd2-b-037",
+          "fd2-b-038",
+          "fd2-b-039",
+          "fd2-b-040",
+          "fd2-b-041",
+          "fd2-b-042",
+          "fd2-b-043",
+          "fd2-b-044",
+          "fd2-b-045",
+          "fd2-b-046",
+          "fd2-b-047",
+          "fd2-b-048",
+          "fd2-b-049",
+          "fd2-b-050",
+          "fd2-b-051",
+          "fd2-b-052",
+          "fd2-b-053",
+          "fd2-b-054",
+          "fd2-b-055",
+          "fd2-b-056",
+          "fd2-b-057",
+          "fd2-b-058",
+          "fd2-b-059",
+          "fd2-b-060",
+          "fd2-b-061",
+          "fd2-b-062",
+          "fd2-b-063",
+          "fd2-b-064",
+          "fd2-b-065",
+          "fd2-b-066",
+          "fd2-b-067",
+          "fd2-b-068",
+          "fd2-b-069",
+          "fd2-b-070",
+          "fd2-b-071",
+          "fd2-b-072",
+          "fd2-b-073",
+          "fd2-b-074",
+          "fd2-b-075",
+          "fd2-b-076",
+          "fd2-b-077",
+          "fd2-b-078",
+          "fd2-b-079",
+          "fd2-b-080",
+          "fd2-b-081",
+          "fd2-b-082",
+          "fd2-b-083",
+          "fd2-b-084",
+          "fd2-b-085",
+          "fd2-b-086",
+          "fd2-b-087",
+          "fd2-b-088",
+          "fd2-b-089",
+          "fd2-b-090",
+          "fd2-b-091",
+          "fd2-b-092",
+          "fd2-b-093",
+          "fd2-b-094",
+          "fd2-b-095",
+          "fd2-b-096",
+          "fd2-b-097",
+          "fd2-b-098",
+          "fd2-b-099",
+          "fd2-b-100",
+          "fd2-b-101",
+          "fd2-b-102",
+          "fd2-b-103",
+          "fd2-b-104",
+          "fd2-b-105",
+          "fd2-b-106",
+          "fd2-b-107",
+          "fd2-b-108",
+          "fd2-b-109",
+          "fd2-b-110",
+          "fd2-b-111",
+          "fd2-b-112",
+          "fd2-b-113",
+          "fd2-b-114",
+          "fd2-b-115",
+          "fd2-b-116",
+          "fd2-b-117",
+          "fd2-b-118",
+          "fd2-b-119",
+          "fd2-b-120",
+          "fd2-b-121",
+          "fd2-b-122",
+          "fd2-b-123",
+          "fd2-b-124",
+          "fd2-b-125",
+          "fd2-b-126",
+          "fd2-b-127",
+          "fd2-b-128",
+          "fd2-b-129",
+          "fd2-b-130",
+          "fd2-b-131",
+          "fd2-b-132",
+          "fd2-b-133",
+          "fd2-b-134",
+          "fd2-b-135",
+          "fd2-b-136",
+          "fd2-b-137",
+          "fd2-b-138",
+          "fd2-b-139",
+          "fd2-b-140",
+          "fd2-b-141",
+          "fd2-b-142",
+          "fd2-b-143",
+          "fd2-b-144",
+          "fd2-b-145",
+          "fd2-b-146",
+          "fd2-b-147",
+          "fd2-b-148",
+          "fd2-b-149",
+          "fd2-b-150",
+          "fd2-b-151",
+          "fd2-b-152",
+          "fd2-b-153",
+          "fd2-b-154",
+          "fd2-b-155",
+          "fd2-b-156",
+          "fd2-b-157",
+          "fd2-b-158",
+          "fd2-b-159",
+          "fd2-b-160",
+          "fd2-b-161",
+          "fd2-b-162",
+          "fd2-b-163",
+          "fd2-b-164",
+          "fd2-b-165",
+          "fd2-b-166",
+          "fd2-b-167",
+          "fd2-b-168",
+          "fd2-b-169",
+          "fd2-b-170",
+          "fd2-b-171",
+          "fd2-b-172",
+          "fd2-b-173",
+          "fd2-b-174",
+          "fd2-b-175",
+          "fd2-b-176",
+          "fd2-b-177",
+          "fd2-b-178",
+          "fd2-b-179",
+          "fd2-b-180",
+          "fd2-b-181",
+          "fd2-b-182",
+          "fd2-b-183",
+          "fd2-b-184",
+          "fd2-b-185",
+          "fd2-b-186",
+          "fd2-b-187",
+          "fd2-b-188",
+          "fd2-b-189",
+          "fd2-b-190",
+          "fd2-b-191",
+          "fd2-b-192",
+          "fd2-b-193",
+          "fd2-b-194",
+          "fd2-b-195",
+          "fd2-b-196",
+          "fd2-b-197",
+          "fd2-b-198",
+          "fd2-b-199"
+        ]
+      }
+    },
+    {
+      "id": "tasks-order",
+      "ac": "AC02/AC04",
+      "behavior": "最近任务窗口按真实createdAt/id正序稳定展示",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "tasks-order"
+      ],
+      "evidence": {
+        "id": "tasks-order",
+        "behavior": "最近任务窗口按真实createdAt/id正序稳定展示",
+        "passed": true,
+        "detail": [
+          "fd2-b-000",
+          "fd2-b-001",
+          "fd2-b-002",
+          "fd2-b-003",
+          "fd2-b-004",
+          "fd2-b-005",
+          "fd2-b-006",
+          "fd2-b-007",
+          "fd2-b-008",
+          "fd2-b-009",
+          "fd2-b-010",
+          "fd2-b-011",
+          "fd2-b-012",
+          "fd2-b-013",
+          "fd2-b-014",
+          "fd2-b-015",
+          "fd2-b-016",
+          "fd2-b-017",
+          "fd2-b-018",
+          "fd2-b-019",
+          "fd2-b-020",
+          "fd2-b-021",
+          "fd2-b-022",
+          "fd2-b-023",
+          "fd2-b-024",
+          "fd2-b-025",
+          "fd2-b-026",
+          "fd2-b-027",
+          "fd2-b-028",
+          "fd2-b-029",
+          "fd2-b-030",
+          "fd2-b-031",
+          "fd2-b-032",
+          "fd2-b-033",
+          "fd2-b-034",
+          "fd2-b-035",
+          "fd2-b-036",
+          "fd2-b-037",
+          "fd2-b-038",
+          "fd2-b-039",
+          "fd2-b-040",
+          "fd2-b-041",
+          "fd2-b-042",
+          "fd2-b-043",
+          "fd2-b-044",
+          "fd2-b-045",
+          "fd2-b-046",
+          "fd2-b-047",
+          "fd2-b-048",
+          "fd2-b-049",
+          "fd2-b-050",
+          "fd2-b-051",
+          "fd2-b-052",
+          "fd2-b-053",
+          "fd2-b-054",
+          "fd2-b-055",
+          "fd2-b-056",
+          "fd2-b-057",
+          "fd2-b-058",
+          "fd2-b-059",
+          "fd2-b-060",
+          "fd2-b-061",
+          "fd2-b-062",
+          "fd2-b-063",
+          "fd2-b-064",
+          "fd2-b-065",
+          "fd2-b-066",
+          "fd2-b-067",
+          "fd2-b-068",
+          "fd2-b-069",
+          "fd2-b-070",
+          "fd2-b-071",
+          "fd2-b-072",
+          "fd2-b-073",
+          "fd2-b-074",
+          "fd2-b-075",
+          "fd2-b-076",
+          "fd2-b-077",
+          "fd2-b-078",
+          "fd2-b-079",
+          "fd2-b-080",
+          "fd2-b-081",
+          "fd2-b-082",
+          "fd2-b-083",
+          "fd2-b-084",
+          "fd2-b-085",
+          "fd2-b-086",
+          "fd2-b-087",
+          "fd2-b-088",
+          "fd2-b-089",
+          "fd2-b-090",
+          "fd2-b-091",
+          "fd2-b-092",
+          "fd2-b-093",
+          "fd2-b-094",
+          "fd2-b-095",
+          "fd2-b-096",
+          "fd2-b-097",
+          "fd2-b-098",
+          "fd2-b-099",
+          "fd2-b-100",
+          "fd2-b-101",
+          "fd2-b-102",
+          "fd2-b-103",
+          "fd2-b-104",
+          "fd2-b-105",
+          "fd2-b-106",
+          "fd2-b-107",
+          "fd2-b-108",
+          "fd2-b-109",
+          "fd2-b-110",
+          "fd2-b-111",
+          "fd2-b-112",
+          "fd2-b-113",
+          "fd2-b-114",
+          "fd2-b-115",
+          "fd2-b-116",
+          "fd2-b-117",
+          "fd2-b-118",
+          "fd2-b-119",
+          "fd2-b-120",
+          "fd2-b-121",
+          "fd2-b-122",
+          "fd2-b-123",
+          "fd2-b-124",
+          "fd2-b-125",
+          "fd2-b-126",
+          "fd2-b-127",
+          "fd2-b-128",
+          "fd2-b-129",
+          "fd2-b-130",
+          "fd2-b-131",
+          "fd2-b-132",
+          "fd2-b-133",
+          "fd2-b-134",
+          "fd2-b-135",
+          "fd2-b-136",
+          "fd2-b-137",
+          "fd2-b-138",
+          "fd2-b-139",
+          "fd2-b-140",
+          "fd2-b-141",
+          "fd2-b-142",
+          "fd2-b-143",
+          "fd2-b-144",
+          "fd2-b-145",
+          "fd2-b-146",
+          "fd2-b-147",
+          "fd2-b-148",
+          "fd2-b-149",
+          "fd2-b-150",
+          "fd2-b-151",
+          "fd2-b-152",
+          "fd2-b-153",
+          "fd2-b-154",
+          "fd2-b-155",
+          "fd2-b-156",
+          "fd2-b-157",
+          "fd2-b-158",
+          "fd2-b-159",
+          "fd2-b-160",
+          "fd2-b-161",
+          "fd2-b-162",
+          "fd2-b-163",
+          "fd2-b-164",
+          "fd2-b-165",
+          "fd2-b-166",
+          "fd2-b-167",
+          "fd2-b-168",
+          "fd2-b-169",
+          "fd2-b-170",
+          "fd2-b-171",
+          "fd2-b-172",
+          "fd2-b-173",
+          "fd2-b-174",
+          "fd2-b-175",
+          "fd2-b-176",
+          "fd2-b-177",
+          "fd2-b-178",
+          "fd2-b-179",
+          "fd2-b-180",
+          "fd2-b-181",
+          "fd2-b-182",
+          "fd2-b-183",
+          "fd2-b-184",
+          "fd2-b-185",
+          "fd2-b-186",
+          "fd2-b-187",
+          "fd2-b-188",
+          "fd2-b-189",
+          "fd2-b-190",
+          "fd2-b-191",
+          "fd2-b-192",
+          "fd2-b-193",
+          "fd2-b-194",
+          "fd2-b-195",
+          "fd2-b-196",
+          "fd2-b-197",
+          "fd2-b-198",
+          "fd2-b-199"
+        ]
+      }
+    },
+    {
+      "id": "outside-prerequisite",
+      "ac": "AC02/AC04",
+      "behavior": "窗口外前置依赖保留真实ID和范围说明",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "outside-prerequisite"
+      ],
+      "evidence": {
+        "id": "outside-prerequisite",
+        "behavior": "窗口外前置依赖保留真实ID和范围说明",
+        "passed": true
+      }
+    },
+    {
+      "id": "outside-no-anchor",
+      "ac": "AC02/AC04",
+      "behavior": "窗口外 task 不生成指向不存在目标的锚点",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "outside-no-anchor"
+      ],
+      "evidence": {
+        "id": "outside-no-anchor",
+        "behavior": "窗口外 task 不生成指向不存在目标的锚点",
+        "passed": true
+      }
+    },
+    {
+      "id": "cross-run-edge",
+      "ac": "AC02/AC04",
+      "behavior": "跨Run前置依赖真实ID与范围说明可读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "cross-run-edge"
+      ],
+      "evidence": {
+        "id": "cross-run-edge",
+        "behavior": "跨Run前置依赖真实ID与范围说明可读",
+        "passed": true
+      }
+    },
+    {
+      "id": "cross-subject-edge",
+      "ac": "AC02/AC04",
+      "behavior": "跨subject前置依赖真实ID与范围说明可读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "cross-subject-edge"
+      ],
+      "evidence": {
+        "id": "cross-subject-edge",
+        "behavior": "跨subject前置依赖真实ID与范围说明可读",
+        "passed": true
+      }
+    },
+    {
+      "id": "edges-cap",
+      "ac": "AC02/AC04",
+      "behavior": "1201候选边最多返回1200并明确截断",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "edges-cap"
+      ],
+      "evidence": {
+        "id": "edges-cap",
+        "behavior": "1201候选边最多返回1200并明确截断",
+        "passed": true,
+        "detail": {
+          "count": 1200
+        }
+      }
+    },
+    {
+      "id": "edges-total",
+      "ac": "AC02/AC04",
+      "behavior": "完整Run边总数与展示task候选边数分别呈现",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "edges-total"
+      ],
+      "evidence": {
+        "id": "edges-total",
+        "behavior": "完整Run边总数与展示task候选边数分别呈现",
+        "passed": true,
+        "detail": {
+          "dense": {
+            "returned": 1200,
+            "run_total": 1201,
+            "candidates": 1201
+          },
+          "boundary": {
+            "returned": 3,
+            "run_total": 4,
+            "candidates": 3
+          }
+        }
+      }
+    },
+    {
+      "id": "partial-graph",
+      "ac": "AC02/AC04",
+      "behavior": "边截断/窗口外关系明确部分图",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "partial-graph"
+      ],
+      "evidence": {
+        "id": "partial-graph",
+        "behavior": "边截断/窗口外关系明确部分图",
+        "passed": true
+      }
+    },
+    {
+      "id": "graph-hide",
+      "ac": "AC02/AC06",
+      "behavior": "Hide graph后完整任务表仍可阅读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "graph-hide"
+      ],
+      "evidence": {
+        "id": "graph-hide",
+        "behavior": "Hide graph后完整任务表仍可阅读",
+        "passed": true
+      }
+    },
+    {
+      "id": "graph-node-link",
+      "ac": "AC02",
+      "behavior": "SVG节点定位到对应真实task指令",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "graph-node-link"
+      ],
+      "evidence": {
+        "id": "graph-node-link",
+        "behavior": "SVG节点定位到对应真实task指令",
+        "passed": true,
+        "detail": [
+          {
+            "href": "#task-MTQ6ZmQyLXNpbmdsZS1yZXE",
+            "text": "\n                \n                  fd2-single-req · REQUIREMENT_ANALYSIS · COMPLETED\n                  REQUIREMENT_ANALYSISfd2-single-reqCOMPLETED\n                \n              ",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLXMtaW1wbA",
+            "text": "\n                \n                  fd2-s-impl · IMPLEMENTATION · COMPLETED\n                  IMPLEMENTATIONfd2-s-implCOMPLETED\n                \n              ",
+            "exists": true
+          },
+          {
+            "href": "#task-MTI6ZmQyLXMtcmV2aWV3",
+            "text": "\n                \n                  fd2-s-review · CODE_REVIEW · COMPLETED\n                  CODE_REVIEWfd2-s-reviewCOMPLETED\n                \n              ",
+            "exists": true
+          },
+          {
+            "href": "#task-MTI6ZmQyLXMtdmVyaWZ5",
+            "text": "\n                \n                  fd2-s-verify · INTEGRATION_VERIFICATION · COMPLETED\n                  INTEGRATION_VERIFICATIONfd2-s-verifyCOMPLETED\n                \n              ",
+            "exists": true
+          },
+          {
+            "href": "#mission-attempts",
+            "text": "Read attempt history",
+            "exists": true
+          },
+          {
+            "href": "#mission-attempts",
+            "text": "Read attempt history",
+            "exists": true
+          },
+          {
+            "href": "#task-MTQ6ZmQyLXNpbmdsZS1yZXE",
+            "text": "fd2-single-req",
+            "exists": true
+          },
+          {
+            "href": "#mission-attempts",
+            "text": "Read attempt history",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLXMtaW1wbA",
+            "text": "fd2-s-impl",
+            "exists": true
+          },
+          {
+            "href": "#mission-attempts",
+            "text": "Read attempt history",
+            "exists": true
+          },
+          {
+            "href": "#task-MTI6ZmQyLXMtcmV2aWV3",
+            "text": "fd2-s-review",
+            "exists": true
+          },
+          {
+            "href": "#task-MTQ6ZmQyLXNpbmdsZS1yZXE",
+            "text": "fd2-single-req",
+            "exists": true
+          },
+          {
+            "href": "#task-MTQ6ZmQyLXNpbmdsZS1yZXE",
+            "text": "fd2-single-req",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLXMtaW1wbA",
+            "text": "fd2-s-impl",
+            "exists": true
+          },
+          {
+            "href": "#task-MTI6ZmQyLXMtcmV2aWV3",
+            "text": "fd2-s-review",
+            "exists": true
+          },
+          {
+            "href": "#task-MTI6ZmQyLXMtdmVyaWZ5",
+            "text": "fd2-s-verify",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "attempt-cap",
+      "ac": "AC03/AC04",
+      "behavior": "301 attempt返回最近300并显示总量/截断",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-cap"
+      ],
+      "evidence": {
+        "id": "attempt-cap",
+        "behavior": "301 attempt返回最近300并显示总量/截断",
+        "passed": true
+      }
+    },
+    {
+      "id": "attempt-run-filter",
+      "ac": "AC03/AC04",
+      "behavior": "较新的其他Run attempt不会挤占本Run窗口",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-run-filter"
+      ],
+      "evidence": {
+        "id": "attempt-run-filter",
+        "behavior": "较新的其他Run attempt不会挤占本Run窗口",
+        "passed": true,
+        "detail": {
+          "actual_ids": [
+            "fd2-aw-task-a10",
+            "fd2-aw-task-a100",
+            "fd2-aw-task-a101",
+            "fd2-aw-task-a102",
+            "fd2-aw-task-a103",
+            "fd2-aw-task-a104",
+            "fd2-aw-task-a105",
+            "fd2-aw-task-a106",
+            "fd2-aw-task-a107",
+            "fd2-aw-task-a108",
+            "fd2-aw-task-a109",
+            "fd2-aw-task-a11",
+            "fd2-aw-task-a110",
+            "fd2-aw-task-a111",
+            "fd2-aw-task-a112",
+            "fd2-aw-task-a113",
+            "fd2-aw-task-a114",
+            "fd2-aw-task-a115",
+            "fd2-aw-task-a116",
+            "fd2-aw-task-a117",
+            "fd2-aw-task-a118",
+            "fd2-aw-task-a119",
+            "fd2-aw-task-a12",
+            "fd2-aw-task-a120",
+            "fd2-aw-task-a121",
+            "fd2-aw-task-a122",
+            "fd2-aw-task-a123",
+            "fd2-aw-task-a124",
+            "fd2-aw-task-a125",
+            "fd2-aw-task-a126",
+            "fd2-aw-task-a127",
+            "fd2-aw-task-a128",
+            "fd2-aw-task-a129",
+            "fd2-aw-task-a13",
+            "fd2-aw-task-a130",
+            "fd2-aw-task-a131",
+            "fd2-aw-task-a132",
+            "fd2-aw-task-a133",
+            "fd2-aw-task-a134",
+            "fd2-aw-task-a135",
+            "fd2-aw-task-a136",
+            "fd2-aw-task-a137",
+            "fd2-aw-task-a138",
+            "fd2-aw-task-a139",
+            "fd2-aw-task-a14",
+            "fd2-aw-task-a140",
+            "fd2-aw-task-a141",
+            "fd2-aw-task-a142",
+            "fd2-aw-task-a143",
+            "fd2-aw-task-a144",
+            "fd2-aw-task-a145",
+            "fd2-aw-task-a146",
+            "fd2-aw-task-a147",
+            "fd2-aw-task-a148",
+            "fd2-aw-task-a149",
+            "fd2-aw-task-a15",
+            "fd2-aw-task-a150",
+            "fd2-aw-task-a151",
+            "fd2-aw-task-a152",
+            "fd2-aw-task-a153",
+            "fd2-aw-task-a154",
+            "fd2-aw-task-a155",
+            "fd2-aw-task-a156",
+            "fd2-aw-task-a157",
+            "fd2-aw-task-a158",
+            "fd2-aw-task-a159",
+            "fd2-aw-task-a16",
+            "fd2-aw-task-a160",
+            "fd2-aw-task-a161",
+            "fd2-aw-task-a162",
+            "fd2-aw-task-a163",
+            "fd2-aw-task-a164",
+            "fd2-aw-task-a165",
+            "fd2-aw-task-a166",
+            "fd2-aw-task-a167",
+            "fd2-aw-task-a168",
+            "fd2-aw-task-a169",
+            "fd2-aw-task-a17",
+            "fd2-aw-task-a170",
+            "fd2-aw-task-a171",
+            "fd2-aw-task-a172",
+            "fd2-aw-task-a173",
+            "fd2-aw-task-a174",
+            "fd2-aw-task-a175",
+            "fd2-aw-task-a176",
+            "fd2-aw-task-a177",
+            "fd2-aw-task-a178",
+            "fd2-aw-task-a179",
+            "fd2-aw-task-a18",
+            "fd2-aw-task-a180",
+            "fd2-aw-task-a181",
+            "fd2-aw-task-a182",
+            "fd2-aw-task-a183",
+            "fd2-aw-task-a184",
+            "fd2-aw-task-a185",
+            "fd2-aw-task-a186",
+            "fd2-aw-task-a187",
+            "fd2-aw-task-a188",
+            "fd2-aw-task-a189",
+            "fd2-aw-task-a19",
+            "fd2-aw-task-a190",
+            "fd2-aw-task-a191",
+            "fd2-aw-task-a192",
+            "fd2-aw-task-a193",
+            "fd2-aw-task-a194",
+            "fd2-aw-task-a195",
+            "fd2-aw-task-a196",
+            "fd2-aw-task-a197",
+            "fd2-aw-task-a198",
+            "fd2-aw-task-a199",
+            "fd2-aw-task-a2",
+            "fd2-aw-task-a20",
+            "fd2-aw-task-a200",
+            "fd2-aw-task-a201",
+            "fd2-aw-task-a202",
+            "fd2-aw-task-a203",
+            "fd2-aw-task-a204",
+            "fd2-aw-task-a205",
+            "fd2-aw-task-a206",
+            "fd2-aw-task-a207",
+            "fd2-aw-task-a208",
+            "fd2-aw-task-a209",
+            "fd2-aw-task-a21",
+            "fd2-aw-task-a210",
+            "fd2-aw-task-a211",
+            "fd2-aw-task-a212",
+            "fd2-aw-task-a213",
+            "fd2-aw-task-a214",
+            "fd2-aw-task-a215",
+            "fd2-aw-task-a216",
+            "fd2-aw-task-a217",
+            "fd2-aw-task-a218",
+            "fd2-aw-task-a219",
+            "fd2-aw-task-a22",
+            "fd2-aw-task-a220",
+            "fd2-aw-task-a221",
+            "fd2-aw-task-a222",
+            "fd2-aw-task-a223",
+            "fd2-aw-task-a224",
+            "fd2-aw-task-a225",
+            "fd2-aw-task-a226",
+            "fd2-aw-task-a227",
+            "fd2-aw-task-a228",
+            "fd2-aw-task-a229",
+            "fd2-aw-task-a23",
+            "fd2-aw-task-a230",
+            "fd2-aw-task-a231",
+            "fd2-aw-task-a232",
+            "fd2-aw-task-a233",
+            "fd2-aw-task-a234",
+            "fd2-aw-task-a235",
+            "fd2-aw-task-a236",
+            "fd2-aw-task-a237",
+            "fd2-aw-task-a238",
+            "fd2-aw-task-a239",
+            "fd2-aw-task-a24",
+            "fd2-aw-task-a240",
+            "fd2-aw-task-a241",
+            "fd2-aw-task-a242",
+            "fd2-aw-task-a243",
+            "fd2-aw-task-a244",
+            "fd2-aw-task-a245",
+            "fd2-aw-task-a246",
+            "fd2-aw-task-a247",
+            "fd2-aw-task-a248",
+            "fd2-aw-task-a249",
+            "fd2-aw-task-a25",
+            "fd2-aw-task-a250",
+            "fd2-aw-task-a251",
+            "fd2-aw-task-a252",
+            "fd2-aw-task-a253",
+            "fd2-aw-task-a254",
+            "fd2-aw-task-a255",
+            "fd2-aw-task-a256",
+            "fd2-aw-task-a257",
+            "fd2-aw-task-a258",
+            "fd2-aw-task-a259",
+            "fd2-aw-task-a26",
+            "fd2-aw-task-a260",
+            "fd2-aw-task-a261",
+            "fd2-aw-task-a262",
+            "fd2-aw-task-a263",
+            "fd2-aw-task-a264",
+            "fd2-aw-task-a265",
+            "fd2-aw-task-a266",
+            "fd2-aw-task-a267",
+            "fd2-aw-task-a268",
+            "fd2-aw-task-a269",
+            "fd2-aw-task-a27",
+            "fd2-aw-task-a270",
+            "fd2-aw-task-a271",
+            "fd2-aw-task-a272",
+            "fd2-aw-task-a273",
+            "fd2-aw-task-a274",
+            "fd2-aw-task-a275",
+            "fd2-aw-task-a276",
+            "fd2-aw-task-a277",
+            "fd2-aw-task-a278",
+            "fd2-aw-task-a279",
+            "fd2-aw-task-a28",
+            "fd2-aw-task-a280",
+            "fd2-aw-task-a281",
+            "fd2-aw-task-a282",
+            "fd2-aw-task-a283",
+            "fd2-aw-task-a284",
+            "fd2-aw-task-a285",
+            "fd2-aw-task-a286",
+            "fd2-aw-task-a287",
+            "fd2-aw-task-a288",
+            "fd2-aw-task-a289",
+            "fd2-aw-task-a29",
+            "fd2-aw-task-a290",
+            "fd2-aw-task-a291",
+            "fd2-aw-task-a292",
+            "fd2-aw-task-a293",
+            "fd2-aw-task-a294",
+            "fd2-aw-task-a295",
+            "fd2-aw-task-a296",
+            "fd2-aw-task-a297",
+            "fd2-aw-task-a298",
+            "fd2-aw-task-a299",
+            "fd2-aw-task-a3",
+            "fd2-aw-task-a30",
+            "fd2-aw-task-a300",
+            "fd2-aw-task-a301",
+            "fd2-aw-task-a31",
+            "fd2-aw-task-a32",
+            "fd2-aw-task-a33",
+            "fd2-aw-task-a34",
+            "fd2-aw-task-a35",
+            "fd2-aw-task-a36",
+            "fd2-aw-task-a37",
+            "fd2-aw-task-a38",
+            "fd2-aw-task-a39",
+            "fd2-aw-task-a4",
+            "fd2-aw-task-a40",
+            "fd2-aw-task-a41",
+            "fd2-aw-task-a42",
+            "fd2-aw-task-a43",
+            "fd2-aw-task-a44",
+            "fd2-aw-task-a45",
+            "fd2-aw-task-a46",
+            "fd2-aw-task-a47",
+            "fd2-aw-task-a48",
+            "fd2-aw-task-a49",
+            "fd2-aw-task-a5",
+            "fd2-aw-task-a50",
+            "fd2-aw-task-a51",
+            "fd2-aw-task-a52",
+            "fd2-aw-task-a53",
+            "fd2-aw-task-a54",
+            "fd2-aw-task-a55",
+            "fd2-aw-task-a56",
+            "fd2-aw-task-a57",
+            "fd2-aw-task-a58",
+            "fd2-aw-task-a59",
+            "fd2-aw-task-a6",
+            "fd2-aw-task-a60",
+            "fd2-aw-task-a61",
+            "fd2-aw-task-a62",
+            "fd2-aw-task-a63",
+            "fd2-aw-task-a64",
+            "fd2-aw-task-a65",
+            "fd2-aw-task-a66",
+            "fd2-aw-task-a67",
+            "fd2-aw-task-a68",
+            "fd2-aw-task-a69",
+            "fd2-aw-task-a7",
+            "fd2-aw-task-a70",
+            "fd2-aw-task-a71",
+            "fd2-aw-task-a72",
+            "fd2-aw-task-a73",
+            "fd2-aw-task-a74",
+            "fd2-aw-task-a75",
+            "fd2-aw-task-a76",
+            "fd2-aw-task-a77",
+            "fd2-aw-task-a78",
+            "fd2-aw-task-a79",
+            "fd2-aw-task-a8",
+            "fd2-aw-task-a80",
+            "fd2-aw-task-a81",
+            "fd2-aw-task-a82",
+            "fd2-aw-task-a83",
+            "fd2-aw-task-a84",
+            "fd2-aw-task-a85",
+            "fd2-aw-task-a86",
+            "fd2-aw-task-a87",
+            "fd2-aw-task-a88",
+            "fd2-aw-task-a89",
+            "fd2-aw-task-a9",
+            "fd2-aw-task-a90",
+            "fd2-aw-task-a91",
+            "fd2-aw-task-a92",
+            "fd2-aw-task-a93",
+            "fd2-aw-task-a94",
+            "fd2-aw-task-a95",
+            "fd2-aw-task-a96",
+            "fd2-aw-task-a97",
+            "fd2-aw-task-a98",
+            "fd2-aw-task-a99"
+          ],
+          "actual_count": 300,
+          "expected_count": 300,
+          "expected_attempt_numbers": [
+            2,
+            301
+          ],
+          "missing_ids": [],
+          "extra_ids": [],
+          "nodes": [
+            {
+              "id": "fd2-aw-task-a10",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTEw"
+            },
+            {
+              "id": "fd2-aw-task-a100",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEwMA"
+            },
+            {
+              "id": "fd2-aw-task-a101",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEwMQ"
+            },
+            {
+              "id": "fd2-aw-task-a102",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEwMg"
+            },
+            {
+              "id": "fd2-aw-task-a103",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEwMw"
+            },
+            {
+              "id": "fd2-aw-task-a104",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEwNA"
+            },
+            {
+              "id": "fd2-aw-task-a105",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEwNQ"
+            },
+            {
+              "id": "fd2-aw-task-a106",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEwNg"
+            },
+            {
+              "id": "fd2-aw-task-a107",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEwNw"
+            },
+            {
+              "id": "fd2-aw-task-a108",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEwOA"
+            },
+            {
+              "id": "fd2-aw-task-a109",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEwOQ"
+            },
+            {
+              "id": "fd2-aw-task-a11",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTEx"
+            },
+            {
+              "id": "fd2-aw-task-a110",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTExMA"
+            },
+            {
+              "id": "fd2-aw-task-a111",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTExMQ"
+            },
+            {
+              "id": "fd2-aw-task-a112",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTExMg"
+            },
+            {
+              "id": "fd2-aw-task-a113",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTExMw"
+            },
+            {
+              "id": "fd2-aw-task-a114",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTExNA"
+            },
+            {
+              "id": "fd2-aw-task-a115",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTExNQ"
+            },
+            {
+              "id": "fd2-aw-task-a116",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTExNg"
+            },
+            {
+              "id": "fd2-aw-task-a117",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTExNw"
+            },
+            {
+              "id": "fd2-aw-task-a118",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTExOA"
+            },
+            {
+              "id": "fd2-aw-task-a119",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTExOQ"
+            },
+            {
+              "id": "fd2-aw-task-a12",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTEy"
+            },
+            {
+              "id": "fd2-aw-task-a120",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEyMA"
+            },
+            {
+              "id": "fd2-aw-task-a121",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEyMQ"
+            },
+            {
+              "id": "fd2-aw-task-a122",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEyMg"
+            },
+            {
+              "id": "fd2-aw-task-a123",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEyMw"
+            },
+            {
+              "id": "fd2-aw-task-a124",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEyNA"
+            },
+            {
+              "id": "fd2-aw-task-a125",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEyNQ"
+            },
+            {
+              "id": "fd2-aw-task-a126",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEyNg"
+            },
+            {
+              "id": "fd2-aw-task-a127",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEyNw"
+            },
+            {
+              "id": "fd2-aw-task-a128",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEyOA"
+            },
+            {
+              "id": "fd2-aw-task-a129",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEyOQ"
+            },
+            {
+              "id": "fd2-aw-task-a13",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTEz"
+            },
+            {
+              "id": "fd2-aw-task-a130",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEzMA"
+            },
+            {
+              "id": "fd2-aw-task-a131",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEzMQ"
+            },
+            {
+              "id": "fd2-aw-task-a132",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEzMg"
+            },
+            {
+              "id": "fd2-aw-task-a133",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEzMw"
+            },
+            {
+              "id": "fd2-aw-task-a134",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEzNA"
+            },
+            {
+              "id": "fd2-aw-task-a135",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEzNQ"
+            },
+            {
+              "id": "fd2-aw-task-a136",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEzNg"
+            },
+            {
+              "id": "fd2-aw-task-a137",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEzNw"
+            },
+            {
+              "id": "fd2-aw-task-a138",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEzOA"
+            },
+            {
+              "id": "fd2-aw-task-a139",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTEzOQ"
+            },
+            {
+              "id": "fd2-aw-task-a14",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTE0"
+            },
+            {
+              "id": "fd2-aw-task-a140",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE0MA"
+            },
+            {
+              "id": "fd2-aw-task-a141",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE0MQ"
+            },
+            {
+              "id": "fd2-aw-task-a142",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE0Mg"
+            },
+            {
+              "id": "fd2-aw-task-a143",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE0Mw"
+            },
+            {
+              "id": "fd2-aw-task-a144",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE0NA"
+            },
+            {
+              "id": "fd2-aw-task-a145",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE0NQ"
+            },
+            {
+              "id": "fd2-aw-task-a146",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE0Ng"
+            },
+            {
+              "id": "fd2-aw-task-a147",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE0Nw"
+            },
+            {
+              "id": "fd2-aw-task-a148",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE0OA"
+            },
+            {
+              "id": "fd2-aw-task-a149",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE0OQ"
+            },
+            {
+              "id": "fd2-aw-task-a15",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTE1"
+            },
+            {
+              "id": "fd2-aw-task-a150",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE1MA"
+            },
+            {
+              "id": "fd2-aw-task-a151",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE1MQ"
+            },
+            {
+              "id": "fd2-aw-task-a152",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE1Mg"
+            },
+            {
+              "id": "fd2-aw-task-a153",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE1Mw"
+            },
+            {
+              "id": "fd2-aw-task-a154",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE1NA"
+            },
+            {
+              "id": "fd2-aw-task-a155",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE1NQ"
+            },
+            {
+              "id": "fd2-aw-task-a156",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE1Ng"
+            },
+            {
+              "id": "fd2-aw-task-a157",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE1Nw"
+            },
+            {
+              "id": "fd2-aw-task-a158",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE1OA"
+            },
+            {
+              "id": "fd2-aw-task-a159",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE1OQ"
+            },
+            {
+              "id": "fd2-aw-task-a16",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTE2"
+            },
+            {
+              "id": "fd2-aw-task-a160",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE2MA"
+            },
+            {
+              "id": "fd2-aw-task-a161",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE2MQ"
+            },
+            {
+              "id": "fd2-aw-task-a162",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE2Mg"
+            },
+            {
+              "id": "fd2-aw-task-a163",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE2Mw"
+            },
+            {
+              "id": "fd2-aw-task-a164",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE2NA"
+            },
+            {
+              "id": "fd2-aw-task-a165",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE2NQ"
+            },
+            {
+              "id": "fd2-aw-task-a166",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE2Ng"
+            },
+            {
+              "id": "fd2-aw-task-a167",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE2Nw"
+            },
+            {
+              "id": "fd2-aw-task-a168",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE2OA"
+            },
+            {
+              "id": "fd2-aw-task-a169",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE2OQ"
+            },
+            {
+              "id": "fd2-aw-task-a17",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTE3"
+            },
+            {
+              "id": "fd2-aw-task-a170",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE3MA"
+            },
+            {
+              "id": "fd2-aw-task-a171",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE3MQ"
+            },
+            {
+              "id": "fd2-aw-task-a172",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE3Mg"
+            },
+            {
+              "id": "fd2-aw-task-a173",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE3Mw"
+            },
+            {
+              "id": "fd2-aw-task-a174",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE3NA"
+            },
+            {
+              "id": "fd2-aw-task-a175",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE3NQ"
+            },
+            {
+              "id": "fd2-aw-task-a176",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE3Ng"
+            },
+            {
+              "id": "fd2-aw-task-a177",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE3Nw"
+            },
+            {
+              "id": "fd2-aw-task-a178",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE3OA"
+            },
+            {
+              "id": "fd2-aw-task-a179",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE3OQ"
+            },
+            {
+              "id": "fd2-aw-task-a18",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTE4"
+            },
+            {
+              "id": "fd2-aw-task-a180",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE4MA"
+            },
+            {
+              "id": "fd2-aw-task-a181",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE4MQ"
+            },
+            {
+              "id": "fd2-aw-task-a182",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE4Mg"
+            },
+            {
+              "id": "fd2-aw-task-a183",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE4Mw"
+            },
+            {
+              "id": "fd2-aw-task-a184",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE4NA"
+            },
+            {
+              "id": "fd2-aw-task-a185",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE4NQ"
+            },
+            {
+              "id": "fd2-aw-task-a186",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE4Ng"
+            },
+            {
+              "id": "fd2-aw-task-a187",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE4Nw"
+            },
+            {
+              "id": "fd2-aw-task-a188",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE4OA"
+            },
+            {
+              "id": "fd2-aw-task-a189",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE4OQ"
+            },
+            {
+              "id": "fd2-aw-task-a19",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTE5"
+            },
+            {
+              "id": "fd2-aw-task-a190",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE5MA"
+            },
+            {
+              "id": "fd2-aw-task-a191",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE5MQ"
+            },
+            {
+              "id": "fd2-aw-task-a192",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE5Mg"
+            },
+            {
+              "id": "fd2-aw-task-a193",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE5Mw"
+            },
+            {
+              "id": "fd2-aw-task-a194",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE5NA"
+            },
+            {
+              "id": "fd2-aw-task-a195",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE5NQ"
+            },
+            {
+              "id": "fd2-aw-task-a196",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE5Ng"
+            },
+            {
+              "id": "fd2-aw-task-a197",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE5Nw"
+            },
+            {
+              "id": "fd2-aw-task-a198",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE5OA"
+            },
+            {
+              "id": "fd2-aw-task-a199",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTE5OQ"
+            },
+            {
+              "id": "fd2-aw-task-a2",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTQ6ZmQyLWF3LXRhc2stYTI"
+            },
+            {
+              "id": "fd2-aw-task-a20",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTIw"
+            },
+            {
+              "id": "fd2-aw-task-a200",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIwMA"
+            },
+            {
+              "id": "fd2-aw-task-a201",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIwMQ"
+            },
+            {
+              "id": "fd2-aw-task-a202",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIwMg"
+            },
+            {
+              "id": "fd2-aw-task-a203",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIwMw"
+            },
+            {
+              "id": "fd2-aw-task-a204",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIwNA"
+            },
+            {
+              "id": "fd2-aw-task-a205",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIwNQ"
+            },
+            {
+              "id": "fd2-aw-task-a206",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIwNg"
+            },
+            {
+              "id": "fd2-aw-task-a207",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIwNw"
+            },
+            {
+              "id": "fd2-aw-task-a208",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIwOA"
+            },
+            {
+              "id": "fd2-aw-task-a209",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIwOQ"
+            },
+            {
+              "id": "fd2-aw-task-a21",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTIx"
+            },
+            {
+              "id": "fd2-aw-task-a210",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIxMA"
+            },
+            {
+              "id": "fd2-aw-task-a211",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIxMQ"
+            },
+            {
+              "id": "fd2-aw-task-a212",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIxMg"
+            },
+            {
+              "id": "fd2-aw-task-a213",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIxMw"
+            },
+            {
+              "id": "fd2-aw-task-a214",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIxNA"
+            },
+            {
+              "id": "fd2-aw-task-a215",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIxNQ"
+            },
+            {
+              "id": "fd2-aw-task-a216",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIxNg"
+            },
+            {
+              "id": "fd2-aw-task-a217",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIxNw"
+            },
+            {
+              "id": "fd2-aw-task-a218",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIxOA"
+            },
+            {
+              "id": "fd2-aw-task-a219",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIxOQ"
+            },
+            {
+              "id": "fd2-aw-task-a22",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTIy"
+            },
+            {
+              "id": "fd2-aw-task-a220",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIyMA"
+            },
+            {
+              "id": "fd2-aw-task-a221",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIyMQ"
+            },
+            {
+              "id": "fd2-aw-task-a222",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIyMg"
+            },
+            {
+              "id": "fd2-aw-task-a223",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIyMw"
+            },
+            {
+              "id": "fd2-aw-task-a224",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIyNA"
+            },
+            {
+              "id": "fd2-aw-task-a225",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIyNQ"
+            },
+            {
+              "id": "fd2-aw-task-a226",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIyNg"
+            },
+            {
+              "id": "fd2-aw-task-a227",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIyNw"
+            },
+            {
+              "id": "fd2-aw-task-a228",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIyOA"
+            },
+            {
+              "id": "fd2-aw-task-a229",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIyOQ"
+            },
+            {
+              "id": "fd2-aw-task-a23",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTIz"
+            },
+            {
+              "id": "fd2-aw-task-a230",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIzMA"
+            },
+            {
+              "id": "fd2-aw-task-a231",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIzMQ"
+            },
+            {
+              "id": "fd2-aw-task-a232",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIzMg"
+            },
+            {
+              "id": "fd2-aw-task-a233",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIzMw"
+            },
+            {
+              "id": "fd2-aw-task-a234",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIzNA"
+            },
+            {
+              "id": "fd2-aw-task-a235",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIzNQ"
+            },
+            {
+              "id": "fd2-aw-task-a236",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIzNg"
+            },
+            {
+              "id": "fd2-aw-task-a237",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIzNw"
+            },
+            {
+              "id": "fd2-aw-task-a238",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIzOA"
+            },
+            {
+              "id": "fd2-aw-task-a239",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTIzOQ"
+            },
+            {
+              "id": "fd2-aw-task-a24",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTI0"
+            },
+            {
+              "id": "fd2-aw-task-a240",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI0MA"
+            },
+            {
+              "id": "fd2-aw-task-a241",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI0MQ"
+            },
+            {
+              "id": "fd2-aw-task-a242",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI0Mg"
+            },
+            {
+              "id": "fd2-aw-task-a243",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI0Mw"
+            },
+            {
+              "id": "fd2-aw-task-a244",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI0NA"
+            },
+            {
+              "id": "fd2-aw-task-a245",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI0NQ"
+            },
+            {
+              "id": "fd2-aw-task-a246",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI0Ng"
+            },
+            {
+              "id": "fd2-aw-task-a247",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI0Nw"
+            },
+            {
+              "id": "fd2-aw-task-a248",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI0OA"
+            },
+            {
+              "id": "fd2-aw-task-a249",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI0OQ"
+            },
+            {
+              "id": "fd2-aw-task-a25",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTI1"
+            },
+            {
+              "id": "fd2-aw-task-a250",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI1MA"
+            },
+            {
+              "id": "fd2-aw-task-a251",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI1MQ"
+            },
+            {
+              "id": "fd2-aw-task-a252",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI1Mg"
+            },
+            {
+              "id": "fd2-aw-task-a253",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI1Mw"
+            },
+            {
+              "id": "fd2-aw-task-a254",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI1NA"
+            },
+            {
+              "id": "fd2-aw-task-a255",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI1NQ"
+            },
+            {
+              "id": "fd2-aw-task-a256",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI1Ng"
+            },
+            {
+              "id": "fd2-aw-task-a257",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI1Nw"
+            },
+            {
+              "id": "fd2-aw-task-a258",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI1OA"
+            },
+            {
+              "id": "fd2-aw-task-a259",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI1OQ"
+            },
+            {
+              "id": "fd2-aw-task-a26",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTI2"
+            },
+            {
+              "id": "fd2-aw-task-a260",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI2MA"
+            },
+            {
+              "id": "fd2-aw-task-a261",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI2MQ"
+            },
+            {
+              "id": "fd2-aw-task-a262",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI2Mg"
+            },
+            {
+              "id": "fd2-aw-task-a263",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI2Mw"
+            },
+            {
+              "id": "fd2-aw-task-a264",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI2NA"
+            },
+            {
+              "id": "fd2-aw-task-a265",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI2NQ"
+            },
+            {
+              "id": "fd2-aw-task-a266",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI2Ng"
+            },
+            {
+              "id": "fd2-aw-task-a267",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI2Nw"
+            },
+            {
+              "id": "fd2-aw-task-a268",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI2OA"
+            },
+            {
+              "id": "fd2-aw-task-a269",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI2OQ"
+            },
+            {
+              "id": "fd2-aw-task-a27",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTI3"
+            },
+            {
+              "id": "fd2-aw-task-a270",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI3MA"
+            },
+            {
+              "id": "fd2-aw-task-a271",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI3MQ"
+            },
+            {
+              "id": "fd2-aw-task-a272",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI3Mg"
+            },
+            {
+              "id": "fd2-aw-task-a273",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI3Mw"
+            },
+            {
+              "id": "fd2-aw-task-a274",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI3NA"
+            },
+            {
+              "id": "fd2-aw-task-a275",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI3NQ"
+            },
+            {
+              "id": "fd2-aw-task-a276",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI3Ng"
+            },
+            {
+              "id": "fd2-aw-task-a277",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI3Nw"
+            },
+            {
+              "id": "fd2-aw-task-a278",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI3OA"
+            },
+            {
+              "id": "fd2-aw-task-a279",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI3OQ"
+            },
+            {
+              "id": "fd2-aw-task-a28",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTI4"
+            },
+            {
+              "id": "fd2-aw-task-a280",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI4MA"
+            },
+            {
+              "id": "fd2-aw-task-a281",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI4MQ"
+            },
+            {
+              "id": "fd2-aw-task-a282",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI4Mg"
+            },
+            {
+              "id": "fd2-aw-task-a283",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI4Mw"
+            },
+            {
+              "id": "fd2-aw-task-a284",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI4NA"
+            },
+            {
+              "id": "fd2-aw-task-a285",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI4NQ"
+            },
+            {
+              "id": "fd2-aw-task-a286",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI4Ng"
+            },
+            {
+              "id": "fd2-aw-task-a287",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI4Nw"
+            },
+            {
+              "id": "fd2-aw-task-a288",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI4OA"
+            },
+            {
+              "id": "fd2-aw-task-a289",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI4OQ"
+            },
+            {
+              "id": "fd2-aw-task-a29",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTI5"
+            },
+            {
+              "id": "fd2-aw-task-a290",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI5MA"
+            },
+            {
+              "id": "fd2-aw-task-a291",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI5MQ"
+            },
+            {
+              "id": "fd2-aw-task-a292",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI5Mg"
+            },
+            {
+              "id": "fd2-aw-task-a293",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI5Mw"
+            },
+            {
+              "id": "fd2-aw-task-a294",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI5NA"
+            },
+            {
+              "id": "fd2-aw-task-a295",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI5NQ"
+            },
+            {
+              "id": "fd2-aw-task-a296",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI5Ng"
+            },
+            {
+              "id": "fd2-aw-task-a297",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI5Nw"
+            },
+            {
+              "id": "fd2-aw-task-a298",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI5OA"
+            },
+            {
+              "id": "fd2-aw-task-a299",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTI5OQ"
+            },
+            {
+              "id": "fd2-aw-task-a3",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTQ6ZmQyLWF3LXRhc2stYTM"
+            },
+            {
+              "id": "fd2-aw-task-a30",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTMw"
+            },
+            {
+              "id": "fd2-aw-task-a300",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTMwMA"
+            },
+            {
+              "id": "fd2-aw-task-a301",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTY6ZmQyLWF3LXRhc2stYTMwMQ"
+            },
+            {
+              "id": "fd2-aw-task-a31",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTMx"
+            },
+            {
+              "id": "fd2-aw-task-a32",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTMy"
+            },
+            {
+              "id": "fd2-aw-task-a33",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTMz"
+            },
+            {
+              "id": "fd2-aw-task-a34",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTM0"
+            },
+            {
+              "id": "fd2-aw-task-a35",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTM1"
+            },
+            {
+              "id": "fd2-aw-task-a36",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTM2"
+            },
+            {
+              "id": "fd2-aw-task-a37",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTM3"
+            },
+            {
+              "id": "fd2-aw-task-a38",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTM4"
+            },
+            {
+              "id": "fd2-aw-task-a39",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTM5"
+            },
+            {
+              "id": "fd2-aw-task-a4",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTQ6ZmQyLWF3LXRhc2stYTQ"
+            },
+            {
+              "id": "fd2-aw-task-a40",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTQw"
+            },
+            {
+              "id": "fd2-aw-task-a41",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTQx"
+            },
+            {
+              "id": "fd2-aw-task-a42",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTQy"
+            },
+            {
+              "id": "fd2-aw-task-a43",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTQz"
+            },
+            {
+              "id": "fd2-aw-task-a44",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTQ0"
+            },
+            {
+              "id": "fd2-aw-task-a45",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTQ1"
+            },
+            {
+              "id": "fd2-aw-task-a46",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTQ2"
+            },
+            {
+              "id": "fd2-aw-task-a47",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTQ3"
+            },
+            {
+              "id": "fd2-aw-task-a48",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTQ4"
+            },
+            {
+              "id": "fd2-aw-task-a49",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTQ5"
+            },
+            {
+              "id": "fd2-aw-task-a5",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTQ6ZmQyLWF3LXRhc2stYTU"
+            },
+            {
+              "id": "fd2-aw-task-a50",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTUw"
+            },
+            {
+              "id": "fd2-aw-task-a51",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTUx"
+            },
+            {
+              "id": "fd2-aw-task-a52",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTUy"
+            },
+            {
+              "id": "fd2-aw-task-a53",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTUz"
+            },
+            {
+              "id": "fd2-aw-task-a54",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTU0"
+            },
+            {
+              "id": "fd2-aw-task-a55",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTU1"
+            },
+            {
+              "id": "fd2-aw-task-a56",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTU2"
+            },
+            {
+              "id": "fd2-aw-task-a57",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTU3"
+            },
+            {
+              "id": "fd2-aw-task-a58",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTU4"
+            },
+            {
+              "id": "fd2-aw-task-a59",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTU5"
+            },
+            {
+              "id": "fd2-aw-task-a6",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTQ6ZmQyLWF3LXRhc2stYTY"
+            },
+            {
+              "id": "fd2-aw-task-a60",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTYw"
+            },
+            {
+              "id": "fd2-aw-task-a61",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTYx"
+            },
+            {
+              "id": "fd2-aw-task-a62",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTYy"
+            },
+            {
+              "id": "fd2-aw-task-a63",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTYz"
+            },
+            {
+              "id": "fd2-aw-task-a64",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTY0"
+            },
+            {
+              "id": "fd2-aw-task-a65",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTY1"
+            },
+            {
+              "id": "fd2-aw-task-a66",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTY2"
+            },
+            {
+              "id": "fd2-aw-task-a67",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTY3"
+            },
+            {
+              "id": "fd2-aw-task-a68",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTY4"
+            },
+            {
+              "id": "fd2-aw-task-a69",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTY5"
+            },
+            {
+              "id": "fd2-aw-task-a7",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTQ6ZmQyLWF3LXRhc2stYTc"
+            },
+            {
+              "id": "fd2-aw-task-a70",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTcw"
+            },
+            {
+              "id": "fd2-aw-task-a71",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTcx"
+            },
+            {
+              "id": "fd2-aw-task-a72",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTcy"
+            },
+            {
+              "id": "fd2-aw-task-a73",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTcz"
+            },
+            {
+              "id": "fd2-aw-task-a74",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTc0"
+            },
+            {
+              "id": "fd2-aw-task-a75",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTc1"
+            },
+            {
+              "id": "fd2-aw-task-a76",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTc2"
+            },
+            {
+              "id": "fd2-aw-task-a77",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTc3"
+            },
+            {
+              "id": "fd2-aw-task-a78",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTc4"
+            },
+            {
+              "id": "fd2-aw-task-a79",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTc5"
+            },
+            {
+              "id": "fd2-aw-task-a8",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTQ6ZmQyLWF3LXRhc2stYTg"
+            },
+            {
+              "id": "fd2-aw-task-a80",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTgw"
+            },
+            {
+              "id": "fd2-aw-task-a81",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTgx"
+            },
+            {
+              "id": "fd2-aw-task-a82",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTgy"
+            },
+            {
+              "id": "fd2-aw-task-a83",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTgz"
+            },
+            {
+              "id": "fd2-aw-task-a84",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTg0"
+            },
+            {
+              "id": "fd2-aw-task-a85",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTg1"
+            },
+            {
+              "id": "fd2-aw-task-a86",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTg2"
+            },
+            {
+              "id": "fd2-aw-task-a87",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTg3"
+            },
+            {
+              "id": "fd2-aw-task-a88",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTg4"
+            },
+            {
+              "id": "fd2-aw-task-a89",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTg5"
+            },
+            {
+              "id": "fd2-aw-task-a9",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTQ6ZmQyLWF3LXRhc2stYTk"
+            },
+            {
+              "id": "fd2-aw-task-a90",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTkw"
+            },
+            {
+              "id": "fd2-aw-task-a91",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTkx"
+            },
+            {
+              "id": "fd2-aw-task-a92",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTky"
+            },
+            {
+              "id": "fd2-aw-task-a93",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTkz"
+            },
+            {
+              "id": "fd2-aw-task-a94",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTk0"
+            },
+            {
+              "id": "fd2-aw-task-a95",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTk1"
+            },
+            {
+              "id": "fd2-aw-task-a96",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTk2"
+            },
+            {
+              "id": "fd2-aw-task-a97",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTk3"
+            },
+            {
+              "id": "fd2-aw-task-a98",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTk4"
+            },
+            {
+              "id": "fd2-aw-task-a99",
+              "tag": "DIV",
+              "row_tag": "TR",
+              "row_id": "attempt-MTU6ZmQyLWF3LXRhc2stYTk5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "attempt-task-link",
+      "ac": "AC03",
+      "behavior": "历史 attempt关联保存的task ID",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-task-link"
+      ],
+      "evidence": {
+        "id": "attempt-task-link",
+        "behavior": "历史 attempt关联保存的task ID",
+        "passed": true
+      }
+    },
+    {
+      "id": "attempt-number",
+      "ac": "AC03",
+      "behavior": "历史 attempt展示实际attemptNo",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-number"
+      ],
+      "evidence": {
+        "id": "attempt-number",
+        "behavior": "历史 attempt展示实际attemptNo",
+        "passed": true
+      }
+    },
+    {
+      "id": "attempt-worker",
+      "ac": "AC03",
+      "behavior": "保存历史Worker ID/Fleet链接，无当前租约断言",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-worker"
+      ],
+      "evidence": {
+        "id": "attempt-worker",
+        "behavior": "保存历史Worker ID/Fleet链接，无当前租约断言",
+        "passed": true
+      }
+    },
+    {
+      "id": "attempt-state",
+      "ac": "AC03",
+      "behavior": "FAILED/EXPIRED/COMPLETED历史状态原样可读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-state"
+      ],
+      "evidence": {
+        "id": "attempt-state",
+        "behavior": "FAILED/EXPIRED/COMPLETED历史状态原样可读",
+        "passed": true
+      }
+    },
+    {
+      "id": "attempt-times",
+      "ac": "AC03",
+      "behavior": "attempt实际创建/开始/结束时间可读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-times"
+      ],
+      "evidence": {
+        "id": "attempt-times",
+        "behavior": "attempt实际创建/开始/结束时间可读",
+        "passed": true,
+        "detail": "created/started/finished timestamps matched"
+      }
+    },
+    {
+      "id": "attempt-failure-category",
+      "ac": "AC03",
+      "behavior": "保存的failure category可读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-failure-category"
+      ],
+      "evidence": {
+        "id": "attempt-failure-category",
+        "behavior": "保存的failure category可读",
+        "passed": true
+      }
+    },
+    {
+      "id": "attempt-reason-paused",
+      "ac": "AC03",
+      "behavior": "EXPIRED OPERATOR_PAUSED原因为暂停",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-reason-paused"
+      ],
+      "evidence": {
+        "id": "attempt-reason-paused",
+        "behavior": "EXPIRED OPERATOR_PAUSED原因为暂停",
+        "passed": true
+      }
+    },
+    {
+      "id": "attempt-reason-cancelled",
+      "ac": "AC03",
+      "behavior": "EXPIRED OPERATOR_CANCELLED原因为取消",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-reason-cancelled"
+      ],
+      "evidence": {
+        "id": "attempt-reason-cancelled",
+        "behavior": "EXPIRED OPERATOR_CANCELLED原因为取消",
+        "passed": true
+      }
+    },
+    {
+      "id": "attempt-reason-missing",
+      "ac": "AC03/AC04",
+      "behavior": "EXPIRED缺原因显示未记录且不推断自动恢复",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-reason-missing"
+      ],
+      "evidence": {
+        "id": "attempt-reason-missing",
+        "behavior": "EXPIRED缺原因显示未记录且不推断自动恢复",
+        "passed": true,
+        "detail": "\n            fd2-h-task-a1Attempt 1fd2-h-task\n            fd2-worker-historicalEXPIRED\n            Created2025-10-02T00:00:00.100ZStarted2025-10-02T00:00:00.110ZFinished2025-10-02T00:00:00.120Z\n            Failure category: Not recordedTermination reason: Not recorded\n          "
+      }
+    },
+    {
+      "id": "attempt-summary",
+      "ac": "AC03",
+      "behavior": "报告摘要独立显示，不冒充根因",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "attempt-summary"
+      ],
+      "evidence": {
+        "id": "attempt-summary",
+        "behavior": "报告摘要独立显示，不冒充根因",
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-latest-outside",
+      "ac": "AC03/AC04",
+      "behavior": "最新 FAILED即使在timeline窗口外仍独立显示",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "failure-latest-outside"
+      ],
+      "evidence": {
+        "id": "failure-latest-outside",
+        "behavior": "最新 FAILED即使在timeline窗口外仍独立显示",
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-event-time",
+      "ac": "AC03",
+      "behavior": "FAILED展示保存的事件时间",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "failure-event-time"
+      ],
+      "evidence": {
+        "id": "failure-event-time",
+        "behavior": "FAILED展示保存的事件时间",
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-event-actor",
+      "ac": "AC03",
+      "behavior": "FAILED展示保存的actor/task/detail",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "failure-event-actor"
+      ],
+      "evidence": {
+        "id": "failure-event-actor",
+        "behavior": "FAILED展示保存的actor/task/detail",
+        "passed": true
+      }
+    },
+    {
+      "id": "recovery-event-time",
+      "ac": "AC03",
+      "behavior": "RECOVERED使用事件实际时间和actor",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "recovery-event-time"
+      ],
+      "evidence": {
+        "id": "recovery-event-time",
+        "behavior": "RECOVERED使用事件实际时间和actor",
+        "passed": true
+      }
+    },
+    {
+      "id": "recovery-event-no-attempt",
+      "ac": "AC03/AC04",
+      "behavior": "Run事件无attempt/Worker来源时不补造链接",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "recovery-event-no-attempt"
+      ],
+      "evidence": {
+        "id": "recovery-event-no-attempt",
+        "behavior": "Run事件无attempt/Worker来源时不补造链接",
+        "passed": true
+      }
+    },
+    {
+      "id": "recovery-history-cap",
+      "ac": "AC03/AC04",
+      "behavior": "FAILED/RECOVERED最近20条/完整23条/截断可读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "recovery-history-cap"
+      ],
+      "evidence": {
+        "id": "recovery-history-cap",
+        "behavior": "FAILED/RECOVERED最近20条/完整23条/截断可读",
+        "passed": true
+      }
+    },
+    {
+      "id": "auto-recovery-explanation",
+      "ac": "AC03",
+      "behavior": "租约自动重新排队机制与人工recover分别说明",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "auto-recovery-explanation"
+      ],
+      "evidence": {
+        "id": "auto-recovery-explanation",
+        "behavior": "租约自动重新排队机制与人工recover分别说明",
+        "passed": true
+      }
+    },
+    {
+      "id": "retry-not-recovery-time",
+      "ac": "AC03",
+      "behavior": "后续attempt创建时间不冒充人工恢复时间",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "retry-not-recovery-time"
+      ],
+      "evidence": {
+        "id": "retry-not-recovery-time",
+        "behavior": "后续attempt创建时间不冒充人工恢复时间",
+        "passed": true,
+        "detail": "last retry creation timestamp excluded from recovery section"
+      }
+    },
+    {
+      "id": "timeline-cap",
+      "ac": "AC04",
+      "behavior": "最近300条/总量/截断与公开timeline API一致",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "timeline-cap"
+      ],
+      "evidence": {
+        "id": "timeline-cap",
+        "behavior": "最近300条/总量/截断与公开timeline API一致",
+        "passed": true,
+        "detail": {
+          "total": 362,
+          "returned": 300
+        }
+      }
+    },
+    {
+      "id": "timeline-chronology",
+      "ac": "AC04",
+      "behavior": "返回窗口保持公开API occurredAt与同时间排序",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "timeline-chronology"
+      ],
+      "evidence": {
+        "id": "timeline-chronology",
+        "behavior": "返回窗口保持公开API occurredAt与同时间排序",
+        "passed": true,
+        "detail": [
+          1546,
+          2035,
+          2466,
+          2901
+        ]
+      }
+    },
+    {
+      "id": "timeline-boundaries",
+      "ac": "AC04",
+      "behavior": "实际首尾时间与公开API窗口一致",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "timeline-boundaries"
+      ],
+      "evidence": {
+        "id": "timeline-boundaries",
+        "behavior": "实际首尾时间与公开API窗口一致",
+        "passed": true,
+        "detail": [
+          "2025-10-01T23:59:59.061Z",
+          "2025-10-02T00:00:00.520Z"
+        ]
+      }
+    },
+    {
+      "id": "timeline-utc-groups",
+      "ac": "AC04",
+      "behavior": "跨UTC午夜条目按UTC日期分组",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "timeline-utc-groups"
+      ],
+      "evidence": {
+        "id": "timeline-utc-groups",
+        "behavior": "跨UTC午夜条目按UTC日期分组",
+        "passed": true
+      }
+    },
+    {
+      "id": "timeline-category-filter",
+      "ac": "AC04",
+      "behavior": "类别筛选只隐藏不匹配的返回条目",
+      "planned": true,
+      "status": "blocked",
+      "test_cases": [],
+      "evidence": {
+        "id": "timeline-category-filter",
+        "behavior": "类别筛选只隐藏不匹配的返回条目",
+        "passed": false,
+        "detail": "{\"exceptionId\":1,\"text\":\"Uncaught\",\"lineNumber\":83,\"columnNumber\":203,\"scriptId\":\"5\",\"stackTrace\":{\"callFrames\":[{\"functionName\":\"filterCategory\",\"scriptId\":\"5\",\"url\":\"\",\"lineNumber\":83,\"columnNumber\":209},{\"functionName\":\"\",\"scriptId\":\"48\",\"url\":\"\",\"lineNumber\":0,\"columnNumber\":27},{\"functionName\":\"\",\"scriptId\":\"48\",\"url\":\"\",\"lineNumber\":0,\"columnNumber\":194}]},\"exception\":{\"type\":\"object\",\"subtype\":\"error\",\"className\":\"Error\",\"description\":\"Error: visible semantic Category control count 0 []\\n    at Object.filterCategory (<anonymous>:84:210)\\n    at <anonymous>:1:28\\n    at <anonymous>:1:195\",\"objectId\":\"7822826133378377087.13.2\"}}"
+      }
+    },
+    {
+      "id": "timeline-text-filter",
+      "ac": "AC04",
+      "behavior": "文本筛选匹配窗口中的实际正文",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "timeline-text-filter"
+      ],
+      "evidence": {
+        "id": "timeline-text-filter",
+        "behavior": "文本筛选匹配窗口中的实际正文",
+        "passed": true,
+        "detail": [
+          {
+            "key": "event-MjA6MjAyNS0xMC0wMVQyMzo1OTo1OVo4Ok9QRVJBVE9SMTA6UlVOX1BBVVNFRDE6MTA6MDowOjA6",
+            "text": "\n                RUN_PAUSED OPERATOR2025-10-01T23:59:59Z\n                \n                  TaskNot recorded\n                  AttemptNot recorded\n                  WorkerNot recorded\n                  Actorhuman:timelineStatePAUSEDTask typeNot recorded\n                  ApprovalNot recordedResult revisionNot recordedPublication refNot recorded\n                BEFORE MIDNIGHT\n              ",
+            "visible": true,
+            "category_attributes": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "timeline-filter-scope",
+      "ac": "AC04",
+      "behavior": "筛选明确只搜索返回窗口",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "timeline-filter-scope"
+      ],
+      "evidence": {
+        "id": "timeline-filter-scope",
+        "behavior": "筛选明确只搜索返回窗口",
+        "passed": true
+      }
+    },
+    {
+      "id": "timeline-reset",
+      "ac": "AC04",
+      "behavior": "Reset恢复整个返回窗口",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "timeline-reset"
+      ],
+      "evidence": {
+        "id": "timeline-reset",
+        "behavior": "Reset恢复整个返回窗口",
+        "passed": true
+      }
+    },
+    {
+      "id": "timeline-full-detail",
+      "ac": "AC04",
+      "behavior": "展开可阅读完整长事件detail",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "timeline-full-detail"
+      ],
+      "evidence": {
+        "id": "timeline-full-detail",
+        "behavior": "展开可阅读完整长事件detail",
+        "passed": true
+      }
+    },
+    {
+      "id": "timeline-detail-key",
+      "ac": "AC04/AC06",
+      "behavior": "事件展开使用稳定key并在刷新后保持",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "timeline-detail-key"
+      ],
+      "evidence": {
+        "id": "timeline-detail-key",
+        "behavior": "事件展开使用稳定key并在刷新后保持",
+        "passed": true
+      }
+    },
+    {
+      "id": "timeline-missing-metadata",
+      "ac": "AC04",
+      "behavior": "缺失actor/task/detail明确未记录",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "timeline-missing-metadata"
+      ],
+      "evidence": {
+        "id": "timeline-missing-metadata",
+        "behavior": "缺失actor/task/detail明确未记录",
+        "passed": true
+      }
+    },
+    {
+      "id": "publication-text-only",
+      "ac": "AC04",
+      "behavior": "publication ref作为文本且不请求外部文件",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "publication-text-only"
+      ],
+      "evidence": {
+        "id": "publication-text-only",
+        "behavior": "publication ref作为文本且不请求外部文件",
+        "passed": true
+      }
+    },
+    {
+      "id": "no-broken-links",
+      "ac": "AC04",
+      "behavior": "页面所有任务/attempt内链均指向存在目标",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "no-broken-links"
+      ],
+      "evidence": {
+        "id": "no-broken-links",
+        "behavior": "页面所有任务/attempt内链均指向存在目标",
+        "passed": true,
+        "detail": [
+          {
+            "href": "#task-MTU6ZmQyLWhpc3RvcnktcmVx",
+            "text": "\n                \n                  fd2-history-req · REQUIREMENT_ANALYSIS · COMPLETED\n                  REQUIREMENT_ANALYSISfd2-history-reqCOMPLETED\n                \n              ",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "\n                \n                  fd2-h-task · IMPLEMENTATION · FAILED\n                  IMPLEMENTATIONfd2-h-taskFAILED\n                \n              ",
+            "exists": true
+          },
+          {
+            "href": "#mission-attempts",
+            "text": "Read attempt history",
+            "exists": true
+          },
+          {
+            "href": "#mission-attempts",
+            "text": "Read attempt history",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hMQ",
+            "text": "1",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hMQ",
+            "text": "1",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hMQ",
+            "text": "1",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hMg",
+            "text": "2",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hMg",
+            "text": "2",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hMg",
+            "text": "2",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hMw",
+            "text": "3",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hMw",
+            "text": "3",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hMw",
+            "text": "3",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hNA",
+            "text": "4",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hNA",
+            "text": "4",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hNA",
+            "text": "4",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hNQ",
+            "text": "5",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hNQ",
+            "text": "5",
+            "exists": true
+          },
+          {
+            "href": "#task-MTA6ZmQyLWgtdGFzaw",
+            "text": "fd2-h-task",
+            "exists": true
+          },
+          {
+            "href": "#attempt-MTM6ZmQyLWgtdGFzay1hNQ",
+            "text": "5",
+            "exists": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "ADMIN-permission",
+      "ac": "AC05",
+      "behavior": "Admin可见既有Run控制且拥有POST权限",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "ADMIN-permission"
+      ],
+      "evidence": {
+        "id": "ADMIN-permission",
+        "behavior": "Admin可见既有Run控制且拥有POST权限",
+        "passed": true,
+        "detail": {
+          "visible": [
+            "/ui/runs/fd2-action/pause",
+            "/ui/runs/fd2-action/cancel"
+          ],
+          "status": 200,
+          "state": {
+            "runId": "fd2-action",
+            "status": "RUNNING",
+            "controlState": "PAUSED",
+            "effectiveStatus": "PAUSED",
+            "terminal": false,
+            "requirementTaskId": "fd2-action-req",
+            "terminalSourceTaskId": null,
+            "resultRevision": null,
+            "approvalRequestId": null,
+            "lastFailedTaskId": null,
+            "lastFailureReason": null,
+            "failureCount": 0,
+            "recoveryCount": 0,
+            "lastRecoveredBy": null,
+            "lastRecoveredAt": null,
+            "pauseCount": 1,
+            "resumeCount": 0,
+            "lastControlAction": "PAUSE",
+            "lastControlledBy": "web:tester",
+            "lastControlReason": "independent fixture action",
+            "lastControlledAt": "2026-10-04T23:41:02.784Z",
+            "cancelledAt": null,
+            "maxParallelism": 0,
+            "activeSlots": 0,
+            "availableSlots": null,
+            "overcommittedSlots": 0,
+            "startedAt": "2025-10-01T23:59:50Z",
+            "statusUpdatedAt": "2026-10-04T23:41:02.784Z",
+            "completedAt": null
+          }
+        }
+      }
+    },
+    {
+      "id": "VIEWER-permission",
+      "ac": "AC05",
+      "behavior": "Viewer隐藏Run控制并拒绝有CSRF的POST",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "VIEWER-permission"
+      ],
+      "evidence": {
+        "id": "VIEWER-permission",
+        "behavior": "Viewer隐藏Run控制并拒绝有CSRF的POST",
+        "passed": true,
+        "detail": {
+          "visible": [],
+          "status": 403,
+          "state": {
+            "runId": "fd2-action",
+            "status": "RUNNING",
+            "controlState": "ACTIVE",
+            "effectiveStatus": "RUNNING",
+            "terminal": false,
+            "requirementTaskId": "fd2-action-req",
+            "terminalSourceTaskId": null,
+            "resultRevision": null,
+            "approvalRequestId": null,
+            "lastFailedTaskId": null,
+            "lastFailureReason": null,
+            "failureCount": 0,
+            "recoveryCount": 0,
+            "lastRecoveredBy": null,
+            "lastRecoveredAt": null,
+            "pauseCount": 0,
+            "resumeCount": 0,
+            "lastControlAction": null,
+            "lastControlledBy": null,
+            "lastControlReason": null,
+            "lastControlledAt": null,
+            "cancelledAt": null,
+            "maxParallelism": 0,
+            "activeSlots": 0,
+            "availableSlots": null,
+            "overcommittedSlots": 0,
+            "startedAt": "2025-10-01T23:59:50Z",
+            "statusUpdatedAt": "2025-10-02T00:00:00Z",
+            "completedAt": null
+          }
+        }
+      }
+    },
+    {
+      "id": "OPERATOR-permission",
+      "ac": "AC05",
+      "behavior": "Operator可见Run控制且拥有POST权限",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "OPERATOR-permission"
+      ],
+      "evidence": {
+        "id": "OPERATOR-permission",
+        "behavior": "Operator可见Run控制且拥有POST权限",
+        "passed": true,
+        "detail": {
+          "visible": [
+            "/ui/runs/fd2-action/pause",
+            "/ui/runs/fd2-action/cancel"
+          ],
+          "status": 200,
+          "state": {
+            "runId": "fd2-action",
+            "status": "RUNNING",
+            "controlState": "PAUSED",
+            "effectiveStatus": "PAUSED",
+            "terminal": false,
+            "requirementTaskId": "fd2-action-req",
+            "terminalSourceTaskId": null,
+            "resultRevision": null,
+            "approvalRequestId": null,
+            "lastFailedTaskId": null,
+            "lastFailureReason": null,
+            "failureCount": 0,
+            "recoveryCount": 0,
+            "lastRecoveredBy": null,
+            "lastRecoveredAt": null,
+            "pauseCount": 1,
+            "resumeCount": 0,
+            "lastControlAction": "PAUSE",
+            "lastControlledBy": "web:tester",
+            "lastControlReason": "independent fixture action",
+            "lastControlledAt": "2026-10-04T23:42:11.269Z",
+            "cancelledAt": null,
+            "maxParallelism": 0,
+            "activeSlots": 0,
+            "availableSlots": null,
+            "overcommittedSlots": 0,
+            "startedAt": "2025-10-01T23:59:50Z",
+            "statusUpdatedAt": "2026-10-04T23:42:11.269Z",
+            "completedAt": null
+          }
+        }
+      }
+    },
+    {
+      "id": "APPROVER-permission",
+      "ac": "AC05",
+      "behavior": "Approver隐藏Run控制并拒绝有CSRF的POST",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "APPROVER-permission"
+      ],
+      "evidence": {
+        "id": "APPROVER-permission",
+        "behavior": "Approver隐藏Run控制并拒绝有CSRF的POST",
+        "passed": true,
+        "detail": {
+          "visible": [],
+          "status": 403,
+          "state": {
+            "runId": "fd2-action",
+            "status": "RUNNING",
+            "controlState": "ACTIVE",
+            "effectiveStatus": "RUNNING",
+            "terminal": false,
+            "requirementTaskId": "fd2-action-req",
+            "terminalSourceTaskId": null,
+            "resultRevision": null,
+            "approvalRequestId": null,
+            "lastFailedTaskId": null,
+            "lastFailureReason": null,
+            "failureCount": 0,
+            "recoveryCount": 0,
+            "lastRecoveredBy": null,
+            "lastRecoveredAt": null,
+            "pauseCount": 0,
+            "resumeCount": 0,
+            "lastControlAction": null,
+            "lastControlledBy": null,
+            "lastControlReason": null,
+            "lastControlledAt": null,
+            "cancelledAt": null,
+            "maxParallelism": 0,
+            "activeSlots": 0,
+            "availableSlots": null,
+            "overcommittedSlots": 0,
+            "startedAt": "2025-10-01T23:59:50Z",
+            "statusUpdatedAt": "2025-10-02T00:00:00Z",
+            "completedAt": null
+          }
+        }
+      }
+    },
+    {
+      "id": "csrf-required",
+      "ac": "AC05",
+      "behavior": "已登录Admin无CSRF写入被拒绝且状态不变",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "csrf-required"
+      ],
+      "evidence": {
+        "id": "csrf-required",
+        "behavior": "已登录Admin无CSRF写入被拒绝且状态不变",
+        "passed": true
+      }
+    },
+    {
+      "id": "pause-submit",
+      "ac": "AC05",
+      "behavior": "合法pause产生反馈与PAUSED事实",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "pause-submit"
+      ],
+      "evidence": {
+        "id": "pause-submit",
+        "behavior": "合法pause产生反馈与PAUSED事实",
+        "passed": true
+      }
+    },
+    {
+      "id": "resume-submit",
+      "ac": "AC05",
+      "behavior": "合法resume产生反馈与ACTIVE事实",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "resume-submit"
+      ],
+      "evidence": {
+        "id": "resume-submit",
+        "behavior": "合法resume产生反馈与ACTIVE事实",
+        "passed": true
+      }
+    },
+    {
+      "id": "recover-submit",
+      "ac": "AC05",
+      "behavior": "合法recover产生反馈与RUNNING事实",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "recover-submit"
+      ],
+      "evidence": {
+        "id": "recover-submit",
+        "behavior": "合法recover产生反馈与RUNNING事实",
+        "passed": true
+      }
+    },
+    {
+      "id": "cancel-warning",
+      "ac": "AC05",
+      "behavior": "Cancel存在不可逆/确认提示",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "cancel-warning"
+      ],
+      "evidence": {
+        "id": "cancel-warning",
+        "behavior": "Cancel存在不可逆/确认提示",
+        "passed": true
+      }
+    },
+    {
+      "id": "cancel-submit",
+      "ac": "AC05",
+      "behavior": "合法cancel产生CANCELLED事实",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "cancel-submit"
+      ],
+      "evidence": {
+        "id": "cancel-submit",
+        "behavior": "合法cancel产生CANCELLED事实",
+        "passed": true
+      }
+    },
+    {
+      "id": "cancel-irreversible",
+      "ac": "AC05",
+      "behavior": "已cancelled Run无法resume",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "cancel-irreversible"
+      ],
+      "evidence": {
+        "id": "cancel-irreversible",
+        "behavior": "已cancelled Run无法resume",
+        "passed": true
+      }
+    },
+    {
+      "id": "stale-action-conflict",
+      "ac": "AC05",
+      "behavior": "旧页面pause在状态已改变时显示竞争错误",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "stale-action-conflict"
+      ],
+      "evidence": {
+        "id": "stale-action-conflict",
+        "behavior": "旧页面pause在状态已改变时显示竞争错误",
+        "passed": true,
+        "detail": {
+          "status": 200,
+          "excerpt": "data-category=\"OPERATOR\">\n              <span class=\"timeline-dot\"></span><details data-detail-key=\"event-MjQ6MjAyNi0xMC0wNFQyMzo0MTo1Ni4yOTRaODpPUEVSQVRPUjEwOlJVTl9QQVVTRUQxOjIwOjA6MDowOg\">\n                <summary><span class=\"timeline-title\">RUN_PAUSED</span> <span class=\"pill neutral\">OPERATOR</span><time class=\"timeline-meta\">2026-10-04T23:41:56.294Z</time></summary>\n                <dl class=\"kv top-gap\">\n                  <dt>Task</dt><dd><span class=\"mono\">Not recorded</span></dd>\n                  <dt>Attempt</dt><dd><span>Not recorded</span></dd>\n                  <dt>Worker</dt><dd><span>Not recorded</span></dd>\n                  <dt>Actor</dt><dd>web:tester</dd><dt>State</dt><dd>PAUSED</dd><dt>Task type</dt><dd>Not recorded</dd>\n                  <dt>Approval</dt><dd class=\"mono\">Not recorded</dd><dt>Result revision</dt><dd class=\"mono\">Not recorded</dd><dt>Publication ref</dt><dd class=\"mono\">Not recorded</dd>\n                </dl><p class=\"mission-fulltext\">Detail not recorded</p>\n              </details>\n            </article>\n          </div>\n        </div>\n        <p class=\"empty top-gap\" data-timeline-empty hidden>No entries match the filters in this returned window.</p>\n      </section>\n      <div class=\"footer-note\">Web Console actions remain subject to current Control Plane authority. <span data-refresh-label>Refresh in 5s</span></div>\n    </div>\n  </main>\n</div>\n<script src=\"/ui/mission.js\"></script><script src=\"/ui/console.js\"></script>\n</body>\n</html>\n"
+        }
+      }
+    },
+    {
+      "id": "action-snapshot-reload",
+      "ac": "AC05",
+      "behavior": "动作快照说明及Reload action availability入口可读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "action-snapshot-reload"
+      ],
+      "evidence": {
+        "id": "action-snapshot-reload",
+        "behavior": "动作快照说明及Reload action availability入口可读",
+        "passed": true
+      }
+    },
+    {
+      "id": "empty-graph",
+      "ac": "AC06",
+      "behavior": "零task/attempt/dependency的缺失关联Run明确空态",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "empty-graph"
+      ],
+      "evidence": {
+        "id": "empty-graph",
+        "behavior": "零task/attempt/dependency的缺失关联Run明确空态",
+        "passed": true
+      }
+    },
+    {
+      "id": "long-id",
+      "ac": "AC06",
+      "behavior": "完整长Run/task ID在任务表可阅读",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "long-id"
+      ],
+      "evidence": {
+        "id": "long-id",
+        "behavior": "完整长Run/task ID在任务表可阅读",
+        "passed": true
+      }
+    },
+    {
+      "id": "width-390",
+      "ac": "AC06",
+      "behavior": "390px窄屏页面不横向溢出且图内部滚动",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "width-390"
+      ],
+      "evidence": {
+        "id": "width-390",
+        "behavior": "390px窄屏页面不横向溢出且图内部滚动",
+        "passed": true
+      }
+    },
+    {
+      "id": "width-768",
+      "ac": "AC06",
+      "behavior": "768px页面不横向溢出",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "width-768"
+      ],
+      "evidence": {
+        "id": "width-768",
+        "behavior": "768px页面不横向溢出",
+        "passed": true
+      }
+    },
+    {
+      "id": "width-1280",
+      "ac": "AC06",
+      "behavior": "1280px页面不横向溢出",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "width-1280"
+      ],
+      "evidence": {
+        "id": "width-1280",
+        "behavior": "1280px页面不横向溢出",
+        "passed": true
+      }
+    },
+    {
+      "id": "width-1440",
+      "ac": "AC06",
+      "behavior": "1440px页面不横向溢出",
+      "planned": true,
+      "status": "blocked",
+      "test_cases": [],
+      "evidence": {
+        "id": "width-1440",
+        "behavior": "1440px页面不横向溢出",
+        "passed": false,
+        "detail": "Unable to capture screenshot"
+      }
+    },
+    {
+      "id": "motion-toggle",
+      "ac": "AC06",
+      "behavior": "Motion off在导航后保持并关闭动效",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "motion-toggle"
+      ],
+      "evidence": {
+        "id": "motion-toggle",
+        "behavior": "Motion off在导航后保持并关闭动效",
+        "passed": true
+      }
+    },
+    {
+      "id": "reduced-motion",
+      "ac": "AC06",
+      "behavior": "系统减少动效设置关闭装饰动画",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "reduced-motion"
+      ],
+      "evidence": {
+        "id": "reduced-motion",
+        "behavior": "系统减少动效设置关闭装饰动画",
+        "passed": true
+      }
+    },
+    {
+      "id": "refresh-auto",
+      "ac": "AC06",
+      "behavior": "5秒周期真实更新只读事实",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "refresh-auto"
+      ],
+      "evidence": {
+        "id": "refresh-auto",
+        "behavior": "5秒周期真实更新只读事实",
+        "passed": true
+      }
+    },
+    {
+      "id": "refresh-filter",
+      "ac": "AC06",
+      "behavior": "刷新后类别/文本筛选条件保持并重新应用",
+      "planned": true,
+      "status": "blocked",
+      "test_cases": [],
+      "evidence": {
+        "id": "refresh-filter",
+        "behavior": "刷新后类别/文本筛选条件保持并重新应用",
+        "passed": false,
+        "detail": "{\"exceptionId\":2,\"text\":\"Uncaught\",\"lineNumber\":83,\"columnNumber\":203,\"scriptId\":\"5\",\"stackTrace\":{\"callFrames\":[{\"functionName\":\"filterCategory\",\"scriptId\":\"5\",\"url\":\"\",\"lineNumber\":83,\"columnNumber\":209},{\"functionName\":\"\",\"scriptId\":\"48\",\"url\":\"\",\"lineNumber\":0,\"columnNumber\":27},{\"functionName\":\"\",\"scriptId\":\"48\",\"url\":\"\",\"lineNumber\":0,\"columnNumber\":194}]},\"exception\":{\"type\":\"object\",\"subtype\":\"error\",\"className\":\"Error\",\"description\":\"Error: visible semantic Category control count 0 []\\n    at Object.filterCategory (<anonymous>:84:210)\\n    at <anonymous>:1:28\\n    at <anonymous>:1:195\",\"objectId\":\"7822826133378377087.13.4\"}}"
+      }
+    },
+    {
+      "id": "refresh-graph-state",
+      "ac": "AC06",
+      "behavior": "刷新后图开关及图内滚动保持",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "refresh-graph-state"
+      ],
+      "evidence": {
+        "id": "refresh-graph-state",
+        "behavior": "刷新后图开关及图内滚动保持",
+        "passed": true
+      }
+    },
+    {
+      "id": "refresh-form-focus",
+      "ac": "AC06",
+      "behavior": "编辑动作表单时输入/焦点保持并暂停刷新",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "refresh-form-focus"
+      ],
+      "evidence": {
+        "id": "refresh-form-focus",
+        "behavior": "编辑动作表单时输入/焦点保持并暂停刷新",
+        "passed": true
+      }
+    },
+    {
+      "id": "refresh-selection",
+      "ac": "AC06",
+      "behavior": "阅读选区的节点/文字/offset刷新后保持",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "refresh-selection"
+      ],
+      "evidence": {
+        "id": "refresh-selection",
+        "behavior": "阅读选区的节点/文字/offset刷新后保持",
+        "passed": true
+      }
+    },
+    {
+      "id": "refresh-scroll",
+      "ac": "AC06",
+      "behavior": "局部刷新保留页面滚动位置",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "refresh-scroll"
+      ],
+      "evidence": {
+        "id": "refresh-scroll",
+        "behavior": "局部刷新保留页面滚动位置",
+        "passed": true
+      }
+    },
+    {
+      "id": "refresh-details",
+      "ac": "AC06",
+      "behavior": "任务展开details刷新后保持",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "refresh-details"
+      ],
+      "evidence": {
+        "id": "refresh-details",
+        "behavior": "任务展开details刷新后保持",
+        "passed": true
+      }
+    },
+    {
+      "id": "keyboard-focus",
+      "ac": "AC06",
+      "behavior": "Tab键真实焦点及可见outline可用",
+      "planned": true,
+      "status": "passed",
+      "test_cases": [
+        "keyboard-focus"
+      ],
+      "evidence": {
+        "id": "keyboard-focus",
+        "behavior": "Tab键真实焦点及可见outline可用",
+        "passed": true
+      }
+    },
+    {
+      "id": "no-js",
+      "ac": "AC04/AC06",
+      "behavior": "禁用JavaScript仍可阅读返回timeline与任务表",
+      "planned": false,
+      "uncovered_reason": "本命令聚焦Chrome交互；另需无脚本浏览上下文",
+      "status": "uncovered",
+      "test_cases": [],
+      "evidence": null
+    },
+    {
+      "id": "firefox-graph",
+      "ac": "AC02/AC06",
+      "behavior": "Firefox依赖图、表格、窗口和锚点兼容",
+      "planned": false,
+      "uncovered_reason": "未包含Firefox启动工具与单独授权",
+      "status": "uncovered",
+      "test_cases": [],
+      "evidence": null
+    },
+    {
+      "id": "firefox-refresh",
+      "ac": "AC06",
+      "behavior": "Firefox筛选/选区/焦点/动效刷新保持",
+      "planned": false,
+      "uncovered_reason": "未包含Firefox启动工具与单独授权",
+      "status": "uncovered",
+      "test_cases": [],
+      "evidence": null
+    },
+    {
+      "id": "lease-auto-runtime",
+      "ac": "AC03",
+      "behavior": "真实租约到期requeue后页面区别人工recover",
+      "planned": false,
+      "uncovered_reason": "聚焦只读详情，自动租约恢复在隔离运行中关闭；仅覆盖已有记录表达",
+      "status": "uncovered",
+      "test_cases": [],
+      "evidence": null
+    },
+    {
+      "id": "lease-pause-revocation",
+      "ac": "AC05",
+      "behavior": "pause撤销真实活跃Worker租约后详情保持一致",
+      "planned": false,
+      "uncovered_reason": "未启动Worker协议进程，控制动作使用无租约Run",
+      "status": "uncovered",
+      "test_cases": [],
+      "evidence": null
+    },
+    {
+      "id": "concurrent-posts",
+      "ac": "AC05",
+      "behavior": "真正同时两个控制POST竞争与原子性反馈",
+      "planned": false,
+      "uncovered_reason": "本命令覆盖旧页面状态变化的串行竞争；同时写入需要独立时序夹具",
+      "status": "uncovered",
+      "test_cases": [],
+      "evidence": null
+    },
+    {
+      "id": "timeline-tz-browser",
+      "ac": "AC04",
+      "behavior": "非UTC浏览器时区仍按UTC日期分组",
+      "planned": false,
+      "uncovered_reason": "本命令检查UTC午夜数据，未再启动其他时区上下文",
+      "status": "uncovered",
+      "test_cases": [],
+      "evidence": null
+    },
+    {
+      "id": "missing-time",
+      "ac": "AC03/AC04",
+      "behavior": "缺失可选attempt started/finished时间明确未记录",
+      "planned": false,
+      "uncovered_reason": "当前夹具终态attempt包含时间；需额外缺失可选时间夹具",
+      "status": "uncovered",
+      "test_cases": [],
+      "evidence": null
+    }
+  ]
+}

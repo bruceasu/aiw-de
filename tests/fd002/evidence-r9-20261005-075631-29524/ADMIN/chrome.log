@@ -1,0 +1,7 @@
+
+DevTools listening on ws://127.0.0.1:2589/devtools/browser/6432362d-c632-4ab0-b065-c3fb45207eb4
+[4920:36088:1005/075654.541:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:75] Failed to open named pipe server process 16128: 拒绝访问。 (0x5)
+[4920:22016:1005/075656.604:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:75] Failed to open named pipe server process 6824: 拒绝访问。 (0x5)
+[4920:36088:1005/075658.662:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:75] Failed to open named pipe server process 34172: 拒绝访问。 (0x5)
+[4920:22016:1005/075658.708:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:75] Failed to open named pipe server process 7972: 拒绝访问。 (0x5)
+[4920:36088:1005/075658.755:ERROR:chrome\updater\ipc\update_service_dialer_win.cc:75] Failed to open named pipe server process 36936: 拒绝访问。 (0x5)

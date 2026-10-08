@@ -1,0 +1,9 @@
+R8-S12 Fix1 validation
+- Root cause: FleetAdmissionBudgetService had two constructors and no @Autowired constructor.
+- Fix: @Autowired added to the public production constructor.
+- Source scan: 0 Spring-managed multi-constructor classes without @Autowired.
+- Schema changes: none.
+- Flyway latest: V13.
+- Core tables: 8.
+- Expected Failsafe integration-test methods: 28.
+- Authoritative gate: mvn clean verify in a Maven-enabled environment.

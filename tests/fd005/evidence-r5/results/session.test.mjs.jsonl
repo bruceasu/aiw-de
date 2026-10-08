@@ -1,0 +1,27 @@
+{"id":"SESSION-missing","outcome":"passed","duration_ms":31}
+{"id":"SESSION-unverified","outcome":"passed","duration_ms":57}
+{"id":"SESSION-sdk-mismatch","outcome":"passed","duration_ms":42}
+{"id":"SESSION-native-digest","outcome":"passed","duration_ms":44}
+{"id":"SESSION-launcher-digest","outcome":"passed","duration_ms":48}
+{"id":"SESSION-proof-digest","outcome":"passed","duration_ms":42}
+{"id":"SESSION-control-missing","outcome":"passed","duration_ms":54}
+{"id":"SESSION-config-change","outcome":"passed","duration_ms":41}
+{"id":"SESSION-workspace-file","outcome":"passed","duration_ms":41}
+{"id":"SESSION-raw-evidence","outcome":"passed","duration_ms":44}
+{"id":"SESSION-fake-admission","outcome":"passed","duration_ms":43}
+{"id":"LAUNCHER-preflight","outcome":"passed","duration_ms":183}
+{"id":"LAUNCHER-exec","outcome":"passed","duration_ms":253}
+{"id":"LAUNCHER-resume","outcome":"passed","duration_ms":93}
+{"id":"LAUNCHER-save-output","outcome":"passed","duration_ms":93}
+{"id":"LAUNCHER-prompt-argv","outcome":"passed","duration_ms":95}
+{"id":"LAUNCHER-conflict","outcome":"passed","duration_ms":94}
+{"id":"LAUNCHER-environment","outcome":"failed","duration_ms":128,"error":"Expected values to be strictly equal:\n\ntrue !== false\n"}
+{"id":"LAUNCHER-stderr","outcome":"passed","duration_ms":143}
+{"id":"RPC-ephemeral","outcome":"passed","duration_ms":131}
+{"id":"RPC-valid-turn","outcome":"passed","duration_ms":124}
+{"id":"RPC-receipt","outcome":"passed","duration_ms":1635}
+{"id":"RPC-read-receipt","outcome":"failed","duration_ms":140,"error":"Expected \"actual\" to be strictly unequal to: 0"}
+{"id":"RPC-turn-order","outcome":"passed","duration_ms":129}
+{"id":"RPC-resume","outcome":"passed","duration_ms":140}
+{"id":"RPC-disk-fork","outcome":"passed","duration_ms":126}
+{"id":"RPC-approval","outcome":"passed","duration_ms":128}

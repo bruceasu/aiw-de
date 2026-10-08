@@ -1,0 +1,21 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000049-changes-requested",
+  "human_report": "FD-005-pm-override-r50.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-005-test-report-r39.md",
+    "fd_revision": 50,
+    "fd_digest": "7580e25fcfb35602b575f8d0cfb056ae1cb1c2e5a024d200650a7beaafa29b6ad",
+    "requirements_coverage": "69.70% (23/33)",
+    "branch_coverage": "not measured",
+    "rationale": "用户明确要求跳过 API-16 并确认现有测试足够；PM 按最终流程权限接受现有测试证据，豁免本次 FD 处置对 Acceptance 1/API-16 行为验证的门槛。该决定不证明相关产品行为通过。",
+    "exceptions": "跳过 API-16 与其他新增测试；接受 69.70% 场景覆盖率及未测量分支覆盖率；豁免本次处置对 Acceptance 1/API-16 行为证据的要求。",
+    "residual_risk": "API-16 要求的保留角色拒绝注册行为仍无运行证据；r39 exit 1 和 r47 changes-requested 保持历史事实；10/33 场景未完整覆盖，分支覆盖率未知，真实服务、远端 Git、平台 G2 与非 API Worker 未由本轮测试验证。",
+    "pm_identity": "host-pm-fd005-20261006",
+    "decision_time": "2026-10-06T00:00:00+09:00",
+    "skipped_checks": ["API-16 behavior test", "additional tests", "coverage", "compile", "build", "formatting"]
+  }
+}

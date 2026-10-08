@@ -1,0 +1,28 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-001",
+  "source_event": "FD-001-000011-implementation-ready",
+  "human_report": "FD-001-test-authorization-r11-v1.md",
+  "data": {
+    "decision": "approved",
+    "basis": "human-approved",
+    "implementation_event": "FD-001-000011-implementation-ready",
+    "fd_revision": 11,
+    "fd_digest": "bf8bbae3a950348233a32faf39393bbd4c8cd7e07aeff14464833dbd0fdb6377",
+    "tester_session": "fd001-tester-20261004-7303009b",
+    "command": "C:/green/python312/python.exe tests/fd001/runtime.py review-fixes",
+    "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+    "scope": "One ADMIN black-box run: four assertions for waiting count/sample exclusivity, category precedence, open detail preservation on count change, and multi-region Selection preservation",
+    "expected_duration": "1–2 minutes; browser subcommand timeout65s; bounded process cleanup",
+    "side_effects": "Owned loopback temporary SQLite application and Chrome profile; local fixture writes; evidence under tests/fd001/evidence-review1; own process cleanup; no downloads, external services, production DB or release artifacts",
+    "risk_review": "Read runtime.py, review-fixes.mjs and fixture_edit.py; existing classpath; random loopback port; temporary DB/profile ownership; no new Maven command; narrow review-finding checks with actual unprotected refresh required; legacy36/36 remains historical",
+    "human_approval": "approved:conversation:20261005-auto-test-review-FD001-FD002",
+    "planner_identity": "fd001-planner-20261004-86fbb56c",
+    "decision_time": "2026-10-04T22:22:45+00:00",
+    "initial_run_budget": 1,
+    "corrected_retry_budget": 1,
+    "branch_coverage": "not measured",
+    "firefox_verification": "user-deferred-for-FD001"
+  }
+}

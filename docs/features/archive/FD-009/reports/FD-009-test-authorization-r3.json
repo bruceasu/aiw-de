@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-009",
+  "source_event": "FD-009-000012-implementation-ready",
+  "human_report": "FD-009-test-authorization-r3.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-009-000012-implementation-ready",
+    "fd_revision": 12,
+    "fd_digest": "c91d54d5fe9bf52fe8c8a0d85fd2da5f1b99a5f4030c2c7d093d91589d40cc82",
+    "tester_session": "fd009-tester-r2-20261007-95171d",
+    "command": "$env:AIW_AGENT_RUNTIME='openai-agents'; & .\\workers\\process-typescript\\scripts\\run-role.ps1 requirements codex-sdk",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\.wt\\FD-009",
+    "scope": "PowerShell role launcher rejects openai-agents environment versus codex-sdk argument before Node startup",
+    "expected_duration": "under 2 seconds",
+    "side_effects": "Only a temporary shell environment variable; no file writes, network, or build artifacts",
+    "risk_review": "Offline focused CLI contract check; conflict branch exits before Node startup",
+    "human_approval": "not required",
+    "planner_identity": "FD-009 host Planner",
+    "decision_time": "2026-10-07T13:58:01+00:00"
+  }
+}

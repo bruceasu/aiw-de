@@ -1,0 +1,16 @@
+{
+  "diagnostics": [
+    {
+      "route": "/ui/login",
+      "url": "http://127.0.0.1:2583/ui/login"
+    },
+    {
+      "infrastructure_error": "Error: CDP timeout Runtime.evaluate\n    at Timeout._onTimeout (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd002/browser.mjs:29:127)\n    at listOnTimeout (node:internal/timers:605:17)\n    at process.processTimers (node:internal/timers:541:7)"
+    },
+    {
+      "section_diagnostics_unavailable": "CDP timeout Runtime.evaluate"
+    }
+  ],
+  "external_requests": [],
+  "runtime_errors": []
+}

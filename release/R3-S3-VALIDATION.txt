@@ -1,0 +1,64 @@
+R3-S3 VALIDATION
+================
+
+Baseline
+--------
+Java: 21
+Accepted input baseline: R3-S2 Fix3
+User-reported Maven verification for R3-S2 Fix3: PASS
+
+Scope
+-----
+FakeWorker Runtime + Worker Loop
+No Codex integration
+No schema change
+Domain table count remains 4
+
+Static compilation in current environment
+-----------------------------------------
+Full main source javac --release 21 with minimal Spring API stubs: PASS
+All test source javac --release 21 with minimal JUnit/Spring Test/AssertJ stubs: PASS
+Spring-managed final-class scan: PASS
+
+Executable runtime harness
+--------------------------
+A dependency-free JDK21 harness was executed against the real R3 application/domain/runtime classes
+with in-memory repository adapters.
+
+Scenario A:
+    100 tasks
+    10 workers
+    pull claim loop
+    concurrent fake execution
+
+Result:
+    completed tasks = 100
+    execution attempts = 100
+    max observed parallel execution = 10
+    PASS
+
+Scenario B:
+    worker claims and starts a task
+    worker process crash simulated
+    heartbeat stops and lease remains owned
+    lease expires
+    Control Plane recoverExpiredLeases()
+    second worker reclaims as attempt 2
+
+Result:
+    recovered leases = 1
+    attempt 1 = EXPIRED
+    attempt 2 = COMPLETED
+    PASS
+
+Observed harness output:
+    R3-S3 HARNESS PASS completed=100 maxParallel=10 recovered=1
+
+Maven gate
+----------
+User-confirmed on 2026-09-26:
+
+    mvn verify : PASS
+
+Authoritative S3 integration test:
+    me.asu.aidev.worker.runtime.R3S3FakeWorkerRuntimeIT

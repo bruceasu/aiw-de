@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-009",
+  "source_event": "FD-009-000008-implementation-ready",
+  "human_report": "FD-009-test-authorization-r1.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-009-000008-implementation-ready",
+    "fd_revision": 8,
+    "fd_digest": "60a1e95a3683465fc204f25f20ece6feae8f0c31d1f6043e14d508b9474549d5",
+    "tester_session": "fd009-tester-20261007-f817be",
+    "command": "node --test tests/fd009/cli-contract.test.mjs",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\.wt\\FD-009",
+    "scope": "Three offline black-box launcher contract checks: removed old package path, missing runtime rejection, unknown runtime rejection",
+    "expected_duration": "under 15 seconds",
+    "side_effects": "No file writes, network calls, or build artifacts in the inspected test code; short-lived PowerShell child processes with 10-second timeouts",
+    "risk_review": "Focused local CLI checks only; positive backend startup and live service behavior remain unverified",
+    "human_approval": "not required",
+    "planner_identity": "FD-009 host Planner",
+    "decision_time": "2026-10-07T13:47:29+00:00"
+  }
+}

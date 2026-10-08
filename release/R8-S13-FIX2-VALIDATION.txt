@@ -1,0 +1,17 @@
+R8-S13 Fix2 namespace validation
+
+Canonical namespace: me.asu
+Application root package: me.asu.aidev
+Maven groupId: me.asu
+Maven artifactId: ai-dev-manager-r8
+
+Expected structural checks:
+- legacy namespace residue: 0
+- Java package/path mismatches: 0
+- unresolved internal me.asu imports: 0
+- core/authority/audit tables: 9
+- Flyway latest: V14
+- expected Failsafe integration-test methods: 29
+
+Authoritative gate:
+  mvn clean verify

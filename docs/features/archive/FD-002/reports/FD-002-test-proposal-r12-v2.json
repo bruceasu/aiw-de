@@ -1,0 +1,91 @@
+{
+    "schema":  "aiw.fd.test-proposal.v1",
+    "kind":  "tester-command-proposal",
+    "fd_id":  "FD-002",
+    "source_event":  "FD-002-000012-implementation-ready",
+    "human_report":  "FD-002-test-proposal-r12-v2.md",
+    "data":  {
+                 "status":  "pending-pm-review-of-authorized-corrected-retry",
+                 "fd_revision":  12,
+                 "fd_digest":  "8a272107c44241a585978e51becdf1d769f5d17736f122b276fea088bb6178b9",
+                 "tester_session":  "fd002-tester-20261005-15d090a2",
+                 "command":  "C:/green/python312/python.exe tests/fd002/runtime.py",
+                 "working_directory":  "D:/03_projects/AI-tools/aiw-dev",
+                 "expected_duration":  "4–8 minutes including complete long-page segments; depends on local memory/capture cost, not an overall hard deadline",
+                 "required_authorization":  "docs/features/reports/FD-002-test-authorization-r12-v2.json",
+                 "evidence_directory_pattern":  "tests/fd002/evidence-r12-\u003ctimestamp\u003e-\u003cpid\u003e",
+                 "applicable_scenarios":  104,
+                 "planned_scenarios":  96,
+                 "planned_requirements_coverage":  "92.31%: planned only",
+                 "current_revision_coverage":  "2.88%: initial run3/104, corrected retry not executed",
+                 "previous_revision_requirements_coverage":  "71.15%",
+                 "previous_revision":  9,
+                 "previous_report":  "docs/features/reports/FD-002-test-report-r9-attempt2.md",
+                 "branch_coverage":  "not measured",
+                 "coverage_unavailable_reason":  "No bytecode branch instrumentation in the offline black-box command",
+                 "static_changes":  [
+                                        "Add exactly one Chrome --disable-gpu after observed GPU process exit34; no claim that this establishes cause or production performance",
+                                        "Reuse unique initial type=page/url=about:blank from json/list rather than create a second blank target; missing/nonunique candidate blocks without new tab fallback; original5s timeout retained",
+                                        "Record exact CDP method/operation on timeout; navigation/login/scenario/screenshot stage labels only, with unchanged actions, waits and timeouts",
+                                        "Use authorization-r12-v2 for same claimed event12/revision12/digest/session; preserve initial raw and all historical snapshots/results"
+                                    ],
+                 "test_files":  [
+                                    "tests/fd002/runtime.py",
+                                    "tests/fd002/fixture.py",
+                                    "tests/fd002/browser.mjs",
+                                    "tests/fd002/scenarios.json"
+                                ],
+                 "roles":  [
+                               "ADMIN",
+                               "VIEWER",
+                               "OPERATOR",
+                               "APPROVER"
+                           ],
+                 "includes_all_planned_assertions":  "96 assertions if reached; unexecuted steps remain unrun",
+                 "screenshot_matrix":  [
+                                           "dense-390",
+                                           "dense-768",
+                                           "dense-1280",
+                                           "dense-1440",
+                                           "long-id-390",
+                                           "long-id-768",
+                                           "long-id-1280",
+                                           "long-id-1440",
+                                           "final-admin",
+                                           "role-ADMIN",
+                                           "role-VIEWER",
+                                           "role-OPERATOR",
+                                           "role-APPROVER",
+                                           "failed-\u003cscenario-id\u003e"
+                                       ],
+                 "screenshot_policy":  "name.png first clip, name-part-002.png onward; all vertical content at public layout width, \u003c=2000 CSS px high and \u003c=4M PNG pixels per clip; diagnostics persist total height, each clip, filename and actual dimensions",
+                 "uncovered_scenarios":  [
+                                             "no-js",
+                                             "firefox-graph",
+                                             "firefox-refresh",
+                                             "lease-auto-runtime",
+                                             "lease-pause-revocation",
+                                             "concurrent-posts",
+                                             "timeline-tz-browser",
+                                             "missing-time"
+                                         ],
+                 "firefox_decision":  "docs/features/reports/FD-002-firefox-decision-r6.md",
+                 "side_effects":  "Unique r12 evidence output, four serial owned loopback temporary applications/SQLite/Chrome profiles/PIDs, complete screenshot segments; no build/downloads/production writes",
+                 "cleanup":  "Stop owned PID trees only; validate direct TEMP parent and fd002-tester prefix; retain paths on live process/cleanup/preservation failure; preserve all old evidence",
+                 "additional_runs_requested":  0,
+                 "related_fix_retry_budget_requested":  1,
+                 "current_initial_budget":  0,
+                 "current_retry_budget":  1,
+                 "run_policy":  "Same authorized conditional retry only after PM static review, approved v2 binding and explicit notice; exact command once; no automatic retry or extra diagnostic runs",
+                 "residual_risk":  "GPU exit34 and CDP evaluate timeout are correlated evidence only; hardware GPU and production performance unverified, system commit pressure remains. No assertion/timeout/matrix weakening. Initial3/104 and historical4 failures stay unchanged; corrected run may still block.",
+                 "current_run_status":  "corrected-retry-not-executed",
+                 "human_approval":  "approved:conversation:call_91WOuZ4AVFLiYni2IuZLDKaE",
+                 "current_report":  "docs/features/reports/FD-002-test-report-r12-attempt1.md",
+                 "script_sha256":  {
+                                       "tests/fd002/runtime.py":  "77a08ccccab06c955d9d84a271d49ab2fe73e2591a4121bcab2dd4688286530e",
+                                       "tests/fd002/fixture.py":  "f054fedc66c2cd095e8582377a12afca9e6df8477f4188ddb86b88494ecc68b2",
+                                       "tests/fd002/browser.mjs":  "ab434e6e9388531f0e6af1b92f048124cc8af0ced6a534f8e7eabcb6cb88a89b",
+                                       "tests/fd002/scenarios.json":  "b4284ae444e58abb1768d7bfbf6196b0bd29d85a4c91a5d8f5e7d863e30db954"
+                                   }
+             }
+}

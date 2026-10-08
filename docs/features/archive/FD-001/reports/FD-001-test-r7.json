@@ -1,0 +1,865 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-001",
+  "source_event": "FD-001-000007-implementation-ready",
+  "human_report": "FD-001-test-r7.md",
+  "data": {
+    "implementation_event": "FD-001-000007-implementation-ready",
+    "tested_fd_revision": 7,
+    "tested_fd_digest": "4d98e2a15e417e8c8986faa809dfe4aa4b5666a38b9b6aa3f8e8c926d92dc125",
+    "tester_session": "fd001-tester-20261004-7303009b",
+    "applicable_scenarios": 88,
+    "covered_scenarios": 42,
+    "executed_behavior_tests": 36,
+    "passed_behavior_tests": 36,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 0,
+    "requirements_coverage": "47.73%",
+    "branch_coverage": "not measured",
+    "coverage_unavailable_reason": "只做公开UI/HTTP黑盒，未授权覆盖率工具/插桩；实际通过不能推导Java或浏览器源码分支覆盖。",
+    "raw_coverage_evidence": "tests/fd001/evidence-r7/results.json：36实际业务断言全部passed；同目录各角色日志、导航JSON和4张宽度PNG。data.scenarios逐项映射42/88。",
+    "test_files": [
+      "tests/fd001/runtime.py",
+      "tests/fd001/browser.mjs"
+    ],
+    "commands": [
+      "C:/green/python312/python.exe tests/fd001/runtime.py diagnose",
+      "C:/green/python312/python.exe tests/fd001/runtime.py"
+    ],
+    "authorization_records": [
+      "docs/features/reports/FD-001-test-authorization-r7-v1.md",
+      "docs/features/reports/FD-001-test-authorization-r7-v2.md"
+    ],
+    "recommendation": "pass",
+    "residual_risk": "执行断言均通过，但独立要求覆盖只有47.73%，46场景未覆盖且源码branch未测。完整审批/服务器权限/CSRF/竞态、五等待条件总数和重叠、完整事件源、隐藏恢复/角色改变/timeout/单请求/陈旧/文本选择仍不能独立确认。PM须显式记录低覆盖和branch unavailable例外；Firefox用户允许延期。",
+    "scenarios": [
+      {
+        "id": "S001",
+        "acceptance": "AC06",
+        "behavior": "ADMIN角色显示",
+        "status": "passed",
+        "test_cases": [
+          "ADMIN-role"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S002",
+        "acceptance": "AC06",
+        "behavior": "ADMIN新建Run入口",
+        "status": "passed",
+        "test_cases": [
+          "ADMIN-new"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S003",
+        "acceptance": "AC06",
+        "behavior": "ADMIN Worker操作入口",
+        "status": "passed",
+        "test_cases": [
+          "ADMIN-worker-actions"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S004",
+        "acceptance": "AC06",
+        "behavior": "VIEWER角色显示",
+        "status": "passed",
+        "test_cases": [
+          "VIEWER-role"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S005",
+        "acceptance": "AC06",
+        "behavior": "VIEWER新建Run入口隐藏",
+        "status": "passed",
+        "test_cases": [
+          "VIEWER-new"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S006",
+        "acceptance": "AC06",
+        "behavior": "VIEWER Worker操作入口隐藏",
+        "status": "passed",
+        "test_cases": [
+          "VIEWER-worker-actions"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S007",
+        "acceptance": "AC06",
+        "behavior": "OPERATOR角色显示",
+        "status": "passed",
+        "test_cases": [
+          "OPERATOR-role"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S008",
+        "acceptance": "AC06",
+        "behavior": "OPERATOR新建Run入口",
+        "status": "passed",
+        "test_cases": [
+          "OPERATOR-new"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S009",
+        "acceptance": "AC06",
+        "behavior": "OPERATOR Worker操作入口",
+        "status": "passed",
+        "test_cases": [
+          "OPERATOR-worker-actions"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S010",
+        "acceptance": "AC06",
+        "behavior": "APPROVER角色显示",
+        "status": "passed",
+        "test_cases": [
+          "APPROVER-role"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S011",
+        "acceptance": "AC06",
+        "behavior": "APPROVER新建Run入口隐藏",
+        "status": "passed",
+        "test_cases": [
+          "APPROVER-new"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S012",
+        "acceptance": "AC06",
+        "behavior": "APPROVER Worker操作入口隐藏",
+        "status": "passed",
+        "test_cases": [
+          "APPROVER-worker-actions"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S013",
+        "acceptance": "AC04",
+        "behavior": "ACTIVE零租约显示Idle",
+        "status": "passed",
+        "test_cases": [
+          "states"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S014",
+        "acceptance": "AC04",
+        "behavior": "ACTIVE有租约显示Executing",
+        "status": "passed",
+        "test_cases": [
+          "states"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S015",
+        "acceptance": "AC04",
+        "behavior": "DRAINING有租约正确区分",
+        "status": "passed",
+        "test_cases": [
+          "states"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S016",
+        "acceptance": "AC04",
+        "behavior": "OFFLINE文字可读",
+        "status": "passed",
+        "test_cases": [
+          "states"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S017",
+        "acceptance": "AC04",
+        "behavior": "相同Worker跨Overview和Fleet身份稳定",
+        "status": "passed",
+        "test_cases": [
+          "identity"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S018",
+        "acceptance": "AC07",
+        "behavior": "Fleet 8秒局部快照更新",
+        "status": "passed",
+        "test_cases": [
+          "fleet-interval"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S019",
+        "acceptance": "AC02",
+        "behavior": "非终态Run总量14与12卡片截断分别显示",
+        "status": "passed",
+        "test_cases": [
+          "run-window"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S020",
+        "acceptance": "AC09",
+        "behavior": "110条新决定记录不淹没16条旧PENDING",
+        "status": "passed",
+        "test_cases": [
+          "pending-old"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S021",
+        "acceptance": "AC09",
+        "behavior": "PENDING明细8与总量16分别显示",
+        "status": "passed",
+        "test_cases": [
+          "pending-old"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S022",
+        "acceptance": "AC05",
+        "behavior": "缺失失败原因显示unavailable",
+        "status": "passed",
+        "test_cases": [
+          "failure-missing"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S023",
+        "acceptance": "AC02",
+        "behavior": "暂停状态可区分",
+        "status": "passed",
+        "test_cases": [
+          "paused"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S024",
+        "acceptance": "AC02",
+        "behavior": "等待分类标题可读",
+        "status": "passed",
+        "test_cases": [
+          "waiting-labels"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S025",
+        "acceptance": "AC05",
+        "behavior": "活动明细最多20条",
+        "status": "passed",
+        "test_cases": [
+          "activity-bound"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S026",
+        "acceptance": "AC05",
+        "behavior": "相同时间fixture活动顺序重复读取稳定",
+        "status": "passed",
+        "test_cases": [
+          "activity-stable"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S027",
+        "acceptance": "AC01",
+        "behavior": "恶意requirement文本按文本显示",
+        "status": "passed",
+        "test_cases": [
+          "safe-text"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S028",
+        "acceptance": "AC03",
+        "behavior": "任务计数不声明ETA或工程完成百分比",
+        "status": "passed",
+        "test_cases": [
+          "no-eta"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S029",
+        "acceptance": "AC07",
+        "behavior": "Overview 5秒局部快照更新",
+        "status": "passed",
+        "test_cases": [
+          "overview-interval"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S030",
+        "acceptance": "AC07",
+        "behavior": "展开详情保持",
+        "status": "passed",
+        "test_cases": [
+          "reading-protection"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S031",
+        "acceptance": "AC07",
+        "behavior": "阅读焦点保持",
+        "status": "passed",
+        "test_cases": [
+          "reading-protection"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S032",
+        "acceptance": "AC07",
+        "behavior": "页面滚动位置保持",
+        "status": "passed",
+        "test_cases": [
+          "reading-protection"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S033",
+        "acceptance": "AC08",
+        "behavior": "390px主要内容无页面横溢",
+        "status": "passed",
+        "test_cases": [
+          "width-390"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S034",
+        "acceptance": "AC08",
+        "behavior": "768px主要内容无页面横溢",
+        "status": "passed",
+        "test_cases": [
+          "width-768"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S035",
+        "acceptance": "AC08",
+        "behavior": "1280px主要内容无页面横溢",
+        "status": "passed",
+        "test_cases": [
+          "width-1280"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S036",
+        "acceptance": "AC08",
+        "behavior": "1440px主要内容无页面横溢",
+        "status": "passed",
+        "test_cases": [
+          "width-1440"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S037",
+        "acceptance": "AC08",
+        "behavior": "动效开关本地持久",
+        "status": "passed",
+        "test_cases": [
+          "motion"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S038",
+        "acceptance": "AC08",
+        "behavior": "系统减少动效独立关闭脉冲",
+        "status": "passed",
+        "test_cases": [
+          "reduced-motion"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S039",
+        "acceptance": "AC07",
+        "behavior": "System旧整页刷新保持编辑输入",
+        "status": "passed",
+        "test_cases": [
+          "edit-pause"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S040",
+        "acceptance": "AC07",
+        "behavior": "reset并结束编辑焦点后恢复刷新",
+        "status": "passed",
+        "test_cases": [
+          "reset-resume"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S041",
+        "acceptance": "AC08",
+        "behavior": "真实Tab键焦点outline可见",
+        "status": "passed",
+        "test_cases": [
+          "keyboard"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S042",
+        "acceptance": "AC07",
+        "behavior": "真实cookie失效停止刷新并保留快照",
+        "status": "passed",
+        "test_cases": [
+          "login-expiry"
+        ],
+        "reason": "r7唯一授权矩阵实际执行通过；只覆盖本行可观察条件。"
+      },
+      {
+        "id": "S043",
+        "acceptance": "AC01",
+        "behavior": "实际零数据空态且不注入演示数据",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S044",
+        "acceptance": "AC01",
+        "behavior": "主区域战术视觉人工检查",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S045",
+        "acceptance": "AC01",
+        "behavior": "活跃Run和关注事项详情链接可进入真实对象",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S046",
+        "acceptance": "AC02",
+        "behavior": "超过recent创建窗口仍显示旧活跃Run",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S047",
+        "acceptance": "AC02",
+        "behavior": "失败状态与审批状态分开",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S048",
+        "acceptance": "AC02",
+        "behavior": "无匹配能力条件准确总量及5条例子",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S049",
+        "acceptance": "AC02",
+        "behavior": "容量耗尽条件准确总量及5条例子",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S050",
+        "acceptance": "AC02",
+        "behavior": "Run admission阻塞准确总量及例子",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S051",
+        "acceptance": "AC02",
+        "behavior": "Fleet admission阻塞准确总量及例子",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S052",
+        "acceptance": "AC02",
+        "behavior": "policy阻塞准确总量及例子",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S053",
+        "acceptance": "AC02",
+        "behavior": "同一任务多个等待条件重叠",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S054",
+        "acceptance": "AC03",
+        "behavior": "已完成/当前任务数和阶段独立正确",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S055",
+        "acceptance": "AC03",
+        "behavior": "repair或新增任务改变分母仍不声明完成度",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S056",
+        "acceptance": "AC04",
+        "behavior": "任务失败不将Worker标记故障",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S057",
+        "acceptance": "AC04",
+        "behavior": "完整Worker ID/runtime/capability可读",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S058",
+        "acceptance": "AC04",
+        "behavior": "Worker大于100与首页8的范围标明",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S059",
+        "acceptance": "AC05",
+        "behavior": "Run开始/终止权威事件来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S060",
+        "acceptance": "AC05",
+        "behavior": "task创建权威事件来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S061",
+        "acceptance": "AC05",
+        "behavior": "attempt claimed/started/finished/gate权威来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S062",
+        "acceptance": "AC05",
+        "behavior": "approval requested/decided权威来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S063",
+        "acceptance": "AC05",
+        "behavior": "Run control事件权威来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S064",
+        "acceptance": "AC05",
+        "behavior": "缺失对象关联明确",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S065",
+        "acceptance": "AC05",
+        "behavior": "活动对象链接真实可进入且不冒充完整审计",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S066",
+        "acceptance": "AC06",
+        "behavior": "APPROVER/ADMIN审批入口权限矩阵",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S067",
+        "acceptance": "AC06",
+        "behavior": "VIEWER/OPERATOR审批入口隐藏",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S068",
+        "acceptance": "AC06",
+        "behavior": "服务器拒绝无权直接操作",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S069",
+        "acceptance": "AC06",
+        "behavior": "CSRF保护",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S070",
+        "acceptance": "AC06",
+        "behavior": "提交错误反馈",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S071",
+        "acceptance": "AC06",
+        "behavior": "状态竞态服务器拒绝反馈",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S072",
+        "acceptance": "AC07",
+        "behavior": "一次请求在途上限",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S073",
+        "acceptance": "AC07",
+        "behavior": "10秒请求超时保留快照",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S074",
+        "acceptance": "AC07",
+        "behavior": "失败不立即连续重试",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S075",
+        "acceptance": "AC07",
+        "behavior": "30秒陈旧反馈",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S076",
+        "acceptance": "AC07",
+        "behavior": "真实隐藏暂停并恢复可见立即更新",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S077",
+        "acceptance": "AC07",
+        "behavior": "局部页面编辑和恢复",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S078",
+        "acceptance": "AC07",
+        "behavior": "文本选择不被刷新破坏",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S079",
+        "acceptance": "AC07",
+        "behavior": "非预期HTML停止刷新",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S080",
+        "acceptance": "AC07",
+        "behavior": "真实角色变化停止刷新",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S081",
+        "acceptance": "AC07",
+        "behavior": "失败后下个周期可恢复",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S082",
+        "acceptance": "AC08",
+        "behavior": "长ID和长需求全文可访问",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S083",
+        "acceptance": "AC08",
+        "behavior": "关闭动效仍可辨识身份和状态",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S084",
+        "acceptance": "AC08",
+        "behavior": "Firefox 1440/1280兼容验证（用户明确延期）",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "用户允许延期；本机未下载Firefox。"
+      },
+      {
+        "id": "S085",
+        "acceptance": "AC09",
+        "behavior": "批量读取而非遍历全部Run timeline的性能边界",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S086",
+        "acceptance": "AC10",
+        "behavior": "所有既有页面共享样式不损坏操作",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S087",
+        "acceptance": "AC10",
+        "behavior": "中英文指南新鲜度/范围/阶段准确",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      },
+      {
+        "id": "S088",
+        "acceptance": "AC10",
+        "behavior": "M1不将M2–M4或整需求标记完成",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "本套独立命令未编写此行为断言，既有Worker结果仅背景，不计Tester覆盖。"
+      }
+    ],
+    "attempts": [
+      {
+        "attempt": "r4-v1",
+        "exit_code": 1,
+        "behavior_assertions_executed": 0,
+        "result": "历史首次fetch登录/DB清理基础设施失败，未改写",
+        "evidence": "tests/fd001/evidence-r4/attempt1"
+      },
+      {
+        "attempt": "r4-v2",
+        "exit_code": 1,
+        "behavior_assertions_executed": 0,
+        "result": "历史四角色net::ERR_ABORTED，4 infrastructure+4runner条目，未改写",
+        "evidence": "tests/fd001/evidence-r4/attempt2"
+      },
+      {
+        "attempt": "r7-diagnose",
+        "exit_code": 0,
+        "behavior_assertions_executed": 0,
+        "result": "HTTP200和明确新page target实际达到/ui/login complete；诊断不计业务覆盖",
+        "evidence": "tests/fd001/evidence-r7/diagnose-v1"
+      },
+      {
+        "attempt": "r7-matrix",
+        "exit_code": 0,
+        "behavior_assertions_executed": 36,
+        "result": "36业务断言/36pass/0fail/无infrastructure条目",
+        "evidence": "tests/fd001/evidence-r7/results.json"
+      }
+    ],
+    "inherited_evidence": "Worker既有4 WebConsole IT通过和Chromium证据仅背景，本Tester未执行且不计入覆盖。",
+    "prepared_behavior_assertions": 36,
+    "visual_evidence": [
+      "tests/fd001/evidence-r7/tester-390.png",
+      "tests/fd001/evidence-r7/tester-768.png",
+      "tests/fd001/evidence-r7/tester-1280.png",
+      "tests/fd001/evidence-r7/tester-1440.png"
+    ]
+  }
+}

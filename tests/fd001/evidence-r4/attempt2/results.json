@@ -1,0 +1,50 @@
+[
+  {
+    "id": "ADMIN-infrastructure",
+    "behavior": "Independent browser infrastructure completes",
+    "passed": false,
+    "detail": "Error: navigation rejected net::ERR_ABORTED\n    at nav (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:21:154)\n    at async file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:24:2"
+  },
+  {
+    "id": "ADMIN-runner",
+    "behavior": "Browser runner completes",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "id": "VIEWER-infrastructure",
+    "behavior": "Independent browser infrastructure completes",
+    "passed": false,
+    "detail": "Error: navigation rejected net::ERR_ABORTED\n    at nav (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:21:154)\n    at async file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:24:2"
+  },
+  {
+    "id": "VIEWER-runner",
+    "behavior": "Browser runner completes",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "id": "OPERATOR-infrastructure",
+    "behavior": "Independent browser infrastructure completes",
+    "passed": false,
+    "detail": "Error: navigation rejected net::ERR_ABORTED\n    at nav (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:21:154)\n    at async file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:24:2"
+  },
+  {
+    "id": "OPERATOR-runner",
+    "behavior": "Browser runner completes",
+    "passed": false,
+    "detail": ""
+  },
+  {
+    "id": "APPROVER-infrastructure",
+    "behavior": "Independent browser infrastructure completes",
+    "passed": false,
+    "detail": "Error: navigation rejected net::ERR_ABORTED\n    at nav (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:21:154)\n    at async file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:24:2"
+  },
+  {
+    "id": "APPROVER-runner",
+    "behavior": "Browser runner completes",
+    "passed": false,
+    "detail": ""
+  }
+]

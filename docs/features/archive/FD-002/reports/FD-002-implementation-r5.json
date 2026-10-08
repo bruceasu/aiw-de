@@ -1,0 +1,28 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000005-design-ready",
+  "human_report": "FD-002-implementation-r5.md",
+  "data": {
+    "summary": "2.1–2.6 实现完成，离线编译通过；独立运行测试和审查待执行。",
+    "worker_session_ref": "fd002-worker-20261005-88571fc5",
+    "baseline_commit": "7372e13c46779ebe60817872b47348385adbb240",
+    "concurrent_commit": "81040ba5c591086d4a8639084d3ff46a726702de",
+    "review_scope": "baseline-to-current HEAD limited to changed_paths and FD-002 evidence; unrelated Update paths excluded",
+    "changed_paths": [
+      "src/main/java/me/asu/aidev/webconsole/domain/WebConsoleMissionDetail.java",
+      "src/main/java/me/asu/aidev/webconsole/jdbc/JdbcWebConsoleMissionReadRepository.java",
+      "src/main/java/me/asu/aidev/webconsole/application/WebConsoleMissionQueryService.java",
+      "src/main/java/me/asu/aidev/webconsole/protocol/http/WebConsoleController.java",
+      "src/main/resources/templates/ui/run-detail.html",
+      "src/main/resources/static/ui/mission.js",
+      "src/main/resources/static/ui/console.css",
+      "docs/current/WEB-CONSOLE-RUN-MISSION.md",
+      "docs/current-zh/WEB-CONSOLE-RUN-MISSION.md"
+    ],
+    "commands": [{"command":"C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests compile","working_directory":"D:/03_projects/AI-tools/aiw-dev","exit_code":0,"jdk":21,"elapsed_seconds":9.413,"evidence":".ai/fd/FD-002/compile-r5.txt"}],
+    "results": ["compile-only: BUILD SUCCESS, 178 sources", "runtime tests: not run", "browser checks: not run", "independent review: pending"],
+    "residual_risk": "Thymeleaf/SVG/过滤/刷新未运行验证；原时间线全量读取成本；窗口截断与既有隔离级别；FD-001 尚未 Complete；Firefox 未延期。"
+  }
+}

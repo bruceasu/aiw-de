@@ -1,0 +1,305 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000012-implementation-ready",
+  "human_report": "FD-006-test-report-r2.md",
+  "data": {
+    "implementation_event": "FD-006-000012-implementation-ready",
+    "tested_fd_revision": 12,
+    "tested_fd_digest": "4bdec80bc23b463d175d189a2e6ff844f73b884e21aada26f469b7bbd78b23db",
+    "tester_session": "fd006-tester-20261007-r2-da1c0478",
+    "applicable_scenarios": 32,
+    "covered_scenarios": 2,
+    "executed_behavior_tests": 4,
+    "passed_behavior_tests": 4,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 28,
+    "requirements_coverage": "6.25%",
+    "branch_coverage": "not measured",
+    "raw_coverage_evidence": "tests/fd006/evidence-r2/node-test-output.txt；没有执行业务代码分支覆盖率工具。",
+    "coverage_unavailable_reason": "只获准执行一个离线 Worker runtime 命令，未授权代码分支插桩；测试输出不是分支覆盖率。",
+    "test_files": [
+      "tests/fd006/direct-workspace.test.mjs"
+    ],
+    "authorization_records": [
+      "docs/features/reports/FD-006-test-authorization-r2.md"
+    ],
+    "commands": [
+      "node --test tests/fd006/direct-workspace.test.mjs"
+    ],
+    "recommendation": "blocked",
+    "not_applicable_reason": "",
+    "residual_risk": "DIRECT Root/Child 的指定目录写入、无 Git worktree/result 和 cleanup 保留通过；Git Worker 对完整 SHA 的使用及无效 SHA 拒绝通过，但 Run 创建时 revision 解析未验证。Workspace UI/API、注册删除用户文件保护、路径越界/冲突、Clone、迁移、并发和其他 Worker adapter 仍缺独立运行证据。需求覆盖率仅 6.25%，PM 若接受须记录明确例外和风险。",
+    "scenarios": [
+      {
+        "id": "AC01-ROOT",
+        "acceptance": "AC01",
+        "behavior": "只登记根目录并明确选根目标时，ref 为 workspaceId/root，relativePath 为 .",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC02-MULTI",
+        "acceptance": "AC02",
+        "behavior": "创建两个 Workspace 后各自 ID、名称、根路径独立且列表详情可见",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC02-EDIT",
+        "acceptance": "AC02",
+        "behavior": "修改名称或未使用根路径并禁用后，目标状态持久化",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC02-REMOVE",
+        "acceptance": "AC02",
+        "behavior": "解除 Workspace 登记后本地目录和文件仍存在",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC03-LINK",
+        "acceptance": "AC03",
+        "behavior": "追加本地链接后目标位于根目录内并指向所选来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC03-BLANK",
+        "acceptance": "AC03",
+        "behavior": "追加空白子目录后生成可选择的显式目标",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC03-UNIQUE",
+        "acceptance": "AC03",
+        "behavior": "多个显式子仓库产生全局唯一 repositoryRef",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC04-INIT",
+        "acceptance": "AC04",
+        "behavior": "根目录 git init 成功后可分别选择 Git 模式和目录模式",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC05-MISSING",
+        "acceptance": "AC05",
+        "behavior": "Git 命令缺失时保留 Workspace 或 Repo 登记并显示警告",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC05-READONLY",
+        "acceptance": "AC05",
+        "behavior": "只读或权限不足导致 git init 失败时仍可启动目录模式 Run",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC06-PRESERVE",
+        "acceptance": "AC06",
+        "behavior": "默认接入外部本地目录不改写源内容或递归删除",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC06-OPTIN",
+        "acceptance": "AC06",
+        "behavior": "显式选择 Git 初始化时尽力执行，失败仅产生警告",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC07-CLONE",
+        "acceptance": "AC07",
+        "behavior": "从本地 Git remote 克隆成功后 Repo 可用",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC07-FAIL",
+        "acceptance": "AC07",
+        "behavior": "克隆失败时可诊断且页面错误不暴露凭据",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC08-BRANCH",
+        "acceptance": "AC08",
+        "behavior": "Git 模式 branch 在 Run 创建时解析为完整 commit ID",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC08-TAG",
+        "acceptance": "AC08",
+        "behavior": "Git 模式 tag 在 Run 创建时解析为完整 commit ID",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC08-SHORT",
+        "acceptance": "AC08",
+        "behavior": "Git 模式短 SHA 在 Run 创建时解析为完整 commit ID",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC08-FULL",
+        "acceptance": "AC08",
+        "behavior": "Git 模式完整 SHA 由所选仓库验证后保持不变",
+        "status": "uncovered",
+        "test_cases": [
+          "GIT_WORKTREE materializes the selected full commit and keeps the source repository"
+        ],
+        "observed": "Worker 从预先给定的完整 SHA 建立 worktree，HEAD 与该 SHA 相同；未验证 Control Plane 在 Run 创建时解析。"
+      },
+      {
+        "id": "AC08-INHERIT",
+        "acceptance": "AC08",
+        "behavior": "后续任务继承 Run 创建时固定的同一 commit 基线",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC09-DIRECT",
+        "acceptance": "AC09",
+        "behavior": "DIRECT Worker 使用 assignment 指定的普通目录写入、保留目录并返回空 Git 结果",
+        "status": "passed",
+        "test_cases": [
+          "DIRECT root assignment uses and preserves the registered directory without Git",
+          "DIRECT child assignment uses and preserves the registered directory without Git"
+        ],
+        "observed": "Root/Child 均使用 assignment.repositoryPath，写入留在原目录，cleanup 后用户文件与写入仍存在，finalize 返回 null。"
+      },
+      {
+        "id": "AC09-NOWORKTREE",
+        "acceptance": "AC09",
+        "behavior": "目录模式无需 Git 且不创建 worktree 或 Git revision",
+        "status": "passed",
+        "test_cases": [
+          "DIRECT root assignment uses and preserves the registered directory without Git",
+          "DIRECT child assignment uses and preserves the registered directory without Git"
+        ],
+        "observed": "两个 DIRECT 用例均验证目标无 .git 且未创建 worktreeRoot，finalize 返回 null。"
+      },
+      {
+        "id": "AC09-PERMISSION",
+        "acceptance": "AC09",
+        "behavior": "目录模式写入遵从文件系统权限",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC10-INVALID",
+        "acceptance": "AC10",
+        "behavior": "不可解析的非空 Base Revision 返回错误且 Run 或 task 不创建",
+        "status": "uncovered",
+        "test_cases": [
+          "GIT_WORKTREE rejects an unavailable full commit and preserves the source repository"
+        ],
+        "observed": "Worker 拒绝不可用的完整 SHA 并保留源目录；未验证 Control Plane 拒绝创建 Run/task。"
+      },
+      {
+        "id": "AC11-SERIAL",
+        "acceptance": "AC11",
+        "behavior": "同一目标的多个目录模式 Run 串行且各 Run 并行度为 1",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC11-INDEPENDENT",
+        "acceptance": "AC11",
+        "behavior": "不同 Workspace 或目标的目录模式 Run 可独立执行",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC12-DISCOVER",
+        "acceptance": "AC12",
+        "behavior": "无显式子仓库时根目录一级子目录成为隐含可选目标",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC12-FALLBACK",
+        "acceptance": "AC12",
+        "behavior": "无一级子目录时自动回退根目标",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC12-SWITCH",
+        "acceptance": "AC12",
+        "behavior": "追加首个显式子仓库后隐含列表不再作为新 Run 目标",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC13-TRAVERSAL",
+        "acceptance": "AC13",
+        "behavior": "越界子路径被拒绝且目标外用户文件不变",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC13-COLLISION",
+        "acceptance": "AC13",
+        "behavior": "已存在目标或冲突 ref 被拒绝且不覆盖用户数据",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "AC13-FAILURE",
+        "acceptance": "AC13",
+        "behavior": "目录或克隆操作中途失败后状态可诊断并保留非应用拥有的数据",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      },
+      {
+        "id": "LEGACY-FALLBACK",
+        "acceptance": "兼容性",
+        "behavior": "未登记旧 YAML ref 仍可手动输入并解析，托管冲突不静默改派",
+        "status": "uncovered",
+        "test_cases": [],
+        "observed": "未执行完整独立运行验证。"
+      }
+    ],
+    "static_exclusions": [],
+    "raw_output_evidence": "tests/fd006/evidence-r2/node-test-output.txt"
+  }
+}

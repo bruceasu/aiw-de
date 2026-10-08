@@ -1,0 +1,70 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000052-review-requested",
+  "human_report": "FD-005-review-r52.md",
+  "data": {
+    "reviewer_session": "fd005-reviewer-20261006-r52-84d21c7b",
+    "reviewed_fd_revision": 52,
+    "reviewed_fd_digest": "8612c48ab78ed15c1e0ce5afec5ed084200cfcf3df6268231d109951e35b6a62",
+    "review_base": "5b1a48baa9c3dd7ca575bab25c11d452f3cce912 (current HEAD)",
+    "worker_commit": "none for r42; report says no production source changes",
+    "outcome": "changes-requested",
+    "findings": [
+      {
+        "id": "F-1",
+        "severity": "medium",
+        "requirement": "FD Verification history and current reviewer outcome count must be unambiguous and internally consistent.",
+        "location": "docs/features/FD-005_WORKER_PI.md:198",
+        "evidence": "The Verification section records changes-requested outcomes for r44/r45 and r47, and explicitly supersedes the earlier zero count. A later sentence in that same section still says Reviewer outcome remains 0 without labeling it as a historical snapshot.",
+        "requested_action": "Label the zero count as an early dated/revisioned historical snapshot or remove that current-sounding count. Preserve the original r44/r45 and r47 reports and outcomes."
+      }
+    ],
+    "pm_decision": "PM r50 explicitly waived the API-16 behavior verification gate for this disposition and accepted 69.70% (23/33) scenario coverage and unmeasured branch coverage. This workflow override is not behavior evidence. The r39 exit 1 and API-16 unverified risk remain accurately represented.",
+    "acceptance_review": {
+      "acceptance_1_api_16": "Verification gate waived by PM for this disposition; behavior remains unverified. r39 did not prove registration rejection.",
+      "requirements_coverage": "69.70% (23/33); accepted exception",
+      "branch_coverage": "not measured",
+      "r39_execution": "Authorized command exit 1; one behavior test failed; both reserved-role processes exited during module or syntax loading.",
+      "authorized_invocation_hashes_match": true,
+      "r42_tester_handoff": "Outcome unavailable; not inferred."
+    },
+    "reviewed_artifacts": [
+      "docs/features/FD-005_WORKER_PI.md revision 52",
+      "docs/features/reports/FD-005-implementation-r42.md and JSON",
+      "docs/features/reports/FD-005-pm-override-r50.md and JSON",
+      "docs/features/reports/FD-005-test-report-r39.md and JSON",
+      "docs/features/reports/FD-005-test-authorization-r39.md and JSON",
+      "tests/fd005/evidence-r39/execution.json and diagnostic.json",
+      "docs/features/reviews/FD-005-review-r44.md and JSON",
+      "docs/features/reviews/FD-005-review-r47.md and JSON",
+      "workers/process-typescript-with-api/src/index.ts",
+      "workers/process-typescript-with-api/src/profiles.ts"
+    ],
+    "commands": [
+      "aiw fd --help",
+      "aiw fd resume FD-005",
+      "aiw fd claim --help",
+      "aiw fd claim FD-005 FD-005-000052-review-requested --session fd005-reviewer-20261006-r52-84d21c7b",
+      "aiw fd emit --help",
+      "rg --files docs/features .ai/fd/FD-005",
+      "rg -n 'Reviewer outcome|Review outcome|outcome.*0|reviews.*0' docs/features/FD-005_WORKER_PI.md",
+      "rg -n 'assertExecutableRole|register\\(' workers/process-typescript-with-api/src/index.ts workers/process-typescript-with-api/src/profiles.ts workers/process-typescript-with-api/src/api-adapter.ts",
+      "Get-Content -Encoding utf8 and Select-String targeted reads of FD, reports, receipts, raw evidence and source",
+      "Get-FileHash -Algorithm SHA256 against the five r39 authorized invocation files",
+      "git rev-parse HEAD",
+      "git branch --show-current",
+      "git diff --name-status HEAD -- workers/process-typescript-with-api workers/runtime-core tests/fd005 docs/features/reports/FD-005-implementation-r42.md docs/features/reports/FD-005-implementation-r42.json"
+    ],
+    "skipped_checks": [
+      "tests",
+      "coverage",
+      "compile",
+      "build",
+      "formatting",
+      "network and runtime checks"
+    ],
+    "residual_risk": "Acceptance 1/API-16 behavior has no runtime proof; 10/33 scenarios are not fully covered; branch coverage is unmeasured; real services, remote Git, platform G2, and non-API Workers were not verified in this round."
+  }
+}

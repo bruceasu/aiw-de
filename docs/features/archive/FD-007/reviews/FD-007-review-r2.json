@@ -1,0 +1,91 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-007",
+  "source_event": "FD-007-000013-test-accepted",
+  "human_report": "FD-007-review-r2.md",
+  "data": {
+    "reviewer_session": "fd007-reviewer-r2-20261007-8f3c2a",
+    "fd_revision": 13,
+    "fd_digest": "4d6a6deed71a987ea45facf622a710de0a6ef00b08d90b3afb87c39c79174ae8",
+    "diff_base": "40493aa95f9e88b89fa990dc2509f0e47916db92",
+    "reviewed_commit": "6746af2",
+    "focused_fix_base": "151c6f09a568c668a0048a431e32e196180b4de6",
+    "worker_session": "fd007-worker-20261007-r2-31d7c9",
+    "tester_session": "fd007-tester-20261007-r2-c41e8d",
+    "pm_decision": "docs/features/reports/FD-007-test-decision-r2.md",
+    "tester_report": "docs/features/reports/FD-007-test-report-r2.md",
+    "decision": "changes-requested",
+    "resolved_prior_findings": [
+      {
+        "id": "F-01",
+        "status": "resolved_by_static_review",
+        "evidence": "TaskExecutor.executeWithStopSignal defaults to COMPLETED after legacy execute returns; WorkerRuntime acknowledges only for stopRequested plus explicit STOPPED, including completion/failure race handling.",
+        "paths": [
+          "src/main/java/me/asu/aidev/worker/runtime/TaskExecutor.java",
+          "src/main/java/me/asu/aidev/worker/runtime/WorkerRuntime.java"
+        ]
+      },
+      {
+        "id": "F-02",
+        "status": "resolved_by_static_review",
+        "evidence": "TaskExecutionService serializes on the task lock and returns early only for a previously acknowledged exact task/worker/lease tuple; first ACK performs guarded state transition, requeue, resource release, and audit once.",
+        "paths": [
+          "src/main/java/me/asu/aidev/execution/application/TaskExecutionService.java",
+          "src/main/java/me/asu/aidev/execution/jdbc/JdbcExecutionAttemptRepository.java",
+          "src/main/java/me/asu/aidev/work/jdbc/JdbcWorkTaskRepository.java"
+        ]
+      }
+    ],
+    "findings": [
+      {
+        "id": "F-03",
+        "severity": "medium",
+        "title": "SQLite and PostgreSQL migration application acceptance lacks evidence",
+        "requirement": "Tester scenarios S21/S22 and FD Verification require V19 to apply successfully on SQLite and PostgreSQL.",
+        "evidence": "Static review found only common DDL types and syntax, with no obvious dialect conflict. Worker, Tester, and PM reports all state that neither migration was executed; static inspection cannot establish migration-runner success against both database versions/configurations and existing data.",
+        "required_change": "Run and record the authorized migration application check for SQLite and PostgreSQL, or obtain an explicit PM revision/waiver of S21/S22. Reviewer did not run migration commands under repository restrictions.",
+        "paths": [
+          "src/main/resources/db/migration/V19__task_instruction_revision_control.sql",
+          "docs/features/FD-007_TASK_INSTRUCTION_REVISION_AND_OPERATOR_CONTROL.md",
+          "docs/features/reports/FD-007-test-report-r2.md",
+          "docs/features/reports/FD-007-test-decision-r2.md"
+        ]
+      }
+    ],
+    "test_evidence": {
+      "applicable_scenarios": 22,
+      "covered_scenarios": 0,
+      "executed_behavior_tests": 0,
+      "passed_behavior_tests": 0,
+      "failed_behavior_tests": 0,
+      "unrun_behavior_tests": 22,
+      "requirements_coverage": "0%",
+      "branch_coverage": "not measured",
+      "raw_coverage_evidence": "not available",
+      "pm_exception": "PM r2 waived the coverage threshold/unmeasured branch gate and allowed static review; unrun scenarios are not recorded as passed.",
+      "sqlite_migration": "not run",
+      "postgresql_migration": "not run",
+      "authorization_records": []
+    },
+    "commands_run": [
+      "aiw fd show FD-007",
+      "aiw fd claim FD-007 FD-007-000013-test-accepted --session fd007-reviewer-r2-20261007-8f3c2a",
+      "git -C .wt/FD-007 log --oneline --decorate -8",
+      "git -C .wt/FD-007 diff --stat 40493aa..6746af2",
+      "git -C .wt/FD-007 diff --stat 151c6f0..6746af2",
+      "targeted git diff, rg -n, and UTF-8 static reads of reviewed sources and reports",
+      "git -C .wt/FD-007 diff 40493aa..6746af2 --check (accidentally included in a read command; no output; not treated as behavior evidence)"
+    ],
+    "commands_skipped": [
+      "tests",
+      "compile/build",
+      "SQLite migration",
+      "PostgreSQL migration",
+      "coverage",
+      "application runtime",
+      "network"
+    ],
+    "residual_risk": "No behavior scenario was executed. Source review supports the stop outcome and duplicate ACK guard logic but does not prove runtime scheduling, concurrent resource accounting, UI/role behavior, or actual migration application. External side effects may continue after an ADMIN force redispatch."
+  }
+}

@@ -1,0 +1,5 @@
+{"id":"WORKSPACE-fallback","outcome":"passed","duration_ms":22}
+{"id":"WORKSPACE-readonly-baseline","outcome":"passed","duration_ms":14}
+{"id":"WORKSPACE-git-materialize","outcome":"passed","duration_ms":603}
+{"id":"WORKSPACE-git-finalize","outcome":"failed","duration_ms":1012,"error":"PROCESS_EXIT_FAILED"}
+{"id":"WORKSPACE-base-reject","outcome":"passed","duration_ms":259}

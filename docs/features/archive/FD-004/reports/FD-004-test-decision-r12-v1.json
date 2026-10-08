@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-004",
+  "source_event": "FD-004-000012-test-report-ready",
+  "human_report": "FD-004-test-decision-r12-v1.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-004-test-report-r12.md",
+    "fd_revision": 12,
+    "fd_digest": "61c508acb22a55b8bf7ee5ea7cc9788058e5933a2fe79cb36d38d4d109eee0a2",
+    "requirements_coverage": "0.00%",
+    "branch_coverage": "not measured",
+    "rationale": "修复仅调整 Run 模板区域与指南；Tester 本轮如实记录 29 场景零执行、零失败。现有旧 IT 不检查 AC04，PM 只接受报告并交第二轮 Reviewer 静态审查，不认定行为通过。",
+    "exceptions": "本轮没有可直接运行的 AC04 黑盒夹具；仓库默认不授权浏览器或更广范围测试。PM 对低于 70% 的需求覆盖与未测量的分支覆盖作检查例外，不豁免 AC01–AC06。",
+    "residual_risk": "AC04 的真实 DOM 替换、聚焦/编辑保护、并发切换及其余 28 个场景均无本 revision 运行证据；Reviewer 须独立审查实际差异。",
+    "pm_identity": "fd004-pm-20261005-219a992b",
+    "decision_time": "2026-10-05T14:13:36+00:00"
+  }
+}

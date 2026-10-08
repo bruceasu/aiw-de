@@ -1,0 +1,33 @@
+FD005_ENTRY_META {"role":"release-readiness","exit":1,"timedOut":false,"category":"module-or-syntax-load-error","firstLine":"module-or-syntax-load-error"}
+✖ API-16 production entry rejects reserved roles before registration (349.4908ms)
+✔ API-33 planner preserves legacy manifest, verdict and model path (77.9347ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 1
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1254.4207
+
+✖ failing tests:
+
+test at tests\fd005\r33\worker.test.mjs:112:1
+✖ API-16 production entry rejects reserved roles before registration (349.4908ms)
+  AssertionError [ERR_ASSERTION]: Production entry must reject this role before registration
+  + actual - expected
+  
+  + 'module-or-syntax-load-error'
+  - 'reserved-role'
+  
+      at TestContext.<anonymous> (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd005/r33/worker.test.mjs:144:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'module-or-syntax-load-error',
+    expected: 'reserved-role',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

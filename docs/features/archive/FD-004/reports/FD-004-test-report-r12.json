@@ -1,0 +1,245 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-004",
+  "source_event": "FD-004-000011-implementation-ready",
+  "human_report": "FD-004-test-report-r12.md",
+  "data": {
+    "implementation_event": "FD-004-000011-implementation-ready",
+    "tested_fd_revision": 11,
+    "tested_fd_digest": "6218e3ae9566927f6239f302b0405bc2034317920ec191586271aec5e4a6a768",
+    "tester_session": "fd004-tester-20261005-3e03b1cd",
+    "applicable_scenarios": 29,
+    "covered_scenarios": 0,
+    "executed_behavior_tests": 0,
+    "passed_behavior_tests": 0,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 29,
+    "requirements_coverage": "0.00%",
+    "branch_coverage": "not measured",
+    "raw_coverage_evidence": "not measured",
+    "coverage_unavailable_reason": "本 revision 未获新的聚焦刷新测试授权，也无新浏览器执行或覆盖率采集",
+    "test_files": [],
+    "authorization_records": [],
+    "commands": [],
+    "recommendation": "blocked",
+    "not_applicable_reason": "",
+    "residual_risk": "AC04 Run 页审批状态/证据/表单同区域刷新、编辑保护、并发后真实状态仍无浏览器执行证据；其余 28 个行为场景也未在 revision 11 复验",
+    "scenarios": [
+      {
+        "id": "pending-history-partition",
+        "behavior": "待决定和已决定记录分区，决定后从待决定区移走",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "exact-evidence-link",
+        "behavior": "单条审批显示同一 approval ID、Run、source task/attempt、result revision、gate 时间和 review/verification 来源",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "older-attempt",
+        "behavior": "同一 source task 有多个 attempt 时绑定审批保存的 attempt，不借用更新 attempt",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "repaired-revision",
+        "behavior": "repair 后出现新结果时，旧审批仍显示原 revision 和原 gate",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "review-verification-details",
+        "behavior": "review 与 verification 分别显示正确 task/attempt、verdict、summary 和来源时间",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "missing-summary",
+        "behavior": "已存 summary 缺失时明确提示，不补造 PASS",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "missing-source-attempt",
+        "behavior": "source attempt 缺失时显示不可核对及原因",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "gate-mismatch",
+        "behavior": "gate 缺失、非 PASSED 或关闭时间不匹配时不显示错误的通过证据",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "review-mismatch",
+        "behavior": "review 或 verification 缺失、版本或依赖不符时显示不可核对",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "bounded-history",
+        "behavior": "已决定历史最多返回规定窗口，显示返回数和上限，不宣称完整审计",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "filtered-history-order",
+        "behavior": "已决定状态先过滤，再按时间和 ID 稳定排序并限制数量",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "pending-count",
+        "behavior": "待决定总数独立准确统计，不用窗口长度冒充总数",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "approver-role",
+        "behavior": "APPROVER/ADMIN 可用动作与服务端权限一致",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "viewer-role",
+        "behavior": "VIEWER 无审批动作，有效 POST 仍被服务端拒绝",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "csrf",
+        "behavior": "无效或缺失 CSRF 的审批 POST 被拒绝且状态不变",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "invalid-action",
+        "behavior": "非法或不满足前置条件的审批提交由权威服务拒绝",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "approve-basic",
+        "behavior": "pending 审批可从页面批准，并保存 APPROVED、决定人和备注",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "reject-basic",
+        "behavior": "pending 审批可拒绝，并保存拒绝归属和备注",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "immutable-decision",
+        "behavior": "已批准/拒绝记录不能改成相反结论",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "concurrent-decision",
+        "behavior": "两个决定竞争时第二次提交显示实际冲突，不报假成功",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "grouped-refresh",
+        "behavior": "刷新后证据和操作表单属于同一 approval ID，旧表单不配新证据",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "stale-submit",
+        "behavior": "过期页面提交后重读实际状态和版本，反馈真实冲突",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "long-content",
+        "behavior": "长 revision 与 summary 可完整阅读，不破坏页面布局",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "empty-state",
+        "behavior": "无审批及无工程证据时显示可理解空态",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "exceptional-state",
+        "behavior": "证据读取异常时显示可理解错误而不误报成功",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "narrow-window",
+        "behavior": "窄窗口仍能访问证据与动作",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "evidence-script",
+        "behavior": "summary/备注含 HTML 或脚本时按文本显示，不执行脚本",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "publication-ref",
+        "behavior": "publicationRef 仅显示已存标识，不出现全文/下载入口",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      },
+      {
+        "id": "no-external-read",
+        "behavior": "浏览页面不请求外部文档、Git 全文或文件下载",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "FD revision 11 未执行该场景；旧 revision 7 结果仅作历史证据"
+      }
+    ],
+    "static_exclusions": [],
+    "history_baseline": {
+      "source": "docs/features/reports/FD-004-test-report-r8.json",
+      "fd_revision": 7,
+      "executed_behavior_tests": 1,
+      "passed_behavior_tests": 1,
+      "covered_scenarios": 1,
+      "applicable_scenarios": 29,
+      "requirements_coverage": "3.45%",
+      "role": "仅历史参考，不计本 revision 覆盖"
+    }
+  }
+}

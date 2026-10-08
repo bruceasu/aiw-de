@@ -1,0 +1,12 @@
+AI Dev Manager R8-S13 Documentation Baseline
+
+Baseline: R8-S13 Fix2 (me.asu.aidev)
+Date: 2026-09-28
+
+Documentation-only update:
+- Adds English docs/current and Chinese docs/current-zh canonical architecture, lifecycle, Worker Protocol, API/user, operations, configuration, database, security, developer, troubleshooting, testing/capabilities documentation.
+- Adds QUICK-START.md and BOSS-INTRO-3-5-MIN.md.
+- Replaces root README with a current-version landing page.
+- Corrects the stale codex-java README compile path after the me.asu namespace migration.
+
+No production Java code, database migration, Worker Protocol, lifecycle, scheduling or authority semantics are changed.

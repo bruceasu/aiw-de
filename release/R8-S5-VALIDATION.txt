@@ -1,0 +1,48 @@
+R8-S5 OPERATOR CONTROL / PAUSE / RESUME / CANCEL
+=================================================
+
+Accepted input baseline
+-----------------------
+R8-S4 Autonomous Run Authority: user-confirmed mvn clean verify PASS.
+Java baseline: 21.
+Canonical environment prefix: AIW_.
+
+Scope
+-----
+- operator control_state is orthogonal to autonomous lifecycle status;
+- PAUSE revokes active leases, requeues active tasks, and blocks all new claims for the run;
+- RESUME restores pull eligibility and creates a new attempt on the next claim;
+- CANCEL is irreversible and cancels every unfinished task;
+- operator-revoked attempts reuse terminal EXPIRED state with explicit termination_reason;
+- FAILED autonomous runs also block unrelated parallel claims until recover;
+- claim/execution/operator actions serialize on autonomous_run authority.
+
+Persistence
+-----------
+Core tables: 6 (unchanged)
+New tables: 0
+Migration: V9
+New autonomous_run columns: control_state and operator-control audit/current-state fields
+New execution_attempt column: termination_reason
+
+Authoritative acceptance
+------------------------
+Run from a fresh/extracted source tree with JDK 21:
+
+    mvn clean verify
+
+Expected Failsafe integration-test methods: 20.
+
+Generation-environment checks
+-----------------------------
+- selected R8-S5 Java 21 structural compile with minimal Spring/JDBC stubs: PASS
+- SQLite V1 -> V9 migration smoke: PASS
+- R8-S5 pause/operator-revocation SQL smoke: PASS
+- core table count: 6
+- legacy environment-prefix residue scan: PASS (0)
+- Spring-managed final-class scan: PASS (0)
+- expected Failsafe integration-test methods: 20
+
+Environment limitation
+----------------------
+Maven is not installed in the generation environment. The authoritative gate remains the user's `mvn clean verify`.

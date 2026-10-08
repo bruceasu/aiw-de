@@ -1,0 +1,57 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000044-review-requested",
+  "human_report": "FD-005-review-r44.md",
+  "data": {
+    "reviewer_session": "fd005-reviewer-20261006-7c31f9a2",
+    "reviewed_fd_revision": 44,
+    "reviewed_fd_digest": "0e1ec05b3f6a5b47a4bed029f829ce7d6036efa20eaa524af34b20a22b84da58",
+    "review_base": "184a0c2c48c5b745ec4bd9546cb35e268f381495 (sole initial commit; no parent commit)",
+    "worker_commit": "none for r42; implementation report says no production source changes",
+    "reviewed_commit": "184a0c2c48c5b745ec4bd9546cb35e268f381495 plus current FD revision 44 evidence",
+    "outcome": "changes-requested",
+    "findings": [
+      {
+        "id": "F-1",
+        "severity": "blocking",
+        "requirement": "FD-005 Acceptance 1 and Work Item 1.1: preserved but non-executable roles must be rejected before registration.",
+        "evidence": "Authorized r39 API-16 command exited 1 after reaching assertions. Both release-readiness and orchestrator child processes exited in module-or-syntax-load-error; no safe Node error code or module basename was captured. The reserved-role assertion failed. Static source places assertExecutableRole before client.register, but runtime behavior remains unproved. PM r41 retained this acceptance requirement and only excepted coverage thresholds.",
+        "requested_action": "Worker to resolve the production-entry/test-loader failure or provide an actionable correction, then obtain a new independently authorized Tester result proving both reserved roles are rejected before registration. Preserve r39 failure evidence and the acceptance requirement."
+      }
+    ],
+    "acceptance_review": {
+      "Acceptance 1": "Not met with runtime evidence: API-16 failed; static guard ordering is not a substitute for the required behavior evidence.",
+      "Acceptance 2-11": "Not established in full by current test evidence. Covered API Worker scenarios remain as reported; partial and uncovered behaviors are not counted as passed. Cross-runtime, platform G2, real service, remote Git, and rollout behavior remain unverified as the FD states.",
+      "coverage_exception": "Respect PM r41 exception for 69.70% scenario coverage and unmeasured branch coverage as a review-entry decision; it does not waive API-16 or convert failures/unrun behavior into passes."
+    },
+    "worker_report": "docs/features/reports/FD-005-implementation-r42.md",
+    "tester_report": "docs/features/reports/FD-005-test-report-r39.md",
+    "pm_decision": "docs/features/reports/FD-005-test-decision-r41.md",
+    "requirements_coverage": "69.70% (23/33)",
+    "branch_coverage": "not measured",
+    "applicable_scenarios": 33,
+    "executed_behavior_tests": 1,
+    "passed_behavior_tests": 0,
+    "failed_behavior_tests": 1,
+    "unrun_behavior_tests": 32,
+    "authorization_records": [
+      "docs/features/reports/FD-005-test-authorization-r39.md",
+      "docs/features/reports/FD-005-test-authorization-r39.json"
+    ],
+    "commands": [
+      "aiw fd resume FD-005",
+      "aiw fd claim FD-005 FD-005-000044-review-requested --session fd005-reviewer-20261006-7c31f9a2",
+      "git branch --show-current",
+      "git rev-parse HEAD",
+      "git log --oneline --decorate -12",
+      "git status --short -- docs/features workers tests/fd005 .ai/fd/FD-005",
+      "git diff --name-status HEAD -- workers/process-typescript-with-api workers/runtime-core tests/fd005 docs/features/FD-005_WORKER_PI.md docs/features/reports/FD-005-implementation-r42.md docs/features/reports/FD-005-implementation-r42.json docs/features/reports/FD-005-test-decision-r41.md docs/features/reports/FD-005-test-decision-r41.json",
+      "Get-Content / rg targeted static reads of FD, Issue-001 plan, worker integration plan, reports, receipts, evidence, source and r39 test harness",
+      "Get-FileHash SHA256 of r39 authorized invocation files and compare to authorization JSON"
+    ],
+    "skipped_checks": "未运行测试、覆盖率、编译、构建、格式器、网络或运行时命令。",
+    "residual_risk": "API-16 acceptance remains unsupported by runtime evidence; 9/33 scenarios are not fully covered and branch coverage is unmeasured; r42 Tester outcome remains unknown; real services, remote Git, platform G2 and non-API Worker behavior are unverified."
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000032-test-rejected",
+  "human_report": "FD-005-implementation-r33.md",
+  "data": {
+    "summary": "r30 API-33 失败由测试读取 complete 第 3 个参数而非第 4 个 report 的夹具断言错误解释；API-16 入口 exit 1 未保存 stderr，实际拒绝阶段未明。未改生产源码，交下一轮独立 Tester 新夹具验证。",
+    "changed_paths": [
+      "docs/features/FD-005_WORKER_PI.md",
+      "docs/features/reports/FD-005-implementation-r33.md",
+      "docs/features/reports/FD-005-implementation-r33.json"
+    ],
+    "commands": [
+      "aiw fd claim FD-005 FD-005-000032-test-rejected --session fd005-worker-20261005-69fe2eb5",
+      "git diff --check",
+      "定向静态读取 API 入口/角色、公共完成调用、传输契约、r30 测试和原始输出"
+    ],
+    "results": [
+      "r30 唯一授权命令 exit 1，17 项中 15 通过、2 失败；本轮未重跑。",
+      "complete 第 3 个实参是 workspaceResult，第 4 个实参是 report；API-33 测试断言读取错误位置。",
+      "API-16 源码顺序为角色检查先于注册，但 r30 未保存子进程 stderr，实际退出根因仍待验证。",
+      "本轮无生产源码改动，未运行编译或测试。"
+    ],
+    "residual_risk": "API-16 入口实际退出阶段未知；API-33 待新测试复核；11 个 API 场景未完整覆盖、分支未测；真实服务、远端 Git、平台 G2 和非 API 运行时未获行为证明。",
+    "worker_session": "fd005-worker-20261005-69fe2eb5",
+    "authored_fd_revision": 32,
+    "source_fd_sha256": "8013650260e33ea3b5bf4245c72604e7d34c2304bda3fca370341b2640cc85bc",
+    "previous_tester_report": "docs/features/reports/FD-005-test-report-r30.md",
+    "previous_pm_decision": "docs/features/reports/FD-005-test-decision-r31.md"
+  }
+}

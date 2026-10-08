@@ -1,0 +1,66 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000013-test-report-ready",
+  "human_report": "FD-005-review-direct-r13.md",
+  "data": {
+    "reviewer_session": "fd005-reviewer-20261005-4c7d916e",
+    "review_mode": "direct-request-pre-handoff",
+    "formal_reviewer_outcome": "none",
+    "recommendation": "changes-requested-at-next-handoff",
+    "reviewed_head": "04a0b6205b026c2753bf838ebfbaeec01c9b5945",
+    "reviewed_scope": "FD-005 current working-tree implementation plus r5/r8/r11 worker reports; current diff is not the full FD scope",
+    "source_event_target_role": "pm",
+    "current_fd_status": "Pending Test Acceptance",
+    "current_fd_revision": 13,
+    "worker_session": "fd005-worker-20261004-2916aea6",
+    "tester_session": "fd005-tester-20261005-7865d383",
+    "current_test_report": "docs/features/reports/FD-005-test-report-r11.md",
+    "current_test_coverage": "0.00%",
+    "current_branch_coverage": "not measured",
+    "current_scenario_count": 305,
+    "current_executed_count": 0,
+    "current_planner_authorizations": [],
+    "historical_r8_executed": 261,
+    "historical_r8_failed": 5,
+    "historical_r8_pm_decision": "rejected",
+    "findings": [
+      {
+        "id": "FD005-REVIEW-001",
+        "severity": "P1",
+        "type": "correctness-contract",
+        "path": "workers/runtime-core/workspace.mjs",
+        "related_path": "workers/runtime-core/attempt.mjs",
+        "requirement": "FD-005 acceptance 3 and workers/runtime-core/PUBLIC_CONTRACT.md cleanup failure rule",
+        "summary": "A normal worktree removal failure is swallowed as preserved, then runClaimedAttempt records settled and can call complete."
+      }
+    ],
+    "residual_risks": [
+      "r11 has no compile or execution evidence by user decision",
+      "r8 has five historical failed cases, not reclassified as r11 pass",
+      "real Codex all-session no-store effect is not platform certified; registration remains denied without proof",
+      "accepted complete followed by report-posted evidence failure requires reconciliation"
+    ],
+    "commands_run": [
+      "Get-Content -Encoding utf8 <targeted FD, issue, report, contract, source files>",
+      "rg <targeted terms and files>",
+      "git status --short",
+      "git rev-parse HEAD",
+      "git diff -- <FD-005 paths>",
+      "git diff --stat",
+      "PowerShell ConvertFrom-Json on existing r8/r11 reports"
+    ],
+    "checks_not_run": [
+      "tests",
+      "compile",
+      "typecheck",
+      "lint",
+      "formatter",
+      "build",
+      "network",
+      "model",
+      "CLI claim or emit"
+    ]
+  }
+}

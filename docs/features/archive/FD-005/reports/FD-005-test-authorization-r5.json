@@ -1,0 +1,34 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000006-implementation-ready",
+  "human_report": "FD-005-test-authorization-r5.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-005-000006-implementation-ready",
+    "fd_revision": 6,
+    "fd_digest": "f29cb07ce849cbbc92c64095bcac4e37ce873ef160d3d3ff6fcf819b38ee5015",
+    "tester_session": "fd005-tester-20261005-7865d383",
+    "command": "node tests/fd005/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r5.json",
+    "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+    "scope": "FD-005 public core and synthetic native/RPC black-box; existing local Go builds only to owned temporary test directory; no real SDK/Codex/model/service",
+    "expected_duration": "60–150 seconds; child deadlines 75/45/120 seconds plus at most 5 seconds helper termination; total 245 seconds",
+    "side_effects": "tests/fd005/.tmp-<tester-session>-<UUID> and tests/fd005/evidence-r5 only; owned temporary programs/caches removed after confirmed termination and path/owner checks; unknown retained",
+    "risk_review": "All eight invoked test/fixture files inspected and hashes checked. Offline builtins/stdlib only, proxy/toolchain downloads disabled, isolated home/config/credentials, no dependency install or release artifact. Synthetic policy is not production evidence. Exact command may run once.",
+    "human_approval": "not required",
+    "planner_identity": "fd005-planner-20261004-cf390565",
+    "decision_time": "2026-10-04T22:38:28+00:00",
+    "test_file_sha256": {
+      "cases.mjs": "5b17176fbc4c20865243344482137bf18708d2cb895569e19228228445016829",
+      "harness.mjs": "6e75653329293519b5291354a59efa219b7f6739b5ac38aa246e616eb437e038",
+      "core.test.mjs": "b5ddea08d3c6632b9e89ee3ea310c5e169298c4069239a01142eb719d2d78707",
+      "session-fixture.mjs": "d621674e6d4bae2ac2df295ae57038a64d1872c435aa26400e56cea93099e81d",
+      "session.test.mjs": "0e975f30ca9c689fd6184c06269a5b1f79938a97627dd58ce22759aca491617c",
+      "reporter.mjs": "25585321caa75181d88e170efd57a83df44e28f89a1689c7d3e3270ec50b6877",
+      "fake-native.go": "6efd52db6c53e74de8981f8f6d89f627bd8da702a83ba6d3cea36cbb7d24d526",
+      "run-offline.mjs": "86263729139b3f09a38feb47e0d632b5ce24276a670cb0aba57b75d7d8daf257"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000007-test-report-ready",
+  "human_report": "FD-002-test-decision-r7-v1.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-002-test-report-r6-attempt3.md",
+    "fd_revision": 7,
+    "fd_digest": "a34907e6d79af3654a28c92ebfd32476a10cb5ae3971b060618592775be4c15a",
+    "requirements_coverage": "34.62%",
+    "branch_coverage": "not measured",
+    "rationale": "36distinct passed,0executed behavior failures,60planned blocked and8uncovered. Native-memory issue resolved, but a content-heading locator still aborts before important attempts/failure/timeline/action/refresh/width checks. Significant acceptance uncertainty prevents review acceptance; three attempts are not additive. Locator infrastructure failure is not attributed to product.",
+    "exceptions": "No requirements or branch coverage exception granted for this blocked report. Human FD002 Firefox deferral applies only to its two uncovered compatibility scenarios; no other behavior waiver.",
+    "residual_risk": "Important current behaviors unexecuted; source branch coverage and original Timeline full-read cost unmeasured; Firefox remains user-deferred. Existing three-run budget exhausted; new Tester handoff does not authorize an extra run.",
+    "pm_identity": "fd002-pm-host-20261005",
+    "decision_time": "2026-10-04T22:46:36+00:00"
+  }
+}

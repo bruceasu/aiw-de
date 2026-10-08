@@ -1,0 +1,3 @@
+interface:
+  display_name: "Finance Metric Brief"
+  short_description: "Clarify a financial metric's intended meaning, use, and unresolved definition conflicts."

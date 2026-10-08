@@ -1,0 +1,61 @@
+R4 EXTERNAL WORKER PROTOCOL + MULTI-LANGUAGE CODEX WORKERS
+=========================================================
+
+Baseline
+--------
+R3-S3 accepted by user: mvn verify PASS.
+Java baseline: 21.
+
+Implemented
+-----------
+- Worker Protocol v1 HTTP transport
+- optional Bearer shared-token protection
+- localhost bind by default
+- executable WorkTask instruction (Flyway V2 column only)
+- external_session_id persistence from external worker
+- automatic lease recovery scheduler
+- Python reference worker using Codex Python SDK
+- TypeScript reference worker using official @openai/codex-sdk
+- JavaScript reference worker using official @openai/codex-sdk
+- Go reference worker using codex exec --json
+- Java 21 reference worker using codex exec --json
+- lost-ownership cancellation behavior in all reference implementations
+- R4WorkerProtocolIT
+
+Persistence
+-----------
+Domain tables: 4 (unchanged)
+New tables: 0
+Schema delta: work_task.instruction column
+Flyway migrations: V1, V2
+
+Local validation performed in generation environment
+----------------------------------------------------
+- Python 3.13 py_compile codex_worker.py: PASS
+- JavaScript node --check: PASS
+- Go 1.23 go build ./...: PASS
+- Java 21 javac --release 21 standalone worker: PASS
+- TypeScript 5.8 strict compile against the verified Codex SDK public API surface used by the example: PASS
+- Java Worker Protocol smoke against mock Control Plane (register -> repeated claim 204 -> heartbeat -> drain/offline): PASS
+- Go Worker Protocol smoke against mock Control Plane (register -> repeated claim 204 -> heartbeat -> drain/offline): PASS
+- @openai/codex-sdk package version pinned to 0.155.1 (current stable observed during generation)
+- SQLite/domain schema: unchanged from R4 baseline
+
+Environment limitation
+----------------------
+- npm install could not complete in the generation container because external package download timed out.
+- Therefore the TypeScript/JavaScript examples were not executed against a locally installed npm package in this container.
+- mvn verify remains the authoritative Control Plane gate in the user's environment.
+- live Codex turns are intentionally not part of automated verification; they require local Codex authentication and runtime access.
+
+Required authoritative Control Plane gate
+-----------------------------------------
+mvn verify
+
+Recommended worker source gates
+-------------------------------
+python -m py_compile workers/codex-python/codex_worker.py
+node --check workers/codex-javascript/worker.mjs
+cd workers/codex-typescript && npm install && npm run build
+cd workers/codex-go && go build ./...
+javac --release 21 -d out workers/codex-java/src/main/java/com/goldenway/aidev/worker/example/CodexJavaWorker.java

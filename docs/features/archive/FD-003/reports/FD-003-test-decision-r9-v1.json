@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-003",
+  "source_event": "FD-003-000009-test-report-ready",
+  "human_report": "FD-003-test-decision-r9-v1.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-003-test-report-r8.md",
+    "fd_revision": 9,
+    "fd_digest": "60cf220eeee66ea9e214db64238028879bee8eb56f80b95f068fbf7362cd39f0",
+    "requirements_coverage": "0.00%",
+    "branch_coverage": "not measured",
+    "rationale": "用户明确要求 FD-003 本轮不做测试；Tester 按 50 个可观察场景如实记录 0 执行、0 通过、0 失败、50 未执行。没有失败的已执行行为测试。本决定只接受报告并交 Reviewer 静态审查，不认定行为通过。",
+    "exceptions": "用户在本会话明确要求不用做测试；本轮需求覆盖 0.00% 低于 70% 且业务分支覆盖未测量，PM 对检查门槛作明确例外，不豁免 AC01–AC06 行为要求。",
+    "residual_risk": "模板渲染、Run 关联、READY 多条件、范围、权限/CSRF、状态竞争、自然排空、局部刷新、窄窗口和减少动效均无运行证据；Reviewer 只可据静态证据判断。",
+    "pm_identity": "fd003-pm-20261005-122d95b6",
+    "decision_time": "2026-10-05T13:12:17+00:00"
+  }
+}

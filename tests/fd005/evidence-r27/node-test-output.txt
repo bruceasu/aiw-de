@@ -1,0 +1,28 @@
+✔ API-16 preserved roles reject through public production adapter factory (1.0881ms)
+attempt synthetic-attempt-reviewer-write: failed RESPONSES_TOOL_NOT_ALLOWED
+✔ API-17 reviewer never receives write tools and forged write has no side effect (81.2842ms)
+attempt synthetic-attempt-coder-boundary: failed ATTEMPT_CANCELLED
+✔ API-18 coder write stays within assigned workspace (33.6517ms)
+✔ API-19 verifier integration alias uses integration profile and report (33.1482ms)
+attempt synthetic-attempt-cancel-model: failed OPERATION_FAILED
+✔ API-23 forced cancellation aborts model request before completion (29.0508ms)
+attempt synthetic-attempt-lease-lost: lease-lost ATTEMPT_CANCELLED
+✔ API-24 lost task lease suppresses complete and fail (47.2287ms)
+FD005_TOOL_META API-27 {"present":true,"chars":1791,"code":null,"complete":false,"truncated":true,"partial":null}
+✔ API-27 multibyte read result remains bounded and marked incomplete (36.2477ms)
+FD005_TOOL_META API-29-good {"present":true,"chars":223,"code":null,"complete":true,"truncated":false,"partial":null}
+attempt synthetic-attempt-edit-many-ambiguous: failed UNRESOLVED_TOOL_FAILURE
+FD005_TOOL_META API-29-ambiguous {"present":true,"chars":87,"code":null,"complete":false,"truncated":false,"partial":null}
+attempt synthetic-attempt-edit-many-overlap: failed UNRESOLVED_TOOL_FAILURE
+✔ API-29 edit_many preserves BOM/CRLF and refuses ambiguous edit (100.2903ms)
+attempt synthetic-attempt-truncated-arguments: failed RESPONSES_TOOL_ARGUMENTS_INVALID
+✔ API-28 incomplete raw tool arguments cause no write (26.9774ms)
+✔ API-33 legacy eight-field profile and report model path remain compatible (28.2505ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1319.5308

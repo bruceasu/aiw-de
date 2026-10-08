@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-004",
+  "source_event": "FD-004-000008-test-report-ready",
+  "human_report": "FD-004-test-decision-r8-v1.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-004-test-report-r8.md",
+    "fd_revision": 8,
+    "fd_digest": "1266f9fb0417f127c4ecbb0b1ac01c6b46a81ed0801a4420356bf6c5c0607da1",
+    "requirements_coverage": "3.45%",
+    "branch_coverage": "not measured",
+    "rationale": "Tester 如实记录 29 场景中仅 1 个既有审批动作测试通过、0 个执行失败。只接受报告并交独立 Reviewer 审查，不认定新增证据行为通过。新增为只读投影，原决定服务未改，离线 Java 编译通过。",
+    "exceptions": "本轮仓库资源预算只允许检查后授权的单个聚焦离线用例；需求覆盖 3.45% 低于 70%，业务分支覆盖未测量。PM 接受检查覆盖例外，不豁免 AC01–AC06 行为要求。",
+    "residual_risk": "正向 Run 证据匹配、多 attempt/repair 历史、缺失矩阵、有限窗口、竞争刷新、窄窗口和外部读取边界无运行证据；Reviewer 必须做独立静态审查。",
+    "pm_identity": "fd004-pm-20261005-219a992b",
+    "decision_time": "2026-10-05T13:59:30+00:00"
+  }
+}

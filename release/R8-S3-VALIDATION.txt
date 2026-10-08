@@ -1,0 +1,47 @@
+R8-S3 PARALLEL RESULT INTEGRATION
+=================================
+
+Accepted input baseline
+-----------------------
+R8-S2 Parallel Implementation Work Items: user-confirmed mvn clean verify PASS.
+Java baseline: 21.
+Canonical environment prefix: AIW_.
+
+Scope
+-----
+- multi-work-item autonomous runs join all IMPLEMENTATION results into one INTEGRATION WorkTask;
+- individual parallel branches do not create review/verification/gate authority;
+- the integration task depends on every implementation branch and therefore receives all branch results via inputs[];
+- integration runs from the common immutable base revision in its own isolated worktree;
+- integrated results fan out to CODE_REVIEW + INTEGRATION_VERIFICATION;
+- integration repairs preserve integration verification semantics;
+- single-work-item autonomous runs keep the accepted R8-S1/R8-S2 behavior.
+
+Persistence
+-----------
+Core tables: 5
+New tables: 0
+New columns: 0
+New migrations: 0
+Flyway remains V1-V7.
+
+Generation-environment checks
+-----------------------------
+- modified core/application structural javac --release 21 with minimal Spring stubs: PASS
+- Java reference Worker javac --release 21: PASS
+- Python Worker py_compile: PASS
+- JavaScript Worker node --check: PASS
+- Go reference Worker go test: PASS
+- EngineeringGate domain javac --release 21: PASS
+- SQLite V1 -> V7 migration smoke: PASS
+- core table count: 5
+- legacy environment-prefix residue scan: PASS (0)
+- expected Failsafe integration-test methods: 18
+
+Authoritative acceptance
+------------------------
+Run from a fresh/extracted source tree with JDK 21:
+
+    mvn clean verify
+
+Expected Failsafe integration-test methods: 18.

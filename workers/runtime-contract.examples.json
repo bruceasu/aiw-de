@@ -1,0 +1,33 @@
+{
+  "schema": "aiw.worker.contract-examples.v1",
+  "status": "static-examples-not-executed",
+  "purpose": "Minimal semantic inputs; not complete Control Plane HTTP requests or permission grants.",
+  "sharedTaskFields": { "taskId": "example-task", "attemptNo": 1, "inputs": [] },
+  "profileFields": ["name", "workerIdPrefix", "roleCapability", "allowedTaskTypes", "readOnly", "instruction", "protocolSkills", "primarySkill"],
+  "roles": [
+    { "role": "requirements", "taskType": "REQUIREMENT_ANALYSIS", "instruction": "Describe the requirement using the supplied inputs.", "readOnly": true, "capability": "requirement-analysis", "finalResponse": "Requirement summary.", "report": { "verdict": "PASS", "summary": "Requirement summary." } },
+    { "role": "architect", "taskType": "SOLUTION_ARCHITECTURE", "instruction": "Describe the solution and its boundaries.", "readOnly": true, "capability": "solution-architecture", "finalResponse": "Solution summary.", "report": { "verdict": "PASS", "summary": "Solution summary." } },
+    { "role": "planner", "taskType": "IMPLEMENTATION_PLANNING", "instruction": "Plan the supplied bounded work package.", "readOnly": true, "capability": "implementation-planning", "finalResponse": "Implementation plan.", "report": { "verdict": "PASS", "summary": "Implementation plan." } },
+    { "role": "coder", "taskType": "IMPLEMENTATION", "instruction": "Implement the approved work in the assigned workspace.", "readOnly": false, "capability": "coding", "finalResponse": "Implementation finished.", "report": null },
+    { "role": "integrator", "taskType": "INTEGRATION", "instruction": "Integrate the supplied approved changes in the assigned workspace.", "readOnly": false, "capability": "integration", "finalResponse": "Integration finished.", "report": null },
+    { "role": "reviewer", "taskType": "CODE_REVIEW", "instruction": "Review the exact supplied result without editing it.", "readOnly": true, "capability": "code-review", "finalResponse": "Needs repair.\nAIW_VERDICT: REPAIR_REQUIRED", "expectedVerdict": "REPAIR_REQUIRED", "summaryRule": "nonempty; preserve each runtime's existing marker handling" },
+    { "role": "verifier", "taskType": "VERIFICATION", "instruction": "Verify only the approved acceptance scope.", "readOnly": true, "capability": "verification", "finalResponse": "Verification summary.\nAIW_VERDICT: PASS", "expectedVerdict": "PASS", "summaryRule": "nonempty; preserve each runtime's existing marker handling" },
+    { "role": "integration-verifier", "taskType": "INTEGRATION_VERIFICATION", "instruction": "Verify the supplied integrated result.", "readOnly": true, "capability": "integration-verification", "finalResponse": "Integration verification summary.\nAIW_VERDICT: PASS", "expectedVerdict": "PASS", "summaryRule": "nonempty; preserve each runtime's existing marker handling" },
+    { "role": "repairer", "taskType": "REPAIR", "instruction": "Repair only the approved findings in the assigned workspace.", "readOnly": false, "capability": "repair", "finalResponse": "Repair finished.", "report": null }
+  ],
+  "compatibility": [
+    { "role": "verifier", "taskType": "INTEGRATION_VERIFICATION", "effectiveProfile": "integration-verifier.toml", "registeredAdditionalCapability": "integration-verification" },
+    { "profileFile": "code-reviewer.toml", "profile": { "name": "software-code-reviewer", "workerIdPrefix": "code-reviewer", "roleCapability": "code-review", "allowedTaskTypes": ["CODE_REVIEW"], "readOnly": true, "instruction": "Review the supplied result. Do not edit files.", "protocolSkills": ["engineering-artifact-protocol"], "primarySkill": "software-code-reviewer" }, "expected": "valid eight-field profile; does not authorize writes" }
+  ],
+  "rejections": [
+    { "role": "reviewer", "taskType": "IMPLEMENTATION", "expected": "reject before model execution" },
+    { "role": "reviewer", "operation": "write", "expected": "deny without modifying the repository" },
+    { "role": "release-readiness", "expected": "preserved configuration; registration denied" },
+    { "role": "orchestrator", "expected": "preserved configuration; registration denied" },
+    { "role": "requirements", "finalResponse": "", "expected": "OUTPUT_INVALID" },
+    { "role": "reviewer", "finalResponse": "AIW_VERDICT: PASS\nMore text.", "expected": "OUTPUT_INVALID; marker must be final nonempty line" },
+    { "role": "coder", "lease": "expired", "expected": "no valid complete; reconcile existing side effects" },
+    { "role": "coder", "criticalEvidence": "write-failed", "expected": "no success response" },
+    { "role": "reviewer", "conversationPersistence": "unknown", "expected": "SESSION_POLICY_REQUIRED or SESSION_CAPABILITIES_UNVERIFIED before registration; no verified deployment evidence is bundled" }
+  ]
+}

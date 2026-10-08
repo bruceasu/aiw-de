@@ -1,0 +1,29 @@
+✔ ROLE-requirements: public task completes through API adapter (143.2596ms)
+✔ ROLE-architect: public task completes through API adapter (55.9042ms)
+✔ ROLE-planner: public task completes through API adapter (62.6754ms)
+✔ ROLE-coder: public task completes through API adapter (58.5023ms)
+✔ ROLE-integrator: public task completes through API adapter (23.1997ms)
+✔ ROLE-reviewer: public task completes through API adapter (52.6748ms)
+✔ ROLE-verifier: public task completes through API adapter (53.6262ms)
+✔ ROLE-integration-verifier: public task completes through API adapter (22.979ms)
+✔ ROLE-repairer: public task completes through API adapter (23.4195ms)
+attempt synthetic-attempt-reviewer-mismatch: failed ROLE_TASK_TYPE_DENIED
+✔ ROLE-reviewer: mismatched task is rejected before success report (6.1905ms)
+attempt synthetic-attempt-reviewer-verdict: failed OPERATION_FAILED
+✔ REPORT-reviewer: absent verdict cannot complete (18.206ms)
+attempt synthetic-attempt-reviewer-dirty: failed READ_ONLY_WORKSPACE_CHANGED
+✔ READONLY-reviewer: external workspace mutation cannot complete (21.6082ms)
+attempt synthetic-attempt-tool-error: failed OPERATION_FAILED
+✔ TOOL-error: a model final response cannot erase failed tool evidence (15.4225ms)
+attempt synthetic-attempt-report-unknown: report-unknown OPERATION_FAILED
+✔ REPORT-unknown: ambiguous complete is sent only once and is not converted to fail (18.1451ms)
+attempt synthetic-attempt-locked-worktree: failed PROCESS_EXIT_FAILED
+✔ CLEANUP-locked-worktree: real Git deletion failure preserves evidence and prevents complete (677.6879ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1841.4925

@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000016-implementation-ready",
+  "human_report": "FD-006-test-authorization-r3.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-006-000016-implementation-ready",
+    "fd_revision": 16,
+    "fd_digest": "fdc97a28f228774cd652e4922886dda98698b856f00184b0ac72df956cb0670c",
+    "tester_session": "fd006-tester-20261007-r3-805960c9",
+    "command": "node --test tests/fd006/direct-workspace.test.mjs",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\.wt\\FD-006",
+    "scope": "Four previously inspected DIRECT and GIT_WORKTREE black-box scenarios on the FD-006 revision 16 baseline.",
+    "expected_duration": "5-30 seconds",
+    "side_effects": "Creates and normally removes test-owned OS temporary files, Git repositories, worktrees and evidence; may retain a test-owned directory on failure; no service, external network or repository user-file writes.",
+    "risk_review": "The test file is unchanged since the prior inspected run; local temporary path confinement and cleanup were reviewed. No Spring HTTP or concurrency fixture is authorized.",
+    "human_approval": "not required",
+    "planner_identity": "FD-006 Planner",
+    "decision_time": "2026-10-07T13:26:38Z"
+  }
+}

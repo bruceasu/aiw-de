@@ -1,0 +1,8 @@
+[
+  {
+    "id": "ADMIN-infrastructure",
+    "behavior": "Independent browser infrastructure completes",
+    "passed": false,
+    "detail": "Error: Uncaught (in promise) TypeError: Failed to fetch {\"type\":\"object\",\"subtype\":\"error\",\"className\":\"TypeError\",\"description\":\"TypeError: Failed to fetch\\n    at <anonymous>:1:1\",\"objectId\":\"6456736970234666481.1.1\"}\n    at ev (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:17:145)\n    at async file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:23:25"
+  }
+]

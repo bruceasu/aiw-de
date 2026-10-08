@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000010-test-report-ready",
+  "human_report": "FD-006-test-decision-r1.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-006-test-report-r1.md",
+    "fd_revision": 10,
+    "fd_digest": "5d28df4b5cda663787479fea96b197e71e0c00061d9c438a9baa86dd77bf89e9",
+    "requirements_coverage": "0%",
+    "branch_coverage": "not measured",
+    "rationale": "The single independently executed behavior test failed with EVIDENCE_FIELD_FORBIDDEN before business assertions; a failed executed behavior test cannot be accepted.",
+    "exceptions": "none",
+    "residual_risk": "DIRECT Workspace behavior remains unverified; 31 other scenarios and database migrations, UI, Git Clone, concurrency, and file protection lack runtime evidence.",
+    "pm_identity": "FD-006 PM",
+    "decision_time": "2026-10-07T13:17:53Z"
+  }
+}

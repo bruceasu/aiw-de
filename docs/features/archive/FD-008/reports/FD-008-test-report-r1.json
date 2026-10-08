@@ -1,0 +1,290 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-008",
+  "source_event": "FD-008-000005-implementation-ready",
+  "human_report": "FD-008-test-report-r1.md",
+  "data": {
+    "implementation_event": "FD-008-000005-implementation-ready",
+    "tested_fd_revision": 5,
+    "tested_fd_digest": "630f1c032f6406ac5cf00afc8b286bf8e97a084eb1195e404bb1ba957a4bc82f",
+    "tester_session": "fd008-tester-20261007-6de97a",
+    "applicable_scenarios": 36,
+    "covered_scenarios": 0,
+    "executed_behavior_tests": 0,
+    "passed_behavior_tests": 0,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 36,
+    "requirements_coverage": "0%",
+    "branch_coverage": "not measured",
+    "raw_coverage_evidence": "not available; no test or coverage command was run",
+    "coverage_unavailable_reason": "No isolated service and READY task fixture; Maven JVM could not start in two Worker compile-only attempts due native memory exhaustion. The Planner declined to use an existing localhost Run as destructive test data.",
+    "test_files": [
+      "tests/fd008/workspace-replacement.test.mjs"
+    ],
+    "authorization_records": [],
+    "commands": [],
+    "recommendation": "blocked",
+    "not_applicable_reason": "All 36 scenarios apply to FD-008 revision 5 acceptance and verification criteria.",
+    "residual_risk": "No behavioral evidence for task state transitions, stop ACK races, stale lease fencing, dependency rewiring, audit, UI permissions, or SQLite/PostgreSQL migrations. The prepared HTTP tests cover only a narrow READY/UI path and were not run.",
+    "scenarios": [
+      {
+        "id": "S01",
+        "behavior": "源任务 repositoryRef 与 baseRevision 保持原值，旧任务继续可追溯",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S02",
+        "behavior": "源任务的 attempt、Worker、lease 与结果证据保持原值",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S03",
+        "behavior": "源任务的 instruction revision 历史保持原值",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S04",
+        "behavior": "BLOCKED 且无活动 lease 的任务立即取消并创建替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S05",
+        "behavior": "READY 且无活动 lease 的任务立即取消并创建替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S06",
+        "behavior": "FAILED 且无活动 lease 的任务可创建替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S07",
+        "behavior": "CANCELLED 且无活动 lease 的任务可创建替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S08",
+        "behavior": "COMPLETED 任务拒绝 Workspace 替换并保留 linked correction 入口",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S09",
+        "behavior": "目标必须是已登记且启用的 Workspace repository",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S10",
+        "behavior": "无效的显式 Git revision 被拒绝且不回退到目录模式",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S11",
+        "behavior": "Git revision 留空时在受理时解析并固定目标 HEAD commit",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S12",
+        "behavior": "目录模式替代任务的 baseRevision 为空",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S13",
+        "behavior": "替代任务复制类型、subject、指令、skill/profile 与 priority，并有自己的初始指令版本",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S14",
+        "behavior": "替代任务同步 repo capability 并保留非 repository capability",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S15",
+        "behavior": "替代任务复制源任务的前置依赖",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S16",
+        "behavior": "未领取的下游任务依赖改接到替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S17",
+        "behavior": "已推进的下游任务导致整体拒绝且依赖图不发生部分写入",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S18",
+        "behavior": "过期 expectedVersion 被拒绝且不修改任务图",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S19",
+        "behavior": "旧 lease 或不匹配的租约身份不能发起有效替换或停止确认",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S20",
+        "behavior": "重复提交只得到一个替代任务和一个有效关系",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S21",
+        "behavior": "CLAIMED 任务在停止确认前只产生待处理请求且替代任务不可领取",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S22",
+        "behavior": "RUNNING 任务在停止确认前保持未停止且替代任务不可领取",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S23",
+        "behavior": "正确 Worker/lease ACK 后同一事务终结旧尝试、取消源任务、创建替代任务并重接依赖",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S24",
+        "behavior": "错误 task、Worker 或 lease 的 ACK 被拒绝",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S25",
+        "behavior": "相同身份重复 ACK 不重复创建、释放资源或更改依赖",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S26",
+        "behavior": "ACK 前自然完成胜出时请求变为冲突且没有替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S27",
+        "behavior": "ACK 前自然失败胜出时请求变为冲突且没有替代任务",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S28",
+        "behavior": "租约过期、回收、暂停或取消胜出时请求变为冲突且不自动重试",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S29",
+        "behavior": "已取消来源的旧 attempt/lease 不能发布结果、完成任务或触发下游",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S30",
+        "behavior": "成功和待处理替换记录操作者、原因、时间及前后 Workspace/任务关联",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S31",
+        "behavior": "被拒绝的替换请求记录操作者、原因、时间和拒绝原因",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S32",
+        "behavior": "Run 页面显示待停止、完成、冲突状态、停止确认与新旧任务链接",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S33",
+        "behavior": "只有 OPERATOR/ADMIN 可提交；其他角色及缺少原因的请求被拒绝",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "隔离服务与任务 fixture 不可用；准备的用例未获运行授权，行为未验证。"
+      },
+      {
+        "id": "S34",
+        "behavior": "V20 增量迁移在 SQLite 成功应用",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "迁移未执行；没有运行证据。"
+      },
+      {
+        "id": "S35",
+        "behavior": "V20 增量迁移在 PostgreSQL 成功应用",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "迁移未执行；没有运行证据。"
+      },
+      {
+        "id": "S36",
+        "behavior": "两个方言迁移后既有任务与 attempt 数据仍可读取",
+        "status": "uncovered",
+        "test_cases": [],
+        "reason": "迁移未执行；没有运行证据。"
+      }
+    ],
+    "static_exclusions": [
+      "Scenarios were derived from FD-008 acceptance, public Web Console documentation, and the Worker handoff report; implementation source was not read.",
+      "Prepared HTTP tests require an explicitly isolated loopback server and fixture; no test, migration, coverage, service startup, or compile command was run by this Tester.",
+      "Worker's git diff --check claim and failed compile attempts were not counted as behavior evidence."
+    ]
+  }
+}

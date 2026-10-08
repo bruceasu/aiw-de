@@ -1,0 +1,5 @@
+
+DevTools listening on ws://127.0.0.1:2787/devtools/browser/64b0a9b3-f9d5-472f-bf9c-7a216bf437e3
+[36252:32296:1005/080314.547:ERROR:content\browser\gpu\gpu_process_host.cc:1130] GPU process exited unexpectedly: exit_code=34
+[36252:32296:1005/080314.826:ERROR:content\browser\gpu\gpu_process_host.cc:1130] GPU process exited unexpectedly: exit_code=34
+[36252:32296:1005/080315.092:ERROR:content\browser\gpu\gpu_process_host.cc:1130] GPU process exited unexpectedly: exit_code=34

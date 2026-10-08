@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.blocker.v1",
+  "fd_id": "FD-010",
+  "stage": "preflight",
+  "role": "pm-planner-host",
+  "source_event": "FD-010-000002-design-requested",
+  "human_report": "FD-010-blocker-preflight-20261007-142606.md",
+  "status": "resolved",
+  "observed_at": "2026-10-07T14:26:06Z",
+  "symptom": "The master worktree has unrelated modified files and staged demo-worker renames before FD-010 isolation.",
+  "cause": "Ownership and completion state of preexisting unrelated changes are unknown; the FD Auto preflight requires a clean parent workspace.",
+  "attempts": [
+    "Inspected Git status, branch, worktrees and FD state without altering unrelated changes.",
+    "Completed FD-010 design and ran a path-scoped static diff check on the FD file.",
+    "Initial design-ready command was rejected because the authored FD status was prematurely Open; corrected it back to Design before the single corrected retry.",
+    "The corrected design-ready handoff FD-010-000003-design-ready succeeded and remains pending Worker; parent master is still dirty.",
+    "Did not stash, reset, commit or include unrelated changes in FD-010."
+  ],
+  "human_decision_need": "Owner cleans/commits/stashes the unrelated changes, or explicitly authorizes this session to temporarily stash and later restore them.",
+  "next_step": "After the parent worktree is clean, verify the current Worker receipt and create the isolated feature/FD-010 worktree.",
+  "reusable_improvement": "Show dirty parent paths and staged state in FD preflight; restore missing blocker feedback templates.",
+  "resolved_at": "2026-10-07T14:30:21Z",
+  "resolution": "After the user reported handling preexisting changes, an elevated Git check found a clean master worktree at 89ba92973aa3b3ff7b7bd4996e5710ebc970c86e; the Worker handoff remains pending."
+}

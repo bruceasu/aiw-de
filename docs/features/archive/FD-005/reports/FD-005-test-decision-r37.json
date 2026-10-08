@@ -1,0 +1,25 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000037-test-report-ready",
+  "human_report": "FD-005-test-decision-r37.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-005-test-report-r36.md",
+    "fd_revision": 37,
+    "fd_digest": "3f66822b4b1efc2190dc309164131e6daff126a0a51dd1dd0e4f444803cbe2e0",
+    "requirements_coverage": "69.70%",
+    "branch_coverage": "not measured",
+    "rationale": "r36 唯一授权命令 exit 1，脱敏输出为空，无可确认 API-16 行为断言；累计仅 23/33 完整场景，低于 70%。",
+    "exceptions": "无例外；不接受失败命令、无证据断言、低于 70% 的场景覆盖，也不将未测分支称为通过。",
+    "residual_risk": "API-16 生产入口仍未验证；另有 9 项 API 场景未完整覆盖，分支未测；真实服务、远端 Git、平台 G2 与非 API 运行时未验证。",
+    "pm_identity": "host-pm-fd005-20261005",
+    "decision_time": "2026-10-05T14:37:15Z",
+    "raw_evidence": [
+      "tests/fd005/evidence-r36/node-test-output.txt",
+      "tests/fd005/evidence-r36/execution.json"
+    ],
+    "failed_scenarios": []
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-001",
+  "kind": "worker-report",
+  "source_event": "FD-001-000003-design-ready",
+  "human_report": "FD-001-implementation-r3.md",
+  "data": {
+    "worker_session": "fd001-worker-20261004-b2aa6c85",
+    "scope": "REQ00001 M1; primary sequential workspace",
+    "diff_base": "d33dbbd12dd8aa906633fe4b518f73d14ee283ee",
+    "work_items": ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6"],
+    "compile": "Java 21; 175 sources; BUILD SUCCESS; 7.891s; no package",
+    "baseline_it": "4 passed / 0 failed / 0 errors / 0 skipped; 14.166s",
+    "browser_evidence": "FD-001-visual-evidence/worker-browser-results.json: 29 passed + 1 focus assertion failed; historical exit 1 preserved",
+    "resolved_focus_evidence": "FD-001-visual-evidence/worker-focus-results.json: 2 passed after CDP activation/focus emulation; exit 0; page styles unchanged",
+    "screenshots": "FD-001-visual-evidence/; actual local fixtures, four widths, Worker states, refresh errors/stale and reduced motion",
+    "checks_not_run": ["Firefox (user deferred)", "coverage", "formatters", "linters", "typechecks", "final builds", "external network", "deployment"],
+    "pending_independent_scenarios": ["complete role matrix", "background/edit pause and recovery", "login/role changes", "all waiting conditions", "activity ties and missing fields"],
+    "residual_risks": ["Firefox compatibility unverified", "query cost at scale unmeasured", "operation choices are page-load snapshot"],
+    "reviewer_failed_outcomes": 0
+  }
+}

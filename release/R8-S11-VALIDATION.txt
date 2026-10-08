@@ -1,0 +1,50 @@
+R8-S11 RUNTIME SCHEDULING CONTROL
+=================================
+
+Accepted input baseline
+-----------------------
+R8-S10 Run Concurrency Budget / Admission Control: user-confirmed mvn clean verify PASS.
+Java baseline: 21.
+Canonical environment prefix: AIW_.
+
+Scope
+-----
+- runtime POST /api/r8/runs/{runId}/scheduling;
+- maxParallelism range 0..1024, 0 = unlimited;
+- non-destructive contraction: existing leases are never revoked by a limit change;
+- hard admission remains atomic in autonomous_run.active_slots;
+- temporary overcommit is explicitly observable;
+- increase/unlimited changes affect subsequent Worker pulls immediately;
+- effective scheduling changes are append-only audited;
+- same-value replay is idempotent;
+- Worker Pull preserved.
+
+Persistence
+-----------
+Core business tables: 7 (unchanged)
+New tables: 0
+Migration: V12
+V12 only extends the CHECK constraint of autonomous_run_event while preserving existing history.
+
+Generation-environment checks
+-----------------------------
+- changed domain Java javac --release 21: PASS
+- changed application/JDBC/controller Java structural javac --release 21 with minimal Spring stubs: PASS
+- R8S11RuntimeSchedulingControlIT structural javac --release 21 with minimal test/Jackson stubs: PASS
+- SQLite V1 -> V12 migration smoke: PASS
+- V10/V11 event history preservation through V12: PASS
+- MAX_PARALLELISM_CHANGED insert after V12: PASS
+- runtime contraction persistence with active_slots > max_parallelism: PASS
+- runtime contraction admission drain (2 active -> limit 1 -> block until below limit): PASS
+- expansion to unlimited admits subsequent claims immediately: PASS
+- core business table count: 7
+- expected Failsafe integration-test methods: 27
+- Maven binary is unavailable in the generation environment.
+
+Authoritative acceptance
+------------------------
+Run from a fresh/extracted source tree with JDK 21:
+
+    mvn clean verify
+
+Expected Failsafe integration-test methods: 27.

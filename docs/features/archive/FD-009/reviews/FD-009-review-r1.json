@@ -1,0 +1,43 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-009",
+  "source_event": "FD-009-000010-test-accepted",
+  "human_report": "FD-009-review-r1.md",
+  "data": {
+    "reviewer_session": "fd009-reviewer-20261007-8e72ba",
+    "base_commit": "ccf26036fd8ae4ad2292752bd9395ab8196168a0",
+    "reviewed_commit": "e5af38a6cc75d3d45038308635c38867969b5833",
+    "result": "changes-requested",
+    "findings": [
+      {
+        "severity": "high",
+        "requirement": "FD-009 conflict runtime selection must fail before registration",
+        "paths": [
+          "workers/process-typescript/scripts/run-role.sh:11",
+          "workers/process-typescript/scripts/run-role.ps1:11",
+          "workers/process-typescript/src/index.ts:34"
+        ],
+        "summary": "Both role scripts overwrite an existing, conflicting AIW_AGENT_RUNTIME value; the unified entry sees only the replacement and cannot reject the conflict.",
+        "evidence_type": "static-code-path"
+      }
+    ],
+    "tester_evidence": {
+      "authorization": "docs/features/reports/FD-009-test-authorization-r1.md",
+      "report": "docs/features/reports/FD-009-test-report-r1.md",
+      "pm_decision": "docs/features/reports/FD-009-test-decision-r1.md",
+      "authorized_command": "node --test tests/fd009/cli-contract.test.mjs",
+      "tested_fd_revision": 8,
+      "tested_fd_digest": "60a1e95a3683465fc204f25f20ece6feae8f0c31d1f6043e14d508b9474549d5",
+      "tester_session": "fd009-tester-20261007-f817be",
+      "requirements_coverage": "0%",
+      "branch_coverage": "not measured",
+      "behavior_assertions_executed": 0,
+      "runner_failure": "spawn EPERM before test file load",
+      "pm_exception_respected": true
+    },
+    "checks_run": ["static diff and code review", "git diff --check master...HEAD", "Tester authorization/report/decision cross-check"],
+    "checks_not_run": ["tests", "type check", "build", "network", "live backend execution"],
+    "residual_risk": "Both runtime paths and attempt/lease behavior lack independent execution evidence even after the runtime-selection defect is repaired."
+  }
+}

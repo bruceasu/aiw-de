@@ -1,0 +1,305 @@
+{
+  "diagnostics": [
+    {
+      "route": "/ui/login",
+      "url": "http://127.0.0.1:4230/ui/login"
+    },
+    {
+      "route": "/ui/runs/fd2-action",
+      "url": "http://127.0.0.1:4230/ui/runs/fd2-action"
+    },
+    {
+      "route": "/ui/runs/fd2-single",
+      "url": "http://127.0.0.1:4230/ui/runs/fd2-single"
+    },
+    {
+      "state": {
+        "runId": "fd2-single",
+        "status": "RUNNING",
+        "controlState": "ACTIVE",
+        "effectiveStatus": "RUNNING",
+        "terminal": false,
+        "requirementTaskId": "fd2-single-req",
+        "terminalSourceTaskId": null,
+        "resultRevision": null,
+        "approvalRequestId": null,
+        "lastFailedTaskId": null,
+        "lastFailureReason": null,
+        "failureCount": 0,
+        "recoveryCount": 0,
+        "lastRecoveredBy": null,
+        "lastRecoveredAt": null,
+        "pauseCount": 0,
+        "resumeCount": 0,
+        "lastControlAction": null,
+        "lastControlledBy": null,
+        "lastControlReason": null,
+        "lastControlledAt": null,
+        "cancelledAt": null,
+        "maxParallelism": 0,
+        "activeSlots": 0,
+        "availableSlots": null,
+        "overcommittedSlots": 0,
+        "startedAt": "2025-10-01T23:59:50Z",
+        "statusUpdatedAt": "2025-10-02T00:00:00Z",
+        "completedAt": null
+      },
+      "dashboard": {
+        "runId": "fd2-single",
+        "lifecycleStatus": "RUNNING",
+        "controlState": "ACTIVE",
+        "effectiveStatus": "RUNNING",
+        "phase": "ENGINEERING_GATE",
+        "terminal": false,
+        "startedAt": "2025-10-01T23:59:50Z",
+        "statusUpdatedAt": "2025-10-02T00:00:00Z",
+        "completedAt": null,
+        "elapsedMillis": 31789467745,
+        "tasks": {
+          "total": 4,
+          "blocked": 0,
+          "ready": 0,
+          "claimed": 0,
+          "running": 0,
+          "completed": 4,
+          "failed": 0,
+          "cancelled": 0,
+          "byType": {
+            "IMPLEMENTATION": 1,
+            "CODE_REVIEW": 1,
+            "INTEGRATION_VERIFICATION": 1,
+            "REQUIREMENT_ANALYSIS": 1
+          }
+        },
+        "execution": {
+          "attempts": 0,
+          "retries": 0,
+          "failedAttempts": 0,
+          "expiredAttempts": 0,
+          "currentParallelism": 0,
+          "peakParallelism": 0,
+          "active": []
+        },
+        "approval": null,
+        "scheduling": {
+          "maxParallelism": 0,
+          "activeSlots": 0,
+          "availableSlots": null,
+          "overcommittedSlots": 0,
+          "accountingDelta": 0
+        },
+        "failureCount": 0,
+        "recoveryCount": 0,
+        "pauseCount": 0,
+        "resumeCount": 0,
+        "lastFailureReason": null
+      }
+    },
+    {
+      "single": {
+        "nodes": {
+          "fd2-single-req": {
+            "x": 24,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-s-impl": {
+            "x": 310,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-s-review": {
+            "x": 596,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-s-verify": {
+            "x": 882,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          }
+        },
+        "edges": [
+          [
+            "fd2-single-req",
+            "fd2-s-impl"
+          ],
+          [
+            "fd2-s-impl",
+            "fd2-s-review"
+          ],
+          [
+            "fd2-s-review",
+            "fd2-s-verify"
+          ]
+        ],
+        "raw": "<svg class=\"mission-graph\" role=\"img\" aria-labelledby=\"mission-graph-title mission-graph-description\" width=\"1148\" height=\"128\" viewBox=\"0 0 1148 128\">\n              <title id=\"mission-graph-title\">Actual task dependencies</title><desc id=\"mission-graph-description\">Edges point from prerequisite to dependent. The task table contains full IDs and prerequisite relationships.</desc>\n              <defs><marker id=\"mission-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M 0 0 L 10 5 L 0 10 z\"></path></marker></defs>\n              <path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 266 64 C 288 64 288 64 310 64\" data-prerequisite=\"fd2-single-req\" data-dependent=\"fd2-s-impl\"><title>fd2-single-req → fd2-s-impl</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 552 64 C 574 64 574 64 596 64\" data-prerequisite=\"fd2-s-impl\" data-dependent=\"fd2-s-review\"><title>fd2-s-impl → fd2-s-review</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 838 64 C 860 64 860 64 882 64\" data-prerequisite=\"fd2-s-review\" data-dependent=\"fd2-s-verify\"><title>fd2-s-review → fd2-s-verify</title></path>\n              <a href=\"#task-MTQ6ZmQyLXNpbmdsZS1yZXE\" aria-label=\"REQUIREMENT_ANALYSIS fd2-single-req COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(24,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-single-req\">\n                  <title>fd2-single-req · REQUIREMENT_ANALYSIS · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">REQUIREMENT_ANALYSIS</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-single-req</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-MTA6ZmQyLXMtaW1wbA\" aria-label=\"IMPLEMENTATION fd2-s-impl COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(310,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-s-impl\">\n                  <title>fd2-s-impl · IMPLEMENTATION · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">IMPLEMENTATION</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-s-impl</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-MTI6ZmQyLXMtcmV2aWV3\" aria-label=\"CODE_REVIEW fd2-s-review COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(596,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-s-review\">\n                  <title>fd2-s-review · CODE_REVIEW · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">CODE_REVIEW</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-s-review</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-MTI6ZmQyLXMtdmVyaWZ5\" aria-label=\"INTEGRATION_VERIFICATION fd2-s-verify COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(882,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-s-verify\">\n                  <title>fd2-s-verify · INTEGRATION_VERIFICATION · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">INTEGRATION_VERIFICATION</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-s-verify</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a>\n            </svg>"
+      }
+    },
+    {
+      "route": "/ui/runs/fd2-parallel",
+      "url": "http://127.0.0.1:4230/ui/runs/fd2-parallel"
+    },
+    {
+      "parallel": {
+        "nodes": {
+          "fd2-parallel-req": {
+            "x": 24,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-p-a": {
+            "x": 310,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-p-b": {
+            "x": 310,
+            "y": 130,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-p-integrate": {
+            "x": 596,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-p-review": {
+            "x": 882,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-p-verify": {
+            "x": 882,
+            "y": 130,
+            "w": 242,
+            "h": 80
+          }
+        },
+        "edges": [
+          [
+            "fd2-parallel-req",
+            "fd2-p-a"
+          ],
+          [
+            "fd2-parallel-req",
+            "fd2-p-b"
+          ],
+          [
+            "fd2-p-a",
+            "fd2-p-integrate"
+          ],
+          [
+            "fd2-p-b",
+            "fd2-p-integrate"
+          ],
+          [
+            "fd2-p-integrate",
+            "fd2-p-review"
+          ],
+          [
+            "fd2-p-integrate",
+            "fd2-p-verify"
+          ]
+        ],
+        "raw": "<svg class=\"mission-graph\" role=\"img\" aria-labelledby=\"mission-graph-title mission-graph-description\" width=\"1148\" height=\"234\" viewBox=\"0 0 1148 234\">\n              <title id=\"mission-graph-title\">Actual task dependencies</title><desc id=\"mission-graph-description\">Edges point from prerequisite to dependent. The task table contains full IDs and prerequisite relationships.</desc>\n              <defs><marker id=\"mission-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M 0 0 L 10 5 L 0 10 z\"></path></marker></defs>\n              <path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 266 64 C 288 64 288 64 310 64\" data-prerequisite=\"fd2-parallel-req\" data-dependent=\"fd2-p-a\"><title>fd2-parallel-req → fd2-p-a</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 266 64 C 288 64 288 170 310 170\" data-prerequisite=\"fd2-parallel-req\" data-dependent=\"fd2-p-b\"><title>fd2-parallel-req → fd2-p-b</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 552 64 C 574 64 574 64 596 64\" data-prerequisite=\"fd2-p-a\" data-dependent=\"fd2-p-integrate\"><title>fd2-p-a → fd2-p-integrate</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 552 170 C 574 170 574 64 596 64\" data-prerequisite=\"fd2-p-b\" data-dependent=\"fd2-p-integrate\"><title>fd2-p-b → fd2-p-integrate</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 838 64 C 860 64 860 64 882 64\" data-prerequisite=\"fd2-p-integrate\" data-dependent=\"fd2-p-review\"><title>fd2-p-integrate → fd2-p-review</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 838 64 C 860 64 860 170 882 170\" data-prerequisite=\"fd2-p-integrate\" data-dependent=\"fd2-p-verify\"><title>fd2-p-integrate → fd2-p-verify</title></path>\n              <a href=\"#task-MTY6ZmQyLXBhcmFsbGVsLXJlcQ\" aria-label=\"REQUIREMENT_ANALYSIS fd2-parallel-req COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(24,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-parallel-req\">\n                  <title>fd2-parallel-req · REQUIREMENT_ANALYSIS · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">REQUIREMENT_ANALYSIS</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-parallel-req</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-NzpmZDItcC1h\" aria-label=\"IMPLEMENTATION fd2-p-a COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(310,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-p-a\">\n                  <title>fd2-p-a · IMPLEMENTATION · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">IMPLEMENTATION</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-p-a</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-NzpmZDItcC1i\" aria-label=\"IMPLEMENTATION fd2-p-b COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(310,130)\" data-status=\"COMPLETED\" data-task-id=\"fd2-p-b\">\n                  <title>fd2-p-b · IMPLEMENTATION · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">IMPLEMENTATION</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-p-b</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-MTU6ZmQyLXAtaW50ZWdyYXRl\" aria-label=\"INTEGRATION fd2-p-integrate COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(596,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-p-integrate\">\n                  <title>fd2-p-integrate · INTEGRATION · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">INTEGRATION</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-p-integrate</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-MTI6ZmQyLXAtcmV2aWV3\" aria-label=\"CODE_REVIEW fd2-p-review COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(882,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-p-review\">\n                  <title>fd2-p-review · CODE_REVIEW · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">CODE_REVIEW</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-p-review</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-MTI6ZmQyLXAtdmVyaWZ5\" aria-label=\"INTEGRATION_VERIFICATION fd2-p-verify COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(882,130)\" data-status=\"COMPLETED\" data-task-id=\"fd2-p-verify\">\n                  <title>fd2-p-verify · INTEGRATION_VERIFICATION · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">INTEGRATION_VERIFICATION</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-p-verify</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a>\n            </svg>"
+      }
+    },
+    {
+      "repaired": {
+        "nodes": {
+          "fd2-parallel-req": {
+            "x": 24,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-p-a": {
+            "x": 310,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-p-b": {
+            "x": 310,
+            "y": 130,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-p-integrate": {
+            "x": 596,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-p-review": {
+            "x": 882,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-p-verify": {
+            "x": 882,
+            "y": 130,
+            "w": 242,
+            "h": 80
+          },
+          "fd2-p-repair": {
+            "x": 1168,
+            "y": 24,
+            "w": 242,
+            "h": 80
+          }
+        },
+        "edges": [
+          [
+            "fd2-parallel-req",
+            "fd2-p-a"
+          ],
+          [
+            "fd2-parallel-req",
+            "fd2-p-b"
+          ],
+          [
+            "fd2-p-a",
+            "fd2-p-integrate"
+          ],
+          [
+            "fd2-p-b",
+            "fd2-p-integrate"
+          ],
+          [
+            "fd2-p-review",
+            "fd2-p-repair"
+          ],
+          [
+            "fd2-p-integrate",
+            "fd2-p-review"
+          ],
+          [
+            "fd2-p-integrate",
+            "fd2-p-verify"
+          ]
+        ],
+        "raw": "<svg class=\"mission-graph\" role=\"img\" aria-labelledby=\"mission-graph-title mission-graph-description\" width=\"1434\" height=\"234\" viewBox=\"0 0 1434 234\">\n              <title id=\"mission-graph-title\">Actual task dependencies</title><desc id=\"mission-graph-description\">Edges point from prerequisite to dependent. The task table contains full IDs and prerequisite relationships.</desc>\n              <defs><marker id=\"mission-arrow\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"6\" markerHeight=\"6\" orient=\"auto-start-reverse\"><path d=\"M 0 0 L 10 5 L 0 10 z\"></path></marker></defs>\n              <path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 266 64 C 288 64 288 64 310 64\" data-prerequisite=\"fd2-parallel-req\" data-dependent=\"fd2-p-a\"><title>fd2-parallel-req → fd2-p-a</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 266 64 C 288 64 288 170 310 170\" data-prerequisite=\"fd2-parallel-req\" data-dependent=\"fd2-p-b\"><title>fd2-parallel-req → fd2-p-b</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 552 64 C 574 64 574 64 596 64\" data-prerequisite=\"fd2-p-a\" data-dependent=\"fd2-p-integrate\"><title>fd2-p-a → fd2-p-integrate</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 552 170 C 574 170 574 64 596 64\" data-prerequisite=\"fd2-p-b\" data-dependent=\"fd2-p-integrate\"><title>fd2-p-b → fd2-p-integrate</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 1124 64 C 1146 64 1146 64 1168 64\" data-prerequisite=\"fd2-p-review\" data-dependent=\"fd2-p-repair\"><title>fd2-p-review → fd2-p-repair</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 838 64 C 860 64 860 64 882 64\" data-prerequisite=\"fd2-p-integrate\" data-dependent=\"fd2-p-review\"><title>fd2-p-integrate → fd2-p-review</title></path><path class=\"mission-edge\" marker-end=\"url(#mission-arrow)\" d=\"M 838 64 C 860 64 860 170 882 170\" data-prerequisite=\"fd2-p-integrate\" data-dependent=\"fd2-p-verify\"><title>fd2-p-integrate → fd2-p-verify</title></path>\n              <a href=\"#task-MTY6ZmQyLXBhcmFsbGVsLXJlcQ\" aria-label=\"REQUIREMENT_ANALYSIS fd2-parallel-req COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(24,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-parallel-req\">\n                  <title>fd2-parallel-req · REQUIREMENT_ANALYSIS · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">REQUIREMENT_ANALYSIS</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-parallel-req</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-NzpmZDItcC1h\" aria-label=\"IMPLEMENTATION fd2-p-a COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(310,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-p-a\">\n                  <title>fd2-p-a · IMPLEMENTATION · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">IMPLEMENTATION</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-p-a</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-NzpmZDItcC1i\" aria-label=\"IMPLEMENTATION fd2-p-b COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(310,130)\" data-status=\"COMPLETED\" data-task-id=\"fd2-p-b\">\n                  <title>fd2-p-b · IMPLEMENTATION · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">IMPLEMENTATION</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-p-b</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-MTU6ZmQyLXAtaW50ZWdyYXRl\" aria-label=\"INTEGRATION fd2-p-integrate COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(596,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-p-integrate\">\n                  <title>fd2-p-integrate · INTEGRATION · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">INTEGRATION</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-p-integrate</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-MTI6ZmQyLXAtcmV2aWV3\" aria-label=\"CODE_REVIEW fd2-p-review COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(882,24)\" data-status=\"COMPLETED\" data-task-id=\"fd2-p-review\">\n                  <title>fd2-p-review · CODE_REVIEW · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">CODE_REVIEW</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-p-review</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-MTI6ZmQyLXAtdmVyaWZ5\" aria-label=\"INTEGRATION_VERIFICATION fd2-p-verify COMPLETED\">\n                <g class=\"mission-node\" transform=\"translate(882,130)\" data-status=\"COMPLETED\" data-task-id=\"fd2-p-verify\">\n                  <title>fd2-p-verify · INTEGRATION_VERIFICATION · COMPLETED</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">INTEGRATION_VERIFICATION</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-p-verify</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">COMPLETED</text>\n                </g>\n              </a><a href=\"#task-MTI6ZmQyLXAtcmVwYWly\" aria-label=\"REPAIR fd2-p-repair READY\">\n                <g class=\"mission-node\" transform=\"translate(1168,24)\" data-status=\"READY\" data-task-id=\"fd2-p-repair\">\n                  <title>fd2-p-repair · REPAIR · READY</title><rect width=\"242\" height=\"80\" rx=\"5\"></rect>\n                  <text x=\"12\" y=\"22\" class=\"mission-node-type\">REPAIR</text><text x=\"12\" y=\"43\" class=\"mission-node-id\">fd2-p-repair</text><text x=\"12\" y=\"64\" class=\"mission-node-state\">READY</text>\n                </g>\n              </a>\n            </svg>"
+      }
+    },
+    {
+      "route": "/ui/runs/fd2-disconnected",
+      "url": "http://127.0.0.1:4230/ui/runs/fd2-disconnected"
+    },
+    {
+      "infrastructure_error": "Error: net::ERR_INSUFFICIENT_RESOURCES\n    at nav (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd002/browser.mjs:32:100)\n    at async file:///D:/03_projects/AI-tools/aiw-dev/tests/fd002/browser.mjs:131:2"
+    }
+  ],
+  "external_requests": [],
+  "runtime_errors": []
+}

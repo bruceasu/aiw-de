@@ -1,0 +1,36 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-004",
+  "source_event": "FD-004-000013-test-accepted",
+  "human_report": "FD-004-review-r13.md",
+  "data": {
+    "reviewer_session": "fd004-reviewer-20261005-59bbba38",
+    "reviewed_fd_revision": 13,
+    "reviewed_fd_digest": "203025c0b08ca4ea6037e0cfc22aa0758846d46f59b1a47a11c9e7d39be886d5",
+    "review_base": "0453efc",
+    "worker_commit": "c7754de",
+    "reviewed_commit": "432ee71",
+    "outcome": "verification-passed",
+    "findings": [],
+    "acceptance_review": {
+      "AC04": "审批权限角色的状态、证据和表单处于同一可替换区域；编辑/焦点时整区保留。只读角色的状态与证据处于同一刷新区域。静态修复首轮发现。",
+      "AC01-AC03,AC05-AC06": "修复未修改首轮已审 Java 查询、服务或相关页面路径；本轮无新增静态缺陷，运行场景未执行。"
+    },
+    "worker_report": "docs/features/reports/FD-004-implementation-r10.md",
+    "tester_report": "docs/features/reports/FD-004-test-report-r12.md",
+    "pm_decision": "docs/features/reports/FD-004-test-decision-r12-v1.md",
+    "requirements_coverage": "0.00%",
+    "branch_coverage": "not measured",
+    "applicable_scenarios": 29,
+    "executed_behavior_tests": 0,
+    "passed_behavior_tests": 0,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 29,
+    "authorization_records": [],
+    "coverage_exception": "PM 接受本轮低覆盖率和未测分支的检查例外，仅准许静态审查，不豁免行为。",
+    "commands": ["aiw fd resume FD-004", "aiw fd claim FD-004 FD-004-000013-test-accepted --session fd004-reviewer-20261005-59bbba38", "git status --short", "git log -4 --oneline", "git diff 0453efc..c7754de -- scoped paths", "targeted Get-Content and rg static reads"],
+    "skipped_checks": "未运行测试、浏览器、模板渲染、SQL、覆盖率、编译、网络、格式器或最终构建。",
+    "residual_risk": "29 个场景本轮均未运行；真实 DOM 刷新、焦点/选区、并发状态、窄窗口和长证据交互缺少执行证据。"
+  }
+}

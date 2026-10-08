@@ -1,0 +1,67 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000047-review-requested",
+  "human_report": "FD-005-review-r47.md",
+  "data": {
+    "reviewer_session": "fd005-reviewer-20261006-r47-ee5fe4ab",
+    "reviewed_fd_revision": 47,
+    "reviewed_fd_digest": "3136aca67cc043f3e09d0aeec01d2813a35c31188caf02c4557e889b5a88496b",
+    "review_base": "5b1a48baa9c3dd7ca575bab25c11d452f3cce912 (current HEAD)",
+    "worker_commit": "none for r42; report says no production source changes",
+    "reviewed_scope": [
+      "docs/features/FD-005_WORKER_PI.md revision 47",
+      "docs/features/reports/FD-005-implementation-r42.md and JSON",
+      "docs/features/reports/FD-005-pm-override-r46.md and JSON",
+      "docs/features/reports/FD-005-test-report-r39.md and JSON",
+      "docs/features/reports/FD-005-test-authorization-r39.md and JSON",
+      "tests/fd005/evidence-r39/execution.json and diagnostic.json",
+      "docs/features/reviews/FD-005-review-r44.md and JSON",
+      "FD-005 API Worker static guard references"
+    ],
+    "outcome": "changes-requested",
+    "findings": [
+      {
+        "id": "F-1",
+        "severity": "blocking",
+        "requirement": "Acceptance 1: preserved but non-executable roles must continue to be rejected before registration.",
+        "evidence": "PM r46 explicitly skips API-16 and accepts coverage exception for review, while retaining Acceptance 1 and the r39 failure. The authorized r39 command exited 1 after assertions; both roles exited with module-or-syntax-load-error and no safe Node error code or module basename. All five authorized invocation-file SHA-256 values match current files. No behavior evidence proves the required rejection. Static guard ordering is not a behavior pass.",
+        "requested_action": "Keep API-16 behavior marked unverified. If PM chooses to accept or advance without evidence, record that as an explicit workflow override; do not represent the behavior or this review as verified."
+      },
+      {
+        "id": "F-2",
+        "severity": "medium",
+        "requirement": "The current Verification record must reflect the latest PM decision and review history.",
+        "evidence": "FD revision 47 records skipping API-16 and no further tests, but retains a prior Tester re-audit plan without marking it superseded; it also says Reviewer outcome remains 0 despite r44/r45 changes-requested evidence.",
+        "requested_action": "Mark the old test plan as historical/superseded for this cycle and correct the Reviewer outcome count without rewriting prior evidence."
+      }
+    ],
+    "pm_decision": "Respect the PM's final workflow authority, skip decision, and 69.70% coverage exception for review entry. PM r46 did not waive Acceptance 1 behavior; the override is not evidence and only authorizes entering review.",
+    "acceptance_review": {
+      "Acceptance 1": "Not verified: API-16 behavior remains unproven; r39 is failed and is not relabeled.",
+      "coverage_exception": "Accepted for review entry: 69.70% (23/33) scenarios; branch coverage not measured. No failed or unrun scenario is converted to pass.",
+      "r42_tester_handoff": "Claimed by fd005-tester-20261005-r42-a9c4e2; outcome unknown, not inferred."
+    },
+    "tester_report": "docs/features/reports/FD-005-test-report-r39.md",
+    "pm_report": "docs/features/reports/FD-005-pm-override-r46.md",
+    "worker_report": "docs/features/reports/FD-005-implementation-r42.md",
+    "prior_review": "docs/features/reviews/FD-005-review-r44.md",
+    "requirements_coverage": "69.70% (23/33)",
+    "branch_coverage": "not measured",
+    "authorized_invocation_hashes_match": true,
+    "commands": [
+      "aiw fd resume FD-005",
+      "aiw fd claim FD-005 FD-005-000047-review-requested --session fd005-reviewer-20261006-r47-ee5fe4ab",
+      "aiw fd emit --help",
+      "Get-Content / Select-String targeted reads of FD, reports, authorization, events and raw JSON evidence",
+      "rg --files and rg -n targeted discovery",
+      "Get-FileHash -Algorithm SHA256 for the five r39 authorized invocation files and FD revision 47",
+      "git rev-parse HEAD",
+      "git branch --show-current",
+      "git diff --name-status HEAD -- workers/process-typescript-with-api workers/runtime-core tests/fd005 docs/features/reports/FD-005-implementation-r42.md docs/features/reports/FD-005-implementation-r42.json"
+    ],
+    "skipped_checks": "未运行测试、覆盖率、编译、构建、格式化、网络或其他运行时检查。预检中尝试读取缺失的 .ai/fd/FD-005/workspace.json。",
+    "residual_risk": "Acceptance 1/API-16 行为未验证；9/33 场景未完整覆盖，分支覆盖未测量；r42 Tester handoff 结果未知；真实服务、远端 Git、平台 G2 和非 API Worker 行为无本轮运行证明。"
+  }
+}

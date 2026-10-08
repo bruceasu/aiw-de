@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/software-engineering/handoff-batch.schema.json",
+  "title": "Engineering Agent Handoff Batch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocolVersion", "batchId", "projectId", "producer", "mode", "expectedBaselines", "artifacts", "commands"],
+  "properties": {
+    "protocolVersion": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+$"},
+    "batchId": {"type": "string", "pattern": "^BATCH-[0-9]{3,}$"},
+    "projectId": {"type": "string", "minLength": 1},
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actorType", "actorId"],
+      "properties": {
+        "actorType": {"type": "string", "enum": ["human", "agent", "system", "policy"]},
+        "actorId": {"type": "string", "minLength": 1}
+      }
+    },
+    "mode": {"type": "string", "enum": ["atomic", "best_effort"]},
+    "expectedBaselines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "version": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {"$ref": "engineering-artifact.schema.json"}
+    },
+    "commands": {
+      "type": "array",
+      "items": {"$ref": "orchestration-command.schema.json"}
+    }
+  }
+}

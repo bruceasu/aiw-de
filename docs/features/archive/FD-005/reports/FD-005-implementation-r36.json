@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000035-test-rejected",
+  "human_report": "FD-005-implementation-r36.md",
+  "data": {
+    "summary": "r33 API-33 通过但 API-16 在直接运行 src/index.ts 的测试加载阶段失败。包正式入口为 dist/index.js；宽泛错误类别无法定位夹具或生产原因。未改生产源码，交新独立 Tester 采集脱敏具体 Node 错误码与模块类别。",
+    "changed_paths": [
+      "docs/features/FD-005_WORKER_PI.md",
+      "docs/features/reports/FD-005-implementation-r36.md",
+      "docs/features/reports/FD-005-implementation-r36.json"
+    ],
+    "commands": [
+      "aiw fd claim FD-005 FD-005-000035-test-rejected --session fd005-worker-20261005-69fe2eb5",
+      "git diff --check",
+      "定向静态读取 API Worker 包入口、index.ts、r33 测试加载器和原始元数据"
+    ],
+    "results": [
+      "r33 唯一授权命令 exit 1，2 项中 API-33 通过、API-16 失败；本轮未重跑。",
+      "生产包启动 dist/index.js；r33 测试自定义加载器直接启动 src/index.ts，前置模块加载可能导致提前退出。",
+      "无具体生产缺陷证据，本轮未改生产源码或运行新的编译测试。"
+    ],
+    "residual_risk": "API-16 入口退出根因未定；累计 23/33 场景、分支未测；真实服务、远端 Git、平台 G2 和非 API 运行时未验证。",
+    "worker_session": "fd005-worker-20261005-69fe2eb5",
+    "authored_fd_revision": 35,
+    "source_fd_sha256": "6db7e374a668268cc1aaf1cf5d5af7bf97f5e341646ce4a464bdfadba45478ef",
+    "previous_tester_report": "docs/features/reports/FD-005-test-report-r33.md",
+    "previous_pm_decision": "docs/features/reports/FD-005-test-decision-r34.md"
+  }
+}

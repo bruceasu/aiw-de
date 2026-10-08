@@ -1,0 +1,57 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000014-test-accepted",
+  "human_report": "FD-006-review-r1.md",
+  "data": {
+    "reviewer_session": "fd006-reviewer-20261007-8d4b7291",
+    "fd_revision": 14,
+    "fd_digest": "af45b347bce6b08fa85af906f18d894832fb635a5de20eead937e856f3a878c9",
+    "diff_base": "0312f09d5a68c1afa0a3f1f7e3ec22351b86e50f",
+    "reviewed_commit": "85fc3708713f5833ba4f6425f0a221156eca5561",
+    "worker_session": "fd006-worker-20261007-r2-6da219",
+    "tester_session": "fd006-tester-20261007-r2-da1c0478",
+    "pm_test_decision": "docs/features/reports/FD-006-test-decision-r2.md",
+    "decision": "changes-requested",
+    "findings": [
+      {
+        "id": "F-01",
+        "severity": "blocking",
+        "requirement": "AC11; Work Item 6.14",
+        "summary": "Directory-mode mutual exclusion uses repositoryRef although distinct refs may resolve to the same physical directory.",
+        "paths": [
+          "src/main/java/me/asu/aidev/workspace/application/DirectWorkspaceConcurrencyBudget.java",
+          "src/main/java/me/asu/aidev/workspace/application/ManagedWorkspaceService.java",
+          "src/main/resources/db/migration/V17__workspace_registry.sql"
+        ],
+        "evidence": "Lock row and active task SQL are keyed by repositoryRef; Workspace rootPath is not unique, and LOCAL_LINK permits aliases. Two refs to one directory use separate locks and may both be active.",
+        "requested_change": "Reject overlapping targets or serialize by canonical physical directory identity, including local links, duplicate roots and path aliases."
+      }
+    ],
+    "test_evidence": {
+      "applicable_scenarios": 32,
+      "covered_scenarios": 2,
+      "executed_behavior_tests": 4,
+      "passed_behavior_tests": 4,
+      "failed_behavior_tests": 0,
+      "requirements_coverage": "6.25%",
+      "branch_coverage": "not measured",
+      "raw_coverage_evidence": "tests/fd006/evidence-r2/node-test-output.txt",
+      "authorization": "docs/features/reports/FD-006-test-authorization-r2.md",
+      "pm_exception": "PM r2 explicitly accepted coverage below 70% and unmeasured branches; unrun behavior remains unverified."
+    },
+    "commands_run": [
+      "aiw fd claim FD-006 FD-006-000014-test-accepted --session fd006-reviewer-20261007-8d4b7291",
+      "git status --short",
+      "git log --oneline master..HEAD",
+      "git diff --stat master...HEAD",
+      "git diff master...HEAD -- selected implementation and UI paths",
+      "git rev-parse HEAD master",
+      "git merge-base master HEAD",
+      "PowerShell Get-Content and rg static reads of FD, source, migrations, reports, test code, raw output and receipt"
+    ],
+    "commands_skipped": ["tests", "compile/build", "database migrations", "coverage", "application runtime", "network"],
+    "residual_risk": "UI/API, SQLite/PostgreSQL migration, Clone, other Worker adapters and true concurrent scheduling lack independent runtime evidence; filesystem and database actions are non-atomic."
+  }
+}

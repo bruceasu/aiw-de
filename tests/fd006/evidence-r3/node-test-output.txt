@@ -1,0 +1,12 @@
+✔ DIRECT root assignment uses and preserves the registered directory without Git (15.3162ms)
+✔ DIRECT child assignment uses and preserves the registered directory without Git (8.4332ms)
+✔ GIT_WORKTREE materializes the selected full commit and keeps the source repository (395.6966ms)
+✔ GIT_WORKTREE rejects an unavailable full commit and preserves the source repository (176.1386ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 669.7479

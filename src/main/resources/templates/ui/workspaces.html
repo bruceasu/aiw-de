@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Workspaces · AI Dev Manager</title><link rel="stylesheet" href="/ui/console.css?v=workspace-spacing-1"></head>
+<body><div class="app workspace-page"><nav th:replace="~{ui/fragments :: nav('workspaces')}"></nav><main class="main">
+<header th:replace="~{ui/fragments :: topbar('Workspaces','Register roots and manage their repository directories')}"></header>
+<div class="content"><div th:replace="~{ui/fragments :: flash}"></div>
+<section class="card form-card"><h2>Register Workspace root</h2>
+<form action="/ui/workspaces" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"/>
+<div class="form-grid">
+<div class="field"><label for="id">Workspace ID</label><input id="id" name="id" required pattern="[A-Za-z0-9._-]+" placeholder="my-project"/></div>
+<div class="field"><label for="displayName">Name</label><input id="displayName" name="displayName" required placeholder="My Project"/></div>
+<div class="field full"><label for="rootPath">Workspace root directory</label><input id="rootPath" name="rootPath" required placeholder="D:\projects\my-project"/><div class="help">Choose an existing directory, or enter a new directory inside an existing parent.</div></div>
+<div class="field full"><label><input type="checkbox" name="rootTarget" value="true"/> Use the Workspace root itself as the Run target</label><div class="help">Select this for a single project rooted here. Otherwise, first-level subdirectories are implicit repositories until you add explicit ones.</div></div>
+</div><div class="form-actions"><button class="btn primary" type="submit">Register Workspace</button></div></form>
+<p class="help">When no child repositories are registered, first-level directories are available as implicit repositories. If the root has no subdirectories, the root itself is the target.</p>
+</section>
+<section class="card section"><h2>Registered Workspaces</h2><p th:if="${workspaces.empty}">No Workspace has been registered.</p>
+<ul class="compact-list"><li th:each="workspace : ${workspaces}">
+<div class="workspace-list-heading"><strong th:text="${workspace.displayName}">Workspace</strong><span class="mono" th:text="${workspace.id}">id</span><span class="pill neutral" th:unless="${workspace.enabled}">Disabled</span></div>
+<p class="mono workspace-list-root" th:text="${workspace.rootPath}">Root</p>
+<a class="btn ghost small-btn" th:href="@{/ui/workspaces/{id}(id=${workspace.id})}">View and manage</a>
+</li></ul></section>
+</div></main></div><script src="/ui/console.js"></script></body></html>

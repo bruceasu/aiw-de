@@ -1,0 +1,5 @@
+interface:
+  display_name: "Publish GitHub Issue"
+  short_description: "Publish an OpenSpec change to GitHub"
+policy:
+  allow_implicit_invocation: false

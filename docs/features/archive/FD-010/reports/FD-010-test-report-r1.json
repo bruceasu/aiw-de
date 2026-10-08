@@ -1,0 +1,163 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-010",
+  "source_event": "FD-010-000005-implementation-ready",
+  "human_report": "FD-010-test-report-r1.md",
+  "data": {
+    "implementation_event": "FD-010-000005-implementation-ready",
+    "tested_fd_revision": 5,
+    "tested_fd_digest": "a811fce4969b6c1306b3e23e5ebb3a2ba081b7941b8d467d8870893aa93f2fdd",
+    "tester_session": "fd010-tester-20261007-11617f",
+    "applicable_scenarios": 19,
+    "covered_scenarios": 4,
+    "executed_behavior_tests": 4,
+    "passed_behavior_tests": 4,
+    "failed_behavior_tests": 0,
+    "unrun_behavior_tests": 15,
+    "requirements_coverage": "21.05%",
+    "branch_coverage": "not measured",
+    "raw_coverage_evidence": "One approved direct Node command exited 0 and printed ok 1 through ok 4 and 1..4; no branch instrumentation.",
+    "coverage_unavailable_reason": "No authorized instrumented build or coverage run; Worker startup and release packaging were not authorized.",
+    "test_files": [
+      "tests/fd010/package-contract.mjs"
+    ],
+    "authorization_records": [
+      "docs/features/reports/FD-010-test-authorization-r1.md"
+    ],
+    "commands": [
+      "node tests/fd010/package-contract.mjs"
+    ],
+    "recommendation": "blocked",
+    "not_applicable_reason": "",
+    "residual_risk": "Source and packaged Worker startup, both backend integrations, registration/lease protocol, missing local module startup failure, and full attempt/evidence/cleanup/uncertain-resource behavior remain untested.",
+    "scenarios": [
+      {
+        "id": "S01",
+        "behavior": "包内 ESM 入口可导入，并暴露共享 attempt、slot 与 Control Plane API",
+        "status": "passed",
+        "test_cases": [
+          "package-contract:1"
+        ]
+      },
+      {
+        "id": "S02",
+        "behavior": "旧顶层 ESM 入口导入失败",
+        "status": "passed",
+        "test_cases": [
+          "package-contract:2"
+        ]
+      },
+      {
+        "id": "S03",
+        "behavior": "无证据 Recorder 时 attempt 拒绝执行操作",
+        "status": "passed",
+        "test_cases": [
+          "package-contract:3"
+        ]
+      },
+      {
+        "id": "S04",
+        "behavior": "UTF-8 输出受公共字节预算约束",
+        "status": "passed",
+        "test_cases": [
+          "package-contract:4"
+        ]
+      },
+      {
+        "id": "S05",
+        "behavior": "Codex 后端从源码启动并使用包内模块",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S06",
+        "behavior": "Agents 后端从源码启动并使用包内模块",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S07",
+        "behavior": "Codex 后端从发布包启动并解析内部模块",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S08",
+        "behavior": "Agents 后端从发布包启动并解析内部模块",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S09",
+        "behavior": "包内模块缺失时 Worker 明确失败且不回退",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S10",
+        "behavior": "两后端保留原 runtime 标签和 Worker 默认身份",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S11",
+        "behavior": "注册、Pull、lease 与心跳的 Control Plane 请求形状不变",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S12",
+        "behavior": "attempt 成功时结果与终态正常",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S13",
+        "behavior": "attempt 失败时错误类别与终态正常",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S14",
+        "behavior": "attempt 超时后停止并按契约上报",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S15",
+        "behavior": "attempt 取消后停止并按契约上报",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S16",
+        "behavior": "资源终态不确定时停止 claim 并保留工作区",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S17",
+        "behavior": "成功与失败后的工作区清理遵循原契约",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S18",
+        "behavior": "证据终态与上报顺序遵循原契约",
+        "status": "uncovered",
+        "test_cases": []
+      },
+      {
+        "id": "S19",
+        "behavior": "发布目录包含包内 runtime-core 且无需包外复制",
+        "status": "uncovered",
+        "test_cases": []
+      }
+    ],
+    "static_exclusions": [
+      "旧顶层路径引用清零、源文件数量、脚本和文档路径及依赖版本属于静态检查，不计入可观察行为覆盖率。"
+    ]
+  }
+}
+

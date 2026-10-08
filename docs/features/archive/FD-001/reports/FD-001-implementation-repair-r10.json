@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-001",
+  "kind": "worker-report",
+  "source_event": "FD-001-000010-changes-requested",
+  "human_report": "FD-001-implementation-repair-r10.md",
+  "data": {
+    "worker_session": "fd001-worker-20261004-b2aa6c85",
+    "diff_base": "ae19d463436fe9730b07e7106ecbdfacfab98845",
+    "review_findings": [
+      "F1 waiting sample predicates follow the same authoritative primary blocker order as Fleet; secondary unmet conditions shown within each task",
+      "F2 waiting details key is category label, independent of count",
+      "F3 preserve every refreshed region intersecting any noncollapsed Selection Range"
+    ],
+    "changed_files": [
+      "src/main/java/me/asu/aidev/webconsole/application/WebConsoleQueryService.java",
+      "src/main/resources/templates/ui/dashboard.html",
+      "src/main/resources/static/ui/console.js",
+      "docs/current/15-WEB-CONSOLE.md",
+      "docs/current-zh/15-WEB-CONSOLE.md"
+    ],
+    "compile_command": "C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests compile",
+    "compile_result": "Java 21; 175 sources; BUILD SUCCESS; 4.079 s; no tests/package",
+    "compile_evidence": "docs/features/reports/FD-001-visual-evidence/repair-compile-r10.txt",
+    "static_evidence": "Compared Fleet authoritative priority with all five local predicates; stable detail key does not include total; Selection range intersection replaces anchor-only protection; scoped source/doc diff inspected",
+    "pending_test_command": "C:/green/python312/python.exe tests/fd001/runtime.py review-fixes",
+    "authorization": "Not executed; original r7 diagnostic/matrix budget exhausted; request new one-run focused budget and bind new implementation event/digest/Tester session",
+    "residual_risk": "New targeted tests prepared only; legacy 36/36 and 42/88 are historical baseline, not rerun on repair; Firefox deferred, branch and scale cost unmeasured",
+    "reviewer_failed_outcomes": 1
+  }
+}

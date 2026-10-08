@@ -1,0 +1,19 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-004",
+  "source_event": "FD-004-000010-changes-requested",
+  "human_report": "FD-004-implementation-r10.md",
+  "data": {
+    "summary": "修复 Run 页审批状态、证据和表单局部刷新不成组的问题。",
+    "changed_paths": [
+      "src/main/resources/templates/ui/run-detail.html",
+      "docs/current/15-WEB-CONSOLE.md",
+      "docs/current-zh/15-WEB-CONSOLE.md",
+      "docs/features/FD-004_APPROVAL_AND_ENGINEERING_EVIDENCE.md"
+    ],
+    "commands": ["git diff --check"],
+    "results": ["按模板区域与 console.js 替换/焦点保护路径完成静态核对，差异无空白错误；未执行新运行检查"],
+    "residual_risk": "28 个验收场景未运行；浏览器中的焦点、编辑与 DOM 替换行为尚无运行证据。"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000008-work-requested",
+  "human_report": "FD-006-implementation-r1.md",
+  "data": {
+    "summary": "完成 Workspace 登记、Git/目录模式 Worker 契约、安全解除登记与兼容性修复；Java 离线编译通过，运行验证待独立 Tester。",
+    "changed_paths": [
+      "docs/current/05-API-USER-MANUAL.md",
+      "docs/current/07-CONFIGURATION-REFERENCE.md",
+      "docs/features/FD-006_WORKSPACE_GIT.md",
+      "src/main/java/me/asu/aidev/autonomous/application/GitRevisionResolver.java",
+      "src/main/java/me/asu/aidev/autonomous/application/WorkspaceRegistry.java",
+      "src/main/java/me/asu/aidev/workspace/application/ManagedWorkspaceService.java",
+      "src/main/java/me/asu/aidev/workspace/protocol/http/WorkspaceWebController.java",
+      "src/main/resources/static/ui/console.js",
+      "src/main/resources/templates/ui/workspace-detail.html",
+      "src/main/resources/templates/ui/workspaces.html",
+      "workers/process-go/main.go",
+      "workers/process-python/process_worker.py"
+    ],
+    "commands": [
+      "git diff --check (first repair slice; exit 0)",
+      "JAVA_HOME=D:/green/jdk-21.0.8 D:/green/apache-maven-3.9.9/bin/mvn.cmd -o -q -DskipTests compile (exit 0)"
+    ],
+    "results": [
+      "Java main-source compile passed offline",
+      "All scoped Work Items have source or document evidence",
+      "Behavior tests, non-Java compilation, and database migrations were not run"
+    ],
+    "residual_risk": "跨文件系统与数据库操作无原子提交；失败后应用创建的目录可能保留。Worker 多语言运行、SQLite/PostgreSQL 迁移和目录并发行为尚未实际验证。"
+  }
+}

@@ -1,0 +1,4 @@
+PASS waiting-count-samples
+PASS waiting-overlap
+FAIL waiting-open-count-change count did not actually update
+FAIL selection-multi-region unselected region did not actually refresh

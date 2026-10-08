@@ -1,0 +1,91 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-007",
+  "source_event": "FD-007-000019-test-accepted",
+  "human_report": "FD-007-review-r3.md",
+  "data": {
+    "reviewer_session": "fd007-reviewer-r3-20261007-c19e74",
+    "fd_revision": 19,
+    "fd_digest": "6b5e502ce43555bc10d44b36115c38587a9c4741a14930d7132d0ad9733a84b1",
+    "diff_base": "40493aa95f9e88b89fa990dc2509f0e47916db92",
+    "reviewed_commit": "0d0f2057bd78f14a87da9b1594dc3e411772d798",
+    "focused_fix_base": "6746af28d7c327eecc6f121dbd98fed405aa4234",
+    "worker_session": "fd007-worker-20261007-r3-63b7ad",
+    "tester_session": "fd007-tester-20261007-9c74e2",
+    "pm_test_decision": "docs/features/reports/FD-007-test-decision-r3.md",
+    "pm_migration_waiver": "docs/features/reports/FD-007-verification-decision-r1.md",
+    "decision": "verification-passed",
+    "findings": [],
+    "resolved_prior_findings": [
+      {
+        "id": "F-01",
+        "status": "resolved_by_static_review",
+        "evidence": "Legacy executor normal return maps to COMPLETED; WorkerRuntime acknowledges only after a stop request and explicit STOPPED outcome.",
+        "paths": [
+          "src/main/java/me/asu/aidev/worker/runtime/TaskExecutor.java",
+          "src/main/java/me/asu/aidev/worker/runtime/WorkerRuntime.java"
+        ]
+      },
+      {
+        "id": "F-02",
+        "status": "resolved_by_static_review",
+        "evidence": "Task lock plus exact task/worker/lease acknowledgement lookup makes duplicate acknowledgement idempotent; first acknowledgement performs requeue, resource release, and audit once.",
+        "paths": [
+          "src/main/java/me/asu/aidev/execution/application/TaskExecutionService.java",
+          "src/main/java/me/asu/aidev/execution/jdbc/JdbcExecutionAttemptRepository.java",
+          "src/main/java/me/asu/aidev/work/jdbc/JdbcWorkTaskRepository.java"
+        ]
+      },
+      {
+        "id": "F-03",
+        "status": "execution_waived_static_sql_review_performed_runtime_unverified",
+        "evidence": "PM explicitly waived S21/S22 migration execution for this FD lifecycle. Static review found no obvious SQLite/PostgreSQL dialect conflict in V19; no migration was executed and neither database is recorded as passed.",
+        "paths": [
+          "src/main/resources/db/migration/V19__task_instruction_revision_control.sql",
+          "docs/features/FD-007_TASK_INSTRUCTION_REVISION_AND_OPERATOR_CONTROL.md",
+          "docs/features/reports/FD-007-verification-decision-r1.md"
+        ]
+      }
+    ],
+    "test_evidence": {
+      "applicable_scenarios": 22,
+      "covered_scenarios": 0,
+      "executed_behavior_tests": 0,
+      "passed_behavior_tests": 0,
+      "failed_behavior_tests": 0,
+      "unrun_behavior_tests": 22,
+      "requirements_coverage": "0%",
+      "branch_coverage": "not measured",
+      "raw_coverage_evidence": "not available; no behavior tests or coverage commands were run",
+      "pm_exception": "PM accepted the explicit coverage exception for the final independent static review; unrun behavior scenarios are not passed."
+    },
+    "migration_review": {
+      "sqlite_s21": "waived_for_this_fd_lifecycle; not run; unverified; not passed",
+      "postgresql_s22": "waived_for_this_fd_lifecycle; not run; unverified; not passed",
+      "static_sql_review": "V19 uses common DDL constructs and no obvious dialect-specific conflict was found; static inspection does not prove migration runner or existing-data success."
+    },
+    "commands_run": [
+      "aiw fd show FD-007",
+      "aiw fd claim FD-007 FD-007-000019-test-accepted --session fd007-reviewer-r3-20261007-c19e74",
+      "git status --short --branch",
+      "git diff --name-status 40493aa..feature/FD-007",
+      "git diff --stat 6746af2..0d0f205",
+      "git diff --unified=3 40493aa..feature/FD-007 -- execution/work/worker/web-console implementation paths",
+      "git show feature/FD-007:src/main/resources/db/migration/V19__task_instruction_revision_control.sql",
+      "git show with Select-Object/Select-String for Worker, attempt, repository, controller, and template source excerpts",
+      "static reads of FD, prior and current reports, JSON sidecars, and AIW receipts"
+    ],
+    "commands_skipped": [
+      "tests",
+      "compile/build",
+      "SQLite migration",
+      "PostgreSQL migration",
+      "coverage",
+      "application runtime",
+      "network"
+    ],
+    "residual_risk": "All 22 behavior scenarios lack runtime evidence. V19 application to SQLite and PostgreSQL remains unverified. Runtime authorization/UI behavior, concurrency, stale-attempt fencing, stop/ack timing and retries, resource accounting, Worker compatibility, migration-runner behavior, database versions/configuration, and existing-data compatibility remain unknown. External side effects may continue after cooperative stop or ADMIN force re-dispatch.",
+    "decision_time": "2026-10-07T07:25:00+09:00"
+  }
+}

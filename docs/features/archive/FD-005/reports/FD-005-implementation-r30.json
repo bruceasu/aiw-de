@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000029-test-rejected",
+  "human_report": "FD-005-implementation-r30.md",
+  "data": {
+    "summary": "r27 离线测试 10/10 通过，但完整 API 场景累计 20/33、低于 70%，PM r28 退回。本轮仅更新 FD 证据与下一轮独立 API Worker 测试交接，生产源码未改。",
+    "changed_paths": [
+      "docs/features/FD-005_WORKER_PI.md",
+      "docs/features/reports/FD-005-implementation-r30.md",
+      "docs/features/reports/FD-005-implementation-r30.json"
+    ],
+    "commands": [
+      "aiw fd claim FD-005 FD-005-000029-test-rejected --session fd005-worker-20261005-69fe2eb5",
+      "git diff --check",
+      "定向静态读取 FD、r27 测试报告与 r28 PM 决策"
+    ],
+    "results": [
+      "r27 唯一授权命令 exit 0，10/10 新用例通过；本轮未重跑。",
+      "累计完整 API Worker 场景 20/33（60.61%），业务代码分支未测。",
+      "本轮无生产代码改动，也未运行新的编译或测试。"
+    ],
+    "residual_risk": "13 个 API 场景未完整覆盖、分支未测；真实服务、远端 Git、平台 G2 和非 API 运行时没有本轮行为证明。",
+    "worker_session": "fd005-worker-20261005-69fe2eb5",
+    "authored_fd_revision": 29,
+    "source_fd_sha256": "737469113fc6dfbeee9a07588e06b272852cf530b604c4e8353529bddb2dddbe",
+    "previous_tester_report": "docs/features/reports/FD-005-test-report-r27.md",
+    "previous_pm_decision": "docs/features/reports/FD-005-test-decision-r28.md"
+  }
+}

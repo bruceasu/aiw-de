@@ -1,0 +1,35 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000017-work-requested",
+  "human_report": "FD-005-implementation-r18.md",
+  "data": {
+    "summary": "修复工作树删除失败仍可上报成功的缺陷，更新公共契约；本轮编译检查通过，行为测试交由独立 Tester 且范围仅限 API Worker。",
+    "changed_paths": [
+      "workers/runtime-core/workspace.mjs",
+      "workers/runtime-core/attempt.mjs",
+      "workers/runtime-core/PUBLIC_CONTRACT.md",
+      "docs/features/FD-005_WORKER_PI.md",
+      "docs/features/reports/FD-005-implementation-r18.md",
+      "docs/features/reports/FD-005-implementation-r18.json"
+    ],
+    "commands": [
+      "aiw fd claim FD-005 FD-005-000017-work-requested --session fd005-worker-20261005-69fe2eb5",
+      "node scripts/compile-worker-runtime.mjs",
+      "git diff --check -- workers/runtime-core/workspace.mjs workers/runtime-core/attempt.mjs workers/runtime-core/PUBLIC_CONTRACT.md",
+      "git diff f5b65b4..HEAD -- workers/runtime-core/workspace.mjs workers/runtime-core/attempt.mjs workers/runtime-core/PUBLIC_CONTRACT.md"
+    ],
+    "results": [
+      "修复已包含在提交 0e8b35c；清理失败记录 preserved 后抛出原错误，阻止未经确认的 complete。",
+      "编译检查 exit 0，无最终发布产物；未执行行为测试。",
+      "历史测试与 r13 直接静态审查仍作为历史证据，不冒充当前独立 Tester 或正式 Reviewer 结果。"
+    ],
+    "residual_risk": "API Worker 清理失败及九角色行为待独立 Tester 复核；历史 r8 五项失败不改写。其他运行时、真实端点、升级回滚和平台全会话 G2 效果未做本轮测试。",
+    "worker_session": "fd005-worker-20261005-69fe2eb5",
+    "authored_fd_revision": 18,
+    "source_fd_sha256": "4cb7a996011ededd3e808ae16d37d005f9698f1027dd190dc29f2a47a21da2fc",
+    "review_base_commit": "f5b65b4",
+    "fix_commit": "0e8b35c"
+  }
+}

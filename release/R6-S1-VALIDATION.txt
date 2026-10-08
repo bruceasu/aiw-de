@@ -1,0 +1,69 @@
+R6-S1 Published Result Handoff validation
+Date: 2026-09-26
+Java baseline: 21
+
+Accepted input baseline:
+- R5 Fix1 mvn verify: PASS (confirmed by user)
+
+Changes:
+- canonical environment prefix: AIW_
+- legacy environment prefix occurrences: 0
+- V4 adds execution_attempt.publication_ref only
+- domain table count remains 4
+- claim protocol adds dependency-derived inputs[]
+- workspace completion adds optional publicationRef
+- five reference workers support AIW_GIT_PUBLISH_REMOTE
+- reference workers append authoritative inputs to the Codex instruction
+- reference workers fetch git:* upstream publication refs
+
+Local validation in generation environment:
+- Python py_compile: PASS
+- JavaScript node --check: PASS
+- Go build: PASS
+- Java worker javac --release 21: PASS
+- R6 domain records javac --release 21: PASS
+- SQLite V1 -> V4 migration: PASS
+- SQLite domain tables: 4
+- legacy environment prefix scan: PASS (0 occurrences)
+
+Not executable in this environment:
+- Maven is unavailable, so full mvn verify was not run here.
+- TypeScript dependencies are not installed; global tsc reports missing @openai/codex-sdk and Node type declarations rather than source-level R6 errors.
+
+Required acceptance gate:
+  mvn verify
+
+Reference worker optional publication setting:
+  AIW_GIT_PUBLISH_REMOTE=origin
+
+R6-S1 Fix1 - dependency readiness on late dependent creation
+-----------------------------------------------------------
+Observed user Maven/Failsafe failure:
+- R6ResultHandoffIT.completedDependencyResultIsMaterializedAsDownstreamInput
+- claimNext(reviewWorker) returned Optional.empty at line 77
+
+Root cause:
+- WorkTaskService.create() initialized every task with dependencies as BLOCKED.
+- DependencyResolver refreshed dependents only when a predecessor completed.
+- In the R6 handoff flow the Review task is created after the Implementation predecessor is already COMPLETED,
+  so the completion event occurred before the dependency edge existed and the Review task remained BLOCKED forever.
+
+Fix:
+- persist the new task and dependency edges first;
+- for dependent-task creation, lock predecessor rows in deterministic TaskId order;
+- refresh the newly created task after edges exist;
+- if all predecessors are already COMPLETED, transition BLOCKED -> READY immediately;
+- predecessor locking closes the concurrent create-vs-complete lost-wakeup race.
+
+Regression coverage:
+- R3S1WorkTaskGraphIT.taskCreatedAfterDependencyCompletedStartsReady
+- existing R6ResultHandoffIT exercises the same late-dependent flow plus result input materialization.
+
+Local validation:
+- relevant Java 21 domain/port/application compile with minimal Spring stubs: PASS
+- legacy AIW_ prefix scan: PASS (0 occurrences)
+- schema changes: none
+- domain tables: 4
+
+Required authoritative gate:
+  mvn verify

@@ -1,0 +1,16 @@
+{"id":"SDK-text-stream","outcome":"passed","duration_ms":82}
+{"id":"SDK-incomplete-no-tool","outcome":"passed","duration_ms":24}
+{"id":"SDK-missing-terminal","outcome":"passed","duration_ms":22}
+{"id":"SDK-unknown-terminal","outcome":"passed","duration_ms":23}
+{"id":"SDK-model-error","outcome":"passed","duration_ms":26}
+{"id":"SDK-tool-failure","outcome":"passed","duration_ms":33}
+{"id":"SDK-readonly-write","outcome":"passed","duration_ms":22}
+{"id":"SDK-cancel-fetch","outcome":"passed","duration_ms":22}
+{"id":"SDK-tool-correlation","outcome":"passed","duration_ms":38}
+{"id":"API-parallel-setting","outcome":"passed","duration_ms":42}
+{"id":"SDK-usage-exact","outcome":"passed","duration_ms":57}
+{"id":"SDK-request-privacy","outcome":"passed","duration_ms":21}
+{"id":"SDK-summary-privacy","outcome":"failed","duration_ms":39,"error":"Expected values to be strictly equal:\n\n0 !== 1\n"}
+{"id":"API-store-false","outcome":"failed","duration_ms":42,"error":"Expected values to be strictly equal:\n\n0 !== 1\n"}
+{"id":"SDK-history-off","outcome":"passed","duration_ms":22}
+{"id":"SDK-tool-parameters","outcome":"failed","duration_ms":25,"error":"Expected values to be strictly equal:\n\n1 !== 0\n"}

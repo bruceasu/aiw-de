@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-XXX",
+  "source_event": "FD-XXX-000000-implementation-ready",
+  "human_report": "FD-XXX-test-authorization-rN.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-XXX-000000-implementation-ready",
+    "fd_revision": 0,
+    "fd_digest": "replace-with-implementation-receipt-digest",
+    "tester_session": "replace-with-claimed-tester-session",
+    "command": "replace-with-one-exact-command",
+    "working_directory": "repository root",
+    "scope": "replace-with-focused-test-scope",
+    "expected_duration": "replace-with-estimate",
+    "side_effects": "replace-with-inspected-effects",
+    "risk_review": "replace-with-review",
+    "human_approval": "not required",
+    "planner_identity": "replace-with-decision-owner",
+    "decision_time": "2026-10-02T00:00:00+00:00"
+  }
+}

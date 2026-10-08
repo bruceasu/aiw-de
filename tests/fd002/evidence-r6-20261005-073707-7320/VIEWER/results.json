@@ -1,0 +1,42 @@
+[
+  {
+    "id": "VIEWER-permission",
+    "behavior": "Viewer隐藏Run控制并拒绝有CSRF的POST",
+    "passed": true,
+    "detail": {
+      "visible": [],
+      "status": 403,
+      "state": {
+        "runId": "fd2-action",
+        "status": "RUNNING",
+        "controlState": "ACTIVE",
+        "effectiveStatus": "RUNNING",
+        "terminal": false,
+        "requirementTaskId": "fd2-action-req",
+        "terminalSourceTaskId": null,
+        "resultRevision": null,
+        "approvalRequestId": null,
+        "lastFailedTaskId": null,
+        "lastFailureReason": null,
+        "failureCount": 0,
+        "recoveryCount": 0,
+        "lastRecoveredBy": null,
+        "lastRecoveredAt": null,
+        "pauseCount": 0,
+        "resumeCount": 0,
+        "lastControlAction": null,
+        "lastControlledBy": null,
+        "lastControlReason": null,
+        "lastControlledAt": null,
+        "cancelledAt": null,
+        "maxParallelism": 0,
+        "activeSlots": 0,
+        "availableSlots": null,
+        "overcommittedSlots": 0,
+        "startedAt": "2025-10-01T23:59:50Z",
+        "statusUpdatedAt": "2025-10-02T00:00:00Z",
+        "completedAt": null
+      }
+    }
+  }
+]

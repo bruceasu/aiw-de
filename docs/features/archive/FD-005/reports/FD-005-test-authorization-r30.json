@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "planner-authorization",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000030-implementation-ready",
+  "human_report": "FD-005-test-authorization-r30.md",
+  "data": {
+    "decision": "approved",
+    "basis": "planner-low-risk",
+    "implementation_event": "FD-005-000030-implementation-ready",
+    "fd_revision": 30,
+    "fd_digest": "422bebacd953340895e93a6d254266eecf58b8ed26d77c8dc5d8202fea359e17",
+    "tester_session": "fd005-tester-20261005-e8931791",
+    "command": "node tests/fd005/r30/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r30.json",
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev",
+    "scope": "仅 API Worker 公开组合路径；合成九角色 API 会话及 API-16/20/21/22/27/31/33 场景，旧 r27 路径复核",
+    "expected_duration": "小于 45 秒；测试子进程 45 秒截止，生产入口子进程各 5 秒截止",
+    "side_effects": "OS 临时目录 fd005-r30-* 内合成工作区和固定本地 shell 标记，以及 tests/fd005/evidence-r30/ 下两个 wx 原始证据文件；临时路径校验后清理",
+    "risk_review": "静态审查五份调用文件与摘要；清除真实 token，合成 fetch 限定且禁用 net/tls/dns；固定 shell 仅作用于独占临时工作区；无真实服务、其他 Worker、依赖安装或生产目录写入",
+    "human_approval": "not required",
+    "planner_identity": "host-planner-fd005-20261005",
+    "decision_time": "2026-10-05T14:24:26Z",
+    "invoked_files_sha256": {
+      "tests/fd005/r30/run-offline.mjs": "709531ce4032254751ce65a1ca7a0499595a5c7576c684ea2143e5a5998dcf58",
+      "tests/fd005/r30/register-loader.mjs": "ba897a9770ae2ce27ce24ececa7d717ea149124bd11b19e9589101378443c17e",
+      "tests/fd005/r30/typescript-loader.mjs": "c543707bf155d98e4d51690f65b1502ea97d8767a235d48e276314117f1b3d2f",
+      "tests/fd005/r30/entry-guard.mjs": "5ad052881a4f44470780cd8cfbc04c83082ae4d3482e99f16334faecb2b6a618",
+      "tests/fd005/r30/worker.test.mjs": "e9fc24d288e74f4f61c30c68cc3f962782acb81c6f66b035349e7ef2463a5fbf"
+    }
+  }
+}

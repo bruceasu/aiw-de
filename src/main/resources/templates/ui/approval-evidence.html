@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"><body>
+<div th:fragment="card(a)">
+<div class="approval-evidence" th:if="${a != null}">
+  <p class="callout bad-callout" th:if="${a.evidenceProblem != null}" th:text="${'Evidence cannot be verified: ' + a.evidenceProblem}"></p>
+  <dl class="kv evidence-grid">
+    <dt>Result revision</dt><dd class="mono evidence-value" th:text="${a.resultRevision}"></dd>
+    <dt>Source task</dt><dd class="mono evidence-value" th:text="${a.sourceTaskId}"></dd>
+    <dt>Source attempt</dt><dd class="mono evidence-value" th:text="${a.sourceAttemptId == null ? 'Unavailable' : a.sourceAttemptId}"></dd>
+    <dt>Result finished</dt><dd th:text="${a.sourceFinishedAt == null ? 'Unavailable' : a.sourceFinishedAt}"></dd>
+    <dt>Engineering gate</dt><dd th:text="${a.gateStatus == null ? 'Unavailable' : a.gateStatus}"></dd>
+    <dt>Gate closed</dt><dd th:text="${a.gateClosedAt}"></dd>
+    <dt>Publication reference</dt><dd class="mono evidence-value" th:text="${a.publicationRef == null ? 'Not recorded' : a.publicationRef}"></dd>
+  </dl>
+  <details th:if="${a.sourceSummary != null}"><summary>Saved source summary</summary><p class="mission-fulltext" th:text="${a.sourceSummary}"></p></details>
+  <p class="small muted" th:unless="${a.sourceSummary != null}">Source summary unavailable.</p>
+  <p class="small" th:if="${a.decisionNote != null}">Decision note: <span class="mission-fulltext" th:text="${a.decisionNote}"></span></p>
+  <div class="evidence-pair">
+    <div><h4>Review</h4><p class="small bad-callout" th:if="${a.review.problem != null}" th:text="${a.review.problem}"></p>
+      <dl class="kv evidence-grid"><dt>Task</dt><dd class="mono evidence-value" th:text="${a.review.taskId == null ? 'Unavailable' : a.review.taskId}"></dd><dt>Attempt</dt><dd class="mono evidence-value" th:text="${a.review.attemptId == null ? 'Unavailable' : a.review.attemptId}"></dd><dt>Verdict</dt><dd th:text="${a.review.verdict == null ? 'Unavailable' : a.review.verdict}"></dd><dt>Finished</dt><dd th:text="${a.review.finishedAt == null ? 'Unavailable' : a.review.finishedAt}"></dd></dl>
+      <details th:if="${a.review.summary != null}"><summary>Saved review summary</summary><p class="mission-fulltext" th:text="${a.review.summary}"></p></details><p class="small muted" th:unless="${a.review.summary != null}">Review summary unavailable.</p>
+    </div>
+    <div><h4>Verification</h4><p class="small bad-callout" th:if="${a.verification.problem != null}" th:text="${a.verification.problem}"></p>
+      <dl class="kv evidence-grid"><dt>Task</dt><dd class="mono evidence-value" th:text="${a.verification.taskId == null ? 'Unavailable' : a.verification.taskId}"></dd><dt>Attempt</dt><dd class="mono evidence-value" th:text="${a.verification.attemptId == null ? 'Unavailable' : a.verification.attemptId}"></dd><dt>Verdict</dt><dd th:text="${a.verification.verdict == null ? 'Unavailable' : a.verification.verdict}"></dd><dt>Finished</dt><dd th:text="${a.verification.finishedAt == null ? 'Unavailable' : a.verification.finishedAt}"></dd></dl>
+      <details th:if="${a.verification.summary != null}"><summary>Saved verification summary</summary><p class="mission-fulltext" th:text="${a.verification.summary}"></p></details><p class="small muted" th:unless="${a.verification.summary != null}">Verification summary unavailable.</p>
+    </div>
+  </div>
+</div>
+<p class="callout muted" th:unless="${a != null}">Approval evidence is unavailable.</p>
+</div>
+</body></html>

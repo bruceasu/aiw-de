@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-009",
+  "source_event": "FD-009-000009-test-report-ready",
+  "human_report": "FD-009-test-decision-r1.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-009-test-report-r1.md",
+    "fd_revision": 9,
+    "fd_digest": "a0c0b219d31d2408e0435c6c7d8a43f06385ee1a00209bab14504a66416db922",
+    "requirements_coverage": "0%",
+    "branch_coverage": "not measured",
+    "rationale": "The sole authorized focused test command failed in the Node runner before loading tests (spawn EPERM); no behavior assertion failed. Accept the truthful test report for independent static review, without treating any behavior as verified.",
+    "exceptions": "Explicit exception for 0% requirements coverage and unavailable branch coverage due to runner spawn EPERM; no retry under repository resource budget.",
+    "residual_risk": "Both backends' registration, permissions, execution, attempt outcomes, lease and Control Plane compatibility remain without independent runtime evidence; compile-only check validates syntax only.",
+    "pm_identity": "FD-009 host PM",
+    "decision_time": "2026-10-07T13:51:07+00:00"
+  }
+}

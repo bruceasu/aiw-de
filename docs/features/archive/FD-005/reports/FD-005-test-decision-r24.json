@@ -1,0 +1,27 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000024-test-report-ready",
+  "human_report": "FD-005-test-decision-r24.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-005-test-report-r23.md",
+    "fd_revision": 24,
+    "fd_digest": "e1d183edaa1c88162d8bbc3092dd19c483003703d7aef75300fb26368a507da0",
+    "requirements_coverage": "54.55%",
+    "branch_coverage": "not measured",
+    "rationale": "r23 唯一命令 exit 1，9 个新用例 7 通过、2 失败；API-27/29 得到 UNRESOLVED_TOOL_FAILURE，未达到目标断言，原因未定位。执行失败不能接受。结合 r19 历史证据，仅 18/33 API 场景完整覆盖。",
+    "exceptions": "无例外；54.55% 低于 70%，业务代码分支覆盖未测。15 个 API 场景保留未覆盖。",
+    "residual_risk": "API-27/29 的失败根因未知；API-16/19/23/33 仅局部通过，其他 11 个 API 场景未覆盖。真实服务、远端 Git、平台 G2、非 API 运行时未测试。",
+    "pm_identity": "host-pm-fd005-20261005",
+    "decision_time": "2026-10-05T14:12:24Z",
+    "raw_evidence": [
+      "tests/fd005/evidence-r23/node-test-output.txt",
+      "tests/fd005/evidence-r23/execution.json",
+      "tests/fd005/evidence-r19/node-test-output.txt",
+      "tests/fd005/evidence-r19/execution.json"
+    ],
+    "failed_scenarios": ["API-27", "API-29"]
+  }
+}

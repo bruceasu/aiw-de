@@ -1,0 +1,42 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-001",
+  "kind": "pm-decision",
+  "source_event": "FD-001-000008-test-report-ready",
+  "human_report": "FD-001-test-decision-r8-v1.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-001-test-r7.md",
+    "fd_revision": 8,
+    "fd_digest": "cb71ae57807dd1e49d370c94d49cbdfdc772553fe7990502a781f7dcdf14005b",
+    "requirements_coverage": "47.73%",
+    "branch_coverage": "not measured",
+    "rationale": "Verified raw r7 results contain 36 passed business assertions and no failed or infrastructure assertions. Diagnosis has separate evidence and is excluded from business counts. The 88-scenario inventory preserves 46 uncovered scenarios; coverage is not inflated. Critical changed observable paths (pending filtering, active window, 4-role read/new/worker visibility, 5/8s polling, reading/edit/reset, real session expiry, identity/motion and four widths) have independent execution. Existing 4 Web Console ITs and Worker visual evidence corroborate preserved action/security paths and failure/timeout/stale behavior; source inspection supports bounded read projections and original permission/CSRF boundaries. Accept this report for independent review with explicit coverage exceptions, not as full FD completion.",
+    "exceptions": "Grant a scoped exception to the 70% independent requirements coverage threshold (47.73%, 42/88) and unavailable branch coverage for this M1 UI/read projection review. No instrumentation/dependency/full-suite scope is authorized. Worker prior 4 ITs, 29 browser passes plus resolved focus checks, current independent screenshots and static source evidence may support Reviewer assessment but are not added to independent counts. All 46 uncovered scenarios remain uncovered; behavior requirements are not waived. Firefox verification remains user-deferred.",
+    "residual_risk": "Independent gaps include waiting counts/overlap, all event sources/missing associations, full approval/server-role/CSRF/race matrix, hidden/role-change/selection/error recovery and repair denominator; high-volume query cost and Firefox compatibility are unmeasured. Reviewer must identify concrete implementation/evidence defects despite the coverage exception and must not mark all scenarios executed.",
+    "pm_identity": "fd001-pm-host-20261004",
+    "decision_time": "2026-10-04T14:14:56+00:00",
+    "evidence_groups": [
+      {
+        "scenarios": "S043-S047,S082-S083,S086",
+        "evidence": "Worker baseline and shared-page screenshots; current independent 1440/390 images; template escaping, links and fallback inspection; no independent runtime credit"
+      },
+      {
+        "scenarios": "S048-S065,S085",
+        "evidence": "QueryService overview predicates, bounded batch/context and per-source SQL LIMIT; independent activity window/order cases; Reviewer must verify semantics and missing fields"
+      },
+      {
+        "scenarios": "S066-S071",
+        "evidence": "Existing action/security controllers unchanged, requireOperator/requireApprover/CSRF static calls; four prior Web Console IT results; full role matrix remains independent gap"
+      },
+      {
+        "scenarios": "S072-S081",
+        "evidence": "Worker single-request/10s timeout/30s stale/failure/unexpectedHTML executed results; console.js hidden/edit/selection/role-change guards statically traced; independent poll/read/edit/reset/cookie cases"
+      },
+      {
+        "scenarios": "S084,S087-S088",
+        "evidence": "Explicit Firefox defer decision; existing bilingual guides and separate M2-M4 records, subject to Reviewer check"
+      }
+    ]
+  }
+}

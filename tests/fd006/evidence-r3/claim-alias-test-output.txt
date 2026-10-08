@@ -1,0 +1,28 @@
+(node:14268) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use node --trace-deprecation ... to show where the warning was created)
+✖ two legacy refs resolving to one physical directory cannot both claim DIRECT tasks (333.0735ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 401.0035
+
+✖ failing tests:
+
+test at tests\fd006\claim-alias.test.mjs:63:1
+✖ two legacy refs resolving to one physical directory cannot both claim DIRECT tasks (333.0735ms)
+  Error: Isolated Control Plane exited before becoming ready: #
+  # There is insufficient memory for the Java Runtime Environment to continue.
+  # Native memory allocation (malloc) failed to allocate 94736 bytes. Error detail: Chunk::new
+  # An error report file with more information is saved as:
+  # D:\03_projects\AI-tools\aiw-dev\.wt\FD-006\hs_err_pid5888.log
+  #
+  # Compiler replay data is saved as:
+  # D:\03_projects\AI-tools\aiw-dev\.wt\FD-006\replay_pid5888.log
+
+      at waitForServer (file:///D:/03_projects/AI-tools/aiw-dev/.wt/FD-006/tests/fd006/claim-alias.test.mjs:44:40)
+      at async TestContext.<anonymous> (file:///D:/03_projects/AI-tools/aiw-dev/.wt/FD-006/tests/fd006/claim-alias.test.mjs:107:5)
+      at async Test.run (node:internal/test_runner/test:1125:7)

@@ -1,0 +1,29 @@
+# Feature Design Index
+
+FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
+
+## Active Features
+
+| FD | Title | Status | Priority |
+| --- | --- | --- | --- |
+| - | - | - | - |
+
+## Completed
+
+| FD | Title | Status | Priority |
+| --- | --- | --- | --- |
+| [FD-001](archive/FD-001/FD-001_MISSION_CONTROL_OVERVIEW_AND_SHARED_VISUAL_FOUND.md) | Mission Control Overview and Shared Visual Foundation | Complete | Medium |
+| [FD-003](archive/FD-003/FD-003_WORKER_FLEET_AND_SCHEDULING_EXPERIENCE.md) | Worker Fleet and Scheduling Experience | Complete | Medium |
+| [FD-004](archive/FD-004/FD-004_APPROVAL_AND_ENGINEERING_EVIDENCE.md) | Approval and Engineering Evidence | Complete | Medium |
+| [FD-005](archive/FD-005/FD-005_WORKER_PI.md) | Worker 公共执行基础与 pi 机制融合 | Complete | Medium |
+| [FD-006](archive/FD-006/FD-006_WORKSPACE_GIT.md) | Workspace 管理：目录接入与可选 Git 支持 | Complete | High |
+| [FD-007](archive/FD-007/FD-007_TASK_INSTRUCTION_REVISION_AND_OPERATOR_CONTROL.md) | Task Instruction Revision and Operator Control | Complete | High |
+| [FD-008](archive/FD-008/FD-008_TASK_WORKSPACE_REPLACEMENT.md) | 任务 Workspace 替换 | Complete | Medium |
+| [FD-009](archive/FD-009/FD-009_TYPESCRIPT_WORKER_AGENTRUNTIME_SPI.md) | TypeScript Worker AgentRuntime SPI 与单入口合并 | Complete | Medium |
+| [FD-010](archive/FD-010/FD-010_TYPESCRIPT_RUNTIME_CORE_WORKER.md) | 将 TypeScript runtime-core 收归单一 Worker 包 | Complete | Medium |
+
+## Deferred / Closed
+
+| FD | Title | Status | Priority |
+| --- | --- | --- | --- |
+| [FD-002](archive/FD-002/FD-002_RUN_MISSION_DETAIL_AND_TIMELINE.md) | Run Mission Detail and Timeline | Deferred | Medium |

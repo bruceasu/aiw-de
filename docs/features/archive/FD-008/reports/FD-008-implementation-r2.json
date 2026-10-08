@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-008",
+  "source_event": "FD-008-000009-changes-requested",
+  "human_report": "FD-008-implementation-r2.md",
+  "data": {
+    "summary": "修复 Reviewer r1 的待停止期间指令变更竞争及 ACK 状态展示缺失；测试豁免，编译和迁移未验证",
+    "changed_paths": [
+      "src/main/resources/db/migration/V20__task_workspace_replacement.sql",
+      "src/main/java/me/asu/aidev/work/application/TaskWorkspaceReplacementService.java",
+      "src/main/resources/templates/ui/run-detail.html",
+      "docs/current-zh/15-WEB-CONSOLE.md",
+      "docs/features/FD-008_TASK_WORKSPACE_REPLACEMENT.md"
+    ],
+    "commands": ["git diff --check"],
+    "results": ["静态 diff 检查通过", "未重复编译；r1 两次 JVM 原生内存不足", "用户豁免测试；双数据库迁移未执行"],
+    "residual_risk": "无源码编译、运行测试、UI 渲染、ACK 竞争或 SQLite/PostgreSQL 迁移通过证据"
+  }
+}

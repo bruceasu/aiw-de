@@ -1,0 +1,45 @@
+[
+  {
+    "id": "OPERATOR-permission",
+    "behavior": "Operator可见Run控制且拥有POST权限",
+    "passed": true,
+    "detail": {
+      "visible": [
+        "/ui/runs/fd2-action/pause",
+        "/ui/runs/fd2-action/cancel"
+      ],
+      "status": 200,
+      "state": {
+        "runId": "fd2-action",
+        "status": "RUNNING",
+        "controlState": "PAUSED",
+        "effectiveStatus": "PAUSED",
+        "terminal": false,
+        "requirementTaskId": "fd2-action-req",
+        "terminalSourceTaskId": null,
+        "resultRevision": null,
+        "approvalRequestId": null,
+        "lastFailedTaskId": null,
+        "lastFailureReason": null,
+        "failureCount": 0,
+        "recoveryCount": 0,
+        "lastRecoveredBy": null,
+        "lastRecoveredAt": null,
+        "pauseCount": 1,
+        "resumeCount": 0,
+        "lastControlAction": "PAUSE",
+        "lastControlledBy": "web:tester",
+        "lastControlReason": "independent fixture action",
+        "lastControlledAt": "2026-10-04T22:37:23.575Z",
+        "cancelledAt": null,
+        "maxParallelism": 0,
+        "activeSlots": 0,
+        "availableSlots": null,
+        "overcommittedSlots": 0,
+        "startedAt": "2025-10-01T23:59:50Z",
+        "statusUpdatedAt": "2026-10-04T22:37:23.575Z",
+        "completedAt": null
+      }
+    }
+  }
+]

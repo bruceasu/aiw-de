@@ -1,0 +1,77 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-007",
+  "source_event": "FD-007-000009-test-accepted",
+  "human_report": "FD-007-review-r1.md",
+  "data": {
+    "reviewer_session": "fd007-reviewer-20261007-a83c1d",
+    "fd_revision": 9,
+    "fd_digest": "3f27e314b5cfae9be80d29cf6f620a6a60e8b80fd03cc8c5bf2200c77f0ec13a",
+    "diff_base": "40493aa95f9e88b89fa990dc2509f0e47916db92",
+    "reviewed_commit": "151c6f09a568c668a0048a431e32e196180b4de6",
+    "worker_session": "fd007-worker-20261007-5f12bd",
+    "tester_session": "fd007-tester-20261007-b6e91d",
+    "decision": "changes-requested",
+    "findings": [
+      {
+        "id": "F-01",
+        "severity": "high",
+        "title": "Legacy TaskExecutor can ignore stop signal while runtime acknowledges and requeues",
+        "paths": [
+          "src/main/java/me/asu/aidev/worker/runtime/TaskExecutor.java:10-12",
+          "src/main/java/me/asu/aidev/worker/runtime/WorkerRuntime.java:173,186-188",
+          "src/main/java/me/asu/aidev/worker/runtime/WorkerRuntimeFactory.java:22-26"
+        ],
+        "requirement": "A normal re-dispatch waits for actual Worker stop acknowledgement; stale execution must not be treated as safely stopped.",
+        "evidence": "The default stop-aware overload delegates to the legacy one-argument method without observing the BooleanSupplier. WorkerRuntime acknowledges whenever that method returns after a stop signal, then control-plane acknowledgement requeues the task.",
+        "required_change": "Require explicit stop-aware execution or a confirmed cancellation result; never convert a normal return from a non-cooperative executor into stop acknowledgement. Add a behavior scenario for legacy/lambda executors."
+      },
+      {
+        "id": "F-02",
+        "severity": "medium",
+        "title": "Duplicate stop acknowledgement is rejected instead of being idempotent",
+        "paths": [
+          "src/main/java/me/asu/aidev/execution/application/TaskExecutionService.java:183-194",
+          "src/main/java/me/asu/aidev/execution/jdbc/JdbcExecutionAttemptRepository.java:129-137"
+        ],
+        "requirement": "FD Work Item 1.3 and Tester scenario S07 require idempotent stop acknowledgement.",
+        "evidence": "The first acknowledgement changes the attempt to EXPIRED and requeues the task. A duplicate is rejected because the task is no longer RUNNING; the repository update also only accepts an attempt in RUNNING state.",
+        "required_change": "Return success for a repeated acknowledgement of the same task, worker, and lease without requeueing or releasing resources twice; continue rejecting mismatched identities. Add duplicate/retry behavior coverage."
+      }
+    ],
+    "evidence": {
+      "applicable_scenarios": 14,
+      "covered_scenarios": 0,
+      "executed_behavior_tests": 0,
+      "passed_behavior_tests": 0,
+      "failed_behavior_tests": 0,
+      "unrun_behavior_tests": 14,
+      "requirements_coverage": "0%",
+      "branch_coverage": "not measured",
+      "raw_coverage_evidence": "not available; no tests or coverage commands were run",
+      "pm_exception": "PM waived the coverage threshold and accepted missing runtime evidence only to proceed to static review; this is not a behavior pass.",
+      "compile": "not run in Reviewer session; Worker report records Maven unavailable and no wrapper",
+      "sqlite_migration": "not run",
+      "postgresql_migration": "not run"
+    },
+    "commands_run": [
+      "aiw fd show FD-007",
+      "aiw fd claim FD-007 FD-007-000009-test-accepted --session fd007-reviewer-20261007-a83c1d",
+      "git diff --stat 40493aa..feature/FD-007",
+      "git diff 40493aa..feature/FD-007 -- implementation files under review",
+      "rg -n TaskExecutor/acknowledgeStop call sites under .wt/FD-007/src/main/java",
+      "UTF-8 static reads of FD, receipts, reports, and reviewed source files"
+    ],
+    "commands_skipped": [
+      "tests",
+      "compile/build",
+      "SQLite migration",
+      "PostgreSQL migration",
+      "coverage",
+      "network",
+      "application runtime"
+    ],
+    "residual_risk": "Behavior, role enforcement, concurrency races, legacy protocol compatibility, template states, and SQLite/PostgreSQL migration compatibility remain unverified. External side effects may continue after cooperative stop or ADMIN force redispatch."
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Resume Codex Session"
+  short_description: "Choose a workspace session and prepare interactive resume"
+  default_prompt: "Use $resume-ext to show my current workspace sessions and prepare an interactive resume command."

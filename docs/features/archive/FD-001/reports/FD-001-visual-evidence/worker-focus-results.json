@@ -1,0 +1,14 @@
+{
+  "checks": [
+    {
+      "name": "form input and programmatic focus remain readable",
+      "passed": true
+    },
+    {
+      "name": "keyboard focus is visible on next form field",
+      "passed": true
+    }
+  ],
+  "firefox": "not available; not run",
+  "scope": "local fixture; Chromium"
+}

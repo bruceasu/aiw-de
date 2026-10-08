@@ -1,0 +1,43 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000008-test-rejected",
+  "human_report": "FD-002-implementation-recovery-r8.md",
+  "data": {
+    "summary": "Worker recovery after blocked report: semantic section locator prepared by independent Tester; graph scroll and long phase wrapping fixed; compile-only successful; new test execution awaiting a real handoff and new human budget.",
+    "worker_session_ref": "fd002-worker-20261005-88571fc5",
+    "baseline_commit": "7372e13c46779ebe60817872b47348385adbb240",
+    "review_scope": "Original r5 implementation paths plus this local recovery and FD-002 evidence only; exclude unrelated concurrent changes.",
+    "changed_paths": [
+      "src/main/resources/static/ui/mission.js",
+      "src/main/resources/static/ui/console.css",
+      "tests/fd002/browser.mjs",
+      "tests/fd002/README.md",
+      "tests/fd002/runtime.py",
+      "tests/fd002/fixture.py",
+      "docs/features/FD-002_RUN_MISSION_DETAIL_AND_TIMELINE.md",
+      "docs/features/reports/FD-002-implementation-recovery-r8.md",
+      "docs/features/reports/FD-002-implementation-recovery-r8.json"
+    ],
+    "commands": [
+      {
+        "command": "C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests compile",
+        "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+        "exit_code": 0,
+        "jdk": 21,
+        "elapsed_seconds": 1.136,
+        "evidence": ".ai/fd/FD-002/compile-recovery-r8.txt"
+      }
+    ],
+    "results": [
+      "compile-only: BUILD SUCCESS; classes up to date; 2+31 resources copied",
+      "three prior runs retained: 24/104 then 36/104 then 36/104; latest distinct coverage 34.62%; 0 executed behavior failures; 60 planned blocked and 8 uncovered",
+      "new locator and interface fixes: statically reviewed, not runtime tested",
+      "new independent Tester handoff required; previous runtime budget exhausted",
+      "Reviewer failures: 0; review not requested before test acceptance",
+      "FD-001: independently reviewed and natively archived Complete"
+    ],
+    "residual_risk": "FD-002 attempts/failure/timeline/actions/refresh/width acceptance incomplete; recovery runtime unexecuted; Firefox user-deferred; branch coverage not measured; original Timeline full-read cost unmeasured. New handoff does not authorize another run."
+  }
+}

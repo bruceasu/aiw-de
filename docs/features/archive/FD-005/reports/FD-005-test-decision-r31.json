@@ -1,0 +1,25 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000031-test-report-ready",
+  "human_report": "FD-005-test-decision-r31.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-005-test-report-r30.md",
+    "fd_revision": 31,
+    "fd_digest": "2f3777634ce0a27233b2a0f86f0ed6c7059c9eca1d92e068b3bc8c00aa8ac512",
+    "requirements_coverage": "66.67%",
+    "branch_coverage": "not measured",
+    "rationale": "r30 唯一授权命令 exit 1，17 项中 API-16/33 两项失败；累计仅 22/33 个 API 场景完整覆盖，低于 70%。失败原因尚不能归于生产或夹具。",
+    "exceptions": "无例外；不批准失败执行、低于 70% 的场景覆盖，亦不将未测分支或 API-31 本地证据外推为完整通过。",
+    "residual_risk": "API-16 入口失败前置原因未知，API-33 complete 参数/manifest 契约待核对；11 个 API 场景未完整覆盖、分支未测；真实服务、远端 Git、平台 G2 与非 API 运行时未验证。",
+    "pm_identity": "host-pm-fd005-20261005",
+    "decision_time": "2026-10-05T14:26:23Z",
+    "raw_evidence": [
+      "tests/fd005/evidence-r30/node-test-output.txt",
+      "tests/fd005/evidence-r30/execution.json"
+    ],
+    "failed_scenarios": ["API-16", "API-33"]
+  }
+}

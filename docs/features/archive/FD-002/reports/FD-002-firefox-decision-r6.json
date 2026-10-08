@@ -1,0 +1,18 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "human-decision",
+  "fd_id": "FD-002",
+  "source_event": "FD-002-000006-implementation-ready",
+  "human_report": "FD-002-firefox-decision-r6.md",
+  "data": {
+    "decision": "defer-firefox-verification",
+    "fd_revision": 6,
+    "fd_digest": "7869eb2108ad9ac8811e65ea339ecde7d6c08d7394add7230ab85a2e5a178c8a",
+    "human_approval": "approved:conversation:call_GbKQIKiYeysoTKpcQOL96T3G",
+    "scope": "FD002 Firefox graph/layout and refresh-state verification only; continue review with actual Chromium evidence; no page behavior waiver",
+    "coverage_policy": "Keep firefox-graph and firefox-refresh in104-scenario denominator and mark uncovered, never passed",
+    "residual_risk": "Firefox compatibility unverified; other uncovered scenarios and unavailable branch coverage remain",
+    "recorded_by": "fd002-planner-20261005-96860f94",
+    "decision_time": "2026-10-04T22:36:24+00:00"
+  }
+}

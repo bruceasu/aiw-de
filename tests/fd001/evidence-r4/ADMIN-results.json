@@ -1,0 +1,8 @@
+[
+  {
+    "id": "ADMIN-infrastructure",
+    "behavior": "Independent browser infrastructure completes",
+    "passed": false,
+    "detail": "Error: navigation rejected net::ERR_ABORTED\n    at nav (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:21:154)\n    at async file:///D:/03_projects/AI-tools/aiw-dev/tests/fd001/browser.mjs:24:2"
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-007",
+  "source_event": "FD-007-000012-test-report-ready",
+  "human_report": "FD-007-test-decision-r2.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-007-test-report-r2.md",
+    "fd_revision": 12,
+    "fd_digest": "4bf07f76d32f27ae06e95972cce178b348aaa633367ddbf997b40db4d0227b1f",
+    "requirements_coverage": "0%",
+    "branch_coverage": "not measured",
+    "rationale": "PM 明确豁免覆盖门槛，仅允许对 Worker r2 修复进行独立静态审查；这不是测试通过，22 个场景均未运行。",
+    "exceptions": "豁免 70% 需求覆盖率门槛与未测分支覆盖；行为测试 0/22，未运行编译、SQLite 或 PostgreSQL 迁移检查。",
+    "residual_risk": "Executor STOPPED 声明、旧式 executor 安全路径、ACK 重试/身份错配、并发资源释放、权限、旧 attempt 隔离、UI 和双数据库迁移均无行为证据；协作式停止及 ADMIN 强制重派仍有外部副作用风险。",
+    "pm_identity": "主控代理（PM override；aiw fd claim 不允许 agent session 领取 PM handoff）",
+    "decision_time": "2026-10-07T07:11:00+09:00"
+  }
+}

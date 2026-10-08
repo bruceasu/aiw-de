@@ -1,0 +1,10 @@
+{
+  "checks": [
+    {
+      "name": "form input and programmatic focus remain readable",
+      "passed": false
+    }
+  ],
+  "firefox": "not available; not run",
+  "scope": "local fixture; Chromium"
+}

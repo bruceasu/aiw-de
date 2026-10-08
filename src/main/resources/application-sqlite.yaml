@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: ${AIW_DB_URL:jdbc:sqlite:d:/temp/data/aidev-r3.db}
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+      minimum-idle: 1
+      connection-timeout: 30000
+      connection-init-sql: PRAGMA foreign_keys=ON
+      data-source-properties:
+        busy_timeout: 5000
+        transaction_mode: IMMEDIATE
+  flyway:
+    mixed: true
+
+aidev:
+  database:
+    mode: sqlite

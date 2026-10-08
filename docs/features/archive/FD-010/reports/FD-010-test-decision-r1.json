@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-010",
+  "source_event": "FD-010-000006-test-report-ready",
+  "human_report": "FD-010-test-decision-r1.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-010-test-report-r1.md",
+    "fd_revision": 6,
+    "fd_digest": "8796e115833abdb03fdcce8ee566b152f7196e736672f09aaa999b76842ab7b0",
+    "requirements_coverage": "21.05%",
+    "branch_coverage": "not measured",
+    "rationale": "All four authorized offline behavior assertions passed; the relocation is constrained to ownership and paths, so independent static review can evaluate the unexecuted packaging and import changes without calling them tested.",
+    "exceptions": "Explicit exception for 4/19 (21.05%) requirements coverage and unavailable branch coverage; build, release packaging, live backends and Control Plane integration were not authorized or run.",
+    "residual_risk": "Source and release Worker startup, backend integration, full attempt lifecycle and external hard-coded old repository paths lack independent runtime evidence.",
+    "pm_identity": "FD-010 host PM",
+    "decision_time": "2026-10-07T14:39:13+00:00"
+  }
+}

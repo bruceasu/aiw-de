@@ -1,0 +1,17 @@
+[
+  {
+    "id": "VIEWER-role",
+    "behavior": "Authenticated role displayed",
+    "passed": true
+  },
+  {
+    "id": "VIEWER-new",
+    "behavior": "New Run visibility follows role",
+    "passed": true
+  },
+  {
+    "id": "VIEWER-worker-actions",
+    "behavior": "Worker operations visibility follows role",
+    "passed": true
+  }
+]

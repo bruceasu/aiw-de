@@ -1,0 +1,24 @@
+PASS ADMIN-permission
+PASS requirement-original
+PASS requirement-long
+PASS requirement-escaped
+PASS status-lifecycle
+PASS status-control
+PASS status-effective
+PASS dashboard-phase
+PASS task-counts
+PASS no-eta
+PASS single-edges
+PASS single-direction
+PASS graph-node-link
+PASS graph-hide
+PASS parallel-edges
+PASS parallel-levels
+PASS final-review-level
+PASS verification-level
+PASS repair-added
+PASS repair-history
+PASS no-inferred-edge
+INFRASTRUCTURE Error: net::ERR_INSUFFICIENT_RESOURCES
+    at nav (file:///D:/03_projects/AI-tools/aiw-dev/tests/fd002/browser.mjs:32:100)
+    at async file:///D:/03_projects/AI-tools/aiw-dev/tests/fd002/browser.mjs:131:2

@@ -1,0 +1,245 @@
+[
+  {
+    "id": "ADMIN-permission",
+    "behavior": "Admin可见既有Run控制且拥有POST权限",
+    "passed": true,
+    "detail": {
+      "visible": [
+        "/ui/runs/fd2-action/pause",
+        "/ui/runs/fd2-action/cancel"
+      ],
+      "status": 200,
+      "state": {
+        "runId": "fd2-action",
+        "status": "RUNNING",
+        "controlState": "PAUSED",
+        "effectiveStatus": "PAUSED",
+        "terminal": false,
+        "requirementTaskId": "fd2-action-req",
+        "terminalSourceTaskId": null,
+        "resultRevision": null,
+        "approvalRequestId": null,
+        "lastFailedTaskId": null,
+        "lastFailureReason": null,
+        "failureCount": 0,
+        "recoveryCount": 0,
+        "lastRecoveredBy": null,
+        "lastRecoveredAt": null,
+        "pauseCount": 1,
+        "resumeCount": 0,
+        "lastControlAction": "PAUSE",
+        "lastControlledBy": "web:tester",
+        "lastControlReason": "independent fixture action",
+        "lastControlledAt": "2026-10-04T22:24:17.474Z",
+        "cancelledAt": null,
+        "maxParallelism": 0,
+        "activeSlots": 0,
+        "availableSlots": null,
+        "overcommittedSlots": 0,
+        "startedAt": "2025-10-01T23:59:50Z",
+        "statusUpdatedAt": "2026-10-04T22:24:17.474Z",
+        "completedAt": null
+      }
+    }
+  },
+  {
+    "id": "requirement-original",
+    "behavior": "需求来自 Run 保存的 requirementTaskId，非首个展示任务",
+    "passed": true,
+    "detail": "saved requirementTaskId input matched"
+  },
+  {
+    "id": "requirement-long",
+    "behavior": "完整长需求可阅读且保留末尾文本",
+    "passed": true
+  },
+  {
+    "id": "requirement-escaped",
+    "behavior": "需求 HTML/script 作为转义文本呈现",
+    "passed": true
+  },
+  {
+    "id": "status-lifecycle",
+    "behavior": "生命周期与公开 Run API 保存状态一致",
+    "passed": true
+  },
+  {
+    "id": "status-control",
+    "behavior": "控制状态与公开 Run API 分别可阅读",
+    "passed": true
+  },
+  {
+    "id": "status-effective",
+    "behavior": "有效状态与公开 Run API 分别可阅读",
+    "passed": true,
+    "detail": {
+      "effective": "RUNNING"
+    }
+  },
+  {
+    "id": "dashboard-phase",
+    "behavior": "当前阶段与公开 Dashboard 事实一致",
+    "passed": true,
+    "detail": {
+      "phases": [
+        "ENGINEERING_GATE"
+      ]
+    }
+  },
+  {
+    "id": "task-counts",
+    "behavior": "完整 Run task计数与 Dashboard一致",
+    "passed": true,
+    "detail": {
+      "expected": 4,
+      "publicTotals": [
+        {
+          "field": "tasks.total",
+          "value": 4
+        }
+      ]
+    }
+  },
+  {
+    "id": "no-eta",
+    "behavior": "任务完成数不生成 ETA 或工程完成百分比",
+    "passed": true
+  },
+  {
+    "id": "single-edges",
+    "behavior": "单实施图边与保存的依赖完全一致",
+    "passed": true
+  },
+  {
+    "id": "single-direction",
+    "behavior": "单实施 SVG 从前置任务指向 dependent",
+    "passed": true
+  },
+  {
+    "id": "graph-node-link",
+    "behavior": "SVG节点定位到对应真实task指令",
+    "passed": true,
+    "detail": [
+      {
+        "href": "#task-MTQ6ZmQyLXNpbmdsZS1yZXE",
+        "text": "\n                \n                  fd2-single-req · REQUIREMENT_ANALYSIS · COMPLETED\n                  REQUIREMENT_ANALYSISfd2-single-reqCOMPLETED\n                \n              ",
+        "exists": true
+      },
+      {
+        "href": "#task-MTA6ZmQyLXMtaW1wbA",
+        "text": "\n                \n                  fd2-s-impl · IMPLEMENTATION · COMPLETED\n                  IMPLEMENTATIONfd2-s-implCOMPLETED\n                \n              ",
+        "exists": true
+      },
+      {
+        "href": "#task-MTI6ZmQyLXMtcmV2aWV3",
+        "text": "\n                \n                  fd2-s-review · CODE_REVIEW · COMPLETED\n                  CODE_REVIEWfd2-s-reviewCOMPLETED\n                \n              ",
+        "exists": true
+      },
+      {
+        "href": "#task-MTI6ZmQyLXMtdmVyaWZ5",
+        "text": "\n                \n                  fd2-s-verify · INTEGRATION_VERIFICATION · COMPLETED\n                  INTEGRATION_VERIFICATIONfd2-s-verifyCOMPLETED\n                \n              ",
+        "exists": true
+      },
+      {
+        "href": "#mission-attempts",
+        "text": "Read attempt history",
+        "exists": true
+      },
+      {
+        "href": "#mission-attempts",
+        "text": "Read attempt history",
+        "exists": true
+      },
+      {
+        "href": "#task-MTQ6ZmQyLXNpbmdsZS1yZXE",
+        "text": "fd2-single-req",
+        "exists": true
+      },
+      {
+        "href": "#mission-attempts",
+        "text": "Read attempt history",
+        "exists": true
+      },
+      {
+        "href": "#task-MTA6ZmQyLXMtaW1wbA",
+        "text": "fd2-s-impl",
+        "exists": true
+      },
+      {
+        "href": "#mission-attempts",
+        "text": "Read attempt history",
+        "exists": true
+      },
+      {
+        "href": "#task-MTI6ZmQyLXMtcmV2aWV3",
+        "text": "fd2-s-review",
+        "exists": true
+      },
+      {
+        "href": "#task-MTQ6ZmQyLXNpbmdsZS1yZXE",
+        "text": "fd2-single-req",
+        "exists": true
+      },
+      {
+        "href": "#task-MTQ6ZmQyLXNpbmdsZS1yZXE",
+        "text": "fd2-single-req",
+        "exists": true
+      },
+      {
+        "href": "#task-MTA6ZmQyLXMtaW1wbA",
+        "text": "fd2-s-impl",
+        "exists": true
+      },
+      {
+        "href": "#task-MTI6ZmQyLXMtcmV2aWV3",
+        "text": "fd2-s-review",
+        "exists": true
+      },
+      {
+        "href": "#task-MTI6ZmQyLXMtdmVyaWZ5",
+        "text": "fd2-s-verify",
+        "exists": true
+      }
+    ]
+  },
+  {
+    "id": "graph-hide",
+    "behavior": "Hide graph后完整任务表仍可阅读",
+    "passed": true
+  },
+  {
+    "id": "parallel-edges",
+    "behavior": "并行分支和 integration 真实边完全一致",
+    "passed": true
+  },
+  {
+    "id": "parallel-levels",
+    "behavior": "同层并行 task，integration 位于分支后方",
+    "passed": true
+  },
+  {
+    "id": "final-review-level",
+    "behavior": "最终 CODE_REVIEW 位于 integration 后方",
+    "passed": true
+  },
+  {
+    "id": "verification-level",
+    "behavior": "INTEGRATION_VERIFICATION 位于 integration 后方",
+    "passed": true
+  },
+  {
+    "id": "repair-added",
+    "behavior": "新增 repair 在局部刷新后显示真实 task 和边",
+    "passed": true
+  },
+  {
+    "id": "repair-history",
+    "behavior": "repair 新增后原任务与原依赖仍保留",
+    "passed": true
+  },
+  {
+    "id": "no-inferred-edge",
+    "behavior": "同Run taskType/列表顺序不会生成未保存的边",
+    "passed": true
+  }
+]

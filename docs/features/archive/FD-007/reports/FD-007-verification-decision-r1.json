@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-007",
+  "source_event": "FD-007-000015-changes-requested",
+  "human_report": "FD-007-verification-decision-r1.md",
+  "data": {
+    "decision_type": "verification-waiver",
+    "disposition": "accepted_with_risk",
+    "fd_revision": 15,
+    "fd_digest": "530e6aff72de8aa0098a5dfcc92fdcc07401272717926006de0ff03af1de69ab",
+    "reviewer_report": "docs/features/reviews/FD-007-review-r2.md",
+    "tester_report": "docs/features/reports/FD-007-test-report-r2.md",
+    "waived_checks": [
+      "Tester S21: execute the V19 migration on SQLite",
+      "Tester S22: execute the V19 migration on PostgreSQL"
+    ],
+    "rationale": "PM expressly waives the two runtime migration execution checks for this FD lifecycle because repository instructions prohibit their execution. Reviewer r2 found no obvious dialect-specific SQL issue by static inspection, but confirms that static inspection cannot prove runner/database/existing-data success.",
+    "not_passed": "SQLite and PostgreSQL migration application remain unverified. No migration output exists; this decision does not say either database successfully applied V19.",
+    "residual_risk": "Migration runner behavior, actual database versions/configurations, existing data, and database-specific behavior may reveal defects not visible in static SQL review. All 22 behavior scenarios remain unrun. This is not release or deployment approval.",
+    "pm_identity": "主控代理（fd-workflow PM verification-stage override）",
+    "decision_time": "2026-10-07T07:17:00+09:00"
+  }
+}

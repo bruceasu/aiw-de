@@ -1,0 +1,26 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-004",
+  "source_event": "FD-004-000006-design-ready",
+  "human_report": "FD-004-implementation-r6.md",
+  "data": {
+    "summary": "按审批记录的 source task、revision 和 gate 关闭时间关联已存证据，提供有界分区与 Run 上下文。",
+    "changed_paths": [
+      "src/main/java/me/asu/aidev/webconsole/domain/WebConsoleApprovalDetail.java",
+      "src/main/java/me/asu/aidev/webconsole/jdbc/JdbcWebConsoleApprovalReadRepository.java",
+      "src/main/java/me/asu/aidev/webconsole/application/WebConsoleQueryService.java",
+      "src/main/java/me/asu/aidev/webconsole/protocol/http/WebConsoleController.java",
+      "src/main/resources/templates/ui/approvals.html",
+      "src/main/resources/templates/ui/approval-evidence.html",
+      "src/main/resources/templates/ui/run-detail.html",
+      "src/main/resources/static/ui/console.css",
+      "docs/current/15-WEB-CONSOLE.md",
+      "docs/current-zh/15-WEB-CONSOLE.md",
+      "docs/features/FD-004_APPROVAL_AND_ENGINEERING_EVIDENCE.md"
+    ],
+    "commands": ["git diff --check", "C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests compile"],
+    "results": ["编辑中一次静态差异检查无空白错误", "JDK 21 离线 compile-only 成功，181 个源文件"],
+    "residual_risk": "测试、SQL 运行查询、Thymeleaf 渲染和浏览器未运行；交互与数据库运行时行为仍待独立阶段核对。"
+  }
+}

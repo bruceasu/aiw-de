@@ -1,0 +1,66 @@
+[
+  {
+    "id": "waiting-count-samples",
+    "behavior": "Every mutually exclusive waiting group total agrees with its bounded sample",
+    "passed": true,
+    "detail": [
+      {
+        "label": "No matching capability\n0",
+        "total": 0,
+        "samples": [],
+        "text": "No matching capability\n0\n\nNo matching task in this detail window."
+      },
+      {
+        "label": "Worker capacity\n0",
+        "total": 0,
+        "samples": [],
+        "text": "Worker capacity\n0\n\nNo matching task in this detail window."
+      },
+      {
+        "label": "Run admission\n1",
+        "total": 1,
+        "samples": [
+          "tester-run-00-ready"
+        ],
+        "text": "Run admission\n1\ntester-run-00-ready\nIMPLEMENTATION\njava\nmaven\nRun admission blocked"
+      },
+      {
+        "label": "Fleet admission\n0",
+        "total": 0,
+        "samples": [],
+        "text": "Fleet admission\n0\n\nNo matching task in this detail window."
+      },
+      {
+        "label": "Policy\n1",
+        "total": 1,
+        "samples": [
+          "tester-run-06-ready"
+        ],
+        "text": "Policy\n1\ntester-run-06-ready\nIMPLEMENTATION\nnonexistent\nPolicy blocked\nNo matching capability"
+      }
+    ]
+  },
+  {
+    "id": "waiting-overlap",
+    "behavior": "READY task lacking capability and policy admission appears once in the primary Policy group",
+    "passed": true,
+    "detail": [
+      {
+        "label": "Policy\n1",
+        "text": "Policy\n1\ntester-run-06-ready\nIMPLEMENTATION\nnonexistent\nPolicy blocked\nNo matching capability"
+      }
+    ]
+  },
+  {
+    "id": "waiting-open-count-change",
+    "behavior": "Open waiting group survives count change and refresh after focus moved away",
+    "passed": false,
+    "detail": "count did not actually update"
+  },
+  {
+    "id": "selection-multi-region",
+    "behavior": "Selection crossing endpoint regions and intermediate regions preserves text and node identity",
+    "passed": false,
+    "detail": "unselected region did not actually refresh"
+  }
+]

@@ -1,0 +1,32 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-003",
+  "source_event": "FD-003-000006-design-ready",
+  "human_report": "FD-003-implementation-r7.md",
+  "data": {
+    "summary": "有界 Fleet 页面读取、真实 Run 关联、活动租约与 READY 多条件诊断、调度后果说明及双语指南",
+    "changed_paths": [
+      "src/main/java/me/asu/aidev/webconsole/domain/WebConsoleFleetDetail.java",
+      "src/main/java/me/asu/aidev/webconsole/jdbc/JdbcWebConsoleOverviewReadRepository.java",
+      "src/main/java/me/asu/aidev/webconsole/application/WebConsoleQueryService.java",
+      "src/main/java/me/asu/aidev/webconsole/protocol/http/WebConsoleController.java",
+      "src/main/resources/templates/ui/workers.html",
+      "src/main/resources/templates/ui/system.html",
+      "docs/current/15-WEB-CONSOLE.md",
+      "docs/current-zh/15-WEB-CONSOLE.md",
+      "docs/features/FD-003_WORKER_FLEET_AND_SCHEDULING_EXPERIENCE.md"
+    ],
+    "commands": [
+      "git diff --check -- src/main/java/me/asu/aidev/webconsole src/main/resources/templates/ui/workers.html src/main/resources/templates/ui/system.html docs/current/15-WEB-CONSOLE.md docs/current-zh/15-WEB-CONSOLE.md",
+      "C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests compile (default Java 8)",
+      "JAVA_HOME=C:\\green\\jdk-21.0.8; C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests compile"
+    ],
+    "results": [
+      "静态空白检查通过",
+      "Java 8 环境导致编译失败，未归因于 FD-003 源码",
+      "Java 21 离线 compile-only 通过：179 个源文件"
+    ],
+    "residual_risk": "用户要求不做测试；Thymeleaf 渲染、浏览器布局/交互、刷新及状态竞争未运行"
+  }
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "OPERATOR-role",
+    "behavior": "Authenticated role displayed",
+    "passed": true
+  },
+  {
+    "id": "OPERATOR-new",
+    "behavior": "New Run visibility follows role",
+    "passed": true
+  },
+  {
+    "id": "OPERATOR-worker-actions",
+    "behavior": "Worker operations visibility follows role",
+    "passed": true
+  }
+]

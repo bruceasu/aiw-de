@@ -1,0 +1,17 @@
+[
+  {
+    "id": "APPROVER-role",
+    "behavior": "Authenticated role displayed",
+    "passed": true
+  },
+  {
+    "id": "APPROVER-new",
+    "behavior": "New Run visibility follows role",
+    "passed": true
+  },
+  {
+    "id": "APPROVER-worker-actions",
+    "behavior": "Worker operations visibility follows role",
+    "passed": true
+  }
+]

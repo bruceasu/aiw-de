@@ -1,0 +1,34 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000010-test-report-ready",
+  "human_report": "FD-005-test-decision-r8.md",
+  "data": {
+    "disposition": "rejected",
+    "tester_report": "docs/features/reports/FD-005-test-report-r8.md",
+    "fd_revision": 10,
+    "fd_digest": "5b5a4a5d5b36f86cec6af83087d29035ffe58cf41fb93cb5468fa78d3cfedabd",
+    "requirements_coverage": "89.47%",
+    "branch_coverage": "not measured",
+    "rationale": "261 个已执行用例中 5 个失败，不能接受。SDK-tool-parameters 已到达目标断言，非法额外字段未阻止成功上报。TOOL-failure-then-text 未建立普通可修正错误前提，两项摘要未到达摘要调用，Git finalize 缺少 argv/stderr 和临时终态证据，须分别修正前置或补充诊断后独立复测，不据这些前置失败推断未观察的副作用或具体根因。",
+    "exceptions": "无验收豁免。256 个原始 pass-case 中 REPORT-manifest 为 partial，完整通过仅 255/285=89.47%；全 FD 分支未测。core 629/777=80.95% 与内存转译 API 94/116=81.03% 仅为局部插桩统计。",
+    "residual_risk": "24 个未运行场景与 REPORT-manifest 部分兼容场景保留在分母；真实四类 Worker 主循环、Go/Python SDK、Codex 平台全部会话禁存、真实端点、发布竞态与升级回滚未证明。缺失的临时诊断已随安全清理删除，不能恢复或补写；后续须新的代码、命令审查与授权。源码自查另发现成功路径误记资源未知及未知资源后领取边界问题，须在 Worker 阶段处理。真实 Codex 准入继续默认拒绝。",
+    "pm_identity": "fd005-pm-20261005-b698602d",
+    "decision_time": "2026-10-04T23:37:17+00:00",
+    "actual_execution": "2026-10-04T23:23:00.535Z–2026-10-04T23:23:30.869Z; exact authorized command once; exit 1; three temporary Go compiles exit 0; resource_uncertain=false; owned temporary root safely cleaned.",
+    "raw_evidence": [
+      "tests/fd005/evidence-r8/execution.json",
+      "tests/fd005/evidence-r8/node-test-events.jsonl",
+      "tests/fd005/evidence-r8/results/sdk.test.mjs.jsonl",
+      "tests/fd005/evidence-r8/results/core.test.mjs.jsonl",
+      "tests/fd005/evidence-r8/results/workspace.test.mjs.jsonl"
+    ],
+    "static_findings": [
+      "SDK 0.3.9 tool.mjs 读取 options.errorFunction；产品三处使用 toolErrorFunction，须按固定 SDK 公开选项对齐并记录校验失败。",
+      "runClaimedAttempt 的 finally 在 evidenceFinished=true 时进入 resource-terminal unknown 分支；成功路径元数据不一致。",
+      "adapter.settled、未知资源结果与 TS/API slot 下一次领取需遵循有界收尾及保留资源边界。",
+      "公开 API adapter 工厂应与生产入口一致拒绝保留而不可执行角色；ProtocolError 类型声明补齐公开数值构造签名。"
+    ]
+  }
+}

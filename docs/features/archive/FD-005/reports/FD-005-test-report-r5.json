@@ -1,0 +1,5078 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "tester-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000006-implementation-ready",
+  "human_report": "FD-005-test-report-r5.md",
+  "data": {
+    "implementation_event": "FD-005-000006-implementation-ready",
+    "tested_fd_revision": 6,
+    "tested_fd_digest": "f29cb07ce849cbbc92c64095bcac4e37ce873ef160d3d3ff6fcf819b38ee5015",
+    "tester_session": "fd005-tester-20261005-7865d383",
+    "applicable_scenarios": 222,
+    "covered_scenarios": 78,
+    "executed_behavior_tests": 138,
+    "passed_behavior_tests": 78,
+    "failed_behavior_tests": 60,
+    "unrun_behavior_tests": 84,
+    "requirements_coverage": "35.14%",
+    "branch_coverage": "not measured",
+    "raw_coverage_evidence": "tests/fd005/evidence-r5/node-test-events.jsonl#test:coverage; tests/fd005/evidence-r5/v8-raw/; runtime-core scoped V8 278/393=70.74%",
+    "coverage_unavailable_reason": "完整 FD 业务代码跨四个 Worker 与 Go launcher；本轮仅 Node runtime-core 有 V8 分支计数，Go 与实际 Worker/SDK 未做分支插桩或端到端执行，因此不能计算全 FD 分支覆盖率。含测试 helper 的 Node 总比例也不能作为业务代码比例。",
+    "test_files": [
+      "tests/fd005/cases.mjs",
+      "tests/fd005/harness.mjs",
+      "tests/fd005/core.test.mjs",
+      "tests/fd005/session-fixture.mjs",
+      "tests/fd005/session.test.mjs",
+      "tests/fd005/reporter.mjs",
+      "tests/fd005/fake-native.go",
+      "tests/fd005/run-offline.mjs"
+    ],
+    "authorization_records": [
+      "docs/features/reports/FD-005-test-authorization-r5.md"
+    ],
+    "commands": [
+      "node tests/fd005/run-offline.mjs --authorization docs/features/reports/FD-005-test-authorization-r5.json"
+    ],
+    "recommendation": "blocked",
+    "not_applicable_reason": "",
+    "residual_risk": "60 个实际 Node 失败保留，其中51个前置夹具失败、7个部分执行/声明前置不明确、2个假 native/RPC目标断言失败；84个实际 Worker、跨语言、插件、真实全会话禁存和运维场景未覆盖。实际平台没有禁存认证，不能上线宣称G2通过；需PM拒绝并由Worker修复产品/明确公开契约，再重新独立测试。",
+    "scenarios": [
+      {
+        "id": "ROLE-requirements-tool-success",
+        "behavior": "requirements 的已授权读取有合法完整结果",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-requirements-tool-success"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-requirements-tool-success",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-requirements-tool-failure",
+        "behavior": "requirements 的工具失败不能被后续成功文本掩盖",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-requirements-tool-failure"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-requirements-tool-failure",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-requirements-access",
+        "behavior": "requirements 的写入被拒绝且文件不变",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-requirements-access"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-requirements-access",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-requirements-cancel",
+        "behavior": "requirements 的取消后新工具不执行",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-requirements-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-requirements-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "API-requirements-success",
+        "behavior": "requirements 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-requirements-failure",
+        "behavior": "requirements 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-requirements-capability-reject",
+        "behavior": "requirements 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-requirements-report",
+        "behavior": "requirements 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-requirements-cancel",
+        "behavior": "requirements 的实际 API Worker 取消后无过期 complete",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "ROLE-architect-tool-success",
+        "behavior": "architect 的已授权读取有合法完整结果",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-architect-tool-success"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-architect-tool-success",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-architect-tool-failure",
+        "behavior": "architect 的工具失败不能被后续成功文本掩盖",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-architect-tool-failure"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-architect-tool-failure",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-architect-access",
+        "behavior": "architect 的写入被拒绝且文件不变",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-architect-access"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-architect-access",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-architect-cancel",
+        "behavior": "architect 的取消后新工具不执行",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-architect-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-architect-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "API-architect-success",
+        "behavior": "architect 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-architect-failure",
+        "behavior": "architect 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-architect-capability-reject",
+        "behavior": "architect 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-architect-report",
+        "behavior": "architect 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-architect-cancel",
+        "behavior": "architect 的实际 API Worker 取消后无过期 complete",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "ROLE-planner-tool-success",
+        "behavior": "planner 的已授权读取有合法完整结果",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-planner-tool-success"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-planner-tool-success",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-planner-tool-failure",
+        "behavior": "planner 的工具失败不能被后续成功文本掩盖",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-planner-tool-failure"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-planner-tool-failure",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-planner-access",
+        "behavior": "planner 的写入被拒绝且文件不变",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-planner-access"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-planner-access",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-planner-cancel",
+        "behavior": "planner 的取消后新工具不执行",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-planner-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-planner-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "API-planner-success",
+        "behavior": "planner 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-planner-failure",
+        "behavior": "planner 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-planner-capability-reject",
+        "behavior": "planner 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-planner-report",
+        "behavior": "planner 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-planner-cancel",
+        "behavior": "planner 的实际 API Worker 取消后无过期 complete",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "ROLE-coder-tool-success",
+        "behavior": "coder 的已授权读取有合法完整结果",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-coder-tool-success"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-coder-tool-success",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-coder-tool-failure",
+        "behavior": "coder 的工具失败不能被后续成功文本掩盖",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-coder-tool-failure"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-coder-tool-failure",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-coder-access",
+        "behavior": "coder 的编辑只修改指定工作区内文件",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-coder-access"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-coder-access",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-coder-cancel",
+        "behavior": "coder 的取消后新工具不执行",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-coder-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-coder-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "API-coder-success",
+        "behavior": "coder 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-coder-failure",
+        "behavior": "coder 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-coder-capability-reject",
+        "behavior": "coder 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-coder-report",
+        "behavior": "coder 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-coder-cancel",
+        "behavior": "coder 的实际 API Worker 取消后无过期 complete",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "ROLE-integrator-tool-success",
+        "behavior": "integrator 的已授权读取有合法完整结果",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-integrator-tool-success"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-integrator-tool-success",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-integrator-tool-failure",
+        "behavior": "integrator 的工具失败不能被后续成功文本掩盖",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-integrator-tool-failure"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-integrator-tool-failure",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-integrator-access",
+        "behavior": "integrator 的编辑只修改指定工作区内文件",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-integrator-access"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-integrator-access",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-integrator-cancel",
+        "behavior": "integrator 的取消后新工具不执行",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-integrator-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-integrator-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "API-integrator-success",
+        "behavior": "integrator 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-integrator-failure",
+        "behavior": "integrator 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-integrator-capability-reject",
+        "behavior": "integrator 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-integrator-report",
+        "behavior": "integrator 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-integrator-cancel",
+        "behavior": "integrator 的实际 API Worker 取消后无过期 complete",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "ROLE-reviewer-tool-success",
+        "behavior": "reviewer 的已授权读取有合法完整结果",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-reviewer-tool-success"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-reviewer-tool-success",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-reviewer-tool-failure",
+        "behavior": "reviewer 的工具失败不能被后续成功文本掩盖",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-reviewer-tool-failure"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-reviewer-tool-failure",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-reviewer-access",
+        "behavior": "reviewer 的写入被拒绝且文件不变",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-reviewer-access"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-reviewer-access",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-reviewer-cancel",
+        "behavior": "reviewer 的取消后新工具不执行",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-reviewer-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-reviewer-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "API-reviewer-success",
+        "behavior": "reviewer 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-reviewer-failure",
+        "behavior": "reviewer 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-reviewer-capability-reject",
+        "behavior": "reviewer 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-reviewer-report",
+        "behavior": "reviewer 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-reviewer-cancel",
+        "behavior": "reviewer 的实际 API Worker 取消后无过期 complete",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "ROLE-verifier-tool-success",
+        "behavior": "verifier 的已授权读取有合法完整结果",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-verifier-tool-success"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-verifier-tool-success",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-verifier-tool-failure",
+        "behavior": "verifier 的工具失败不能被后续成功文本掩盖",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-verifier-tool-failure"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-verifier-tool-failure",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-verifier-access",
+        "behavior": "verifier 的写入被拒绝且文件不变",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-verifier-access"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-verifier-access",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-verifier-cancel",
+        "behavior": "verifier 的取消后新工具不执行",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-verifier-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-verifier-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "API-verifier-success",
+        "behavior": "verifier 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-verifier-failure",
+        "behavior": "verifier 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-verifier-capability-reject",
+        "behavior": "verifier 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-verifier-report",
+        "behavior": "verifier 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-verifier-cancel",
+        "behavior": "verifier 的实际 API Worker 取消后无过期 complete",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "ROLE-integration-verifier-tool-success",
+        "behavior": "integration-verifier 的已授权读取有合法完整结果",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-integration-verifier-tool-success"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-integration-verifier-tool-success",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-integration-verifier-tool-failure",
+        "behavior": "integration-verifier 的工具失败不能被后续成功文本掩盖",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-integration-verifier-tool-failure"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-integration-verifier-tool-failure",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-integration-verifier-access",
+        "behavior": "integration-verifier 的写入被拒绝且文件不变",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-integration-verifier-access"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-integration-verifier-access",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-integration-verifier-cancel",
+        "behavior": "integration-verifier 的取消后新工具不执行",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-integration-verifier-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-integration-verifier-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "API-integration-verifier-success",
+        "behavior": "integration-verifier 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-integration-verifier-failure",
+        "behavior": "integration-verifier 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-integration-verifier-capability-reject",
+        "behavior": "integration-verifier 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-integration-verifier-report",
+        "behavior": "integration-verifier 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-integration-verifier-cancel",
+        "behavior": "integration-verifier 的实际 API Worker 取消后无过期 complete",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "ROLE-repairer-tool-success",
+        "behavior": "repairer 的已授权读取有合法完整结果",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-repairer-tool-success"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-repairer-tool-success",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-repairer-tool-failure",
+        "behavior": "repairer 的工具失败不能被后续成功文本掩盖",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-repairer-tool-failure"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-repairer-tool-failure",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-repairer-access",
+        "behavior": "repairer 的编辑只修改指定工作区内文件",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-repairer-access"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-repairer-access",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "ROLE-repairer-cancel",
+        "behavior": "repairer 的取消后新工具不执行",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ROLE-repairer-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ROLE-repairer-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "API-repairer-success",
+        "behavior": "repairer 的实际 API Worker 成功 attempt 使用正确角色与既有终态",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-repairer-failure",
+        "behavior": "repairer 的实际 API Worker 模型/工具失败形成既有 failureCategory",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-repairer-capability-reject",
+        "behavior": "repairer 的实际 API Worker 在不兼容任务类型/能力时于模型前拒绝",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-repairer-report",
+        "behavior": "repairer 的实际 API Worker 报告保留当前 role/report/workspaceResult 契约",
+        "acceptance_items": [
+          1,
+          8,
+          10
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-repairer-cancel",
+        "behavior": "repairer 的实际 API Worker 取消后无过期 complete",
+        "acceptance_items": [
+          1,
+          3
+        ],
+        "plane": "runtime-adapter",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "PATH-outside",
+        "behavior": "工作区外路径被拒绝",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#PATH-outside"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#PATH-outside",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "PATH-git",
+        "behavior": "Git 内部路径被拒绝",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#PATH-git"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#PATH-git",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "PATH-link",
+        "behavior": "链接路径不能越过工作区策略",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#PATH-link"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#PATH-link",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "PATH-hardlink",
+        "behavior": "危险硬链接写入被拒绝",
+        "acceptance_items": [
+          1
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#PATH-hardlink"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#PATH-hardlink",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RESOURCE-independent",
+        "behavior": "独立文件操作可以并行",
+        "acceptance_items": [
+          2
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#RESOURCE-independent"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RESOURCE-independent",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RESOURCE-readers",
+        "behavior": "多个读取可以并行",
+        "acceptance_items": [
+          2
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#RESOURCE-readers"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RESOURCE-readers",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RESOURCE-same-file",
+        "behavior": "同文件修改按读改写全过程串行",
+        "acceptance_items": [
+          2
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#RESOURCE-same-file"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RESOURCE-same-file",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RESOURCE-read-write",
+        "behavior": "同文件读取与修改保持一致性",
+        "acceptance_items": [
+          2
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#RESOURCE-read-write"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RESOURCE-read-write",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RESOURCE-shell",
+        "behavior": "未声明范围的 shell 与工作区修改互斥",
+        "acceptance_items": [
+          2
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#RESOURCE-shell"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RESOURCE-shell",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RESOURCE-limit",
+        "behavior": "活动操作数量不超过并发上限",
+        "acceptance_items": [
+          2
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#RESOURCE-limit"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RESOURCE-limit",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RESOURCE-cancel-wait",
+        "behavior": "排队等待取消后不启动操作",
+        "acceptance_items": [
+          2,
+          3
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#RESOURCE-cancel-wait"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RESOURCE-cancel-wait",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RESOURCE-active-cancel",
+        "behavior": "活动 I/O 未结束时取消不能提前释放资源",
+        "acceptance_items": [
+          2,
+          3
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#RESOURCE-active-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RESOURCE-active-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RESOURCE-failure-release",
+        "behavior": "失败后下一操作取得资源",
+        "acceptance_items": [
+          2
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#RESOURCE-failure-release"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RESOURCE-failure-release",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "TOOL-parameters",
+        "behavior": "非法参数在副作用前失败",
+        "acceptance_items": [
+          2,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#TOOL-parameters"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#TOOL-parameters",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "TOOL-shell-denied",
+        "behavior": "缺少 shell 授权时不执行命令",
+        "acceptance_items": [
+          1,
+          9
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#TOOL-shell-denied"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#TOOL-shell-denied",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "TOOL-nested",
+        "behavior": "嵌套工具调用经过相同边界并保留关联 ID",
+        "acceptance_items": [
+          2,
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#TOOL-nested"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#TOOL-nested",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "TOOL-partial",
+        "behavior": "未完成搜索的模型可见结果明确为不完整",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#TOOL-partial"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#TOOL-partial",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "TOOL-output-bound",
+        "behavior": "工具结果 envelope 与截断提示一同受字节上限约束",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#TOOL-output-bound"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#TOOL-output-bound",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "TOOL-timeout-active",
+        "behavior": "操作超时后仍等待活动 I/O 终态",
+        "acceptance_items": [
+          2,
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#TOOL-timeout-active"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#TOOL-timeout-active",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "OUTPUT-short",
+        "behavior": "未超限文本完整返回",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#OUTPUT-short"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#OUTPUT-short",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "OUTPUT-chinese",
+        "behavior": "中文和 emoji 预算按 UTF-8 字节计算",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "partial",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#OUTPUT-chinese"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#OUTPUT-chinese",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "OUTPUT_BUDGET_INVALID",
+        "uncovered_reason": "utf8Bytes('中文🧪')=10 的断言已执行；maxBytes=96 的 boundedText 返回 OUTPUT_BUDGET_INVALID，未验证截断分支。该函数预算有效域缺少明确公开声明，可能需要调整夹具，不能判为 Unicode 算法错误。"
+      },
+      {
+        "id": "OUTPUT-long-line",
+        "behavior": "长单行截断不产生无效 Unicode",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#OUTPUT-long-line"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#OUTPUT-long-line",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "OUTPUT-lines",
+        "behavior": "行数上限包含截断提示",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#OUTPUT-lines"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#OUTPUT-lines",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "JSON-complete",
+        "behavior": "合法完整 JSON 原样解析",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#JSON-complete"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#JSON-complete",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "JSON-too-large",
+        "behavior": "超限 JSON 明确拒绝，不返回半个结构",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#JSON-too-large"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#JSON-too-large",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "JSON-invalid",
+        "behavior": "非法或不符合 schema 的 JSON 明确拒绝",
+        "acceptance_items": [
+          5,
+          9
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#JSON-invalid"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#JSON-invalid",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "EDIT-multiple",
+        "behavior": "多区域计划一次生成全部修改",
+        "acceptance_items": [
+          6
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EDIT-multiple"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EDIT-multiple",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "EDIT-missing",
+        "behavior": "缺少匹配时拒绝且不写任何部分修改",
+        "acceptance_items": [
+          6
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EDIT-missing"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EDIT-missing",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "EDIT-duplicate-match",
+        "behavior": "重复匹配时拒绝且原文件不变",
+        "acceptance_items": [
+          6
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EDIT-duplicate-match"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EDIT-duplicate-match",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "EDIT-overlap",
+        "behavior": "重叠编辑在写入前拒绝",
+        "acceptance_items": [
+          6
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EDIT-overlap"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EDIT-overlap",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "EDIT-duplicate-plan",
+        "behavior": "重复编辑区域在写入前拒绝",
+        "acceptance_items": [
+          6
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EDIT-duplicate-plan"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EDIT-duplicate-plan",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "EDIT-format",
+        "behavior": "修改保留 BOM 与 CRLF",
+        "acceptance_items": [
+          6
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EDIT-format"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EDIT-format",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "EDIT-baseline",
+        "behavior": "基线摘要变化时拒绝原子写入",
+        "acceptance_items": [
+          6
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EDIT-baseline"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EDIT-baseline",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "EDIT-diff-bound",
+        "behavior": "编辑结果 diff 受字节预算约束",
+        "acceptance_items": [
+          6
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EDIT-diff-bound"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EDIT-diff-bound",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "EDIT-cancel",
+        "behavior": "写入前取消不会修改文件",
+        "acceptance_items": [
+          3,
+          6
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EDIT-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EDIT-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "CONTEXT-sources",
+        "behavior": "输入来源具有路径、版本摘要与字节记录",
+        "acceptance_items": [
+          7,
+          8
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#CONTEXT-sources"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#CONTEXT-sources",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "CONTEXT-required",
+        "behavior": "必需规则、验收和冻结材料均保留",
+        "acceptance_items": [
+          7
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#CONTEXT-required"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#CONTEXT-required",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "CONTEXT-overflow",
+        "behavior": "首轮超限明确失败而非删除必需输入",
+        "acceptance_items": [
+          7
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#CONTEXT-overflow"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#CONTEXT-overflow",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "CONTEXT-skills",
+        "behavior": "原 Skill 主文、references 与 agents 展开兼容",
+        "acceptance_items": [
+          7,
+          10
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#CONTEXT-skills"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#CONTEXT-skills",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "HISTORY-off",
+        "behavior": "关闭历史压缩时不调用摘要模型且原输入保留",
+        "acceptance_items": [
+          7
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#HISTORY-off"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#HISTORY-off",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "HISTORY-budget",
+        "behavior": "启用摘要必须具有显式预算",
+        "acceptance_items": [
+          7
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#HISTORY-budget"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#HISTORY-budget",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "HISTORY-derived",
+        "behavior": "摘要是派生输入且原始来源可回查",
+        "acceptance_items": [
+          7
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#HISTORY-derived"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#HISTORY-derived",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "HISTORY-pairs",
+        "behavior": "压缩不拆散工具调用和结果",
+        "acceptance_items": [
+          7
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#HISTORY-pairs"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#HISTORY-pairs",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "HISTORY-cancel",
+        "behavior": "摘要取消后无新增摘要和无限重试",
+        "acceptance_items": [
+          3,
+          7
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#HISTORY-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#HISTORY-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "HISTORY-failure",
+        "behavior": "摘要失败不进行无界重试",
+        "acceptance_items": [
+          7
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#HISTORY-failure"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#HISTORY-failure",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "HISTORY-max-two",
+        "behavior": "同一历史压缩器最多生成两次摘要",
+        "acceptance_items": [
+          7
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#HISTORY-max-two"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#HISTORY-max-two",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "EVIDENCE-outside",
+        "behavior": "关键证据目录位于 Git 工作区之外",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EVIDENCE-outside"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EVIDENCE-outside",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "EVIDENCE-forbidden-root",
+        "behavior": "证据根在工作区内时拒绝",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EVIDENCE-forbidden-root"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EVIDENCE-forbidden-root",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "EVIDENCE-correlation",
+        "behavior": "工具与输入/结果版本可以关联追踪",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EVIDENCE-correlation"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EVIDENCE-correlation",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "EVIDENCE-redaction",
+        "behavior": "正文、密钥和 leaseToken 不进入元数据",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EVIDENCE-redaction"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EVIDENCE-redaction",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "EVIDENCE-capacity",
+        "behavior": "关键元数据超限后健康校验失败",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EVIDENCE-capacity"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EVIDENCE-capacity",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "EVIDENCE-write-failure",
+        "behavior": "关键写入失败后健康校验失败",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EVIDENCE-write-failure"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EVIDENCE-write-failure",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "EVIDENCE-terminal-expiry",
+        "behavior": "拥有且已终态的日志在30天后可清理",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EVIDENCE-terminal-expiry"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EVIDENCE-terminal-expiry",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "EVIDENCE-active-retain",
+        "behavior": "活动日志即使很旧也不自动删除",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EVIDENCE-active-retain"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EVIDENCE-active-retain",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "EVIDENCE-foreign-retain",
+        "behavior": "不带所有权标记的目录不自动删除",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#EVIDENCE-foreign-retain"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#EVIDENCE-foreign-retain",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "ATTEMPT-cancel-prepare",
+        "behavior": "准备阶段取消后不执行下一阶段",
+        "acceptance_items": [
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "partial",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ATTEMPT-cancel-prepare"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ATTEMPT-cancel-prepare",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "Expected values to be strictly equal:\n\nfalse !== true\n",
+        "uncovered_reason": "已构造 AttemptRunner 并调用公开 step；取消/超时终态断言失败，或回调未进入导致本地观察期限届满。关键 Recorder 前置/step 语义尚不明确，没有证明对应阶段的实际取消或活动 I/O 行为。"
+      },
+      {
+        "id": "ATTEMPT-cancel-model",
+        "behavior": "模型阶段取消后不启动工具或发布",
+        "acceptance_items": [
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "partial",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ATTEMPT-cancel-model"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ATTEMPT-cancel-model",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "Expected values to be strictly equal:\n\nfalse !== true\n",
+        "uncovered_reason": "已构造 AttemptRunner 并调用公开 step；取消/超时终态断言失败，或回调未进入导致本地观察期限届满。关键 Recorder 前置/step 语义尚不明确，没有证明对应阶段的实际取消或活动 I/O 行为。"
+      },
+      {
+        "id": "ATTEMPT-cancel-tool",
+        "behavior": "工具阶段取消后不启动发布",
+        "acceptance_items": [
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "partial",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ATTEMPT-cancel-tool"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ATTEMPT-cancel-tool",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "Expected values to be strictly equal:\n\nfalse !== true\n",
+        "uncovered_reason": "已构造 AttemptRunner 并调用公开 step；取消/超时终态断言失败，或回调未进入导致本地观察期限届满。关键 Recorder 前置/step 语义尚不明确，没有证明对应阶段的实际取消或活动 I/O 行为。"
+      },
+      {
+        "id": "ATTEMPT-cancel-publish",
+        "behavior": "发布阶段取消后不回报有效完成",
+        "acceptance_items": [
+          3,
+          4
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "partial",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ATTEMPT-cancel-publish"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ATTEMPT-cancel-publish",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "Expected values to be strictly equal:\n\nfalse !== true\n",
+        "uncovered_reason": "已构造 AttemptRunner 并调用公开 step；取消/超时终态断言失败，或回调未进入导致本地观察期限届满。关键 Recorder 前置/step 语义尚不明确，没有证明对应阶段的实际取消或活动 I/O 行为。"
+      },
+      {
+        "id": "ATTEMPT-timeout",
+        "behavior": "整体期限覆盖执行阶段并传出取消",
+        "acceptance_items": [
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "partial",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ATTEMPT-timeout"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ATTEMPT-timeout",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "Expected values to be strictly equal:\n\nfalse !== true\n",
+        "uncovered_reason": "已构造 AttemptRunner 并调用公开 step；取消/超时终态断言失败，或回调未进入导致本地观察期限届满。关键 Recorder 前置/step 语义尚不明确，没有证明对应阶段的实际取消或活动 I/O 行为。"
+      },
+      {
+        "id": "ATTEMPT-cleanup-wait",
+        "behavior": "独立清理预算不能把活动资源写成已结束",
+        "acceptance_items": [
+          3
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "partial",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ATTEMPT-cleanup-wait"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ATTEMPT-cleanup-wait",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "Synthetic test deadline exceeded",
+        "uncovered_reason": "已构造 AttemptRunner 并调用公开 step；取消/超时终态断言失败，或回调未进入导致本地观察期限届满。关键 Recorder 前置/step 语义尚不明确，没有证明对应阶段的实际取消或活动 I/O 行为。"
+      },
+      {
+        "id": "MODEL-completed",
+        "behavior": "已完成且完整的模型响应可接受",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#MODEL-completed"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#MODEL-completed",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "MODEL-incomplete",
+        "behavior": "长度截断的模型响应在工具执行前拒绝",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#MODEL-incomplete"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#MODEL-incomplete",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "MODEL-unknown",
+        "behavior": "未知响应终态明确失败",
+        "acceptance_items": [
+          5,
+          10
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#MODEL-unknown"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#MODEL-unknown",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "MODEL-invalid-call",
+        "behavior": "不完整工具参数即使部分 JSON 可解析也不得执行",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#MODEL-invalid-call"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#MODEL-invalid-call",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "MODEL-truncated-call",
+        "behavior": "残余参数 JSON 可解析的长度截断响应仍不得执行工具",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#MODEL-truncated-call"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#MODEL-truncated-call",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "MODEL-stream-incomplete",
+        "behavior": "流结束没有完整终态时拒绝",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#MODEL-stream-incomplete"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#MODEL-stream-incomplete",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "MODEL-usage-unknown",
+        "behavior": "缺少实际 usage 不能当作精确零值",
+        "acceptance_items": [
+          7,
+          10
+        ],
+        "plane": "public-core",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "prepared",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#MODEL-usage-unknown"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#MODEL-usage-unknown",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "EVIDENCE_FIELD_FORBIDDEN",
+        "uncovered_reason": "已运行 Node 用例；EvidenceRecorder.open 的前置夹具返回 EVIDENCE_FIELD_FORBIDDEN，目标工具/元数据/模型断言未到达。公开 Metadata 声明未列明允许 identity 字段，需核对公开契约后修正夹具或接口；不据此判定目标业务已执行或通过。"
+      },
+      {
+        "id": "PROCESS-success",
+        "behavior": "离线子进程退出、输出和完整性可观察",
+        "acceptance_items": [
+          3
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#PROCESS-success"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#PROCESS-success",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "PROCESS-overflow",
+        "behavior": "子进程结构化输出超限明确失败",
+        "acceptance_items": [
+          5
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#PROCESS-overflow"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#PROCESS-overflow",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "PROCESS-cancel",
+        "behavior": "子进程取消返回终态并停止输出",
+        "acceptance_items": [
+          3
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#PROCESS-cancel"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#PROCESS-cancel",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "ENV-minimum",
+        "behavior": "插件/工具子进程不取得 CP、模型密钥与 leaseToken",
+        "acceptance_items": [
+          8,
+          9
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#ENV-minimum"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#ENV-minimum",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "PLUGIN-disabled",
+        "behavior": "没有 catalog 时插件默认关闭",
+        "acceptance_items": [
+          9
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#PLUGIN-disabled"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#PLUGIN-disabled",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "PLUGIN-malformed",
+        "behavior": "非法 catalog 格式被拒绝",
+        "acceptance_items": [
+          9
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#PLUGIN-malformed"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#PLUGIN-malformed",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "PLUGIN-missing",
+        "behavior": "不存在的插件入口明确失败",
+        "acceptance_items": [
+          9
+        ],
+        "plane": "public-core",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/core.test.mjs#PLUGIN-missing"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#PLUGIN-missing",
+          "tests/fd005/evidence-r5/results/core.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "SESSION-missing",
+        "behavior": "缺少禁存清单时在会话前拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#SESSION-missing"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#SESSION-missing",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "SESSION-unverified",
+        "behavior": "未验证证据不能使会话准入",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#SESSION-unverified"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#SESSION-unverified",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "SESSION-sdk-mismatch",
+        "behavior": "SDK 版本绑定不一致时拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#SESSION-sdk-mismatch"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#SESSION-sdk-mismatch",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "SESSION-native-digest",
+        "behavior": "native 摘要不符时拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#SESSION-native-digest"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#SESSION-native-digest",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "SESSION-launcher-digest",
+        "behavior": "launcher 摘要不符时拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#SESSION-launcher-digest"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#SESSION-launcher-digest",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "SESSION-proof-digest",
+        "behavior": "证据摘要不符时拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#SESSION-proof-digest"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#SESSION-proof-digest",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "SESSION-control-missing",
+        "behavior": "十项通道证据缺失时拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#SESSION-control-missing"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#SESSION-control-missing",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "SESSION-config-change",
+        "behavior": "固定配置源发生变化后拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#SESSION-config-change"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#SESSION-config-change",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "SESSION-workspace-file",
+        "behavior": "任务可写根中的清单不能授予准入",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#SESSION-workspace-file"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#SESSION-workspace-file",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "SESSION-raw-evidence",
+        "behavior": "rawEvidence 摘要不符时拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#SESSION-raw-evidence"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#SESSION-raw-evidence",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "SESSION-fake-admission",
+        "behavior": "只绑定假 native 的合成政策可以验证准入适配",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#SESSION-fake-admission"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#SESSION-fake-admission",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "LAUNCHER-preflight",
+        "behavior": "preflight 不启动假 native 或发送提示词",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#LAUNCHER-preflight"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#LAUNCHER-preflight",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "LAUNCHER-exec",
+        "behavior": "首次 exec 强制 ephemeral、stdin 与原模型参数",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#LAUNCHER-exec"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#LAUNCHER-exec",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "LAUNCHER-resume",
+        "behavior": "通过准入后仍拒绝 resume",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#LAUNCHER-resume"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#LAUNCHER-resume",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "LAUNCHER-save-output",
+        "behavior": "通过准入后仍拒绝输出文件参数",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#LAUNCHER-save-output"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#LAUNCHER-save-output",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "LAUNCHER-prompt-argv",
+        "behavior": "通过准入后仍拒绝正文 argv",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#LAUNCHER-prompt-argv"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#LAUNCHER-prompt-argv",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "LAUNCHER-conflict",
+        "behavior": "通过准入后仍拒绝隐私配置冲突",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#LAUNCHER-conflict"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#LAUNCHER-conflict",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "LAUNCHER-environment",
+        "behavior": "假 native 不取得适配器/CP/调试环境",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#LAUNCHER-environment"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#LAUNCHER-environment",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "Expected values to be strictly equal:\n\ntrue !== false\n",
+        "uncovered_reason": "假 native 实际启动并报告 leakedEnvironment=true（扫描 AIW_/OTEL_/DEBUG 类键）；stdout 同时确认 modelAuthAvailable=true、RUST_LOG=off。未采集泄漏键名/值，不能断言真实凭据泄漏；禁存文档要求的剥离目标断言失败。"
+      },
+      {
+        "id": "LAUNCHER-stderr",
+        "behavior": "假 native 的原始 stderr 正文不向主机泄漏",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#LAUNCHER-stderr"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#LAUNCHER-stderr",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RPC-ephemeral",
+        "behavior": "thread/start 必须显式 ephemeral true",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#RPC-ephemeral"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RPC-ephemeral",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RPC-valid-turn",
+        "behavior": "已核验 ephemeral 线程可接收合成正文 turn",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#RPC-valid-turn"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RPC-valid-turn",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RPC-receipt",
+        "behavior": "非 ephemeral 或有磁盘 path 的回执在正文前被拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#RPC-receipt"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RPC-receipt",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RPC-read-receipt",
+        "behavior": "公开 thread/read 回执的磁盘 path 冲突在正文前被拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "blocked",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "failed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#RPC-read-receipt"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RPC-read-receipt",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "Expected \"actual\" to be strictly unequal to: 0",
+        "uncovered_reason": "先成功创建 ephemeral/path=null 的合成线程；thread/read 的 ephemeral=false 且 path=SYNTHETIC_FORBIDDEN_SESSION_PATH 回执被转发，launcher exit 0。拒绝非法回执的目标断言失败。"
+      },
+      {
+        "id": "RPC-turn-order",
+        "behavior": "turn 只允许已核验的 ephemeral 线程",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#RPC-turn-order"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RPC-turn-order",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RPC-resume",
+        "behavior": "持久化 resume/fork RPC 被拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#RPC-resume"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RPC-resume",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RPC-disk-fork",
+        "behavior": "持久化 fork RPC 被拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#RPC-disk-fork"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RPC-disk-fork",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "RPC-approval",
+        "behavior": "SDK 默认 accept 审批回复不能取得宿主授权",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "synthetic-launcher",
+        "status": "passed",
+        "prepared": true,
+        "execution_status": "executed",
+        "case_execution": "executed",
+        "actual_outcome": "passed",
+        "test_cases": [
+          "tests/fd005/session.test.mjs#RPC-approval"
+        ],
+        "raw_evidence": [
+          "tests/fd005/evidence-r5/execution.json#RPC-approval",
+          "tests/fd005/evidence-r5/results/session.test.mjs.jsonl",
+          "tests/fd005/evidence-r5/node-test-events.jsonl"
+        ],
+        "failure_message": "",
+        "uncovered_reason": ""
+      },
+      {
+        "id": "ROLE-preserved-reject",
+        "behavior": "release-readiness 与 orchestrator 在注册前拒绝",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "ROLE-verifier-alias",
+        "behavior": "verifier 的集成任务使用既有 integration-verifier Profile 与能力",
+        "acceptance_items": [
+          1,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "REPORT-semantic-empty",
+        "behavior": "前三个语义角色的空报告拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "REPORT-verdict-missing",
+        "behavior": "审查/验证缺少末行 verdict 时拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "REPORT-verdict-final",
+        "behavior": "verdict 后有正文或 verdict 非法时拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "REPORT-readonly-dirty",
+        "behavior": "只读工作区变脏时不回报成功",
+        "acceptance_items": [
+          1,
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "REPORT-manifest",
+        "behavior": "规划 manifest 和代码 workspaceResult 的既有契约保持兼容",
+        "acceptance_items": [
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "LEASE-lost",
+        "behavior": "真实角色适配的租约丢失停止新增副作用并拒绝过期结果",
+        "acceptance_items": [
+          3,
+          4
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "PUBLISH-completed-race",
+        "behavior": "发布已经完成的租约竞争记录引用、版本和对账状态",
+        "acceptance_items": [
+          4
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "PUBLISH-unknown-race",
+        "behavior": "发布结果未知的租约竞争不声称回滚或无写入",
+        "acceptance_items": [
+          4
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "COMPLETE-response-lost",
+        "behavior": "CP complete 响应丢失不重跑整个业务 attempt",
+        "acceptance_items": [
+          3,
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "DRAIN-inflight",
+        "behavior": "drain 停止领取且允许在途 attempt 结束",
+        "acceptance_items": [
+          3,
+          11
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "DRAIN-force",
+        "behavior": "第二次终止取消在途任务并有资源终态",
+        "acceptance_items": [
+          3,
+          11
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "没有执行实际 Worker/控制平面/工作区发布入口；相关生命周期、报告、租约、drain 或兼容行为未有目标断言证据。"
+      },
+      {
+        "id": "PLUGIN-version",
+        "behavior": "插件/解释器版本或摘要不一致时拒绝",
+        "acceptance_items": [
+          9
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "固定 catalog 只提供空模板；本轮未构造实际插件查询或授予网络/外部操作。身份、超时、输出与网络拒绝的目标场景没有执行。"
+      },
+      {
+        "id": "PLUGIN-timeout",
+        "behavior": "实际固定查询插件超时明确失败",
+        "acceptance_items": [
+          9
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "固定 catalog 只提供空模板；本轮未构造实际插件查询或授予网络/外部操作。身份、超时、输出与网络拒绝的目标场景没有执行。"
+      },
+      {
+        "id": "PLUGIN-output",
+        "behavior": "插件超限/非法输出明确失败",
+        "acceptance_items": [
+          9
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "固定 catalog 只提供空模板；本轮未构造实际插件查询或授予网络/外部操作。身份、超时、输出与网络拒绝的目标场景没有执行。"
+      },
+      {
+        "id": "PLUGIN-network",
+        "behavior": "未有网络授权的 GitHub 查询在外部请求前拒绝",
+        "acceptance_items": [
+          9
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "固定 catalog 只提供空模板；本轮未构造实际插件查询或授予网络/外部操作。身份、超时、输出与网络拒绝的目标场景没有执行。"
+      },
+      {
+        "id": "API-store-false",
+        "behavior": "API 实际 SDK 正常与摘要请求均 store false 且 tracing/logging 关闭",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "API-parallel-setting",
+        "behavior": "API 实际 SDK 保持并行工具设置与关联",
+        "acceptance_items": [
+          2,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "未启动实际 API Worker/Agents SDK 角色入口；本轮公开核心合成用例不能证明实际角色路由、报告和任务协议。"
+      },
+      {
+        "id": "CODEX-TS-bridge",
+        "behavior": "Codex TS 的公开 SDK 入口保留模型政策并覆盖公共生命周期",
+        "acceptance_items": [
+          3,
+          7,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "仅编译和执行了独立假 native/launcher；没有执行对应 Worker/真实 SDK，缺少受控端到端入口及单独授权。"
+      },
+      {
+        "id": "GO-admission",
+        "behavior": "Go Worker 无准入证据时在注册/领取前拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "仅编译和执行了独立假 native/launcher；没有执行对应 Worker/真实 SDK，缺少受控端到端入口及单独授权。"
+      },
+      {
+        "id": "PYTHON-admission",
+        "behavior": "Python Worker 无准入证据时在注册/领取前拒绝",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "仅编译和执行了独立假 native/launcher；没有执行对应 Worker/真实 SDK，缺少受控端到端入口及单独授权。"
+      },
+      {
+        "id": "GO-lifecycle",
+        "behavior": "Go Worker 的期限、取消、证据、工作区和报告端到端对齐",
+        "acceptance_items": [
+          3,
+          8,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "仅编译和执行了独立假 native/launcher；没有执行对应 Worker/真实 SDK，缺少受控端到端入口及单独授权。"
+      },
+      {
+        "id": "PYTHON-lifecycle",
+        "behavior": "Python Worker 的期限、取消、证据、工作区和报告端到端对齐",
+        "acceptance_items": [
+          3,
+          8,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "仅编译和执行了独立假 native/launcher；没有执行对应 Worker/真实 SDK，缺少受控端到端入口及单独授权。"
+      },
+      {
+        "id": "PYTHON-sdk-receipt",
+        "behavior": "真实固定 Python SDK 在送正文前核对公开 thread/read 回执",
+        "acceptance_items": [
+          8,
+          10
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "仅编译和执行了独立假 native/launcher；没有执行对应 Worker/真实 SDK，缺少受控端到端入口及单独授权。"
+      },
+      {
+        "id": "NS-roles-slots-attempts",
+        "behavior": "九角色、两个 slot、多 attempt 和 CP 重试全部经过实际禁存入口",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "NS-normal-no-body",
+        "behavior": "实际正常会话在全过程监测中无正文落盘",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "NS-tool-failure-no-body",
+        "behavior": "实际工具失败会话在全过程监测中无正文落盘",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "NS-model-failure-no-body",
+        "behavior": "实际模型失败会话在全过程监测中无正文落盘",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "NS-timeout-no-body",
+        "behavior": "实际超时会话在全过程监测中无正文落盘",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "NS-cancel-no-body",
+        "behavior": "实际显式取消会话在全过程监测中无正文落盘",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "NS-lease-no-body",
+        "behavior": "实际租约丢失会话在全过程监测中无正文落盘",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "NS-termination-tree",
+        "behavior": "实际父进程强杀和逃逸子进程不突破禁存/资源终态",
+        "acceptance_items": [
+          3,
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "NS-other-channels",
+        "behavior": "实际 memory/state-cache/hooks/plugins/trace/诊断均无正文写入或导出",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "NS-derived",
+        "behavior": "实际子 Agent、fork 和压缩继承禁存或在创建前拒绝",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "NS-host-auth",
+        "behavior": "实际认证缓存与主机介质符合部署 G2 政策",
+        "acceptance_items": [
+          8
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "UPGRADE-order",
+        "behavior": "升级先 drain，并按只读至可写角色分批接入",
+        "acceptance_items": [
+          11
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "ROLLBACK-policy",
+        "behavior": "旧包/配置回退仍满足 G2，未完成 attempt 与远端副作用分别恢复对账",
+        "acceptance_items": [
+          8,
+          11
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      },
+      {
+        "id": "ROLLBACK-old-directory",
+        "behavior": "回滚和历史清理不自动删除其他用户共享目录",
+        "acceptance_items": [
+          8,
+          11
+        ],
+        "plane": "runtime-or-deployment",
+        "status": "uncovered",
+        "prepared": false,
+        "execution_status": "uncovered",
+        "case_execution": "not run",
+        "actual_outcome": "uncovered",
+        "test_cases": [],
+        "raw_evidence": [],
+        "failure_message": "",
+        "uncovered_reason": "无真实 Codex/SDK/平台全通道或运维过程证据；模型、网络、部署和主机控制未授权；合成政策不构成认证。"
+      }
+    ],
+    "static_exclusions": [
+      "模块命名、职责组织、复制源码来源和 MIT 许可属于静态审查，不计入运行行为分母。",
+      "旧 codex-* 参考示例定位与 demo-deployer 独立维护范围属于静态维护说明。",
+      "发布携带规则由 Reviewer 静态检查；本轮没有最终发布包构建，不能声称发布物行为通过。"
+    ],
+    "prepared_scenarios": 138,
+    "setup_blocked_cases": 51,
+    "partially_executed_cases": 7,
+    "target_assertion_failures": 2,
+    "scoped_core_branch_coverage": {
+      "scope": "workers/runtime-core/*.mjs only; Node V8 native counters",
+      "percent": 70.73791348600508,
+      "covered": 278,
+      "total": 393,
+      "files": [
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\aiw-adapter.mjs",
+          "totalLineCount": 69,
+          "coveredLineCount": 34,
+          "totalBranchCount": 23,
+          "coveredBranchCount": 11,
+          "totalFunctionCount": 6,
+          "coveredFunctionCount": 3,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\attempt.mjs",
+          "totalLineCount": 170,
+          "coveredLineCount": 46,
+          "totalBranchCount": 8,
+          "coveredBranchCount": 6,
+          "totalFunctionCount": 23,
+          "coveredFunctionCount": 5,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\context.mjs",
+          "totalLineCount": 167,
+          "coveredLineCount": 155,
+          "totalBranchCount": 85,
+          "coveredBranchCount": 54,
+          "totalFunctionCount": 25,
+          "coveredFunctionCount": 20,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\edit.mjs",
+          "totalLineCount": 69,
+          "coveredLineCount": 69,
+          "totalBranchCount": 38,
+          "coveredBranchCount": 31,
+          "totalFunctionCount": 8,
+          "coveredFunctionCount": 8,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\errors.mjs",
+          "totalLineCount": 26,
+          "coveredLineCount": 17,
+          "totalBranchCount": 5,
+          "coveredBranchCount": 5,
+          "totalFunctionCount": 4,
+          "coveredFunctionCount": 2,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\evidence.mjs",
+          "totalLineCount": 119,
+          "coveredLineCount": 79,
+          "totalBranchCount": 38,
+          "coveredBranchCount": 18,
+          "totalFunctionCount": 14,
+          "coveredFunctionCount": 6,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\index.mjs",
+          "totalLineCount": 14,
+          "coveredLineCount": 14,
+          "totalBranchCount": 1,
+          "coveredBranchCount": 1,
+          "totalFunctionCount": 0,
+          "coveredFunctionCount": 0,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\model-guard.mjs",
+          "totalLineCount": 91,
+          "coveredLineCount": 18,
+          "totalBranchCount": 14,
+          "coveredBranchCount": 8,
+          "totalFunctionCount": 4,
+          "coveredFunctionCount": 1,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\output.mjs",
+          "totalLineCount": 74,
+          "coveredLineCount": 56,
+          "totalBranchCount": 29,
+          "coveredBranchCount": 26,
+          "totalFunctionCount": 6,
+          "coveredFunctionCount": 5,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\process.mjs",
+          "totalLineCount": 96,
+          "coveredLineCount": 74,
+          "totalBranchCount": 36,
+          "coveredBranchCount": 21,
+          "totalFunctionCount": 18,
+          "coveredFunctionCount": 12,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\resources.mjs",
+          "totalLineCount": 105,
+          "coveredLineCount": 94,
+          "totalBranchCount": 49,
+          "coveredBranchCount": 39,
+          "totalFunctionCount": 19,
+          "coveredFunctionCount": 14,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\session-policy.mjs",
+          "totalLineCount": 74,
+          "coveredLineCount": 74,
+          "totalBranchCount": 63,
+          "coveredBranchCount": 55,
+          "totalFunctionCount": 6,
+          "coveredFunctionCount": 6,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\settings.mjs",
+          "totalLineCount": 17,
+          "coveredLineCount": 4,
+          "totalBranchCount": 1,
+          "coveredBranchCount": 1,
+          "totalFunctionCount": 2,
+          "coveredFunctionCount": 0,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\tool-host.mjs",
+          "totalLineCount": 85,
+          "coveredLineCount": 15,
+          "totalBranchCount": 2,
+          "coveredBranchCount": 1,
+          "totalFunctionCount": 6,
+          "coveredFunctionCount": 0,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        },
+        {
+          "path": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\runtime-core\\workspace.mjs",
+          "totalLineCount": 134,
+          "coveredLineCount": 19,
+          "totalBranchCount": 1,
+          "coveredBranchCount": 1,
+          "totalFunctionCount": 10,
+          "coveredFunctionCount": 0,
+          "branchCoverage": null,
+          "lineCoverage": null,
+          "functionCoverage": null
+        }
+      ],
+      "raw_evidence": "tests/fd005/evidence-r5/node-test-events.jsonl#test:coverage"
+    },
+    "raw_node_coverage_including_helpers": {
+      "totalLineCount": 1695,
+      "totalBranchCount": 463,
+      "totalFunctionCount": 192,
+      "coveredLineCount": 1137,
+      "coveredBranchCount": 339,
+      "coveredFunctionCount": 114,
+      "coveredLinePercent": 67.07964601769912,
+      "coveredBranchPercent": 73.2181425485961,
+      "coveredFunctionPercent": 59.375
+    },
+    "child_commands": [
+      {
+        "executable": "go",
+        "args": [
+          "build",
+          "-o",
+          "D:\\03_projects\\AI-tools\\aiw-dev\\tests\\fd005\\.tmp-fd005-tester-20261005-7865d383-8640da40-5afc-40bf-806c-0c31014921a4\\programs\\fake-native.exe",
+          "D:\\03_projects\\AI-tools\\aiw-dev\\tests\\fd005\\fake-native.go"
+        ],
+        "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\tests\\fd005",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "duration_ms": 7146,
+        "raw_output": "tests/fd005/evidence-r5/compile-fake-native.log"
+      },
+      {
+        "executable": "go",
+        "args": [
+          "build",
+          "-o",
+          "D:\\03_projects\\AI-tools\\aiw-dev\\tests\\fd005\\.tmp-fd005-tester-20261005-7865d383-8640da40-5afc-40bf-806c-0c31014921a4\\programs\\launcher.exe",
+          "."
+        ],
+        "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev\\workers\\codex-session-launcher",
+        "exit_code": 0,
+        "signal": null,
+        "timed_out": false,
+        "duration_ms": 906,
+        "raw_output": "tests/fd005/evidence-r5/compile-launcher.log"
+      },
+      {
+        "executable": "C:\\green\\nodejs\\node.exe",
+        "args": [
+          "--experimental-test-coverage",
+          "--test",
+          "--test-concurrency=1",
+          "--test-reporter=./tests/fd005/reporter.mjs",
+          "tests/fd005/core.test.mjs",
+          "tests/fd005/session.test.mjs"
+        ],
+        "working_directory": "D:\\03_projects\\AI-tools\\aiw-dev",
+        "exit_code": 1,
+        "signal": null,
+        "timed_out": false,
+        "duration_ms": 7159,
+        "raw_output": "tests/fd005/evidence-r5/node-test-events.jsonl"
+      }
+    ],
+    "test_file_sha256": {
+      "cases.mjs": "5b17176fbc4c20865243344482137bf18708d2cb895569e19228228445016829",
+      "harness.mjs": "6e75653329293519b5291354a59efa219b7f6739b5ac38aa246e616eb437e038",
+      "core.test.mjs": "b5ddea08d3c6632b9e89ee3ea310c5e169298c4069239a01142eb719d2d78707",
+      "session-fixture.mjs": "d621674e6d4bae2ac2df295ae57038a64d1872c435aa26400e56cea93099e81d",
+      "session.test.mjs": "0e975f30ca9c689fd6184c06269a5b1f79938a97627dd58ce22759aca491617c",
+      "reporter.mjs": "25585321caa75181d88e170efd57a83df44e28f89a1689c7d3e3270ec50b6877",
+      "fake-native.go": "6efd52db6c53e74de8981f8f6d89f627bd8da702a83ba6d3cea36cbb7d24d526",
+      "run-offline.mjs": "86263729139b3f09a38feb47e0d632b5ce24276a670cb0aba57b75d7d8daf257"
+    },
+    "started_at": "2026-10-04T22:39:38.925Z",
+    "finished_at": "2026-10-04T22:39:54.149Z",
+    "commands_not_run": [
+      "未经新授权的重跑",
+      "实际SDK/模型/控制平面/插件服务",
+      "依赖安装/网络/真实Codex",
+      "类型检查/lint/formatter/最终发布构建",
+      "实际Go/Python Worker端到端及主机禁存监测"
+    ]
+  }
+}

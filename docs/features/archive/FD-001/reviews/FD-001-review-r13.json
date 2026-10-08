@@ -1,0 +1,66 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-001",
+  "source_event": "FD-001-000013-test-accepted",
+  "human_report": "FD-001-review-r13.md",
+  "data": {
+    "reviewer_session": "fd001-reviewer-20261004-9195c0ad",
+    "reviewed_fd_revision": 13,
+    "reviewed_fd_digest": "f9dac54d598c14ce8f670f7f51b64243746d52a9925d51c84f1873e533c4d8ff",
+    "review_base": "ae19d463436fe9730b07e7106ecbdfacfab98845",
+    "reviewed_commit": "a870b97d6a77204fb0cbdfe73f7016fd46a362bf",
+    "outcome": "verification-passed",
+    "failed_review_count": 1,
+    "findings": [],
+    "resolved_findings": [
+      {
+        "id": "F1",
+        "status": "resolved",
+        "evidence": "QueryService samples match unchanged Fleet mutually exclusive counters; per-task additional conditions and bilingual scope documentation. Current0/0 and1/1 categories plus Policy+capability overlap verified."
+      },
+      {
+        "id": "F2",
+        "status": "resolved",
+        "evidence": "Stable g.label detail key; outside focus, actual0to1 count update158ms, open/focus retained."
+      },
+      {
+        "id": "F3",
+        "status": "resolved",
+        "evidence": "Every selected Range.intersectsNode protects all intersecting regions; 13149characters across5regions retained while unselected metrics replaced165ms."
+      }
+    ],
+    "test_report": "docs/features/reports/FD-001-test-r11.md",
+    "pm_decision": "docs/features/reports/FD-001-test-decision-r12-v1.md",
+    "requirements_coverage": "5.49%",
+    "branch_coverage": "not measured",
+    "executed_behavior_tests": 4,
+    "passed_behavior_tests": 4,
+    "failed_behavior_tests": 0,
+    "applicable_scenarios": 91,
+    "covered_scenarios": 5,
+    "current_uncovered_scenarios": 86,
+    "covered_scenario_ids": ["S053", "S078", "S089", "S090", "S091"],
+    "authorization_records": [
+      "docs/features/reports/FD-001-test-authorization-r11-v1.md",
+      "docs/features/reports/FD-001-test-authorization-r11-v2.md"
+    ],
+    "authorization_result": "Both exact runtime.py review-fixes commands match source11/revision11/digest/session/cwd and human approval. One relevant corrected retry separately authorized; initial results and scripts preserved; no scope expansion.",
+    "initial_execution": "4 business assertions:2passed/2failed plus1runner failure; evidence-review1/initial preserved. Final4unique business assertions passed;8total business executions across2runs. Initial unique root cause not claimed.",
+    "historical_support": "r7 36/36 and42/88=47.73%, prior Worker4IT/29browser/2focus remain historical, excluded from current counts. Source boundaries unaffected by repairs and previously independently reviewed.",
+    "exceptions_respected": "PM explicitly accepts below70 current5.49% and unavailable branch coverage for repair review, with unchanged baseline historical evidence. Firefox user-deferred. No failed current behavior tests accepted or behavior requirements waived.",
+    "commands": [
+      "C:/green/aiw/aiw.exe fd claim FD-001 FD-001-000013-test-accepted --session fd001-reviewer-20261004-9195c0ad",
+      "git diff ae19d463436fe9730b07e7106ecbdfacfab98845 HEAD -- scoped QueryService/dashboard/console.js/bilingual guides",
+      "git diff -- scoped QueryService/dashboard/console.js/bilingual guides",
+      "git show HEAD --format=fuller --no-patch",
+      "Targeted rg, Get-Content -Encoding UTF8 and FD Get-FileHash; view_image existing evidence-review2/review-fixes.png",
+      "One post-edit scoped static read of FD and dual report"
+    ],
+    "handoff_command": "C:/green/aiw/aiw.exe fd emit FD-001 verification-passed --producer reviewer --artifact docs/features/reviews/FD-001-review-r13.md --source-event FD-001-000013-test-accepted",
+    "handoff_policy": "Reviewer executes only after host serial dispatch approval; native receipt records actual event, no fake or host-generated Reviewer outcome.",
+    "skipped_checks": "No new tests/browser/network/Maven/compile/coverage/formatter/lint/typecheck/verification scripts/final build/deployment. Current runtime budget exhausted; Reviewer static review only.",
+    "residual_risk": "86scenarios not rerun, branch unavailable, >=5samples/truncation and other wait combinations, full event/missing-association and server role/CSRF/race coverage, hidden/timeout/stale, scale cost, Firefox; no new concrete defect found. Future archive external image links need host-stage check.",
+    "scope": "Only FD001 private webconsole repairs, guides, tests/evidence and FD summary. No product edits by Reviewer, no FD002 or unrelated Worker review, no close/archive/merge/release."
+  }
+}

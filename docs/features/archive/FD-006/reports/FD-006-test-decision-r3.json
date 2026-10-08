@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-decision",
+  "fd_id": "FD-006",
+  "source_event": "FD-006-000017-test-report-ready",
+  "human_report": "FD-006-test-decision-r3.md",
+  "data": {
+    "disposition": "accepted",
+    "tester_report": "docs/features/reports/FD-006-test-report-r3.md",
+    "fd_revision": 17,
+    "fd_digest": "0ec1324232f41f35d7f5ad6472634365f0093748ab29dfef16bdfcc43dad4ccb",
+    "requirements_coverage": "6.25%",
+    "branch_coverage": "not measured",
+    "rationale": "Four authorized Worker behavior tests passed on the repaired baseline. The authorized HTTP integration attempt exited before Spring and before any product assertion because the Maven JVM could not allocate native memory; it is an environment block, not a product behavior failure.",
+    "exceptions": "Explicit exception for 2/32 requirements coverage below 70%, unavailable branch coverage and AC11 runtime verification blocked by local JVM memory. Reviewer must statically verify physical-path alias serialization and report the untested concurrency risk truthfully.",
+    "residual_risk": "AC11 lacks runtime evidence; UI/API, database migrations, Clone, file safety and other Worker adapters are largely untested. Ignored JVM crash logs remain after cleanup was blocked by tool policy; DB/filesystem operations are non-atomic.",
+    "pm_identity": "FD-006 PM",
+    "decision_time": "2026-10-07T13:33:36Z"
+  }
+}

@@ -1,0 +1,39 @@
+# 术语表
+
+**Control Plane**：Java 应用，拥有 Lifecycle/Scheduling/Authority。
+
+**Worker**：外部进程，声明 Capability 并 Pull Task。
+
+**WorkTask**：DAG 中的一项持久化工作。
+
+**TaskDependency**：Task 间前置依赖。
+
+**Lease**：Task 当前由某 Worker 临时拥有的凭证，包括 Worker ID、Lease Token、Expire time。
+
+**ExecutionAttempt**：一次具体执行历史；Retry 创建新 Attempt。
+
+**Capability**：Worker 能力标签，例如 `java`、`coding`、`repo:core`。
+
+**AutonomousRun**：一条自然语言 Requirement 的 Run-level Authority。
+
+**Engineering Gate**：Review + Verification 后针对某个精确代码结果的工程判定。
+
+**ApprovalRequest**：绑定精确 Gate/Revision 的 Human Authorization。
+
+**Workspace Assignment**：Control Plane 给 Worker 的 repository/base/workspaceKey/branch 逻辑信息。
+
+**Workspace Result**：Worker 返回的 resultRevision/changedFiles/publicationRef。
+
+**publicationRef**：跨机器交接代码结果的位置，如 `git:origin:<branch>`。
+
+**Worker Pull**：Worker 主动申请任务，不是 Control Plane Push 指定 Worker。
+
+**Run Admission**：单个 AutonomousRun 的并发上限。
+
+**Fleet Admission**：全局并发上限。
+
+**activeSlots**：Run 层持久化并发 slot ledger。
+
+**overcommittedSlots**：运行时收缩后允许出现的临时“现有任务超过新上限”。
+
+**accounting delta**：容量 ledger 与真实 Task ownership 的差值，正常应为 0。

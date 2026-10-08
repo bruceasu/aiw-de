@@ -1,0 +1,27 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-001",
+  "kind": "planner-authorization",
+  "source_event": "FD-001-000007-implementation-ready",
+  "human_report": "FD-001-test-authorization-r7-v2.md",
+  "data": {
+    "decision": "approved",
+    "implementation_event": "FD-001-000007-implementation-ready",
+    "fd_revision": 7,
+    "fd_digest": "4d98e2a15e417e8c8986faa809dfe4aa4b5666a38b9b6aa3f8e8c926d92dc125",
+    "tester_session": "fd001-tester-20261004-7303009b",
+    "command": "C:/green/python312/python.exe tests/fd001/runtime.py",
+    "working_directory": "D:/03_projects/AI-tools/aiw-dev",
+    "scope": "One focused Chromium four-role behavior matrix matching r4 scope, with explicit fresh CDP target. Conditional: only after PM inspects v1 diagnostic evidence confirming the login page was reached; no scope expansion",
+    "expected_duration": "1-3 minutes",
+    "side_effects": "Loopback JVM with disposable SQLite and guarded Chrome temporary profile; assigned tests/fd001/evidence-r7 logs/JSON and matrix screenshots; no external service, download, production data or final package",
+    "basis": "human-approved",
+    "human_approval": "approved:conversation:call_mIrsO74rlMXpNaY6ZFVXER0L",
+    "risk_review": "Statically inspected current runtime.py and browser.mjs; same temporary fixture/public DOM assertions as r4, explicit fresh target with bounded timeout, evidence-r7 output preserves previous failures. Requires v1 diagnostic success and host confirmation before execution. Execute once only; failed assertions cannot be accepted or retried automatically.",
+    "condition_confirmed": "Host inspected diagnosis: HTTP 200 text/html; fresh CDP page navigate has no errorText; final URL /ui/login, readyState complete and Sign in title. V2 precondition satisfied.",
+    "condition_evidence": "tests/fd001/evidence-r7/diagnose-v1/http-login.json; navigation-diagnosis.json; results.json",
+    "condition_confirmed_at": "2026-10-04T14:12:31+00:00",
+    "planner_identity": "fd001-planner-host-20261004",
+    "decision_time": "2026-10-04T14:11:49+00:00"
+  }
+}

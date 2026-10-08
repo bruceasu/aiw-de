@@ -1,0 +1,14 @@
+{
+  "diagnostics": [
+    {
+      "route": "/ui/login",
+      "url": "http://127.0.0.1:4267/ui/login"
+    },
+    {
+      "route": "/ui/runs/fd2-action",
+      "url": "http://127.0.0.1:4267/ui/runs/fd2-action"
+    }
+  ],
+  "external_requests": [],
+  "runtime_errors": []
+}

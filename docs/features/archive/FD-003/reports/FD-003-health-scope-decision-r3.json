@@ -1,0 +1,15 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "human-decision",
+  "fd_id": "FD-003",
+  "source_event": "FD-003-000003-needs-decision",
+  "human_report": "FD-003-health-scope-decision-r3.md",
+  "data": {
+    "decision": "observed-heartbeat-capacity-and-leases-only",
+    "approved_source": "user-message-20261005",
+    "user_statement": "M3 仅交付可观测心跳/容量/租约事实，不包含自动 healthy/unhealthy 分级或告警",
+    "automatic_health_classification": false,
+    "automatic_alerting": false,
+    "tests_authorized": false
+  }
+}

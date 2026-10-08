@@ -1,0 +1,63 @@
+R8-S2 PARALLEL IMPLEMENTATION WORK ITEMS
+========================================
+
+Accepted input baseline
+-----------------------
+R8-S1 Autonomous Requirement Execution: user-confirmed mvn clean verify PASS.
+Java baseline: 21.
+Canonical environment prefix: AIW_.
+
+Scope
+-----
+- planner completion can materialize 1-16 deterministic implementation work items;
+- each item is a normal IMPLEMENTATION WorkTask;
+- all items share the same repositoryRef + immutable baseRevision;
+- every item depends on Requirement Analysis + Solution Architecture + Implementation Planning;
+- independent items become READY together and are pull-claimed by different Workers;
+- R5 attempt-specific Git worktree isolation is reused unchanged;
+- no cross-branch merge/integration behavior is introduced in S2.
+
+Planner manifest
+----------------
+Markers:
+  AIW_IMPLEMENTATION_WORK_ITEMS_V1
+  AIW_WORK_ITEM_BEGIN <key>
+  AIW_CAPABILITIES <optional comma-separated capabilities>
+  <multi-line instruction>
+  AIW_WORK_ITEM_END
+  AIW_IMPLEMENTATION_WORK_ITEMS_END
+
+Safety rule:
+The planner must emit multiple items only when they can be implemented independently from the same immutable base revision. Otherwise it emits one item.
+
+Compatibility
+-------------
+A planning completion summary without an R8-S2 manifest falls back to the accepted R8-S1 single implementation task.
+An explicitly malformed manifest is rejected rather than guessed.
+
+Persistence
+-----------
+Core tables: 5
+New tables: 0
+New columns: 0
+New migrations: 0
+Flyway remains V1-V7.
+
+Generation-environment checks
+-----------------------------
+- Implementation plan parser javac --release 21: PASS
+- Implementation plan parser executable harness: PASS (2 work items)
+- R8-S2 autonomous handler structural javac --release 21 with minimal Spring/application stubs: PASS
+- SQLite V1 -> V7 migration smoke: PASS
+- core table count: 5
+- legacy environment-prefix scan: PASS (0)
+- expected Failsafe integration-test methods: 17
+- generated/binary worker build artifacts removed from distribution
+
+Authoritative acceptance
+------------------------
+Run from a fresh/extracted source tree with JDK 21:
+
+    mvn clean verify
+
+Expected Failsafe integration-test methods: 17.

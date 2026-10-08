@@ -1,0 +1,32 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-009",
+  "source_event": "FD-009-000006-work-requested",
+  "human_report": "FD-009-implementation-r1.md",
+  "data": {
+    "summary": "Implemented one TypeScript Worker entry with explicit Codex SDK or OpenAI Agents SDK selection through a local AgentRuntime SPI; removed the former API package and launcher.",
+    "changed_paths": [
+      "workers/process-typescript/",
+      "workers/process-typescript-with-api/",
+      "scripts/compile-worker-runtime.mjs",
+      "workers/WORKER_OPERATIONS.md",
+      "docs/current/",
+      "docs/current-zh/",
+      "docs/worker-pi-integration-plan.md",
+      "docs/AgentRuntime SPI.md",
+      "docs/features/FD-009_TYPESCRIPT_WORKER_AGENTRUNTIME_SPI.md"
+    ],
+    "commands": [
+      "git diff --check",
+      "git rm -r -- workers/process-typescript-with-api",
+      "$env:AIW_TYPESCRIPT_COMPILER='D:\\03_projects\\AI-tools\\aiw-dev\\workers\\process-typescript\\node_modules\\typescript'; node scripts/compile.mjs"
+    ],
+    "results": [
+      "Seven scoped Work Items were implemented and committed separately in feature/FD-009.",
+      "TypeScript syntax compile passed with no retained artifact; no type or dependency validation.",
+      "Tests, final builds, network/model calls, and deployment were not run."
+    ],
+    "residual_risk": "Runtime behavior, type compatibility, lockfile installation, historical FD-005 test paths, and live CLI/API integration remain unverified."
+  }
+}

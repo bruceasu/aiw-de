@@ -1,0 +1,106 @@
+PASS ADMIN-permission
+PASS requirement-original
+PASS requirement-long
+PASS requirement-escaped
+PASS status-lifecycle
+PASS status-control
+PASS status-effective
+PASS dashboard-phase
+PASS task-counts
+PASS no-eta
+PASS single-edges
+PASS single-direction
+PASS graph-node-link
+PASS graph-hide
+PASS parallel-edges
+PASS parallel-levels
+PASS final-review-level
+PASS verification-level
+PASS repair-added
+PASS repair-history
+PASS no-inferred-edge
+PASS cycle-warning
+PASS cycle-table
+PASS tasks-cap
+PASS tasks-order
+PASS requirement-window-outside
+PASS outside-prerequisite
+PASS outside-no-anchor
+PASS cross-run-edge
+PASS cross-subject-edge
+PASS edges-cap
+PASS edges-total
+PASS partial-graph
+PASS attempt-cap
+FAIL attempt-run-filter returned attempt IDs differ from newest300
+PASS attempt-task-link
+PASS attempt-number
+PASS attempt-worker
+PASS attempt-state
+PASS attempt-times
+PASS attempt-failure-category
+PASS attempt-reason-paused
+PASS attempt-reason-cancelled
+PASS attempt-reason-missing
+PASS attempt-summary
+PASS failure-latest-outside
+PASS failure-event-time
+PASS failure-event-actor
+PASS recovery-event-time
+PASS recovery-event-no-attempt
+PASS recovery-history-cap
+PASS auto-recovery-explanation
+PASS retry-not-recovery-time
+PASS timeline-cap
+PASS timeline-boundaries
+PASS timeline-filter-scope
+PASS timeline-chronology
+PASS timeline-utc-groups
+PASS timeline-full-detail
+PASS timeline-missing-metadata
+FAIL timeline-text-filter text filter did not limit entries
+PASS timeline-reset
+FAIL timeline-category-filter {"exceptionId":1,"text":"Uncaught","lineNumber":0,"columnNumber":203,"scriptId":"48","stackTrace":{"callFrames":[{"functionName":"","scriptId":"48","url":"","lineNumber":0,"columnNumber":209},{"functionName":"","scriptId":"48","url":"","lineNumber":0,"columnNumber":421}]},"exception":{"type":"object","subtype":"error","className":"Error","description":"Error: category options absent\n    at <anonymous>:1:210\n    at <anonymous>:1:422","objectId":"-8479590100450231344.13.2"}}
+FAIL refresh-filter filter not reapplied
+PASS timeline-detail-key
+PASS refresh-details
+PASS refresh-selection
+PASS refresh-scroll
+PASS refresh-auto
+PASS publication-text-only
+PASS no-broken-links
+PASS requirement-cross-run
+PASS requirement-missing
+PASS empty-graph
+PASS long-id
+
+<--- Last few GCs --->
+
+[19468:0000019A75335000]    11037 ms: Scavenge 11.1 (13.3) -> 9.7 (15.4) MB, pooled: 4 MB, 0.34 / 0.00 ms  (average mu = 1.000, current mu = 1.000) allocation failure; 
+[19468:0000019A75335000]    12444 ms: Mark-Compact (reduce) 10.5 (15.9) -> 9.5 (11.7) MB, pooled: 0 MB, 2.14 / 0.00 ms  (+ 2.1 ms in 45 steps since start of marking, biggest step 0.2 ms, walltime since start of marking 5 ms) (average mu = 1.000, current m
+FATAL ERROR: Committing semi space failed. Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 00007FF73ED9C36F 
+ 2: 00007FF73F9E4D77 
+ 3: 00007FF73F7E5467 
+ 4: 00007FF73F77DE8B 
+ 5: 00007FF73F7A61FA 
+ 6: 00007FF73F7E7846 
+ 7: 00007FF73F7E6E96 
+ 8: 00007FF73F7F7E22 
+ 9: 00007FF73F7F794B 
+10: 00007FF740C7DAED 
+11: 00007FF73F7E2F30 
+12: 00007FF73F7DC094 
+13: 00007FF73ECEF0CA 
+14: 00007FF73ECED8B0 
+15: 00007FF73FA4C70B 
+16: 00007FF73FA4C27F 
+17: 00007FF73EEAEBCF 
+18: 00007FF73ED2B416 
+19: 00007FF73EDF718C 
+20: 00007FF73FE13F82 
+21: 00007FF740C871F4 
+22: 00007FF86F857034 
+23: 00007FF870882651 RtlUserThreadStart+33

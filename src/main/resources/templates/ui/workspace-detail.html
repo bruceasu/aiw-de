@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Workspace · AI Dev Manager</title><link rel="stylesheet" href="/ui/console.css?v=workspace-spacing-1"></head>
+<body><div class="app workspace-page"><nav th:replace="~{ui/fragments :: nav('workspaces')}"></nav><main class="main">
+<header th:replace="~{ui/fragments :: topbar('Workspace details','Review, edit, and add repository directories')}"></header>
+<div class="content"><div th:replace="~{ui/fragments :: flash}"></div><p><a href="/ui/workspaces">All Workspaces</a></p>
+<section class="card section"><h2 th:text="${workspace.displayName}">Workspace</h2><p class="mono" th:text="${workspace.id}">id</p>
+<p><strong>Root:</strong> <span class="mono" th:text="${workspace.rootPath}">path</span></p>
+<p th:unless="${workspace.enabled}">This Workspace is disabled.</p>
+<h3>Workspace root and registered repositories</h3><p th:if="${visibleTargets.empty}">No registered repositories.</p><ul class="workspace-target-list" th:unless="${visibleTargets.empty}"><li th:each="target : ${visibleTargets}">
+<div class="workspace-target-heading"><strong th:text="${target.repositoryRef}">ref</strong><span class="pill neutral" th:text="${target.sourceType}">type</span></div>
+<p class="mono workspace-target-path" th:text="${target.repositoryPath}">path</p>
+<p class="workspace-target-status" th:if="${target.gitWarning}" th:text="${target.gitWarning}">warning</p>
+<p class="workspace-target-status" th:unless="${target.gitWarning}">Git available</p>
+<details class="workspace-delete-choice" th:if="${target.sourceType == 'EXPLICIT'}" th:attr="data-delete-target=${target.repositoryRef}" data-delete-confirm="repository"><summary class="btn ghost small-btn">Remove registration</summary>
+<div class="workspace-delete-choice__fallback"><p>Remove this repository registration? Its directory, local link, and files stay on disk.</p><form th:action="@{/ui/workspaces/{id}/repos/{repoId}/delete(id=${workspace.id},repoId=${target.repoId})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"/><input type="hidden" name="confirmed" value="true"/><button class="btn danger small-btn" type="submit">Remove registration</button></form></div></details>
+</li></ul>
+<p class="help">First-level directories appear as implicit Run targets when no child is registered. Implicit targets have no registration to remove. Removing an explicit registration keeps its directory and files.</p>
+</section>
+<section class="card form-card" th:if="${workspace.enabled}"><h2>Add child repository</h2>
+<form th:action="@{/ui/workspaces/{id}/repos(id=${workspace.id})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"/>
+<div class="form-grid"><div class="field"><label for="repoId">Directory name</label><input id="repoId" name="repoId" required pattern="[A-Za-z0-9._-]+" placeholder="api"/></div>
+<div class="field"><label for="kind">Type</label><select id="kind" name="kind"><option value="LOCAL_LINK">Link another local directory</option><option value="GIT_CLONE">Clone a Git address</option><option value="BLANK">Create an empty directory</option></select></div>
+<div class="field full"><label for="source">Local source path or Git address</label><input id="source" name="source" placeholder="D:\projects\api or https://example/repo.git"/><div class="help">Required for link and clone; leave empty for a blank directory. The new directory appears directly under the Workspace root.</div></div>
+<div class="field full"><label><input type="checkbox" name="initializeGit" value="true"/> Initialize Git in a linked local directory</label><div class="help">A local link keeps its source unchanged unless you select this option. Git initialization adds metadata to the linked source.</div></div></div>
+<div class="form-actions"><button class="btn primary" type="submit">Add repository</button></div></form></section>
+<section class="card form-card"><h2>Edit Workspace</h2>
+<form th:action="@{/ui/workspaces/{id}/name(id=${workspace.id})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"/><div class="field"><label for="editName">Name</label><input id="editName" name="displayName" required th:value="${workspace.displayName}"/></div><div class="form-actions"><button class="btn ghost" type="submit">Save name</button></div></form>
+<form th:action="@{/ui/workspaces/{id}/root(id=${workspace.id})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"/><div class="field"><label for="editRoot">Root directory</label><input id="editRoot" name="rootPath" required th:value="${workspace.rootPath}"/><div class="help">The path can change before any task has used this Workspace.</div></div><div class="form-actions"><button class="btn ghost" type="submit">Save root</button></div></form>
+<form th:action="@{/ui/workspaces/{id}/root-target(id=${workspace.id})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"/><input type="hidden" name="rootTarget" th:value="${workspace.targetMode != 'ROOT'}"/><div class="form-actions"><button class="btn ghost" type="submit" th:text="${workspace.targetMode == 'ROOT' ? 'Use implicit children when available' : 'Use Workspace root as target'}">Change target</button></div><p class="help">Changing this setting requires no unfinished tasks or explicit child registrations.</p></form>
+<form th:action="@{/ui/workspaces/{id}/enabled(id=${workspace.id})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"/><input type="hidden" name="enabled" th:value="${!workspace.enabled}"/><div class="form-actions"><button class="btn ghost" type="submit" th:text="${workspace.enabled ? 'Disable Workspace' : 'Enable Workspace'}">Disable Workspace</button></div></form>
+</section>
+<section class="card section"><h2>Delete registration</h2><p>Deletes this Workspace's registration and child registrations. Local directories, links, and cloned files stay on disk. Unfinished tasks must be completed or cancelled first.</p>
+<details class="workspace-delete-choice" th:attr="data-delete-target=${workspace.displayName}" data-delete-confirm="workspace"><summary class="btn ghost">Delete Workspace registration</summary>
+<div class="workspace-delete-choice__fallback"><p>Remove this Workspace registration? Files, directories, links, and clones on disk will stay.</p><form th:action="@{/ui/workspaces/{id}/delete(id=${workspace.id})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"/><input type="hidden" name="confirmed" value="true"/><button class="btn danger" type="submit">Confirm deletion</button></form></div></details></section>
+<dialog class="workspace-confirm" data-workspace-delete-dialog aria-labelledby="workspace-confirm-title" aria-describedby="workspace-confirm-copy">
+<div class="workspace-confirm__top"><span>AIW / CONFIRM ACTION</span><span class="pill bad">DELETE</span></div>
+<div class="workspace-confirm__body"><h2 id="workspace-confirm-title" data-delete-title>Remove repository registration?</h2><p id="workspace-confirm-copy" data-delete-copy></p></div>
+<div class="workspace-confirm__target"><span>SELECTED TARGET</span><strong data-delete-target-display></strong></div>
+<div class="workspace-confirm__footer"><button class="btn ghost" type="button" data-delete-cancel>Cancel</button><button class="btn danger" type="button" data-delete-accept>Confirm removal</button></div>
+</dialog>
+</div></main></div><script src="/ui/console.js?v=workspace-delete-3"></script></body></html>

@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-005",
+  "source_event": "FD-005-000041-test-rejected",
+  "human_report": "FD-005-implementation-r42.md",
+  "data": {
+    "summary": "r39 两保留角色均在模块或语法加载阶段退出，现有类别合并多种错误，Node 错误码/模块 basename 为空。无生产修复依据；新独立 Tester 需采集安全加载错误子类别。",
+    "changed_paths": [
+      "docs/features/FD-005_WORKER_PI.md",
+      "docs/features/reports/FD-005-implementation-r42.md",
+      "docs/features/reports/FD-005-implementation-r42.json"
+    ],
+    "commands": [
+      "aiw fd claim FD-005 FD-005-000041-test-rejected --session fd005-worker-20261005-69fe2eb5",
+      "git diff --check",
+      "定向静态读取 r39 分类器与受控诊断、API Worker 包入口和加载器"
+    ],
+    "results": [
+      "r39 唯一命令 exit 1，1 项行为测试失败；本轮未重跑。",
+      "类别合并 SyntaxError、缺失导出等多种情况，空安全字段无法定位根因。",
+      "无生产源码改动，也未运行编译或测试。"
+    ],
+    "residual_risk": "API-16 入口行为未验证；累计 23/33 完整场景、分支未测；真实服务、远端 Git、平台 G2 与非 API 运行时无本轮行为证明。",
+    "worker_session": "fd005-worker-20261005-69fe2eb5",
+    "authored_fd_revision": 41,
+    "source_fd_sha256": "9600fe04907e73a1e842b131349ee1763b8bd84c4719487026e64b3eaead9c26",
+    "previous_tester_report": "docs/features/reports/FD-005-test-report-r39.md",
+    "previous_pm_decision": "docs/features/reports/FD-005-test-decision-r40.md"
+  }
+}

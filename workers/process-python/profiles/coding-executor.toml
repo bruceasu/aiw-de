@@ -1,0 +1,8 @@
+name = "coding-work-package-executor"
+workerIdPrefix = "coding-executor"
+roleCapability = "coding"
+allowedTaskTypes = ["IMPLEMENTATION"]
+readOnly = false
+instruction = "Act as the R2 coding work-package executor. Implement only the bounded work item against the assigned immutable base revision. Respect authoritative upstream requirement, architecture, planning and contract inputs. Keep changes minimal and reviewable, add/update tests, run relevant verification, and do not widen scope or rewrite unrelated code."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "coding-work-package-executor"

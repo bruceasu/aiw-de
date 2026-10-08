@@ -1,0 +1,27 @@
+R6-S3 Fix1 validation
+
+Observed external failure root cause:
+- obsolete ImplementationCompletedHandler source survived archive-overlay extraction;
+- both legacy and R6-S3 completion handlers executed for IMPLEMENTATION;
+- duplicate deterministic review/verification task insertion caused SQLite PK violations;
+- the same failure cascaded into HTTP 500s and FakeWorker completion timeouts.
+
+Corrections:
+- historical source path restored as a non-Spring tombstone;
+- TaskCompletionHandler now declares supported TaskType authority;
+- TaskCompletionDispatcher rejects duplicate authority for a TaskType;
+- generated tasks/dependencies materialize idempotently with createIfAbsent + ON CONFLICT DO NOTHING;
+- existing deterministic task IDs are checked for semantic compatibility;
+- R6-S2 integration test replays code-change materialization and asserts exactly one review and one verification task.
+
+Local validation in generation environment:
+- JDK 21 structural compilation of core/application/JDBC changes: PASS
+- SQLite ON CONFLICT task/dependency idempotency smoke: PASS
+- obsolete handler Spring stereotype scan: PASS (0)
+- legacy environment-prefix residue scan: PASS (0)
+- schema change: NONE
+- domain tables: 4
+- Flyway migrations: V1-V5
+
+Authoritative acceptance remains: mvn clean verify on JDK 21.
+Expected Failsafe integration tests: 11.

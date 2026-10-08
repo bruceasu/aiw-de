@@ -1,0 +1,1 @@
+{"focus":{"value":"LOCAL UNSAVED INPUT","active":"requirement","windowFocused":true,"outline":"solid","focusVisible":true},"checks":[{"name":"form input and programmatic focus remain readable","passed":true},{"name":"keyboard focus is visible on next form field","passed":true}]}

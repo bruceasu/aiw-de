@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: me.asu.aidev.webconsole.R9WebConsoleApprovalIT
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.964 s -- in me.asu.aidev.webconsole.R9WebConsoleApprovalIT
