@@ -5,7 +5,7 @@
 - 整理者：Codex，使用 issue-management 技能
 - 当前阶段：用户已批准需求政策并要求交接 FD 设计；CLI 批准与交接结果以实际记录为准
 - 准备度：READY_FOR_FD_DESIGN，G1/G2 已由用户决定；其余技术与交付门槛进入 FD 设计，不等于设计就绪或实施授权
-- CLI 生命周期与批准状态：以同目录 requirement.toml 为准
+- CLI 生命周期与批准状态：以同目录 issue.toml 为准
 
 ## 事实与来源
 
@@ -139,7 +139,7 @@ G1、G2 已由用户明确决定，可以记录本版本的需求批准并交接
 
 ## 当前结果与下一步
 
-已按用户指令创建一个整体 Issue，保留主要目标、规则和验收例，并记录人工确认的 G1/G2 与设计交接范围。需求批准由 `aiw issue approve` 绑定捕获后的实际来源版本；关联 FD 使用 CLI 成功创建的编号，参见 [Feature Design 索引](../../features/FEATURE_INDEX.md)。CLI 状态以 requirement.toml 和对应 FD、交接收据为准。
+已按用户指令创建一个整体 Issue，保留主要目标、规则和验收例，并记录人工确认的 G1/G2 与设计交接范围。需求批准由 `aiw issue approve` 绑定捕获后的实际来源版本；关联 FD 使用 CLI 成功创建的编号，参见 [Feature Design 索引](../../features/FEATURE_INDEX.md)。CLI 状态以 issue.toml 和对应 FD、交接收据为准。
 
 下一步通过 fd-workflow 在关联 FD 中设计公共基础、记录技术门槛并排序 Work Items。完整设计就绪需要实际 SDK、配置和兼容证据；本次不直接派发实施。
 

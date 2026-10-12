@@ -87,7 +87,7 @@ Worker Session：`fd004-worker-20261005-85b8a0b8`，来源事件：`FD-004-00000
 ## Sources
 
 - Issue: none
-- Source requirement: [REQ00001-web-control-plane](../requirements/REQ00001-web-control-plane/requirement-plan.md)，M4；[差距分析](../requirements/REQ00001-web-control-plane/current-state.md)。
+- Source requirement: [REQ00001-web-control-plane](../../../issues/ISSUE-00002/issue-plan.md)，M4；[差距分析](../../../issues/ISSUE-00002/current-state.md)。
 - CLI 的 `--issue` 当前只允许一个 FD 正式关联同一需求；此 FD 使用来源链接，未新增正式绑定或伪造批准记录。
 - 依赖：[FD-001](FD-001_MISSION_CONTROL_OVERVIEW_AND_SHARED_VISUAL_FOUND.md)、[FD-002](FD-002_RUN_MISSION_DETAIL_AND_TIMELINE.md)；相关：[FD-003](FD-003_WORKER_FLEET_AND_SCHEDULING_EXPERIENCE.md)。
 - 来源事件：`FD-004-000002-design-requested`；2026-10-04 用户要求剩余里程碑先生成 FD。

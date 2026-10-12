@@ -88,7 +88,7 @@ Worker Session：`fd003-worker-20261005-176e2057`，来源事件 `FD-003-000006-
 ## Sources
 
 - Issue: none
-- Source requirement: [REQ00001-web-control-plane](../requirements/REQ00001-web-control-plane/requirement-plan.md)，M3；[差距分析](../requirements/REQ00001-web-control-plane/current-state.md)。
+- Source requirement: [REQ00001-web-control-plane](../../../issues/ISSUE-00002/issue-plan.md)，M3；[差距分析](../../../issues/ISSUE-00002/current-state.md)。
 - CLI 的 `--issue` 只允许一个 FD 正式关联同一需求；本文件以来源链接追溯，不新增或伪造正式绑定。
 - 依赖：[FD-001](FD-001_MISSION_CONTROL_OVERVIEW_AND_SHARED_VISUAL_FOUND.md)；相关：[FD-002](FD-002_RUN_MISSION_DETAIL_AND_TIMELINE.md)、[FD-004](FD-004_APPROVAL_AND_ENGINEERING_EVIDENCE.md)。
 - 来源事件：`FD-003-000002-design-requested`；2026-10-04 用户授权先生成剩余里程碑 FD。

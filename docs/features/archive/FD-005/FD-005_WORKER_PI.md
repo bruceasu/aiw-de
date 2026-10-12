@@ -223,8 +223,8 @@ Worker 首轮实施与编译证据：[实施报告 r5](reports/FD-005-implementa
 
 - Issue: ISSUE-001
 
-- [批准的需求计划](../requirements/ISSUE-001/requirement-plan.md)；metadata revision 4，approval=APPROVED。
-- [批准记录](../requirements/ISSUE-001/requirement.toml)与 [决策日志](../requirements/ISSUE-001/decision-log.md)。approval source digest：`7ff4e1c8aff561ac06e4303ae0b911afc1d674c52c9dfb18766ecacc6881f835`；requirement-plan SHA-256：`fbd09ddac173968bf34c6aa233c99823b1ee8a91976fe11f373f07f5d7a942bc`。
+- [批准的需求计划](../../../issues/ISSUE-00003/issue-plan.md)；metadata revision 4，approval=APPROVED。
+- [批准记录](../../../issues/ISSUE-00003/issue.toml)与 [决策日志](../../../issues/ISSUE-00003/decision-log.md)。approval source digest：`7ff4e1c8aff561ac06e4303ae0b911afc1d674c52c9dfb18766ecacc6881f835`；requirement-plan SHA-256：`fbd09ddac173968bf34c6aa233c99823b1ee8a91976fe11f373f07f5d7a942bc`。
 - [Worker 整体融合计划](../worker-pi-integration-plan.md)，SHA-256：`8c0bcde838945fdf45f77464a3481db51e07de17913557546953328f2619289f`。
 - [aiw 能力复用评估](../aiw-review.md)。
 - [API Worker 生命周期](../../workers/process-typescript-with-api/src/index.ts)、[API 运行时](../../workers/process-typescript-with-api/src/api-runtime.ts)、[工具与队列](../../workers/process-typescript-with-api/src/tools.ts)、[角色](../../workers/process-typescript-with-api/src/profiles.ts)。

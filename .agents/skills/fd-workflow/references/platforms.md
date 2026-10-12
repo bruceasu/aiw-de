@@ -16,7 +16,7 @@ Keep repository-wide durable project instructions in:
 AGENTS.md
 ```
 
-Both CLIs can use this convention, so FD lifecycle rules do not need to be duplicated in `CODEX.md` or vendor-specific files.
+Both CLIs can use this convention, so FD lifecycle rules do not need to be duplicated in vendor-specific files.
 
 ## OpenAI Codex CLI
 

@@ -1,0 +1,32 @@
+id = "ISSUE-00001"
+title = "Worker 灵活任务与流程编排"
+parent_id = ""
+status = "APPROVED"
+created = "2026-10-12"
+updated = "2026-10-12"
+revision = 3
+
+[approval]
+status = "APPROVED"
+by = "manager"
+at = "2026-10-12T14:39:23+09:00"
+reason = "管理者在会话中明确批准 ISSUE-00001 并要求立即 Promote。"
+source_digest = "ef4371b0e6fcb8c3ade7a7e0097cb41bcd771563688cc9fa5992d3f46b3cd8cc"
+
+[promotion]
+status = "NOT_STARTED"
+task_id = ""
+
+[conversation]
+session_id = ""
+
+[terminal]
+by = ""
+at = ""
+reason = ""
+
+[artifact]
+requirement-plan = "docs/issues/ISSUE-00001/issue-plan.md"
+
+[digest]
+requirement-plan = "d35360d65a752b68b51e630033d8c0048973088973d41e779212bb5553fbd035"

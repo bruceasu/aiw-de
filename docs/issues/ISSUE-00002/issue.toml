@@ -1,4 +1,4 @@
-id = "REQ00001-web-control-plane"
+id = "ISSUE-00002"
 title = "Beautiful Web Control Plane"
 parent_id = ""
 status = "APPROVED"
@@ -26,7 +26,7 @@ at = ""
 reason = ""
 
 [artifact]
-requirement-plan = "docs/requirements/REQ00001-web-control-plane/requirement-plan.md"
+requirement-plan = "docs/issues/ISSUE-00002/issue-plan.md"
 
 [digest]
-requirement-plan = "36ef3c6c4728b972ee4e58105634ada4c2ef1b35a1d5e716a43fc4da4bb62878"
+requirement-plan = "52827f47e5f0ca428dcd3d93be261076284ad28ddcf529d9dd991b41588ac0de"

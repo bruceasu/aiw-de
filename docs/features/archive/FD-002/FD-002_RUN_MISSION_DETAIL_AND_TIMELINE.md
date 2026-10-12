@@ -114,7 +114,7 @@ PM 已依据 [r13 决定](reports/FD-002-test-decision-r13-v1.md) 拒绝，Worke
 ## Sources
 
 - Issue: none
-- Source requirement: [REQ00001-web-control-plane](../requirements/REQ00001-web-control-plane/requirement-plan.md)，M2；[差距分析](../requirements/REQ00001-web-control-plane/current-state.md)。
+- Source requirement: [REQ00001-web-control-plane](../../../issues/ISSUE-00002/issue-plan.md)，M2；[差距分析](../../../issues/ISSUE-00002/current-state.md)。
 - CLI 的 `--issue` 目前只允许一个 FD 正式关联同一需求；此处 `Issue: none` 表示没有新增正式绑定，不表示没有需求来源。
 - 依赖：[FD-001](archive/FD-001/FD-001_MISSION_CONTROL_OVERVIEW_AND_SHARED_VISUAL_FOUND.md) 已通过独立审查并归档；同需求 M3/M4：[FD-003](FD-003_WORKER_FLEET_AND_SCHEDULING_EXPERIENCE.md)、[FD-004](FD-004_APPROVAL_AND_ENGINEERING_EVIDENCE.md)。
 - 来源事件：`FD-002-000002-design-requested`；2026-10-04 用户要求剩余里程碑先生成 FD。

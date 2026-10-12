@@ -138,9 +138,30 @@ followed the normal route.
 
 Use the primary workspace for FD design and planning. By default, every numbered
 FD moves to its isolated worktree before implementation starts, so parallel FD
-work does not share writable files. A question or design-only discussion does
-not start implementation and does not create a worktree. Legacy Tasks keep
-their existing Task worktree policy.
+work does not share writable files. A user may explicitly direct implementation
+in the primary workspace; treat that as an alternate workspace choice for that
+FD, not as an implicit change to the default. A question or design-only
+discussion does not start implementation and does not create a worktree. Legacy
+Tasks keep their existing Task worktree policy.
+
+For an explicitly authorized primary-workspace implementation, do not create a
+branch, worktree, or `.ai/fd/<fd-id>/workspace.json`. Do not claim or invent a
+Worker receipt when no handoff exists. Keep the FD itself current: check off
+only completed Work Items, update TODO, and record actual static/compile
+evidence and skipped checks in Verification. Inspect the primary-workspace diff
+before handoff. File edits do not advance the FD lifecycle status automatically.
+At completion, PM must explicitly route the active FD to review or archive it
+under an explicit override. Primary-workspace authorization alone does not
+authorize Git commits, tests, builds, deployment, or archive; follow the
+repository budget and any separate user authorization.
+
+The ordinary completion gate still applies in either workspace: a separate
+Reviewer must record a pass before normal Complete archive. For a direct
+implementation with no Worker handoff, use the managed FD status/review CLI
+route instead of fabricating lifecycle evidence. If PM explicitly overrides
+the gate, record the skipped review and missing evidence in the reason and use
+`aiw fd close <id> Complete --force --reason "..."`; the operation audit is
+the override record. Never describe skipped review or checks as passed.
 
 Use `feature/<fd-id>` and `.wt/<fd-id>` for an isolated FD. Determine the
 current branch before creation. Before creating the worktree, commit the ready

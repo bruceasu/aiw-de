@@ -23,8 +23,8 @@ change only on a separate, explicit request.
 
 ## Inputs and inspection
 
-Required input is the target repository. Inspect its existing `AGENTS.md` or
-`CODEX.md`, AIW markers and available CLI help, `openspec/changes/` and
+Required input is the target repository. Inspect its existing `AGENTS.md`, AIW
+markers and available CLI help, `openspec/changes/` and
 `openspec/specs/`, `.agents/agents/`, `CONTEXT.md`, `CONTEXT-MAP.md`, ADR
 directories, installed triage Skill, and clear monorepo boundaries. Treat
 `.scratch` as legacy data. Read `skills/work-management.md` once when present.
@@ -40,9 +40,9 @@ Before writing any project files, present one concise proposal that names each
 file to create or change, summarizes its exact intended content, and identifies
 any unresolved choice. Include the proposed `## Agent skills` block. Wait for
 the user's confirmation before applying these project configuration changes.
-If no `AGENTS.md` or `CODEX.md` exists, include the choice of which file to
-create in that same proposal; do not create both. If both exist, inspect both
-and propose updating only the one that governs the relevant repository scope.
+If no `AGENTS.md` exists, include creating it in the proposal. If a legacy
+`CODEX.md` exists, treat it as migration input and move relevant rules into
+`AGENTS.md` rather than keeping parallel instruction files.
 
 Propose the AIW ownership contract in `.agents/agents/work-management.md`:
 

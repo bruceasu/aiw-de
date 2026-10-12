@@ -150,8 +150,9 @@ decision need, next step or risk, and a concrete reusable improvement or
 `none`. If no event exists, use JSON `source_event: null` and explain why
 in the report. Make the suffix unique across resumes and archived records.
 Keep the pair in the writing role's workspace and commit tracked feedback
-before a handoff or merge; do not edit an active handoff's FD body or receipt
-merely to record a blocker. Feedback is supplemental evidence, not a new
+before a handoff or merge in isolated mode. In direct-workspace mode, do not
+commit unless separately authorized; do not edit an active handoff's FD body or
+receipt merely to record a blocker. Feedback is supplemental evidence, not a new
 handoff artifact, and does not itself authorize tests, rule changes, Gate
 overrides, or risky recovery.
 
@@ -188,18 +189,32 @@ in the user-facing Gate and final report.
    its receipt and continue only when the user explicitly requests its legacy
    CLI path. Skip already completed stages;
    an archived Complete FD is already done. Before any implementation, capture
-   the current branch, commit the ready FD plan on the parent branch, and make
-   sure the parent workspace is clean. Do not mix unrelated changes into the FD
-   plan commit; if other parent changes are uncommitted, resolve and commit
-   them separately first. Ensure `.wt/` and `.ai/` are ignored by Git;
-   `wt add` rejects missing rules before changing Git state. Then create the branch/worktree with
-   `aiw git wt add <id>` (`feature/<id>` and `.wt/<id>`). This is the
-   default for every numbered FD, not only requests that mention isolation or
-   parallel work. Immediately read
-   `.ai/fd/<id>/workspace.json` and verify `fd_id`, `parent_branch`, `branch`,
-   and `worktree` against the created worktree. This file records the exact
-   parent for the later merge; stop if it is missing or inconsistent. Keep all
-   Worker writes in that worktree.
+   the current branch. For isolated work, commit the ready FD plan on the parent
+   branch and make sure the parent workspace is clean. Do not mix unrelated
+   changes into the FD plan commit; if other parent changes are uncommitted,
+   resolve and commit them separately first. Unless the user explicitly directs
+   primary-workspace implementation, ensure `.wt/` and `.ai/` are ignored by
+   Git; `wt add`
+   rejects missing rules before changing Git state. Create the branch/worktree
+   with `aiw git wt add <id>` (`feature/<id>` and `.wt/<id>`), the default for
+   numbered FDs. Immediately read `.ai/fd/<id>/workspace.json` and verify
+   `fd_id`, `parent_branch`, `branch`, and `worktree` against the created
+   worktree. This file records the exact parent for later merge; stop if it is
+   missing or inconsistent. Keep all Worker writes in that worktree.
+
+   If the user explicitly directs work in the primary workspace, use the
+   direct-workspace path in `skills/work-management.md`: do not create a
+   worktree or workspace record, and do not invent a Worker event or receipt.
+   Keep the FD's Work Items, TODO, and Verification current, inspect the
+   primary-workspace diff, and preserve skipped checks as unrun. This choice
+   does not authorize Git commits. To continue through normal independent
+   review without a Worker handoff, PM sets the active FD to `Pending Verification`
+   with `aiw fd set-status <id> "Pending Verification" --operator <pm>
+   --reason "..."`, then creates the Reviewer handoff with
+   `aiw fd request-review <id> --reason "..."`; cite only evidence that actually exists. If the
+   user explicitly chooses PM override, archive with `aiw fd close <id>
+   Complete --force --reason "..."` and state the skipped review/evidence in
+   the reason. Never edit receipts or represent skipped stages as passed.
 2. **Plan and split when in Design.** Load `roles/planner.md`. As Planner, resolve routine choices from evidence and
    write Problem, options and decision, scope, ordered numbered Work Items,
    acceptance, TODO, Verification, and relevant spec updates. Split items by
@@ -212,14 +227,19 @@ in the user-facing Gate and final report.
    remaining `%%` notes with actual evidence and skipped checks. Apply the
    repo's validation budget. For a Dual evidence FD, write a Chinese Markdown
    report and same-basename JSON using `docs/templates/REPORT_DATA_TEMPLATE.json`;
-   point `--artifact` to Markdown. In the FD worktree, inspect the diff and
-   commit each completed, independently reviewable Work Item before starting
-   the next. Stage only that item's files; use `aiw git wt commit <id>` only when
-   every uncommitted change belongs to it, otherwise use path-scoped `git add`
-   and `git commit`. Commit final FD evidence before the Reviewer
-   handoff. Do not rebase either branch as part of this workflow; delivery
-   squashes the reviewed FD result onto the recorded parent branch.
-   If authorization or design is missing, stop with the FD active. Emit `implementation-ready
+   point `--artifact` to Markdown. In the selected workspace, inspect the diff
+   and update the FD as work is completed. In an isolated worktree, commit each
+   completed, independently reviewable Work Item before starting the next.
+   Stage only that item's files; use `aiw git wt commit <id>` only when every
+   uncommitted change belongs to it, otherwise use path-scoped `git add` and
+   `git commit`. In the primary workspace, do not commit unless separately
+   authorized. Commit final FD evidence before the Reviewer handoff only when
+   working in a worktree. Do not rebase either branch as part of this workflow;
+   delivery squashes the reviewed FD result onto the recorded parent branch.
+   If authorization or design is missing, stop with the FD active. In direct-
+   workspace mode, do not emit `implementation-ready` without a claimed Worker
+   event; use the status/review CLI route described in step 1. Otherwise emit
+   `implementation-ready
    --producer worker --artifact <implementation-report> --source-event
    <claimed-worker-event>` only after all scoped items and required evidence
    are resolved. Worker performs the repository-authorized compile-only check
@@ -249,7 +269,7 @@ in the user-facing Gate and final report.
    and relevant implementation evidence. Reviewer does not inspect or evaluate
    optional `fd-test` reports. Its session must differ from Worker.
    If subagents are unavailable, stop and leave the handoff pending.
-5. **Repair, merge, and close.** Inspect the subagent's report and latest receipt;
+5. **Repair, deliver, and close.** Inspect the subagent's report and latest receipt;
    subagent prose alone is not a pass. On `changes-requested`, first count
    Reviewer outcomes and assess whether the findings have an actionable fix.
    If this is the third failed review or no fix is actionable, stop before
@@ -257,7 +277,9 @@ in the user-facing Gate and final report.
    state the Gate. Otherwise claim that handoff, fix the concrete findings,
    update the FD/report, and emit `implementation-ready` again. On
    `verification-passed`, verify the latest receipt matches the current FD
-   revision and content. Read `.ai/fd/<id>/workspace.json` and take its
+   revision and content. In direct-workspace mode, the reviewed changes are
+   already in the primary workspace; skip worktree delivery and proceed to
+   archive. In isolated mode, read `.ai/fd/<id>/workspace.json` and take its
    `parent_branch`, `branch`, and `worktree` as the merge coordinates. Confirm
    the parent branch is clean and still matches the recorded parent. Run
    `aiw git wt local-merge <id>` for one squash commit on the parent branch. On a

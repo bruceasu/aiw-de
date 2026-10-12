@@ -1,6 +1,6 @@
 # REQ00001 — Beautiful Web Control Plane 需求计划
 
-批准依据：用户于 2026-10-04 在当前会话明确确认「批准需求，并将 M1 交接到 FD」。需求来源：用户请求与 [Web Control Plane Handoff](../../web-ui.md)。视觉方向已由用户在 2026-10-02 的需求讨论确认。生命周期批准状态以 `requirement.toml` 的 CLI 记录为准。
+批准依据：用户于 2026-10-04 在当前会话明确确认「批准需求，并将 M1 交接到 FD」。需求来源：用户请求与 [Web Control Plane Handoff](../../web-ui.md)。视觉方向已由用户在 2026-10-02 的需求讨论确认。生命周期批准状态以 `issue.toml` 的 CLI 记录为准。
 
 本次批准确定现有需求方向，并仅交接 M1：Mission Control Overview 与共享视觉基础。M2–M4 保留为后续里程碑；其新增能力及未决范围不因本次批准而视为已确定或已授权实施。保留原 REQ ID。用户误发且随后撤回的 plugin 补充不属于本需求。
 

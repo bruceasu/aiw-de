@@ -157,10 +157,10 @@ Worker 形象采用仓库内可复用的 SVG fragment：将完整 Worker ID 用�
 ## Sources
 
 - Issue: REQ00001-web-control-plane
-- [CLI 捕获并批准的需求计划](../requirements/REQ00001-web-control-plane/requirement-plan.md)
-- [保留的原计划入口](../requirements/REQ00001-web-control-plane/plan.md)
-- [当前能力与差距](../requirements/REQ00001-web-control-plane/current-state.md)
-- [需求元数据与批准记录](../requirements/REQ00001-web-control-plane/requirement.toml)
+- [CLI 捕获并批准的需求计划](../../../issues/ISSUE-00002/issue-plan.md)
+- [保留的原计划入口](../../../issues/ISSUE-00002/plan.md)
+- [当前能力与差距](../../../issues/ISSUE-00002/current-state.md)
+- [需求元数据与批准记录](../../../issues/ISSUE-00002/issue.toml)
 - [Web Console 指南](../current/15-WEB-CONSOLE.md)、[生命周期](../current/03-AUTONOMOUS-ENGINEERING-LIFECYCLE.md)
 - 2026-10-04 用户确认：「批准需求，并将 M1 交接到 FD」。撤回的 plugin 补充不作为设计来源。
 - 静态源码：WebConsoleController/QueryService/JdbcWebConsoleReadRepository、FleetDashboard、AutonomousRunDashboard/TimelineService、现有 dashboard/workers/fragments 与 console.css/console.js。

@@ -33,12 +33,18 @@ revisions, digests, confirmed facts, Session evidence, and loaded methods.
 Read an existing Issue Plan and linked sources before editing it. A new request
 has no ID until the CLI creates one; never invent an ID. Use `aiw issue` as the
 supported command surface, checking its help before an unfamiliar or mutating
-operation. Current records may still use `REQ` IDs under
-`docs/requirements/<id>/`; preserve their paths and evidence.
+operation. New records use IDs such as `ISSUE-00001` under `docs/issues/<id>/`.
+Existing `REQ` records remain under `docs/requirements/<id>/`; preserve their
+paths, evidence, and existing FD references. Migrate individual records only
+when needed in separately authorized work. IDs are case-insensitive; a REQ
+number abbreviation is accepted only when it matches one record.
 
-Write temporary Issue drafts under `.ai/requirements/drafts/`. Keep them
+Write temporary Issue drafts under `.ai/issues/drafts/`. Legacy drafts under
+`.ai/requirements/drafts/` remain supported. Keep drafts
 project-relative, UTF-8, and within 64 KiB. Capture copies a confirmed draft
-into `docs/requirements/<id>/`; a draft is not itself an approved record.
+into the target record directory; a draft is not itself an approved record.
+Capture `issue-plan` (or the existing `requirement-plan` alias); the Plan file
+is `issue-plan.md` for ISSUE records and `requirement-plan.md` for REQ records.
 
 The output is one source-backed Issue Plan or decision, with any split lineage,
 unresolved Gates, and a recommended next action. The Issue Plan records the
