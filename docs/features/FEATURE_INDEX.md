@@ -7,7 +7,7 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
 | [FD-011](FD-011_WORKER.md) | Worker 灵活任务与流程编排 | Design | Medium |
-| [FD-012](FD-012_BEAUTIFUL_WEB_CONTROL_PLANE.md) | Beautiful Web Control Plane | Design | Medium |
+| [FD-012](FD-012_BEAUTIFUL_WEB_CONTROL_PLANE.md) | Beautiful Web Control Plane | Open | Medium |
 | [FD-013](FD-013_WORKER_PI.md) | Worker 公共执行基础与 pi 机制融合 | Design | Medium |
 | [FD-014](FD-014_CODEX_RUNTIME_GO.md) | 统一多语言 Codex Runtime：Go 先行试点 | Design | Medium |
 
