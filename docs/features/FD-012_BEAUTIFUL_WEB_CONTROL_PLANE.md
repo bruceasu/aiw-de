@@ -1,7 +1,7 @@
 # FD-012: Beautiful Web Control Plane
 
 **Status:** Open
-**Revision:** 4
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -21,7 +21,7 @@ Use the existing Overview and Fleet pages as the M1 experience. Organize the Ove
 
 Use the existing Worker identity derived from the full Worker ID in both Overview and Fleet. Pair its stable mark with the real Worker ID, management status, runtime/capability facts when present, and lease usage; do not infer health or expertise. Keep the 5s/8s partial refresh and current stale/error/input-preservation behavior. Any refinement must remain inside the existing read-only refresh regions and leave forms, focus, expanded details, and scroll stable.
 
-No schema, persistence, authorization, management API, scheduler, or lifecycle change is required by the approved M1 scope. Query changes are allowed only for a demonstrated M1 display gap and must remain a read-only projection with truthful count/window semantics. The broader M2–M4 outcomes remain outside this FD.
+No schema, persistence, authorization, management API, scheduler, or lifecycle change is required by the approved M1 scope. Query changes are allowed only for a demonstrated M1 display gap and must remain a read-only projection with truthful count/window semantics. The broader M2 through M4 outcomes remain outside this FD.
 
 ## Scope
 
@@ -55,7 +55,7 @@ No schema, persistence, authorization, management API, scheduler, or lifecycle c
 
 ## TODO
 
-1.2 → 1.1 and 1.3–1.4 → 1.5. Complete and record each item before beginning the next independent slice. Keep item IDs stable after implementation starts.
+Complete 1.2 before 1.1 and complete 1.3 and 1.4 before 1.5. Record each item before beginning the next dependent slice. Keep item IDs stable after implementation starts.
 
 ## Sources
 
