@@ -7,14 +7,12 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
 | [FD-011](FD-011_WORKER.md) | Worker 灵活任务与流程编排 | Design | Medium |
-| [FD-013](FD-013_WORKER_PI.md) | Worker 公共执行基础与 pi 机制融合 | Design | Medium |
-| [FD-014](FD-014_CODEX_RUNTIME_GO.md) | 统一多语言 Codex Runtime：Go 先行试点 | Design | Medium |
+| [FD-014](FD-014_CODEX_RUNTIME_GO.md) | 统一多语言 Codex Runtime：Go 先行试点 | Open | Medium |
 
 ## Completed
 
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
-| [FD-012](FD-012_BEAUTIFUL_WEB_CONTROL_PLANE.md) | Beautiful Web Control Plane | Complete | Medium |
 | [FD-001](archive/FD-001/FD-001_MISSION_CONTROL_OVERVIEW_AND_SHARED_VISUAL_FOUND.md) | Mission Control Overview and Shared Visual Foundation | Complete | Medium |
 | [FD-003](archive/FD-003/FD-003_WORKER_FLEET_AND_SCHEDULING_EXPERIENCE.md) | Worker Fleet and Scheduling Experience | Complete | Medium |
 | [FD-004](archive/FD-004/FD-004_APPROVAL_AND_ENGINEERING_EVIDENCE.md) | Approval and Engineering Evidence | Complete | Medium |
@@ -24,9 +22,11 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 | [FD-008](archive/FD-008/FD-008_TASK_WORKSPACE_REPLACEMENT.md) | 任务 Workspace 替换 | Complete | Medium |
 | [FD-009](archive/FD-009/FD-009_TYPESCRIPT_WORKER_AGENTRUNTIME_SPI.md) | TypeScript Worker AgentRuntime SPI 与单入口合并 | Complete | Medium |
 | [FD-010](archive/FD-010/FD-010_TYPESCRIPT_RUNTIME_CORE_WORKER.md) | 将 TypeScript runtime-core 收归单一 Worker 包 | Complete | Medium |
+| [FD-012](archive/FD-012/FD-012_BEAUTIFUL_WEB_CONTROL_PLANE.md) | Beautiful Web Control Plane | Complete | Medium |
 
 ## Deferred / Closed
 
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
 | [FD-002](archive/FD-002/FD-002_RUN_MISSION_DETAIL_AND_TIMELINE.md) | Run Mission Detail and Timeline | Deferred | Medium |
+| [FD-013](archive/FD-013/FD-013_WORKER_PI.md) | Worker 公共执行基础与 pi 机制融合 | Closed | Medium |

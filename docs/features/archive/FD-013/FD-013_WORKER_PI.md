@@ -1,7 +1,7 @@
 # FD-013: Worker 公共执行基础与 pi 机制融合
 
-**Status:** Design
-**Revision:** 2
+**Status:** Closed
+**Revision:** 3
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -37,3 +37,6 @@
 ## Sources
 
 - Issue: ISSUE-00003
+
+**Closed:** 2026-10-12
+**Disposition reason:** Duplicate of FD-005, which already covers the same Worker public execution foundation and pi integration scope. Keep FD-013 only as an archived duplicate record; do not run a second implementation.
