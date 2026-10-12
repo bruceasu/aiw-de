@@ -1,7 +1,7 @@
 # FD-012: Beautiful Web Control Plane
 
-**Status:** Open
-**Revision:** 5
+**Status:** Complete
+**Revision:** 7
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -31,11 +31,11 @@ No schema, persistence, authorization, management API, scheduler, or lifecycle c
 
 ## Work items
 
-- [ ] 1.1 Refine the Overview command hierarchy for current Runs, attention, and existing actions. Size: S; difficulty: Medium; depends on 1.2 for shared presentation. Evidence: static review shows the active/attention distinction, real-state links, empty states, and no stale or bounded list presented as complete.
-- [ ] 1.2 Apply a shared tactical visual foundation to the Overview and Fleet surfaces. Size: S; difficulty: Medium; no dependency. Evidence: shared navigation, typography, panels, semantic status colors, focus states, and reduced-motion behavior are consistent without hiding operational content.
-- [ ] 1.3 Present capacity, waiting diagnostics, approvals, and recent activity as bounded command information. Size: S; difficulty: Medium; depends on 1.2. Evidence: each sample is labeled with its source window and total where available; blocker labels preserve primary-current-blocker semantics; activity is clearly not complete audit history.
-- [ ] 1.4 Make Worker identity and execution state consistent between Overview and Fleet. Size: S; difficulty: Medium; depends on 1.2. Evidence: the same Worker ID yields the same identity mark in both pages, while management status and lease usage remain separately readable and unknown facts stay unknown.
-- [ ] 1.5 Refine responsive and live-monitoring states for the M1 surfaces. Size: S; difficulty: Medium; depends on 1.1–1.4. Evidence: narrow layouts retain access to primary data/actions; stale/failure/refresh feedback is visible; polling retains current input, focus, open details, and scroll behavior.
+- [x] 1.1 Refine the Overview command hierarchy for current Runs, attention, and existing actions. Size: S; difficulty: Medium; depends on 1.2 for shared presentation. Evidence: renamed the count to “Non-terminal runs” to match its data; retained explicit active/attention panels and existing routes.
+- [x] 1.2 Apply a shared tactical visual foundation to the Overview and Fleet surfaces. Size: S; difficulty: Medium; no dependency. Evidence: added a command header, stronger metric hierarchy, panel accents, and shared Worker card styling while preserving the existing navigation, focus, and reduced-motion rules.
+- [x] 1.3 Present capacity, waiting diagnostics, approvals, and recent activity as bounded command information. Size: S; difficulty: Medium; depends on 1.2. Evidence: kept the existing source-window/count labels and primary-current-blocker copy; waiting and activity panels now have clearer open/focus treatment.
+- [x] 1.4 Make Worker identity and execution state consistent between Overview and Fleet. Size: S; difficulty: Medium; depends on 1.2. Evidence: both pages use the same ID-derived avatar and now share Worker-card styling keyed to actual management status and lease occupancy; status and capacity text remain visible.
+- [x] 1.5 Refine responsive and live-monitoring states for the M1 surfaces. Size: S; difficulty: Medium; depends on 1.1–1.4. Evidence: tightened the Overview header and metric sizing at the existing narrow breakpoint and emphasized the existing stale/error refresh indicator; polling logic and interaction preservation were left intact.
 
 ## Acceptance
 
@@ -49,13 +49,14 @@ No schema, persistence, authorization, management API, scheduler, or lifecycle c
 
 ## Verification
 
-- Worker: inspect the final diff and perform one repository-authorized compile-only check after implementation; default to the narrowest compile command. Static review must trace page models, refresh-region boundaries, permission-conditioned actions, and the M1 data-window labels.
-- Do not run tests, a final build, formatters, linters, type checks, browser automation, or a verification script in this workflow. A browser-level visual check remains unverified under the current repository authorization; report that limitation and any visual risk explicitly.
+- Worker: inspected the final source diff and existing `console.js` refresh behavior. `mvn -q -DskipTests compile` was attempted but did not start because `mvn` is unavailable; `pom.xml` exists but no `mvnw` wrapper is present. No compile result is claimed.
+- Tests, final build, formatters, linters, type checks, browser automation, and verification scripts were not run. Browser-level visual/layout behavior remains unverified; report this residual risk explicitly.
 - Reviewer: independently compare the actual diff and Worker report with the approved M1 scope and each acceptance item. Optional `$fd-test` is a separate workflow and is not part of this FD's default acceptance.
+- Reviewer r1 (`fd012-reviewer-20261012-6c2b`; source event `FD-012-000006-implementation-ready`): static review of `9cf61c3a27f40b4cba69f860a1d3b69e89917c24...dd450cf940690d9cd857ab81b4f5765f247198e3` covered all seven acceptance items; no blocking findings; `verification-passed`. Report: `docs/features/reviews/FD-012-review-r1.md`. Browser layout/Thymeleaf rendering and Java compilation remain unverified.
 
 ## TODO
 
-Complete 1.2 before 1.1 and complete 1.3 and 1.4 before 1.5. Record each item before beginning the next dependent slice. Keep item IDs stable after implementation starts.
+All five M1 items are implemented in focused commits. Independent Reviewer handoff is next. Browser-level visual behavior and Java compilation remain unverified for the reasons recorded above.
 
 ## Sources
 

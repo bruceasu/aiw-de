@@ -1,0 +1,26 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-012",
+  "source_event": "FD-012-000005-work-requested",
+  "human_report": "FD-012-implementation-r1.md",
+  "data": {
+    "summary": "完成 M1 Overview 与 Fleet 呈现调整；保留既有数据权威、刷新机制和操作边界。",
+    "changed_paths": [
+      "src/main/resources/static/ui/console.css",
+      "src/main/resources/templates/ui/dashboard.html",
+      "src/main/resources/templates/ui/workers.html"
+    ],
+    "commands": [
+      "git diff --unified=0 master...HEAD -- src/main/resources/static/ui/console.css src/main/resources/templates/ui/dashboard.html src/main/resources/templates/ui/workers.html",
+      "mvn -q -DskipTests compile",
+      "Get-ChildItem -Force -Name mvnw*,pom.xml"
+    ],
+    "results": [
+      "静态差异已检查；未观察到超出 M1 的查询、权限或调度改动。",
+      "编译未启动：mvn 不可用；仓库存在 pom.xml，但没有 mvnw。",
+      "未运行测试、浏览器检查、最终构建、格式化、lint、类型检查或验证脚本。"
+    ],
+    "residual_risk": "浏览器中的视觉与窄屏布局未验证，Java 编译未验证；现有页面模型和刷新代码未改变。"
+  }
+}

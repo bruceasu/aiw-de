@@ -1,0 +1,39 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-012",
+  "source_event": "FD-012-000006-implementation-ready",
+  "human_report": "FD-012-review-r1.md",
+  "data": {
+    "reviewer_session": "fd012-reviewer-20261012-6c2b",
+    "fd_revision": 6,
+    "fd_digest": "11b8928d2adce05498cc90d8d0df5fce4965961376897501234c9613dfc25f21",
+    "review_base": "9cf61c3a27f40b4cba69f860a1d3b69e89917c24",
+    "reviewed_commit": "dd450cf940690d9cd857ab81b4f5765f247198e3",
+    "result": "verification-passed",
+    "findings": [],
+    "acceptance_results": [
+      {"id": 1, "result": "supported", "evidence": "Overview template groups live work, attention, capacity, waiting and activity with existing operation/detail links."},
+      {"id": 2, "result": "supported", "evidence": "Thymeleaf binds projected values and real empty states; activeRunCount SQL excludes terminal outcomes; no invented estimates or health grade found."},
+      {"id": 3, "result": "supported", "evidence": "Distinct source fields and bounded-window/blocker descriptions remain in templates; current data projections are unchanged."},
+      {"id": 4, "result": "supported", "evidence": "Overview and Fleet share worker-identity fragment; management state, runtime/capabilities, lease occupancy and available capacity remain separate."},
+      {"id": 5, "result": "supported by static source review", "evidence": "Unchanged console.js retains snapshot timestamp and stale/error messaging and preserves focused/open/scroll interaction; not executed in a browser."},
+      {"id": 6, "result": "supported by static source review", "evidence": "Shared focus-visible, text wrapping, reduced-motion and narrow viewport rules remain; browser rendering not observed."},
+      {"id": 7, "result": "supported", "evidence": "Diff adds no routes, operations, services or authorization changes; links use existing UI routes."}
+    ],
+    "checks_run": [
+      "aiw fd show FD-012",
+      "aiw fd claim FD-012 FD-012-000006-implementation-ready --session fd012-reviewer-20261012-6c2b",
+      "git status --short",
+      "git log --oneline --decorate -8",
+      "git diff --stat master...feature/FD-012",
+      "git diff --unified=3 master...feature/FD-012 -- src/main/resources/static/ui/console.css src/main/resources/templates/ui/dashboard.html src/main/resources/templates/ui/workers.html",
+      "git diff --name-status master...feature/FD-012",
+      "git rev-parse HEAD master",
+      "rg and Get-Content on changed templates/CSS, console.js, query repository, issue plan, and Web Console contract",
+      "aiw fd status FD-012 (unsupported CLI verb; status then read with aiw fd show)"
+    ],
+    "checks_not_run": ["tests", "browser automation or visual inspection", "final build", "formatters", "linters", "type checks", "verification scripts", "Java compile"],
+    "residual_risk": "Thymeleaf rendering and browser narrow-window layout were not observed; Java compilation was unavailable to Worker (mvn missing and no mvnw) and was not retried by Reviewer."
+  }
+}

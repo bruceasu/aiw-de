@@ -63,3 +63,40 @@
 .mission-page .mission-table form input:not([type=hidden]):not([type=checkbox]){width:100%;min-width:0;padding:9px 10px;border:1px solid #465e76;border-radius:4px;background:#0c1623;color:var(--text)}
 .mission-page .mission-table textarea[name="instruction"]{display:block;width:100%;min-height:210px;resize:vertical;padding:12px 14px;border:1px solid #465e76;border-radius:4px;background:#0c1623;color:var(--text);font:inherit;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;transition:border-color 140ms ease,box-shadow 140ms ease}
 .mission-page .mission-table textarea[name="instruction"]:focus{border-color:var(--accent);box-shadow:0 0 0 3px #64e4dc22}
+
+
+/* M1 Mission Control: sharpen the command hierarchy while reusing R9 data and refresh regions. */
+.overview-shell .content{max-width:1680px}
+.overview-hero{position:relative;isolation:isolate;overflow:hidden;padding:20px 22px;margin:0 0 18px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:5px;background:linear-gradient(110deg,#122337 0%,#0e1a29 58%,#0c1623 100%)}
+.overview-hero:after{content:"";position:absolute;z-index:-1;inset:0 0 0 auto;width:min(34%,360px);background:repeating-linear-gradient(135deg,transparent 0 15px,#64e4dc0b 15px 16px);mask-image:linear-gradient(90deg,transparent,#000)}
+.overview-hero .eyebrow{font-weight:700}
+.overview-hero h2{font-size:30px}
+.overview-hero .btn{flex-shrink:0}
+.overview-metrics{gap:12px}
+.overview-metrics .overview-metric{position:relative;overflow:hidden;min-height:112px;border-top:2px solid var(--accent);background:linear-gradient(145deg,#14263a 0%,var(--panel) 72%)}
+.overview-metrics .overview-metric:nth-child(2){border-top-color:var(--info)}
+.overview-metrics .overview-metric:nth-child(3){border-top-color:#92a8c0}
+.overview-metrics .overview-metric:nth-child(4){border-top-color:var(--warn)}
+.overview-metric .metric{font-size:34px}
+.overview-runs{border-top:2px solid var(--accent)}
+.overview-attention{background:linear-gradient(155deg,#2a241d 0%,var(--panel) 44%);border-top-width:2px}
+.overview-attention .signal-dot{box-shadow:0 0 0 4px #f0bd5a18,0 0 12px #f0bd5a66}
+.overview-shell .attention-item,.overview-shell .approval-summary{transition:background-color 140ms ease,padding-left 140ms ease}
+.overview-shell .attention-item:hover,.overview-shell .approval-summary:hover{padding-left:8px;background:#ffffff06}
+
+.overview-shell .waiting-group[open]{border-left:2px solid var(--accent);padding-left:10px}
+.overview-shell .activity-feed li:focus-within{background:#ffffff06}
+
+.worker-card{border-left:2px solid var(--info);background:linear-gradient(120deg,#122337 0%,#0d1724 65%)}
+.worker-card[data-status="DRAINING"]{border-left-color:var(--warn)}
+.worker-card[data-status="OFFLINE"]{border-left-color:#7b8793}
+.worker-card[data-busy="true"] .worker-avatar{filter:drop-shadow(0 0 8px #64e4dc26)}
+
+.overview-shell .snapshot-bar [data-refresh-label].dirty-refresh{padding:4px 8px;border:1px solid #806137;border-radius:4px;background:#3d301f;color:var(--warn)}
+@media(max-width:760px){
+ .overview-hero{padding:17px 16px}
+ .overview-hero h2{font-size:23px}
+ .overview-hero:after{width:46%;opacity:.65}
+ .overview-metrics{gap:10px}
+ .overview-metric .metric{font-size:28px}
+}
