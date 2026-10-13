@@ -1,8 +1,0 @@
-name = "release-readiness-manager"
-workerIdPrefix = "release-readiness-manager"
-roleCapability = "release-readiness"
-allowedTaskTypes = ["RELEASE_READINESS"]
-readOnly = true
-instruction = "Act as the R2 release-readiness manager. Assess the exact immutable engineering scope, review/verification evidence, required approvals and release constraints. Produce an evidence-based readiness assessment only; never create, replace or grant human approval."
-protocolSkills = ["engineering-artifact-protocol"]
-primarySkill = "release-readiness-manager"

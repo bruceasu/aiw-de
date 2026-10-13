@@ -1,0 +1,78 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-011",
+  "source_event": "FD-011-000004-design-ready",
+  "human_report": "FD-011-implementation-r1.md",
+  "data": {
+    "summary": "Implemented bounded manager-confirmed workflow plans; compile-only passed after authorized dependency downloads, ready for independent review.",
+    "session": "fd011-host-20261013-c94b7e",
+    "changed_paths": [
+      "src/main/java/me/asu/aidev/workflow/domain/WorkflowPlanSpec.java",
+      "src/main/java/me/asu/aidev/workflow/domain/WorkflowPlan.java",
+      "src/main/java/me/asu/aidev/workflow/port/WorkflowPlanRepository.java",
+      "src/main/java/me/asu/aidev/workflow/jdbc/JdbcWorkflowPlanRepository.java",
+      "src/main/java/me/asu/aidev/workflow/application/WorkflowPlanService.java",
+      "src/main/java/me/asu/aidev/workflow/protocol/http/WorkflowPlanController.java",
+      "src/main/java/me/asu/aidev/execution/application/TaskClaimService.java",
+      "src/main/java/me/asu/aidev/execution/scheduling/PullSchedulingPolicy.java",
+      "src/main/resources/db/migration/V21__flexible_workflow_plans.sql",
+      "docs/current-zh/FLEXIBLE-WORKFLOW-PLANS.md",
+      "README.md",
+      "docs/features/FD-011_WORKER.md"
+    ],
+    "commands": [
+      "aiw fd show FD-011",
+      "aiw fd claim FD-011 FD-011-000002-design-requested --session fd011-host-20261013-c94b7e",
+      "aiw fd emit FD-011 design-ready --producer planner --artifact docs/features/FD-011_WORKER.md --source-event FD-011-000002-design-requested",
+      "aiw fd claim FD-011 FD-011-000004-design-ready --session fd011-host-20261013-c94b7e",
+      "git add <FD-plan-and-feedback-paths>; git commit",
+      "aiw git wt add FD-011",
+      "cat .ai/fd/FD-011/workspace.json",
+      "git add <each-work-item-paths>; git commit",
+      "mvn -o -DskipTests compile",
+      "git diff master -- <claim-and-ranking-paths>; git diff --stat; cat <model-and-review-skill>; git status --short",
+      "mvn -DskipTests compile"
+    ],
+    "results": [
+      {
+        "check": "compile-only",
+        "command": "mvn -o -DskipTests compile",
+        "status": "blocked",
+        "exit_code": 1,
+        "reason": "Missing offline Spring Boot 4.0.8 parent POM; Java sources not compiled."
+      },
+      {
+        "check": "static trace",
+        "status": "completed",
+        "areas": [
+          "bounded DAG input validation",
+          "transactional confirm and withdrawal",
+          "existing CSRF/operator boundary",
+          "skill preferences after effective priority",
+          "legacy constructor and no-preference compatibility"
+        ]
+      },
+      {
+        "check": "compile-only",
+        "command": "mvn -DskipTests compile",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_seconds": 9.98,
+        "source_count": 194,
+        "authorization": "user confirm"
+      }
+    ],
+    "not_run": [
+      "tests",
+      "migration execution",
+      "application smoke",
+      "formatter/linter/type checks",
+      "final-artifact build",
+      "independent Reviewer",
+      "merge and archive"
+    ],
+    "residual_risk": "SQLite/PostgreSQL migration, JSON serialization and concurrency runtime behavior remain untested; no dedicated form UI or automatic AI generation; running-work forced stop deferred.",
+    "blocker_report": "FD-011-blocker-compile-20261013-c94b7e.md"
+  }
+}

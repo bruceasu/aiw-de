@@ -1,0 +1,34 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-017",
+  "source_event": "FD-017-000005-implementation-ready",
+  "human_report": "FD-017-review-r1.md",
+  "data": {
+    "reviewer_session": "fd017-reviewer-20261013-7c9e41",
+    "reviewed_head": "dbe72bc",
+    "diff_base": "master",
+    "outcome": "changes-requested",
+    "findings": [
+      {
+        "severity": "medium",
+        "path": "src/main/java/me/asu/aidev/workflow/application/WorkflowRecommendationService.java",
+        "line": 98,
+        "requirement": "FD-017 strict single JSON recommendation result; acceptance 3, 4",
+        "finding": "Default readTree does not require end of input after the first JSON value.",
+        "correction": "Enable and verify trailing-token rejection for the completion summary."
+      },
+      {
+        "severity": "medium",
+        "path": "src/main/resources/static/ui/workflow-editor.js",
+        "line": 54,
+        "requirement": "FD-017 mark stale recommendation and keep old requests refreshable; acceptance 7",
+        "finding": "Editing during the recommendation POST leaves the old task running, displays requesting status, and discards its eventual ID without a retrieval path.",
+        "correction": "Mark the request stale immediately and retain a visible refresh/withdraw path when its delayed POST returns."
+      }
+    ],
+    "commands": ["aiw fd show FD-017", "aiw fd claim FD-017 FD-017-000005-implementation-ready --session fd017-reviewer-20261013-7c9e41", "git diff --stat master...HEAD", "git diff master...HEAD", "aiw fd emit --help"],
+    "checks_not_run": ["tests", "browser", "HTTP", "model", "network", "database", "compile", "lint", "final build", "deployment"],
+    "residual_risk": "Runtime behavior, model output and database flows were not exercised."
+  }
+}

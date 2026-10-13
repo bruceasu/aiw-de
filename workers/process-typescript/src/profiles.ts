@@ -10,12 +10,13 @@ export const ROLE_FILES = {
   coder: "coding-executor",
   integrator: "integration-executor",
   reviewer: "code-reviewer",
+  "stage-reviewer": "stage-reviewer",
   verifier: "verifier",
   "integration-verifier": "integration-verifier",
   repairer: "repair-executor",
-  "release-readiness": "release-readiness-manager",
-  orchestrator: "software-development-orchestrator",
 } as const;
+
+const ADVISORY_ROLES = new Set(["release-readiness", "orchestrator"]);
 
 export type Role = keyof typeof ROLE_FILES;
 export interface ProcessProfile {
@@ -23,13 +24,14 @@ export interface ProcessProfile {
   workerIdPrefix: string;
   roleCapability: string;
   allowedTaskTypes: string[];
+  resultKind: "REPORT" | "VERDICT" | "WORKSPACE";
   readOnly: boolean;
   instruction: string;
   protocolSkills: string[];
   primarySkill: string;
 }
 
-const fields = ["name", "workerIdPrefix", "roleCapability", "allowedTaskTypes", "readOnly", "instruction", "protocolSkills", "primarySkill"];
+const fields = ["name", "workerIdPrefix", "roleCapability", "allowedTaskTypes", "resultKind", "readOnly", "instruction", "protocolSkills", "primarySkill"];
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 const profileDirectory = path.resolve(process.env.AIW_PROCESS_PROFILES_ROOT || (
   existsSync(path.join(moduleDirectory, "profiles"))
@@ -51,6 +53,15 @@ export function loadProfile(file: string): ProcessProfile {
       throw new Error(`invalid profile ${file}: ${key} must be a nonempty string array`);
     }
   }
+  if (value.allowedTaskTypes instanceof Array && (value.allowedTaskTypes.length !== 1 || value.allowedTaskTypes[0] !== "EXTERNAL_WORK")) {
+    throw new Error(`invalid profile ${file}: allowedTaskTypes must be [EXTERNAL_WORK]`);
+  }
+  if (!["REPORT", "VERDICT", "WORKSPACE"].includes(String(value.resultKind))) {
+    throw new Error(`invalid profile ${file}: resultKind must be REPORT, VERDICT or WORKSPACE`);
+  }
+  if ((value.resultKind === "WORKSPACE") !== (value.readOnly === false)) {
+    throw new Error(`invalid profile ${file}: resultKind conflicts with readOnly`);
+  }
   if (typeof value.readOnly !== "boolean") throw new Error(`invalid profile ${file}: readOnly must be a boolean`);
   return value as unknown as ProcessProfile;
 }
@@ -58,12 +69,21 @@ export function loadProfile(file: string): ProcessProfile {
 export function getProfile(role: string, taskType?: string): ProcessProfile {
   const key = role.trim().toLowerCase();
   if (!(key in ROLE_FILES)) throw new Error(`unsupported AIW_PROCESS_ROLE=${role}; choose one of: ${Object.keys(ROLE_FILES).join(", ")}`);
-  const resolved = key === "verifier" && taskType === "INTEGRATION_VERIFICATION" ? "integration-verifier" : key;
+  const resolved = key;
   return loadProfile(path.join(profileDirectory, `${ROLE_FILES[resolved as Role]}.toml`));
 }
 
 export function assertExecutableRole(role: string): void {
-  if (role === "release-readiness" || role === "orchestrator") {
-    throw new Error(`role ${role} is preserved from R2 but R9 has no matching executable TaskType`);
+  if (ADVISORY_ROLES.has(role)) {
+    throw new Error(`role ${role} is a non-executable advisory role`);
+  }
+}
+
+export const ROLE_CAPABILITIES = new Set(["requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"]);
+export function assertRoleCapabilities(capabilities: Iterable<string>, _profile: ProcessProfile): void {
+  for (const capability of capabilities) {
+    if (capability === "*" || capability === "flexible-work-v1" || capability.startsWith("repo:") || ROLE_CAPABILITIES.has(capability)) {
+      throw new Error("ROLE_CAPABILITY_DENIED");
+    }
   }
 }

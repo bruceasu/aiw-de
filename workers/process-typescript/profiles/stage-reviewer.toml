@@ -1,0 +1,9 @@
+name = "independent-workflow-stage-reviewer"
+workerIdPrefix = "stage-reviewer"
+roleCapability = "workflow-review"
+allowedTaskTypes = ["EXTERNAL_WORK"]
+resultKind = "VERDICT"
+readOnly = true
+instruction = "Independently assess the exact upstream step output against the supplied goal and acceptance criteria. Inspect authoritative task inputs and repository evidence when available. Give concrete findings for deficiencies. Do not modify files or approve your own work. End the non-empty final report with AIW_VERDICT: PASS or AIW_VERDICT: REPAIR_REQUIRED."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "workflow-stage-reviewer"

@@ -1,0 +1,50 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-014",
+  "source_event": "FD-014-000020-implementation-ready",
+  "human_report": "FD-014-review-local-r1.md",
+  "data": {
+    "reviewer_session": "fd014-reviewer-linux-20261013-c8d052",
+    "reviewed_commit": "dff2b237d942b4442b44c977d0ab78bf9d15a94f",
+    "diff_base": "813a40107e3364921c33a5cd7d43401d02b94688",
+    "outcome": "changes-requested",
+    "findings": [
+      {
+        "id": "R1",
+        "severity": "high",
+        "path": "workers/process-go/app_server_runtime.go:309; workers/process-go/main.go:342",
+        "requirement": "Acceptance 3; CODEX-RUNTIME minimum contract 5",
+        "summary": "Transport/event failure does not prove active turn termination; stop-request path can cleanup/ack, while uncertain paths always release workspace lock and slot.",
+        "requested_change": "Make active-turn transport/event failures terminate the managed process or return explicit resource uncertainty. Preserve workspace lock and retire/quarantine affected slot when termination remains unknown; only cleanup/ack after matching terminal or confirmed process stop."
+      },
+      {
+        "id": "R2",
+        "severity": "high",
+        "path": "workers/process-go/app_server_runtime.go:99,227; workers/process-go/main.go:913",
+        "requirement": "Acceptance 2; shared documented AIW_CODEX_NETWORK_ACCESS configuration",
+        "summary": "App Server never uses cfg.NetworkAccess; native context can override the worker tool network policy.",
+        "requested_change": "Pass sandbox_workspace_write.network_access explicitly to managed App Server startup (native --config) or equivalent pinned per-thread config; keep both true and false meaningful."
+      }
+    ],
+    "commands": [
+      "cat/sed/rg/nl targeted source and evidence reads",
+      "git diff --stat master...HEAD; git diff master...HEAD -- workers/process-go/main.go workers/process-go/worker_runtime.go",
+      "git rev-parse HEAD master",
+      "aiw fd --help; aiw fd claim --help; aiw fd emit --help",
+      "aiw fd claim FD-014 FD-014-000020-implementation-ready --session fd014-reviewer-linux-20261013-c8d052"
+    ],
+    "checks_not_run": [
+      "tests",
+      "compilation",
+      "network/source downloads",
+      "real authentication and switching",
+      "new Linux lifecycle verification",
+      "Docker/production no-store"
+    ],
+    "residual_risks": [
+      "Real authentication and Linux behavior remain untested under user G11/G12 waiver; not a request to repeat waived checks.",
+      "Production admission is deferred FD-015, not passed."
+    ]
+  }
+}

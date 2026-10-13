@@ -1,0 +1,23 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-016",
+  "source_event": "FD-016-000011-work-requested",
+  "human_report": "FD-016-blocker-local-scope-20261013-0f3443b8.md",
+  "data": {
+    "stage": "Worker runtime admission scope",
+    "role": "worker",
+    "observed_symptom": "FD-016 references historical FD-014 G2 production admission, while final FD-014 scope delegates production admission to FD-015.",
+    "confirmed_cause": "FD-016 had not reconciled the final Go local delivery decision.",
+    "recovery_attempts": [
+      "Read final archived FD-014 scope and the active FD-016.",
+      "Requested scope clarification while completing independent role/result and SDK changes.",
+      "User confirmed local delivery and production admission in FD-015; reconciled current FD scope and affected work items."
+    ],
+    "status": "resolved",
+    "resolved_at": "2026-10-13T05:31:57.779703+00:00",
+    "human_decision_need": "none",
+    "next_step_or_risk": "Implement local dual Codex modes; no production no-store certification.",
+    "reusable_improvement": "When referencing a prior FD Gate, use its final approved scope and explicit owning FD; shared worktree receipt linking and missing blocker templates also recur from FD-006 and warrant a separately scoped tooling/template fix."
+  }
+}

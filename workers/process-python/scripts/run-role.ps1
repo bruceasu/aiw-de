@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("requirements","architect","planner","coder","integrator","reviewer","verifier","integration-verifier","repairer")]
+    [ValidateSet("requirements","architect","planner","coder","integrator","reviewer","stage-reviewer","verifier","integration-verifier","repairer")]
     [string]$Role
 )
 $ErrorActionPreference = "Stop"

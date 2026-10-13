@@ -1,9 +1,0 @@
-ALTER TABLE execution_attempt ADD COLUMN ai_profile_id VARCHAR(64);
-ALTER TABLE execution_attempt ADD COLUMN ai_profile_version VARCHAR(64);
-ALTER TABLE execution_attempt ADD COLUMN ai_provider VARCHAR(120);
-ALTER TABLE execution_attempt ADD COLUMN ai_runtime VARCHAR(120);
-ALTER TABLE execution_attempt ADD COLUMN ai_model VARCHAR(120);
-ALTER TABLE execution_attempt ADD COLUMN ai_effort VARCHAR(120);
-ALTER TABLE execution_attempt ADD COLUMN ai_fast BOOLEAN;
-ALTER TABLE execution_attempt ADD COLUMN ai_selection_reason VARCHAR(512);
-ALTER TABLE execution_attempt ADD COLUMN failure_category VARCHAR(32);

@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-011",
+  "source_event": "FD-011-000004-design-ready",
+  "human_report": "FD-011-blocker-compile-20261013-c94b7e.md",
+  "data": {
+    "stage": "Worker compile-only gate",
+    "role": "worker",
+    "observed_symptom": "mvn -o -DskipTests compile exited 1 before Java compilation.",
+    "confirmed_cause": "Spring Boot parent POM 4.0.8 is unavailable to the configured offline Maven repository. Network dependency downloads are not authorized by Auto.",
+    "recovery_attempts": [
+      "Ran the required compile-only command once in the recorded FD worktree.",
+      "Inspected its POM-resolution failure and completed one targeted static/read-only validation command.",
+      "Did not retry unchanged compilation, download dependencies, change Maven configuration, or run tests.",
+      "User confirmed network dependency downloads; mvn -DskipTests compile exited 0 (194 Java source files, 9.980 s)."
+    ],
+    "status": "resolved",
+    "resolved_at": "2026-10-13T03:52:34.600533+00:00",
+    "human_decision_need": "none",
+    "next_step_or_risk": "Continue independent Reviewer; runtime migration and integration behavior remain untested.",
+    "reusable_improvement": "Document an offline compile prerequisite and dependency-cache preparation procedure in a separately scoped change; do not silently enable network access."
+  }
+}

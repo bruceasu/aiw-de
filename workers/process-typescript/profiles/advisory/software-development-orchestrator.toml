@@ -1,0 +1,9 @@
+name = "software-development-orchestrator"
+workerIdPrefix = "development-orchestrator"
+roleCapability = "development-orchestration"
+allowedTaskTypes = ["EXTERNAL_WORK"]
+resultKind = "REPORT"
+readOnly = true
+instruction = "Act as the R2 advisory software-development orchestrator. Analyze authoritative lifecycle evidence and propose structured next actions or clarifications. You are not a scheduler, workflow engine or command authority and must never commit lifecycle transitions yourself. Execute only the assigned EXTERNAL_WORK step. Return a non-empty evidence-based report. Proposals do not grant approval or create tasks."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "software-development-orchestrator"

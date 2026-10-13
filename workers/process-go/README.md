@@ -1,6 +1,10 @@
 # AI Dev Manager Process Workers (Go)
 
-This worker package converts the R2 software-process roles into specialized R9 pull workers without creating separate implementations for every role. Each process explicitly selects `codex-cli` or `openai-api` through the Go `AgentRuntime` SPI; scheduling, leases, workspace preparation, evidence, and publication remain in the Worker.
+## FD-016 profile transition
+
+Bundled profiles accept only `EXTERNAL_WORK` and require nine fields including `resultKind`: `REPORT`, `VERDICT`, or `WORKSPACE`. Old task types and eight-field profiles are rejected. The launch role fixes the capability, exact `skillRef` and result kind; verifier never switches to integration-verifier. Release-readiness and orchestrator remain non-executable advisory profiles. See the [shared contract](../WORKER_RUNTIME_CONTRACT.md). This is local delivery; runtime checks, model calls and production no-store certification are separate evidence.
+
+This worker package converts the R2 software-process roles into specialized R9 pull workers without creating separate implementations for every role. Each process explicitly selects `codex-cli` or `openai-api` through the Go `AgentRuntime` SPI; scheduling, leases, workspace preparation, evidence, and local result commits remain in the Worker.
 
 One Go runtime is started multiple times with different role profiles. Go profiles live in `profiles/` and use the same TOML field format as the Python worker's profiles. Each worker keeps its own role instructions. Each process registers its selected runtime and role, pulls compatible READY tasks, heartbeats its lease, and completes/fails through Worker Protocol v1.
 
@@ -23,19 +27,20 @@ R9 already provides decentralized worker pull, leases, attempts, isolated Git wo
 
 | Profile | R2/R9 process role | Registered capability | Allowed task type | Repository access |
 |---|---|---|---|---|
-| `requirement-analyst.toml` | software-requirements-analyst | `requirement-analysis` | `REQUIREMENT_ANALYSIS` | read-only |
-| `solution-architect.toml` | solution-architect | `solution-architecture` | `SOLUTION_ARCHITECTURE` | read-only |
-| `implementation-planner.toml` | implementation-planner | `implementation-planning` | `IMPLEMENTATION_PLANNING` | read-only |
-| `coding-executor.toml` | coding-work-package-executor | `coding` | `IMPLEMENTATION` | writable |
-| `integration-executor.toml` | R9 integration role | `integration` | `INTEGRATION` | writable |
-| `code-reviewer.toml` | software-code-reviewer | `code-review` | `CODE_REVIEW` | read-only |
-| `verifier.toml` | software-test-verifier | `verification` | `VERIFICATION` | read-only |
-| `integration-verifier.toml` | software-test-verifier, integration scope | `integration-verification` | `INTEGRATION_VERIFICATION` | read-only |
-| `repair-executor.toml` | R9 repair role | `repair` | `REPAIR` | writable |
+| `requirement-analyst.toml` | software-requirements-analyst | `requirement-analysis` | `EXTERNAL_WORK` | read-only |
+| `solution-architect.toml` | solution-architect | `solution-architecture` | `EXTERNAL_WORK` | read-only |
+| `implementation-planner.toml` | implementation-planner | `implementation-planning` | `EXTERNAL_WORK` | read-only |
+| `coding-executor.toml` | coding-work-package-executor | `coding` | `EXTERNAL_WORK` | writable |
+| `integration-executor.toml` | R9 integration role | `integration` | `EXTERNAL_WORK` | writable |
+| `code-reviewer.toml` | software-code-reviewer | `code-review` | `EXTERNAL_WORK` | read-only |
+| `stage-reviewer.toml` | independent workflow step review using `workflow-stage-reviewer` | `workflow-review` | `EXTERNAL_WORK` | read-only |
+| `verifier.toml` | software-test-verifier | `verification` | `EXTERNAL_WORK` | read-only |
+| `integration-verifier.toml` | software-test-verifier, integration scope | `integration-verification` | `EXTERNAL_WORK` | read-only |
+| `repair-executor.toml` | R9 repair role | `repair` | `EXTERNAL_WORK` | writable |
 
 ## Preserved R2 profiles not schedulable by R9 yet
 
-These R2 roles are included so their process definition is not lost, but R9 currently has no matching `TaskType`, so do not launch them yet:
+These R2 definitions live in `profiles/advisory/`, with their Skill packages in `skills/advisory/`. They remain advisory only; execution registration is denied:
 
 - `release-readiness-manager.toml` -> would require `RELEASE_READINESS`
 - `software-development-orchestrator.toml` -> would require an advisory orchestration task type
@@ -66,10 +71,16 @@ Set `AIW_AGENT_RUNTIME` explicitly before starting a worker:
 
 ```text
 codex-cli   Existing authenticated Codex CLI; uses AIW_CODEX_* settings.
+codex-app-server  Codex App Server v2 over managed stdio; uses the pinned Codex CLI release.
 openai-api  OpenAI Responses API; requires OPENAI_API_KEY and provides bounded workspace tools.
 ```
 
-Both runtimes use the same role profile and Worker lifecycle. AI guidance must contain an approved profile whose `provider` is `openai` and whose `runtime` matches the selected runtime. `openai-api` skips fast-tier profiles because the Go API adapter does not implement the Codex service-tier setting.
+All runtimes use the same role profile and Worker lifecycle. AI guidance must contain an approved profile whose `provider` is `openai` and whose `runtime` matches the selected runtime family. `codex-app-server` uses the approved Codex CLI profile; `openai-api` skips fast-tier profiles because the Go API adapter does not implement the Codex service-tier setting.
+
+See [CODEX-RUNTIME.md](CODEX-RUNTIME.md) for the source-level runtime baseline,
+cross-mode contract, pinned App Server protocol and capability matrix. The
+App Server runtime accepts Codex CLI `0.162.1`; other versions fail before
+Worker registration. Deployments install and upgrade the CLI themselves.
 
 ## Required runtime
 
@@ -84,7 +95,7 @@ Linux/macOS:
 
 ```bash
 export AIW_PROCESS_PROFILE=profiles/requirement-analyst.toml
-export AIW_WORKER_CAPABILITIES=java,maven
+export AIW_WORKER_CAPABILITIES=
 export AIW_REPOSITORY_REF=core
 export AIW_REPOSITORY_ROOT=/work/core
 ./process-worker
@@ -94,7 +105,7 @@ PowerShell:
 
 ```powershell
 $env:AIW_PROCESS_PROFILE = "profiles/requirement-analyst.toml"
-$env:AIW_WORKER_CAPABILITIES = "java,maven"
+$env:AIW_WORKER_CAPABILITIES = ""
 $env:AIW_REPOSITORY_REF = "core"
 $env:AIW_REPOSITORY_ROOT = "D:\projects\core"
 .\process-worker.exe
@@ -108,7 +119,7 @@ The role capability is added automatically. Do not add `requirement-analysis`, `
 AIW_CONTROL_PLANE_URL          default http://127.0.0.1:8080
 AIW_WORKER_ID                  default <profile-prefix>-1
 AIW_WORKER_TOKEN               optional Worker Protocol bearer token
-AIW_WORKER_CAPABILITIES        technical capabilities, e.g. java,maven,postgresql
+AIW_WORKER_CAPABILITIES        technical capabilities actually available to this role, e.g. typescript,node,sql on a qualified coder
 AIW_WORKER_MAX_CONCURRENCY     default 1
 AIW_WORKER_POLL_MS             default 1000
 AIW_WORKER_HEARTBEAT_MS        default 20000
@@ -116,14 +127,17 @@ AIW_WORKER_HTTP_TIMEOUT_MS     default 15000
 AIW_REPOSITORY_REF             logical repository identity
 AIW_REPOSITORY_ROOT            local repository path
 AIW_WORKTREE_ROOT              optional isolated worktree root
-AIW_GIT_PUBLISH_REMOTE         optional, e.g. origin
+AIW_GIT_PUBLISH_REMOTE         forbidden; Worker startup fails if set
 AIW_CODEX_PATH                 default codex
 AIW_CODEX_MODEL                optional
 AIW_CODEX_REASONING_EFFORT     default high
 AIW_CODEX_APPROVAL_POLICY      default never
-AIW_CODEX_NETWORK_ACCESS       default false
+AIW_CODEX_NETWORK_ACCESS       false only; Codex workspace network access is forbidden
 AIW_CODEX_SANDBOX              read-only roles force read-only; writable roles default workspace-write
-AIW_AGENT_RUNTIME              required: codex-cli or openai-api
+AIW_AGENT_RUNTIME              required: codex-cli, codex-app-server, or openai-api
+AIW_CODEX_APP_SERVER_VERSION   default 0.162.1; App Server requires this exact supported version
+AIW_CODEX_AUTH_MODE            default inherit; explicit api-key or chatgpt for Codex runtimes
+AIW_CODEX_AUTH_HOME            absolute prepared CODEX_HOME required for explicit authentication
 AIW_OPENAI_MODEL               OpenAI API default gpt-4.1
 AIW_OPENAI_REASONING_EFFORT    optional: minimal, low, medium, high; applied to reasoning models
 OPENAI_API_KEY                 required for openai-api
@@ -132,8 +146,51 @@ AIW_OPENAI_TIMEOUT_MS          default 120000
 AIW_AGENT_MAX_TURNS            default 40 API tool-loop turns
 AIW_AGENT_MAX_OUTPUT_BYTES     default 24000 bounded tool output
 AIW_AGENT_TOOL_TIMEOUT_MS      default 60000 per tool call
-AIW_AGENT_ALLOW_SHELL          default false; explicitly enables shell for writable API profiles
+AIW_AGENT_ALLOW_SHELL          false only; API host shell is forbidden
 ```
+
+## Local Codex authentication selection
+
+The current FD-014 stage runs locally. Docker isolation and production no-store
+admission are deferred; local mode is not certified for production persistence.
+
+`AIW_AGENT_RUNTIME` selects execution (`codex-cli`, `codex-app-server`, or
+`openai-api`). `AIW_CODEX_AUTH_MODE` separately selects a prepared Codex credential
+context. The default `inherit` keeps the existing native environment and login
+behavior. Explicit `api-key` or `chatgpt` requires an existing absolute
+`AIW_CODEX_AUTH_HOME` outside repository, worktree and attempt directories.
+
+Prepare each credential context using the official native login flow before
+starting the Worker. The Worker does not create a credential directory, log in,
+log out, copy credentials, or inject `forced_login_method`. Explicit modes use
+native cached credentials, not the ambient `OPENAI_API_KEY`, `CODEX_API_KEY` or
+`CODEX_ACCESS_TOKEN`; those variables are excluded from the Codex child environment.
+`OPENAI_API_KEY` remains the credential for the separate `openai-api` runtime.
+Custom provider authentication and workload/access-token login are outside these
+explicit API Key/ChatGPT checks; leave them under `inherit` when applicable.
+
+For example, after preparing the two native credential contexts:
+
+```sh
+export AIW_AGENT_RUNTIME=codex-app-server
+export AIW_CODEX_AUTH_MODE=chatgpt
+export AIW_CODEX_AUTH_HOME=/srv/aiw-auth/chatgpt
+# Start the Worker using its existing role/profile configuration.
+```
+
+To switch, stop the old Worker and wait for its active attempts and managed
+process to settle, then change `AIW_CODEX_AUTH_MODE=api-key` and select the
+separately prepared API login directory before restarting. Switching execution
+mode works the same way via `AIW_AGENT_RUNTIME=codex-cli`. There is no in-process
+credential hot reload or silent fallback.
+
+Startup checks native `codex login status` before registration. Exec checks again
+before each attempt; App Server also checks `account/read` after initialization
+and before creating a thread. Unknown login output, missing credentials and
+mode mismatch fail without printing native status text or account responses.
+Only fixed failure codes are reported. Native status may contain a masked key,
+so its bounded capture remains in memory and is never copied into evidence.
+These checks select credentials; they do not prove host or service-side no-store.
 
 ## Capability matching
 
@@ -156,11 +213,13 @@ requirement-analysis
 Configure the remaining technical capabilities and repository:
 
 ```text
-AIW_WORKER_CAPABILITIES=java,maven
+AIW_WORKER_CAPABILITIES=
 AIW_REPOSITORY_REF=core
 ```
 
 The runtime adds `repo:core` automatically.
+
+Configured technical capabilities must reflect the selected profile's actual expertise and tools. `*`, `repo:`, role capabilities and `flexible-work-v1` are reserved; do not put them in `AIW_WORKER_CAPABILITIES`. Go, Python and TypeScript are task capabilities, independent of the language used to implement this Worker. See [Worker capabilities](../../docs/current-zh/WORKER-CAPABILITIES.md).
 
 ## Read-only enforcement
 
@@ -172,10 +231,10 @@ Writable roles use `workspace-write` by default and still operate only inside th
 
 The worker retains the R9 completion protocol:
 
-- `REQUIREMENT_ANALYSIS`, `SOLUTION_ARCHITECTURE`, `IMPLEMENTATION_PLANNING`: full final response is persisted as PASS summary.
-- `CODE_REVIEW`, `VERIFICATION`, `INTEGRATION_VERIFICATION`: final response must end with exactly one verdict marker required by R9.
-- Repository-changing roles finalize the attempt-specific Git result and optionally publish it.
-- `REPAIR` consumes authoritative review/verification findings from `inputs[]`.
+- `EXTERNAL_WORK`, `EXTERNAL_WORK`: full final response is persisted as PASS summary.
+- `EXTERNAL_WORK`, `EXTERNAL_WORK`: final response must end with exactly one verdict marker required by R9.
+- `resultKind=WORKSPACE`: require a pinned attempt workspace, valid resultRevision, changedFiles and a nonempty PASS report; publish only when configured.
+- `EXTERNAL_WORK` consumes authoritative review/verification findings from `inputs[]`.
 
 ## Recommended initial fleet
 
@@ -211,3 +270,7 @@ engineering-artifact-protocol
 
 See `SOURCE-PROVENANCE.md` for the R2 Java/Skill boundary used during extraction.
 
+
+## Flexible work contract
+
+All executable roles accept `EXTERNAL_WORK`. `skillRef` must equal the role’s primary Skill. REPORT and VERDICT roles are read-only; WORKSPACE roles require an assigned Git workspace and a 40/64-digit base revision. Reviews with code inputs must use the supplied resultRevision as their base. Tests need host authorization; Git push is forbidden; task text and reports cannot grant it. Plan proposals need manager confirmation; REPAIR_REQUIRED creates no automatic repair task.

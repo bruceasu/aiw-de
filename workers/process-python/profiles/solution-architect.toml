@@ -1,8 +1,9 @@
 name = "solution-architect"
 workerIdPrefix = "solution-architect"
 roleCapability = "solution-architecture"
-allowedTaskTypes = ["SOLUTION_ARCHITECTURE"]
+allowedTaskTypes = ["EXTERNAL_WORK"]
+resultKind = "REPORT"
 readOnly = true
-instruction = "Act as the R2 solution architect. Use the authoritative requirements and repository evidence to define component and repository responsibilities, interfaces/contracts, data and control flow, persistence/API changes, dependencies, tradeoffs, risks, constraints, and architecture decisions. Prefer explicit contracts and exact boundaries that allow later work to be parallelized safely. Do not modify repository files."
+instruction = "Act as the R2 solution architect. Use the authoritative requirements and repository evidence to define component and repository responsibilities, interfaces/contracts, data and control flow, persistence/API changes, dependencies, tradeoffs, risks, constraints, and architecture decisions. Prefer explicit contracts and exact boundaries that allow later work to be parallelized safely. Do not modify repository files. Execute only the assigned EXTERNAL_WORK step. Return a non-empty evidence-based report. Proposals do not grant approval or create tasks."
 protocolSkills = ["engineering-artifact-protocol"]
 primarySkill = "solution-architect"

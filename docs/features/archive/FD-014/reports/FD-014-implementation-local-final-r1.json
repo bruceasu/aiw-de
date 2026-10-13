@@ -1,0 +1,30 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-014",
+  "source_event": "FD-014-000016-work-requested",
+  "human_report": "FD-014-implementation-local-final-r1.md",
+  "data": {
+    "worker_session": "fd014-worker-linux-20261013-a83c26",
+    "summary": "Local Go Runtime and dual-auth implementation complete; Docker, production admission and additional Linux lifecycle evidence transferred to deferred FD-015 by explicit user decision.",
+    "scope_revision": 19,
+    "previous_report": "FD-014-implementation-linux-r2.md",
+    "commands": [
+      "GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off go build -o /dev/null . (previous implementation, passed)",
+      "git diff --check (final scope/evidence documents)"
+    ],
+    "checks_not_run": [
+      "new real authentication/switching/failure checks",
+      "new Linux lifecycle/restart checks",
+      "Docker/no-store production verification",
+      "tests or final-artifact builds in current Linux session"
+    ],
+    "residual_risks": [
+      "Authentication switching and Linux lifecycle paths have no new runtime evidence; static review and compilation only.",
+      "CLI/host/service retention is not certified; not a production candidate.",
+      "Explicit authentication requires prepared native credentials; inherit reuses existing native login."
+    ],
+    "transferred_to": "FD-015",
+    "reusable_improvements": "Missing blocker templates and migration metadata validation remain separate tooling improvements, not added to this FD."
+  }
+}

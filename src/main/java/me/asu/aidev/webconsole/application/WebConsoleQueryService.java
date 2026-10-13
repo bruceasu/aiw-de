@@ -17,6 +17,7 @@ import me.asu.aidev.webconsole.domain.WebConsoleOverview.RunCard;
 import me.asu.aidev.webconsole.domain.WebConsoleOverview.WaitingGroup;
 import me.asu.aidev.webconsole.jdbc.JdbcWebConsoleOverviewReadRepository;
 import me.asu.aidev.webconsole.jdbc.JdbcWebConsoleReadRepository;
+import me.asu.aidev.webconsole.jdbc.JdbcWebConsoleRunArchiveRepository;
 import me.asu.aidev.webconsole.jdbc.JdbcWebConsoleApprovalReadRepository;
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +37,7 @@ public class WebConsoleQueryService {
     private final AutonomousRunDashboardService runDashboards;
     private final AutonomousRunTimelineService timelines;
     private final JdbcWebConsoleReadRepository reads;
+    private final JdbcWebConsoleRunArchiveRepository archives;
     private final JdbcWebConsoleOverviewReadRepository overviewReads;
     private final JdbcWebConsoleApprovalReadRepository approvalReads;
 
@@ -44,6 +46,7 @@ public class WebConsoleQueryService {
                                   AutonomousRunDashboardService runDashboards,
                                   AutonomousRunTimelineService timelines,
                                   JdbcWebConsoleReadRepository reads,
+                                  JdbcWebConsoleRunArchiveRepository archives,
                                   JdbcWebConsoleOverviewReadRepository overviewReads,
                                   JdbcWebConsoleApprovalReadRepository approvalReads) {
         this.fleet = fleet;
@@ -51,6 +54,7 @@ public class WebConsoleQueryService {
         this.runDashboards = runDashboards;
         this.timelines = timelines;
         this.reads = reads;
+        this.archives = archives;
         this.overviewReads = overviewReads;
         this.approvalReads = approvalReads;
     }
@@ -66,7 +70,9 @@ public class WebConsoleQueryService {
         return WebConsoleFleetDetail.from(snapshot, overviewReads.existingRunIds(runIds));
     }
     public List<FleetAdmissionBudgetEvent> fleetSchedulingEvents(int limit) { return fleetScheduling.recentEvents(limit); }
-    public List<WebConsoleRunSummary> runs() { return reads.recentRuns(200); }
+    public List<WebConsoleRunSummary> runs(boolean archived) { return reads.recentRuns(200, archived); }
+    public boolean archived(String runId) { return archives.isArchived(runId); }
+    public java.util.Optional<java.time.Instant> deleteAfter(String runId) { return archives.deleteAfter(runId); }
     public static final int APPROVAL_WINDOW = 100;
     public record ApprovalInbox(int pendingTotal, List<WebConsoleApprovalDetail> pending,
                                 List<WebConsoleApprovalDetail> decided, int limit) {}

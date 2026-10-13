@@ -35,7 +35,6 @@ class WorkerConfig:
     repository_ref: str
     repository_root: str
     worktree_root: str
-    git_publish_remote: str
     model: str | None
     reasoning_effort: str
     sandbox: str
@@ -47,6 +46,10 @@ class WorkerConfig:
 
     @staticmethod
     def from_env() -> "WorkerConfig":
+        if os.getenv("AIW_GIT_PUBLISH_REMOTE", "").strip():
+            raise ValueError("AIW_GIT_PUBLISH_REMOTE is forbidden: Workers cannot git push")
+        if _bool_env("AIW_CODEX_NETWORK_ACCESS", False):
+            raise ValueError("AIW_CODEX_NETWORK_ACCESS is forbidden for Workers")
         repository_ref = os.getenv("AIW_REPOSITORY_REF", "").strip()
         repository_root = os.getenv("AIW_REPOSITORY_ROOT", "").strip()
         if bool(repository_ref) != bool(repository_root):
@@ -69,12 +72,11 @@ class WorkerConfig:
             repository_ref=repository_ref,
             repository_root=str(Path(repository_root).resolve()) if repository_root else "",
             worktree_root=str(Path(os.getenv("AIW_WORKTREE_ROOT", default_worktrees)).resolve()),
-            git_publish_remote=os.getenv("AIW_GIT_PUBLISH_REMOTE", "").strip(),
             model=os.getenv("AIW_CODEX_MODEL") or None,
             reasoning_effort=os.getenv("AIW_CODEX_REASONING_EFFORT", "high"),
             sandbox=os.getenv("AIW_CODEX_SANDBOX", "workspace-write"),
             approval_mode=os.getenv("AIW_CODEX_APPROVAL_MODE", "auto-review"),
-            network_access=_bool_env("AIW_CODEX_NETWORK_ACCESS", False),
+            network_access=False,
             poll_interval=float(os.getenv("AIW_WORKER_POLL_SECONDS", "1")),
             heartbeat_interval=float(os.getenv("AIW_WORKER_HEARTBEAT_SECONDS", "20")),
             http_timeout=float(os.getenv("AIW_WORKER_HTTP_TIMEOUT_SECONDS", "15")),
@@ -183,11 +185,7 @@ class GitWorkspace:
         result_revision = _git(self.cwd, "rev-parse", "HEAD").strip().lower()
         raw = subprocess.check_output(["git", "-C", self.cwd, "diff", "--name-only", "-z", self.assignment["baseRevision"], result_revision])
         changed = sorted(p for p in raw.decode("utf-8").split("\0") if p)
-        publication_ref = None
-        if self.config.git_publish_remote:
-            _git(self.cwd, "push", self.config.git_publish_remote, f"{result_revision}:refs/heads/{self.assignment["branchName"]}")
-            publication_ref = f"git:{self.config.git_publish_remote}:{self.assignment["branchName"]}"
-        return {"resultRevision": result_revision, "changedFiles": changed, "publicationRef": publication_ref}
+        return {"resultRevision": result_revision, "changedFiles": changed, "publicationRef": None}
 
     def cleanup(self) -> None:
         if self.assignment is None or not self.assignment.get("baseRevision"):
@@ -213,6 +211,8 @@ def _fetch_inputs(config: WorkerConfig, task: dict[str, Any]) -> None:
 
 
 def _git(cwd: str, *args: str) -> str:
+    if "push" in args:
+        raise RuntimeError("GIT_PUSH_FORBIDDEN")
     return subprocess.check_output(["git", "-C", cwd, *args], text=True, stderr=subprocess.STDOUT)
 
 

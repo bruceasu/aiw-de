@@ -38,13 +38,17 @@
 
 `runCommand` 取消后等待原进程关闭和进程树终止结果；最多等待 5000ms。无法确认时抛出 PROCESS_TREE_UNCERTAIN 并解除自身管道等待，不能把这次返回当作释放资源或删除工作区的依据。Windows 的 taskkill 辅助进程也有同样的有界等待；该策略不证明逃逸子进程已经结束，真实平台能力仍由准入验证约束。
 
+## FD-016 Profile 结果接入
+
+adapter.profile 固定启动角色并校验 EXTERNAL_WORK 与精确 primarySkill skillRef；共享 attempt 在模型与工作区业务动作前完成校验和可信技能冻结。adapter.report 接受 profile.resultKind（REPORT/VERDICT/WORKSPACE），不接受旧 TaskType 分派。写角色必须有固定 baseRevision 工作区，审查基准等于输入结果 revision；只读收尾不 stage/commit/push。
+
 ## 公共 attempt 与 slot
 
 `runClaimedAttempt(cfg, client, task, adapter)` 返回 `{ status, sessionId, workspaceResult?, evidence?, resourceUncertain }`。`resourceUncertain` 为明确布尔值，覆盖 finally 的最终判断；调用者不能用 failed/completed 字符串代替资源状态。`adapter.settled(timeoutMs?)` 必须说明活动 I/O 是否已结束，false 或拒绝按未知处理，未提供钩子仍依赖 Runner 登记的整个执行 Promise。
 
 元数据初始化、准备/只读基线、模型、报告验证、发布与成功上报都受整体期限约束。取消后的操作宽限和随后独立清理窗口分别有界；catch/finally 的保存、失败上报、资源等待及清理共用一个 cleanupTimeoutMs 窗口。窗口耗尽后不启动新的清理 I/O；未能确认的资源和工作区保留。未确认资源时不调用 adapter.clear，也不把后台 Promise 当作结束。
 
-`runWorkerSlot({ cfg, client, createAdapter, shouldStop, onOutcome?, onUncertain?, onError? })` 是两个 TS 生产入口共用的公开领取循环。cfg 需要 pollMs，并沿用公共 attempt 配置；client 另提供 claim()。每个领取任务使用 createAdapter(task)。正常 drain 由 shouldStop() 停止后续领取，已领取任务仍可结束；forceSignal 中止时不启动刚收到的任务，由控制平面恢复租约。
+`runWorkerSlot({ cfg, client, createAdapter, shouldStop, onOutcome?, onUncertain?, onError? })` 是三个 TS Runtime 共用的公开领取循环。cfg 需要 pollMs，并沿用公共 attempt 配置；client 另提供 claim()。每个领取任务使用 createAdapter(task)。正常 drain 由 shouldStop() 停止后续领取，已领取任务仍可结束；forceSignal 中止时不启动刚收到的任务，由控制平面恢复租约。
 
 资源未知结果让 slot 永久退役，不再调用 claim；即使观察回调或 onUncertain 抛错也不能恢复该 slot。onUncertain 调用本身受 cleanupTimeoutMs 约束。TS/API 主机回调设置停止、强制取消与 drain，防止其他 slot 再启动新 attempt；只保留现有协议终态，不在 Worker 自行重跑。
 
@@ -52,7 +56,7 @@
 
 | 事件/标记 | 成功完成 | 上报响应未知或资源未知 |
 |---|---|---|
-| model-terminal | completed；API 的 usageKnown=true、usageSource=provider-response 表示实际报告数值，Codex SDK 使用 codex-sdk-turn；缺失 usage 时 false/unknown，不补零值 | error 对应固定错误码；不保存原始模型异常 |
+| model-terminal | completed；API 的 usageKnown=true、usageSource=provider-response 表示实际报告数值，Codex 使用 exec-json/app-server-notification；缺失 usage 时 false/unknown，不补零值 | error 对应固定错误码；不保存原始模型异常 |
 | resource-terminal | 成功请求前保存 status=settled；正常成功不追加 PROCESS_TREE_UNCERTAIN | status=unknown、code=PROCESS_TREE_UNCERTAIN 表示未确认终态；关键 I/O 故障无法保存时仍返回 resourceUncertain=true 并停止领取 |
 | terminal.json / attempt-terminal | ready-to-report 是成功请求前已保存必需结果与清理证据的标记，本身不代表 CP 接受 | 无 ready-to-report 时只有已确认资源结束才形成 failed/lease-lost 等终态标记；未知活动日志不作为完成证明 |
 | report-posted | reportStatus=accepted 表示 complete 请求已获得正常响应 | attempt-failed 的 status=report-unknown、reportStatus=unknown；不再 fail 或重发 complete |

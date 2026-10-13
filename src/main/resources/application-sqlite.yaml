@@ -1,6 +1,7 @@
 spring:
   datasource:
-    url: ${AIW_DB_URL:jdbc:sqlite:d:/temp/data/aidev-r3.db}
+    #    url: ${AIW_DB_URL:jdbc:sqlite:d:/temp/data/aidev-r3.db}
+    url: ${AIW_DB_URL:jdbc:sqlite:/mnt/temp/data/aidev-r3.db}
     driver-class-name: org.sqlite.JDBC
     hikari:
       maximum-pool-size: 1

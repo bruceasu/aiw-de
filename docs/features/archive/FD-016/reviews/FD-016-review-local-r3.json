@@ -1,0 +1,68 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-016",
+  "source_event": "FD-016-000017-review-requested",
+  "human_report": "FD-016-review-local-r3.md",
+  "data": {
+    "session_ref": "fd016-reviewer-20261013-a9e28b61",
+    "diff_base": "5e094e9",
+    "reviewed_commit": "b7eda116fa12bc6f082d139b8525335e5de30ce7",
+    "outcome": "changes-requested",
+    "review_number": 3,
+    "findings": [
+      {
+        "id": "R4",
+        "severity": "P2",
+        "path": "workers/process-typescript/README.md",
+        "line": 8,
+        "title": "整合后的 README 宣称已被移除的迁移错误与过期清单",
+        "description": "新手段落仍说 codex-cli/codex-app-server 会报迁移未完成（第 8–10、181–182 行），但两个真实 adapter 已实现，现行边界是本地交付、原生 Windows 提前拒绝与运行验证未执行。第 84–85 行及后续分发说明还说 start-all 未进入清单，但清单已包含。造成同一文档内部与实际代码矛盾。",
+        "correction": "保留父分支新增使用说明，按当前实现重写迁移、平台与发行说明；不宣称真实运行或生产认证通过。",
+        "acceptance": [
+          8,
+          12
+        ]
+      },
+      {
+        "id": "R5",
+        "severity": "P2",
+        "path": "workers/process-typescript/scripts/package-release.mjs",
+        "line": 21,
+        "title": "发行清单要求不存在的 bin 目录，打包必然在复制前失败",
+        "description": "releaseFiles 强制包含 bin，随后第 33–34 行逐项 access；实际 HEAD Git 树与定向 rg 文件列表均无 workers/process-typescript/bin，父分支新 README 也明确记录该阻塞。即使 dist 已由 build 生成，release 仍在不存在的 bin 上失败，不能分发新 start-all。此项为历史脚本缺陷在当前明确整合发行范围中的未解决行为，不是一次构建失败证据。",
+        "correction": "按实际需要移除不存在且未使用的 bin 清单项及对应 package files 定义，或提供真实必需内容；静态核对其余非生成发布源文件存在，文档同步。无需为证明这一点运行最终构建。",
+        "acceptance": [
+          8
+        ],
+        "work_items": [
+          "1.20",
+          "1.24"
+        ]
+      }
+    ],
+    "results": [
+      "Prior runtime R1/R2/R3 fixes remain intact.",
+      "Index preserves FD-016 current Pending Verification and FD-017 Design.",
+      "Parent launcher/build integration inspected; stale docs and missing bin prevent release consistency.",
+      "Delivery blocker pending actual merge is not an independent review gate."
+    ],
+    "commands": [
+      "read-only targeted receipt/status/HEAD/diff/source reads",
+      "git ls-tree -r HEAD workers/process-typescript/bin",
+      "rg --files workers/process-typescript",
+      "aiw fd claim FD-016 FD-016-000017-review-requested --session fd016-reviewer-20261013-a9e28b61",
+      "git diff --check"
+    ],
+    "checks_not_run": [
+      "tests",
+      "type checks",
+      "compile rerun",
+      "real CLI/model",
+      "launcher",
+      "build/release",
+      "deployment"
+    ],
+    "residual_risk": "整合发行清单与文档需修复；真实 SDK 类型、并发/取消与系统路径未运行验证；生产认证仍归 FD-015。"
+  }
+}

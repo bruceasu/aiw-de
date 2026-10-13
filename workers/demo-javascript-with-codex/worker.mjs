@@ -8,6 +8,8 @@ const execFileAsync = promisify(execFile);
 class ProtocolError extends Error { constructor(status, message) { super(`worker protocol HTTP ${status}: ${message}`); this.status = status; } }
 
 const repositoryRef = env("AIW_REPOSITORY_REF", "").trim();
+if (env("AIW_GIT_PUBLISH_REMOTE", "").trim()) throw new Error("AIW_GIT_PUBLISH_REMOTE is forbidden: Workers cannot git push");
+if (/^(1|true|yes)$/i.test(env("AIW_CODEX_NETWORK_ACCESS", "false"))) throw new Error("AIW_CODEX_NETWORK_ACCESS is forbidden for Workers");
 const repositoryRoot = env("AIW_REPOSITORY_ROOT", "").trim();
 if ((repositoryRef === "") !== (repositoryRoot === "")) throw new Error("AIW_REPOSITORY_REF and AIW_REPOSITORY_ROOT must be configured together");
 const capabilities = new Set(env("AIW_WORKER_CAPABILITIES", "coding").split(",").map(x => x.trim()).filter(Boolean));
@@ -19,11 +21,10 @@ const cfg = {
   capabilities: [...capabilities].sort(), maxConcurrency: positiveInt("AIW_WORKER_MAX_CONCURRENCY", 1),
   fallbackWorkspace, repositoryRef, repositoryRoot,
   worktreeRoot: env("AIW_WORKTREE_ROOT", path.resolve(repositoryRoot || fallbackWorkspace, "..", ".aidev-worktrees")),
-  gitPublishRemote: env("AIW_GIT_PUBLISH_REMOTE", ""),
   pollMs: positiveInt("AIW_WORKER_POLL_MS", 1000), heartbeatMs: positiveInt("AIW_WORKER_HEARTBEAT_MS", 20000),
   model: process.env.AIW_CODEX_MODEL || undefined, sandboxMode: env("AIW_CODEX_SANDBOX", "workspace-write"),
   approvalPolicy: env("AIW_CODEX_APPROVAL_POLICY", "never"), reasoningEffort: env("AIW_CODEX_REASONING_EFFORT", "high"),
-  networkAccess: /^(1|true|yes)$/i.test(env("AIW_CODEX_NETWORK_ACCESS", "false")),
+  networkAccess: false,
 };
 
 class Client {
@@ -65,12 +66,7 @@ class GitWorkspace {
     const resultRevision = (await git(this.cwd, "rev-parse", "HEAD")).trim().toLowerCase();
     const { stdout } = await execFileAsync("git", ["-C", this.cwd, "diff", "--name-only", "-z", this.assignment.baseRevision, resultRevision], { encoding: "buffer" });
     const changedFiles = stdout.toString("utf8").split("\0").filter(Boolean).sort();
-    let publicationRef = null;
-    if (cfg.gitPublishRemote) {
-      await git(this.cwd, "push", cfg.gitPublishRemote, `${resultRevision}:refs/heads/${this.assignment.branchName}`);
-      publicationRef = `git:${cfg.gitPublishRemote}:${this.assignment.branchName}`;
-    }
-    return { resultRevision, changedFiles, publicationRef };
+    return { resultRevision, changedFiles, publicationRef: null };
   }
   async cleanup() { if (this.assignment) try { await git(cfg.repositoryRoot, "worktree", "remove", "--force", this.cwd); } catch (e) { console.error("worktree cleanup failed", e); } }
 }
@@ -84,7 +80,7 @@ async function fetchPublishedInputs(task) {
     await git(cfg.repositoryRoot, "fetch", parts[1], parts[2]);
   }
 }
-async function git(cwd, ...args) { const { stdout } = await execFileAsync("git", ["-C", cwd, ...args], { encoding: "utf8" }); return stdout; }
+async function git(cwd, ...args) { if (args.includes("push")) throw new Error("GIT_PUSH_FORBIDDEN"); const { stdout } = await execFileAsync("git", ["-C", cwd, ...args], { encoding: "utf8" }); return stdout; }
 
 const client = new Client(); let stopping = false;
 process.on("SIGINT", () => { stopping = true; }); process.on("SIGTERM", () => { stopping = true; });

@@ -1,0 +1,26 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-017",
+  "source_event": "FD-017-000002-design-requested",
+  "human_report": "FD-017-blocker-preflight-20261013-060825-442014.md",
+  "data": {
+    "stage": "preflight",
+    "role": "pm",
+    "observed_symptom": "resume rejected FD revision 1 versus event revision 2; latest Planner handoff is dispatched to another session.",
+    "confirmed_cause": "Revision mismatch and existing dispatched ownership; origin and original session outcome unknown.",
+    "recovery_attempts": [
+      "Read FD, receipt, applicable instructions and Git state/history.",
+      "aiw fd show FD-017 succeeded; aiw fd resume FD-017 rejected revision mismatch (exit 1); not retried.",
+      "Inspected local FD records; only event receipt found, no original session log.",
+      "Read cancel-event help without cancelling or claiming.",
+      "Required blocker templates absent; used existing archived blocker-feedback schema.",
+      "用户确认自行修复；PM cancel-event 旧事件，force-emit 新 FD-017-000003-design-requested 并以当前 Session 领取；版本和所有权恢复。"
+    ],
+    "status": "resolved",
+    "resolved_at": "2026-10-13T06:21:57.531433+00:00",
+    "human_decision_need": "none",
+    "next_step_or_risk": "按新 Planner 交接继续；旧 Session 结果仍未知，取消不终止原 Agent；用户已确认 Worker 推荐边界。",
+    "reusable_improvement": "Restore referenced blocker templates and document managed recovery for dispatched Planner revision mismatches."
+  }
+}

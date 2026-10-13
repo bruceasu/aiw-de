@@ -1,0 +1,41 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-014",
+  "source_event": "FD-014-000010-work-requested",
+  "human_report": "FD-014-implementation-r1.md",
+  "data": {
+    "summary": "实现并验证固定版本 Go App Server runtime；1.3、1.4、1.5、1.7 完成，1.6 因禁存及 restart/rollback 准入证据不足而 Gate，未发 implementation-ready。",
+    "changed_paths": [
+      "workers/process-go/app_server_runtime.go",
+      "workers/process-go/app_server_runtime_test.go",
+      "workers/process-go/testdata/fake_app_server/main.go",
+      "workers/process-go/worker_runtime.go",
+      "workers/process-go/agent_runtime.go",
+      "workers/process-go/main.go",
+      "workers/process-go/CODEX-RUNTIME.md",
+      "workers/process-go/README.md",
+      "workers/README.md",
+      "workers/WORKER_RUNTIME_CONTRACT.md",
+      "docs/features/FD-014_CODEX_RUNTIME_GO.md",
+      "docs/features/reports/FD-014-blocker-worker-protocol-20261012-b71f6d.md",
+      "docs/features/reports/FD-014-blocker-worker-protocol-20261012-b71f6d.json",
+      "docs/features/reports/FD-014-blocker-runtime-authorization-20261013-0802-fd014a.md",
+      "docs/features/reports/FD-014-blocker-runtime-authorization-20261013-0802-fd014a.json",
+      "docs/features/reports/FD-014-blocker-candidate-admission-20261013-0828-a54d3e.md",
+      "docs/features/reports/FD-014-blocker-candidate-admission-20261013-0828-a54d3e.json"
+    ],
+    "commands": [
+      "GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off go build -o NUL .",
+      "GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off go test -run '^Test(CodexAppServer(FakeLifecycle|RejectsUnpinnedVersion|DisconnectSignalsFailure|UnconfirmedInterruptStopsManagedProcess)|ExecuteTask(LeaseLossDoesNotReportSuccess|StopRequestIsAcknowledged))$' -count=1",
+      "AIW_RUN_CODEX_APP_SERVER_REAL_TURN=1 AIW_CODEX_JS_PATH=<installed Codex CLI entrypoint> go test -run '^TestCodexAppServerRealTurn$' -count=1 -v"
+    ],
+    "results": [
+      "Compile-only build passed with output directed to NUL.",
+      "Focused local fake App Server and Worker lifecycle tests passed after fixing process creation, cancellation terminal handling, and runtime evidence field admission.",
+      "One real Codex CLI 0.162.1 App Server turn passed in a temporary read-only workspace and graceful EOF shutdown completed.",
+      "No-store persistence behavior and full Worker restart/Exec rollback remain unverified; production-candidate admission is blocked."
+    ],
+    "residual_risk": "Ephemeral thread mode and one real turn do not establish all CLI, host, or service-side persistence channels. Full Worker restart and Exec rollback runtime checks are not covered. FD remains In Progress and no Reviewer handoff was emitted."
+  }
+}

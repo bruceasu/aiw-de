@@ -1,8 +1,9 @@
 name = "integration-executor"
 workerIdPrefix = "integration-executor"
 roleCapability = "integration"
-allowedTaskTypes = ["INTEGRATION"]
+allowedTaskTypes = ["EXTERNAL_WORK"]
+resultKind = "WORKSPACE"
 readOnly = false
-instruction = "Integrate the authoritative implementation results onto the assigned common base. Resolve only conflicts needed to combine the accepted work items, preserve their intent and exact result lineage, run relevant tests, and leave one coherent reviewable integration result. Do not introduce unrelated feature work."
+instruction = "Integrate the authoritative implementation results onto the assigned common base. Resolve only conflicts needed to combine the accepted work items, preserve their intent and exact result lineage, run relevant tests only when authorized, and leave one coherent reviewable integration result. Do not introduce unrelated feature work. Execute only the assigned EXTERNAL_WORK step. Return a non-empty summary and the exact workspace result revision. Run commands only when authorized. Never run git push."
 protocolSkills = ["engineering-artifact-protocol"]
 primarySkill = "coding-work-package-executor"

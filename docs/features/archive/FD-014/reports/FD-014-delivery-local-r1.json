@@ -1,0 +1,36 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-report",
+  "fd_id": "FD-014",
+  "source_event": "FD-014-000023-verification-passed",
+  "human_report": "FD-014-delivery-local-r1.md",
+  "data": {
+    "result": "Complete, local delivery and archive only",
+    "parent_branch": "master",
+    "delivery_commit": "3e2e120",
+    "reviewed_source": "640252fb3fdaa8604835c4cebffc897fa5bef1af",
+    "review_count": 2,
+    "review_report": "../reviews/FD-014-review-local-r2.md",
+    "cleanup": "Recorded FD worktree and feature/FD-014 removed by verified local-merge; receipts retained.",
+    "commands": [
+      "aiw fd new <Docker follow-up title> --issue ISSUE-00004",
+      "aiw fd claim FD-015 FD-015-000002-design-requested --session fd015-planner-deferred-20261013-c67b92",
+      "aiw fd close FD-015 Deferred --reason <user deferral> (initially refused: claimed Planner outcome unknown)",
+      "aiw fd cancel-event FD-015 --expected-event FD-015-000002-design-requested --reason <completed scope registration, user deferral> --operator fd015-planner-deferred-20261013-c67b92",
+      "aiw fd close FD-015 Deferred --reason <user deferral> (passed after managed cancellation)",
+      "git merge master --no-edit (FD worktree, passed)",
+      "GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off go build -o /dev/null . (repair source, passed)",
+      "git diff --check (passed)",
+      "aiw git wt local-merge FD-014 (passed)",
+      "aiw fd close FD-014 Complete (passed)"
+    ],
+    "checks_not_run": [
+      "new real authentication switching",
+      "new Linux lifecycle runtime tests",
+      "Docker/production no-store admission",
+      "tests, final distribution builds, network or model calls in this closure session"
+    ],
+    "residual_risks": "Independent static review and compilation do not certify real credentials or Linux runtime behavior. Shared App Server shutdown affects active sessions; unknown termination needs operator recovery. FD-015 retains production isolation and no-store evidence.",
+    "follow_up_fd": "FD-015 (Deferred)"
+  }
+}

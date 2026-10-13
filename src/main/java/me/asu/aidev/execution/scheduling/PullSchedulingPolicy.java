@@ -25,6 +25,11 @@ public final class PullSchedulingPolicy {
         return candidates.stream().sorted(comparator(now)).toList();
     }
 
+    public static List<ReadyTaskCandidate> rank(List<ReadyTaskCandidate> candidates, Instant now,
+                                                 java.util.function.ToIntFunction<ReadyTaskCandidate> preference) {
+        return candidates.stream().sorted(comparator(now, preference)).toList();
+    }
+
     public static int effectivePriority(ReadyTaskCandidate candidate, Instant now) {
         long waitedSeconds = Math.max(0L, Duration.between(candidate.task().updatedAt(), now).toSeconds());
         int ageBoost = (int) Math.min(MAX_AGING_BOOST, waitedSeconds / AGING_STEP_SECONDS);
@@ -32,8 +37,14 @@ public final class PullSchedulingPolicy {
     }
 
     static Comparator<ReadyTaskCandidate> comparator(Instant now) {
+        return comparator(now, candidate -> 0);
+    }
+
+    static Comparator<ReadyTaskCandidate> comparator(Instant now,
+            java.util.function.ToIntFunction<ReadyTaskCandidate> preference) {
         return Comparator
                 .comparingInt((ReadyTaskCandidate c) -> effectivePriority(c, now)).reversed()
+                .thenComparing(Comparator.comparingInt(preference).reversed())
                 .thenComparingInt(ReadyTaskCandidate::activeSubjectLeases)
                 .thenComparing(c -> c.task().updatedAt())
                 .thenComparing(c -> c.task().createdAt())

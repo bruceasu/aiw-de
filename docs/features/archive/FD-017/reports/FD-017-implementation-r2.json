@@ -1,0 +1,28 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-017",
+  "source_event": "FD-017-000006-changes-requested",
+  "human_report": "FD-017-implementation-r2.md",
+  "data": {
+    "summary": "修复 R1 尾随 JSON token 接受及创建中目标变更导致旧推荐 ID 丢失。",
+    "changed_paths": [
+      "src/main/java/me/asu/aidev/workflow/application/WorkflowRecommendationService.java",
+      "src/main/resources/static/ui/workflow-editor.js",
+      "src/main/resources/templates/ui/plan-editor.html",
+      "src/main/resources/static/ui/console.css",
+      "docs/features/FD-017_WEB_CONSOLE_AI.md"
+    ],
+    "commands": [
+      "mvn -o -q -DskipTests compile",
+      "node --check src/main/resources/static/ui/workflow-editor.js",
+      "git diff --check"
+    ],
+    "results": [
+      "exit 0",
+      "exit 0",
+      "exit 0"
+    ],
+    "residual_risk": "No runtime/browser/model/database validation; async behavior assessed statically."
+  }
+}

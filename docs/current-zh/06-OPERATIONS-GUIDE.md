@@ -83,7 +83,7 @@ POST /api/worker-protocol/v1/workers/{workerId}/drain
 
 [TypeScript 流程 Worker](../../workers/process-typescript/README.md) 在单一入口显式选择 `codex-sdk` 或 `openai-agents`；旧 API 包及启动路径已删除。选择 Agents 时配置 `OPENAI_API_KEY`，并在 AI 策略中批准相应 `openai-agents` profile。只读角色仅有文件检查工具；写入角色可显式开启主机命令工具，但该工具没有操作系统沙箱，须在隔离主机或容器中运行。配置和验证限制见 Worker 指南。
 
-各进程应指向相同的 Control Plane 和 Repository Ref，并能访问对应 Git 仓库。`AIW_WORKER_CAPABILITIES` 配置额外的技术能力；角色能力及 `repo:<repositoryRef>` 会自动加入。每个并发进程需要独立的 `AIW_WORKER_ID`。跨机器交接代码结果时配置共享 Git 发布远端 `AIW_GIT_PUBLISH_REMOTE`。
+各进程应指向相同的 Control Plane 和 Repository Ref，并能访问对应 Git 仓库。`AIW_WORKER_CAPABILITIES` 配置额外的技术能力；角色能力及 `repo:<repositoryRef>` 会自动加入。每个并发进程需要独立的 `AIW_WORKER_ID`。Worker 不允许 `git push`；代码任务应共享本地 Git 仓库，跨机器交接需由独立受控发布服务处理。
 
 滚动更新时先 Drain 旧进程，等待活动 Lease 清零后停止，再以相同角色和唯一 Worker ID 启动新进程。进程异常退出后，由 Control Plane 在 Lease 过期时重新排队任务；先查看 Run Timeline，再决定是否人工干预。只读角色强制使用只读 Codex 沙箱；编码、集成、修复角色使用独立可写 Worktree。
 

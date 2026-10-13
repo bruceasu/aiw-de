@@ -15,11 +15,11 @@ export interface AiGuidance {
 }
 
 /** The Worker chooses within the approved ordered path; the Control Plane validates the choice. */
-export function chooseAiProfile(guidance: AiGuidance, runtime: "codex-sdk" | "openai-agents" = "codex-sdk"): { id: string; profile: AiProfile; reason: string } {
+export function chooseAiProfile(guidance: AiGuidance, runtime: "codex-cli" | "codex-app-server" | "openai-agents" = "codex-cli"): { id: string; profile: AiProfile; reason: string } {
   const allowed = guidance.allowedProfiles.filter(item => item.profile.provider === "openai" && item.profile.runtime === runtime
-    && (runtime === "codex-sdk" || (!item.profile.fast && ["none", "minimal", "low", "medium", "high"].includes(item.profile.effort))));
-  if (!allowed.length) throw new Error(runtime === "codex-sdk"
-    ? "no approved Codex SDK profile in AI guidance"
+    && (runtime !== "openai-agents" || (!item.profile.fast && ["none", "minimal", "low", "medium", "high"].includes(item.profile.effort))));
+  if (!allowed.length) throw new Error(runtime !== "openai-agents"
+    ? "no approved system Codex profile matching the selected mode"
     : "no compatible approved OpenAI Agents profile (use fast=false and supported effort)");
   const previousIndex = allowed.findIndex(item => item.id === guidance.previous?.profileId);
   const upgrade = guidance.previous?.failureCategory === "MODEL_ERROR" || guidance.previous?.failureCategory === "OUTPUT_INVALID";

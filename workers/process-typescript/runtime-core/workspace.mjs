@@ -85,6 +85,7 @@ export class WorkspaceSession {
     }
   }
   async gitAt(cwd, args, signal = this.attempt.signal) {
+    if (args.includes("push")) throw new RuntimeFault("GIT_PUSH_FORBIDDEN", "CONFIGURATION");
     const result = await runCommand("git", ["-C", cwd, ...args], { cwd, signal, timeoutMs: this.cfg.gitTimeoutMs ?? 120000, exact: true });
     return result.stdout;
   }
@@ -115,22 +116,9 @@ export class WorkspaceSession {
       }
       const resultRevision = (await this.gitAt(this.cwd, ["rev-parse", "HEAD"])).trim().toLowerCase();
       const changedFiles = (await this.gitAt(this.cwd, ["diff", "--name-only", "-z", this.assignment.baseRevision, resultRevision])).split("\0").filter(Boolean).sort();
-      let publicationRef = null;
-      if (this.cfg.gitPublishRemote) {
-        publicationRef = `git:${this.cfg.gitPublishRemote}:${this.assignment.branchName}`;
-        await this.attempt.recorder.record("publication-started", { publicationRef, resultRevision, sideEffect: "possible" });
-        try {
-          checkSignal(this.attempt.signal);
-          await this.gitAt(this.cwd, ["push", argument(this.cfg.gitPublishRemote), `${resultRevision}:refs/heads/${this.assignment.branchName}`]);
-          await this.attempt.recorder.record("publication-terminal", { publicationRef, resultRevision, status: "completed", sideEffect: "completed" });
-        } catch (error) {
-          await this.attempt.recorder.record("publication-terminal", { publicationRef, resultRevision, status: "unknown", sideEffect: "reconcile" });
-          throw error;
-        }
-      }
       checkSignal(this.attempt.signal);
-      await this.attempt.recorder.record("workspace-result", { resultRevision, publicationRef, count: changedFiles.length });
-      return { resultRevision, changedFiles, publicationRef };
+      await this.attempt.recorder.record("workspace-result", { resultRevision, count: changedFiles.length });
+      return { resultRevision, changedFiles };
     });
   }
   async cleanup() {

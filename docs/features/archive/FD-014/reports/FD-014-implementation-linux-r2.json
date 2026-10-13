@@ -1,0 +1,34 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-014",
+  "source_event": "FD-014-000016-work-requested",
+  "human_report": "FD-014-implementation-linux-r2.md",
+  "data": {
+    "worker_session": "fd014-worker-linux-20261013-a83c26",
+    "summary": "完成本地 ready 子项 1.6.4.1：两种 Codex 执行模式支持显式 API Key/ChatGPT 凭据上下文选择，默认 inherit 保持兼容；注册和执行前核验类型，不登录/注销或复制凭据。Linux 编译通过，新增运行检查未执行，Docker 和生产准入按用户指示暂缓。",
+    "changed_paths": [
+      "workers/process-go/codex_auth.go",
+      "workers/process-go/main.go",
+      "workers/process-go/agent_runtime.go",
+      "workers/process-go/app_server_runtime.go",
+      "workers/process-go/README.md",
+      "workers/process-go/CODEX-RUNTIME.md",
+      "docs/features/FD-014_CODEX_RUNTIME_GO.md"
+    ],
+    "commands": [
+      "aiw fd refresh-worker FD-014 --reason <Docker deferred and local development scope>",
+      "aiw fd claim FD-014 FD-014-000016-work-requested --session fd014-worker-linux-20261013-a83c26",
+      "GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off go build -o /dev/null .",
+      "git diff --check"
+    ],
+    "results": [
+      "Current Worker event was created through CLI and claimed by this session.",
+      "One compile-only command passed; no dependency download or retained distributable.",
+      "Native status and account/read paths were inspected statically but not executed.",
+      "No tests, real credential/model checks, Docker, deployment, Reviewer action, delivery or archive ran.",
+      "Static diff check passed; Dual evidence references and current Worker ownership were consistent."
+    ],
+    "residual_risk": "Local authentication switching and failure paths lack runtime evidence. The added bounded status subprocess adds per-attempt latency. Docker isolation and full production no-store/credential-policy admission remain deferred and unverified; no implementation-ready handoff was emitted."
+  }
+}

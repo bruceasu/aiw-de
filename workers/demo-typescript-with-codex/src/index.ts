@@ -62,7 +62,6 @@ interface Config {
   repositoryRef: string;
   repositoryRoot: string;
   worktreeRoot: string;
-  gitPublishRemote: string;
   pollMs: number;
   heartbeatMs: number;
   model?: string;
@@ -161,12 +160,7 @@ class GitWorkspace {
     const resultRevision = (await git(this.cwd, "rev-parse", "HEAD")).trim().toLowerCase();
     const { stdout } = await execFileAsync("git", ["-C", this.cwd, "diff", "--name-only", "-z", this.assignment.baseRevision, resultRevision], { encoding: "buffer" });
     const changedFiles = stdout.toString("utf8").split("\0").filter(Boolean).sort();
-    let publicationRef: string | null = null;
-    if (this.cfg.gitPublishRemote) {
-      await git(this.cwd, "push", this.cfg.gitPublishRemote, `${resultRevision}:refs/heads/${this.assignment.branchName}`);
-      publicationRef = `git:${this.cfg.gitPublishRemote}:${this.assignment.branchName}`;
-    }
-    return { resultRevision, changedFiles, publicationRef };
+    return { resultRevision, changedFiles, publicationRef: null };
   }
 
   async cleanup(): Promise<void> {
@@ -186,6 +180,7 @@ async function fetchPublishedInputs(repositoryRoot: string, task: ClaimedTask): 
 }
 
 async function git(cwd: string, ...args: string[]): Promise<string> {
+  if (args.includes("push")) throw new Error("GIT_PUSH_FORBIDDEN");
   const { stdout } = await execFileAsync("git", ["-C", cwd, ...args], { encoding: "utf8" });
   return stdout;
 }
@@ -290,6 +285,8 @@ function completionReport(task: ClaimedTask, finalResponse: string): CompletionR
 }
 
 function loadConfig(): Config {
+  if (env("AIW_GIT_PUBLISH_REMOTE", "").trim()) throw new Error("AIW_GIT_PUBLISH_REMOTE is forbidden: Workers cannot git push");
+  if (/^(1|true|yes)$/i.test(env("AIW_CODEX_NETWORK_ACCESS", "false"))) throw new Error("AIW_CODEX_NETWORK_ACCESS is forbidden for Workers");
   const repositoryRef = env("AIW_REPOSITORY_REF", "").trim();
   const repositoryRoot = env("AIW_REPOSITORY_ROOT", "").trim();
   if ((repositoryRef === "") !== (repositoryRoot === "")) throw new Error("AIW_REPOSITORY_REF and AIW_REPOSITORY_ROOT must be configured together");
@@ -302,13 +299,12 @@ function loadConfig(): Config {
     capabilities: [...capabilities].sort(), maxConcurrency: positiveInt("AIW_WORKER_MAX_CONCURRENCY", 1),
     fallbackWorkspace, repositoryRef, repositoryRoot,
     worktreeRoot: env("AIW_WORKTREE_ROOT", path.resolve(repositoryRoot || fallbackWorkspace, "..", ".aidev-worktrees")),
-    gitPublishRemote: env("AIW_GIT_PUBLISH_REMOTE", ""),
     pollMs: positiveInt("AIW_WORKER_POLL_MS", 1000), heartbeatMs: positiveInt("AIW_WORKER_HEARTBEAT_MS", 20000),
     model: process.env.AIW_CODEX_MODEL || undefined,
     sandboxMode: env("AIW_CODEX_SANDBOX", "workspace-write") as SandboxMode,
     approvalPolicy: env("AIW_CODEX_APPROVAL_POLICY", "never") as ApprovalMode,
     reasoningEffort: env("AIW_CODEX_REASONING_EFFORT", "high") as ModelReasoningEffort,
-    networkAccess: /^(1|true|yes)$/i.test(env("AIW_CODEX_NETWORK_ACCESS", "false")),
+    networkAccess: false,
   };
 }
 function env(name: string, fallback: string): string { return process.env[name] ?? fallback; }

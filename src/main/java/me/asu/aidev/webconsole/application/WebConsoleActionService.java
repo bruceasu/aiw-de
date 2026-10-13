@@ -7,10 +7,7 @@ import me.asu.aidev.approval.domain.ApprovalChannel;
 import me.asu.aidev.approval.domain.ApprovalDecision;
 import me.asu.aidev.approval.domain.ApprovalRequest;
 import me.asu.aidev.approval.domain.ApprovalRequestId;
-import me.asu.aidev.autonomous.application.AutonomousRequirementRun;
-import me.asu.aidev.autonomous.application.AutonomousRequirementService;
 import me.asu.aidev.autonomous.application.AutonomousRunService;
-import me.asu.aidev.autonomous.application.StartAutonomousRequirementCommand;
 import me.asu.aidev.execution.application.TaskExecutionService;
 import me.asu.aidev.fleet.application.FleetAdmissionBudgetService;
 import me.asu.aidev.fleet.domain.FleetAdmissionBudget;
@@ -32,7 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 /** Browser adapter facade. All mutations delegate to existing application-service authority. */
 @Service
 public class WebConsoleActionService {
-    private final AutonomousRequirementService requirements;
     private final AutonomousRunService runs;
     private final ApprovalService approvals;
     private final FleetAdmissionBudgetService fleetScheduling;
@@ -46,29 +42,18 @@ public class WebConsoleActionService {
         this.workspaceReplacements = workspaceReplacements;
     }
 
-    public WebConsoleActionService(AutonomousRequirementService requirements,
-                                   AutonomousRunService runs,
+    public WebConsoleActionService(AutonomousRunService runs,
                                    ApprovalService approvals,
                                    FleetAdmissionBudgetService fleetScheduling,
                                    WorkerService workers,
                                    TaskExecutionService taskExecution,
                                    WorkTaskService tasks) {
-        this.requirements = requirements;
         this.runs = runs;
         this.approvals = approvals;
         this.fleetScheduling = fleetScheduling;
         this.workers = workers;
         this.taskExecution = taskExecution;
         this.tasks = tasks;
-    }
-
-    public AutonomousRequirementRun startRun(String requestId, String requirement, String repositoryRef,
-                                              String baseRevision, String capabilities, String priority,
-                                              Integer maxParallelism) {
-        return requirements.start(new StartAutonomousRequirementCommand(
-                blankToNull(requestId), required(requirement, "requirement"), required(repositoryRef, "repositoryRef"),
-                blankToNull(baseRevision), parseCapabilities(capabilities), parsePriority(priority),
-                maxParallelism));
     }
 
     public void pause(String runId, String actor, String reason) { runs.pause(runId, actor, reason); }

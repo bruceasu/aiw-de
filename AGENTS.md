@@ -1,217 +1,103 @@
-Always respond in Chinese.
+# Repository Instructions
 
-# AGENTS.md
+## Purpose and Communication
 
-## Purpose
-
-This is the root rule file for mixed-language repositories.
+This file is the root instruction source for this repository.
 Keep the active instruction set and execution budget small.
 
-## Load Order
+- Always respond in Chinese.
+- Write prompts in Easy English when asked to draft or edit prompts.
+- State facts, assumptions, and unverified behavior separately.
 
-1. Apply this file.
-2. Prefer the nearest local `AGENTS.md` or `CODEX.md`.
-3. Load `.agents/prompts/core/resource-budget.md`,
-   `.agents/prompts/core/universal-principles.md`,
-   `.agents/prompts/core/validation.md`, and `.agents/prompts/core/communication.md`.
-4. Add at most one repo-type prompt, one domain prompt, and one task-mode prompt.
-5. Use `project-local > domain > language > repo-type > root` precedence.
+## Instruction Loading
 
-Do not load the whole prompt library.
+1. Apply this file and the nearest applicable subtree `AGENTS.md` or `CODEX.md`.
+2. Load these four shared files:
+   - `.agents/prompts/core/resource-budget.md`
+   - `.agents/prompts/core/universal-principles.md`
+   - `.agents/prompts/core/validation.md`
+   - `.agents/prompts/core/communication.md`
+3. Add at most one repo-type prompt, one domain prompt, and one task-mode prompt.
 
-## Resource Guard
-
-- Static analysis and editing are the default.
-- Tests, final-artifact builds, formatters, linters, type checks, verification
-  scripts, network calls, permission probes, privilege escalation,
-  `codex-auto-review` has a default budget of zero.
-- After implementation, run one compile-only check: prefer `scripts/compile*`
-  or root `compile*`, otherwise use the narrowest language-level compiler
-  command. The command must not retain a final distributable artifact.
-- Implementation does not imply authorization to run the restricted commands.
-- Use no more than three targeted discovery batches before editing unless a
-  concrete blocker remains.
-- After editing, use at most one static/read-only validation command by default.
-- Do not repeat unchanged failed commands; a compile-only check may be retried
-  once after a relevant source fix.
-
-Follow `.agents/prompts/core/resource-budget.md` and `.agents/prompts/core/validation.md` for
-authorization and retry rules.
-
-## Working Rules
-
-- Plan first for non-trivial work.
-- Inspect the nearest code, tests, config, and docs.
-- Expand only when current evidence is insufficient.
-- Change only what the task needs.
-- Preserve current contracts unless explicitly changed.
-- Keep diffs small, local, and reviewable.
-- Update nearby docs when behavior or workflow changes.
-
-## UI Style
-
-- For UI work, treat the existing Web Console visual style as a required contract.
-- Inspect nearby pages and shared styles first; reuse their colors, typography,
-  spacing, components, and interaction patterns. Any game or technology motif
-  must fit that style rather than introduce a separate one.
-
-## Stop And Ask
-
-Pause when:
-
-- local instructions conflict;
-- external behavior is unclear;
-- designs have materially different blast radius;
-- migration, rollout, or compatibility policy is missing;
-- runtime evidence is decisive but not already authorized.
-
-## High-Risk Areas
-
-Call out risk before changing dependencies, auth, permissions, billing, schema,
-migrations, persistence, public APIs, events, CLI contracts, CI/CD, deployment,
-concurrency, retries, timeouts, or shutdown behavior.
+Use `project-local > domain > language > repo-type > root` precedence for
+repository rules. Explicit user instructions take priority over repository
+rules. Ask only if a material conflict remains after applying precedence.
+Do not load the whole prompt library or use a wildcard to load all core files.
+Root `CODEX.md` only points here; it adds no separate rules.
 
 ## Prompt Routing
 
-- Mixed-language repository: `.agents/prompts/repo-types/monorepo.md`
-- Python: `python/AGENTS.md` or `python/CODEX.md`
-- Java: `java/AGENTS.md` or `java/CODEX.md`
-- Go: `go/AGENTS.md` or `go/CODEX.md`
-- Prompt changes: `.agents/prompts/domains/prompt-authoring.md`
-- Task mode: one matching file under `.agents/prompts/task-modes/`
+Load only files that exist and apply to the task:
 
-## Final Report
-
-Include the change, reason, static evidence, commands actually run, checks not
-run, residual risks, and optional focused checks that require authorization.
-
-<!-- aiw-prompts:java:agents begin -->
-Always respond in Chinese.
-Write prompts in Easy English when asked to draft prompts.
-
-# AGENTS.md
-
-## Purpose
-
-This is the root rule file for mixed-language repositories.
-Keep the active instruction set and execution budget small.
-
-## Load Order
-
-1. Apply this file.
-2. Prefer the nearest local `AGENTS.md` or `CODEX.md`.
-3. Load `.agents/prompts/core/resource-budget.md`,
-   `.agents/prompts/core/universal-principles.md`,
-   `.agents/prompts/core/validation.md`, and `.agents/prompts/core/communication.md`.
-4. Add at most one repo-type prompt, one domain prompt, and one task-mode prompt.
-5. Use `project-local > domain > language > repo-type > root` precedence.
-
-Do not load the whole prompt library.
-
-## Resource Guard
-
-- Static analysis and editing are the default.
-- Tests, final-artifact builds, formatters, linters, type checks, verification
-  scripts, network calls, permission probes, privilege escalation,
-  `codex-auto-review` has a default budget of zero.
-- After implementation, run one compile-only check: prefer `scripts/compile*`
-  or root `compile*`, otherwise use the narrowest language-level compiler
-  command. The command must not retain a final distributable artifact.
-- Implementation does not imply authorization to run the restricted commands.
-- Use no more than three targeted discovery batches before editing unless a
-  concrete blocker remains.
-- After editing, use at most one static/read-only validation command by default.
-- Do not repeat unchanged failed commands; a compile-only check may be retried
-  once after a relevant source fix.
-
-Follow `.agents/prompts/core/resource-budget.md` and `.agents/prompts/core/validation.md` for
-authorization and retry rules.
+- Use `.agents/prompts/repo-types/monorepo.md` when work spans multiple projects.
+- For language subtrees, prefer their local `AGENTS.md` or `CODEX.md`, such as
+  those under `python/`, `java/`, or `go/`; do not assume these paths exist.
+- For Java work with Spring markers (`spring-boot`, `@RestController`,
+  `application.yml`, or `src/main/java`), use
+  `.agents/prompts/domains/java-spring.md`.
+- For prompt changes, use `.agents/prompts/domains/prompt-authoring.md`.
+- Choose one matching file under `.agents/prompts/task-modes/` for feature,
+  bugfix, debugging, review, test, docs, or risky-change work.
 
 ## Working Rules
 
-- Plan first for non-trivial work.
-- Inspect the nearest code, tests, config, and docs.
-- Expand only when current evidence is insufficient.
-- Change only what the task needs.
-- Preserve current contracts unless explicitly changed.
-- Keep diffs small, local, and reviewable.
+- Plan first for non-trivial work. Briefly state the goal, relevant files or
+  classes, assumptions, steps, validation, and material risks.
+- Inspect nearby code, contracts, tests, configuration, and docs before
+  expanding the search. Expand only when current evidence is insufficient.
+- Change only what the task needs. Keep diffs small, local, and reviewable.
+- Preserve existing contracts unless the user explicitly requests a change.
 - Update nearby docs when behavior or workflow changes.
 
-## Stop And Ask
+For Java work, inspect the build file and wrappers, nearby handlers or
+controllers, services, repositories, DTOs, configuration, and tests. Preserve
+layer boundaries, request/response contracts, transaction boundaries,
+dependency injection, and build-tool conventions unless explicitly changed.
 
-Pause when:
+## Resource and Validation Budget
 
-- local instructions conflict;
-- external behavior is unclear;
-- designs have materially different blast radius;
-- migration, rollout, or compatibility policy is missing;
-- runtime evidence is decisive but not already authorized.
+Follow the shared resource-budget and validation files for authorization,
+command scope, and retry rules. The default is static analysis and editing.
 
-## High-Risk Areas
+- Tests, final-artifact builds, formatters, linters, type checks, verification
+  scripts, network calls, dependency downloads, permission probes, privilege
+  escalation, `codex-auto-review`, and sub-agents have a default budget of zero.
+- Implementation alone does not authorize these restricted actions.
+- Use at most three targeted discovery batches before editing, unless a
+  concrete blocker requires more evidence.
+- After editing, use at most one static/read-only validation command by default.
+- After source-code implementation, run one compile-only check. Prefer an
+  applicable `scripts/compile*` or root `compile*` script; otherwise use the
+  narrowest language compiler command. For Java, use the narrowest Maven or
+  Gradle compile goal. Do not retain a final distributable artifact or download
+  dependencies without authorization. Docs-only edits do not need compilation.
+- Do not automatically run `scripts/verify.sh`, `build*`, tests, or smoke checks.
+- Do not repeat an unchanged failed command. A compile-only check may be retried
+  once after a relevant source fix; follow the shared rules for other retries.
+- When runtime validation is authorized, run one smallest relevant command.
+  Ask before expanding to repository-wide validation. Static evidence does
+  not count as a runtime pass.
 
-Call out risk before changing dependencies, auth, permissions, billing, schema,
-migrations, persistence, public APIs, events, CLI contracts, CI/CD, deployment,
-concurrency, retries, timeouts, or shutdown behavior.
+## UI Contract
 
-## Prompt Routing
+For UI work, inspect nearby pages and shared styles first. Reuse the existing
+Web Console colors, typography, spacing, components, and interaction patterns.
+Any game or technology motif must fit this visual style.
 
-- Mixed-language repository: `.agents/prompts/repo-types/monorepo.md`
-- Python: `python/AGENTS.md` or `python/CODEX.md`
-- Java: `java/AGENTS.md` or `java/CODEX.md`
-- Go: `go/AGENTS.md` or `go/CODEX.md`
-- Prompt changes: `.agents/prompts/domains/prompt-authoring.md`
-- Task mode: one matching file under `.agents/prompts/task-modes/`
+## Risk and Decision Boundaries
+
+Call out material risk before changing dependencies, auth, permissions,
+billing, schema, migrations, persistence, transactions, public APIs, events,
+CLI contracts, CI/CD, deployment, concurrency, retries, timeouts, or shutdown.
+
+Pause the affected work and ask when an unresolved instruction conflict,
+unclear external contract, materially different design impact, or missing
+migration/rollout/compatibility policy prevents a sound decision. Also ask
+when decisive runtime evidence is required but execution is not authorized.
+Continue independent work that is already authorized.
 
 ## Final Report
 
-Include the change, reason, static evidence, commands actually run, checks not
-run, residual risks, and optional focused checks that require authorization.
-
----
-
-# AGENTS.md
-
-## Purpose
-This is the default local rule file for Java subtrees.
-Use it when the task is mostly Java or the current directory contains Java markers.
-
-## Inspect First
-- `pom.xml`, `build.gradle*`, and wrapper files
-- controllers or handlers near the touched path
-- services, repositories, DTOs, and config classes
-- tests near the touched code
-
-## Detect The Java Domain
-- Spring markers:
-  `spring-boot`, `@RestController`, `application.yml`, `src/main/java`
-  - also load `.agents/prompts/domains/java-spring.md`
-
-## Keep Stable
-- controller, service, repository, and config boundaries
-- request and response contracts
-- transaction boundaries
-- dependency injection and build-tool conventions
-
-## High-Risk Java Areas
-- dependency upgrades
-- auth, schema, or migration changes
-- transaction changes
-- public API or event contract changes
-
-## Validation Options
-Use static review by default. After implementation, run one compile-only check:
-prefer `scripts/compile*` or root `compile*`, otherwise use the narrowest
-Maven or Gradle compile goal without retaining a final distributable artifact.
-Do not run `scripts/verify.sh`, tests, `build*` scripts, or final-artifact
-builds.
-
-When the shared resource budget authorizes runtime validation, choose one
-smallest relevant command:
-- `mvn -pl module -am test`
-- `./gradlew :module:test`
-
-Ask before repository-wide commands. Rerun only after a relevant change.
-
-## Escalation
-If a deeper subtree has its own `AGENTS.md` or `CODEX.md`, prefer that local file.
-<!-- aiw-prompts:java:agents end -->
+State what changed and why, the static evidence reviewed, commands actually
+run, checks not run, and remaining risks. Mention optional focused checks
+requiring authorization only when they help resolve a remaining uncertainty.

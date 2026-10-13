@@ -34,10 +34,14 @@ type RoleProfile struct {
 	PrimarySkill     string   `toml:"primarySkill"`
 	Instruction      string   `toml:"instruction"`
 	ReadOnly         bool     `toml:"readOnly"`
+	ResultKind       string   `toml:"resultKind"`
 }
 
 type Config struct {
 	AgentRuntime      string
+	AppServerVersion  string
+	CodexAuthMode     string
+	CodexAuthHome     string
 	Profile           RoleProfile
 	ProfilePath       string
 	SkillsRoot        string
@@ -51,7 +55,6 @@ type Config struct {
 	RepositoryRef     string
 	RepositoryRoot    string
 	WorktreeRoot      string
-	GitPublishRemote  string
 	PollInterval      time.Duration
 	HeartbeatInterval time.Duration
 	HTTPTimeout       time.Duration
@@ -111,6 +114,7 @@ type ClaimedTask struct {
 	SubjectType string               `json:"subjectType"`
 	SubjectID   string               `json:"subjectId"`
 	Instruction string               `json:"instruction"`
+	SkillRef    string               `json:"skillRef"`
 	AttemptID   string               `json:"attemptId"`
 	AttemptNo   int                  `json:"attemptNo"`
 	LeaseToken  string               `json:"leaseToken"`
@@ -197,6 +201,19 @@ func main() {
     force, forceCancel := context.WithCancel(context.Background())
     defer forceCancel()
     client.forceCtx = force
+	if managed, ok := runtime.(managedAgentRuntime); ok {
+		startupCtx, startupCancel := context.WithTimeout(root, cfg.HTTPTimeout)
+		err := managed.Start(startupCtx)
+		startupCancel()
+		must(err)
+		defer func() {
+			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 50*time.Second)
+			defer shutdownCancel()
+			if err := managed.Close(shutdownCtx); err != nil {
+				fmt.Fprintln(os.Stderr, "app-server shutdown:", err)
+			}
+		}()
+	}
     signals := make(chan os.Signal, 2)
     signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
     defer signal.Stop(signals)
@@ -210,6 +227,16 @@ func main() {
 
 	must(client.register(root))
 	fmt.Printf("registered %s (%d slots)\n", cfg.WorkerID, cfg.MaxConcurrency)
+	if monitored, ok := runtime.(failureAwareRuntime); ok {
+		go func() {
+			select {
+			case <-root.Done():
+			case <-monitored.Failure():
+				fmt.Fprintln(os.Stderr, "agent runtime failed; stopping new claims:", monitored.FailureError())
+				cancel()
+			}
+		}()
+	}
 
 	hbCtx, hbCancel := context.WithCancel(root)
 	defer hbCancel()
@@ -255,34 +282,42 @@ func slotLoop(ctx context.Context, slot int, client *Client) {
 			sleepContext(ctx, client.cfg.PollInterval)
 			continue
 		}
-		executeTask(client.forceCtx, slot, client, *task)
+		if !executeTask(client.forceCtx, slot, client, *task) {
+			fmt.Fprintf(os.Stderr, "slot %d quarantined: resource termination is unknown\n", slot)
+			return
+		}
 	}
 }
 
-func executeTask(parent context.Context, slot int, client *Client, task ClaimedTask) {
+func executeTask(parent context.Context, slot int, client *Client, task ClaimedTask) bool {
     if parent == nil { parent = context.Background() }
     timeout := time.Duration(positiveInt("AIW_WORKER_ATTEMPT_TIMEOUT_MS", positiveInt("AIW_AGENT_TASK_TIMEOUT_MS", 900000)))*time.Millisecond
     runCtx, cancel := context.WithTimeout(parent, timeout); defer cancel()
 	evidence, err := newAttemptEvidence(client.cfg, task)
-    if err != nil { fmt.Fprintf(os.Stderr, "attempt %s: CRITICAL_EVIDENCE_FAILED\n", task.AttemptID); return }
+    if err != nil { fmt.Fprintf(os.Stderr, "attempt %s: CRITICAL_EVIDENCE_FAILED\n", task.AttemptID); return true }
 	cfg := client.cfg
 	processTree := "native-codex-cli"
 	if client.runtime.Type() == "openai-api" { processTree = "direct-http" }
+	if client.runtime.Type() == "codex-app-server" { processTree = "managed-codex-app-server" }
 	caps := client.runtime.Capabilities()
 	capability := fmt.Sprintf("%s;resume=%t;attemptCancellation=%t;eventStreaming=%t;tools=%t", client.runtime.Type(), caps.Resume, caps.AttemptCancellation, caps.EventStreaming, caps.Tools)
-	if err = evidence.record("runtime-capabilities", map[string]any{"capability": capability, "processTree": processTree, "unknown": "runtime-specific-tool-policy-and-model-window"}); err != nil { fmt.Fprintf(os.Stderr, "attempt %s: CRITICAL_EVIDENCE_FAILED\n", task.AttemptID); return }
-    if cfg.Profile.RoleCapability == "verification" && task.TaskType == "INTEGRATION_VERIFICATION" { cfg.Profile = loadRoleProfile(filepath.Join(filepath.Dir(cfg.ProfilePath), "integration-verifier.toml")) }
+	runtimeEvidence := map[string]any{"capability": capability, "processTree": processTree, "unknown": "runtime-specific-tool-policy-and-model-window"}
+	if client.runtime.Type() == "codex-app-server" { runtimeEvidence["cliVersion"] = codexAppServerVersion; runtimeEvidence["protocol"] = "app-server-v2"; runtimeEvidence["threadPersistence"] = "ephemeral"; runtimeEvidence["usage"] = "unknown" }
+	if err = evidence.record("runtime-capabilities", runtimeEvidence); err != nil { fmt.Fprintf(os.Stderr, "attempt %s: CRITICAL_EVIDENCE_FAILED\n", task.AttemptID); return true }
     var workspace *GitWorkspace
     var mu sync.RWMutex
     sessionID := ""
     lost, stopRequested, publicationStarted, reporting, started, finished, cleaned, uncertain := false, false, false, false, false, false, false, false
+    runtimeStopped := false
+    var releaseWorkspace func()
+    defer func() { if releaseWorkspace != nil && !uncertain { releaseWorkspace() } }()
     phase := "TOOL_ERROR"
     stopHeartbeat := make(chan struct{})
     heartbeatDone := make(chan struct{})
     heartbeatStarted := false
     resultErr := func() error {
-        if !taskTypeAllowed(cfg.Profile, task.TaskType) { return errors.New("ROLE_TASK_TYPE_DENIED") }
-		selection, reason, e := chooseAIProfile(task.AIGuidance, cfg.AgentRuntime); if e != nil { return e }
+		profileRuntime := cfg.AgentRuntime
+		selection, reason, e := chooseAIProfile(task.AIGuidance, profileRuntime); if e != nil { return e }
         if e = client.start(runCtx, task, selection, reason); e != nil {
             var response struct { StopRequested bool `json:"stopRequested"` }
             if client.heartbeat(runCtx, task, "", &response) == nil && response.StopRequested { stopRequested = true }
@@ -306,27 +341,40 @@ func executeTask(parent context.Context, slot int, client *Client, task ClaimedT
                 if response.StopRequested { mu.Lock(); stopRequested = true; mu.Unlock(); cancel(); return }
             } }
         }()
+        if !taskTypeAllowed(cfg.Profile, task.TaskType) { return errors.New("ROLE_TASK_TYPE_DENIED") }
+        if task.TaskType != "EXTERNAL_WORK" || task.SkillRef != cfg.Profile.PrimarySkill { return errors.New("ROLE_SKILL_DENIED") }
+        if cfg.Profile.ResultKind == "WORKSPACE" && (task.Workspace == nil || !validResultRevision(task.Workspace.BaseRevision)) { return errors.New("WRITABLE_WORKSPACE_REQUIRED") }
+        if cfg.Profile.ResultKind == "VERDICT" { for _, input := range task.Inputs {
+            if input.ResultRevision != "" && (task.Workspace == nil || input.ResultRevision != task.Workspace.BaseRevision) { return errors.New("UPSTREAM_REVISION_MISMATCH") }
+        } }
+        // Freeze trusted skill input before preparing a workspace.
+        frozenSkills, e := freezeGoSkills(runCtx, cfg, evidence); if e != nil { return e }
+
         var e2 error
         workspace, e2 = materializeWorkspace(runCtx, cfg, task, evidence); if e2 != nil { return e2 }
-        release, e := lockWorkspace(runCtx, workspace.cwd); if e != nil { return e }; defer release()
+        release, e := lockWorkspace(runCtx, workspace.cwd); if e != nil { return e }; releaseWorkspace = release
         baseline := ""
         if cfg.Profile.ReadOnly { baseline, e = workspaceDigest(runCtx, workspace.cwd); if e != nil { return e } }
-        instruction, e := assembleGoContext(runCtx, cfg, task, evidence); if e != nil { return e }
+        instruction, e := assembleGoContextWithSkills(runCtx, cfg, task, evidence, frozenSkills); if e != nil { return e }
 		phase = "MODEL_ERROR"
 		runResult, e := client.runtime.Run(runCtx, AgentRunRequest{Task: task, Workspace: workspace.cwd, ReadOnly: cfg.Profile.ReadOnly,
 			Instruction: instruction, Selection: selection, Evidence: evidence,
 			OnSession: func(id string) { mu.Lock(); sessionID = id; mu.Unlock() }})
-		if e != nil { mu.RLock(); stopping := stopRequested; mu.RUnlock(); if !stopping { uncertain = true }; return e }
+		// App Server guarantees terminal confirmation or a successful shared
+		// shutdown on every return except PROCESS_TREE_UNCERTAIN.
+		runtimeStopped = client.runtime.Type() == "codex-app-server" && (e == nil || e.Error() != "PROCESS_TREE_UNCERTAIN")
+		if e != nil { mu.RLock(); stopping := stopRequested; mu.RUnlock(); if !stopping && !runtimeStopped { uncertain = true }; return e }
 		mu.Lock(); if runResult.SessionID != "" { sessionID = runResult.SessionID }; leaseLost := lost; mu.Unlock()
         if leaseLost || runCtx.Err() != nil { return errors.New("ATTEMPT_CANCELLED") }
         phase = "OUTPUT_INVALID"
-		report, e := completionReport(task, runResult.Output); if e != nil { return errors.New("COMPLETION_REPORT_INVALID") }
+		report, e := completionReport(cfg.Profile.ResultKind, runResult.Output); if e != nil { return errors.New("COMPLETION_REPORT_INVALID") }
         if cfg.Profile.ReadOnly { current, e := workspaceDigest(runCtx, workspace.cwd); if e != nil { return e }; if current != baseline { return errors.New("READ_ONLY_WORKSPACE_CHANGED") } }
         if cfg.Profile.ReadOnly && workspace.assignment != nil && workspace.assignment.BaseRevision != "" { head, e := gitTextContext(runCtx, workspace.cwd, "rev-parse", "HEAD"); if e != nil { return e }; if strings.TrimSpace(head) != workspace.assignment.BaseRevision { return errors.New("READ_ONLY_REVISION_CHANGED") } }
 		if e = evidence.record("report-validated", map[string]any{"status": "valid", "digest": fmt.Sprintf("%x", sha256.Sum256([]byte(runResult.Output)))}); e != nil { return e }
         phase = "TOOL_ERROR"
         publicationStarted = true
         result, e := workspace.finalize(task); if e != nil { return e }
+        if cfg.Profile.ResultKind == "WORKSPACE" && (result == nil || !validResultRevision(result.ResultRevision)) { return errors.New("WORKSPACE_RESULT_INVALID") }
         close(stopHeartbeat); <-heartbeatDone; heartbeatStarted = false
         mu.RLock(); leaseLost = lost; mu.RUnlock()
         if leaseLost || runCtx.Err() != nil { return errors.New("ATTEMPT_CANCELLED") }
@@ -343,11 +391,11 @@ func executeTask(parent context.Context, slot int, client *Client, task ClaimedT
     if resultErr != nil {
         if resultErr.Error() == "PROCESS_TREE_UNCERTAIN" { uncertain = true }
         mu.RLock(); stopping := stopRequested; mu.RUnlock()
-        if runCtx.Err() != nil && !stopping { uncertain = true }
+        if runCtx.Err() != nil && !stopping && !runtimeStopped { uncertain = true }
         status := "failed"; if leaseLost { status = "lease-lost" }; if reporting { status = "report-unknown" }
         _ = evidence.record("attempt-failed", map[string]any{"status": status, "phase": phase, "code": "OPERATION_FAILED"})
         if runCtx.Err() != nil || leaseLost { reason := "force-shutdown"; if runCtx.Err() == context.DeadlineExceeded { reason = "deadline" }; if leaseLost { reason = "lease-lost" }; _ = evidence.record("attempt-cancelled", map[string]any{"reason": reason}) }
-        if started && !stopping && !leaseLost && !reporting { reportCtx, stop := context.WithTimeout(context.Background(), cfg.HTTPTimeout); _ = client.fail(reportCtx, task, sid, "OPERATION_FAILED", phase); stop() }
+        if started && !stopping && !leaseLost && !reporting && !uncertain { reportCtx, stop := context.WithTimeout(context.Background(), cfg.HTTPTimeout); _ = client.fail(reportCtx, task, sid, "OPERATION_FAILED", phase); stop() }
         fmt.Fprintf(os.Stderr, "slot %d attempt %s: %s\n", slot, task.AttemptID, status)
     } else { fmt.Printf("slot %d attempt %s: completed\n", slot, task.AttemptID) }
     if workspace != nil && !cleaned && !uncertain { _ = workspace.cleanup() }
@@ -358,6 +406,7 @@ func executeTask(parent context.Context, slot int, client *Client, task ClaimedT
         if err := client.action(reportCtx, task, "stop-acknowledgement", ""); err != nil { fmt.Fprintln(os.Stderr, "stop acknowledgement:", err) }
         release()
     }
+    return !uncertain
 }
 func runCodex(ctx context.Context, cfg Config, workspace string, instruction string, onSession func(string), evidences ...*AttemptEvidence) (string, string, error) {
     var evidence *AttemptEvidence
@@ -380,7 +429,7 @@ func runCodex(ctx context.Context, cfg Config, workspace string, instruction str
 	cmd := exec.CommandContext(ctx, cfg.CodexPath, args...)
 	cmd.Dir = workspace
     cmd.Stdin = strings.NewReader(instruction)
-	cmd.Env = childEnvironment(true)
+	cmd.Env = codexChildEnvironment(cfg)
     configureProcessTree(cmd)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -463,34 +512,17 @@ func (c *Client) register(ctx context.Context) error {
 	return c.post(ctx, "/workers/register", payload, nil)
 }
 
-func completionReport(task ClaimedTask, finalMessage string) (*CompletionReport, error) {
-	if task.TaskType == "REQUIREMENT_ANALYSIS" || task.TaskType == "SOLUTION_ARCHITECTURE" || task.TaskType == "IMPLEMENTATION_PLANNING" {
-		summary := strings.TrimSpace(finalMessage)
-		if summary == "" {
-			return nil, fmt.Errorf("%s must return a non-empty final response", task.TaskType)
-		}
-		return &CompletionReport{Verdict: "PASS", Summary: summary}, nil
-	}
-	if task.TaskType != "CODE_REVIEW" && task.TaskType != "VERIFICATION" && task.TaskType != "INTEGRATION_VERIFICATION" {
-		return nil, nil
-	}
-	verdict := ""
-	lines := strings.Split(finalMessage, "\n")
-	for i := len(lines) - 1; i >= 0; i-- {
-		line := strings.TrimSpace(lines[i])
-		if strings.HasPrefix(line, "AIW_VERDICT:") {
-			verdict = strings.TrimSpace(strings.TrimPrefix(line, "AIW_VERDICT:"))
-			break
-		}
-	}
-	if verdict != "PASS" && verdict != "REPAIR_REQUIRED" {
-		return nil, errors.New("review/verification final response must end with AIW_VERDICT: PASS or AIW_VERDICT: REPAIR_REQUIRED")
-	}
-	summary := strings.TrimSpace(finalMessage)
-	if summary == "" {
-		summary = "AIW_VERDICT: " + verdict
-	}
-	return &CompletionReport{Verdict: verdict, Summary: summary}, nil
+func completionReport(resultKind string, finalMessage string) (*CompletionReport, error) {
+    summary := strings.TrimSpace(finalMessage)
+    if summary == "" { return nil, errors.New("COMPLETION_REPORT_EMPTY") }
+    if resultKind == "REPORT" || resultKind == "WORKSPACE" { return &CompletionReport{Verdict: "PASS", Summary: summary}, nil }
+    if resultKind != "VERDICT" { return nil, errors.New("RESULT_KIND_INVALID") }
+    lines := strings.Split(summary, "\n")
+    marker := strings.TrimSpace(lines[len(lines)-1])
+    if !strings.HasPrefix(marker, "AIW_VERDICT:") { return nil, errors.New("COMPLETION_VERDICT_INVALID") }
+    verdict := strings.TrimSpace(strings.TrimPrefix(marker, "AIW_VERDICT:"))
+    if verdict != "PASS" && verdict != "REPAIR_REQUIRED" { return nil, errors.New("COMPLETION_VERDICT_INVALID") }
+    return &CompletionReport{Verdict: verdict, Summary: summary}, nil
 }
 
 func (c *Client) claim(ctx context.Context) (*ClaimedTask, error) {
@@ -626,6 +658,7 @@ func (w *GitWorkspace) finalize(task ClaimedTask) (*WorkspaceResult, error) {
 	if w.assignment == nil || w.assignment.BaseRevision == "" {
 		return nil, nil
 	}
+    if !w.cfg.Profile.ReadOnly {
 	if _, err := gitTextContext(w.ctx, w.cwd, "add", "-A"); err != nil {
 		return nil, err
 	}
@@ -639,6 +672,8 @@ func (w *GitWorkspace) finalize(task ClaimedTask) (*WorkspaceResult, error) {
 			return nil, err
 		}
 	}
+    }
+
 	revision, err := gitTextContext(w.ctx, w.cwd, "rev-parse", "HEAD")
 	if err != nil {
 		return nil, err
@@ -649,18 +684,8 @@ func (w *GitWorkspace) finalize(task ClaimedTask) (*WorkspaceResult, error) {
 		return nil, err
 	}
 	changed := splitZero(diffRaw)
-	publicationRef := ""
-    if w.cfg.GitPublishRemote != "" {
-        publicationRef = "git:" + w.cfg.GitPublishRemote + ":" + w.assignment.BranchName
-        if e := w.recorder.record("publication-started", map[string]any{"publicationRef": publicationRef, "resultRevision": resultRevision, "sideEffect": "possible"}); e != nil { return nil, e }
-		if _, err := gitTextContext(w.ctx, w.cwd, "push", w.cfg.GitPublishRemote, resultRevision+":refs/heads/"+w.assignment.BranchName); err != nil {
-			_ = w.recorder.record("publication-terminal", map[string]any{"publicationRef": publicationRef, "resultRevision": resultRevision, "status": "unknown", "sideEffect": "reconcile"})
-            return nil, err
-        }
-        if e := w.recorder.record("publication-terminal", map[string]any{"publicationRef": publicationRef, "resultRevision": resultRevision, "status": "completed", "sideEffect": "completed"}); e != nil { return nil, e }
-	}
-	if e := w.recorder.record("workspace-result", map[string]any{"resultRevision": resultRevision, "publicationRef": publicationRef, "count": len(changed)}); e != nil { return nil, e }
-    return &WorkspaceResult{ResultRevision: resultRevision, ChangedFiles: changed, PublicationRef: publicationRef}, nil
+	if e := w.recorder.record("workspace-result", map[string]any{"resultRevision": resultRevision, "count": len(changed)}); e != nil { return nil, e }
+    return &WorkspaceResult{ResultRevision: resultRevision, ChangedFiles: changed}, nil
 }
 
 func fetchPublishedInputs(ctx context.Context, repositoryRoot string, task ClaimedTask) error {
@@ -736,6 +761,7 @@ func buildRoleInstruction(cfg Config, task ClaimedTask) string {
 	b.WriteString("- The Control Plane owns lifecycle state, scheduling, durable IDs, approval and authoritative transitions.\n")
 	b.WriteString("- You perform only the bounded task you claimed and return evidence/result text.\n")
 	b.WriteString("- Do not invent authoritative IDs, approvals, lifecycle transitions or hidden state.\n")
+	b.WriteString("- Never run git push or publish a Git branch. Return the local result revision only.\n")
 	if profile.ReadOnly {
 		b.WriteString("- This role is read-only: do not modify repository files.\n")
 	}
@@ -791,7 +817,7 @@ func loadRoleProfile(path string) RoleProfile {
 	if undecoded := metadata.Undecoded(); len(undecoded) > 0 {
 		panic(fmt.Sprintf("unknown AIW_PROCESS_PROFILE fields: %v", undecoded))
 	}
-	for _, key := range []string{"name", "workerIdPrefix", "roleCapability", "allowedTaskTypes", "protocolSkills", "primarySkill", "instruction", "readOnly"} {
+	for _, key := range []string{"name", "workerIdPrefix", "roleCapability", "allowedTaskTypes", "protocolSkills", "primarySkill", "instruction", "readOnly", "resultKind"} {
 		if !metadata.IsDefined(key) {
 			panic("missing AIW_PROCESS_PROFILE field: " + key)
 		}
@@ -803,13 +829,25 @@ func loadRoleProfile(path string) RoleProfile {
 	if p.Name == "" || p.WorkerIDPrefix == "" || p.RoleCapability == "" || len(p.AllowedTaskTypes) == 0 || len(p.ProtocolSkills) == 0 || p.PrimarySkill == "" || p.Instruction == "" {
 		panic("invalid AIW_PROCESS_PROFILE: name, workerIdPrefix, roleCapability, allowedTaskTypes, protocolSkills, primarySkill and instruction are required")
 	}
+	if len(p.AllowedTaskTypes) != 1 || p.AllowedTaskTypes[0] != "EXTERNAL_WORK" {
+		panic("invalid AIW_PROCESS_PROFILE: allowedTaskTypes must be [EXTERNAL_WORK]")
+	}
+	if p.ResultKind != "REPORT" && p.ResultKind != "VERDICT" && p.ResultKind != "WORKSPACE" {
+		panic("invalid AIW_PROCESS_PROFILE: unknown resultKind")
+	}
+	if (p.ResultKind == "WORKSPACE") != !p.ReadOnly {
+		panic("invalid AIW_PROCESS_PROFILE: resultKind conflicts with readOnly")
+	}
 	return p
 }
 
 func loadConfig() Config {
+    if strings.TrimSpace(os.Getenv("AIW_GIT_PUBLISH_REMOTE")) != "" { panic("AIW_GIT_PUBLISH_REMOTE is forbidden: Workers cannot git push") }
+    if boolEnv("AIW_CODEX_NETWORK_ACCESS", false) { panic("AIW_CODEX_NETWORK_ACCESS is forbidden for process Workers") }
+    if boolEnv("AIW_AGENT_ALLOW_SHELL", false) { panic("AIW_AGENT_ALLOW_SHELL is forbidden for process Workers") }
 	runtime := strings.TrimSpace(env("AIW_AGENT_RUNTIME", ""))
-	if runtime != "codex-cli" && runtime != "openai-api" {
-		panic("AIW_AGENT_RUNTIME must explicitly be codex-cli or openai-api")
+	if runtime != "codex-cli" && runtime != "codex-app-server" && runtime != "openai-api" {
+		panic("AIW_AGENT_RUNTIME must explicitly be codex-cli, codex-app-server or openai-api")
 	}
 	profilePath := strings.TrimSpace(env("AIW_PROCESS_PROFILE", ""))
 	if profilePath == "" {
@@ -848,8 +886,10 @@ func loadConfig() Config {
 	worktreeRoot, err := filepath.Abs(env("AIW_WORKTREE_ROOT", defaultWorktreeRoot))
 	must(err)
 	capabilities := splitSet(env("AIW_WORKER_CAPABILITIES", ""))
+    for _, capability := range capabilities {
+        if capability == "*" || capability == "flexible-work-v1" || strings.HasPrefix(capability, "repo:") || roleCapability(capability) { panic("ROLE_CAPABILITY_DENIED") }
+    }
 	capabilities = appendUnique(capabilities, profile.RoleCapability)
-    if profile.RoleCapability == "verification" { capabilities = appendUnique(capabilities, "integration-verification") }
 	if repositoryRef != "" {
 		capabilities = appendUnique(capabilities, "repo:"+repositoryRef)
 	}
@@ -866,18 +906,20 @@ func loadConfig() Config {
 	workerID := env("AIW_WORKER_ID", profile.WorkerIDPrefix+"-1")
 	if runtime == "openai-api" && strings.TrimSpace(os.Getenv("AIW_WORKER_ID")) == "" { workerID = profile.WorkerIDPrefix + "-api-1" }
 	config := Config{
-		AgentRuntime: runtime,
+		AgentRuntime: runtime, AppServerVersion: env("AIW_CODEX_APP_SERVER_VERSION", codexAppServerVersion),
+		CodexAuthMode: strings.ToLower(strings.TrimSpace(env("AIW_CODEX_AUTH_MODE", "inherit"))),
+		CodexAuthHome: strings.TrimSpace(os.Getenv("AIW_CODEX_AUTH_HOME")),
 		Profile: profile, ProfilePath: profilePathAbs, SkillsRoot: skillsRoot, IncludeReferences: boolEnv("AIW_PROCESS_INCLUDE_REFERENCES", true),
 		BaseURL:  strings.TrimRight(env("AIW_CONTROL_PLANE_URL", "http://127.0.0.1:8080"), "/"),
 		WorkerID: workerID, Token: env("AIW_WORKER_TOKEN", ""),
 		Capabilities: capabilities, MaxConcurrency: positiveInt("AIW_WORKER_MAX_CONCURRENCY", 1),
-		FallbackWorkspace: fallback, RepositoryRef: repositoryRef, RepositoryRoot: repositoryRoot, WorktreeRoot: worktreeRoot, GitPublishRemote: env("AIW_GIT_PUBLISH_REMOTE", ""),
+		FallbackWorkspace: fallback, RepositoryRef: repositoryRef, RepositoryRoot: repositoryRoot, WorktreeRoot: worktreeRoot,
 		PollInterval:      time.Duration(positiveInt("AIW_WORKER_POLL_MS", 1000)) * time.Millisecond,
 		HeartbeatInterval: time.Duration(positiveInt("AIW_WORKER_HEARTBEAT_MS", 20000)) * time.Millisecond,
 		HTTPTimeout:       time.Duration(positiveInt("AIW_WORKER_HTTP_TIMEOUT_MS", 15000)) * time.Millisecond,
 		CodexPath:         env("AIW_CODEX_PATH", "codex"), Model: env("AIW_CODEX_MODEL", ""), Sandbox: sandbox,
 		ApprovalPolicy: env("AIW_CODEX_APPROVAL_POLICY", "never"), ReasoningEffort: env("AIW_CODEX_REASONING_EFFORT", "high"),
-		NetworkAccess: boolEnv("AIW_CODEX_NETWORK_ACCESS", false),
+		NetworkAccess: false,
 		OpenAIAPIKey: strings.TrimSpace(os.Getenv("OPENAI_API_KEY")),
 		OpenAIBaseURL: strings.TrimRight(env("OPENAI_BASE_URL", "https://api.openai.com/v1"), "/"),
 		OpenAIModel: env("AIW_OPENAI_MODEL", "gpt-4.1"),
@@ -886,7 +928,7 @@ func loadConfig() Config {
 		AgentMaxTurns: positiveInt("AIW_AGENT_MAX_TURNS", 40),
 		AgentMaxOutputBytes: positiveInt("AIW_AGENT_MAX_OUTPUT_BYTES", 24000),
 		AgentToolTimeout: time.Duration(positiveInt("AIW_AGENT_TOOL_TIMEOUT_MS", 60000)) * time.Millisecond,
-		AgentAllowShell: boolEnv("AIW_AGENT_ALLOW_SHELL", false),
+		AgentAllowShell: false,
 	}
 	if runtime == "openai-api" && config.OpenAIAPIKey == "" {
 		panic("OPENAI_API_KEY is required for openai-api")
@@ -954,4 +996,14 @@ func must(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func validResultRevision(revision string) bool {
+    if len(revision) != 40 && len(revision) != 64 { return false }
+    for _, char := range revision { if !(char >= '0' && char <= '9' || char >= 'a' && char <= 'f' || char >= 'A' && char <= 'F') { return false } }
+    return true
+}
+func roleCapability(value string) bool {
+    switch value { case "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration": return true }
+    return false
 }

@@ -6,8 +6,7 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
-| [FD-011](FD-011_WORKER.md) | Worker 灵活任务与流程编排 | Design | Medium |
-| [FD-014](FD-014_CODEX_RUNTIME_GO.md) | 统一多语言 Codex Runtime：Go 先行试点 | Open | Medium |
+| - | - | - | - |
 
 ## Completed
 
@@ -22,7 +21,11 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 | [FD-008](archive/FD-008/FD-008_TASK_WORKSPACE_REPLACEMENT.md) | 任务 Workspace 替换 | Complete | Medium |
 | [FD-009](archive/FD-009/FD-009_TYPESCRIPT_WORKER_AGENTRUNTIME_SPI.md) | TypeScript Worker AgentRuntime SPI 与单入口合并 | Complete | Medium |
 | [FD-010](archive/FD-010/FD-010_TYPESCRIPT_RUNTIME_CORE_WORKER.md) | 将 TypeScript runtime-core 收归单一 Worker 包 | Complete | Medium |
+| [FD-011](archive/FD-011/FD-011_WORKER.md) | Worker 灵活任务与流程编排 | Complete | Medium |
 | [FD-012](archive/FD-012/FD-012_BEAUTIFUL_WEB_CONTROL_PLANE.md) | Beautiful Web Control Plane | Complete | Medium |
+| [FD-014](archive/FD-014/FD-014_CODEX_RUNTIME_GO.md) | 本地 Go Runtime 与双认证支持 | Complete | Medium |
+| [FD-016](archive/FD-016/FD-016_FD_011_WORKER.md) | 灵活计划 Worker 统一 Profile 与执行契约 | Complete | Medium |
+| [FD-017](archive/FD-017/FD-017_WEB_CONSOLE_AI.md) | 灵活流程 Web Console：自定义、推荐模板与 AI 推荐 | Complete | Medium |
 
 ## Deferred / Closed
 
@@ -30,3 +33,4 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 | --- | --- | --- | --- |
 | [FD-002](archive/FD-002/FD-002_RUN_MISSION_DETAIL_AND_TIMELINE.md) | Run Mission Detail and Timeline | Deferred | Medium |
 | [FD-013](archive/FD-013/FD-013_WORKER_PI.md) | Worker 公共执行基础与 pi 机制融合 | Closed | Medium |
+| [FD-015](archive/FD-015/FD-015_DOCKER_CODEX.md) | Docker 隔离与 Codex 生产禁存准入 | Deferred | Medium |

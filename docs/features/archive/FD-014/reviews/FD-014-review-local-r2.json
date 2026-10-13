@@ -1,0 +1,53 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-014",
+  "source_event": "FD-014-000022-implementation-ready",
+  "human_report": "FD-014-review-local-r2.md",
+  "data": {
+    "reviewer_session": "fd014-reviewer-linux-20261013-c8d052",
+    "reviewed_commit": "e0bc678e263ce9ac9aa00d3c49be34c0227324a4",
+    "diff_base": "813a40107e3364921c33a5cd7d43401d02b94688",
+    "fix_diff_base": "99dd3da",
+    "outcome": "verification-passed",
+    "findings": [],
+    "resolved_findings": [
+      {
+        "id": "R1",
+        "evidence": "Run marks possible activity before turn/start; nonterminal failure closes shared server. Close serializes callers and observes done; unconfirmed close returns PROCESS_TREE_UNCERTAIN. executeTask retains lock/workspace and retires slot while suppressing fail/stop-ack when uncertain."
+      },
+      {
+        "id": "R2",
+        "evidence": "App Server startup passes sandbox_workspace_write.network_access from cfg.NetworkAccess explicitly."
+      }
+    ],
+    "acceptance_results": {
+      "1": "Explicit runtime selection, separate Exec path, no fallback: source supported.",
+      "2": "Existing attempt/workspace/lease checks retained; auth selected and network policy explicitly forwarded: source supported.",
+      "3": "Matching terminal or confirmed shared process close required for App Server resource release; uncertain lock/slot preserved: source supported after R1 fix.",
+      "4": "Capability distinctions and unknown usage/resume/approval documented; no inferred migration.",
+      "5": "Pinned CLI manual install/upgrade/rollback and no cost claim documented.",
+      "6": "No CP API/schema boundary changes; other-language migration remains recommendation.",
+      "7": "Local scope only; G11/G12 skipped runtime checks recorded honestly; production scope transferred to Deferred FD-015."
+    },
+    "commands": [
+      "cat/sed/rg targeted current receipt, reports, FD and source reads",
+      "git diff 99dd3da...HEAD -- workers/process-go/main.go workers/process-go/app_server_runtime.go workers/process-go/CODEX-RUNTIME.md",
+      "git rev-parse HEAD",
+      "aiw fd claim FD-014 FD-014-000022-implementation-ready --session fd014-reviewer-linux-20261013-c8d052",
+      "git diff --check"
+    ],
+    "checks_not_run": [
+      "tests",
+      "compilation by Reviewer",
+      "real auth/model/network",
+      "new Linux lifecycle/restart",
+      "Docker/production no-store"
+    ],
+    "residual_risks": [
+      "Fix paths statically reviewed and Worker compiled but not run; real auth and Linux behavior remain unverified under explicit waiver.",
+      "Shared close ends other active sessions. Unknown process termination quarantines resources until operator recovery.",
+      "Production admission and all-channel/service retention remain Deferred FD-015."
+    ]
+  }
+}

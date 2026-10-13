@@ -1,0 +1,38 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-016",
+  "source_event": "FD-016-000011-work-requested",
+  "human_report": "FD-016-implementation-local-r1.md",
+  "data": {
+    "summary": "三语言灵活任务策略及 TypeScript 系统 Exec/App Server 本地实现完成，等待独立审查。",
+    "session_ref": "fd016-worker-20261013-0f3443b8",
+    "diff_base": "3e13f49",
+    "changed_paths": [
+      "workers/process-typescript",
+      "workers/process-python",
+      "workers/process-go",
+      "workers/WORKER_RUNTIME_CONTRACT.md",
+      "workers/WORKER_OPERATIONS.md",
+      "workers/SDK_CAPABILITIES.md",
+      "workers/runtime-contract.examples.json",
+      "docs/features/FD-016_FD_011_WORKER.md"
+    ],
+    "commands": [
+      "aiw git wt add FD-016",
+      "aiw fd claim FD-016 FD-016-000011-work-requested --session fd016-worker-20261013-0f3443b8",
+      "node scripts/compile-worker-runtime.mjs (three actual executions; initial stage, separately authorized final, relevant source correction)",
+      "git -c core.whitespace=cr-at-eol diff --check master...HEAD",
+      "read-only pinned rust-v0.162.1 schema queries",
+      "path-scoped git add and local commits"
+    ],
+    "results": [
+      "Compile-only exit 0: TypeScript/JavaScript/Python syntax; offline Go compiler; no retained distribution.",
+      "No whitespace errors in checked diff.",
+      "Local scope Gate resolved by user; production admission transferred to FD-015.",
+      "Existing role assertions updated; not executed.",
+      "No real CLI, model, tests, type checks, builds, deployment or credential changes."
+    ],
+    "residual_risk": "未经真实会话验证的 SDK 类型/端点、并发、取消、路径与进程树行为；生产禁存与认证由 FD-015 承接。"
+  }
+}

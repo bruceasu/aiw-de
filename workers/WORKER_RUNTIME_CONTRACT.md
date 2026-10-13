@@ -1,26 +1,28 @@
 # Worker 公共执行契约
 
-来源：FD-005 / ISSUE-001。本文记录跨运行时的目标契约与源码基线，尚不代表全部运行时已经实现或验证。
+## FD-016 统一执行契约
 
-## 角色、操作和报告
+三语言九字段 Profile：name、workerIdPrefix、roleCapability、allowedTaskTypes、readOnly、instruction、protocolSkills、primarySkill、resultKind。allowedTaskTypes 只能为 [EXTERNAL_WORK]；WORKSPACE 要求 readOnly=false，REPORT/VERDICT 要求 readOnly=true。不兼容旧任务或八字段配置。
 
-| 配置角色 | 有效 TaskType | 注册能力 | 仓库编辑 | 完成报告 |
+| 启动角色 | TaskType | 注册能力 | primarySkill / skillRef | resultKind |
 |---|---|---|---|---|
-| requirements | REQUIREMENT_ANALYSIS | requirement-analysis | 禁止 | 非空 summary，PASS |
-| architect | SOLUTION_ARCHITECTURE | solution-architecture | 禁止 | 非空 summary，PASS |
-| planner | IMPLEMENTATION_PLANNING | implementation-planning | 禁止 | 非空 summary，PASS；保留原 manifest |
-| coder | IMPLEMENTATION | coding | 指定工作区内 | 保持现有 workspaceResult，report 可空 |
-| integrator | INTEGRATION | integration | 指定工作区内 | 保持现有 workspaceResult，report 可空 |
-| reviewer | CODE_REVIEW | code-review | 禁止 | 末行 AIW_VERDICT: PASS 或 REPAIR_REQUIRED |
-| verifier | VERIFICATION | verification | 禁止 | 同上 |
-| integration-verifier | INTEGRATION_VERIFICATION | integration-verification | 禁止 | 同上 |
-| repairer | REPAIR | repair | 指定工作区内 | 保持现有 workspaceResult，report 可空 |
+| requirements | EXTERNAL_WORK | requirement-analysis | software-requirements-analyst | REPORT |
+| architect | EXTERNAL_WORK | solution-architecture | solution-architect | REPORT |
+| planner | EXTERNAL_WORK | implementation-planning | implementation-planner | REPORT |
+| coder | EXTERNAL_WORK | coding | coding-work-package-executor | WORKSPACE |
+| integrator | EXTERNAL_WORK | integration | coding-work-package-executor | WORKSPACE |
+| repairer | EXTERNAL_WORK | repair | coding-work-package-executor | WORKSPACE |
+| reviewer | EXTERNAL_WORK | code-review | software-code-reviewer | VERDICT |
+| verifier | EXTERNAL_WORK | verification | software-test-verifier | VERDICT |
+| integration-verifier | EXTERNAL_WORK | integration-verification | software-test-verifier | VERDICT |
 
-`verifier` 对 INTEGRATION_VERIFICATION 使用 integration-verifier 的有效 Profile，并声明对应注册能力。Release Readiness 与 Orchestrator 的 Profile 保留，缺少现有可执行 TaskType，不允许注册为执行角色。
+skillRef 必须精确匹配启动角色的 primarySkill；技能在模型与工作区动作前从可信 skills 根读取冻结。verifier 与 integration-verifier 独立启动、单独能力；附加技术能力不能冒充其他执行角色。release-readiness/orchestrator 仍不可执行。
 
-操作授权与资源协调分别处理。只读角色不能编辑；API Worker 不向其开放 bash，Codex 内部命令受其 read-only sandbox 及主机政策约束，不能伪称 SDK 内部没有 shell。可写角色可以取得文件编辑能力，命令、网络和外部写入仍需要具体政策。角色名、插件输出、模型文本及上游报告不能自行授予权限。
+REPORT 返回非空 PASS summary；VERDICT 返回非空报告且末行 AIW_VERDICT: PASS/REPAIR_REQUIRED；WORKSPACE 返回有效 resultRevision、changedFiles、适用 publicationRef 和非空 PASS summary。写角色必须有固定 Git baseRevision；审查与输入结果 revision 一致，不自行选择新 HEAD。只读角色不 stage/commit/push。
 
-Profile 继续使用现有八个字段，逐一验证而不增加新必需字段。冻结 protocolSkills、primarySkill 和参考材料的内容契约保持完整，变更加载政策先形成设计决定。
+TypeScript 明确选择 codex-cli、codex-app-server 或 openai-agents；两 Codex 模式使用系统 CLI 0.162.1，无 SDK/CLI/平台包依赖，无下载或自动回退。Exec 为独立 attempt 进程；App Server 是受管 stdio 服务，每 slot 独立 thread/turn。Go 保留原三 Runtime，Python 保留原 SDK/API Runtime，本 FD 仅统一其任务契约。
+
+操作授权与资源协调分别处理。只读 API 无写入/host shell；Codex 内部 shell 受原生 sandbox 和主机政策约束。任务、Skill、报告不能提升 shell、网络、测试、发布权限。计划须经理确认；preferredSkills 仅排序；报告不形成第二工作流或自动修复。
 
 ## 单次 attempt
 
@@ -39,7 +41,7 @@ TaskExecutionService 的 complete/fail 要求 RUNNING 且租约未过期、属�
 
 现有 failureCategory 仅有 UNKNOWN、RATE_LIMIT、MODEL_ERROR、OUTPUT_INVALID、TOOL_ERROR、CONFIGURATION。内部取消、权限、证据和资源错误映射到这些值，不新增公开枚举。TS RuntimeFault 的 TIMEOUT 只用于内部取消与工具终态，向控制平面上报时映射为 TOOL_ERROR。
 
-代码任务保持 WorkspaceResult 的 resultRevision、changedFiles、publicationRef。审查/验证必须给出 report；前三个语义角色必须给出 PASS report。发布与报告校验必须遵循这一既有契约。
+代码任务保持 WorkspaceResult 的 resultRevision、changedFiles、publicationRef。审查/验证必须给出 report；所有 WORKSPACE/REPORT 角色必须给出非空 PASS report。发布与报告校验必须遵循这一既有契约。
 
 ## 并行与工具结果
 
@@ -62,32 +64,27 @@ G1：首期接受取消或租约丢失竞争窗口内可能已完成的远端发
 
 G2：必存执行元数据，访问沿用主机文件权限。新增 attempt 日志保存 30 天，在 Git 工作区外，容量有界；关键证据保存失败不回报成功。用户已明确 G2 覆盖全部 Worker 会话，包括 SDK/CLI 自身及派生线程；完整提示词、源码和会话正文不能因来自既有 SDK 而落盘。既有明确业务 report 和 FD 工件沿用其字段及保留契约，不能增添完整聊天转储。
 
-默认不存完整提示词、源码或隐藏推理；密钥、leaseToken 不进入常规日志或插件环境。关键元数据包括输入版本、调用关联、终态、取消、发布和结果校验。允许字段、拒绝规则与 Runner 前置要求见 [公共输入契约](process-typescript/runtime-core/PUBLIC_CONTRACT.md)。会话准入必须在正文送入之前生效；能力未知时拒绝注册/领取。Codex 的禁存入口源码已经实现，其他落盘通道及兼容 Gate 见 [完整设计](../docs/worker-codex-no-store-design.md)；真实平台运行效果尚未认证。
+默认不存完整提示词、源码或隐藏推理；密钥、leaseToken 不进入常规日志或插件环境。关键元数据包括输入版本、调用关联、终态、取消、发布和结果校验。允许字段、拒绝规则与 Runner 前置要求见 [公共输入契约](process-typescript/runtime-core/PUBLIC_CONTRACT.md)。固定版本、权限和本地会话检查在正文送入前生效；未知版本或不安全权限拒绝。用户已批准 FD-016 按 Go 的本地交付范围，生产禁存认证与隔离归 FD-015；这项范围决定不降低生产 G2 要求。Codex 的禁存入口源码已经实现，其他落盘通道及兼容 Gate 见 [完整设计](../docs/worker-codex-no-store-design.md)；真实平台运行效果尚未认证。
 
 ## 运行时能力基线
 
 | 运行时 | 当前源码与基线 | 验证边界 |
 |---|---|---|
-| API TypeScript | Agents 0.3.9 / OpenAI 6.49.0；完整终态保护、公共工具与九角色适配；parallelToolCalls=true | 独立离线验收进行中，真实部署端点未运行 |
-| Codex TypeScript | SDK 0.155.1；公共生命周期与上下文接入已安装 native CLI | 内部工具细节明确 unknown；真实平台缺少禁存认证时拒绝准入 |
-| Go | `AgentRuntime` SPI 显式选择 `codex-cli` 或 `openai-api`；共享期限、证据、workspace 与 Git 生命周期 | OpenAI tool loop 与各 API/CLI 部署行为仍需运行验证 |
+| API TypeScript | Agents 0.20.0 / OpenAI 7.32.0 / Zod 4.6.7；完整终态保护、公共工具与九角色适配；parallelToolCalls=true | 独立离线验收进行中，真实部署端点未运行 |
+| Codex TypeScript | 系统 CLI 0.162.1；Exec/App Server 直接 stdio 接入，共享任务/结果生命周期 | 内部工具细节明确 unknown；本地交付；生产禁存认证归 FD-015 |
+| Go | `AgentRuntime` SPI 显式选择 `codex-cli`、`codex-app-server` 或 `openai-api`；App Server 固定 CLI `0.162.1`，共享期限、证据、workspace 与 Git 生命周期 | App Server lifecycle、隔离、取消及关闭尚未运行验证；OpenAI tool loop 与各 API/CLI 部署行为也需运行验证 |
 | Python | SDK 0.157.0 wheel 静态核对；公开 launch_args_override 与 ephemeral/read 回执入口已接入 | 未安装或启动真实 SDK；禁存平台能力未知时拒绝准入 |
 
 这个基线不是端点支持声明。不可观察的能力明确记录 unknown/unsupported，不静默将并行要求改为全局串行。
 
-旧 workers/codex-* 保持参考示例定位，生产对齐覆盖四个 process Worker；demo-deployer 的权限、发布和回滚独立设计。TypeScript Worker 使用包内 runtime-core ESM，Go/Python 按此行为契约适配；Codex 禁存共用固定原生启动适配器，未经验证的平台/版本/配置在注册前拒绝。
+旧 workers/codex-* 保持参考示例定位，任务契约覆盖三语言 process Worker；demo-deployer 的权限、发布和回滚独立设计。TypeScript Worker 使用包内 runtime-core ESM，Go/Python 按此行为契约适配；TypeScript/Go 使用本地固定 CLI 契约并明确不具有生产禁存认证；Python 保留既有 SDK 会话准入。生产能力须由 FD-015 的实际平台证据认定。
 
 ## 输入与拒绝样例
 
-- requirements + REQUIREMENT_ANALYSIS：只读，非空语义报告。
-- coder + IMPLEMENTATION：可在指定工作区编辑；查询工具可并行。
-- reviewer + IMPLEMENTATION：任务类型不匹配，模型启动前拒绝。
-- reviewer + 文件写入：操作未授权，不能产生写入。
-- verifier + INTEGRATION_VERIFICATION：解析为 integration-verifier 的 Profile 和报告契约。
-- release-readiness 或 orchestrator：保留配置材料，但拒绝执行注册。
-- 任意角色 + 过期 lease：不接受 complete/fail；已有副作用进入对账记录。
-- 任意角色 + 关键证据不可保存：不能回报成功，不能由模型文本替代证据。
+见 [静态输入样例](runtime-contract.examples.json)。旧类型、缺失/越界 skillRef、错误角色能力、缺失必需 workspace、审查 revision 不匹配、空报告或无效末行均拒绝，不调用模型或产生工作区业务修改。计划提议和单步分析不自动补齐流水线，REPAIR_REQUIRED 不自动派生任务。
 
-## 验证状态
+## 历史 FD-005 验证状态（不代表 FD-016）
 
 静态读取了 API Worker 的 Profile、工具、上下文与生命周期，已安装 SDK 源码、Codex SDK 声明和 TaskExecutionService。首轮源码的一次编译检查通过；首轮独立离线测试 138 个用例执行，78 通过、60 失败。第二轮 261 个用例执行，256 个原始 pass-case、5 个失败；完整场景通过 255/285=89.47%，全 FD 分支尚未测量，两轮均已被 PM 退回。后续源码修复尚待新的独立授权验证，历史编译结果不代表新源码通过。以上样例仍是验收输入，完整 FD 尚未验收，真实端点或模型未调用。SDK 细节见 [SDK 能力基线](SDK_CAPABILITIES.md)，当前证据以 FD 报告与角色交接收据为准。
+
+FD-016 本地平台限制：TypeScript Codex 原生 Windows 进程树能力未核定，启动前拒绝 CODEX_WINDOWS_PROCESS_TREE_UNVERIFIED；系统路径解析保留，Unix/WSL 与 Agents API 按各自准入。App Server 确认终态后调用 thread/unsubscribe 并验证释放回执；未知释放保留工作区，不用删除本地 inbox 冒充服务端清理。

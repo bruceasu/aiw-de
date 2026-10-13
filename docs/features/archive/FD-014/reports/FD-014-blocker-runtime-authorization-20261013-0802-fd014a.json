@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.blocker.v1",
+  "fd_id": "FD-014",
+  "stage": "worker-protocol-and-handoff",
+  "role": "pm-worker-host",
+  "source_event": "FD-014-000010-work-requested",
+  "human_report": "FD-014-blocker-runtime-authorization-20261013-0802-fd014a.md",
+  "status": "resolved",
+  "observed_at": "2026-10-12T23:02:55Z",
+  "symptom": "Implementation and compile-only evidence exist, but runtime evidence required by the FD has not been run.",
+  "cause": "The user selected the latest official protocol version, which resolved source/version selection only. Repository authorization rules require separate authorization for runtime checks.",
+  "attempts": [
+    "Pinned the implementation to official Codex CLI 0.162.1 tag rust-v0.162.1 and the App Server v2 schema.",
+    "Implemented the managed Go App Server runtime and recorded lifecycle and capability limits in the FD and runtime docs.",
+    "Ran a compile-only Go build with output directed to NUL; it passed without retaining a distributable artifact.",
+    "The user replied \"confirm\" to the separate local fake-server and real-turn authorization questions.",
+    "Ran focused fake-server and local Worker integration checks for concurrent threads, cancellation, stop acknowledgement, lease loss, disconnect, unconfirmed interrupt shutdown, and version rejection.",
+    "Ran one real Codex CLI 0.162.1 App Server turn in a temporary read-only workspace; the fixed smoke response matched and the server closed after stdin EOF."
+  ],
+  "human_decision_need": "Runtime-validation authorization is resolved. Production-candidate admission has a separate blocker because no-store and full restart/rollback evidence remain incomplete.",
+  "resolution": "Resolved 2026-10-12T23:28:51Z after the user confirmed both scoped validations. The authorized local fake App Server/Worker checks and one real CLI 0.162.1 turn passed after fixes recorded in FD-014 Verification. This does not certify every persistence channel or grant release/deployment authority.",
+  "next_step": "Continue through the separate candidate-admission blocker; retain FD-014 as In Progress until that decision and evidence gate are resolved.",
+  "reusable_improvement": "Restore the blocker-pair templates referenced by fd-workflow; docs/templates currently contains only TEMPLATE.md."
+}

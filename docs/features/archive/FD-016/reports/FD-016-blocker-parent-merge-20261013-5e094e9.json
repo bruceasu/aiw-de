@@ -1,0 +1,29 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-016",
+  "source_event": "FD-016-000015-verification-passed",
+  "human_report": "FD-016-blocker-parent-merge-20261013-5e094e9.md",
+  "data": {
+    "stage": "PM local delivery merge",
+    "role": "pm",
+    "observed_symptom": "local-merge failed with a FEATURE_INDEX content conflict; parent advanced to c97afdd with FD-017 and TypeScript launcher additions.",
+    "confirmed_cause": "Concurrent managed index changes: FD-016 passed in its isolated worktree while parent added FD-017 using the previous FD-016 Open row.",
+    "recovery_attempts": [
+      "local-merge reset the failed parent squash, verified cleanliness and merged master into the FD worktree.",
+      "Inspected both histories, source FDs, conflict hunk and actual parent launcher/package changes.",
+      "Resolved generated index by keeping current FD-016 Complete and new FD-017 Design; preserved user launcher changes.",
+      "Added parent build/start-all scripts to the explicit FD-016 release list so the merged documented fleet launcher is distributable.",
+      "Request a fresh independent review of the integrated result before rerunning delivery.",
+      "Initial active request-review rejected Complete status; no event created.",
+      "PM handoff claim rejected because CLI does not allow agent claims for PM/human handoffs; receipt left intact.",
+      "Used managed set-status Pending Verification with declared auto operator, then request-review for the integrated result.",
+      "Authorized fourth review passed on FD-016-000021-verification-passed; explicit local-merge succeeded, squash 41f7451 from 603fd6f, verified cleanup removed the FD worktree/branch and retained event receipts."
+    ],
+    "status": "resolved",
+    "resolved_at": "2026-10-13T06:03:12.071152+00:00",
+    "human_decision_need": "none",
+    "next_step_or_risk": "Archive using actual current pass; no runtime certification inferred from static integration.",
+    "reusable_improvement": "Generated FD index conflicts should be reconciled from source FD files; parent runtime/packaging changes after review warrant a fresh review rather than reusing a pass for an earlier result."
+  }
+}

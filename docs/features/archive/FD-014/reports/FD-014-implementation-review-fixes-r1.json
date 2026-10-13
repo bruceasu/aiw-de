@@ -1,0 +1,41 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-014",
+  "source_event": "FD-014-000021-changes-requested",
+  "human_report": "FD-014-implementation-review-fixes-r1.md",
+  "data": {
+    "worker_session": "fd014-worker-linux-20261013-a83c26",
+    "summary": "Repair independent review R1 resource confirmation/quarantine and R2 network policy; local scope unchanged.",
+    "previous_report": "FD-014-implementation-local-final-r1.md",
+    "review_report": "../reviews/FD-014-review-local-r1.md",
+    "changed_paths": [
+      "workers/process-go/app_server_runtime.go",
+      "workers/process-go/main.go",
+      "workers/process-go/CODEX-RUNTIME.md",
+      "docs/features/FD-014_CODEX_RUNTIME_GO.md"
+    ],
+    "commands": [
+      "aiw fd claim FD-014 FD-014-000021-changes-requested --session fd014-worker-linux-20261013-a83c26",
+      "GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off go build -o /dev/null .",
+      "git diff --check"
+    ],
+    "results": [
+      "The initial edit command used an incorrect cwd and changed no file; compilation in that shell passed against unchanged code. Corrected the edit cwd once, then separately compiled the modified source successfully.",
+      "Active turn failure stops the shared server; unknown close results retain workspace lock and quarantine slot, suppressing stop acknowledgement and fail reporting.",
+      "Close callers serialize and observe process exit instead of using started=false as proof.",
+      "App Server forwards sandbox_workspace_write.network_access from Worker configuration."
+    ],
+    "checks_not_run": [
+      "tests",
+      "real authentication/model calls",
+      "Linux runtime cancellation/restart",
+      "Docker/production verification"
+    ],
+    "residual_risks": [
+      "Static and compile evidence only; new paths have no runtime checks.",
+      "Shared shutdown ends unrelated active App Server turns; no runtime fallback.",
+      "Unknown resource termination leaves workspace occupancy for operator recovery; not a production admission certification."
+    ]
+  }
+}

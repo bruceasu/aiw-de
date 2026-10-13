@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-016",
+  "source_event": "FD-016-000018-changes-requested",
+  "human_report": "FD-016-implementation-local-r3.md",
+  "data": {
+    "summary": "R4/R5 文档及不存在 bin 发行条目已修复，编译/静态源清单通过；等待额外独立审查授权。",
+    "session_ref": "fd016-worker-20261013-0f3443b8",
+    "diff_base": "0ec46d5",
+    "changed_paths": [
+      "workers/process-typescript/README.md",
+      "workers/process-typescript/package.json",
+      "workers/process-typescript/scripts/package-release.mjs",
+      "docs/features/FD-016_FD_011_WORKER.md"
+    ],
+    "commands": [
+      "aiw fd claim FD-016 FD-016-000018-changes-requested --session fd016-worker-20261013-0f3443b8",
+      "node scripts/compile-worker-runtime.mjs",
+      "targeted static release source/manifest/README inspection; git -c core.whitespace=cr-at-eol diff --check 0ec46d5...HEAD",
+      "path-scoped git commits"
+    ],
+    "results": [
+      "Compile-only exit 0; no retained distribution.",
+      "Every non-generated release source exists; bin removed from both declarations; build/start-all included.",
+      "No tests, type checks, CLI/model, fleet, build/release or deployment.",
+      "Three Reviewer outcomes used; no current pass for these fixes."
+    ],
+    "residual_risk": "额外独立审查待授权，未合并归档；真实 SDK/CLI/并发行为未运行，生产与 Windows 平台能力归 FD-015。"
+  }
+}

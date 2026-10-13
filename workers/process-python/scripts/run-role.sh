@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 if [ "$#" -lt 1 ]; then
-  echo "usage: $0 <requirements|architect|planner|coder|integrator|reviewer|verifier|integration-verifier|repairer>" >&2
+  echo "usage: $0 <requirements|architect|planner|coder|integrator|reviewer|stage-reviewer|verifier|integration-verifier|repairer>" >&2
   exit 2
 fi
 ROLE="$1"

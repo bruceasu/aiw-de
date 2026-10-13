@@ -32,7 +32,6 @@ type Config struct {
 	RepositoryRef     string
 	RepositoryRoot    string
 	WorktreeRoot      string
-	GitPublishRemote  string
 	PollInterval      time.Duration
 	HeartbeatInterval time.Duration
 	HTTPTimeout       time.Duration
@@ -523,14 +522,7 @@ func (w *GitWorkspace) finalize(task ClaimedTask) (*WorkspaceResult, error) {
 		return nil, err
 	}
 	changed := splitZero(diffRaw)
-	publicationRef := ""
-	if w.cfg.GitPublishRemote != "" {
-		if _, err := gitText(w.cwd, "push", w.cfg.GitPublishRemote, resultRevision+":refs/heads/"+w.assignment.BranchName); err != nil {
-			return nil, err
-		}
-		publicationRef = "git:" + w.cfg.GitPublishRemote + ":" + w.assignment.BranchName
-	}
-	return &WorkspaceResult{ResultRevision: resultRevision, ChangedFiles: changed, PublicationRef: publicationRef}, nil
+	return &WorkspaceResult{ResultRevision: resultRevision, ChangedFiles: changed}, nil
 }
 
 func fetchPublishedInputs(cfg Config, task ClaimedTask) error {
@@ -566,6 +558,7 @@ func gitText(cwd string, args ...string) (string, error) {
 	return string(b), err
 }
 func gitBytes(cwd string, args ...string) ([]byte, error) {
+	for _, arg := range args { if arg == "push" { return nil, errors.New("GIT_PUSH_FORBIDDEN") } }
 	command := append([]string{"-C", cwd}, args...)
 	cmd := exec.Command("git", command...)
 	var out bytes.Buffer
@@ -589,6 +582,8 @@ func splitZero(raw []byte) []string {
 }
 
 func loadConfig() Config {
+	if strings.TrimSpace(os.Getenv("AIW_GIT_PUBLISH_REMOTE")) != "" { panic("AIW_GIT_PUBLISH_REMOTE is forbidden: Workers cannot git push") }
+	if boolEnv("AIW_CODEX_NETWORK_ACCESS", false) { panic("AIW_CODEX_NETWORK_ACCESS is forbidden for Workers") }
 	repositoryRef := strings.TrimSpace(env("AIW_REPOSITORY_REF", ""))
 	repositoryRootRaw := strings.TrimSpace(env("AIW_REPOSITORY_ROOT", ""))
 	if (repositoryRef == "") != (repositoryRootRaw == "") {
@@ -623,13 +618,13 @@ func loadConfig() Config {
 		BaseURL:  strings.TrimRight(env("AIW_CONTROL_PLANE_URL", "http://127.0.0.1:8080"), "/"),
 		WorkerID: env("AIW_WORKER_ID", "codex-go-1"), Token: env("AIW_WORKER_TOKEN", ""),
 		Capabilities: capabilities, MaxConcurrency: positiveInt("AIW_WORKER_MAX_CONCURRENCY", 1),
-		FallbackWorkspace: fallback, RepositoryRef: repositoryRef, RepositoryRoot: repositoryRoot, WorktreeRoot: worktreeRoot, GitPublishRemote: env("AIW_GIT_PUBLISH_REMOTE", ""),
+		FallbackWorkspace: fallback, RepositoryRef: repositoryRef, RepositoryRoot: repositoryRoot, WorktreeRoot: worktreeRoot,
 		PollInterval:      time.Duration(positiveInt("AIW_WORKER_POLL_MS", 1000)) * time.Millisecond,
 		HeartbeatInterval: time.Duration(positiveInt("AIW_WORKER_HEARTBEAT_MS", 20000)) * time.Millisecond,
 		HTTPTimeout:       time.Duration(positiveInt("AIW_WORKER_HTTP_TIMEOUT_MS", 15000)) * time.Millisecond,
 		CodexPath:         env("AIW_CODEX_PATH", "codex"), Model: env("AIW_CODEX_MODEL", ""), Sandbox: env("AIW_CODEX_SANDBOX", "workspace-write"),
 		ApprovalPolicy: env("AIW_CODEX_APPROVAL_POLICY", "never"), ReasoningEffort: env("AIW_CODEX_REASONING_EFFORT", "high"),
-		NetworkAccess: boolEnv("AIW_CODEX_NETWORK_ACCESS", false),
+		NetworkAccess: false,
 	}
 }
 

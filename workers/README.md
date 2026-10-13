@@ -9,7 +9,7 @@ These are the maintained multi-role workers:
 | Package | Language | Runtime choices | Details |
 | --- | --- | --- | --- |
 | [`process-typescript`](process-typescript/README.md) | TypeScript | `codex-sdk`, `openai-agents` | One entry point selects an `AgentRuntime` backend per process. |
-| [`process-go`](process-go/README.md) | Go | `codex-cli`, `openai-api` | An `AgentRuntime` SPI keeps model execution behind the shared Worker lifecycle. |
+| [`process-go`](process-go/README.md) | Go | `codex-cli`, `codex-app-server`, `openai-api` | An `AgentRuntime` SPI keeps model execution behind the shared Worker lifecycle. |
 | [`process-python`](process-python/README.md) | Python | `codex-sdk`, `openai-agents` | Runtime selection is implemented through the Python `AgentRuntime` protocol. |
 
 Each process selects one runtime at startup. API runtimes require `OPENAI_API_KEY`; Codex runtimes require their corresponding installed/authenticated Codex setup. Runtime-specific profile and environment requirements are documented in each package README.

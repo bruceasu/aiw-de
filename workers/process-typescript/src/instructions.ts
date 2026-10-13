@@ -1,4 +1,4 @@
-import { readSkillPackage, type Context } from "./runtime-core.js";
+import { RuntimeFault, readSkillPackage, type Context } from "./runtime-core.js";
 import { getProfile, type ProcessProfile } from "./profiles.js";
 
 export interface PromptTask {
@@ -17,8 +17,18 @@ export interface CompletionReport {
   summary: string;
 }
 
-export function buildPrompt(task: PromptTask, role: string, skillsRoot: string, context?: Context): string {
-  const profile = getProfile(role, task.taskType);
+export function resolveTaskProfile(task: PromptTask, role: string): ProcessProfile {
+  const profile = getProfile(role);
+  if (task.taskType !== "EXTERNAL_WORK") throw new RuntimeFault("ROLE_TASK_TYPE_DENIED", "CONFIGURATION");
+  if (typeof task.skillRef !== "string" || task.skillRef !== profile.primarySkill || !/^[a-z0-9][a-z0-9-]*$/.test(task.skillRef)) {
+    throw new RuntimeFault("ROLE_SKILL_DENIED", "CONFIGURATION");
+  }
+  return Object.freeze({ ...profile, allowedTaskTypes: Object.freeze([...profile.allowedTaskTypes]),
+    protocolSkills: Object.freeze([...profile.protocolSkills]) }) as unknown as ProcessProfile;
+}
+
+export function buildPrompt(task: PromptTask, role: string, skillsRoot: string, context?: Context, frozenProfile?: ProcessProfile): string {
+  const profile = frozenProfile ?? resolveTaskProfile(task, role);
   if (!profile.allowedTaskTypes.includes(task.taskType)) {
     throw new Error(`profile ${profile.name} cannot execute task type ${task.taskType}; allowed=${profile.allowedTaskTypes.join(",")}`);
   }
@@ -31,6 +41,7 @@ export function buildPrompt(task: PromptTask, role: string, skillsRoot: string, 
     "- This worker owns bounded semantic execution only.",
     "- Never create a second workflow engine or claim lifecycle authority.",
     "- Treat upstream inputs supplied by the Control Plane as authoritative.",
+    "- Never run git push or publish a Git branch. Return the local result revision only.",
   ].join("\n");
   const skills = [...profile.protocolSkills, ...(profile.primarySkill === "engineering-artifact-protocol" ? [] : [profile.primarySkill])]
     .map(skill => readSkillPackage(skillsRoot, skill, context)).join("\n\n");
@@ -38,20 +49,17 @@ export function buildPrompt(task: PromptTask, role: string, skillsRoot: string, 
   return `AI Dev Manager R10 Process Worker\nProcess role: ${profile.name}\nPrimary R2 Skill: ${profile.primarySkill}\nProfile instruction: ${profile.instruction}\nPermission boundary: ${permission}\nTask ID: ${task.taskId}\nTask type: ${task.taskType}\nAttempt: ${task.attemptNo}${skillRef}\n\n=== Frozen R2 process context ===\n${boundary}\n\n${skills}\n\n=== Current authoritative work instruction ===\n${instruction}${inputs}\n\nExecute only this bounded task. Preserve the Control Plane authority boundary. For read-only roles, do not change repository files. For writable roles, work only inside the assigned workspace.`;
 }
 
-export function completionReport(taskType: string, finalResponse: string): CompletionReport | null {
-  if (["REQUIREMENT_ANALYSIS", "SOLUTION_ARCHITECTURE", "IMPLEMENTATION_PLANNING"].includes(taskType)) {
-    const summary = finalResponse.trim();
-    if (!summary) throw new Error(`${taskType} must return a non-empty final response`);
-    return { verdict: "PASS", summary };
-  }
-  if (!["CODE_REVIEW", "VERIFICATION", "INTEGRATION_VERIFICATION"].includes(taskType)) return null;
-  const lines = finalResponse.trimEnd().split(/\r?\n/);
-  const marker = lines.at(-1)?.trim();
+export function completionReport(resultKind: string, finalResponse: string): CompletionReport {
+  const summary = finalResponse.trim();
+  if (!summary) throw new RuntimeFault("COMPLETION_REPORT_EMPTY", "OUTPUT_INVALID");
+  if (resultKind === "REPORT" || resultKind === "WORKSPACE") return { verdict: "PASS", summary };
+  if (resultKind !== "VERDICT") throw new RuntimeFault("RESULT_KIND_INVALID", "CONFIGURATION");
+  const marker = summary.split(/\r?\n/).at(-1)?.trim();
   const verdict = marker?.startsWith("AIW_VERDICT:") ? marker.slice("AIW_VERDICT:".length).trim() : null;
   if (verdict !== "PASS" && verdict !== "REPAIR_REQUIRED") {
-    throw new Error("review/verification final response must end with AIW_VERDICT: PASS or AIW_VERDICT: REPAIR_REQUIRED");
+    throw new RuntimeFault("COMPLETION_VERDICT_INVALID", "OUTPUT_INVALID");
   }
-  return { verdict, summary: finalResponse.trim() };
+  return { verdict, summary };
 }
 
 export function sandboxForProfile(profile: ProcessProfile, configured: string): "read-only" | "workspace-write" | "danger-full-access" {

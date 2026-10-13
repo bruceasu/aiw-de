@@ -350,12 +350,7 @@ public final class CodexJavaWorker {
             }
             String revision = gitText(cwd, "rev-parse", "HEAD").strip().toLowerCase();
             List<String> changed = splitZero(gitBytes(cwd, "diff", "--name-only", "-z", assignment.baseRevision(), revision));
-            String publicationRef = null;
-            if (!cfg.gitPublishRemote().isBlank()) {
-                gitText(cwd, "push", cfg.gitPublishRemote(), revision + ":refs/heads/" + assignment.branchName());
-                publicationRef = "git:" + cfg.gitPublishRemote() + ":" + assignment.branchName();
-            }
-            return new WorkspaceResult(revision, List.copyOf(changed), publicationRef);
+            return new WorkspaceResult(revision, List.copyOf(changed), null);
         }
 
         private static void fetchPublishedInputs(Path repositoryRoot, ClaimedTask task) throws Exception {
@@ -380,6 +375,7 @@ public final class CodexJavaWorker {
     }
 
     private static byte[] gitBytes(Path cwd, String... args) throws Exception {
+        if (List.of(args).contains("push")) throw new IllegalStateException("GIT_PUSH_FORBIDDEN");
         List<String> command = new ArrayList<>(); command.add("git"); command.add("-C"); command.add(cwd.toString()); command.addAll(List.of(args));
         Process p = new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.INHERIT).start();
         byte[] out = p.getInputStream().readAllBytes();
@@ -478,10 +474,12 @@ public final class CodexJavaWorker {
     }
 
     private record Config(String baseUrl, String workerId, String token, Set<String> capabilities,
-                          int maxConcurrency, Path fallbackWorkspace, String repositoryRef, Path repositoryRoot, Path worktreeRoot, String gitPublishRemote,
+                          int maxConcurrency, Path fallbackWorkspace, String repositoryRef, Path repositoryRoot, Path worktreeRoot,
                           Duration pollInterval, Duration heartbeatInterval, Duration httpTimeout, String codexPath, String model,
                           String sandbox, String approvalPolicy, String reasoningEffort, boolean networkAccess) {
         static Config fromEnv() {
+            if (!env("AIW_GIT_PUBLISH_REMOTE", "").isBlank()) throw new IllegalArgumentException("AIW_GIT_PUBLISH_REMOTE is forbidden: Workers cannot git push");
+            if (boolEnv("AIW_CODEX_NETWORK_ACCESS", false)) throw new IllegalArgumentException("AIW_CODEX_NETWORK_ACCESS is forbidden for Workers");
             String repositoryRef = env("AIW_REPOSITORY_REF", "").strip();
             String repositoryRootValue = env("AIW_REPOSITORY_ROOT", "").strip();
             if (repositoryRef.isBlank() != repositoryRootValue.isBlank())
@@ -495,11 +493,11 @@ public final class CodexJavaWorker {
             return new Config(
                     stripTrailingSlash(env("AIW_CONTROL_PLANE_URL", "http://127.0.0.1:8080")),
                     env("AIW_WORKER_ID", "codex-java-1"), env("AIW_WORKER_TOKEN", ""), Set.copyOf(capabilities),
-                    positiveInt("AIW_WORKER_MAX_CONCURRENCY", 1), fallback, repositoryRef, repositoryRoot, worktreeRoot, env("AIW_GIT_PUBLISH_REMOTE", ""),
+                    positiveInt("AIW_WORKER_MAX_CONCURRENCY", 1), fallback, repositoryRef, repositoryRoot, worktreeRoot,
                     Duration.ofMillis(positiveInt("AIW_WORKER_POLL_MS", 1000)), Duration.ofMillis(positiveInt("AIW_WORKER_HEARTBEAT_MS", 20000)),
                     Duration.ofMillis(positiveInt("AIW_WORKER_HTTP_TIMEOUT_MS", 15000)), env("AIW_CODEX_PATH", "codex"), System.getenv("AIW_CODEX_MODEL"),
                     env("AIW_CODEX_SANDBOX", "workspace-write"), env("AIW_CODEX_APPROVAL_POLICY", "never"),
-                    env("AIW_CODEX_REASONING_EFFORT", "high"), boolEnv("AIW_CODEX_NETWORK_ACCESS", false));
+                    env("AIW_CODEX_REASONING_EFFORT", "high"), false);
         }
     }
 

@@ -115,9 +115,8 @@ Worker 收到 Workspace Assignment 后应：
 5. 在 worktree 中执行 AI；
 6. Commit 未提交修改；
 7. 计算 base..result changedFiles；
-8. 可选 push 到 remote；
-9. Complete WorkspaceResult；
-10. 清理本地 worktree。
+8. 返回只包含本地 resultRevision 和 changedFiles 的 WorkspaceResult；
+9. 清理本地 worktree。
 
 Control Plane 永远不保存 Worker 机器上的实际目录路径。
 
@@ -132,7 +131,6 @@ AIW_WORKER_MAX_CONCURRENCY
 AIW_REPOSITORY_REF
 AIW_REPOSITORY_ROOT
 AIW_WORKTREE_ROOT
-AIW_GIT_PUBLISH_REMOTE
 AIW_CODEX_PATH
 AIW_CODEX_MODEL
 AIW_CODEX_SANDBOX

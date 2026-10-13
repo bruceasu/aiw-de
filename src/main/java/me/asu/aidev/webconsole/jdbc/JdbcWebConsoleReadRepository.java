@@ -22,10 +22,10 @@ public class JdbcWebConsoleReadRepository {
     }
 
     @Transactional(readOnly = true)
-    public List<WebConsoleRunSummary> recentRuns(int limit) {
+    public List<WebConsoleRunSummary> recentRuns(int limit, boolean archived) {
         return jdbc.query("""
                 SELECT ar.id, ar.status, ar.control_state, ar.max_parallelism, ar.active_slots,
-                       ar.started_at_epoch_ms, ar.status_updated_at_epoch_ms,
+                       ar.started_at_epoch_ms, ar.status_updated_at_epoch_ms, a.delete_after_epoch_ms,
                        COALESCE((SELECT wt.instruction
                                    FROM work_task wt
                                   WHERE wt.subject_type='AUTONOMOUS_REQUIREMENT'
@@ -61,9 +61,11 @@ public class JdbcWebConsoleReadRepository {
                          ELSE 'ENGINEERING_GATE'
                        END AS phase
                   FROM autonomous_run ar
+                  LEFT JOIN web_console_run_archive a ON a.run_id=ar.id
+                 WHERE (a.run_id IS NOT NULL) = ?
                  ORDER BY ar.started_at_epoch_ms DESC, ar.id
                  LIMIT ?
-                """, (rs, n) -> runSummary(rs), limit);
+                """, (rs, n) -> runSummary(rs), archived, limit);
     }
 
     @Transactional(readOnly = true)
@@ -111,7 +113,7 @@ public class JdbcWebConsoleReadRepository {
                 rs.getString("phase"), rs.getInt("total_tasks"), rs.getInt("completed_tasks"),
                 rs.getInt("active_tasks"), rs.getInt("failed_tasks"), rs.getInt("max_parallelism"),
                 rs.getInt("active_slots"), instant(rs, "started_at_epoch_ms"),
-                instant(rs, "status_updated_at_epoch_ms"));
+                instant(rs, "status_updated_at_epoch_ms"), instant(rs, "delete_after_epoch_ms"));
     }
 
     private static Instant instant(ResultSet rs, String column) throws SQLException {

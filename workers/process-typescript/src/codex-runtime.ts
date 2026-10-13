@@ -18,7 +18,7 @@ export function resolveInstalledCodex(override?: string): { executablePath: stri
     : (process.env[pathKey] ?? "").split(path.delimiter).filter(Boolean).flatMap(directory => {
       const base = path.resolve(directory.replace(/^"(.*)"$/, "$1"));
       // npm start prepends this worker's node_modules/.bin, which contains the SDK's CLI shim.
-      if (!override?.trim() && within(workerDependencies, base)) return [];
+      if (within(workerDependencies, base)) return [];
       const names = process.platform === "win32" && path.extname(requested) === ""
         ? [`${requested}.exe`, `${requested}.cmd`, `${requested}.ps1`] : [requested];
       return names.map(name => path.join(base, name));
@@ -27,7 +27,7 @@ export function resolveInstalledCodex(override?: string): { executablePath: stri
   for (const candidate of candidates) {
     const executable = resolveLauncher(candidate);
     if (!executable) continue;
-    if (!override?.trim() && within(workerDependencies, realpathSync(executable.executablePath))) continue;
+    if (within(workerDependencies, realpathSync(executable.executablePath))) continue;
     const env: Record<string, string> = {};
     for (const [key, value] of Object.entries(process.env)) {
       if (value !== undefined && key.toUpperCase() !== "PATH") env[key] = value;
@@ -43,7 +43,11 @@ function resolveLauncher(candidate: string): Executable | null {
   if (process.platform !== "win32") {
     try {
       accessSync(candidate, constants.X_OK);
-      return { executablePath: candidate, pathDirectories: [] };
+      const resolved = realpathSync(candidate);
+      if (/codex\.js$/.test(resolved)) {
+        return nativeNpmExecutable(path.dirname(path.dirname(resolved)));
+      }
+      return { executablePath: resolved, pathDirectories: [] };
     } catch { return null; }
   }
   if (path.extname(candidate).toLowerCase() === ".exe") {
@@ -65,19 +69,20 @@ function resolveLauncher(candidate: string): Executable | null {
 function nativeNpmExecutable(packageRoot: string): Executable | null {
   const manifest = path.join(packageRoot, "package.json");
   if (!isFile(manifest)) return null;
-  const target = process.arch === "x64" ? "x86_64-pc-windows-msvc"
-    : process.arch === "arm64" ? "aarch64-pc-windows-msvc" : null;
+  const architecture = process.arch === "x64" ? "x86_64" : process.arch === "arm64" ? "aarch64" : null;
+  const suffix = process.platform === "win32" ? "pc-windows-msvc" : process.platform === "darwin" ? "apple-darwin" : process.platform === "linux" ? "unknown-linux-musl" : null;
+  const target = architecture && suffix ? `${architecture}-${suffix}` : null;
   if (!target) return null;
   const vendorRoots: string[] = [];
   try {
-    const platformManifest = createRequire(manifest).resolve(`@openai/codex-win32-${process.arch}/package.json`);
+    const platformManifest = createRequire(manifest).resolve(`@openai/codex-${process.platform}-${process.arch}/package.json`);
     vendorRoots.push(path.join(path.dirname(platformManifest), "vendor"));
   } catch { /* Older CLI packages keep vendor files in the main package. */ }
   vendorRoots.push(path.join(packageRoot, "vendor"));
   for (const vendorRoot of vendorRoots) {
     const targetRoot = path.join(vendorRoot, target);
     for (const directory of ["bin", "codex"]) {
-      const executablePath = path.join(targetRoot, directory, "codex.exe");
+      const executablePath = path.join(targetRoot, directory, process.platform === "win32" ? "codex.exe" : "codex");
       if (isFile(executablePath)) return { executablePath, pathDirectories: companionPaths(targetRoot) };
     }
   }

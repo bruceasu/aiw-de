@@ -73,7 +73,7 @@ $env:AIW_CODEX_PATH="codex"
 java -cp out me.asu.aidev.worker.example.CodexJavaWorker
 ```
 
-单机 Demo 可以不设置 `AIW_GIT_PUBLISH_REMOTE`；跨机器 Worker 应配置共同 Git remote。
+Worker 禁止 `git push`，不要设置 `AIW_GIT_PUBLISH_REMOTE`。代码任务的后续 Worker 应能访问同一本地 Git 仓库；跨机器交接需由独立受控发布服务处理。
 
 ### 可选：使用 R10 流程专职 Worker
 

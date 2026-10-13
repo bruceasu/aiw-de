@@ -1,0 +1,26 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-research",
+  "fd_id": "FD-014",
+  "source_event": "FD-014-000012-work-requested",
+  "human_report": "FD-014-no-store-source-review-linux-r1.md",
+  "data": {
+    "summary": "下载现有 Go 依赖并通过一次 Linux 编译重试；核对固定 CLI 源码，发现独立 SQLite/日志通道及已移除的 sqlite 开关。提出待确认的 Linux 内存隔离部署准入边界，未宣称禁存或生产候选验证通过。",
+    "official_tag": "rust-v0.162.1",
+    "tag_object": "7a078f6bb4ce0dc2a81408b334ce52979d92c603",
+    "source_commit": "092d3acd6bec3e3a14bdc7e7a2810ab628ab759d",
+    "commands": [
+      "GOTOOLCHAIN=local GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org go mod download github.com/BurntSushi/toml@v1.6.0",
+      "GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off go build -o /dev/null ."
+    ],
+    "results": [
+      "Existing fixed dependency downloaded without dependency upgrade.",
+      "One authorized Linux compilation retry passed; no distributable retained.",
+      "Pinned official source shows App Server SQLite/log initialization independent of per-thread ephemeral settings.",
+      "The sqlite feature is Stage::Removed; RUST_LOG's stderr filter does not certify the independently filtered database log sink.",
+      "No tests, real model turn, disk-write monitoring, host configuration changes, deployment or Reviewer action ran."
+    ],
+    "proposal": "User accepted Linux memory-isolated production admission and clarified support for explicit API Key/ChatGPT switching. Host isolation and identity-bound admission evidence still require a concrete verified deployment contract.",
+    "residual_risk": "No memory-isolated deployment or Linux no-store runtime evidence exists. The architecture decisions are confirmed, but isolation launch mechanism and credential boundaries remain unresolved. Original 1.6 is superseded by 1.6.1–1.6.6; only source/design item 1.6.1 is complete."
+  }
+}

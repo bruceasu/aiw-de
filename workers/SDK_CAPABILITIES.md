@@ -1,5 +1,19 @@
 # Worker SDK 能力基线
 
+## 当前决定：移除 TypeScript Codex SDK，直接使用系统 App Server
+
+用户要求 Worker 分发完全不带本地 Codex 包。已移除 @openai/codex-sdk 及其传递依赖 @openai/codex，清理旧 SDK adapter。TypeScript Runtime 明确支持 codex-cli 与 codex-app-server 两个目标入口，分别从 AIW_CODEX_PATH/PATH 调用系统 codex exec 或 codex app-server，不自动下载或回退。两个 adapter 已实现独立 Exec 与共享 App Server 本地执行；事件/取消/ephemeral 和结果策略静态接入。生产认证由 FD-015 承接；未运行真实 CLI/模型，不借用 Go 证据宣称 TypeScript 运行通过。
+
+OpenAI API backend 继续使用 @openai/agents 0.20.0、openai 7.32.0、zod 4.6.7。以下 Codex SDK 安装和源码核对记录是此前阶段历史，不代表当前依赖或当前运行能力。
+
+## FD-016 SDK 更新基线（2026-10-13）
+
+经 npm latest 查询并安装，TypeScript 依赖已固定为 @openai/codex-sdk 0.162.1、@openai/agents 0.20.0、openai 7.32.0、zod 4.6.7；package-lock 同步。Agents 0.20.0 要求 Zod ^4 并依赖 OpenAI ^7.2，配套依赖随之升级。安装使用 --ignore-scripts --omit=optional --no-audit --no-fund，没有启动 SDK/CLI 或调用模型。
+
+安装包源码：Codex SDK dist/index.js 的 CodexExec.run 仍以 ["exec", "--experimental-json"] 启动原生 CLI；公开导出未提供 App Server 客户端。TypeScript 可以按官方 App Server 协议通过 stdio/JSON-RPC 接入，但需要独立 Runtime 适配器，不是升级此 SDK 自动获得的能力。[官方 SDK 文档](https://learn.chatgpt.com/docs/codex-sdk)、[官方 App Server 文档](https://learn.chatgpt.com/docs/app-server)。
+
+仅依赖与版本准入常量已更新。新版本的工具参数、流式终态、usage、取消、tracing、store 和禁存契约仍需 FD-016 迁移核对，不声明运行认证完成。下文旧版本的 SDK 源码分析与测试保留为历史，不能用于新版准入认证。
+
 来源：FD-005，2026-10-04/05 的本地安装源码和经授权下载的固定 Python wheel。API 安装命令 `npm install --ignore-scripts --no-audit --no-fund` 已获授权并成功执行。没有调用模型或部署端点。
 
 ## API TypeScript

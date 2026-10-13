@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-011",
+  "source_event": "FD-011-000002-design-requested",
+  "human_report": "FD-011-blocker-preflight-20261013-a71c93.md",
+  "data": {
+    "stage": "Preflight",
+    "role": "pm",
+    "observed_symptom": "Parent master workspace contains 2093 tracked Zone.Identifier deletions; required blocker templates are absent.",
+    "confirmed_cause": "Tracked unrelated metadata deletions make the parent dirty. Their intended disposition is unknown. Both referenced docs/templates blocker files are missing.",
+    "recovery_attempts": [
+      "Read repository instructions, FD and approved ISSUE-00001; aiw fd show confirmed the pending Planner event.",
+      "Inspected git status and diff stat; preserved existing deletions without staging or restoring them.",
+      "Searched repository templates and prior blocker evidence; used the historical FD-006 feedback structure because the required templates are absent.",
+      "On Auto resume, git status --short and git diff --shortstat returned no changes; parent cleanliness blocker is resolved. Missing templates remain a separately scoped improvement."
+    ],
+    "status": "resolved",
+    "resolved_at": "2026-10-13T03:46:05.722085+00:00",
+    "human_decision_need": "none",
+    "next_step_or_risk": "Continue Planner. Feedback template absence is handled with the historical evidence structure.",
+    "reusable_improvement": "Missing blocker templates were already reported by FD-006; provide the referenced templates and reconcile installation paths through a separately scoped reviewed change."
+  }
+}

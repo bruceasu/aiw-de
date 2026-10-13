@@ -1,0 +1,41 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-011",
+  "source_event": "FD-011-000005-implementation-ready",
+  "human_report": "FD-011-review-r1.md",
+  "data": {
+    "reviewer_session": "fd011-reviewer-20261013-7d093b",
+    "fd_revision": 5,
+    "fd_digest": "6387b463417760f1d312dacbbf4c5b3d6d0a5bc2ea8eb850eed3c8c512218168",
+    "review_base": "2a96a71e984e0591441c383e03a4dd1a492c2cfc",
+    "reviewed_commit": "02162e00d7c6fa9ac7b589dce17ec48643c314d1",
+    "result": "verification-passed",
+    "findings": [],
+    "acceptance_results": [
+      {"id": 1, "status": "supported-static", "evidence": "Draft inserts plan only; session/operator/CSRF protected confirm creates tasks."},
+      {"id": 2, "status": "supported-static", "evidence": "Bounded selected EXTERNAL_WORK DAG; copied immutable spec becomes new DRAFT."},
+      {"id": 3, "status": "supported-static", "evidence": "Required supports filter; preference score follows effective priority without excluding workers."},
+      {"id": 4, "status": "supported-static", "evidence": "Model validation; CAS and graph writes within @Transactional; idempotent confirmed retry."},
+      {"id": 5, "status": "supported-static", "evidence": "Sorted task locks, active-state rollback, inactive conditional cancellation and audit; completed preserved."},
+      {"id": 6, "status": "supported-static", "evidence": "Append-only migration; old DTOs, sorting tie breakers, constructors and lease/dependency paths retained."}
+    ],
+    "commands": [
+      "aiw fd show FD-011",
+      "aiw fd claim --help",
+      "aiw fd emit --help",
+      "aiw fd claim FD-011 FD-011-000005-implementation-ready --session fd011-reviewer-20261013-7d093b",
+      "git diff --stat master",
+      "git diff master -- src/main",
+      "git diff master -- README.md docs/current-zh/FLEXIBLE-WORKFLOW-PLANS.md",
+      "git status --short",
+      "git rev-parse HEAD master",
+      "cat/sed/rg targeted repository instructions, Issue, Worker evidence and relevant contracts/implementations",
+      "aiw fd emit FD-011 verification-passed --producer reviewer --artifact docs/features/reviews/FD-011-review-r1.md --source-event FD-011-000005-implementation-ready",
+      "git add docs/features/reviews/FD-011-review-r1.md docs/features/reviews/FD-011-review-r1.json docs/features/FD-011_WORKER.md docs/features/FEATURE_INDEX.md",
+      "git commit -m 'FD-011: record independent verification pass'"
+    ],
+    "checks_not_run": ["tests", "compile", "migration execution", "application/HTTP smoke", "database concurrency validation", "format/lint/type checks", "final build", "network"],
+    "residual_risk": "JSON roundtrip, SQLite/PostgreSQL migration and concurrency runtime remain unexecuted; inherited local-console unauthenticated mode requires production authentication configuration."
+  }
+}

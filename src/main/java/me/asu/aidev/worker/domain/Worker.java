@@ -31,6 +31,6 @@ public record Worker(
     }
 
     public boolean supports(Set<String> requiredCapabilities) {
-        return capabilities.contains("*") || capabilities.containsAll(requiredCapabilities);
+        return capabilities.containsAll(requiredCapabilities);
     }
 }

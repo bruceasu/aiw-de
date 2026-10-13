@@ -1,0 +1,12 @@
+<div th:fragment="guide" xmlns:th="http://www.thymeleaf.org">
+  <p class="help">A role describes the work performed; a technical capability describes the expertise or toolchain actually available. The Worker's implementation language does not grant a task capability. These names are suggested labels, not a list of installed tools.</p>
+  <div class="table-wrap"><table><thead><tr><th>Capability</th><th>Use for</th><th>Typical roles when qualified</th></tr></thead><tbody>
+    <tr><td><code>typescript</code>, <code>node</code></td><td>TypeScript source and Node tooling</td><td>coder, repairer, integrator, reviewer, verifier</td></tr>
+    <tr><td><code>go</code></td><td>Go source and its toolchain</td><td>coder, repairer, integrator, reviewer, verifier</td></tr>
+    <tr><td><code>python</code></td><td>Python source and its toolchain</td><td>coder, repairer, integrator, reviewer, verifier</td></tr>
+    <tr><td><code>java</code>, <code>spring</code></td><td>Java and Spring work</td><td>coder, repairer, integrator, reviewer, verifier</td></tr>
+    <tr><td><code>sql</code>, <code>postgresql</code></td><td>SQL work and PostgreSQL specifics</td><td>architect, coder, reviewer, verifier when qualified</td></tr>
+    <tr><td><code>database-design</code></td><td>Schema, constraints, indexes and migration design</td><td>architect and qualified reviewer</td></tr>
+  </tbody></table></div>
+  <p class="help">Use a role as required. Require a technical capability only when the step cannot be completed without it; otherwise prefer it. A requirements step need not require the later implementation language. Preferred skills give available specialists a 30-second claim window; required capabilities cannot be bypassed. Workers cannot run git push. Code handoff uses local result revisions in a shared repository.</p>
+</div>

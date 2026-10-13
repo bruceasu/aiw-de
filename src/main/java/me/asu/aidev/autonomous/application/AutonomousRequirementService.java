@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
 public class AutonomousRequirementService {
     public static final String SUBJECT_TYPE = "AUTONOMOUS_REQUIREMENT";
     private final WorkTaskService tasks;

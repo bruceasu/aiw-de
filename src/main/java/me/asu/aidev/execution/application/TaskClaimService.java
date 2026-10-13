@@ -27,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskClaimService {
+    private static final Duration SPECIALIST_WINDOW = Duration.ofSeconds(30);
+    private static final Duration WORKER_FRESHNESS = Duration.ofSeconds(90);
     private final WorkTaskRepository tasks;
     private final WorkerRepository workers;
     private final ExecutionAttemptRepository attempts;
@@ -34,6 +36,7 @@ public class TaskClaimService {
     private final List<TaskClaimPolicy> claimPolicies;
     private final List<TaskConcurrencyBudget> concurrencyBudgets;
     private final AiProfileCatalog aiProfiles;
+    private final me.asu.aidev.workflow.port.WorkflowPlanRepository planPreferences;
     private final Clock clock;
     private final Duration leaseDuration;
 
@@ -44,8 +47,18 @@ public class TaskClaimService {
                             TaskDependencyRepository dependencies,
                             List<TaskClaimPolicy> claimPolicies,
                             List<TaskConcurrencyBudget> concurrencyBudgets,
+                            AiProfileCatalog aiProfiles,
+                            me.asu.aidev.workflow.port.WorkflowPlanRepository planPreferences) {
+        this(tasks, workers, attempts, dependencies, claimPolicies, concurrencyBudgets, aiProfiles,
+                Clock.systemUTC(), Duration.ofSeconds(60), planPreferences);
+    }
+
+    public TaskClaimService(WorkTaskRepository tasks, WorkerRepository workers,
+                            ExecutionAttemptRepository attempts, TaskDependencyRepository dependencies,
+                            List<TaskClaimPolicy> claimPolicies, List<TaskConcurrencyBudget> concurrencyBudgets,
                             AiProfileCatalog aiProfiles) {
-        this(tasks, workers, attempts, dependencies, claimPolicies, concurrencyBudgets, aiProfiles, Clock.systemUTC(), Duration.ofSeconds(60));
+        this(tasks, workers, attempts, dependencies, claimPolicies, concurrencyBudgets, aiProfiles,
+                Clock.systemUTC(), Duration.ofSeconds(60), null);
     }
 
     TaskClaimService(WorkTaskRepository tasks,
@@ -57,6 +70,15 @@ public class TaskClaimService {
                      AiProfileCatalog aiProfiles,
                      Clock clock,
                      Duration leaseDuration) {
+        this(tasks, workers, attempts, dependencies, claimPolicies, concurrencyBudgets, aiProfiles, clock, leaseDuration, null);
+    }
+
+    TaskClaimService(WorkTaskRepository tasks, WorkerRepository workers,
+                     ExecutionAttemptRepository attempts, TaskDependencyRepository dependencies,
+                     List<TaskClaimPolicy> claimPolicies, List<TaskConcurrencyBudget> concurrencyBudgets,
+                     AiProfileCatalog aiProfiles, Clock clock, Duration leaseDuration,
+                     me.asu.aidev.workflow.port.WorkflowPlanRepository planPreferences) {
+        this.planPreferences = planPreferences;
         this.tasks = tasks;
         this.workers = workers;
         this.attempts = attempts;
@@ -74,13 +96,29 @@ public class TaskClaimService {
         var worker = workers.find(workerId)
                 .orElseThrow(() -> new IllegalStateException("worker not found: " + workerId.value()));
 
+        var preferred = planPreferences == null ? java.util.Map.<me.asu.aidev.work.domain.TaskId, java.util.Set<String>>of()
+                : planPreferences.preferences();
+        var available = preferred.isEmpty() ? List.<me.asu.aidev.worker.domain.Worker>of()
+                : workers.findAvailable(now.minus(WORKER_FRESHNESS));
         var rankedCandidates = PullSchedulingPolicy.rank(
                 tasks.findReadySchedulingCandidates().stream()
                         .filter(candidate -> worker.supports(candidate.task().requiredCapabilities()))
                         .toList(),
-                now);
+                now, candidate -> {
+                    var skills = preferred.getOrDefault(candidate.task().id(), java.util.Set.of());
+                    return (int) skills.stream().filter(worker.capabilities()::contains).count();
+                });
         for (var schedulingCandidate : rankedCandidates) {
             var candidate = schedulingCandidate.task();
+            var skills = preferred.getOrDefault(candidate.id(), java.util.Set.<String>of());
+            if (!skills.isEmpty() && now.isBefore(candidate.updatedAt().plus(SPECIALIST_WINDOW))) {
+                int currentScore = (int) skills.stream().filter(worker.capabilities()::contains).count();
+                boolean betterAvailable = available.stream().anyMatch(other -> !other.id().equals(workerId)
+                        && other.supports(candidate.requiredCapabilities())
+                        && aiProfiles.canRun(candidate.type(), other.runtimeType())
+                        && skills.stream().filter(other.capabilities()::contains).count() > currentScore);
+                if (betterAvailable) continue;
+            }
             if (!aiProfiles.canRun(candidate.type(), worker.runtimeType())) continue;
             boolean allowed = true;
             for (TaskClaimPolicy policy : claimPolicies) {

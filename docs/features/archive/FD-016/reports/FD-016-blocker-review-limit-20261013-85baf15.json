@@ -1,0 +1,25 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-016",
+  "source_event": "FD-016-000018-changes-requested",
+  "human_report": "FD-016-blocker-review-limit-20261013-85baf15.md",
+  "data": {
+    "stage": "PM independent Reviewer dispatch gate",
+    "role": "pm",
+    "observed_symptom": "Three Reviewer outcomes consumed; integrated delivery required R4/R5 fixes after a parent merge.",
+    "confirmed_cause": "Auto caps cumulative Reviewer outcomes at three; latest integrated result requested changes even though only two reviews failed.",
+    "recovery_attempts": [
+      "Preserved outcomes changes-requested, verification-passed, changes-requested; did not reset count.",
+      "Claimed actionable Worker handoff because there have not been three failed outcomes; completed concrete R4/R5 fixes before requesting permission.",
+      "Ran one compile-only and one targeted static release-source check; both passed.",
+      "Prepared current Dual Worker report; no fourth Reviewer spawned and no stale pass used for delivery.",
+      "User explicitly authorized one additional independent review and local delivery/archive after its pass; total cap extended to four, not reset."
+    ],
+    "status": "resolved",
+    "resolved_at": "2026-10-13T06:00:34.948350+00:00",
+    "human_decision_need": "none; one additional review explicitly authorized",
+    "next_step_or_risk": "Claim the fresh Reviewer handoff; no tests, CLI/model or builds authorized; stop if the fourth review requests changes.",
+    "reusable_improvement": "Treat generated-index/parent integration conflicts as a normal managed recovery; assess review-budget consumption for concurrent parent changes in a separately approved workflow change. Missing blocker templates remain a separate tooling gap."
+  }
+}

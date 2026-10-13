@@ -1,0 +1,80 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-016",
+  "source_event": "FD-016-000012-implementation-ready",
+  "human_report": "FD-016-review-local-r1.md",
+  "data": {
+    "session_ref": "fd016-reviewer-20261013-a9e28b61",
+    "diff_base": "3e13f49",
+    "reviewed_commit": "21afd675474a0f929adb32d99dc7d62d0c98a0e1",
+    "outcome": "changes-requested",
+    "review_number": 1,
+    "findings": [
+      {
+        "id": "R1",
+        "severity": "P1",
+        "path": "workers/process-typescript/src/app-server-adapter.ts",
+        "line": 71,
+        "title": "turn/start 提升管理员配置的只读 sandbox",
+        "description": "写角色允许 AIW_CODEX_SANDBOX=read-only；thread/start 传入并验证 readOnly，但 turn/start 只按 profile.readOnly 分支，写角色被覆盖为 workspaceWrite。Exec 则保留 settings.sandbox，两个模式权限不一致。",
+        "correction": "由同一有效 sandbox 生成 thread/start 与 turn/start 权限；显式只读配置不得被写角色提升。",
+        "acceptance": [
+          5,
+          7,
+          11,
+          12
+        ]
+      },
+      {
+        "id": "R2",
+        "severity": "P1",
+        "path": "workers/process-typescript/src/codex-process.ts",
+        "line": 95,
+        "title": "Windows taskkill 失败被父进程退出掩盖",
+        "description": "terminate 在 taskkill 非零且原父进程已经 close 时继续执行；treeGone 在 Windows 只检查 exited 后直接返回 true。无法杀死或核对父进程留下的子操作时，Exec 仍报告已结算，允许清理工作区或 stop acknowledgement。",
+        "correction": "taskkill 非零/不可核对不得因父进程已 close 而成为成功；保留未知进程树状态并阻止清理/确认。若平台无法提供所需能力，应明确拒绝或保持未知，而非宣传终止已确认。",
+        "acceptance": [
+          7,
+          11,
+          12
+        ]
+      },
+      {
+        "id": "R3",
+        "severity": "P2",
+        "path": "workers/process-typescript/src/app-server-adapter.ts",
+        "line": 51,
+        "title": "未消费 authoritative agentMessage 完成正文",
+        "description": "item/completed 只记工具终态，忽略 agentMessage.text。若最终正文由 item/completed 给出、turn/completed.items 为空，当前逻辑只能依赖此前 delta；无 delta 时有效完成被拒绝，只有 commentary delta 时可能将 commentary 当作 REPORT/WORKSPACE 的 PASS summary。固定 schema 的 AgentMessage 具有完整 text，而 Turn.items 允许空数组，不能以 delta 串代替权威最终结果。",
+        "correction": "按 item id/phase 消费并校验完成的 agentMessage 正文，优先最终完成消息；对最终文本执行同一输出预算，不把 commentary 或缺失最终结果当成功。",
+        "acceptance": [
+          5,
+          6,
+          11,
+          12
+        ]
+      }
+    ],
+    "results": [
+      "Static evidence supports unified profiles, role/skill/result routing, lease lifecycle and removal of local TypeScript Codex packages.",
+      "Three actionable behavior defects block acceptance; production certification remains FD-015."
+    ],
+    "commands": [
+      "read-only targeted git diff/source/receipt reads",
+      "aiw fd show FD-016",
+      "aiw fd claim FD-016 FD-016-000012-implementation-ready --session fd016-reviewer-20261013-a9e28b61",
+      "aiw fd emit --help",
+      "Python urllib read-only pinned rust-v0.162.1 protocol schema requests (two standalone-definition paths 404; corrected to embedded definitions)"
+    ],
+    "checks_not_run": [
+      "tests",
+      "type checks",
+      "compile rerun",
+      "real CLI/model",
+      "release build",
+      "deployment"
+    ],
+    "residual_risk": "真实并发、平台进程树、SDK 类型/端点与取消未经运行验证；远端 thread 资源边界未认证；生产禁存和认证归 FD-015。"
+  }
+}

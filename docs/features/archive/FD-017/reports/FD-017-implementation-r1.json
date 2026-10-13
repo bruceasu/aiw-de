@@ -1,0 +1,33 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-017",
+  "source_event": "FD-017-000004-design-ready",
+  "human_report": "FD-017-implementation-r1.md",
+  "data": {
+    "summary": "新增灵活计划 Web Console、可信模板/编辑/预览/确认与独立只读 Worker AI 推荐；保留原 JSON API。",
+    "changed_paths": [
+      "src/main/java/me/asu/aidev/workflow/application/WorkflowEditorService.java",
+      "src/main/java/me/asu/aidev/workflow/application/WorkflowRecommendationService.java",
+      "src/main/java/me/asu/aidev/workflow/protocol/http/WorkflowEditorController.java",
+      "src/main/java/me/asu/aidev/webconsole/protocol/http/WorkflowConsoleModelAdvice.java",
+      "src/main/resources/templates/ui",
+      "src/main/resources/static/ui/workflow-editor.js",
+      "src/main/resources/static/ui/console.css",
+      "src/main/resources/application.yaml",
+      "docs/current-zh/FLEXIBLE-WORKFLOW-PLANS.md",
+      "docs/features/FD-017_WEB_CONSOLE_AI.md"
+    ],
+    "commands": [
+      "mvn -o -q -DskipTests compile",
+      "mvn -o -q -DskipTests compile",
+      "git diff --check master...HEAD"
+    ],
+    "results": [
+      "compile exit 0",
+      "compile exit 0",
+      "no whitespace error before final small fixes"
+    ],
+    "residual_risk": "No runtime/browser/model/database validation. Final Java/JS small fixes after last compile/diff command. Recommendation policy availability does not prove a live worker, budget, or model output quality."
+  }
+}

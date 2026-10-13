@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import tomllib
 from dataclasses import dataclass
@@ -13,11 +13,10 @@ ROLE_FILES = {
     "coder": "coding-executor",
     "integrator": "integration-executor",
     "reviewer": "code-reviewer",
+    "stage-reviewer": "stage-reviewer",
     "verifier": "verifier",
     "integration-verifier": "integration-verifier",
     "repairer": "repair-executor",
-    "release-readiness": "release-readiness-manager",
-    "orchestrator": "software-development-orchestrator",
 }
 
 
@@ -31,6 +30,7 @@ class ProcessProfile:
     primary_skill: str
     instruction: str
     writable: bool
+    result_kind: str
 
 
 def load_profile(path: Path) -> ProcessProfile:
@@ -38,7 +38,7 @@ def load_profile(path: Path) -> ProcessProfile:
         raise ValueError(f"profile must be a .toml file: {path}")
     with path.open("rb") as stream:
         data = tomllib.load(stream)
-    required = {"name", "workerIdPrefix", "roleCapability", "allowedTaskTypes", "protocolSkills", "primarySkill", "instruction", "readOnly"}
+    required = {"name", "workerIdPrefix", "roleCapability", "allowedTaskTypes", "protocolSkills", "primarySkill", "instruction", "readOnly", "resultKind"}
     if set(data) != required:
         raise ValueError(f"invalid profile {path}: missing={sorted(required - set(data))}, unknown={sorted(set(data) - required)}")
     for key in ("name", "workerIdPrefix", "roleCapability", "primarySkill", "instruction"):
@@ -49,11 +49,17 @@ def load_profile(path: Path) -> ProcessProfile:
             raise ValueError(f"invalid profile {path}: {key} must be a nonempty string array")
     if type(data["readOnly"]) is not bool:
         raise ValueError(f"invalid profile {path}: readOnly must be a boolean")
+    if data["allowedTaskTypes"] != ["EXTERNAL_WORK"]:
+        raise ValueError(f"invalid profile {path}: allowedTaskTypes must be [EXTERNAL_WORK]")
+    if data["resultKind"] not in {"REPORT", "VERDICT", "WORKSPACE"}:
+        raise ValueError(f"invalid profile {path}: unknown resultKind")
+    if (data["resultKind"] == "WORKSPACE") != (not data["readOnly"]):
+        raise ValueError(f"invalid profile {path}: resultKind conflicts with readOnly")
     return ProcessProfile(
         name=data["name"], worker_id_prefix=data["workerIdPrefix"],
         capabilities=(data["roleCapability"],), task_types=tuple(data["allowedTaskTypes"]),
         protocol_skills=tuple(data["protocolSkills"]), primary_skill=data["primarySkill"],
-        instruction=data["instruction"], writable=not data["readOnly"],
+        instruction=data["instruction"], writable=not data["readOnly"], result_kind=data["resultKind"],
     )
 
 
@@ -62,8 +68,6 @@ PROFILES = {role: load_profile(PROFILE_DIR / f"{filename}.toml") for role, filen
 
 def get_profile(name: str, task_type: str | None = None) -> ProcessProfile:
     key = name.strip().lower()
-    if key == "verifier" and task_type == "INTEGRATION_VERIFICATION":
-        key = "integration-verifier"
     try:
         return PROFILES[key]
     except KeyError as exc:

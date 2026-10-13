@@ -2,12 +2,10 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org"><body>
 <nav class="sidebar" th:fragment="nav(active)">
   <div class="brand"><div class="brand-mark">AIW</div><div><strong>AI Dev Manager</strong><span>Web Console · R9</span></div></div>
-  <a th:classappend="${active == 'dashboard' ? 'active' : ''}" href="/ui">Overview</a>
-  <a th:if="${canOperate}" th:classappend="${active == 'new-run' ? 'active' : ''}" href="/ui/runs/new">New Run</a>
-  <a th:classappend="${active == 'runs' ? 'active' : ''}" href="/ui/runs">Runs</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'new-plan' ? 'active' : ''}" href="/ui/plans/new">New Plan</a>
+  <a th:classappend="${active == 'plans' ? 'active' : ''}" href="/ui/plans">Plans</a>
   <a th:if="${canOperate}" th:classappend="${active == 'workspaces' ? 'active' : ''}" href="/ui/workspaces">Workspaces</a>
   <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Fleet</a>
-  <a th:classappend="${active == 'approvals' ? 'active' : ''}" href="/ui/approvals">Approvals</a>
   <a th:classappend="${active == 'system' ? 'active' : ''}" href="/ui/system">System</a>
   <div class="sidebar-note"><strong th:text="${consolePrincipal}">local-console</strong><br/><span th:text="${consoleRole}">ADMIN</span><br/>Authority remains in the Control Plane.</div>
 </nav>

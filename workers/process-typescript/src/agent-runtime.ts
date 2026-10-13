@@ -28,7 +28,7 @@ export interface AgentRuntimeCapabilities {
 
 /** Local execution engine. The Control Plane still owns task and lease state. */
 export interface AgentRuntime {
-  readonly type: "codex-sdk" | "openai-agents";
+  readonly type: "codex-cli" | "codex-app-server" | "openai-agents";
   readonly capabilities: AgentRuntimeCapabilities;
   run(request: AgentRunRequest): Promise<AgentRunResult>;
   settled?(timeoutMs?: number): Promise<void | boolean>;

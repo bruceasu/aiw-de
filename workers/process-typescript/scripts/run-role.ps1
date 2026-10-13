@@ -1,9 +1,9 @@
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("requirements","architect","planner","coder","integrator","reviewer","verifier","integration-verifier","repairer")]
+    [ValidateSet("requirements","architect","planner","coder","integrator","reviewer","stage-reviewer","verifier","integration-verifier","repairer")]
     [string]$Role,
     [Parameter(Mandatory=$true)]
-    [ValidateSet("codex-sdk","openai-agents")]
+    [ValidateSet("codex-cli","codex-app-server","openai-agents")]
     [string]$Runtime
 )
 $ErrorActionPreference = "Stop"
@@ -14,7 +14,7 @@ if ($env:AIW_AGENT_RUNTIME -and $env:AIW_AGENT_RUNTIME -cne $Runtime) {
 $env:AIW_PROCESS_ROLE = $Role
 $env:AIW_AGENT_RUNTIME = $Runtime
 if (-not $env:AIW_WORKER_ID) {
-    $env:AIW_WORKER_ID = if ($Runtime -eq "codex-sdk") { "process-$Role-1" } else { "process-api-$Role-1" }
+    $env:AIW_WORKER_ID = if ($Runtime -eq "codex-cli") { "process-exec-$Role-1" } elseif ($Runtime -eq "codex-app-server") { "process-$Role-1" } else { "process-api-$Role-1" }
 }
 node "$PSScriptRoot/../dist/index.js"
 exit $LASTEXITCODE

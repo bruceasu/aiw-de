@@ -11,8 +11,8 @@ Source basis: the frozen R2 architecture defines nine core Skills and a Java-own
 | coding-work-package-executor | primary/lifecycle skill | Coding Executor worker | active |
 | software-test-verifier | primary/lifecycle skill | Verifier + Integration Verifier workers | active |
 | software-code-reviewer | primary/lifecycle skill | Code Reviewer worker | active |
-| release-readiness-manager | primary/lifecycle skill | preserved profile | blocked: no R9 task type |
-| software-development-orchestrator | advisory skill | preserved profile | blocked: no R9 task type; must never become scheduler authority |
+| release-readiness-manager | primary/lifecycle skill | preserved profile | advisory only; execution denied |
+| software-development-orchestrator | advisory skill | preserved profile | advisory only; execution denied; must never become scheduler authority |
 
 R9-native execution roles retained in addition to R2:
 
@@ -39,3 +39,5 @@ Workers may not:
 - become the scheduler;
 - widen repository or sandbox permissions;
 - treat hidden Codex session state as durable system authority.
+
+FD-016: executable roles all use EXTERNAL_WORK, exact primary skillRef, one role capability, and resultKind. No legacy task-type role switching is supported.

@@ -38,9 +38,9 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
         List<WorkerRow> workerRows = workers();
         List<TaskRow> unfinishedTasks = unfinishedTasks();
         FleetAdmissionBudget admissionBudget = admissionBudgets.snapshot();
-        RunCounts runCounts = runCounts();
-        List<RunRow> liveRuns = liveRuns();
-        Map<String, RunTaskStats> runTaskStats = runTaskStats();
+        RunCounts runCounts = new RunCounts(0, Map.of(), Map.of(), 0);
+        List<RunRow> liveRuns = List.of();
+        Map<String, RunTaskStats> runTaskStats = Map.of();
 
         FleetDashboard.WorkerFleet workers = workerFleet(workerRows, detailLimit);
         FleetDashboard.AdmissionBudget admission = new FleetDashboard.AdmissionBudget(
@@ -69,11 +69,9 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
                 SELECT wt.id,wt.task_type,wt.state,wt.subject_type,wt.subject_id,
                        wt.required_capabilities,wt.priority,wt.current_worker_id,wt.attempt_no,
                        wt.lease_expires_at_epoch_ms,wt.created_at_epoch_ms,
-                       ar.status AS run_status,ar.control_state AS run_control_state,
-                       ar.max_parallelism AS run_max_parallelism,ar.active_slots AS run_active_slots
+                       NULL AS run_status,NULL AS run_control_state,
+                       0 AS run_max_parallelism,0 AS run_active_slots
                   FROM work_task wt
-                  LEFT JOIN autonomous_run ar
-                    ON wt.subject_type='AUTONOMOUS_REQUIREMENT' AND ar.id=wt.subject_id
                  WHERE wt.state NOT IN ('COMPLETED','CANCELLED')
                  ORDER BY wt.priority DESC,wt.created_at_epoch_ms,wt.id
                 """, (rs, n) -> new TaskRow(

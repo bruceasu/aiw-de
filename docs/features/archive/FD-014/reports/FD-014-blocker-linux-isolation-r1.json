@@ -1,0 +1,26 @@
+{
+  "schema": "aiw.fd.blocker.v1",
+  "fd_id": "FD-014",
+  "stage": "linux-isolation-platform-design",
+  "role": "pm-planner",
+  "source_event": "FD-014-000014-work-requested",
+  "human_report": "FD-014-blocker-linux-isolation-r1.md",
+  "status": "resolved",
+  "observed_at": "2026-10-13",
+  "symptom": "The user-approved memory-isolated production boundary has no concrete verified Linux launcher/host contract. Both authentication modes are in scope, but their isolation and credential-refresh boundaries still need that deployment contract.",
+  "cause": "Pinned official CLI initializes independent persistent SQLite/log channels. Current Go startup directly launches the CLI. No verified isolation launcher, host non-persistence evidence or Linux no-store runtime evidence is present.",
+  "attempts": [
+    "Downloaded existing toml v1.6.0 and passed one authorized offline compilation retry.",
+    "Reviewed pinned official source commit 092d3acd6bec3e3a14bdc7e7a2810ab628ab759d and current official authentication/data-policy documentation.",
+    "Recorded user acceptance of memory isolation and clarification that API Key and ChatGPT authentication must both support explicit switching.",
+    "Split original unfinished 1.6 into stable child IDs, preserved full acceptance scope and refreshed the unclaimed Worker handoff through CLI.",
+    "Prepared concrete launcher, writable-path, memory, identity and evidence interfaces without installing or running an isolation tool or altering host configuration.",
+    "User chose Docker isolation for a later stage and directed local development now. Claimed FD-014-000016-work-requested and implemented local authentication selection under fd014-worker-linux-20261013-a83c26; one offline Go compilation passed. No runtime login or Docker validation ran."
+  ],
+  "human_decision_need": "None for FD-014 local closure; deferred production scope is recorded in FD-015.",
+  "resolution": "2026-10-13: user explicitly narrowed FD-014 to local Go Runtime and dual-auth support. This workflow Gate is resolved by scope transfer to FD-015, not by passing production/runtime verification. Original missing evidence remains unperformed.",
+  "next_step": "Independent review, local delivery and archive of revised FD-014; resume deferred FD-015 separately.",
+  "reusable_improvement": "Missing blocker templates and cross-platform workspace checks warrant separate scoped tooling work.",
+  "deferred_by_user": true,
+  "transferred_to": "FD-015"
+}

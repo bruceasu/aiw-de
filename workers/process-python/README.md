@@ -1,5 +1,9 @@
 # R10 R2 Process Workers (Python)
 
+## FD-016 profile transition
+
+Bundled profiles accept only `EXTERNAL_WORK` and require nine fields including `resultKind`: `REPORT`, `VERDICT`, or `WORKSPACE`. Old task types and eight-field profiles are rejected. The launch role fixes the capability, exact `skillRef` and result kind; verifier never switches to integration-verifier. Release-readiness and orchestrator remain non-executable advisory profiles. See the [shared contract](../WORKER_RUNTIME_CONTRACT.md). This is local delivery; runtime checks, model calls and production no-store certification are separate evidence.
+
 This worker runtime ports the **software-process execution side** of the frozen R2 implementation onto the R9 decentralized Worker Pull protocol.
 
 It deliberately does **not** port R2 lifecycle authority into workers. The R9 Java Control Plane remains authoritative for task state, leases, retries, run control, approvals, scheduling, engineering gates and persistence.
@@ -21,22 +25,23 @@ The OpenAI Agents runtime uses `openai-agents==0.23.1` with `openai==3.26.0`, re
 
 | Role | R9 task type(s) | R2 primary Skill | Workspace |
 |---|---|---|---|
-| `requirements` | `REQUIREMENT_ANALYSIS` | `software-requirements-analyst` | read-only |
-| `architect` | `SOLUTION_ARCHITECTURE` | `solution-architect` | read-only |
-| `planner` | `IMPLEMENTATION_PLANNING` | `implementation-planner` | read-only |
-| `coder` | `IMPLEMENTATION` | `coding-work-package-executor` | writable |
-| `integrator` | `INTEGRATION` | `coding-work-package-executor` | writable |
-| `reviewer` | `CODE_REVIEW` | `software-code-reviewer` | read-only |
-| `verifier` | `VERIFICATION`, `INTEGRATION_VERIFICATION` | `software-test-verifier` | read-only |
-| `integration-verifier` | `INTEGRATION_VERIFICATION` | `software-test-verifier` | read-only |
-| `repairer` | `REPAIR` | `coding-work-package-executor` | writable |
+| `requirements` | `EXTERNAL_WORK` | `software-requirements-analyst` | read-only |
+| `architect` | `EXTERNAL_WORK` | `solution-architect` | read-only |
+| `planner` | `EXTERNAL_WORK` | `implementation-planner` | read-only |
+| `coder` | `EXTERNAL_WORK` | `coding-work-package-executor` | writable |
+| `integrator` | `EXTERNAL_WORK` | `coding-work-package-executor` | writable |
+| `reviewer` | `EXTERNAL_WORK` | `software-code-reviewer` | read-only |
+| `stage-reviewer` | `EXTERNAL_WORK` | `workflow-stage-reviewer` | read-only |
+| `verifier` | `EXTERNAL_WORK` | `software-test-verifier` | read-only |
+| `integration-verifier` | `EXTERNAL_WORK` | `software-test-verifier` | read-only |
+| `repairer` | `EXTERNAL_WORK` | `coding-work-package-executor` | writable |
 
-Two additional frozen R2 profiles are preserved but are not executable in R9 because R9 has no corresponding TaskType yet:
+Two additional frozen R2 profiles are preserved in `profiles/advisory/` and their Skills in `skills/advisory/`; they are not executable in R9:
 
 - `release-readiness` -> `release-readiness-manager`
 - `orchestrator` -> `software-development-orchestrator`
 
-The `verifier` launch role registers both verification capabilities. For integration tasks it uses the `integration-verifier.toml` instruction.
+The `verifier` launch role registers only verification. Integration verification requires an independently launched `integration-verifier`.
 
 The complete frozen R2 `skills/` tree is retained under `skills/`. At execution time the worker composes:
 
@@ -66,7 +71,7 @@ Set common environment values first. Example PowerShell:
 $env:AIW_CONTROL_PLANE_URL = "http://127.0.0.1:8080"
 $env:AIW_REPOSITORY_REF = "core"
 $env:AIW_REPOSITORY_ROOT = "D:/03_projects/example-repo"
-$env:AIW_WORKER_CAPABILITIES = "java,maven"
+$env:AIW_WORKER_CAPABILITIES = "" # Configure per role only after confirming its actual tools and expertise.
 ```
 
 Then open separate terminals:
@@ -91,11 +96,12 @@ Linux / WSL:
 ./scripts/run-role.sh coder
 ./scripts/run-role.sh integrator
 ./scripts/run-role.sh reviewer
+./scripts/run-role.sh stage-reviewer
 ./scripts/run-role.sh verifier
 ./scripts/run-role.sh repairer
 ```
 
-You do not need all eight processes for a small test. A practical first fleet is:
+You do not need all ten executable roles for a small test. A practical first fleet is:
 
 ```text
 requirements x1
@@ -103,6 +109,7 @@ architect    x1
 planner      x1
 coder        x2
 reviewer     x1
+stage-reviewer x1
 verifier     x1
 repairer     x1
 ```
@@ -113,13 +120,13 @@ The same runtime can be horizontally replicated. Give every process a unique `AI
 
 The runtime automatically adds the role capability. For example, `requirements` registers `requirement-analysis`; `reviewer` registers `code-review`.
 
-`AIW_WORKER_CAPABILITIES` is therefore only for additional technical capabilities required by the run, for example:
+`AIW_WORKER_CAPABILITIES` is therefore only for technical capabilities actually available to that role, for example on a qualified coder:
 
 ```text
-java,maven,postgresql
+typescript,node,sql
 ```
 
-Repository capability `repo:<AIW_REPOSITORY_REF>` is added automatically.
+Repository capability `repo:<AIW_REPOSITORY_REF>` is added automatically. `*`, `repo:`, role capabilities and `flexible-work-v1` are reserved and rejected in the configured technical list. Do not share one technical list across every role. The initial TypeScript, Go, Python, SQL and database vocabulary is in [Worker capabilities](../../docs/current-zh/WORKER-CAPABILITIES.md).
 
 ## Permission boundary
 
@@ -129,9 +136,13 @@ R2's read-only rules are enforced by the runtime:
 - coder / integrator / repairer may use `AIW_CODEX_SANDBOX` (default `workspace-write`).
 
 A read-only profile cannot widen itself to `workspace-write` through environment configuration.
-The OpenAI API runtime exposes bounded workspace tools and does not expose shell execution.
+The OpenAI API runtime exposes bounded workspace tools and does not expose shell execution. Git push is forbidden: `AIW_GIT_PUBLISH_REMOTE` and writable Codex network access are rejected at startup. Return a local result revision from a shared repository.
 
 ## R2 source extraction
 
 See `../../docs/R10-R2-PROCESS-WORKER-EXTRACTION.md` for the exact mapping of R2 Java process code to the new workers and the list of authority code intentionally kept out of workers.
 
+
+## Flexible work contract
+
+All executable roles accept `EXTERNAL_WORK`. `skillRef` must equal the role’s primary Skill. REPORT and VERDICT roles are read-only; WORKSPACE roles require an assigned Git workspace and a 40/64-digit base revision. Reviews with code inputs must use the supplied resultRevision as their base. Tests need host authorization; Git push is forbidden; task text and reports cannot grant it. Plan proposals need manager confirmation; REPAIR_REQUIRED creates no automatic repair task.

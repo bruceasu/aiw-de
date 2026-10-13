@@ -13,6 +13,7 @@ AI Dev Manager is a Java Control Plane for a pull-based workforce of AI software
 ## Start here
 
 - [Quick Start](docs/current/QUICK-START.md)
+- [Docker: Java 25, Node.js 24 and Codex](docs/current-zh/DOCKER.md)
 - [3–5 minute Boss introduction](docs/current/BOSS-INTRO-3-5-MIN.md)
 - [Current documentation index — English](docs/current/README.md)
 - [当前正式文档 — 中文](docs/current-zh/README.md)
@@ -52,6 +53,45 @@ Start the default local SQLite profile:
 ```bash
 mvn spring-boot:run
 ```
+
+If a request fails with `NoClassDefFoundError` for a generated class such as
+`JdbcAutonomousRunDashboardRepository$1`, stop the application, rebuild the
+classes, and start a new JVM:
+
+```bash
+mvn -o -DskipTests clean compile
+mvn spring-boot:run
+```
+
+The offline compile requires dependencies already cached locally. Keep IDE
+compiler output separate from Maven's `target/classes`. Do not clean or overwrite
+that directory while a Maven-started application is running: its JVM may still
+reference generated classes from the previous compilation. The failed request
+may have created the run before its dashboard failed; check the run list before
+creating it again.
+
+Start with remote debugging enabled (default: `127.0.0.1:5005`):
+
+```bash
+./scripts/startup.sh
+# Wait for the debugger before starting the application:
+DEBUG_SUSPEND=y ./scripts/startup.sh
+# Extra application JVM options and Maven arguments:
+STARTUP_JVM_ARGS='--enable-native-access=ALL-UNNAMED' ./scripts/startup.sh -Dspring-boot.run.profiles=sqlite
+```
+
+For IntelliJ IDEA, create a **Remote JVM Debug** configuration with **Attach to
+remote JVM**, host `localhost`, port `5005`, and transport **Socket**. For a
+remote server, forward the port first, then use the same client settings:
+
+```bash
+ssh -N -L 5005:127.0.0.1:5005 user@server
+```
+
+For a direct connection, start with `DEBUG_ADDRESS='*:5005' ./scripts/startup.sh`
+and set the client's host to the server address. JDWP has no authentication;
+restrict access to the debugger client. `DEBUG_ADDRESS` can also select a
+different port. `DEBUG_SUSPEND` accepts `y` or `n` (default).
 
 When running with Java 25, SQLite JDBC loads its native library. Add
 `--enable-native-access=ALL-UNNAMED` to the application's JVM options to avoid
@@ -100,3 +140,7 @@ R9 Web Console adds no business table and no migration.
 R10 adds process-specialized Go, Python, and TypeScript worker fleets. These runtimes carry forward the frozen R2 Skill packages and compose R2 Protocol -> Primary Skill instructions while retaining the R9 decentralized Worker Pull/lease model. No Java Control Plane authority or database schema is moved into workers.
 
 Start with the [TypeScript](workers/process-typescript/README.md), [Go](workers/process-go/README.md), or [Python](workers/process-python/README.md) process-worker guide. The [Quick Start](docs/current/QUICK-START.md) shows the existing single-worker demo and how to launch a process-worker fleet; the [operations and maintenance guide](docs/current/06-OPERATIONS-GUIDE.md) covers role coverage, draining, and upgrades.
+
+### Flexible Worker delegation plans
+
+FD-011 adds opt-in, manager-confirmed workflow plans using the existing Worker pull and task dependency model. Enable `aidev.flexible-workflow.enabled=true` for the session/CSRF-protected management API. Drafts (including imported AI proposals) do not create executable work until an operator confirms them. See [the management contract](docs/current-zh/FLEXIBLE-WORKFLOW-PLANS.md) for selected steps, required/preferred skills, templates, and inactive-work withdrawal.

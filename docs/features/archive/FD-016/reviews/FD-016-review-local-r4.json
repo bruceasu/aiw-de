@@ -1,0 +1,40 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-016",
+  "source_event": "FD-016-000020-review-requested",
+  "human_report": "FD-016-review-local-r4.md",
+  "data": {
+    "session_ref": "fd016-reviewer-20261013-a9e28b61",
+    "diff_base": "0ec46d5",
+    "reviewed_commit": "58875c7c475ee01b38edbb27b28c600e390f9d9a",
+    "outcome": "verification-passed",
+    "review_number": 4,
+    "findings": [],
+    "resolved_findings": [
+      "R4: newbie/English runtime and release docs match implemented local scope.",
+      "R5: nonexistent unused bin removed from release/package files; all non-generated release sources exist."
+    ],
+    "results": [
+      "Acceptance 1–12 supported within approved local-delivery/static scope; prior runtime fixes unchanged.",
+      "New parent launcher/build retained, index consistent, no Codex manifest/lock packages.",
+      "Review-limit authorization resolved by explicit user extra-round permission; actual delivery blocker awaits merge."
+    ],
+    "commands": [
+      "read-only targeted receipt/status/HEAD/diff/rg/source/report reads",
+      "aiw fd claim FD-016 FD-016-000020-review-requested --session fd016-reviewer-20261013-a9e28b61",
+      "Python read-only release-path and manifest/lock inspection",
+      "git diff --check"
+    ],
+    "checks_not_run": [
+      "tests",
+      "type checks",
+      "compile rerun",
+      "real CLI/model/service",
+      "launcher",
+      "build/release",
+      "deployment"
+    ],
+    "residual_risk": "发行/构建未运行；SDK 类型/端点、真实并发/取消与Unix/WSL进程和路径未运行验证；原生 Windows TypeScript Codex 不可用；生产认证归 FD-015。"
+  }
+}

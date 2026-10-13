@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.blocker.v1",
+  "fd_id": "FD-014",
+  "stage": "local-implementation-checkpoint",
+  "role": "worker",
+  "source_event": "FD-014-000016-work-requested",
+  "human_report": "FD-014-blocker-local-stage-r1.md",
+  "status": "resolved",
+  "observed_at": "2026-10-13",
+  "symptom": "Ready local implementation item 1.6.4.1 is complete and compiled, while runtime evidence and user-deferred Docker/production admission are incomplete.",
+  "cause": "The user chose Docker but explicitly deferred handling it. Auto does not authorize new credential/model runtime checks or tests; no such evidence was produced by this source/compile-only implementation.",
+  "attempts": [
+    "Reconciled the FD with the user's Docker-later/local-now direction and split the authentication item without erasing historical scope.",
+    "Used CLI refresh-worker and claim for FD-014-000016-work-requested under fd014-worker-linux-20261013-a83c26.",
+    "Implemented shared explicit authentication context selection and native/RPC type checks, preserving inherit compatibility and avoiding login/logout or credential copies.",
+    "Ran one offline Linux Go compile-only command successfully; did not execute the new native/RPC paths, tests, Docker or production validation."
+  ],
+  "human_decision_need": "None for FD-014 local closure; deferred production scope is recorded in FD-015.",
+  "resolution": "2026-10-13: user explicitly narrowed FD-014 to local Go Runtime and dual-auth support. This workflow Gate is resolved by scope transfer to FD-015, not by passing production/runtime verification. Original missing evidence remains unperformed.",
+  "next_step": "Independent review, local delivery and archive of revised FD-014; resume deferred FD-015 separately.",
+  "reusable_improvement": "none",
+  "updates": [
+    {
+      "date": "2026-10-13",
+      "decision": "User accepts API Key availability and existing native ChatGPT login; local authentication runtime verification is waived for this round, not run or passed.",
+      "resolved_gate": "Request for two prepared authentication homes and authorization for this round of authentication checks.",
+      "remaining": "User-deferred Docker/production admission and incomplete Linux lifecycle evidence; full FD remains active."
+    }
+  ],
+  "transferred_to": "FD-015"
+}

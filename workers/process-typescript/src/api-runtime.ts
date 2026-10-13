@@ -61,7 +61,7 @@ export class ApiRuntime {
     await input.context.record(instructions);
     const effort = input.selection?.effort ?? this.cfg.reasoningEffort;
     const agent = new Agent({ name: input.profile.name, model: input.selection?.model ?? this.cfg.model, instructions, tools,
-      modelSettings: { parallelToolCalls: true, truncation: "disabled", store: false,
+      modelSettings: { parallelToolCalls: true, truncation: "disabled", store: false, preserveRawUsage: true,
         ...(effort && effort !== "none" ? { reasoning: { effort: effort as "minimal" | "low" | "medium" | "high" } } : {}) },
     });
     const runner = new Runner({ tracingDisabled: true, modelProvider: {
@@ -75,6 +75,7 @@ export class ApiRuntime {
     await result.completed;
     signal.throwIfAborted();
     if (typeof result.finalOutput !== "string" || !result.finalOutput.trim()) throw new InvalidAgentOutput("Agent must return a non-empty text report");
+    if (Buffer.byteLength(result.finalOutput, "utf8") > this.cfg.maxOutputChars) throw new InvalidAgentOutput("Agent output exceeds configured budget");
     return result.finalOutput;
   }
   async settled(timeoutMs?: number): Promise<boolean> { return this.host ? await this.host.settled(timeoutMs) : true; }

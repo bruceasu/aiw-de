@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Plans · AI Dev Manager</title><link rel="stylesheet" href="/ui/console.css"></head>
+<body><div class="app"><nav th:replace="~{ui/fragments :: nav('plans')}"></nav><main class="main">
+<header th:replace="~{ui/fragments :: topbar('Plans','Selected work and recorded decisions')}"></header>
+<div class="content workflow-page"><div th:replace="~{ui/fragments :: flash}"></div>
+<div class="section-title"><h2 th:text="${archivedView ? 'Archived plans' : 'Current plans'}"></h2>
+<div class="form-actions"><a class="btn ghost" th:href="@{/ui/plans}" th:if="${archivedView}">Current plans</a>
+<a class="btn ghost" th:href="@{/ui/plans(view='archived')}" th:unless="${archivedView}">Archived plans</a>
+<a th:if="${canOperate}" class="btn primary" href="/ui/plans/new">Create plan</a></div></div>
+<div class="card"><p class="muted">A draft stores selected steps. Confirm it to create Worker tasks. Completed work remains available after a plan is stopped or archived.</p>
+<div class="table-wrap"><table><thead><tr><th>Goal</th><th>Source</th><th>State</th><th>Version</th><th>Created</th><th th:if="${canOperate}">Actions</th></tr></thead>
+<tbody><tr th:each="plan : ${plans}"><td><a th:href="@{/ui/plans/{id}(id=${plan.id})}" th:text="${plan.spec.goal}"></a></td>
+<td th:text="${plan.spec.source}"></td><td th:text="${plan.state}"></td><td th:text="${plan.version}"></td><td th:text="${plan.createdAt}"></td>
+<td th:if="${canOperate}"><form th:if="${!archivedView and archivablePlans.contains(plan.id)}" th:action="@{/ui/plans/{id}/archive(id=${plan.id})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="btn ghost small-btn" type="submit">Archive</button></form>
+<th:block th:if="${archivedView and canAdmin}"><p th:if="${deleteAfterByPlan[plan.id] != null}" class="small muted">Delete after <time th:text="${deleteAfterByPlan[plan.id]}"></time></p>
+<form th:if="${deleteAfterByPlan[plan.id] == null}" th:action="@{/ui/plans/{id}/schedule-delete(id=${plan.id})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="btn danger small-btn" data-confirm="Schedule database deletion in 30 days?" type="submit">Delete in 30 days</button></form>
+<form th:if="${deleteAfterByPlan[plan.id] != null}" th:action="@{/ui/plans/{id}/undo-delete(id=${plan.id})}" method="post"><input type="hidden" name="_csrf" th:value="${csrfToken}"><button class="btn ghost small-btn" type="submit">Undo deletion</button></form></th:block></td></tr>
+<tr th:if="${#lists.isEmpty(plans)}"><td th:colspan="${canOperate ? 6 : 5}" class="empty" th:text="${archivedView ? 'No archived plans.' : 'No current plans.'}"></td></tr></tbody></table></div></div>
+</div></main></div><script src="/ui/console.js"></script></body></html>

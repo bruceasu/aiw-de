@@ -1,0 +1,23 @@
+{
+    "schema":  "aiw.fd.blocker.v1",
+    "fd_id":  "FD-014",
+    "stage":  "worker-protocol-and-handoff",
+    "role":  "pm-worker-host",
+    "source_event":  "FD-014-000005-design-ready",
+    "human_report":  "FD-014-blocker-worker-protocol-20261012-b71f6d.md",
+    "status":  "resolved",
+    "observed_at":  "2026-10-12T08:11:21Z",
+    "symptom":  "At observation, aiw fd resume reported FD revision 8 differs from event revision 5; after recording the Gate, current FD revision is 9. The dispatched receipt remains bound to session fd014-worker-20261012-a19d7c. The Go subtree has no pinned App Server protocol implementation or fixture.",
+    "cause":  "App Server protocol behavior is not pinned by local evidence, and a forced PM status change warned that receipts were unchanged and may be stale.",
+    "attempts":  [
+                     "Inspected Go AgentRuntime, Codex Exec, OpenAI adapter, process termination helpers, Worker attempt lifecycle, SDK capability notes and no-store design.",
+                     "Completed and separately committed Work Item 1.1 baseline as 2077e31 and Work Item 1.2 contract/matrix as 66a3447.",
+                     "Ran aiw fd set-status to record active implementation; the CLI reported a forced transition with checks skipped and receipts possibly stale.",
+                     "Read aiw fd show/resume and confirmed the exact dispatched event, session reference and revision mismatch.",
+                     "Did not browse externally, start Codex/App Server, run tests or edit receipts; recover-worker is deferred until this Worker session has stopped."
+                 ],
+    "human_decision_need":  "Protocol-source/version and scoped runtime-validation authorization are resolved. A separate production-candidate blocker remains for no-store admission and complete Worker restart/Exec rollback evidence.",
+    "resolution":  "On 2026-10-12T22:53Z, user directed use of the latest version. OpenAI official docs and repository were consulted. Latest stable CLI observed was 0.162.1, tag rust-v0.162.1; implementation is pinned to that tag's App Server v2 JSON schemas. The user later authorized focused fake-server lifecycle checks and one real CLI turn; results and fixes are recorded in FD-014-implementation-r1.md. This protocol Gate remains resolved; the separate production-candidate Gate is tracked in FD-014-blocker-candidate-admission-20261013-0828-a54d3e.md.",
+    "next_step":  "Follow up on the candidate-admission scope decision; do not claim production readiness until the no-store and restart/rollback Gate is resolved.",
+    "reusable_improvement":  "Make set-status reject or safely handle a stale dispatched receipt and restore the blocker feedback templates referenced by fd-workflow."
+}

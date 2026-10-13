@@ -1,0 +1,39 @@
+{
+  "schema": "aiw.fd.blocker.v1",
+  "fd_id": "FD-014",
+  "stage": "linux-production-candidate-admission",
+  "role": "pm",
+  "source_event": "FD-014-000012-work-requested",
+  "human_report": "FD-014-blocker-linux-admission-r1.md",
+  "status": "resolved",
+  "observed_at": "2026-10-13",
+  "symptom": "Linux workspace and abandoned Worker handoff are recovered, but production-candidate admission lacks a fixed-version no-store control design and Linux runtime evidence. Offline compilation is blocked by a missing existing dependency.",
+  "cause": "Version pinning and ephemeral threads do not prove all persistence channels. Existing runtime reports are Windows evidence. BurntSushi/toml v1.6.0 is absent from the local Go cache and network access is not authorized by Auto.",
+  "attempts": [
+    "Read current FD, Issue, runtime contract, no-store design, prior blocker reports, preserved Go source and current handoff.",
+    "Confirmed the role runner is unset and no Reviewer outcome events exist.",
+    "Used managed recover-worker after user confirmation that the old session has stopped; created pending FD-014-000012-work-requested without claiming it.",
+    "Committed preserved migrated implementation as c2507f7; original Windows implementation objects remain missing.",
+    "Ran GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off go build -o /dev/null .; it failed because the existing toml v1.6.0 dependency is unavailable offline.",
+    "Prepared a concrete admission proposal covering fixed deployment identity, pre-registration checks, local persistence channels, host/service responsibility, Linux lifecycle and policy-preserving Exec rollback.",
+    "Requested permission for fixed-version official-source research and existing-dependency download with one compilation retry.",
+    "User confirmed the source research and dependency download permissions. Download and one Linux compilation retry passed.",
+    "Pinned source review established independent SQLite/log channels and removed sqlite feature flag.",
+    "User accepted Linux memory isolation and clarified support for explicit API Key/ChatGPT switching rather than choosing one mode.",
+    "Reconciled FD Work Items and acceptance, cancelled and split unfinished 1.6 into child IDs, then used managed refresh-worker to create pending FD-014-000014-work-requested.",
+    "User chose Docker isolation for a later stage and directed local development now. Claimed FD-014-000016-work-requested and implemented local authentication selection under fd014-worker-linux-20261013-a83c26; one offline Go compilation passed. No runtime login or Docker validation ran."
+  ],
+  "human_decision_need": "None for FD-014 local closure; deferred production scope is recorded in FD-015.",
+  "resolution": "2026-10-13: user explicitly narrowed FD-014 to local Go Runtime and dual-auth support. This workflow Gate is resolved by scope transfer to FD-015, not by passing production/runtime verification. Original missing evidence remains unperformed.",
+  "next_step": "Independent review, local delivery and archive of revised FD-014; resume deferred FD-015 separately.",
+  "reusable_improvement": "Missing blocker templates and cross-platform workspace validation warrant a separate scoped tooling improvement, not an implicit expansion of FD-014.",
+  "resolved_components": [
+    "fixed-official-source-research-authorization",
+    "existing-go-dependency-cache",
+    "linux-compilation-retry",
+    "memory-isolation-deployment-direction",
+    "dual-authentication-scope"
+  ],
+  "deferred_by_user": true,
+  "transferred_to": "FD-015"
+}

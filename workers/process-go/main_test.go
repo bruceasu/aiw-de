@@ -7,8 +7,8 @@ import (
 
 func TestTomlProfiles(t *testing.T) {
 	paths, err := filepath.Glob(filepath.Join("profiles", "*.toml"))
-	if err != nil || len(paths) != 11 {
-		t.Fatalf("expected 11 Go TOML profiles, got %d: %v", len(paths), err)
+	if err != nil || len(paths) != 10 {
+		t.Fatalf("expected 10 executable Go TOML profiles, got %d: %v", len(paths), err)
 	}
 	for _, path := range paths {
 		profile := loadRoleProfile(path)
@@ -19,9 +19,9 @@ func TestTomlProfiles(t *testing.T) {
 }
 
 func TestTaskTypeAllowed(t *testing.T) {
-	p := RoleProfile{AllowedTaskTypes: []string{"REQUIREMENT_ANALYSIS", "SOLUTION_ARCHITECTURE"}}
-	if !taskTypeAllowed(p, "REQUIREMENT_ANALYSIS") {
-		t.Fatal("expected REQUIREMENT_ANALYSIS to be allowed")
+	p := RoleProfile{AllowedTaskTypes: []string{"EXTERNAL_WORK"}}
+	if !taskTypeAllowed(p, "EXTERNAL_WORK") {
+		t.Fatal("expected EXTERNAL_WORK to be allowed")
 	}
 	if taskTypeAllowed(p, "IMPLEMENTATION") {
 		t.Fatal("did not expect IMPLEMENTATION to be allowed")
@@ -30,7 +30,7 @@ func TestTaskTypeAllowed(t *testing.T) {
 
 func TestBuildRoleInstructionPreservesAuthorityBoundary(t *testing.T) {
 	p := RoleProfile{Name: "software-requirements-analyst", ProtocolSkills: []string{"protocol"}, PrimarySkill: "primary", Instruction: "Analyze requirements.", ReadOnly: true}
-	task := ClaimedTask{TaskType: "REQUIREMENT_ANALYSIS", Instruction: "User requirement here"}
+	task := ClaimedTask{TaskType: "EXTERNAL_WORK", SkillRef: "primary", Instruction: "User requirement here"}
 	got := buildRoleInstruction(Config{Profile: p, SkillsRoot: "testdata/skills", IncludeReferences: false}, task)
 	for _, want := range []string{
 		"software-requirements-analyst",

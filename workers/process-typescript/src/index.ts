@@ -1,11 +1,11 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { assertExecutableRole, getProfile } from "./profiles.js";
+import { assertExecutableRole, getProfile, assertRoleCapabilities } from "./profiles.js";
 import { ControlPlaneClient, runWorkerSlot, runtimeSettings, positiveSetting } from "./runtime-core.js";
 import type { AttemptAdapter, RuntimeSettings } from "../runtime-core/index.mjs";
 
-type RuntimeType = "codex-sdk" | "openai-agents";
+type RuntimeType = "codex-cli" | "codex-app-server" | "openai-agents";
 
 export interface WorkerConfig extends RuntimeSettings {
   runtime: RuntimeType;
@@ -20,7 +20,6 @@ export interface WorkerConfig extends RuntimeSettings {
   repositoryRef: string;
   repositoryRoot: string;
   worktreeRoot: string;
-  gitPublishRemote: string;
   pollMs: number;
   heartbeatMs: number;
   httpTimeoutMs: number;
@@ -28,13 +27,14 @@ export interface WorkerConfig extends RuntimeSettings {
 
 export interface WorkerBackend {
   startup: string;
+  shutdown?(): Promise<void>;
   createAdapter(task: any, slot: number): AttemptAdapter;
 }
 
 function selectedRuntime(): RuntimeType {
   const selected = (process.env.AIW_AGENT_RUNTIME ?? "").trim();
-  if (selected !== "codex-sdk" && selected !== "openai-agents") {
-    throw new Error("AIW_AGENT_RUNTIME must explicitly be codex-sdk or openai-agents");
+  if (selected !== "codex-cli" && selected !== "codex-app-server" && selected !== "openai-agents") {
+    throw new Error("AIW_AGENT_RUNTIME must explicitly be codex-cli, codex-app-server or openai-agents");
   }
   return selected;
 }
@@ -42,6 +42,7 @@ function selectedRuntime(): RuntimeType {
 function env(name: string, fallback: string): string { return process.env[name] ?? fallback; }
 
 function loadConfig(runtime: RuntimeType): WorkerConfig {
+  if (env("AIW_GIT_PUBLISH_REMOTE", "").trim()) throw new Error("AIW_GIT_PUBLISH_REMOTE is forbidden: Workers cannot git push");
   const role = env("AIW_PROCESS_ROLE", "requirements").trim().toLowerCase();
   assertExecutableRole(role);
   const profile = getProfile(role);
@@ -49,8 +50,8 @@ function loadConfig(runtime: RuntimeType): WorkerConfig {
   const repositoryRoot = env("AIW_REPOSITORY_ROOT", "").trim();
   if ((repositoryRef === "") !== (repositoryRoot === "")) throw new Error("AIW_REPOSITORY_REF and AIW_REPOSITORY_ROOT must be configured together");
   const capabilities = new Set(env("AIW_WORKER_CAPABILITIES", "").split(",").map(s => s.trim()).filter(Boolean));
+  assertRoleCapabilities(capabilities, profile);
   capabilities.add(profile.roleCapability);
-  if (role === "verifier") capabilities.add(getProfile("integration-verifier").roleCapability);
   if (repositoryRef) capabilities.add(`repo:${repositoryRef}`);
   const fallbackWorkspace = path.resolve(env("AIW_WORKSPACE", repositoryRoot || process.cwd()));
   const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -59,12 +60,11 @@ function loadConfig(runtime: RuntimeType): WorkerConfig {
   return {
     ...runtimeSettings(), runtime, role, skillsRoot,
     baseUrl: env("AIW_CONTROL_PLANE_URL", "http://127.0.0.1:8080").replace(/\/$/, ""),
-    workerId: env("AIW_WORKER_ID", runtime === "codex-sdk" ? `process-${role}-1` : `process-api-${role}-1`),
+    workerId: env("AIW_WORKER_ID", runtime === "codex-cli" ? `process-exec-${role}-1` : runtime === "codex-app-server" ? `process-${role}-1` : `process-api-${role}-1`),
     token: env("AIW_WORKER_TOKEN", ""),
     capabilities: [...capabilities].sort(), maxConcurrency: positiveSetting("AIW_WORKER_MAX_CONCURRENCY", 1),
     fallbackWorkspace, repositoryRef, repositoryRoot: repositoryRoot ? path.resolve(repositoryRoot) : "",
     worktreeRoot: path.resolve(env("AIW_WORKTREE_ROOT", path.resolve(repositoryRoot || fallbackWorkspace, "..", ".aidev-worktrees"))),
-    gitPublishRemote: env("AIW_GIT_PUBLISH_REMOTE", ""),
     pollMs: positiveSetting("AIW_WORKER_POLL_MS", 1000),
     heartbeatMs: positiveSetting("AIW_WORKER_HEARTBEAT_MS", 20000),
     httpTimeoutMs: positiveSetting("AIW_WORKER_HTTP_TIMEOUT_MS", 15000),
@@ -80,8 +80,10 @@ if (runtime === "openai-agents") {
   process.env.OPENAI_AGENTS_DISABLE_TRACING = "1";
   process.env.DEBUG = "";
 }
-const backend: WorkerBackend = runtime === "codex-sdk"
-  ? await (await import("./codex-adapter.js")).createCodexBackend(cfg)
+const backend: WorkerBackend = runtime === "codex-cli"
+  ? await (await import("./exec-adapter.js")).createCodexExecBackend(cfg)
+  : runtime === "codex-app-server"
+  ? await (await import("./app-server-adapter.js")).createCodexAppServerBackend(cfg)
   : await (await import("./api-adapter.js")).createApiBackend(cfg);
 const force = new AbortController();
 cfg.forceSignal = force.signal;
@@ -93,9 +95,10 @@ for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => {
   void client.drain().catch(() => console.error("worker drain failed"));
 });
 console.log(backend.startup);
-await client.register();
-const workerHeartbeat = setInterval(() => void client.workerHeartbeat().catch(() => console.error("worker heartbeat failed")), cfg.heartbeatMs);
+let workerHeartbeat: ReturnType<typeof setInterval> | undefined;
 try {
+  await client.register();
+  workerHeartbeat = setInterval(() => void client.workerHeartbeat().catch(() => console.error("worker heartbeat failed")), cfg.heartbeatMs);
   await Promise.all(Array.from({ length: cfg.maxConcurrency }, (_, i) => {
     const slot = i + 1;
     return runWorkerSlot({
@@ -109,5 +112,6 @@ try {
 } finally {
   clearInterval(workerHeartbeat);
   try { await client.drain(); } catch { console.error("worker drain failed"); }
+  await backend.shutdown?.();
   try { await client.offline(); } catch { console.error("worker offline failed"); }
 }

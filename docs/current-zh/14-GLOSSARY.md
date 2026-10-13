@@ -22,9 +22,9 @@
 
 **Workspace Assignment**：Control Plane 给 Worker 的 repository/base/workspaceKey/branch 逻辑信息。
 
-**Workspace Result**：Worker 返回的 resultRevision/changedFiles/publicationRef。
+**Workspace Result**：Worker 返回的本地 resultRevision/changedFiles；新的 Worker 结果不允许 publicationRef。
 
-**publicationRef**：跨机器交接代码结果的位置，如 `git:origin:<branch>`。
+**publicationRef**：历史跨机器代码交接引用；新的 Worker 不允许 Git 推送或提交这个字段。
 
 **Worker Pull**：Worker 主动申请任务，不是 Control Plane Push 指定 Worker。
 

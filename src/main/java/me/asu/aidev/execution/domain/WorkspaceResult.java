@@ -28,6 +28,7 @@ public record WorkspaceResult(String resultRevision, List<String> changedFiles, 
         }
         changedFiles = List.copyOf(normalized);
         publicationRef = publicationRef == null || publicationRef.isBlank() ? null : publicationRef.strip();
+        if (publicationRef != null) throw new IllegalArgumentException("Worker Git publication is forbidden");
     }
 
     public WorkspaceResult(String resultRevision, List<String> changedFiles) {

@@ -39,9 +39,14 @@ type AgentRunResult struct {
 }
 
 func resolveAgentRuntime(cfg Config) (AgentRuntime, error) {
+	if err := validateCodexAuthConfig(cfg); err != nil {
+		return nil, err
+	}
 	switch cfg.AgentRuntime {
 	case "codex-cli":
 		return CodexAgentRuntime{cfg: cfg}, nil
+	case "codex-app-server":
+		return NewCodexAppServerRuntime(cfg), nil
 	case "openai-api":
 		if cfg.OpenAIAPIKey == "" {
 			return nil, errors.New("OPENAI_API_KEY is required for openai-api")
@@ -55,12 +60,31 @@ func resolveAgentRuntime(cfg Config) (AgentRuntime, error) {
 type CodexAgentRuntime struct { cfg Config }
 
 func (CodexAgentRuntime) Type() string { return "codex-cli" }
+
+func (runtime CodexAgentRuntime) Start(ctx context.Context) error {
+	return checkCodexAuthentication(ctx, runtime.cfg, "")
+}
+
+func (CodexAgentRuntime) Close(context.Context) error { return nil }
 func (CodexAgentRuntime) Capabilities() AgentRuntimeCapabilities {
 	return AgentRuntimeCapabilities{AttemptCancellation: true, EventStreaming: true, Tools: true}
 }
 
+type managedAgentRuntime interface {
+	Start(context.Context) error
+	Close(context.Context) error
+}
+
+type failureAwareRuntime interface {
+	Failure() <-chan struct{}
+	FailureError() error
+}
+
 func (runtime CodexAgentRuntime) Run(ctx context.Context, request AgentRunRequest) (AgentRunResult, error) {
 	cfg := runtime.cfg
+	if err := checkCodexAuthentication(ctx, cfg, request.Workspace); err != nil {
+		return AgentRunResult{}, err
+	}
 	selection := request.Selection
 	if selection != nil {
 		cfg.Model = selection.Profile.Model

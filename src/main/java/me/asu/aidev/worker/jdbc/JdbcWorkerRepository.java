@@ -7,6 +7,7 @@ import me.asu.aidev.worker.domain.WorkerStatus;
 import me.asu.aidev.worker.port.WorkerRepository;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -57,6 +58,21 @@ public class JdbcWorkerRepository implements WorkerRepository {
                         Instant.ofEpochMilli(rs.getLong("last_heartbeat_at_epoch_ms")),
                         Instant.ofEpochMilli(rs.getLong("updated_at_epoch_ms"))))
                         : Optional.empty(), workerId.value());
+    }
+
+    @Override
+    public List<Worker> findAvailable(Instant heartbeatSince) {
+        return jdbc.query("""
+                SELECT id,runtime_type,capabilities,max_concurrency,active_leases,status,
+                       registered_at_epoch_ms,last_heartbeat_at_epoch_ms,updated_at_epoch_ms
+                  FROM worker WHERE status='ACTIVE' AND active_leases < max_concurrency
+                   AND last_heartbeat_at_epoch_ms >= ?
+                """, (rs, row) -> new Worker(new WorkerId(rs.getString("id")), rs.getString("runtime_type"),
+                CapabilitySetCodec.decode(rs.getString("capabilities")), rs.getInt("max_concurrency"),
+                rs.getInt("active_leases"), WorkerStatus.valueOf(rs.getString("status")),
+                Instant.ofEpochMilli(rs.getLong("registered_at_epoch_ms")),
+                Instant.ofEpochMilli(rs.getLong("last_heartbeat_at_epoch_ms")),
+                Instant.ofEpochMilli(rs.getLong("updated_at_epoch_ms"))), heartbeatSince.toEpochMilli());
     }
 
     @Override

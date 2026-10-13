@@ -5,9 +5,8 @@ import type { WorkerBackend, WorkerConfig } from "./index.js";
 import type { AgentRuntime, AgentRunRequest } from "./agent-runtime.js";
 import { completed } from "./agent-runtime.js";
 import { ApiRuntime, type ApiRuntimeConfig } from "./api-runtime.js";
-import { buildPrompt, completionReport } from "./instructions.js";
+import { buildPrompt, completionReport, resolveTaskProfile } from "./instructions.js";
 import { chooseAiProfile } from "./ai-profiles.js";
-import { getProfile } from "./profiles.js";
 import { RuntimeFault, positiveSetting, sha256 } from "./runtime-core.js";
 
 class AgentsRuntime implements AgentRuntime {
@@ -41,6 +40,7 @@ function installedVersion(name: string): string {
 }
 
 function apiConfig(cfg: WorkerConfig): ApiRuntimeConfig {
+  if (/^(1|true|yes)$/i.test(process.env.AIW_AGENT_ALLOW_SHELL ?? "false")) throw new Error("AIW_AGENT_ALLOW_SHELL is forbidden for process Workers");
   const apiKey = (process.env.OPENAI_API_KEY ?? "").trim();
   if (!apiKey) throw new Error("OPENAI_API_KEY is required before registering the worker");
   const reasoningEffort = (process.env.AIW_OPENAI_REASONING_EFFORT ?? "").trim();
@@ -56,7 +56,7 @@ function apiConfig(cfg: WorkerConfig): ApiRuntimeConfig {
     maxTurns: positiveSetting("AIW_AGENT_MAX_TURNS", 40), apiTimeoutMs: positiveSetting("AIW_OPENAI_TIMEOUT_MS", 120000),
     taskTimeoutMs: cfg.taskTimeoutMs, toolTimeoutMs: positiveSetting("AIW_AGENT_TOOL_TIMEOUT_MS", 60000),
     maxOutputChars, maxInputBytes: cfg.maxInputBytes,
-    allowShell: /^(1|true|yes)$/i.test(process.env.AIW_AGENT_ALLOW_SHELL ?? "false"), compactHistory,
+    allowShell: false, compactHistory,
     compactAfterBytes: compactHistory ? positiveSetting("AIW_AGENT_COMPACT_AFTER_BYTES", 0) : undefined,
     summaryMaxTokens: compactHistory ? positiveSetting("AIW_AGENT_SUMMARY_MAX_TOKENS", 0) : undefined,
     aiwToolCatalog: process.env.AIW_AGENT_AIW_TOOL_CATALOG || undefined,
@@ -64,8 +64,8 @@ function apiConfig(cfg: WorkerConfig): ApiRuntimeConfig {
 }
 
 export async function createApiBackend(cfg: WorkerConfig): Promise<WorkerBackend> {
-  const versions = { agents: installedVersion("@openai/agents"), openai: installedVersion("openai") };
-  if (versions.agents !== "0.3.9" || versions.openai !== "6.49.0") throw new Error("API_SDK_BASELINE_MISMATCH");
+  const versions = { agents: installedVersion("@openai/agents"), core: installedVersion("@openai/agents-core"), provider: installedVersion("@openai/agents-openai"), openai: installedVersion("openai"), zod: installedVersion("zod") };
+  if (versions.agents !== "0.20.0" || versions.core !== "0.20.0" || versions.provider !== "0.20.0" || versions.openai !== "7.32.0" || versions.zod !== "4.6.7") throw new Error("API_SDK_BASELINE_MISMATCH");
   const settings = apiConfig(cfg);
   const runtimes = new Map<number, AgentsRuntime>();
   return {
@@ -74,15 +74,12 @@ export async function createApiBackend(cfg: WorkerConfig): Promise<WorkerBackend
       let runtime = runtimes.get(slot);
       if (!runtime) { runtime = new AgentsRuntime(settings); runtimes.set(slot, runtime); }
       const engine = runtime;
+      let frozenProfile: ReturnType<typeof resolveTaskProfile>;
       return {
         runtime: engine.type, versions,
         select: task => task.aiGuidance ? chooseAiProfile(task.aiGuidance, "openai-agents") : null,
-        profile: task => {
-          const profile = getProfile(cfg.role, task.taskType);
-          if (!profile.allowedTaskTypes.includes(task.taskType)) throw new RuntimeFault("ROLE_TASK_TYPE_DENIED", "CONFIGURATION");
-          return profile;
-        },
-        prompt: (task, context) => buildPrompt(task, cfg.role, cfg.skillsRoot, context),
+        profile: task => (frozenProfile = resolveTaskProfile(task, cfg.role)),
+        prompt: (task, context) => buildPrompt(task, cfg.role, cfg.skillsRoot, context, frozenProfile),
         execute: async execution => (await engine.run({ execution, emit: event => {
           if (event.type === "session-started") execution.onSession(event.sessionId);
           else console.log(`slot ${slot}: task=${task.taskId} ${event.name}`);

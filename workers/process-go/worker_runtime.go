@@ -51,7 +51,7 @@ func safeDirectories(target string) error {
 func (e *AttemptEvidence) record(event string, values map[string]any) error {
     e.mu.Lock(); defer e.mu.Unlock()
     if e.failed { return errors.New("CRITICAL_EVIDENCE_FAILED") }
-    allowed := " status runtime unknown usageKnown path digest bytes count phase callId tool inputTokens outputTokens cachedTokens publicationRef resultRevision sideEffect verdict code reportStatus reason "
+    allowed := " status runtime unknown usage usageKnown capability processTree cliVersion protocol threadPersistence path digest bytes count phase callId tool inputTokens outputTokens cachedTokens publicationRef resultRevision sideEffect verdict code reportStatus reason "
     for key := range values { if !strings.Contains(allowed, " "+key+" ") { e.failed = true; return errors.New("EVIDENCE_FIELD_FORBIDDEN") } }
     data := map[string]any{"event": event, "time": time.Now().UTC().Format(time.RFC3339Nano), "taskId": e.taskID, "attemptId": e.attemptID, "role": e.role}
     for key, value := range values { data[key] = value }
@@ -98,6 +98,7 @@ func childEnvironment(model bool) []string {
     return append(result, "GIT_TERMINAL_PROMPT=0")
 }
 func gitBytesContext(ctx context.Context, cwd string, args ...string) ([]byte, error) {
+    for _, arg := range args { if arg == "push" { return nil, errors.New("GIT_PUSH_FORBIDDEN") } }
     bounded, cancel := context.WithTimeout(ctx, time.Duration(positiveInt("AIW_WORKER_GIT_TIMEOUT_MS", 120000))*time.Millisecond); defer cancel()
     cmd := exec.CommandContext(bounded, "git", append([]string{"-C", cwd}, args...)...); cmd.Env = childEnvironment(false)
     configureProcessTree(cmd); out := &limitedCapture{}; cmd.Stdout, cmd.Stderr = out, io.Discard
@@ -125,13 +126,13 @@ func workspaceDigest(ctx context.Context, cwd string) (string, error) {
     })
     return hex.EncodeToString(hash.Sum(nil)), err
 }
-func assembleGoContext(ctx context.Context, cfg Config, task ClaimedTask, evidence *AttemptEvidence) (string, error) {
+func freezeGoSkills(ctx context.Context, cfg Config, evidence *AttemptEvidence) ([]string, error) {
     maxBytes := positiveInt("AIW_WORKER_MAX_INPUT_BYTES", 1024*1024); used := 0; var parts []string
     skills := append([]string{}, cfg.Profile.ProtocolSkills...)
     if cfg.Profile.PrimarySkill != "engineering-artifact-protocol" { skills = append(skills, cfg.Profile.PrimarySkill) }
     for _, skill := range skills {
-        if filepath.Base(skill) != skill || skill == "." || skill == ".." { return "", errors.New("SKILL_NAME_INVALID") }
-        dir := filepath.Join(cfg.SkillsRoot, skill); info, err := os.Lstat(dir); if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 { return "", errors.New("SKILL_DIRECTORY_UNSAFE") }
+        if filepath.Base(skill) != skill || skill == "." || skill == ".." { return nil, errors.New("SKILL_NAME_INVALID") }
+        dir := filepath.Join(cfg.SkillsRoot, skill); info, err := os.Lstat(dir); if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 { return nil, errors.New("SKILL_DIRECTORY_UNSAFE") }
         files := []string{filepath.Join(dir, "SKILL.md")}
         if cfg.IncludeReferences { for _, sub := range []string{"references", "agents"} {
             start := filepath.Join(dir, sub)
@@ -139,16 +140,26 @@ func assembleGoContext(ctx context.Context, cfg Config, task ClaimedTask, eviden
             err = filepath.WalkDir(start, func(file string, entry fs.DirEntry, e error) error {
                 if e != nil { return e }; if entry.Type()&os.ModeSymlink != 0 { return errors.New("SKILL_REFERENCE_UNSAFE") }
                 ext := strings.ToLower(filepath.Ext(file)); if !entry.IsDir() && (ext == ".md" || ext == ".yml" || ext == ".yaml" || ext == ".json") { files = append(files, file) }; return nil
-            }); if err != nil { return "", err }
+            }); if err != nil { return nil, err }
         } }
         for _, file := range files {
-            if ctx.Err() != nil { return "", ctx.Err() }; info, e := os.Lstat(file); if e != nil || !info.Mode().IsRegular() { return "", errors.New("SKILL_FILE_UNSAFE") }
-            used += int(info.Size()); if used > maxBytes { return "", errors.New("CONTEXT_BUDGET_EXCEEDED") }
-            raw, e := os.ReadFile(file); if e != nil { return "", e }; digest := sha256.Sum256(raw)
-            if e = evidence.record("context-source", map[string]any{"path": file, "digest": hex.EncodeToString(digest[:]), "bytes": len(raw)}); e != nil { return "", e }
+            if ctx.Err() != nil { return nil, ctx.Err() }; info, e := os.Lstat(file); if e != nil || !info.Mode().IsRegular() { return nil, errors.New("SKILL_FILE_UNSAFE") }
+            used += int(info.Size()); if used > maxBytes { return nil, errors.New("CONTEXT_BUDGET_EXCEEDED") }
+            raw, e := os.ReadFile(file); if e != nil { return nil, e }; digest := sha256.Sum256(raw)
+            if e = evidence.record("context-source", map[string]any{"path": file, "digest": hex.EncodeToString(digest[:]), "bytes": len(raw)}); e != nil { return nil, e }
             parts = append(parts, fmt.Sprintf("--- %s ---\n%s", file, raw))
         }
     }
+    return parts, nil
+}
+func assembleGoContext(ctx context.Context, cfg Config, task ClaimedTask, evidence *AttemptEvidence) (string, error) {
+    parts, err := freezeGoSkills(ctx, cfg, evidence); if err != nil { return "", err }
+    return assembleGoContextWithSkills(ctx, cfg, task, evidence, parts)
+}
+func assembleGoContextWithSkills(ctx context.Context, cfg Config, task ClaimedTask, evidence *AttemptEvidence, frozen []string) (string, error) {
+    maxBytes := positiveInt("AIW_WORKER_MAX_INPUT_BYTES", 1024*1024); used := 0
+    parts := append([]string{}, frozen...)
+    for _, part := range parts { used += len([]byte(part)) }
     inputs, err := json.MarshalIndent(task.Inputs, "", "  "); if err != nil { return "", err }
     for _, name := range []string{"AGENTS.md", "CODEX.md"} {
         root := cfg.FallbackWorkspace

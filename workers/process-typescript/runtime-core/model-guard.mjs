@@ -15,7 +15,7 @@ export function validateModelResponse(response, raw, request) {
 }
 
 async function recordUsage(recorder, response, raw) {
-  const usage = raw?.usage ?? response.providerData?.usage;
+  const usage = raw?.usage ?? response.rawUsage ?? response.providerData?.usage;
   const known = usage && Number.isSafeInteger(usage.input_tokens) && Number.isSafeInteger(usage.output_tokens);
   for (const item of response.output.filter(item => item.type === "function_call")) {
     await recorder.record("tool-proposed", { callId: item.callId, tool: item.name, status: "validated" });
@@ -27,6 +27,7 @@ async function recordUsage(recorder, response, raw) {
 export function guardedModel(model, { recorder, signal, history, maxInputBytes = 1024 * 1024 } = {}) {
   const prepare = async request => {
     checkSignal(signal);
+    if (request.previousResponseId || request.conversationId) throw new RuntimeFault("PROVIDER_CONTINUATION_DENIED", "CONFIGURATION");
     const summarize = async (original, sourceId, maxTokens) => {
       const summaryRequest = { ...request, previousResponseId: undefined, conversationId: undefined,
         input: [{ type: "message", role: "user", content: [{ type: "input_text", text:
@@ -45,7 +46,7 @@ export function guardedModel(model, { recorder, signal, history, maxInputBytes =
     const prepared = history ? await history.prepare(request, summarize, maxInputBytes) : request;
     if (requestBytes(prepared) > maxInputBytes) throw new RuntimeFault("MODEL_INPUT_BUDGET_EXCEEDED", "MODEL_ERROR");
     await recorder.record("model-request", { inputBytes: requestBytes(prepared), usageKnown: false, unknown: "model-window-and-input-tokens" });
-    return { ...prepared, signal, modelSettings: { ...prepared.modelSettings, store: false, truncation: "disabled", parallelToolCalls: true } };
+    return { ...prepared, signal, tracing: false, modelSettings: { ...prepared.modelSettings, store: false, truncation: "disabled", parallelToolCalls: true } };
   };
   return {
     async getResponse(request) {
@@ -80,7 +81,7 @@ export function guardedModel(model, { recorder, signal, history, maxInputBytes =
           yield event;
         }
         if (!done) throw new RuntimeFault("RESPONSES_TERMINAL_MISSING", "MODEL_ERROR");
-        // SDK 0.3.9 yields response_done before the raw completed event containing usage.
+        // Agents 0.20.0 yields response_done before the raw completed event containing usage.
         // Hold terminal until stream closure; late errors cannot schedule tool execution.
         validateModelResponse(terminal.response, raw, prepared);
         await recordUsage(recorder, terminal.response, raw);

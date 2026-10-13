@@ -1,0 +1,37 @@
+{
+  "schema": "aiw.fd.blocker.v1",
+  "fd_id": "FD-014",
+  "stage": "resume-preflight",
+  "role": "pm",
+  "source_event": "FD-014-000010-work-requested",
+  "human_report": "FD-014-blocker-resume-20261013-linux-6e91b4.md",
+  "status": "resolved",
+  "observed_at": "2026-10-13",
+  "symptom": "The Worker handoff remains dispatched to another session, the recorded Windows worktree is not registered in this Linux checkout, and candidate admission has an unresolved human scope decision.",
+  "cause": "The original session termination is unconfirmed. The workspace record and .git pointer use Windows paths while local Git lists only master. The worktree FD revision 11 retains a material NEEDS_INPUT gate for persistence/no-store admission and restart/rollback evidence.",
+  "attempts": [
+    "Read repository rules, work-management contract, PM role, both FD copies, current receipt, workspace record, implementation report and prior blocker reports.",
+    "git status --short --branch showed a clean master workspace.",
+    "git worktree list --porcelain listed only the Linux primary checkout.",
+    "Asked whether the original Worker session has stopped and which candidate-admission scope to retain.",
+    "Did not claim, recover, alter receipts, repair Git metadata, run tests or compile, access the network, commit, deliver or archive.",
+    "User confirmed the old Worker session has ended and requested Linux workspace metadata repair.",
+    "The local repository has only Initial history; feature/FD-014 and historical implementation objects e9f15ac and 09ad083 are absent.",
+    "Backed up the old .git pointer and workspace.json to a system temporary directory.",
+    "git worktree add --no-checkout -b feature/FD-014 /workspace/ai-tools/aiw-dev/.wt/FD-014-linux-register-6e91b4 master failed to create the branch reference. The environment marks the repository .git read-only. No workspace pointer, workspace record or event was rewritten.",
+    "User made the repository writable; the Git metadata permission blocker is resolved.",
+    "Registered feature/FD-014 based on local master using git worktree add --no-checkout and mixed reset, preserving all existing worktree files.",
+    "git worktree repair updated the registration to /workspace/ai-tools/aiw-dev/.wt/FD-014; workspace.json now records that Linux path. Created the shared .ai symlink.",
+    "Old metadata backup: /mnt/temp/tmp/fd014-linux-metadata-7_nmwd5v. Original implementation commit objects remain unavailable; recovered source contents remain uncommitted differences."
+  ],
+  "human_decision_need": "No infrastructure decision remains in this record; network and admission evidence needs are tracked in FD-014-blocker-linux-admission-r1.",
+  "next_step": "Continue production-candidate admission from pending FD-014-000012-work-requested; see FD-014-blocker-linux-admission-r1.",
+  "reusable_improvement": "Restore missing blocker templates and add cross-platform resume checks for workspace paths, Git registration and claimed-session ownership in separately authorized scope.",
+  "resolved_components": [
+    "old-session-termination-confirmed",
+    "git-metadata-write-permission",
+    "linux-worktree-registration-and-path"
+  ],
+  "resolution": "User confirmed old session termination and made .git writable. Linux workspace registration is verified. Managed recover-worker created pending FD-014-000012-work-requested from revision 11; c2507f7 preserves migrated implementation. Admission remains unresolved in FD-014-blocker-linux-admission-r1.",
+  "resolved_at": "2026-10-13"
+}

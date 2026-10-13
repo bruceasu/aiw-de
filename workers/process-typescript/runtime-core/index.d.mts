@@ -106,7 +106,7 @@ export interface AttemptAdapter {
   runtime: string; versions?: Record<string, string>;
   select(task: any): any; profile(task: any): any; prompt(task: any, context: ContextAssembler): string;
   execute(input: AttemptExecution): Promise<string>;
-  report(taskType: string, response: string): unknown;
+  report(resultKind: string, response: string): unknown;
   digest?(text: string): string;
   settled?(timeoutMs?: number): Promise<void | boolean>; assertSuccessful?(): void; clear?(): void;
 }

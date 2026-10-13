@@ -1,0 +1,33 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-016",
+  "source_event": "FD-016-000013-changes-requested",
+  "human_report": "FD-016-implementation-local-r2.md",
+  "data": {
+    "summary": "修复首轮 R1/R2/R3 并确认 thread/unsubscribe 释放；等待第二次独立审查。",
+    "session_ref": "fd016-worker-20261013-0f3443b8",
+    "diff_base": "be29dfe",
+    "changed_paths": [
+      "workers/process-typescript/src/app-server-adapter.ts",
+      "workers/process-typescript/src/codex-process.ts",
+      "workers/process-typescript/README.md",
+      "workers/WORKER_RUNTIME_CONTRACT.md",
+      "docs/features/FD-016_FD_011_WORKER.md"
+    ],
+    "commands": [
+      "aiw fd claim FD-016 FD-016-000013-changes-requested --session fd016-worker-20261013-0f3443b8",
+      "node scripts/compile-worker-runtime.mjs",
+      "git -c core.whitespace=cr-at-eol diff --check be29dfe...HEAD",
+      "read-only pinned ThreadUnsubscribeResponse schema",
+      "path-scoped local git commits"
+    ],
+    "results": [
+      "Compile-only exit 0; no retained distribution, SDK or type execution.",
+      "R1 preserves effective sandbox; R2 preserves Windows unknown state and rejects unverified platform before body; R3 uses completed final messages.",
+      "Thread release is confirmed by RPC response; no inbox-only cleanup claim.",
+      "No tests, real CLI/model, type checks, builds or deployment."
+    ],
+    "residual_risk": "原生 Windows TypeScript Codex 明确不支持；使用 Unix/WSL 或 API。真实 SDK/并发/取消行为未运行；生产准入归 FD-015。"
+  }
+}

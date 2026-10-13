@@ -12,7 +12,7 @@ export interface ToolContext {
 
 /** SDK scheduling stays parallel; every primitive enters the same host. */
 export function createWorkspaceTools(ctx: ToolContext): Tool[] {
-  function primitive<P extends z.AnyZodObject>(description: string, parameters: P, definition: ToolDefinition): Tool {
+  function primitive(description: string, parameters: z.ZodObject, definition: ToolDefinition): Tool {
     return createHostedTool(ctx.host, description, parameters, definition);
   }
   const tools: Tool[] = [primitive("Read a UTF-8 workspace file by line range. Lines start at 1; the JSON envelope describes completeness.",

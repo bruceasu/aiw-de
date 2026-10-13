@@ -14,6 +14,7 @@ import me.asu.aidev.execution.port.TaskConcurrencyBudget;
 import me.asu.aidev.knowledge.application.KnowledgeService;
 import me.asu.aidev.work.application.DependencyResolver;
 import me.asu.aidev.work.application.TaskWorkspaceReplacementService;
+import me.asu.aidev.workflow.application.WorkflowPlanService;
 import me.asu.aidev.work.application.TaskCompletionResult;
 import me.asu.aidev.work.domain.TaskId;
 import me.asu.aidev.work.domain.TaskState;
@@ -44,6 +45,12 @@ public class TaskExecutionService {
     private final Clock clock;
     private final Duration leaseDuration;
     private TaskWorkspaceReplacementService workspaceReplacements;
+    private WorkflowPlanService workflowPlans;
+
+    @Autowired
+    public void setWorkflowPlans(WorkflowPlanService workflowPlans) {
+        this.workflowPlans = workflowPlans;
+    }
 
     @Autowired
     public void setWorkspaceReplacements(TaskWorkspaceReplacementService workspaceReplacements) {
@@ -210,6 +217,7 @@ public class TaskExecutionService {
         tasks.recordControlEvent(UUID.randomUUID().toString(), taskId, attemptId.value(), "STOP_ACKNOWLEDGED",
                 "worker:" + workerId.value(), "Worker acknowledged stop request", false, now);
         if (workspaceReplacements != null) workspaceReplacements.afterStopAcknowledged(taskId, workerId, leaseToken);
+        if (workflowPlans != null) workflowPlans.afterStopAcknowledged(taskId, workerId.value(), leaseToken.value());
     }
 
     @Transactional
@@ -319,6 +327,7 @@ public class TaskExecutionService {
             throw new IllegalStateException("execution attempt is not RUNNING");
         }
         if (workspaceReplacements != null) workspaceReplacements.conflictIfPending(taskId, "Worker completed before stop acknowledgement");
+        if (workflowPlans != null) workflowPlans.conflictPending(taskId);
         if (!workers.releaseCapacity(workerId, now)) {
             throw new IllegalStateException("worker capacity accounting underflow: " + workerId.value());
         }
@@ -368,6 +377,7 @@ public class TaskExecutionService {
             throw new IllegalStateException("execution attempt is not RUNNING");
         }
         if (workspaceReplacements != null) workspaceReplacements.conflictIfPending(taskId, "Worker failed before stop acknowledgement");
+        if (workflowPlans != null) workflowPlans.conflictPending(taskId);
         if (!workers.releaseCapacity(workerId, now)) {
             throw new IllegalStateException("worker capacity accounting underflow: " + workerId.value());
         }

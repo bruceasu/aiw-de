@@ -18,6 +18,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 /** R9 Web Console query controller. Mutation handlers live in WebConsoleActionController. */
@@ -48,52 +49,27 @@ public class WebConsoleController {
     }
 
     @GetMapping("/")
-    public String root() { return "redirect:/ui"; }
+    public String root() { return "redirect:/ui/plans"; }
 
     @GetMapping("/ui")
     public String dashboard(Model model) {
-        var overview = console.overview();
-        var fleet = overview.fleet();
-        model.addAttribute("page", "dashboard");
-        model.addAttribute("fleet", fleet);
-        model.addAttribute("overview", overview);
-        model.addAttribute("workerIdentities", identities(overview.workers()));
-        model.addAttribute("pendingApprovals", overview.pendingApprovals());
-        return "ui/dashboard";
+        return "redirect:/ui/plans";
     }
 
     @GetMapping("/ui/runs")
-    public String runs(Model model) {
-        model.addAttribute("page", "runs");
-        model.addAttribute("runs", console.runs());
-        return "ui/runs";
+    public String runs(@RequestParam(defaultValue = "current") String view, Model model) {
+        return "redirect:/ui/plans";
     }
 
     @GetMapping("/ui/runs/new")
     public String newRun(HttpSession session, Model model) {
         security.requireOperator(session);
-        model.addAttribute("page", "new-run");
-        model.addAttribute("workspaceTargets", managedWorkspaces == null ? List.of() : managedWorkspaces.targets());
-        return "ui/new-run";
+        return "redirect:/ui/plans/new";
     }
 
     @GetMapping("/ui/runs/{runId}")
     public String run(@PathVariable String runId, HttpSession session, Model model) {
-        var mission = missions.get(runId);
-        model.addAttribute("page", "runs");
-        model.addAttribute("run", mission.run());
-        model.addAttribute("mission", mission);
-        model.addAttribute("taskAnchors", mission.tasks().stream().collect(Collectors.toMap(
-                row -> row.task().taskId(), row -> row.anchor())));
-        model.addAttribute("workspaceTargets", managedWorkspaces == null ? List.of() : managedWorkspaces.targets());
-        model.addAttribute("workspaceReplacements", workspaceReplacements == null ? List.of() : workspaceReplacements.forRun(runId));
-        model.addAttribute("isAdmin", security.role(session).canAdmin());
-        if (mission.run().approval() != null) {
-            console.approvalDetail(mission.run().approval().requestId())
-                    .filter(evidence -> runId.equals(evidence.runId()))
-                    .ifPresent(evidence -> model.addAttribute("approvalEvidence", evidence));
-        }
-        return "ui/run-detail";
+        return "redirect:/ui/plans";
     }
 
     @GetMapping("/ui/workers")
@@ -113,9 +89,7 @@ public class WebConsoleController {
 
     @GetMapping("/ui/approvals")
     public String approvals(Model model) {
-        model.addAttribute("page", "approvals");
-        model.addAttribute("inbox", console.approvalInbox());
-        return "ui/approvals";
+        return "redirect:/ui/plans";
     }
 
     @GetMapping("/ui/system")
@@ -131,7 +105,7 @@ public class WebConsoleController {
         ModelAndView view = new ModelAndView("ui/not-found");
         view.setStatus(org.springframework.http.HttpStatus.NOT_FOUND);
         view.addObject("message", error.getMessage());
-        view.addObject("page", "runs");
+        view.addObject("page", "plans");
         return view;
     }
 }

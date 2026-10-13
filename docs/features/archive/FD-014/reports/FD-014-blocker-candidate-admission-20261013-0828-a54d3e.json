@@ -1,0 +1,23 @@
+{
+  "schema": "aiw.fd.blocker.v1",
+  "fd_id": "FD-014",
+  "stage": "worker-protocol-and-handoff",
+  "role": "pm-worker-host",
+  "source_event": "FD-014-000010-work-requested",
+  "human_report": "FD-014-blocker-candidate-admission-20261013-0828-a54d3e.md",
+  "status": "resolved",
+  "observed_at": "2026-10-12T23:28:51Z",
+  "symptom": "The App Server runtime and authorized runtime checks are complete for the covered paths, but FD-014 Work Item 1.6 cannot establish production-candidate readiness.",
+  "cause": "Ephemeral thread mode and one successful turn do not establish that all CLI, host, and service-side persistence channels satisfy the repository's no-store admission contract. Full Worker restart and Exec rollback runtime evidence is also missing.",
+  "attempts": [
+    "Pinned the implementation to official Codex CLI 0.162.1 and App Server v2 schemas.",
+    "Ran focused local fake-server/Worker tests for concurrent thread isolation, cancellation, stop, lease loss, disconnect, process termination, version refusal, and workspace evidence.",
+    "Ran one authorized real Codex CLI 0.162.1 App Server turn in a temporary read-only workspace.",
+    "Documented the explicit codex-cli rollback route, manual version ownership, and cross-language migration recommendations without claiming measured cost reduction or persistence compliance."
+  ],
+  "human_decision_need": "None for FD-014 local closure; deferred production scope is recorded in FD-015.",
+  "resolution": "2026-10-13: user explicitly narrowed FD-014 to local Go Runtime and dual-auth support. This workflow Gate is resolved by scope transfer to FD-015, not by passing production/runtime verification. Original missing evidence remains unperformed.",
+  "next_step": "Independent review, local delivery and archive of revised FD-014; resume deferred FD-015 separately.",
+  "reusable_improvement": "Restore the blocker-feedback and report-data templates referenced by fd-workflow; docs/templates currently contains only TEMPLATE.md.",
+  "transferred_to": "FD-015"
+}

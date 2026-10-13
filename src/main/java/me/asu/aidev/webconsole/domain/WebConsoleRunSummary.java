@@ -17,10 +17,17 @@ public record WebConsoleRunSummary(
         int maxParallelism,
         int activeSlots,
         Instant startedAt,
-        Instant statusUpdatedAt) {
+        Instant statusUpdatedAt,
+        Instant deleteAfter) {
 
     public int progressPercent() {
         if (totalTasks <= 0) return 0;
         return Math.min(100, Math.max(0, (completedTasks * 100) / totalTasks));
+    }
+
+    public boolean terminal() {
+        return "CANCELLED".equals(controlState)
+                || "SUCCEEDED".equals(lifecycleStatus)
+                || "REJECTED".equals(lifecycleStatus);
     }
 }

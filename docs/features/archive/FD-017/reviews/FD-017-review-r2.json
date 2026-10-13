@@ -1,0 +1,23 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-017",
+  "source_event": "FD-017-000007-implementation-ready",
+  "human_report": "FD-017-review-r2.md",
+  "data": {
+    "reviewer_session": "fd017-reviewer-r2-20261013-a94d63",
+    "reviewed_head": "8f4204e",
+    "diff_base": "master",
+    "outcome": "verification-passed",
+    "findings": [],
+    "results": [
+      "Jackson FAIL_ON_TRAILING_TOKENS rejects additional recommendation output tokens.",
+      "Edits mark in-flight requests stale; delayed successful POST responses expose task IDs and independent check/withdraw controls.",
+      "Stale requests cannot enter the current recommendation application area.",
+      "Existing draft, confirmation, dependency, security and API paths remain represented by reviewed source."
+    ],
+    "commands": ["aiw fd show FD-017", "git status --short --branch", "git diff --stat 33c8d88..HEAD", "git diff 33c8d88..HEAD", "git log -5 --oneline", "aiw fd claim FD-017 FD-017-000007-implementation-ready --session fd017-reviewer-r2-20261013-a94d63"],
+    "checks_not_run": ["tests", "browser", "HTTP", "model", "network", "database migration", "Reviewer compile", "final build", "deployment"],
+    "residual_risk": "Async UI, model output, database and task lifecycle behavior have not been exercised at runtime."
+  }
+}

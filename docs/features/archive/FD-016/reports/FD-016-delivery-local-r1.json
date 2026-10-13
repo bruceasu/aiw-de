@@ -1,0 +1,34 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "pm-report",
+  "fd_id": "FD-016",
+  "source_event": "FD-016-000021-verification-passed",
+  "human_report": "FD-016-delivery-local-r1.md",
+  "data": {
+    "result": "Complete; local delivery, verified cleanup and archive succeeded",
+    "parent_branch": "master",
+    "delivery_commit": "41f74510bb5b247c770e044f6962548a0e8dade7",
+    "reviewed_source": "603fd6f871054e7af8cd162116ebfc71d9b23d51",
+    "review_count": 4,
+    "review_report": "../reviews/FD-016-review-local-r4.md",
+    "cleanup": "FD worktree and feature/FD-016 removed by verified local-merge; event receipts retained.",
+    "commands": [
+      "aiw git wt local-merge FD-016 (first conflict reset/recovery, then explicit successful delivery)",
+      "managed set-status Pending Verification and request-review for integrated result",
+      "source/FD digest and recorded coordinate checks",
+      "local path-scoped commits; no push/deploy",
+      "aiw fd close FD-016 Complete (exit 0)"
+    ],
+    "checks_not_run": [
+      "tests",
+      "TypeScript type checks",
+      "real CLI/model/authentication",
+      "fleet launcher",
+      "build/release",
+      "deployment/production certification"
+    ],
+    "residual_risks": "Native Windows TypeScript Codex is refused; use Unix/WSL or API. Real SDK/CLI, concurrency, cancellation and platform behavior unverified; production no-store/identity admission belongs to FD-015.",
+    "follow_up_fd": "FD-015 (Deferred)",
+    "archive_path": "docs/features/archive/FD-016/FD-016_FD_011_WORKER.md"
+  }
+}

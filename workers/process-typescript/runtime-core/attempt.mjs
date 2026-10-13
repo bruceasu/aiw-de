@@ -137,7 +137,6 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
       versions: adapter.versions ?? {} }, { maxBytes: cfg.evidenceMaxBytes ?? 4 * 1024 * 1024, forbiddenRoots: [cfg.repositoryRoot, cfg.fallbackWorkspace, cfg.worktreeRoot] });
     await attempt.step("evidence-retention", () => EvidenceRecorder.prune(evidenceRoot));
     const selection = adapter.select(task);
-    const profile = adapter.profile(task);
     await attempt.step("start", async () => { await client.start(task, selection ?? undefined, attempt.signal); started = true; });
     heartbeat = setInterval(() => {
       if (heartbeatPromise || ownershipLost || reporting) return;
@@ -151,13 +150,23 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
       // The awaited heartbeat below observes failures, while this prevents an unhandled rejection during execution.
       heartbeatPromise.catch(() => attempt.cancel("critical-evidence"));
     }, cfg.heartbeatMs);
+    const profile = adapter.profile(task);
+    if (profile.resultKind === "WORKSPACE" && (!task.workspace || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(task.workspace.baseRevision ?? ""))) {
+      throw new RuntimeFault("WRITABLE_WORKSPACE_REQUIRED", "CONFIGURATION");
+    }
+    if (profile.resultKind === "VERDICT") {
+      const revisions = new Set((task.inputs ?? []).map(input => input.resultRevision).filter(Boolean));
+      if (revisions.size && (revisions.size !== 1 || !revisions.has(task.workspace?.baseRevision))) {
+        throw new RuntimeFault("UPSTREAM_REVISION_MISMATCH", "CONFIGURATION");
+      }
+    }
+    const context = new ContextAssembler({ maxInputBytes: cfg.maxInputBytes ?? 1024 * 1024, recorder: attempt.recorder, signal: attempt.signal });
+    context.source(`cp-inputs:${task.taskId}`, JSON.stringify({ taskType: task.taskType, instruction: task.instruction, skillRef: task.skillRef, inputs: task.inputs }), "control-plane-inputs");
+    const prompt = adapter.prompt(task, context);
     await attempt.step("prepare", async () => {
       workspace = await WorkspaceSession.materialize(cfg, task, attempt);
       await workspace.beforeExecution(profile.readOnly);
     });
-    const context = new ContextAssembler({ maxInputBytes: cfg.maxInputBytes ?? 1024 * 1024, recorder: attempt.recorder, signal: attempt.signal });
-    context.source(`cp-inputs:${task.taskId}`, JSON.stringify({ taskType: task.taskType, instruction: task.instruction, skillRef: task.skillRef, inputs: task.inputs }), "control-plane-inputs");
-    const prompt = adapter.prompt(task, context);
     phase = "MODEL_ERROR";
     const result = await attempt.step("execute", () => adapter.execute({ task, workspace, profile, prompt, context, attempt, selection: selection?.profile,
       onSession: id => { sessionId = id; } }));
@@ -166,7 +175,7 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
     adapter.assertSuccessful?.();
     phase = "OUTPUT_INVALID";
     const report = await attempt.step("validate-report", async () => {
-      const value = adapter.report(task.taskType, result);
+      const value = adapter.report(profile.resultKind, result);
       await workspace.validateReadOnly(profile.readOnly);
       await attempt.recorder.record("report-validated", { verdict: value?.verdict ?? "not-required", digest: adapter.digest?.(result), status: "valid" });
       return value;
@@ -174,6 +183,9 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
     phase = "TOOL_ERROR";
     publicationStarted = true;
     const workspaceResult = await attempt.step("publish", () => workspace.finalize(task, profile.readOnly));
+    if (profile.resultKind === "WORKSPACE" && (!workspaceResult || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(workspaceResult.resultRevision) || !Array.isArray(workspaceResult.changedFiles))) {
+      throw new RuntimeFault("WORKSPACE_RESULT_INVALID", "OUTPUT_INVALID");
+    }
     clearInterval(heartbeat);
     if (heartbeatPromise) await attempt.step("heartbeat-settlement", () => heartbeatPromise);
     checkSignal(attempt.signal);

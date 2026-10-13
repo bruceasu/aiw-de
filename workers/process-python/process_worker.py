@@ -61,7 +61,6 @@ class WorkerConfig:
     repository_ref: str
     repository_root: str
     worktree_root: str
-    git_publish_remote: str
     model: str | None
     reasoning_effort: str
     sandbox: str
@@ -73,6 +72,10 @@ class WorkerConfig:
 
     @staticmethod
     def from_env() -> "WorkerConfig":
+        if os.getenv("AIW_GIT_PUBLISH_REMOTE", "").strip():
+            raise ValueError("AIW_GIT_PUBLISH_REMOTE is forbidden: Workers cannot git push")
+        if _bool_env("AIW_CODEX_NETWORK_ACCESS", False):
+            raise ValueError("AIW_CODEX_NETWORK_ACCESS is forbidden for process Workers")
         repository_ref = os.getenv("AIW_REPOSITORY_REF", "").strip()
         repository_root = os.getenv("AIW_REPOSITORY_ROOT", "").strip()
         if bool(repository_ref) != bool(repository_root):
@@ -85,13 +88,14 @@ class WorkerConfig:
             raise ValueError("OPENAI_API_KEY is required for openai-agents runtime")
         if runtime == "openai-agents" and _bool_env("AIW_AGENT_ALLOW_SHELL", False):
             raise ValueError("AIW_AGENT_ALLOW_SHELL is not supported by the Python API runtime")
-        profile = get_profile(process_role)
         if process_role in {"release-readiness", "orchestrator"}:
             raise ValueError("ROLE_NONEXECUTABLE")
+        profile = get_profile(process_role)
         capabilities = {part.strip() for part in os.getenv("AIW_WORKER_CAPABILITIES", "").split(",") if part.strip()}
+        role_capabilities = {"requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
+        if any(part == "*" or part == "flexible-work-v1" or part.startswith("repo:") or part in role_capabilities for part in capabilities):
+            raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
-        if process_role == "verifier":
-            capabilities.update(get_profile("integration-verifier").capabilities)
         if repository_ref:
             capabilities.add(f"repo:{repository_ref}")
         max_concurrency = int(os.getenv("AIW_WORKER_MAX_CONCURRENCY", "1"))
@@ -112,12 +116,11 @@ class WorkerConfig:
             repository_ref=repository_ref,
             repository_root=str(Path(repository_root).resolve()) if repository_root else "",
             worktree_root=str(Path(os.getenv("AIW_WORKTREE_ROOT", default_worktrees)).resolve()),
-            git_publish_remote=os.getenv("AIW_GIT_PUBLISH_REMOTE", "").strip(),
             model=(os.getenv("AIW_OPENAI_MODEL") if runtime == "openai-agents" else os.getenv("AIW_CODEX_MODEL")) or None,
             reasoning_effort=os.getenv("AIW_OPENAI_REASONING_EFFORT", "") if runtime == "openai-agents" else os.getenv("AIW_CODEX_REASONING_EFFORT", "high"),
             sandbox=os.getenv("AIW_CODEX_SANDBOX", "workspace-write"),
             approval_mode=os.getenv("AIW_CODEX_APPROVAL_MODE", "auto-review"),
-            network_access=_bool_env("AIW_CODEX_NETWORK_ACCESS", False),
+            network_access=False,
             poll_interval=float(os.getenv("AIW_WORKER_POLL_SECONDS", "1")),
             heartbeat_interval=float(os.getenv("AIW_WORKER_HEARTBEAT_SECONDS", "20")),
             http_timeout=float(os.getenv("AIW_WORKER_HTTP_TIMEOUT_SECONDS", "15")),
@@ -240,23 +243,10 @@ class GitWorkspace:
         if read_only and revision != self.assignment["baseRevision"].lower():
             raise RuntimeError("READ_ONLY_REVISION_CHANGED")
         changed = sorted(filter(None, _git(self.cwd, "diff", "--name-only", "-z", self.assignment["baseRevision"], revision).split("\0")))
-        publication_ref = None
         attempt = current_attempt()
-        if self.config.git_publish_remote:
-            publication_ref = f"git:{self.config.git_publish_remote}:{self.assignment['branchName']}"
-            if attempt:
-                attempt.evidence.record("publication-started", publicationRef=publication_ref, resultRevision=revision, sideEffect="possible")
-            try:
-                _git(self.cwd, "push", self.config.git_publish_remote, f"{revision}:refs/heads/{self.assignment['branchName']}")
-                if attempt:
-                    attempt.evidence.record("publication-terminal", publicationRef=publication_ref, resultRevision=revision, status="completed", sideEffect="completed")
-            except Exception:
-                if attempt:
-                    attempt.evidence.record("publication-terminal", publicationRef=publication_ref, resultRevision=revision, status="unknown", sideEffect="reconcile")
-                raise
         if attempt:
-            attempt.evidence.record("workspace-result", resultRevision=revision, publicationRef=publication_ref, count=len(changed))
-        return {"resultRevision": revision, "changedFiles": changed, "publicationRef": publication_ref}
+            attempt.evidence.record("workspace-result", resultRevision=revision, count=len(changed))
+        return {"resultRevision": revision, "changedFiles": changed}
 
     def cleanup(self) -> None:
         if self.assignment is None or self.assignment.get("baseRevision") is None:
@@ -288,21 +278,18 @@ def _git(cwd: str, *args: str) -> str:
     return runtime_git(cwd, *args)
 
 
-def _completion_report(task: dict[str, Any], final_response: str) -> dict[str, str] | None:
-    task_type = task.get("taskType")
-    if task_type in {"REQUIREMENT_ANALYSIS", "SOLUTION_ARCHITECTURE", "IMPLEMENTATION_PLANNING"}:
-        summary = final_response.strip()
-        if not summary:
-            raise RuntimeError(f"{task_type} must return a non-empty final response")
+def _completion_report(result_kind: str, final_response: str) -> dict[str, str]:
+    summary = final_response.strip()
+    if not summary:
+        raise RuntimeError("COMPLETION_REPORT_EMPTY")
+    if result_kind in {"REPORT", "WORKSPACE"}:
         return {"verdict": "PASS", "summary": summary}
-    if task_type not in {"CODE_REVIEW", "VERIFICATION", "INTEGRATION_VERIFICATION"}:
-        return None
-    lines = final_response.rstrip().splitlines()
-    marker = lines[-1].strip() if lines else ""
+    if result_kind != "VERDICT":
+        raise RuntimeError("RESULT_KIND_INVALID")
+    marker = summary.splitlines()[-1].strip()
     verdict = marker.split(":", 1)[1].strip() if marker.startswith("AIW_VERDICT:") else None
     if verdict not in {"PASS", "REPAIR_REQUIRED"}:
-        raise RuntimeError("review/verification final response must end with AIW_VERDICT: PASS or AIW_VERDICT: REPAIR_REQUIRED")
-    summary = final_response or f"AIW_VERDICT: {verdict}"
+        raise RuntimeError("COMPLETION_VERDICT_INVALID")
     return {"verdict": verdict, "summary": summary}
 
 
@@ -382,14 +369,24 @@ class ProcessSlot:
             attempt = Attempt(self.config, task, self.force_event)
             with attempt_scope(attempt):
                 profile = _profile(self.config, task.get("taskType"))
-                if task.get("taskType") not in profile.task_types:
-                    raise RuntimeError("ROLE_TASK_TYPE_DENIED")
                 selection, reason = choose_ai_profile(task.get("aiGuidance"), self.config.runtime)
                 self.client.start(task, self.config.worker_id, selection, reason)
                 started = True
                 attempt.evidence.record("attempt-running", status="running")
                 heartbeat = LeaseHeartbeat(self.client, task, self.config.worker_id, self.config.heartbeat_interval, attempt)
                 heartbeat.start()
+                if task.get("taskType") not in profile.task_types:
+                    raise RuntimeError("ROLE_TASK_TYPE_DENIED")
+                if task.get("taskType") != "EXTERNAL_WORK" or task.get("skillRef") != profile.primary_skill:
+                    raise RuntimeError("ROLE_SKILL_DENIED")
+                assignment = task.get("workspace") or {}
+                revision = assignment.get("baseRevision") or ""
+                if profile.result_kind == "WORKSPACE" and (len(revision) not in {40, 64} or any(c not in "0123456789abcdefABCDEF" for c in revision)):
+                    raise RuntimeError("WRITABLE_WORKSPACE_REQUIRED")
+                if profile.result_kind == "VERDICT" and any(item.get("resultRevision") and item["resultRevision"] != revision for item in task.get("inputs") or []):
+                    raise RuntimeError("UPSTREAM_REVISION_MISMATCH")
+                # Read and freeze trusted skills before workspace side effects.
+                instruction = _prompt(task, self.config)
                 if task.get("workspace"):
                     repository_gate = workspace_lock(task["workspace"].get("repositoryPath") or self.config.repository_root, attempt)
                     try: workspace = GitWorkspace.materialize(self.config, task)
@@ -399,7 +396,6 @@ class ProcessSlot:
                 gate = workspace_lock(workspace.cwd, attempt)
                 baseline = snapshot(workspace.cwd, attempt) if not profile.writable else None
                 selected = selection["profile"] if selection else None
-                instruction = _prompt(task, self.config)
                 for name in ("AGENTS.md", "CODEX.md"):
                     file = Path(workspace.cwd) / name
                     if not file.exists(): continue
@@ -432,12 +428,14 @@ class ProcessSlot:
                     raise
                 if heartbeat.ownership_lost.is_set(): raise RuntimeError("LEASE_LOST")
                 phase = "OUTPUT_INVALID"
-                report = _completion_report(task, final_response)
+                report = _completion_report(profile.result_kind, final_response)
                 if not profile.writable and snapshot(workspace.cwd, attempt) != baseline:
                     raise RuntimeError("READ_ONLY_WORKSPACE_CHANGED")
                 attempt.evidence.record("report-validated", status="valid", digest=hashlib.sha256(final_response.encode("utf-8")).hexdigest())
                 phase = "TOOL_ERROR"
                 workspace_result = workspace.finalize(task, read_only=not profile.writable)
+                if profile.result_kind == "WORKSPACE" and (not workspace_result or not workspace_result.get("resultRevision") or not isinstance(workspace_result.get("changedFiles"), list)):
+                    raise RuntimeError("WORKSPACE_RESULT_INVALID")
                 heartbeat.close()
                 attempt.check()
                 if heartbeat.ownership_lost.is_set(): raise RuntimeError("LEASE_LOST")
@@ -495,6 +493,7 @@ def _skill_context(config: WorkerConfig, task_type=None) -> str:
         "- This worker owns bounded semantic execution only.\n"
         "- Never create a second workflow engine or claim lifecycle authority.\n"
         "- Treat upstream inputs supplied by the Control Plane as authoritative.\n"
+        "- Never run git push or publish a Git branch. Return the local result revision only.\n"
     ]
     for skill in profile.protocol_skills:
         parts.append(_read_skill_package(config.skills_root, skill))
@@ -513,6 +512,8 @@ def _prompt(task: dict[str, Any], config: WorkerConfig) -> str:
     instruction = (task.get("instruction") or "").strip() or f"Execute AI Dev Manager task {task['taskId']} for {task.get('subjectType')} {task.get('subjectId')}."
     if task.get("inputs"):
         instruction += "\n\nUpstream task inputs (authoritative):\n" + json.dumps(task["inputs"], indent=2)
+    if task_type != "EXTERNAL_WORK" or task.get("skillRef") != profile.primary_skill:
+        raise RuntimeError("ROLE_SKILL_DENIED")
     skill_ref = (task.get("skillRef") or "").strip()
     skill_line = f"\nControl Plane skill reference: {skill_ref}" if skill_ref else ""
     permission = "WRITABLE repository task" if profile.writable else "READ-ONLY semantic/review task; do not modify repository files"

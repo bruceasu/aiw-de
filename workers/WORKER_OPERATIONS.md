@@ -1,19 +1,19 @@
-﻿# Worker 公共基础运维说明
+# Worker 公共基础运维说明
 
-关联：FD-005。**当前为实施预览：公共基础与 Codex 全会话禁存入口源码已接入，独立测试和审查未完成；没有实际平台的禁存认证，不能作为已验收发布包部署。**
+关联：FD-005 / FD-016。FD-016 本地交付优先于下文历史生产预览：TypeScript 使用系统 codex-cli/codex-app-server/openai-agents，生产禁存认证移交 FD-015；Python 保留原准入。**当前为实施预览：公共基础与 Codex 全会话禁存入口源码已接入，独立测试和审查未完成；没有实际平台的禁存认证，不能作为已验收发布包部署。**
 
 ## 维护范围与角色
 
-生产对齐范围是单包 `process-typescript`（显式选择 `codex-sdk` 或 `openai-agents`）、支持 `codex-cli` / `openai-api` AgentRuntime SPI 的 `process-go`、以及 `process-python`。旧 `process-typescript-with-api` 包及启动路径已删除。旧 `codex-*` 为参考示例，`demo-deployer` 保持独立部署权限契约。
+生产对齐范围是单包 `process-typescript`（显式选择 `codex-cli`、`codex-app-server` 或 `openai-agents`）、支持 `codex-cli` / `codex-app-server` / `openai-api` AgentRuntime SPI 的 `process-go`、以及 `process-python`。旧 `process-typescript-with-api` 包及启动路径已删除。旧 `codex-*` 为参考示例，`demo-deployer` 保持独立部署权限契约。
 
-九角色、verifier 的集成验证别名、八字段 Profile 和原 report 规则见 [公共契约](WORKER_RUNTIME_CONTRACT.md)。[兼容样例](runtime-contract.examples.json) 提供每个角色的最小语义输入、报告和拒绝样例；它们未执行，不能直接当作 HTTP 请求发送，也不授予命令/网络权限。
+九角色、独立 integration-verifier、九字段 Profile 和 resultKind 报告规则见 [公共契约](WORKER_RUNTIME_CONTRACT.md)。[兼容样例](runtime-contract.examples.json) 提供每个角色的最小语义输入、报告和拒绝样例；它们未执行，不能直接当作 HTTP 请求发送，也不授予命令/网络权限。
 
 ## 版本与运行时差异
 
 | 运行时 | 已观察/声明版本 | 当前源码适配 | 仍未证明 |
 |---|---|---|---|
-| API TypeScript | 实际安装 Agents SDK 0.3.9、OpenAI 6.49.0 | 公共 ESM 生命周期/工具/上下文/证据；完整响应保护；并行工具开启 | 类型兼容、行为、部署端点和全部禁存路径 |
-| Codex TypeScript | 实际本地 SDK 0.155.1；本机全局 CLI 包声明 0.160.0 | 复用公共 ESM；公开 SDK 启动已安装 native CLI；整个内部 Agent 持排他资源 | native 实际二进制认证、禁存与完整进程树终止效果；内层工具授权不可观察 |
+| API TypeScript | 固定 Agents SDK 0.20.0、OpenAI 7.32.0、Zod 4.6.7 | 公共 ESM 生命周期/工具/上下文/证据；完整响应保护；并行工具开启 | 类型兼容、行为、部署端点和全部禁存路径 |
+| Codex TypeScript | 固定系统 CLI 0.162.1，无 Worker-local Codex 包 | 复用公共 ESM；直接 Exec / App Server 启动系统 native CLI；整个内部 Agent 持排他资源 | native 实际二进制认证、禁存与完整进程树终止效果；内层工具授权不可观察 |
 | Go | go.mod 声明 Go 1.23、toml 1.6.0 | 同行为契约的期限/证据/Git/进程组适配；整个 CLI 持排他资源 | Codex 全通道禁存与跨平台行为；内部调度仍由 CLI 负责 |
 | Python | 固定 wheel 源码 openai-codex 0.157.0；未安装 | 公开 launch_args_override、ephemeral 与 read 回执；同契约期限/证据/Git/心跳 | 配套 CLI 的实际禁存、内层工具/usage、取消终态；宿主审批接受回复被拒绝 |
 
@@ -23,7 +23,7 @@ API 允许不冲突文件工具有界并行；Codex 适配只协调 Worker 外�
 
 ## 公共环境配置
 
-保留现有控制平面地址、Worker ID/token、角色、能力、仓库、工作区、Profile、Skills 和模型配置。新增公共预算是环境项，不进入严格八字段 Profile。
+保留现有控制平面地址、Worker ID/token、角色、能力、仓库、工作区、Profile、Skills 和模型配置。新增公共预算是环境项，不进入严格九字段 Profile。
 
 | 环境变量 | 默认值 | 含义 |
 |---|---|---|
@@ -42,7 +42,7 @@ API 专用项：`AIW_AGENT_TOOL_TIMEOUT_MS=60000`、`AIW_AGENT_MAX_TURNS=40`；�
 
 ## Codex 禁存准入与发布
 
-三个 Codex Worker 均新增必需环境项 `AIW_CODEX_SESSION_POLICY`，指向任务工作区外的 `aiw.worker.session-policy.v1` 清单；缺少或不匹配时注册/领取前失败。清单绑定 runtime（codex-typescript/codex-go/codex-python）、SDK、平台、native/launcher 摘要、用户与工程配置来源及独立验证工件。Python native 必须保持配套 0.157.0。
+以下为 FD-005 历史生产准入目标，FD-016 TypeScript/Go 本地交付不以此为已完成认证；实际生产检查由 FD-015 承接。Python 当前仍保留这些准入。三个 Codex Worker 原设计新增必需环境项 `AIW_CODEX_SESSION_POLICY`，指向任务工作区外的 `aiw.worker.session-policy.v1` 清单；缺少或不匹配时注册/领取前失败。清单绑定 runtime（codex-typescript/codex-go/codex-python）、SDK、平台、native/launcher 摘要、用户与工程配置来源及独立验证工件。Python native 必须保持配套 0.157.0。
 
 配置来源固定 SHA-256 或明确 absent。用户 CODEX_HOME/config.toml 及存在的工程祖先 .codex/config.toml 必须列入；变更后重新验证。含工程配置的动态 worktree 未在清单中核验时会拒绝，不能仅复制旧清单授权新路径。清单与程序及原始证据不得放在工作区里，模型不能选择入口。主机权限仍是信任边界，并非操作系统沙箱。
 
@@ -80,7 +80,7 @@ push 与取消竞争窗口按 G1 处理：记录目标 publicationRef、resultRe
 
 ## 升级与回滚
 
-先取得 [全会话禁存设计](../docs/worker-codex-no-store-design.md) 的实际版本、平台与全部数据通道证据。源码准入已实现，真实验证未完成，旧包不能自动视为满足新 G2。
+生产升级须先取得 [全会话禁存设计](../docs/worker-codex-no-store-design.md) 的实际版本、平台与全部数据通道证据。源码准入已实现，真实验证未完成，旧包不能自动视为满足新 G2。
 
 完成独立验收后才按新 Worker 身份从只读角色试用，再到编码/集成/修复；升级先 drain，保存已核验包、配置和版本摘要。回滚选择必须同样满足 G2，不能借恢复可用性重新开启会话正文持久化。未完成 attempt、保留工作区及远端副作用分别由控制平面/操作者对账。
 

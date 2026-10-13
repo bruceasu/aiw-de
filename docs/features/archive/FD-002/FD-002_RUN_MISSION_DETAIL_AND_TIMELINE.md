@@ -124,3 +124,9 @@ PM 已依据 [r13 决定](reports/FD-002-test-decision-r13-v1.md) 拒绝，Worke
 
 **Closed:** 2026-10-05
 **Disposition reason:** 用户将自行测试，要求本轮结束 FD-002；测试未执行，验收未完成。保留现有未执行报告、历史失败证据及用户延期验证决定，后续如需继续可重新打开。
+
+## 后续处置决定（2026-10-13）
+
+用户阅读当前 UI 与验收适用性评估后，明确决定“保守处理，我就放弃这个任务了”。停止本 FD 的后续实现、测试与验收投入；保留已有代码、历史失败及未运行证据，不标记 Complete，也不声称验收通过。
+
+评估见 [当前 UI 报告](../../../reports/FD-002-current-ui-assessment-20261013.md)。尝试通过 `aiw fd close FD-002 Closed --reason ...` 记录关闭时，CLI 返回 `FD is already archived`。保留原 Deferred 归档状态，不为状态变更重新打开或创建 Worker 交接；本节记录用户放弃决定，原延期原因保留为历史。

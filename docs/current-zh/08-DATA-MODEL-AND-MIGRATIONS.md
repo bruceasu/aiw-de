@@ -4,9 +4,9 @@
 
 不会因为“规范化”就增加表。只有独立生命周期、并发 Ownership、独立关系索引、或无法从现有数据恢复的审计历史，才值得增加表。
 
-当前：**9 张表、Flyway V1～V14**。
+当前开发基线：**单个 Flyway V1 文件**，仅用于空数据库初始化。
 
-## 2. 9 张表
+## 2. 主要表
 
 ### `worker`
 
@@ -52,24 +52,20 @@ Run lifecycle/current authority，以及 failure/recovery、operator control、p
 
 记录 Fleet ceiling runtime 修改历史。
 
+### `web_console_plan_archive`
+
+此表属于旧迁移历史，在单文件 V1 末尾与旧 Run 权威表一并删除；当前产品不再创建固定自主 Run。新的计划归档使用
+`web_console_plan_archive`，保存归档操作人、时间和可撤销的 30 天删除标记。
+到期清理仅删除 Control Plane 数据库中的计划及关联记录，外部工作目录和 Git 成果保留。
+
+计划归档只控制当前列表的显示。只有已停止、已收回，或最终步骤通过评审且所有任务结束的计划可归档。
+管理员可撤销未到期的删除标记；到期后后台按计划独立清理，若有未结束任务或外部引用，事务回滚并重试。
+
 ## 3. Migration
 
-```text
-V1  core Worker/Task/Dependency/Attempt
-V2  instruction
-V3  isolated workspace/result revision
-V4  publication ref
-V5  completion verdict/summary
-V6  engineering gate
-V7  human approval
-V8  autonomous run
-V9  operator control
-V10 run events
-V11 run concurrency budget
-V12 runtime run scheduling audit
-V13 fleet budget
-V14 runtime fleet scheduling audit
-```
+`src/main/resources/db/migration/V1__initial_schema.sql` 按原 V1～V21 顺序保留建表和变更 SQL，
+最后加入计划控制与归档表，并删除旧固定 Run 表。开发库必须以**空数据库**重新初始化；已有 Flyway
+历史或数据不能直接沿用这个新基线。重建前自行备份需要保留的数据。
 
 ## 4. SQLite
 

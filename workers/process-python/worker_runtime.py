@@ -229,6 +229,8 @@ def safe_directories(path):
     _regular_parents(Path(path).absolute())
 
 def git(cwd, *args, cleanup=False):
+    if "push" in args:
+        raise RuntimeError("GIT_PUSH_FORBIDDEN")
     attempt = None if cleanup else current_attempt()
     if attempt:
         attempt.check()
