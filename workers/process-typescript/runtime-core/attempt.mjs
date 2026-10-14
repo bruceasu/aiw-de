@@ -5,19 +5,30 @@ import { WorkspaceSession } from "./workspace.mjs";
 import { RuntimeFault, checkSignal, failureCategory, errorCode } from "./errors.mjs";
 
 export class AttemptRunner {
-  constructor({ timeoutMs = 900000, parentSignal, settleTimeoutMs = 10000, recorder } = {}) {
-    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || !Number.isSafeInteger(settleTimeoutMs) || settleTimeoutMs < 1) {
+  constructor({ timeoutMs = 0, warningMs = 900000, onWarning, parentSignal, settleTimeoutMs = 10000, recorder } = {}) {
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0 || timeoutMs > 2147483647
+        || !Number.isSafeInteger(warningMs) || warningMs < 1 || warningMs > 2147483647
+        || !Number.isSafeInteger(settleTimeoutMs) || settleTimeoutMs < 1) {
       throw new RuntimeFault("ATTEMPT_BUDGET_INVALID", "CONFIGURATION");
     }
     this.controller = new AbortController();
     this.signal = parentSignal ? AbortSignal.any([parentSignal, this.controller.signal]) : this.controller.signal;
     this.started = Date.now();
-    this.timer = setTimeout(() => this.cancel("deadline"), timeoutMs);
+    this.timer = timeoutMs > 0 ? setTimeout(() => this.cancel("deadline"), timeoutMs) : undefined;
     this.resourceUncertain = false;
     this.reason = null;
     this.active = new Set();
     this.settleTimeoutMs = settleTimeoutMs;
     this.recorder = recorder;
+    this.warningTimer = setTimeout(() => {
+      if (this.signal.aborted) return;
+      const durationMs = Date.now() - this.started;
+      if (onWarning) onWarning(durationMs);
+      else console.warn(`attempt duration warning: elapsedMs=${durationMs}; execution continues`);
+      if (this.recorder) void this.#run(() => this.recorder.record("attempt-duration-warning", {
+        code: "ATTEMPT_DURATION_WARNING", durationMs, warningMs, status: "continuing" }))
+        .catch(() => { if (!this.signal.aborted) this.cancel("critical-evidence"); });
+    }, warningMs);
   }
   cancel(reason = "cancelled") {
     this.reason ??= reason;
@@ -59,7 +70,7 @@ export class AttemptRunner {
     try { return await Promise.race([Promise.allSettled([...this.active]).then(() => true), new Promise(resolve => { timer = setTimeout(() => { this.resourceUncertain = true; resolve(false); }, timeoutMs); })]); }
     finally { clearTimeout(timer); }
   }
-  dispose() { clearTimeout(this.timer); }
+  dispose() { clearTimeout(this.timer); clearTimeout(this.warningTimer); }
 }
 
 async function withinCleanup(promise, timeoutMs, onTimeout = () => {}) {
@@ -87,7 +98,17 @@ export class ControlPlaneClient {
   async heartbeat(task, externalSessionId) { return await this.action(task, "heartbeat", { externalSessionId }); }
   async acknowledgeStop(task) { return await this.action(task, "stop-acknowledgement", {}); }
   async fail(task, externalSessionId, failureReason = null, category = "UNKNOWN") { return await this.action(task, "fail", { externalSessionId, failureReason, failureCategory: category }); }
-  async complete(task, externalSessionId, workspaceResult, report, signal) { return await this.action(task, "complete", { externalSessionId, workspaceResult, report }, signal); }
+  async complete(task, externalSessionId, workspaceResult, report, signal) {
+    return await this.action(task, "complete", { externalSessionId, workspaceResult,
+      report: report ? { verdict: report.verdict, summary: report.summary } : report }, signal);
+  }
+  async registerOutputs(task, report, files, resultRevision, signal) {
+    return await this.action(task, "outputs", { attemptId: task.attemptId, verdict: report.verdict,
+      summary: report.summary, files, resultRevision }, signal);
+  }
+  async readOutputs(task, bundleId, signal) {
+    return await this.action(task, "outputs/read", { attemptId: task.attemptId, bundleId }, signal);
+  }
   async action(task, action, fields, signal) { return await this.post(`/tasks/${encodeURIComponent(task.taskId)}/${action}`, { workerId: this.cfg.workerId, leaseToken: task.leaseToken, ...fields }, false, signal); }
   async post(pathPart, payload, allowNoContent = false, signal) {
     const headers = { Accept: "application/json" };
@@ -104,7 +125,9 @@ export class ControlPlaneClient {
 }
 
 export async function runClaimedAttempt(cfg, client, task, adapter) {
-  const attempt = new AttemptRunner({ timeoutMs: cfg.taskTimeoutMs ?? 900000, parentSignal: cfg.forceSignal, settleTimeoutMs: cfg.cleanupTimeoutMs ?? 10000 });
+  const attempt = new AttemptRunner({ timeoutMs: cfg.taskHardTimeoutMs ?? 0, warningMs: cfg.taskTimeoutMs ?? 900000,
+    onWarning: durationMs => console.warn(`attempt ${task.attemptId}: ATTEMPT_DURATION_WARNING task=${task.taskId} elapsedMs=${durationMs}; execution continues`),
+    parentSignal: cfg.forceSignal, settleTimeoutMs: cfg.cleanupTimeoutMs ?? 10000 });
   let workspace;
   let started = false;
   let ownershipLost = false;
@@ -151,7 +174,7 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
       heartbeatPromise.catch(() => attempt.cancel("critical-evidence"));
     }, cfg.heartbeatMs);
     const profile = adapter.profile(task);
-    if (profile.resultKind === "WORKSPACE" && (!task.workspace || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(task.workspace.baseRevision ?? ""))) {
+    if (profile.resultKind === "WORKSPACE" && (!task.workspace || (task.workspace.baseRevision != null && !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(task.workspace.baseRevision)))) {
       throw new RuntimeFault("WRITABLE_WORKSPACE_REQUIRED", "CONFIGURATION");
     }
     if (profile.resultKind === "VERDICT") {
@@ -162,11 +185,14 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
     }
     const context = new ContextAssembler({ maxInputBytes: cfg.maxInputBytes ?? 1024 * 1024, recorder: attempt.recorder, signal: attempt.signal });
     context.source(`cp-inputs:${task.taskId}`, JSON.stringify({ taskType: task.taskType, instruction: task.instruction, skillRef: task.skillRef, inputs: task.inputs }), "control-plane-inputs");
-    const prompt = adapter.prompt(task, context);
     await attempt.step("prepare", async () => {
       workspace = await WorkspaceSession.materialize(cfg, task, attempt);
       await workspace.beforeExecution(profile.readOnly);
     });
+    const { collectOutputFiles, readOutputInputs, publicationSnapshot, validatePublication } = await import("./outputs.mjs");
+    const outputInputs = await attempt.step("prepare-output-inputs", () => readOutputInputs(client, task, context, attempt.signal));
+    const publicationBefore = await attempt.step("prepare-publication", () => publicationSnapshot(task, workspace.cwd, attempt.signal));
+    const prompt = adapter.prompt({ ...task, outputInputs }, context);
     phase = "MODEL_ERROR";
     const result = await attempt.step("execute", () => adapter.execute({ task, workspace, profile, prompt, context, attempt, selection: selection?.profile,
       onSession: id => { sessionId = id; } }));
@@ -175,16 +201,43 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
     adapter.assertSuccessful?.();
     phase = "OUTPUT_INVALID";
     const report = await attempt.step("validate-report", async () => {
-      const value = adapter.report(profile.resultKind, result);
+      const value = adapter.report(profile.resultKind, result, Boolean(task.outputStore));
       await workspace.validateReadOnly(profile.readOnly);
+      if (!profile.readOnly) await validatePublication(task, outputInputs, publicationBefore, workspace.cwd, attempt.signal);
       await attempt.recorder.record("report-validated", { verdict: value?.verdict ?? "not-required", digest: adapter.digest?.(result), status: "valid" });
       return value;
     });
     phase = "TOOL_ERROR";
     publicationStarted = true;
     const workspaceResult = await attempt.step("publish", () => workspace.finalize(task, profile.readOnly));
-    if (profile.resultKind === "WORKSPACE" && (!workspaceResult || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(workspaceResult.resultRevision) || !Array.isArray(workspaceResult.changedFiles))) {
-      throw new RuntimeFault("WORKSPACE_RESULT_INVALID", "OUTPUT_INVALID");
+    if (task.outputStore?.publication && !profile.readOnly) {
+      await attempt.step("validate-publication-result", async () => {
+        await validatePublication(task, outputInputs, publicationBefore, workspace.cwd, attempt.signal);
+        if (workspaceResult?.changedFiles?.some(file => file !== task.outputStore.publication.targetPath)) {
+          throw new RuntimeFault("PUBLICATION_CHANGED_FILES_INVALID", "OUTPUT_INVALID");
+        }
+      });
+    }
+    if (profile.resultKind === "WORKSPACE") {
+      if (task.workspace.baseRevision == null) {
+        if (workspaceResult !== null) throw new RuntimeFault("DIRECT_WORKSPACE_RESULT_INVALID", "OUTPUT_INVALID");
+      } else if (!workspaceResult || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(workspaceResult.resultRevision) || !Array.isArray(workspaceResult.changedFiles)) {
+        throw new RuntimeFault("WORKSPACE_RESULT_INVALID", "OUTPUT_INVALID");
+      }
+    }
+    if (task.outputStore) {
+      await attempt.step("archive-outputs", async () => {
+        let declarations = report.outputFiles ?? [];
+        const publication = task.outputStore.publication;
+        if (publication && !profile.readOnly) {
+          declarations = [...declarations.filter(file => file?.path !== publication.targetPath),
+            { path: publication.targetPath, kind: "DOCUMENT", sourcePath: publication.targetPath }];
+        }
+        const files = await collectOutputFiles({ ...report, outputFiles: declarations }, workspace.cwd, attempt.signal);
+        const bundle = await client.registerOutputs(task, report, files, workspaceResult?.resultRevision ?? null, attempt.signal);
+        await attempt.recorder.record("outputs-registered", { path: bundle.directory, count: bundle.files.length,
+          status: "registered", revision: bundle.attemptId });
+      });
     }
     clearInterval(heartbeat);
     if (heartbeatPromise) await attempt.step("heartbeat-settlement", () => heartbeatPromise);
@@ -222,6 +275,9 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
     attempt.cancel(attempt.reason ?? errorCode(error));
     await cleanupWait(() => attempt.recorder?.record("attempt-failed", { status: terminal, category: failureCategory(error, phase), code: errorCode(error), reason: attempt.reason, reportStatus: reporting ? "unknown" : "not-completed" }));
     if (started && !stopRequested && !ownershipLost && !reporting) {
+      if (task.outputStore) {
+        await cleanupWait(() => client.registerOutputs(task, { verdict: "FAILED", summary: `Task failed: ${errorCode(error)}` }, [], null));
+      }
       const posted = await cleanupWait(() => client.fail(task, sessionId, errorCode(error), failureCategory(error, phase)));
       await cleanupWait(() => attempt.recorder?.record("failure-posted", { reportStatus: posted ? "accepted" : "unknown" }));
     }

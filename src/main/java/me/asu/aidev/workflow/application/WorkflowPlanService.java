@@ -21,11 +21,18 @@ import me.asu.aidev.workflow.port.WorkflowPlanRepository;
 import me.asu.aidev.workflow.jdbc.JdbcWorkflowControlRepository;
 import me.asu.aidev.workflow.jdbc.JdbcWorkflowControlRepository.Control;
 import me.asu.aidev.workflow.jdbc.JdbcWorkflowHumanOutcomeRepository;
+import me.asu.aidev.workflow.jdbc.JdbcWorkflowPlanArchiveRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkflowPlanService {
+    private me.asu.aidev.output.jdbc.JdbcTaskOutputRepository taskOutputs;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTaskOutputs(me.asu.aidev.output.jdbc.JdbcTaskOutputRepository taskOutputs) {
+        this.taskOutputs = taskOutputs;
+    }
     public static final String SUBJECT = "flexible-plan";
     private final WorkflowPlanRepository plans;
     private final WorkTaskService taskService;
@@ -33,16 +40,21 @@ public class WorkflowPlanService {
     private final ExecutionAttemptRepository attempts;
     private final JdbcWorkflowControlRepository controls;
     private final JdbcWorkflowHumanOutcomeRepository outcomes;
+    private final JdbcWorkflowPlanArchiveRepository archives;
+
+    public record RetryEligibility(long planVersion, boolean allowed, String blockedReason) {}
 
     public WorkflowPlanService(WorkflowPlanRepository plans, WorkTaskService taskService, WorkTaskRepository tasks,
                                ExecutionAttemptRepository attempts, JdbcWorkflowControlRepository controls,
-                               JdbcWorkflowHumanOutcomeRepository outcomes) {
+                               JdbcWorkflowHumanOutcomeRepository outcomes,
+                               JdbcWorkflowPlanArchiveRepository archives) {
         this.plans = plans;
         this.taskService = taskService;
         this.tasks = tasks;
         this.attempts = attempts;
         this.controls = controls;
         this.outcomes = outcomes;
+        this.archives = archives;
     }
 
     @Transactional
@@ -81,6 +93,89 @@ public class WorkflowPlanService {
     public List<Control> controlHistory(String id) {
         get(id);
         return controls.history(id);
+    }
+
+    @Transactional(readOnly = true)
+    public RetryEligibility retryEligibility(String id, String taskId) {
+        WorkflowPlan plan = get(id);
+        List<WorkTask> current = steps(id);
+        WorkTask task = current.stream().filter(row -> row.id().value().equals(taskId)).findFirst()
+                .orElseThrow(() -> new PlanNotFound(taskId));
+        String blocked = retryBlockedReason(plan, task, current);
+        return new RetryEligibility(plan.version(), blocked == null, blocked);
+    }
+
+    @Transactional
+    public WorkflowPlan retryFailedTask(String id, String taskId, long planVersion, long taskVersion,
+                                        String actor, String reason, boolean warningConfirmed) {
+        actor = actor(actor);
+        if (reason == null || reason.isBlank() || reason.length() > 2000) {
+            throw new IllegalArgumentException("Retry reason must contain 1 to 2000 characters.");
+        }
+        if (!warningConfirmed) throw new IllegalArgumentException("Confirm the retry warning before continuing.");
+        get(id);
+        List<WorkTask> current = lockedTasks(id);
+        WorkflowPlan plan = get(id);
+        WorkTask task = current.stream().filter(row -> row.id().value().equals(taskId)).findFirst()
+                .orElseThrow(() -> new PlanNotFound(taskId));
+        if (plan.version() != planVersion || task.version() != taskVersion) {
+            throw new IllegalStateException("Plan or task changed. Reload before retrying.");
+        }
+        String blocked = retryBlockedReason(plan, task, current);
+        if (blocked != null) throw new IllegalStateException(blocked);
+        int step = stepIndex(plan, task.id());
+        acceptedInputs(plan, step - 1);
+        Instant now = Instant.now();
+        String auditReason = "Retry " + taskId + ": " + reason.strip();
+        if (!plans.transition(id, planVersion, WorkflowPlan.State.CONFIRMED, WorkflowPlan.State.CONFIRMED,
+                actor, auditReason.substring(0, Math.min(2000, auditReason.length())), now)) {
+            throw new IllegalStateException("Plan or task changed. Reload before retrying.");
+        }
+        if (!tasks.retryFailed(task.id(), now)) {
+            throw new IllegalStateException("Plan or task changed. Reload before retrying.");
+        }
+        tasks.recordControlEvent(UUID.randomUUID().toString(), task.id(), null,
+                "RETRY_FAILED", actor, reason.strip(), true, now);
+        return get(id);
+    }
+
+    private String retryBlockedReason(WorkflowPlan plan, WorkTask task, List<WorkTask> current) {
+        if (plan.state() != WorkflowPlan.State.CONFIRMED || archives.archived(plan.id())
+                || outcomes.find(plan.id()).isPresent()) {
+            return "This plan has ended or is archived. Its tasks cannot be retried.";
+        }
+        if (controls.pending(plan.id()).isPresent()) return "Resolve the pending stop request before retrying.";
+        if (task.state() != TaskState.FAILED) return "Only a failed task can be retried.";
+        int sequence = taskSequence(plan, task.id());
+        if (sequence < 0 || controls.skipped(plan.id(), stepIndex(plan, task.id()))
+                || current.stream().anyMatch(row -> taskSequence(plan, row.id()) < 0
+                        || taskSequence(plan, row.id()) > sequence)) {
+            return "Only the current failed task can be retried. This plan has already advanced.";
+        }
+        if (current.stream().anyMatch(row -> !row.id().equals(task.id())
+                && (row.state() == TaskState.READY || row.state() == TaskState.BLOCKED
+                || row.state() == TaskState.CLAIMED || row.state() == TaskState.RUNNING))) {
+            return "Another task is pending or running. Wait before retrying.";
+        }
+        int last = plan.spec().steps().size() - 1;
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS_PER_STEP; attempt++) {
+            if (attempts.findCompletionReport(reviewId(plan, last, attempt))
+                    .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false)) {
+                return "This plan has already passed its final review.";
+            }
+        }
+        return null;
+    }
+
+    private static int taskSequence(WorkflowPlan plan, TaskId id) {
+        for (int step = 0; step < plan.spec().steps().size(); step++) {
+            for (int attempt = 1; attempt <= MAX_ATTEMPTS_PER_STEP; attempt++) {
+                int sequence = step * MAX_ATTEMPTS_PER_STEP * 2 + (attempt - 1) * 2;
+                if (id.equals(executionId(plan, step, attempt))) return sequence;
+                if (id.equals(reviewId(plan, step, attempt))) return sequence + 1;
+            }
+        }
+        return -1;
     }
 
     @Transactional
@@ -328,6 +423,9 @@ public class WorkflowPlanService {
         TaskId id = reviewId(plan, stepIndex, attempt);
         var reviewSkills = new java.util.LinkedHashSet<String>();
         reviewSkills.add("workflow-review");
+        if (taskOutputs != null && taskOutputs.completed(execution.value())
+                .map(bundle -> bundle.files().stream().anyMatch(file -> Set.of("DOCUMENT", "ATTACHMENT").contains(file.kind())))
+                .orElse(false)) reviewSkills.add("task-outputs-v1");
         if ("coding-work-package-executor".equals(step.skillRef())) {
             step.requiredSkills().stream().filter(skill -> !Set.of("coding", "integration", "repair").contains(skill))
                     .forEach(reviewSkills::add);

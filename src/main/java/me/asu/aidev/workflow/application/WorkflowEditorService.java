@@ -11,6 +11,8 @@ import me.asu.aidev.workflow.domain.WorkflowPlan;
 import me.asu.aidev.workflow.domain.WorkflowPlanSpec;
 import me.asu.aidev.workflow.jdbc.JdbcWorkflowControlRepository.Control;
 import me.asu.aidev.workflow.jdbc.JdbcWorkflowHumanOutcomeRepository;
+import me.asu.aidev.workflow.jdbc.JdbcWorkflowTaskReadRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 /** The editor's trusted, executable subset of the general workflow-plan API. */
@@ -21,6 +23,9 @@ public class WorkflowEditorService {
     public record StepDetail(WorkTask task, List<String> dependencies, String report, String verdict) {}
     public record Detail(WorkflowPlan plan, List<StepDetail> steps, List<Control> controls,
                          JdbcWorkflowHumanOutcomeRepository.Outcome humanOutcome) {}
+    public record TaskDetail(WorkTask task, List<JdbcWorkflowTaskReadRepository.Attempt> attempts,
+                             WorkflowPlanService.RetryEligibility retry,
+                             List<JdbcWorkflowTaskReadRepository.RetryEvent> retries) {}
 
     private static final List<Role> ROLES = List.of(
             new Role("requirement-analysis", "software-requirements-analyst", "REPORT", false),
@@ -37,13 +42,16 @@ public class WorkflowEditorService {
     private final TaskDependencyRepository dependencies;
     private final ExecutionAttemptRepository attempts;
     private final JdbcWorkflowHumanOutcomeRepository outcomes;
+    private final JdbcWorkflowTaskReadRepository taskReads;
 
     public WorkflowEditorService(WorkflowPlanService plans, TaskDependencyRepository dependencies,
-                                 ExecutionAttemptRepository attempts, JdbcWorkflowHumanOutcomeRepository outcomes) {
+                                 ExecutionAttemptRepository attempts, JdbcWorkflowHumanOutcomeRepository outcomes,
+                                 JdbcWorkflowTaskReadRepository taskReads) {
         this.plans = plans;
         this.dependencies = dependencies;
         this.attempts = attempts;
         this.outcomes = outcomes;
+        this.taskReads = taskReads;
     }
 
     public List<Role> roles() { return ROLES; }
@@ -111,6 +119,15 @@ public class WorkflowEditorService {
     public WorkflowPlan confirm(String id, long version, String actor) {
         validate(plans.get(id).spec());
         return plans.confirm(id, version, actor);
+    }
+
+    @Transactional(readOnly = true)
+    public TaskDetail taskDetail(String id, String taskId) {
+        plans.get(id);
+        WorkTask task = plans.steps(id).stream().filter(row -> row.id().value().equals(taskId))
+                .findFirst().orElseThrow(() -> new WorkflowPlanService.PlanNotFound(taskId));
+        return new TaskDetail(task, taskReads.attempts(taskId), plans.retryEligibility(id, taskId),
+                taskReads.retries(taskId));
     }
 
     public Detail detail(String id) {

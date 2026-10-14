@@ -2,8 +2,9 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertExecutableRole, getProfile, assertRoleCapabilities } from "./profiles.js";
-import { ControlPlaneClient, runWorkerSlot, runtimeSettings, positiveSetting } from "./runtime-core.js";
+import { ControlPlaneClient, runWorkerSlot, runtimeSettings, positiveSetting, prepareToolCache } from "./runtime-core.js";
 import type { AttemptAdapter, RuntimeSettings } from "../runtime-core/index.mjs";
+import { connectionFailureCode, workerDebugEnabled } from "./failure-diagnostics.js";
 
 type RuntimeType = "codex-cli" | "codex-app-server" | "openai-agents";
 
@@ -52,6 +53,7 @@ function loadConfig(runtime: RuntimeType): WorkerConfig {
   const capabilities = new Set(env("AIW_WORKER_CAPABILITIES", "").split(",").map(s => s.trim()).filter(Boolean));
   assertRoleCapabilities(capabilities, profile);
   capabilities.add(profile.roleCapability);
+  capabilities.add("task-outputs-v1");
   if (repositoryRef) capabilities.add(`repo:${repositoryRef}`);
   const fallbackWorkspace = path.resolve(env("AIW_WORKSPACE", repositoryRoot || process.cwd()));
   const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -73,6 +75,10 @@ function loadConfig(runtime: RuntimeType): WorkerConfig {
 
 const runtime = selectedRuntime();
 const cfg = loadConfig(runtime);
+const toolCache = prepareToolCache(cfg.workerId);
+Object.assign(process.env, toolCache.environment);
+console.log(`worker cache=${toolCache.directory} temp=${toolCache.temp}`);
+if (workerDebugEnabled()) console.error("[AIW DEBUG] enabled: failed Codex tools log bounded command/output details; credential masking is best-effort and logs may contain project text.");
 // Agents reads logging controls during import; set them before loading its adapter.
 if (runtime === "openai-agents") {
   process.env.OPENAI_AGENTS_DONT_LOG_MODEL_DATA = "1";
@@ -88,30 +94,37 @@ const backend: WorkerBackend = runtime === "codex-cli"
 const force = new AbortController();
 cfg.forceSignal = force.signal;
 const client = new ControlPlaneClient(cfg, `${runtime}:${cfg.role}`);
+const endpoint = (() => {
+  try { return new URL(cfg.baseUrl).origin; }
+  catch { return "INVALID_CONTROL_PLANE_URL"; }
+})();
+const logConnectionFailure = (operation: string, error: unknown) =>
+  console.error(`${new Date().toISOString()} ${operation} failed code=${connectionFailureCode(error)} controlPlane=${endpoint}`);
 let stopping = false;
 for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => {
   if (stopping) force.abort();
   stopping = true;
-  void client.drain().catch(() => console.error("worker drain failed"));
+  void client.drain().catch(error => logConnectionFailure("worker drain", error));
 });
 console.log(backend.startup);
+console.log(`worker=${cfg.workerId} role=${cfg.role} controlPlane=${endpoint}`);
 let workerHeartbeat: ReturnType<typeof setInterval> | undefined;
 try {
   await client.register();
-  workerHeartbeat = setInterval(() => void client.workerHeartbeat().catch(() => console.error("worker heartbeat failed")), cfg.heartbeatMs);
+  workerHeartbeat = setInterval(() => void client.workerHeartbeat().catch(error => logConnectionFailure("worker heartbeat", error)), cfg.heartbeatMs);
   await Promise.all(Array.from({ length: cfg.maxConcurrency }, (_, i) => {
     const slot = i + 1;
     return runWorkerSlot({
       cfg, client, shouldStop: () => stopping,
       createAdapter: task => backend.createAdapter(task, slot),
-      onOutcome: (outcome, task) => console.log(`slot ${slot}: task=${task.taskId} status=${outcome.status}`),
-      onError: () => console.error(`slot ${slot}: polling failed`),
+      onOutcome: (outcome, task) => console.log(`slot ${slot}: task=${task.taskId} status=${outcome.status}${outcome.evidence ? ` evidence=${outcome.evidence}` : ""}`),
+      onError: error => logConnectionFailure(`slot ${slot}: polling`, error),
       onUncertain: async () => { stopping = true; force.abort(); await client.drain(); },
     });
   }));
 } finally {
   clearInterval(workerHeartbeat);
-  try { await client.drain(); } catch { console.error("worker drain failed"); }
+  try { await client.drain(); } catch (error) { logConnectionFailure("worker drain", error); }
   await backend.shutdown?.();
-  try { await client.offline(); } catch { console.error("worker offline failed"); }
+  try { await client.offline(); } catch (error) { logConnectionFailure("worker offline", error); }
 }

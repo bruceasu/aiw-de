@@ -1,13 +1,34 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { realpathSync } from "node:fs";
+import { realpathSync, statSync } from "node:fs";
 import path from "node:path";
-import { RuntimeFault, positiveSetting } from "./runtime-core.js";
+import { RuntimeFault, positiveSetting, toolCacheEnvironment } from "./runtime-core.js";
 import { resolveInstalledCodex } from "./codex-runtime.js";
 
 export const CODEX_VERSION = "0.162.1";
+export const CODEX_BASH_PATH = "/bin/bash";
+export const CODEX_SHELL_INSTRUCTIONS = [
+  "Worker shell policy:",
+  'Use Bash for every shell command. For exec_command, always set shell to "/bin/bash" and login to false.',
+  "Never omit the shell field or use the user's default shell. Do not use zsh, sh, or a login shell.",
+  "Do not source shell startup files. If Bash cannot run, report the error; do not fall back to another shell.",
+].join("\n");
+export const CODEX_EXECUTION_CONFIG = {
+  allow_login_shell: false,
+  "features.unified_exec": true,
+  "features.unified_exec_zsh_fork": false,
+  "features.shell_snapshot": false,
+  "shell_environment_policy.experimental_use_profile": false,
+  developer_instructions: CODEX_SHELL_INSTRUCTIONS,
+};
+export const CODEX_EXECUTION_ARGS = Object.entries(CODEX_EXECUTION_CONFIG)
+  .flatMap(([key, value]) => ["--config", `${key}=${JSON.stringify(value)}`]);
+export function codexCacheConfig(env: Record<string, string>): string {
+  return `{${Object.entries(toolCacheEnvironment(env))
+    .map(([key, value]) => `${JSON.stringify(key)}=${JSON.stringify(value)}`).join(",")}}`;
+}
 export interface CodexSettings {
   executablePath: string; env: Record<string, string>; model: string; effort: string;
-  network: boolean; sandbox: "read-only" | "workspace-write"; maxBytes: number;
+  network: boolean; sandbox: "read-only" | "workspace-write" | "danger-full-access"; maxBytes: number;
 }
 
 /** One native process; stdout parsing and callbacks are serialized and bounded. */
@@ -61,8 +82,9 @@ export class CodexProcess {
     await new Promise<void>((resolve, reject) => this.child.stdin.end(text, (error?: Error | null) => error ? reject(new RuntimeFault("CODEX_STDIN_FAILED")) : resolve()));
   }
   async finish(timeoutMs = 10000): Promise<number> {
-    const code = await this.bounded(this.closed, timeoutMs);
-    await this.bounded(this.queue, timeoutMs);
+    const code = timeoutMs === 0 ? await this.closed : await this.bounded(this.closed, timeoutMs);
+    if (timeoutMs === 0) await this.queue;
+    else await this.bounded(this.queue, timeoutMs);
     if (this.error) throw this.error;
     if (this.buffer.toString("utf8").trim()) throw new RuntimeFault("CODEX_FRAME_INCOMPLETE");
     return code;
@@ -110,17 +132,22 @@ export async function codexSettings(roleReadOnly: boolean): Promise<CodexSetting
   // Node's native API cannot prove descendant termination after a Windows
   // parent exits. Keep that platform unsupported before sending task text.
   if (process.platform === "win32") throw new RuntimeFault("CODEX_WINDOWS_PROCESS_TREE_UNVERIFIED", "CONFIGURATION");
+  try {
+    const bash = statSync(CODEX_BASH_PATH);
+    if (!bash.isFile() || !(bash.mode & 0o111)) throw new Error("Bash unavailable");
+  } catch { throw new RuntimeFault("WORKER_BASH_UNAVAILABLE", "CONFIGURATION"); }
   const installed = resolveInstalledCodex(process.env.AIW_CODEX_PATH);
   const allowed = /^(PATH|PATHEXT|SYSTEMROOT|WINDIR|COMSPEC|TEMP|TMP|HOME|USERPROFILE|LANG|LC_ALL|CODEX_HOME|OPENAI_API_KEY|CODEX_API_KEY|SSH_AUTH_SOCK)$/i;
-  const env = Object.fromEntries(Object.entries(installed.env).filter(([key]) => allowed.test(key)));
-  const configured = process.env.AIW_CODEX_SANDBOX || (roleReadOnly ? "read-only" : "workspace-write");
-  if (!["read-only", "workspace-write"].includes(configured) || (roleReadOnly && configured !== "read-only")) throw new RuntimeFault("CODEX_PERMISSION_INVALID", "CONFIGURATION");
+  const env = { ...Object.fromEntries(Object.entries(installed.env).filter(([key]) => allowed.test(key))),
+    ...toolCacheEnvironment() };
+  const configured = process.env.AIW_CODEX_SANDBOX || "danger-full-access";
+  if (!["read-only", "workspace-write", "danger-full-access"].includes(configured)
+      || roleReadOnly && configured === "workspace-write") throw new RuntimeFault("CODEX_PERMISSION_INVALID", "CONFIGURATION");
   if ((process.env.AIW_CODEX_APPROVAL_POLICY || "never") !== "never") throw new RuntimeFault("CODEX_INTERACTIVE_APPROVAL_UNSUPPORTED", "CONFIGURATION");
-  if (/^(1|true|yes)$/i.test(process.env.AIW_CODEX_NETWORK_ACCESS || "false")) throw new RuntimeFault("WORKER_NETWORK_ACCESS_FORBIDDEN", "CONFIGURATION");
   const effort = process.env.AIW_CODEX_REASONING_EFFORT || "medium";
   if (!["none", "minimal", "low", "medium", "high", "xhigh"].includes(effort)) throw new RuntimeFault("CODEX_EFFORT_INVALID", "CONFIGURATION");
   const settings: CodexSettings = { ...installed, env, sandbox: configured as CodexSettings["sandbox"],
-    network: false,
+    network: configured === "danger-full-access" || /^(1|true|yes)$/i.test(process.env.AIW_CODEX_NETWORK_ACCESS || "false"),
     model: process.env.AIW_CODEX_MODEL || "", effort, maxBytes: positiveSetting("AIW_CODEX_MAX_OUTPUT_BYTES", 4 * 1024 * 1024) };
   await verifyCodexVersion(settings);
   return settings;

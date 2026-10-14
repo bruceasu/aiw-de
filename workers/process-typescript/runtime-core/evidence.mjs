@@ -8,8 +8,8 @@ const owner = "aiw.worker.attempt.v1";
 const keys = new Set(("taskId attemptId attemptNo role runtime versions event seq time status code category phase reason "
   + "callId parentCallId tool operation sourceId path digest bytes count inputBytes outputBytes inputTokens outputTokens "
   + "cachedTokens usageKnown usageSource durationMs complete truncated mode sideEffect resultRevision publicationRef "
-  + "baseRevision workspaceKey repositoryRef readOnly maxBytes maxTurns deadlineMs model effort sourceIds summaryCalls "
-  + "processTree reportStatus retentionDays verdict capability unknown revision").split(" "));
+  + "baseRevision workspaceKey repositoryRef readOnly maxBytes maxTurns deadlineMs warningMs model effort sourceIds summaryCalls "
+  + "processTree reportStatus retentionDays verdict capability unknown revision exitCode").split(" "));
 function metadata(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new RuntimeFault("EVIDENCE_SCHEMA_INVALID");
   const result = {};
@@ -67,7 +67,8 @@ export class EvidenceRecorder {
       throw new RuntimeFault("EVIDENCE_MUST_BE_OUTSIDE_WORKSPACE", "CONFIGURATION");
     }
     await regularDirectory(root);
-    const directory = path.join(root, randomUUID());
+    const datetime = new Date().toISOString().replaceAll(":", "-");
+    const directory = path.join(root, `${datetime}_${randomUUID()}`);
     await mkdir(directory, { mode: 0o700 });
     const header = JSON.stringify({ owner, ...identity });
     if (Buffer.byteLength(header) >= maxBytes) throw new RuntimeFault("EVIDENCE_CAPACITY_EXCEEDED");

@@ -6,7 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = WorkerProtocolV1Controller.class)
+@RestControllerAdvice(assignableTypes = {WorkerProtocolV1Controller.class,
+        me.asu.aidev.output.protocol.http.WorkerOutputController.class,
+        me.asu.aidev.output.protocol.http.TaskOutputController.class})
 public class WorkerProtocolExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ProtocolError> badRequest(IllegalArgumentException error) {

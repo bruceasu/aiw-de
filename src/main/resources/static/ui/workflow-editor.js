@@ -4,14 +4,18 @@
   if (!editor && !detail) return;
   const root = editor || detail;
   const csrf = root.dataset.csrf;
+  let pendingWrites = 0;
   const api = async (path, body) => {
-    const response = await fetch(`/ui/plan-editor${path}${body === undefined ? '' : `?_csrf=${encodeURIComponent(csrf)}`}`, {
-      method: body === undefined ? 'GET' : 'POST',
-      headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body)
-    });
-    if (!response.ok) throw new Error((await response.text()).slice(0, 500) || `HTTP ${response.status}`);
-    return response.json();
+    if (body !== undefined) pendingWrites++;
+    try {
+      const response = await fetch(`/ui/plan-editor${path}${body === undefined ? '' : `?_csrf=${encodeURIComponent(csrf)}`}`, {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body)
+      });
+      if (!response.ok) throw new Error((await response.text()).slice(0, 500) || `HTTP ${response.status}`);
+      return await response.json();
+    } finally { if (body !== undefined) pendingWrites--; }
   };
   const el = (tag, text, className) => {
     const node = document.createElement(tag);
@@ -356,7 +360,11 @@
     const id = detail.dataset.id;
     let plan;
     const actionStatus = detail.querySelector('[data-action-status]');
+    const refreshStatus = detail.querySelector('[data-plan-refresh-status]');
+    let loading = false;
     const load = async () => {
+      if (loading) return;
+      loading = true;
       try {
         const data = await api(`/plans/${encodeURIComponent(id)}`); plan = data.plan;
         detail.querySelector('[data-detail-goal]').textContent = plan.spec.goal;
@@ -366,6 +374,8 @@
         const exhausted = data.steps.some(row => (row.task.id.value.endsWith('~review-3') &&
           row.task.state === 'COMPLETED' && row.verdict === 'REPAIR_REQUIRED') || row.task.state === 'FAILED');
         const pendingControl = data.controls.find(control => control.status === 'PENDING_STOP');
+        const attention = detail.querySelector('[data-plan-attention]');
+        if (attention) attention.hidden = !exhausted;
         detail.querySelector('[data-detail-state]').textContent = data.humanOutcome?.status === 'APPLIED'
           ? data.humanOutcome.outcome === 'COMPLETE' ? 'COMPLETED_BY_HUMAN' : 'CANCELLED'
           : data.humanOutcome?.status === 'PENDING' ? 'WAITING_FOR_WORKER_STOP'
@@ -378,7 +388,10 @@
         detail.querySelector('[data-detail-audit]').textContent = `${plan.updatedBy} · ${plan.reason || 'No decision recorded'}`;
         detail.querySelector('[data-detail-time]').textContent = `${plan.createdAt} / ${plan.updatedAt}`;
         graph(detail.querySelector('[data-detail-graph]'), plan.spec.steps);
-        const rows = detail.querySelector('[data-detail-steps]'); rows.replaceChildren();
+        const rows = detail.querySelector('[data-detail-steps]');
+        const reportStates = new Map([...rows.querySelectorAll('[data-task-report]')].map(report =>
+          [report.dataset.taskReport, { open: report.open, scrollTop: report.querySelector('pre').scrollTop }]));
+        rows.replaceChildren();
         plan.spec.steps.forEach((step, index) => {
           const actual = data.steps.filter(row => row.task.id.value.startsWith(`${id}~${step.key}~`))
             .sort((a, b) => a.task.id.value.localeCompare(b.task.id.value));
@@ -392,8 +405,25 @@
           if (!actual.length) line(resultCell, 'div', skipped ? 'Skipped by manager decision' : 'Waiting for the previous step to pass review');
           for (const row of actual) {
             const kind = row.task.id.value.includes('~review-') ? 'Independent review' : 'Execution';
-            line(resultCell, 'div', `${kind} · ${row.task.id.value} · ${row.task.state}${row.verdict ? ` · ${row.verdict}` : ''}`);
-            if (row.report) line(resultCell, 'p', row.report, 'small muted');
+            const record = el('div', undefined, 'workflow-task-record');
+            line(record, 'div', kind, 'small muted');
+            line(record, 'div', row.task.id.value, 'mono');
+            line(record, 'span', row.task.state, 'badge');
+            if (row.verdict) line(record, 'span', row.verdict, 'badge');
+            const link = line(record, 'a', 'View task details', 'btn ghost small-btn');
+            link.href = `/ui/plans/${encodeURIComponent(id)}/tasks/${encodeURIComponent(row.task.id.value)}`;
+            if (row.report) {
+              const report = el('details', undefined, 'workflow-task-report');
+              report.dataset.taskReport = row.task.id.value;
+              line(report, 'summary', 'View report', 'small muted');
+              const content = line(report, 'pre', row.report, 'code task-report');
+              const previous = reportStates.get(row.task.id.value);
+              report.open = previous?.open || false;
+              record.appendChild(report);
+              // Restore scrolling after the expanded content has been attached to the document.
+              if (previous?.open) requestAnimationFrame(() => { content.scrollTop = previous.scrollTop; });
+            }
+            resultCell.appendChild(record);
           }
           tr.appendChild(resultCell); rows.appendChild(tr);
         });
@@ -407,6 +437,7 @@
           row.task.id.value.startsWith(`${id}~${step.key}~`))));
         const target = detail.querySelector('[data-jump-target]');
         if (target) {
+          const selectedTarget = target.value;
           target.replaceChildren();
           plan.spec.steps.forEach((step, index) => {
             if (index > currentStep) {
@@ -414,6 +445,7 @@
               target.appendChild(option);
             }
           });
+          if ([...target.options].some(option => option.value === selectedTarget)) target.value = selectedTarget;
         }
         const confirm = detail.querySelector('[data-confirm]'); if (confirm) confirm.hidden = plan.state !== 'DRAFT';
         const withdraw = detail.querySelector('[data-withdraw]'); if (withdraw) withdraw.hidden = plan.state !== 'CONFIRMED';
@@ -424,11 +456,16 @@
         const resolve = detail.querySelector('[data-resolve-stop]');
         if (resolve) resolve.hidden = !pendingControl || data.steps.some(row =>
           row.task.id.value === pendingControl.taskId && ['CLAIMED', 'RUNNING'].includes(row.task.state));
-      } catch (error) { detail.querySelector('[data-detail-error]').textContent = error.message; }
+        detail.querySelector('[data-detail-error]').textContent = '';
+        if (refreshStatus) refreshStatus.textContent = 'Updates every 5 seconds';
+      } catch (error) {
+        detail.querySelector('[data-detail-error]').textContent = error.message;
+        if (refreshStatus) refreshStatus.textContent = 'Status refresh failed. Previous data remains visible.';
+      } finally { loading = false; }
     };
     detail.querySelector('[data-copy]')?.addEventListener('click', () => { location.href = `/ui/plans/new?copy=${encodeURIComponent(id)}`; });
     detail.querySelector('[data-confirm]')?.addEventListener('click', async () => {
-      if (!plan || !window.confirm(`Confirm ${plan.spec.steps.length} selected steps at version ${plan.version}? This creates Worker tasks.`)) return;
+      if (!plan || !await window.aiwConfirm(`Confirm ${plan.spec.steps.length} selected steps at version ${plan.version}? This creates Worker tasks.`)) return;
       try { await api(`/plans/${encodeURIComponent(id)}/confirm`, { version: plan.version });
         actionStatus.textContent = 'Confirmed selected graph.'; await load();
       } catch (error) { actionStatus.textContent = `Confirmation failed: ${error.message}`; }
@@ -444,7 +481,7 @@
       const reason = detail.querySelector('[data-control-reason]').value.trim();
       const targetStep = Number(detail.querySelector('[data-jump-target]').value);
       if (!reason) { actionStatus.textContent = 'Enter a decision reason.'; return; }
-      if (!window.confirm(`Skip ahead to step ${targetStep + 1}? Existing unfinished work will be stopped or cancelled.`)) return;
+      if (!await window.aiwConfirm(`Skip ahead to step ${targetStep + 1}? Existing unfinished work will be stopped or cancelled.`, { danger: true })) return;
       try { await api(`/plans/${encodeURIComponent(id)}/jump`, { version: plan.version, targetStep, reason });
         actionStatus.textContent = 'Jump recorded. Waiting for Worker acknowledgement if work was active.'; await load();
       } catch (error) { actionStatus.textContent = `Jump failed: ${error.message}`; }
@@ -452,7 +489,7 @@
     detail.querySelector('[data-stop-plan]')?.addEventListener('click', async () => {
       const reason = detail.querySelector('[data-control-reason]').value.trim();
       if (!reason) { actionStatus.textContent = 'Enter a decision reason.'; return; }
-      if (!window.confirm('Stop this plan early? Completed results remain; unfinished work will be stopped or cancelled.')) return;
+      if (!await window.aiwConfirm('Stop this plan early? Completed results remain; unfinished work will be stopped or cancelled.', { danger: true })) return;
       try { await api(`/plans/${encodeURIComponent(id)}/stop`, { version: plan.version, reason });
         actionStatus.textContent = 'Stop recorded. Waiting for Worker acknowledgement if work was active.'; await load();
       } catch (error) { actionStatus.textContent = `Stop failed: ${error.message}`; }
@@ -460,7 +497,7 @@
     detail.querySelector('[data-complete-plan]')?.addEventListener('click', async () => {
       const reason = detail.querySelector('[data-control-reason]').value.trim();
       if (!reason) { actionStatus.textContent = 'Enter a decision reason.'; return; }
-      if (!window.confirm('Complete by human decision? Unfinished Worker tasks will be stopped or cancelled.')) return;
+      if (!await window.aiwConfirm('Complete by human decision? Unfinished Worker tasks will be stopped or cancelled.')) return;
       try { await api(`/plans/${encodeURIComponent(id)}/complete`, { version: plan.version, reason });
         actionStatus.textContent = 'Human completion recorded. Waiting for Worker acknowledgement if work was active.'; await load();
       } catch (error) { actionStatus.textContent = `Completion failed: ${error.message}`; }
@@ -468,7 +505,7 @@
     detail.querySelector('[data-cancel-plan]')?.addEventListener('click', async () => {
       const reason = detail.querySelector('[data-control-reason]').value.trim();
       if (!reason) { actionStatus.textContent = 'Enter a decision reason.'; return; }
-      if (!window.confirm('Cancel this plan and delete its verified local isolated Git branches? Stop active Workers first.')) return;
+      if (!await window.aiwConfirm('Cancel this plan and delete its verified local isolated Git branches? Stop active Workers first.', { danger: true })) return;
       try { await api(`/plans/${encodeURIComponent(id)}/cancel`, { version: plan.version, reason });
         actionStatus.textContent = 'Plan cancelled; verified local branches discarded.'; await load();
       } catch (error) { actionStatus.textContent = `Cancellation requires manual intervention: ${error.message}`; }
@@ -478,6 +515,21 @@
         actionStatus.textContent = 'Stale stop request marked as conflict. Review the tasks, then submit a new decision.'; await load();
       } catch (error) { actionStatus.textContent = `Resolution failed: ${error.message}`; }
     });
+    detail.querySelector('[data-plan-refresh]')?.addEventListener('click', load);
+    const refresh = () => {
+      const selection = window.getSelection();
+      const paused = document.hidden || pendingWrites > 0 || document.querySelector('dialog[open]')
+        || detail.contains(document.activeElement) && document.activeElement?.matches('input, textarea, select')
+        || selection && !selection.isCollapsed;
+      if (paused) {
+        if (refreshStatus) refreshStatus.textContent = 'Status updates paused while editing, confirming or selecting text.';
+        return;
+      }
+      void load();
+    };
+    const timer = setInterval(refresh, 5000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+    window.addEventListener('pagehide', () => clearInterval(timer), { once: true });
     load();
   }
 })();

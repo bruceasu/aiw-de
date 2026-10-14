@@ -3,30 +3,44 @@ import type { AgentRuntime, AgentRunRequest } from "./agent-runtime.js";
 import { completed } from "./agent-runtime.js";
 import { AppServerTransport } from "./app-server-transport.js";
 import { codexBackend } from "./codex-adapter-common.js";
-import { codexSettings, assertCredentialBoundary, type CodexSettings } from "./codex-process.js";
+import { codexSettings, assertCredentialBoundary, CODEX_EXECUTION_CONFIG, type CodexSettings } from "./codex-process.js";
 import { getProfile } from "./profiles.js";
-import { RuntimeFault } from "./runtime-core.js";
+import { RuntimeFault, toolCacheEnvironment } from "./runtime-core.js";
+import { ToolFailureTracker } from "./failure-diagnostics.js";
+
+export function matchesCodexSandbox(actual: any, settings: Pick<CodexSettings, "sandbox" | "network">): boolean {
+  const expectedType = settings.sandbox === "danger-full-access" ? "dangerFullAccess"
+    : settings.sandbox === "read-only" ? "readOnly" : "workspaceWrite";
+  return actual?.type === expectedType && (expectedType === "dangerFullAccess"
+    || typeof actual.networkAccess === "boolean" && actual.networkAccess === settings.network);
+}
 
 class AppServerRuntime implements AgentRuntime {
   readonly type = "codex-app-server" as const;
   readonly capabilities = { resume: false, cancelById: false, attemptCancellation: true, eventStreaming: true, tools: true } as const;
   private confirmed = true;
-  private toolFailed = false;
+  private toolFailures = new ToolFailureTracker();
   constructor(private readonly transport: AppServerTransport, private readonly settings: CodexSettings, private readonly cfg: WorkerConfig) {}
   async run({ execution, emit }: AgentRunRequest) {
     const { attempt, workspace, profile, selection } = execution;
     const signal = attempt.signal;
     assertCredentialBoundary(this.settings, workspace.cwd);
     await this.transport.account(signal);
-    const sandbox = profile.readOnly ? "read-only" : this.settings.sandbox;
+    const sandbox = this.settings.sandbox;
     const started = await this.transport.request("thread/start", { cwd: workspace.cwd, ephemeral: true,
-      approvalPolicy: "never", sandbox, config: { "sandbox_workspace_write.network_access": this.settings.network,
+      approvalPolicy: "never", sandbox, config: { ...CODEX_EXECUTION_CONFIG,
+        "shell_environment_policy.set": toolCacheEnvironment(this.settings.env), "sandbox_workspace_write.network_access": this.settings.network,
         "sandbox_read_only.network_access": this.settings.network, "sandbox_workspace_write.exclude_slash_tmp": true, "sandbox_workspace_write.exclude_tmpdir_env_var": true }, ...(selection?.model || this.settings.model ? { model: selection?.model || this.settings.model } : {}) }, signal);
     const threadId = started?.thread?.id;
     if (typeof threadId !== "string" || !threadId || started.thread.ephemeral !== true) throw new RuntimeFault("CODEX_EPHEMERAL_THREAD_UNCONFIRMED", "CONFIGURATION");
     if (started.thread.cliVersion !== "0.162.1" || started.cwd !== workspace.cwd || started.approvalPolicy !== "never"
-      || started.sandbox?.type !== (profile.readOnly ? "readOnly" : sandbox === "read-only" ? "readOnly" : "workspaceWrite")
-      || Boolean(started.sandbox?.networkAccess) !== this.settings.network) throw new RuntimeFault("CODEX_THREAD_POLICY_MISMATCH", "CONFIGURATION");
+      || !matchesCodexSandbox(started.sandbox, this.settings)) {
+      const observedType = ["dangerFullAccess", "readOnly", "workspaceWrite", "externalSandbox"].includes(started.sandbox?.type)
+        ? started.sandbox.type : "unknown";
+      await attempt.recorder.record("thread-policy-mismatch", { code: "CODEX_THREAD_POLICY_MISMATCH", mode: sandbox,
+        capability: observedType, status: "mismatch" });
+      throw new RuntimeFault("CODEX_THREAD_POLICY_MISMATCH", "CONFIGURATION");
+    }
     const metadata = await this.transport.request("thread/read", { threadId, includeTurns: false }, signal);
     if (metadata?.thread?.id !== threadId || metadata.thread.ephemeral !== true) throw new RuntimeFault("CODEX_EPHEMERAL_THREAD_UNCONFIRMED", "CONFIGURATION");
     const events = this.transport.subscribe(threadId);
@@ -69,7 +83,7 @@ class AppServerRuntime implements AgentRuntime {
       if (event.method === "item/completed") {
         const item = params.item;
         if (item?.type === "agentMessage") message(item);
-        if (item?.status === "failed" || (item?.type === "commandExecution" && item.exitCode !== 0 && item.exitCode !== null)) this.toolFailed = true;
+        await this.toolFailures.observe(attempt.recorder, item, workspace.cwd);
         await attempt.recorder.record("sdk-item-terminal", { callId: item?.id, tool: item?.type, status: item?.status || "completed" });
       }
       if (event.method === "thread/tokenUsage/updated") {
@@ -87,7 +101,8 @@ class AppServerRuntime implements AgentRuntime {
       const turn = await this.transport.request("turn/start", { threadId, input: [{ type: "text", text: execution.prompt }],
         effort: selection?.effort || this.settings.effort, serviceTierForTurn: selection?.fast ? "fast" : "default",
         approvalPolicy: "never", cwd: workspace.cwd,
-        sandboxPolicy: sandbox === "read-only" ? { type: "readOnly", networkAccess: this.settings.network }
+        sandboxPolicy: sandbox === "danger-full-access" ? { type: "dangerFullAccess" }
+          : sandbox === "read-only" ? { type: "readOnly", networkAccess: this.settings.network }
           : { type: "workspaceWrite", writableRoots: [workspace.cwd], networkAccess: this.settings.network, excludeSlashTmp: true, excludeTmpdirEnvVar: true } }, signal);
       turnId = turn?.turn?.id;
       if (!turnId) throw new RuntimeFault("CODEX_TURN_ID_MISSING");
@@ -125,7 +140,7 @@ class AppServerRuntime implements AgentRuntime {
     }
   }
   async settled() { return this.confirmed; }
-  assertSuccessful() { if (this.toolFailed) throw new RuntimeFault("UNRESOLVED_TOOL_FAILURE", "OUTPUT_INVALID"); }
+  assertSuccessful() { this.toolFailures.assertSuccessful(); }
 }
 
 export async function createCodexAppServerBackend(cfg: WorkerConfig): Promise<WorkerBackend> {

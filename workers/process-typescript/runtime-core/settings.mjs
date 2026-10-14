@@ -6,8 +6,15 @@ export function positiveSetting(name, fallback) {
   return value;
 }
 export function runtimeSettings() {
+  const warningMs = positiveSetting("AIW_WORKER_ATTEMPT_TIMEOUT_MS", process.env.AIW_AGENT_TASK_TIMEOUT_MS ?? 900000);
+  if (warningMs > 2147483647) throw new RuntimeFault("INVALID_AIW_WORKER_ATTEMPT_TIMEOUT_MS", "CONFIGURATION");
+  const hardTimeoutMs = Number(process.env.AIW_WORKER_ATTEMPT_HARD_TIMEOUT_MS ?? 0);
+  if (!Number.isSafeInteger(hardTimeoutMs) || hardTimeoutMs < 0 || hardTimeoutMs > 2147483647) {
+    throw new RuntimeFault("INVALID_AIW_WORKER_ATTEMPT_HARD_TIMEOUT_MS", "CONFIGURATION");
+  }
   return {
-    taskTimeoutMs: positiveSetting("AIW_WORKER_ATTEMPT_TIMEOUT_MS", process.env.AIW_AGENT_TASK_TIMEOUT_MS ?? 900000),
+    taskTimeoutMs: warningMs,
+    taskHardTimeoutMs: hardTimeoutMs,
     cleanupTimeoutMs: positiveSetting("AIW_WORKER_CLEANUP_TIMEOUT_MS", 10000),
     gitTimeoutMs: positiveSetting("AIW_WORKER_GIT_TIMEOUT_MS", 120000),
     maxInputBytes: positiveSetting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024),

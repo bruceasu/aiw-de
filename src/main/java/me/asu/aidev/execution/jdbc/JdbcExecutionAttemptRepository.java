@@ -150,6 +150,15 @@ public class JdbcExecutionAttemptRepository implements ExecutionAttemptRepositor
     }
 
     @Override
+    public boolean attachFailureDetails(LeaseToken leaseToken, WorkerId workerId, String category, String code) {
+        return jdbc.update("""
+                UPDATE execution_attempt
+                   SET failure_category=?, termination_reason=?
+                 WHERE lease_token=? AND worker_id=? AND state='RUNNING'
+                """, category, code, leaseToken.value(), workerId.value()) == 1;
+    }
+
+    @Override
     public Optional<ExecutionAttemptId> findAttemptId(LeaseToken leaseToken) {
         List<String> rows = jdbc.query("SELECT id FROM execution_attempt WHERE lease_token=?",
                 (rs, rowNum) -> rs.getString("id"), leaseToken.value());
@@ -198,7 +207,7 @@ public class JdbcExecutionAttemptRepository implements ExecutionAttemptRepositor
     public Optional<TaskInput> findCompletedInput(TaskId taskId) {
         List<TaskInput> rows = jdbc.query("""
                 SELECT wt.task_type, wt.repository_ref, ea.base_revision, ea.result_revision,
-                       ea.publication_ref, ea.changed_files, ea.completion_verdict, ea.completion_summary
+                       ea.publication_ref, ea.changed_files, ea.completion_verdict, ea.completion_summary, ea.id AS output_attempt_id
                   FROM execution_attempt ea
                   JOIN work_task wt ON wt.id = ea.task_id
                  WHERE ea.task_id=? AND ea.state='COMPLETED'
@@ -213,7 +222,7 @@ public class JdbcExecutionAttemptRepository implements ExecutionAttemptRepositor
                 rs.getString("publication_ref"),
                 decodeChangedFiles(rs.getString("changed_files")),
                 rs.getString("completion_verdict") == null ? null : CompletionVerdict.valueOf(rs.getString("completion_verdict")),
-                rs.getString("completion_summary")), taskId.value());
+                rs.getString("completion_summary"), rs.getString("output_attempt_id")), taskId.value());
         return rows.stream().findFirst();
     }
 

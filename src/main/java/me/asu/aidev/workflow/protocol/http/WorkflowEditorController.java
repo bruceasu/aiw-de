@@ -31,6 +31,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequestMapping("/ui")
 public class WorkflowEditorController {
+    @Value("${aidev.worker.attempt-warning-ms:${AIW_WORKER_ATTEMPT_TIMEOUT_MS:${AIW_AGENT_TASK_TIMEOUT_MS:900000}}}")
+    private long attemptWarningMs = 900000;
     private final WorkflowEditorService editor;
     private final WorkflowPlanService plans;
     private final WorkflowCancellationService cancellation;
@@ -89,6 +91,21 @@ public class WorkflowEditorController {
         return "ui/plan-detail";
     }
 
+    @GetMapping("/plans/{id}/tasks/{taskId}")
+    public String taskPage(@PathVariable String id, @PathVariable String taskId, Model model) {
+        requireEnabled();
+        var detail = editor.taskDetail(id, taskId);
+        model.addAttribute("page", "plans");
+        model.addAttribute("planId", id);
+        model.addAttribute("taskDetail", detail);
+        model.addAttribute("attemptWarningMs", attemptWarningMs);
+        model.addAttribute("taskActive", switch (detail.task().state()) {
+            case READY, BLOCKED, CLAIMED, RUNNING -> true;
+            default -> false;
+        });
+        return "ui/plan-task-detail";
+    }
+
     @PostMapping("/plans/{id}/archive")
     public String archive(@PathVariable String id, HttpSession session, RedirectAttributes flash) {
         security.requireOperator(session);
@@ -126,6 +143,17 @@ public class WorkflowEditorController {
     public WorkflowEditorService.Detail detail(@PathVariable String id) {
         requireEnabled();
         return editor.detail(id);
+    }
+
+    public record RetryTaskRequest(long planVersion, long taskVersion, String reason, boolean warningConfirmed) {}
+
+    @PostMapping("/plan-editor/plans/{id}/tasks/{taskId}/retry")
+    @ResponseBody
+    public WorkflowPlan retryTask(@PathVariable String id, @PathVariable String taskId,
+                                  @RequestBody RetryTaskRequest request, HttpSession session) {
+        requireWrite(session);
+        return plans.retryFailedTask(id, taskId, request.planVersion(), request.taskVersion(),
+                security.actor(session), request.reason(), request.warningConfirmed());
     }
 
     @PostMapping("/plan-editor/drafts")

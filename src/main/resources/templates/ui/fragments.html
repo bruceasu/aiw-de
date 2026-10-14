@@ -8,6 +8,8 @@
   <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Fleet</a>
   <a th:classappend="${active == 'system' ? 'active' : ''}" href="/ui/system">System</a>
   <div class="sidebar-note"><strong th:text="${consolePrincipal}">local-console</strong><br/><span th:text="${consoleRole}">ADMIN</span><br/>Authority remains in the Control Plane.</div>
+  <div class="sidebar-locale"><label for="console-locale" data-i18n="Language">Language</label><select id="console-locale" aria-label="Language"><option value="en">English</option><option value="zh">简体中文</option></select></div>
+  <script src="/ui/i18n.js" defer></script>
 </nav>
 <header class="topbar" th:fragment="topbar(title, subtitle)">
   <div><h1 th:text="${title}">Title</h1><p th:text="${subtitle}">Subtitle</p></div>

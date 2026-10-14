@@ -6,7 +6,6 @@ import { sha256 } from "./evidence.mjs";
 
 export class ToolHost {
   #active = new Set();
-  #failures = new Map();
   #calls = new Map();
   #known = new Set();
   constructor({ cwd, readOnly, allowShell, signal, recorder, coordinator, abort, maxOutputBytes = 24000, toolTimeoutMs = 60000 }) {
@@ -26,7 +25,6 @@ export class ToolHost {
   async #execute(definition, args, callId, parentCallId) {
     const started = Date.now();
     let operationStarted = false;
-    const failureKey = `${definition.name}:${args?.path ?? sha256(JSON.stringify(args ?? {}))}`;
     const timerController = new AbortController();
     const timer = setTimeout(() => { timerController.abort(new RuntimeFault("TOOL_DEADLINE_EXCEEDED", "TIMEOUT")); this.abort?.("tool-timeout"); }, this.toolTimeoutMs);
     const signal = AbortSignal.any([this.signal, timerController.signal]);
@@ -52,8 +50,6 @@ export class ToolHost {
           truncated: JSON.parse(result).truncated, outputBytes: utf8Bytes(result), durationMs: Date.now() - started,
           digest: typeof value === "string" ? undefined : value.data?.resultDigest ?? value.data?.sourceDigest,
           sideEffect: definition.write ? "completed" : "none" });
-        if (failed) this.#failures.set(failureKey, "TOOL_RESULT_FAILED");
-        else this.#failures.delete(failureKey);
         return result;
       };
       // Composition holds no resource slot: each child acquires its own lease through execute.
@@ -63,7 +59,6 @@ export class ToolHost {
     } catch (originalError) {
       const error = ["ENOENT", "ENOTDIR", "EISDIR"].includes(originalError.code)
         ? new RuntimeFault("WORKSPACE_FILE_NOT_FOUND", "TOOL_ERROR", false) : originalError;
-      this.#failures.set(failureKey, errorCode(error));
       try { await this.recorder.record("tool-terminal", { callId, parentCallId, tool: definition.name, status: "error", code: errorCode(error), durationMs: Date.now() - started,
         sideEffect: definition.write && operationStarted ? "unknown" : "none" }); }
       catch (evidenceError) { this.abort?.("critical-evidence"); throw evidenceError; }
@@ -82,6 +77,6 @@ export class ToolHost {
   }
   assertSuccessful() {
     this.recorder.assertHealthy();
-    if (this.#failures.size) throw new RuntimeFault("UNRESOLVED_TOOL_FAILURE", "OUTPUT_INVALID");
+    checkSignal(this.signal);
   }
 }

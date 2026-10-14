@@ -4,16 +4,16 @@ import { fileURLToPath } from "node:url";
 import * as toml from "@iarna/toml";
 
 export const ROLE_FILES = {
-  requirements: "requirement-analyst",
-  architect: "solution-architect",
-  planner: "implementation-planner",
-  coder: "coding-executor",
-  integrator: "integration-executor",
-  reviewer: "code-reviewer",
+  requirements: "requirements",
+  architect: "architect",
+  planner: "planner",
+  coder: "coder",
+  integrator: "integrator",
+  reviewer: "reviewer",
   "stage-reviewer": "stage-reviewer",
   verifier: "verifier",
   "integration-verifier": "integration-verifier",
-  repairer: "repair-executor",
+  repairer: "repairer",
 } as const;
 
 const ADVISORY_ROLES = new Set(["release-readiness", "orchestrator"]);
@@ -69,8 +69,7 @@ export function loadProfile(file: string): ProcessProfile {
 export function getProfile(role: string, taskType?: string): ProcessProfile {
   const key = role.trim().toLowerCase();
   if (!(key in ROLE_FILES)) throw new Error(`unsupported AIW_PROCESS_ROLE=${role}; choose one of: ${Object.keys(ROLE_FILES).join(", ")}`);
-  const resolved = key;
-  return loadProfile(path.join(profileDirectory, `${ROLE_FILES[resolved as Role]}.toml`));
+  return loadProfile(path.join(profileDirectory, `${key}.toml`));
 }
 
 export function assertExecutableRole(role: string): void {

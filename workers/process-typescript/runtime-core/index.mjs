@@ -3,6 +3,7 @@ export * from "./output.mjs";
 export * from "./resources.mjs";
 export * from "./evidence.mjs";
 export * from "./process.mjs";
+export * from "./cache.mjs";
 export * from "./edit.mjs";
 export * from "./tool-host.mjs";
 export * from "./context.mjs";

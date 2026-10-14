@@ -5,7 +5,7 @@
   const initialForms = new Map([...document.forms].map(form => [form, formValue(form)]));
   let dirty = false;
   const trackEdits = () => { dirty = [...initialForms].some(([form, value]) => formValue(form) !== value); };
-  const editing = () => dirty || document.activeElement?.matches('input, textarea, select, [contenteditable="true"]');
+  const editing = () => dirty || !!document.querySelector('dialog[open]') || document.activeElement?.matches('input, textarea, select, [contenteditable="true"]');
   document.addEventListener('input', event => {
     if (event.target.closest('form')) trackEdits();
     const id = event.target.dataset.tableFilter;
@@ -17,9 +17,58 @@
   });
   document.addEventListener('change', event => { if (event.target.closest('form')) trackEdits(); });
   document.addEventListener('reset', () => setTimeout(trackEdits, 0));
-  document.addEventListener('click', event => {
-    const button = event.target.closest('[data-confirm]');
-    if (button && !window.confirm(button.dataset.confirm || 'Are you sure?')) event.preventDefault();
+  const confirmation = document.createElement('dialog');
+  confirmation.className = 'workspace-confirm console-confirm';
+  confirmation.setAttribute('aria-labelledby', 'console-confirm-title');
+  confirmation.setAttribute('aria-describedby', 'console-confirm-message');
+  confirmation.innerHTML = '<div class="workspace-confirm__top"><span>Confirm action</span></div>'
+    + '<div class="workspace-confirm__body"><h2 id="console-confirm-title"></h2><p id="console-confirm-message"></p></div>'
+    + '<div class="workspace-confirm__footer"><button class="btn ghost" type="button" data-confirm-cancel>Cancel</button>'
+    + '<button class="btn primary" type="button" data-confirm-accept>Confirm</button></div>';
+  document.body.appendChild(confirmation);
+  let pendingConfirmation = null;
+  let confirmationFocus = null;
+  window.aiwConfirm = (message, { danger = false, title = 'Confirm action' } = {}) => {
+    if (pendingConfirmation || typeof confirmation.showModal !== 'function') return Promise.resolve(false);
+    confirmation.querySelector('#console-confirm-title').textContent = title;
+    confirmation.querySelector('#console-confirm-message').textContent = message;
+    confirmation.classList.toggle('console-confirm--danger', danger);
+    confirmation.querySelector('[data-confirm-accept]').className = danger ? 'btn danger' : 'btn primary';
+    confirmation.returnValue = '';
+    confirmationFocus = document.activeElement;
+    return new Promise(resolve => {
+      pendingConfirmation = resolve;
+      confirmation.showModal();
+      confirmation.querySelector('[data-confirm-cancel]').focus();
+    });
+  };
+  confirmation.querySelector('[data-confirm-cancel]').addEventListener('click', () => confirmation.close('cancel'));
+  confirmation.querySelector('[data-confirm-accept]').addEventListener('click', () => confirmation.close('confirm'));
+  confirmation.addEventListener('click', event => {
+    if (event.target === confirmation) confirmation.close('cancel');
+  });
+  confirmation.addEventListener('close', () => {
+    const resolve = pendingConfirmation;
+    pendingConfirmation = null;
+    if (confirmationFocus?.isConnected) confirmationFocus.focus();
+    resolve?.(confirmation.returnValue === 'confirm');
+  });
+  const confirmedForms = new WeakSet();
+  const confirmingForms = new WeakSet();
+  document.addEventListener('submit', async event => {
+    const button = event.submitter;
+    if (event.defaultPrevented || !button?.hasAttribute('data-confirm')) return;
+    const form = event.target;
+    if (confirmedForms.delete(form)) return;
+    event.preventDefault();
+    if (confirmingForms.has(form)) return;
+    confirmingForms.add(form);
+    try {
+      if (await window.aiwConfirm(button.dataset.confirm || 'Are you sure?', { danger: button.classList.contains('danger') })) {
+        confirmedForms.add(form);
+        try { form.requestSubmit(button); } finally { confirmedForms.delete(form); }
+      }
+    } finally { confirmingForms.delete(form); }
   });
   const deletionDialog = document.querySelector('[data-workspace-delete-dialog]');
   let pendingDeletion = null;

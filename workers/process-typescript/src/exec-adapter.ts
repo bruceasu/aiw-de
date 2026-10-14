@@ -1,10 +1,11 @@
 import type { WorkerBackend, WorkerConfig } from "./index.js";
 import type { AgentRuntime, AgentRunRequest } from "./agent-runtime.js";
 import { completed } from "./agent-runtime.js";
-import { CodexProcess, codexSettings, verifyCodexVersion, assertCredentialBoundary, type CodexSettings } from "./codex-process.js";
+import { CodexProcess, codexSettings, codexCacheConfig, verifyCodexVersion, assertCredentialBoundary, CODEX_EXECUTION_ARGS, type CodexSettings } from "./codex-process.js";
 import { codexBackend } from "./codex-adapter-common.js";
 import { getProfile } from "./profiles.js";
 import { RuntimeFault } from "./runtime-core.js";
+import { ToolFailureTracker } from "./failure-diagnostics.js";
 
 class ExecRuntime implements AgentRuntime {
   readonly type = "codex-cli" as const;
@@ -18,17 +19,19 @@ class ExecRuntime implements AgentRuntime {
     assertCredentialBoundary(this.settings, workspace.cwd);
     await verifyCodexVersion(this.settings);
     attempt.signal.throwIfAborted();
-    const sandbox = profile.readOnly ? "read-only" : this.settings.sandbox;
+    const sandbox = this.settings.sandbox;
     const effort = selection?.effort || this.settings.effort;
-    const args = ["exec", "--ephemeral", "--json", "--sandbox", sandbox, "--cd", workspace.cwd,
+    const args = ["exec", "--ephemeral", "--json", "--sandbox", sandbox, "--cd", workspace.cwd, ...CODEX_EXECUTION_ARGS,
       "--config", 'approval_policy="never"', "--config", `model_reasoning_effort=${JSON.stringify(effort)}`,
       "--config", `sandbox_workspace_write.network_access=${this.settings.network}`,
       "--config", `sandbox_read_only.network_access=${this.settings.network}`,
+      "--config", `shell_environment_policy.set=${codexCacheConfig(this.settings.env)}`,
       "--config", "sandbox_workspace_write.exclude_slash_tmp=true", "--config", "sandbox_workspace_write.exclude_tmpdir_env_var=true"];
     if (selection?.model || this.settings.model) args.push("--model", selection?.model || this.settings.model);
     if (selection) args.push("--config", `service_tier="${selection.fast ? "fast" : "default"}"`);
     args.push("-");
-    let terminal = false, failed = false, toolFailed = false, output = "", sessionId = "";
+    let terminal = false, failed = false, output = "", sessionId = "";
+    const toolFailures = new ToolFailureTracker();
     this.confirmed = false;
     this.process = new CodexProcess(this.settings, args, workspace.cwd, async event => {
       if (event.type === "thread.started") {
@@ -43,7 +46,7 @@ class ExecRuntime implements AgentRuntime {
           output = item.text;
           if (typeof output !== "string" || Buffer.byteLength(output, "utf8") > this.settings.maxBytes) throw new RuntimeFault("CODEX_OUTPUT_INVALID", "OUTPUT_INVALID");
         } else {
-          if (item?.status === "failed" || (item?.type === "command_execution" && item.exit_code !== 0)) toolFailed = true;
+          await toolFailures.observe(attempt.recorder, item, workspace.cwd);
           await attempt.recorder.record("sdk-item-terminal", { callId: item?.id, tool: item?.type, status: item?.status || "completed" });
         }
       } else if (event.type === "turn.completed") {
@@ -61,12 +64,13 @@ class ExecRuntime implements AgentRuntime {
     try {
       if (attempt.signal.aborted) abort();
       await process.input(execution.prompt);
-      const code = await process.finish(this.cfg.taskTimeoutMs + this.cfg.cleanupTimeoutMs);
+      // The attempt signal owns optional hard cancellation; elapsed-time warnings do not end Exec.
+      const code = await process.finish(0);
       this.confirmed = await process.close(this.cfg.cleanupTimeoutMs);
       if (!this.confirmed) throw new RuntimeFault("PROCESS_TREE_UNCERTAIN");
       attempt.signal.throwIfAborted();
       if (code !== 0 || failed || !terminal || !output.trim()) throw new RuntimeFault("CODEX_EXEC_NOT_COMPLETED", "MODEL_ERROR");
-      if (toolFailed) throw new RuntimeFault("UNRESOLVED_TOOL_FAILURE", "OUTPUT_INVALID");
+      toolFailures.assertSuccessful();
       return completed(output);
     } catch (error) {
       if (!this.confirmed) this.confirmed = await process.terminate(this.cfg.cleanupTimeoutMs);

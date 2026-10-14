@@ -106,6 +106,133 @@ npm run start:all -- openai-agents
 Linux/macOS 用 `unset AIW_WORKER_ID` 清除。Ctrl+C 停止批量启动；Windows 的
 进程终止可能绕过排空流程，详见下面的批量启动说明。
 
+### 工作区交付物与正式文档
+
+新版 Control Plane 领取响应包含 `outputStore` 时，Worker 自动在完成回报和临时工作区清理前
+登记报告和附件。文件保存在 Control Plane 所在机器的持久工作区 `.aiw/plans/.../tasks/.../`，
+跨机器输入通过带当前租约校验的接口读取，验证来源 ID、SHA-256 和字节数后加入上下文。
+同机可以直接查看共享目录；任务执行使用固定的 Control Plane 输入版本，不扫描最新文件。
+
+最终响应可附一个 `aiw-output-files` JSON 代码块：
+
+````text
+完成报告正文。
+```aiw-output-files
+[{"path":"requirements.md","kind":"DOCUMENT","content":"# Requirements\n..."}]
+```
+````
+
+或者用 `sourcePath` 声明当前工作区中的已有文件；`content` 与 `sourcePath` 二选一。
+每次最多 16 个声明文件，单文件最多 4 MiB，包含自动报告和计划快照的归档总量最多 8 MiB。
+只读角色返回内联文档；程序归档不会授予模型写仓库的权限。
+
+TypeScript Worker 自动注册 `task-outputs-v1` 能力，文档入库任务及其独立评审要求此能力。
+其他语言的旧 Worker 仍按现有 complete 提交报告，Control Plane 会为有工作区的报告归档；
+附件、固定输入下载和入库校验需要实现新协议，不能手动声明此能力来代替实现。
+任务详情页提供下载和创建文档入库草稿；草稿仍须通过现有计划确认入口执行。
+详见 [任务产出机制](../../docs/current-zh/TASK-OUTPUTS.md)。
+
+### 查看失败诊断
+
+后台管理器将每个角色的标准输出与错误输出保存到 `.ai/worker-manager/<role>.log`。
+`logs` 命令只返回文件路径，不显示文件内容；在 Worker 目录中查看需求分析日志：
+
+```sh
+node scripts/manage-workers.mjs logs requirements
+tail -n 80 .ai/worker-manager/requirements.log
+```
+
+前台 `npm start` 或 `start:all` 的输出默认在启动终端，不会自动创建管理器日志文件。
+使用后台管理器启动后才能按管理器的路径查日志；不要重复启动同 ID 的实例。
+
+后续轮询与心跳错误会记录时间、Control Plane 地址（不含 URL 凭据）和
+`HTTP_401`、`HTTP_403`、`ECONNREFUSED` 等结构化状态码。
+Codex 的失败工具事件会记录工具类型、调用 ID、退出码、诊断码及证据目录；
+执行证据中的 `sdk-tool-failed` 包含相同字段，可通过 `owner.json` 的执行 ID 关联任务。
+默认不会记录完整命令、原始 SDK 错误、命令输出、任务正文或凭据。
+只在内存中根据有限输出识别沙箱 namespace、命令不存在、权限、路径及连接错误；
+未匹配的失败仍记为 `UNRESOLVED_TOOL_FAILURE`，不推断具体原因。
+
+`SANDBOX_NAMESPACE_UNAVAILABLE` 表示输出中检测到沙箱创建 namespace 被拒绝；
+应检查实际宿主机或容器的 Linux sandbox 支持。
+`COMMAND_NOT_FOUND`、`COMMAND_PERMISSION_DENIED`、`COMMAND_PATH_NOT_FOUND`、
+`COMMAND_CONNECTION_FAILED` 分别指向工具、权限、路径或网络配置排查。
+这些诊断是输出模式识别结果，不代表执行环境已经修复。
+历史执行没有保留的错误输出无法补回。
+
+无 Git 基线的 DIRECT 工作区允许是空的普通目录。Worker 提示会要求模型先检查
+Git 条件，不默认执行 `git status` / `git rev-parse`，也不为报告初始化仓库或编造版本。
+搜索探测应在同一命令中处理 `rg` / `grep` 的退出码 1，保留其他错误。
+诊断解析支持 `bash`、`sh` 和 `zsh` 的 `-c` / `-lc` 包装；SDK 未提供输出时
+仍按未知失败处理，不把缺失输出等同于空输出。实际 Git 非仓库错误会显示
+`GIT_REPOSITORY_UNAVAILABLE`。这些提示减少无效探测，但不保证模型一定遵循；
+工具失败作为诊断保留，不要求完全相同命令重跑，不单独阻止成功回报。
+完成 Gate 检查模型终态、资源终止、证据健康、报告格式、只读/发布约束、产出登记和租约；
+普通编码任务不会由 Worker 自动运行统一的构建或测试，业务验收仍由独立评审决定。
+模型结束或完成 Gate 通过不等于项目已通过构建/测试。致命工具故障、取消、超时及证据保存失败仍阻止完成。
+
+#### Codex 命令使用 Bash
+
+Codex 两种后端均明确要求模型在每次 `exec_command` 中设置 `shell="/bin/bash"`、
+`login=false`，并通过开发者指令及任务提示传递此规则。启动时检查 `/bin/bash`
+是带执行位的普通文件，否则报 `WORKER_BASH_UNAVAILABLE`。
+同时设置 `allow_login_shell=false`、`features.unified_exec=true`、
+`features.unified_exec_zsh_fork=false`、`features.shell_snapshot=false` 和
+`shell_environment_policy.experimental_use_profile=false`，覆盖对应个人/项目配置；
+模型应从 Worker 继承的 PATH 查找工具，不依赖个人 shell 启动文件。
+Worker 不修改系统账户的登录 shell，也不以 `SHELL` 变量冒充默认 shell 覆盖。
+Codex 0.162.1 的默认 shell 来自系统账户，Bash 选择依赖工具调用显式传参；
+这些指令不是阻止模型使用其他 shell 的操作系统安全边界。
+实现依据为 [固定版本的 shell 选择逻辑](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/shell-command/src/shell_detect.rs)
+及 [exec_command 的 shell/login 参数处理](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/core/src/tools/handlers/unified_exec.rs)。
+
+#### 工具缓存与临时目录
+
+Worker 启动时创建 `/mnt/temp/cache/workers/<Worker-ID及摘要>/`，可用
+`AIW_WORKER_CACHE_ROOT` 指定其他绝对根目录。缓存按实例持久保存，临时目录为
+`tmp/<PID>-<随机后缀>/`，不同进程互不复用临时目录；同一进程内工具自行创建临时文件。
+启动日志会显示实际缓存和临时目录。创建失败会在注册、领取任务前终止启动。
+
+| 工具 | 配置 | 实例目录下的位置 |
+| --- | --- | --- |
+| 通用临时文件 | `TMPDIR`、`TMP`、`TEMP` | `tmp/<PID>-<随机后缀>/` |
+| npm | `npm_config_cache`、`NPM_CONFIG_CACHE` | `npm/` |
+| Go | `GOMODCACHE`、`GOCACHE`、`GOTMPDIR` | `go/modules/`、`go/build/`、进程临时目录 |
+| Python / pip | `PIP_CACHE_DIR` | `python/pip/` |
+| Java / Maven | `JAVA_TOOL_OPTIONS` 中的 `java.io.tmpdir`、`maven.repo.local` | 进程临时目录、`maven/repository/` |
+| 其他遵循 XDG 的工具 | `XDG_CACHE_HOME` | `xdg/` |
+
+这些变量在 Worker 内设置，并传递给受管子进程及 Codex shell 配置，无需修改 `.bashrc`。
+保留已有 `JAVA_TOOL_OPTIONS`，追加本次目录配置。任务提示要求使用这些目录，不得用显式
+`--cache` 或类似参数改回项目缓存；直接主机访问模式不能阻止模型主动覆盖环境或参数。
+项目依赖安装目录（如 `node_modules`、虚拟环境）和编译产物仍留在项目工作区。
+不迁移旧缓存、不自动清理目录，也不改变项目依赖版本、源地址或下载验证设置。
+本机制适用于此 TypeScript Worker 启动的工具，不设置全局交互 shell，也不修改 Go/Python Worker 程序。
+
+配置依据：[npm 环境变量](https://docs.npmjs.com/cli/v11/using-npm/config/#environment-variables)、
+[Go 环境变量](https://pkg.go.dev/cmd/go#hdr-Environment_variables)、
+[pip 缓存](https://pip.pypa.io/en/stable/topics/caching/)、
+[Java 工具选项](https://docs.oracle.com/javase/8/docs/technotes/guides/troubleshoot/envvars002.html)。
+
+#### 临时 DEBUG 模式（Codex CLI / App Server）
+
+启动前设置 `export AIW_WORKER_DEBUG=true`（也接受 `1` 或 `yes`），然后启动所需角色。
+已运行的 Worker 必须先排空、停止，再用此变量重新启动；变量不会动态更新现有进程。
+失败工具额外输出一行 `[AIW DEBUG]` JSON，包含调用 ID、退出码、证据目录、命令、
+工作目录、工具输出和错误消息。后台管理器会把这些行保存到对应角色日志中。
+每次 attempt 最多记录 8 条工具详情；命令、目录、输出和错误消息分别限制为
+4096、1024、8192 和 2048 字符，过长内容保留头尾并标记 `truncated`；
+`text: null` 表示该字段未提供，空字符串表示实际输出为空。
+
+DEBUG 尝试遮蔽敏感环境变量值、Bearer 凭据、URL 用户密码及常见凭据字段，
+但不能保证识别所有秘密，日志仍可能包含项目正文。只在诊断期间启用，
+分享日志前检查内容。该模式不向 `events.jsonl` 写入正文、不改变任务结果判断，
+也不打开原始协议、模型提示词或 SDK tracing。
+排查结束后执行 `unset AIW_WORKER_DEBUG` 并重新启动 Worker，按本地策略清理诊断日志。
+
+Worker 源码更新后，先停止相关角色并确认排空结束，再执行 `npm run build`，
+然后用原运行时重新启动。`npm run compile` 不生成运行文件，不能替代 build。
+
 ### 分发给其他机器
 
 **发行定义：** 发布清单已移除不存在且未使用的 `bin/`，包含
@@ -220,7 +347,11 @@ Bundled profiles accept only `EXTERNAL_WORK` and require nine fields including `
 
 This is the single TypeScript Worker package for the R9 Worker Pull protocol. Each process runs one R2 role with an explicit `AIW_AGENT_RUNTIME`: `codex-cli`, `codex-app-server`, or `openai-agents`. The Java Control Plane owns task state, leases, retries, scheduling, approvals, and persistence. The Worker owns task instructions and result interpretation; the selected AgentRuntime owns model execution. The former `process-typescript-with-api` package and launcher have been removed.
 
-The Codex backends launch the system-installed CLI 0.162.1: `codex-cli` uses `codex exec` per attempt; `codex-app-server` manages one stdio service with independent ephemeral threads per slot. They use `AIW_CODEX_PATH` or system `PATH`; no Worker-local Codex binary, SDK, download or fallback is included. Native login is inherited. Interactive approval and danger-full-access are rejected; approval is `never`, network defaults to false.
+The Codex backends launch the system-installed CLI 0.162.1: `codex-cli` uses `codex exec` per attempt; `codex-app-server` manages one stdio service with independent ephemeral threads per slot. They use `AIW_CODEX_PATH` or system `PATH`; no Worker-local Codex binary, SDK, download or fallback is included. Native login is inherited. Approval is `never`; the default is direct host access (`danger-full-access`), including host network access. Read-only roles remain constrained by task instructions, without OS-enforced read-only isolation in this mode.
+
+App Server 的 thread 响应须与请求模式一致：直接访问对应 `dangerFullAccess`，该结构不要求
+`networkAccess`；`readOnly/workspaceWrite` 必须校验明确返回的网络权限。只读角色的指令约束
+不改变所请求的直接访问模式。响应不匹配时仍拒绝执行，并保存 `thread-policy-mismatch` 诊断。
 
 The Agents backend uses OpenAI Agents SDK and Responses API. It requires `OPENAI_API_KEY` before registration and does not need Codex CLI. The SDK version is checked at startup. Agents model and tool body logs and tracing are disabled before SDK import.
 
@@ -230,6 +361,17 @@ The Codex SDK and its transitive Codex CLI package have been removed from packag
 ## Roles
 
 Executable role profiles live directly in `profiles/`; unfinished advisory definitions and their reference configuration live in `profiles/advisory/`. The corresponding advisory Skill packages live in `skills/advisory/` and are not loaded by executable roles. Their R2 Skill source version is in `skills/VERSION`. `AIW_PROCESS_PROFILES_ROOT` and `AIW_PROCESS_SKILLS_ROOT` can point to externally supplied copies.
+
+启动参数、`AIW_PROCESS_ROLE`、TOML 文件名及环境配置示例统一使用同一个 role。
+例如 `architect` 加载 `profiles/architect.toml`，配置示例为 `profiles/architect.env.example`：
+
+```sh
+node scripts/manage-workers.mjs start architect codex-app-server
+```
+
+`.env.example` 只提供示例，不会由 Worker 自动加载。TOML 内的 `primarySkill` 是任务协议中的
+精确技能引用，例如 `solution-architect`，不用于启动参数。外部 `AIW_PROCESS_PROFILES_ROOT`
+也必须提供 `<role>.toml`；不再加载旧文件名。更新源码后先执行 `npm run build`，再重启 Worker。
 
 | Launch role | Task type | Access |
 | --- | --- | --- |
@@ -306,6 +448,32 @@ Select `sh ./scripts/run-role.sh coder codex-cli` for a bounded one-shot process
 
 ## Configuration
 
+### 执行循环与次数
+
+所有角色共用领取循环：每个 slot 领取一个任务，执行一次 attempt，上报结果，再领取下一个任务。
+空队列或轮询错误后等待 `AIW_WORKER_POLL_MS`（默认 1000ms）；运行至停止、强制取消或资源终态不确定。
+并发 slot 数由 `AIW_WORKER_MAX_CONCURRENCY` 决定，默认 1；这不是同一任务的重试次数。
+
+Codex App Server 每个 attempt 创建一个临时 thread，并调用一次 `turn/start`；Codex CLI
+每个 attempt 启动一次 `codex exec`。模型内部可以多轮调用工具、修改和验证，Worker 不设
+coder 专属轮数，也不在模型结束后自动追加修复 turn。整体耗时提醒由
+`AIW_WORKER_ATTEMPT_TIMEOUT_MS` 决定，未设置时使用 `AIW_AGENT_TASK_TIMEOUT_MS`，再默认 900000ms（15分钟）。
+到达该时间只向日志和执行证据写入一次 `ATTEMPT_DURATION_WARNING`，继续执行与续租。
+默认没有整体硬期限；需要时显式设置 `AIW_WORKER_ATTEMPT_HARD_TIMEOUT_MS`，0 表示关闭。
+原 TIMEOUT 配置现为提醒，不能再用它限制总执行时间；此行为适用于所有角色及三种后端。
+Codex CLI 等待最终结果不再绑定提醒期限；App Server 单次 RPC 响应仍限制为30秒，
+模型 turn 可继续运行。HTTP、API 请求、工具和清理期限、主动停止及租约失效仍按原机制处理。
+没有新增断点续跑或自动恢复能力。
+任务详情页按执行开始时间显示耗时提醒；Control Plane 的
+`aidev.worker.attempt-warning-ms` 可独立配置，默认读取相同 TIMEOUT 环境变量并回落到15分钟。
+远端 Worker 自定义提醒值时，需要同步配置 Control Plane；页面提醒是耗时提示，并非 Worker 进度或健康判定。
+Agents 后端另有 `AIW_AGENT_MAX_TURNS`（默认 40），它不控制 Codex 两种后端。
+
+灵活计划每步执行完成后由独立 stage-reviewer 评审；`REPAIR_REQUIRED` 由 Control Plane 创建
+带评审意见的新执行任务，每步最多三轮（首次加两次返工），仍由原角色执行。
+执行任务直接 `FAILED` 时不由 Worker 自行重跑；人工重试保留原任务 ID，新增 execution attempt，
+与上述 `~work-1/2/3` 的评审返工轮次是两个计数。
+
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `AIW_AGENT_RUNTIME` | required | `codex-cli`, `codex-app-server`, or `openai-agents` |
@@ -320,12 +488,15 @@ Select `sh ./scripts/run-role.sh coder codex-cli` for a bounded one-shot process
 | `AIW_WORKER_POLL_MS` | `1000` | Empty-claim retry interval |
 | `AIW_WORKER_HEARTBEAT_MS` | `20000` | Worker and task heartbeat interval |
 | `AIW_WORKER_HTTP_TIMEOUT_MS` | `15000` | Control Plane request timeout |
+| `AIW_WORKER_ATTEMPT_TIMEOUT_MS` | `900000` | Elapsed-time warning only; does not cancel an attempt |
+| `AIW_WORKER_ATTEMPT_HARD_TIMEOUT_MS` | `0` | Optional hard cancellation deadline; 0 disables it |
 | `AIW_CODEX_PATH` | installed CLI on `PATH` | Existing native Codex executable |
 | `AIW_CODEX_MODEL` | CLI default | Codex model |
 | `AIW_CODEX_REASONING_EFFORT` | `medium` | Codex reasoning effort |
 | `AIW_CODEX_APPROVAL_POLICY` | `never` | Unattended Codex approval policy |
-| `AIW_CODEX_SANDBOX` | role dependent | Read-only roles force `read-only` |
-| `AIW_CODEX_NETWORK_ACCESS` | `false` only | Codex workspace network access is forbidden |
+| `AIW_CODEX_SANDBOX` | `danger-full-access` | Direct host access; optional `read-only` or `workspace-write` (the latter is rejected for read-only roles) |
+| `AIW_CODEX_NETWORK_ACCESS` | `false` in sandbox modes | Controls sandbox network access; direct host mode always uses host network access |
+| `AIW_WORKER_CACHE_ROOT` | `/mnt/temp/cache` | Root directory for tool caches and process temporary files |
 | `OPENAI_API_KEY` | required for Agents | OpenAI credential |
 | `OPENAI_BASE_URL` | SDK default | Agents API endpoint |
 | `AIW_OPENAI_MODEL` | `gpt-4.1` | Agents model without an approved task profile |

@@ -367,7 +367,9 @@ public class TaskExecutionService {
                 .contains(category)) throw new IllegalArgumentException("invalid failure category");
         var now = clock.instant();
         attachExternalSession(workerId, leaseToken, externalSessionId);
-        if (!attempts.attachFailureCategory(leaseToken, workerId, category)) {
+        String code = failureReason != null && failureReason.matches("[A-Z][A-Z0-9_]{0,119}")
+                ? failureReason : null;
+        if (!attempts.attachFailureDetails(leaseToken, workerId, category, code)) {
             throw new IllegalStateException("cannot record failure category; RUNNING lease is missing");
         }
         if (!tasks.failOwned(taskId, workerId, leaseToken, now)) {

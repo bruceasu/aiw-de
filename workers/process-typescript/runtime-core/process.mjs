@@ -1,13 +1,15 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { RuntimeFault, checkSignal } from "./errors.mjs";
+import { TOOL_CACHE_ENV_NAMES } from "./cache.mjs";
 
 export function commandEnvironment(extra = {}) {
   const allowed = /^(PATH|PATHEXT|SYSTEMROOT|WINDIR|COMSPEC|TEMP|TMP|HOME|USERPROFILE|HOMEDRIVE|HOMEPATH|LANG|LC_ALL|SSH_AUTH_SOCK|GIT_SSH|GIT_SSH_COMMAND)$/i;
-  const result = Object.fromEntries(Object.entries(process.env).filter(([key, value]) => value !== undefined && allowed.test(key)));
+  const permitted = key => allowed.test(key) || TOOL_CACHE_ENV_NAMES.includes(key);
+  const result = Object.fromEntries(Object.entries(process.env).filter(([key, value]) => value !== undefined && permitted(key)));
   // Callers cannot accidentally forward Control Plane or model credentials.
   for (const [key, value] of Object.entries(extra)) {
-    if (!allowed.test(key)) throw new RuntimeFault("CHILD_ENVIRONMENT_FORBIDDEN", "CONFIGURATION");
+    if (!permitted(key)) throw new RuntimeFault("CHILD_ENVIRONMENT_FORBIDDEN", "CONFIGURATION");
     result[key] = value;
   }
   result.GIT_TERMINAL_PROMPT = "0";

@@ -30,6 +30,56 @@ TypeScript 全角色启动器会额外启动一个 `stage-reviewer`。角色能�
 
 编辑页的能力指南列出可选步骤角色、最多 100 个 Worker 快照中 ACTIVE Worker 声明的技术能力及独立评审 Worker 数量；完整的当前 Worker 声明和 READY 任务匹配诊断可在 `/ui/workers` 查看。技术能力是 Worker 自报标签，不能证明工具已安装。AI 推荐按钮已存在；推荐按每一步的实际需要分配技术能力，独立评审由系统自动插入，推荐结果仍需人工检查当前 Worker 匹配并保存、确认。
 
+## 查看任务详情与处理失败
+
+在计划详情页的“执行与独立审核”列，点击具体任务的“查看任务详情”。
+计划表格中的报告默认折叠；展开后在最高 320px（不超过半屏）的区域内滚动阅读，
+表格列宽不随报告长度变化。自动刷新保留报告展开状态及报告内滚动位置。
+详情页显示每次执行的 Worker、开始与结束时间、指令版本、失败分类、结构化错误码、
+审核判定、结果版本及完成报告；没有记录的数据明确显示“未记录”。
+任务必须属于当前计划，页面沿用控制台认证，不展示租约令牌。
+
+计划详情每 5 秒更新状态；编辑输入、打开确认弹窗、选择文本或切换到后台时暂停。
+任务详情在任务仍处于等待、领取或执行状态时每 8 秒刷新，终态可手动刷新。
+任务详情页对长时间 CLAIMED/RUNNING 的执行显示黄色耗时提醒，默认15分钟；耗时提醒不会停止 Worker。
+Control Plane 可通过 `aidev.worker.attempt-warning-ms` 调整页面阈值；默认读取
+`AIW_WORKER_ATTEMPT_TIMEOUT_MS`、`AIW_AGENT_TASK_TIMEOUT_MS`，再回落到900000ms。
+远端 Worker 使用不同阈值时需要同步配置；页面按执行开始（尚未开始时按领取时间）计算，
+不是对模型进度或 Worker 健康状态的判断。Worker 本地也记录提醒日志及执行证据。
+整体硬期限默认关闭，需要时设置 Worker 的 `AIW_WORKER_ATTEMPT_HARD_TIMEOUT_MS`。
+后续失败上报把结构化错误码保存到已有 `execution_attempt.termination_reason` 字段；
+只保存大写字母、数字与下划线组成的最多 120 字符错误码，不保存原始工具输出。
+本次不做数据库迁移，也不回填历史失败；之前未保存的命令输出无法从页面恢复。
+
+TypeScript Codex Worker 后续会在日志和 `sdk-tool-failed` 证据中记录工具类型、调用 ID、
+退出码及固定诊断码，已识别的诊断码同时作为失败原因上报。
+诊断从有限输出中识别常见沙箱、工具、权限、路径和连接错误，不保存原始命令或输出。
+轮询与心跳日志会带 HTTP 状态或连接错误码。
+`manage-workers.mjs logs <role>` 只返回文件路径，需用 `tail` 查看内容；
+前台启动的 Worker 输出在原终端，不自动生成管理器日志。
+
+遇到 `FAILED`：
+
+1. 查看最新执行详情，并在运行 Worker 的机器上查看其日志与执行证据。
+   TypeScript Worker 管理器用 `node scripts/manage-workers.mjs logs requirements`
+   获取需求分析日志路径；其他角色替换 `requirements`。执行证据由
+   `AIW_WORKER_EVIDENCE_ROOT` 配置，默认在 Worker 仓库根目录或备用工作目录的父目录
+   下的 `.aidev-attempt-evidence` 中，可用 `owner.json` 的 `attemptId` 匹配。
+2. 修复失败命令、工具、权限或运行时配置。单纯启动或重启 Worker 不会让这个失败任务重试。
+3. 确认执行角色和独立 `workflow-review` Worker 都已注册且能力匹配；
+   核心模板还需 requirements、architect、planner、coder、stage-reviewer。
+4. 在失败任务详情填写重试原因，点击“重试失败任务”并确认。仍使用原计划与原任务，
+   下一次领取会新增执行尝试，旧失败记录保留。已验收的前置产出、依赖与结果版本不变；
+   执行任务成功后继续创建独立审核，审核任务失败时只重试审核任务。
+   已完成的前置步骤不会重跑。失败执行可能留下本地改动，确认前须检查已有文件与副作用。
+
+重试仅允许尚未结束、未归档计划中的当前 `FAILED` 任务，要求 OPERATOR/ADMIN、有效 CSRF、
+当前计划和任务版本、非空原因及显式风险确认。服务在一个事务内锁定任务、校验控制状态、
+更新计划审计、重新入队并记录人工重试事件；重复点击或过期页面不能重复入队。
+待停止确认、已跳过、已推进到后续任务、存在其他待执行或活动任务、人工完成/取消和最终审核通过
+都会阻止重试。人工重试不绕过 `REPAIR_REQUIRED` 的三轮纠正上限；已完成的审核任务不能用此入口重排。
+只有需要修改目标或步骤设计时，才复制为新草稿并重新确认。
+
 ## 管理接口
 
 沿用 Web Console 登录会话；写操作要求 OPERATOR/ADMIN，并在查询参数中携带该会话的 `_csrf`（JSON body 不含 CSRF 参数）。生产环境应启用既有控制台认证；默认本地免认证模式仍使用 local-console 身份和 CSRF。外部流程/Worker 的提交令牌不能调用这些管理操作。
@@ -40,6 +90,7 @@ TypeScript 全角色启动器会额外启动一个 `stage-reviewer`。角色能�
 | GET `/ui/workflow-plans/{id}` | 计划及创建后的任务状态 |
 | POST `/ui/workflow-plans` | 保存草稿；body 为下方计划格式 |
 | POST `/ui/workflow-plans/{id}/copy` | 复制为全新草稿，可复用模板；不会启动 |
+| POST `/ui/plan-editor/plans/{id}/tasks/{taskId}/retry` | 页面重试当前失败任务；body 为 `{"planVersion":1,"taskVersion":6,"reason":"已修复运行环境","warningConfirmed":true}`；保留原计划、任务与执行历史 |
 | POST `/ui/workflow-plans/{id}/confirm` | body `{"version":0}`，明确确认当前草稿版本 |
 | POST `/ui/workflow-plans/{id}/withdraw` | body `{"version":1,"reason":"收回剩余委派"}` |
 | POST `/ui/workflow-plans/{id}/jump` | body `{"version":1,"targetStep":2,"reason":"跳过中间步骤"}`；`targetStep` 从 0 开始 |
@@ -73,6 +124,8 @@ TypeScript 全角色启动器会额外启动一个 `stage-reviewer`。角色能�
 每个计划有 1–32 个有序步骤。key 唯一，依赖须指向更早步骤，禁止循环和缺失前置工作。工作区规则复用现有任务：`repositoryRef` 可为工作区目标或旧仓库 ID，`baseRevision` 可为空，此时沿用直接目录执行模式，不要求目录具有 Git；若提供必须为完整不可变 commit ID，且必须同时指定 `repositoryRef`。必需技能为空、非法技能、空指令和不合法版本均拒绝。参数错误返回 400，未知计划 404，版本变化/活动工作/状态冲突 409，权限不足 403；未认证与 CSRF 失败由既有拦截器处理。
 
 ## 确认、保留与收回
+
+计划确认、跳转、停止、人工完成和取消使用控制台主题弹窗，并跟随当前语言。点击取消、按 Esc 或点击弹窗外部均不会提交操作；只有点击确认才会继续。打开确认弹窗时，控制台自动刷新暂停，关闭后恢复。
 
 创建计划时仅保存 DRAFT。管理者确认后以同一事务变更 CONFIRMED 并创建第一步 EXTERNAL_WORK；失败回滚，不留下部分任务。每个后续执行或评审任务由前一步完成事务幂等创建，评审未 PASS 不创建下一步。同一已确认计划重试原确认版本或当前版本不会重复创建工作。
 

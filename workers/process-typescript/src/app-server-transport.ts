@@ -1,4 +1,4 @@
-import { CodexProcess, type CodexSettings } from "./codex-process.js";
+import { CodexProcess, CODEX_EXECUTION_ARGS, type CodexSettings } from "./codex-process.js";
 import { RuntimeFault } from "./runtime-core.js";
 
 export class ThreadEvents {
@@ -36,7 +36,7 @@ export class AppServerTransport {
   private failed?: Error;
   private closing?: Promise<boolean>;
   private constructor(settings: CodexSettings) {
-    this.process = new CodexProcess(settings, ["app-server", "--listen", "stdio://", "--config", `sandbox_workspace_write.network_access=${settings.network}`], process.cwd(), async message => {
+    this.process = new CodexProcess(settings, ["app-server", "--listen", "stdio://", ...CODEX_EXECUTION_ARGS, "--config", `sandbox_workspace_write.network_access=${settings.network}`], process.cwd(), async message => {
       if (message.id !== undefined && !message.method) {
         const pending = this.pending.get(message.id);
         if (!pending) return;
@@ -75,6 +75,8 @@ export class AppServerTransport {
     if (!response || !response.account || !["apiKey", "chatgpt"].includes(response.account.type)) throw new RuntimeFault("CODEX_ACCOUNT_UNAVAILABLE", "CONFIGURATION");
   }
   async request(method: string, params: unknown, signal: AbortSignal): Promise<any> {
+    // Bound individual RPC responses, independently of the potentially long-running model turn.
+    signal = AbortSignal.any([signal, AbortSignal.timeout(30000)]);
     signal.throwIfAborted(); if (this.failed) throw this.failed;
     const id = ++this.sequence;
     return new Promise((resolve, reject) => {

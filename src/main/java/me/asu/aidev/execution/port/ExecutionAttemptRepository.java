@@ -25,6 +25,7 @@ public interface ExecutionAttemptRepository {
     boolean attachCompletionReport(LeaseToken leaseToken, WorkerId workerId, CompletionReport report);
     boolean attachAiSelection(LeaseToken leaseToken, WorkerId workerId, AiSelection selection);
     boolean attachFailureCategory(LeaseToken leaseToken, WorkerId workerId, String category);
+    boolean attachFailureDetails(LeaseToken leaseToken, WorkerId workerId, String category, String code);
     boolean requestStop(LeaseToken leaseToken, WorkerId workerId, Instant requestedAt);
     boolean stopRequested(LeaseToken leaseToken, WorkerId workerId);
     boolean acknowledgeStop(LeaseToken leaseToken, WorkerId workerId, Instant acknowledgedAt);

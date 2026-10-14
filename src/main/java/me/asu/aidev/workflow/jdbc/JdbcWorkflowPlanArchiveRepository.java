@@ -9,6 +9,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class JdbcWorkflowPlanArchiveRepository {
+    private me.asu.aidev.output.jdbc.JdbcTaskOutputRepository taskOutputs;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setTaskOutputs(me.asu.aidev.output.jdbc.JdbcTaskOutputRepository taskOutputs) {
+        this.taskOutputs = taskOutputs;
+    }
     private static final String TASKS = "SELECT id FROM work_task WHERE subject_type='flexible-plan' AND subject_id=?";
     private final JdbcTemplate jdbc;
 
@@ -90,6 +96,8 @@ public class JdbcWorkflowPlanArchiveRepository {
         jdbc.update("DELETE FROM work_task_workspace_replacement WHERE source_task_id IN (" + TASKS + ") AND (replacement_task_id IS NULL OR replacement_task_id IN (" + TASKS + "))", id, id);
         jdbc.update("DELETE FROM work_task_skill_preference WHERE task_id IN (" + TASKS + ")", id);
         jdbc.update("DELETE FROM work_task_instruction_revision WHERE task_id IN (" + TASKS + ")", id);
+        // Keep immutable deliverables even when their source plan/task history is removed.
+        if (taskOutputs != null) taskOutputs.snapshotPlan(id);
         jdbc.update("DELETE FROM execution_attempt WHERE task_id IN (" + TASKS + ")", id);
         jdbc.update("DELETE FROM work_task_dependency WHERE task_id IN (" + TASKS + ")", id);
         jdbc.update("DELETE FROM work_task WHERE subject_type='flexible-plan' AND subject_id=?", id);

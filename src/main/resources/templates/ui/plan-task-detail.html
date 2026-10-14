@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Task details · AI Dev Manager</title><link rel="stylesheet" href="/ui/console.css"></head>
+<body><div class="app" th:attr="data-auto-refresh=${taskActive ? 8 : 0}">
+<nav th:replace="~{ui/fragments :: nav('plans')}"></nav><main class="main">
+<header th:replace="~{ui/fragments :: topbar('Task details','Execution history, failures and recovery')}"></header>
+<div class="content workflow-page task-detail-page">
+  <div class="callout" data-attempt-duration-warning hidden role="status">Long-running task. Check Worker progress; elapsed time alone does not stop execution.</div>
+  <div class="section-title"><a th:href="@{/ui/plans/{id}(id=${planId})}">Back to plan</a><div class="form-actions"><span class="small muted" data-refresh-label th:if="${taskActive}">Refresh in 8s</span><a class="btn ghost small-btn" th:href="@{/ui/plans/{id}/tasks/{taskId}(id=${planId},taskId=${taskDetail.task.id.value})}">Refresh now</a></div></div>
+  <section class="card"><h2>Task overview</h2><dl class="kv">
+    <dt>Task ID</dt><dd class="mono" th:text="${taskDetail.task.id.value}"></dd>
+    <dt>State</dt><dd><span class="badge" th:attr="data-status=${taskDetail.task.state}" th:text="${taskDetail.task.state}"></span></dd>
+    <dt>Skill</dt><dd th:text="${taskDetail.task.skillRef}"></dd>
+    <dt>Required capabilities</dt><dd th:text="${taskDetail.task.requiredCapabilities}"></dd>
+    <dt>Workspace</dt><dd th:text="${taskDetail.task.repositoryRef ?: 'Not recorded'}"></dd>
+    <dt>Created</dt><dd th:text="${taskDetail.task.createdAt}"></dd>
+    <dt>Updated</dt><dd th:text="${taskDetail.task.updatedAt}"></dd>
+  </dl></section>
+  <section class="card section" th:if="${taskDetail.task.state.name() == 'FAILED'}"><h2>What to do after failure</h2>
+    <div class="callout bad-callout">This task failed. Fix the cause, then retry this task to continue the plan.</div>
+    <ol class="compact-list">
+      <li>Check the latest attempt below for its Worker, failure category and error code.</li>
+      <li>Inspect that Worker's logs and attempt evidence. Fix the failed command, tool, permissions or runtime configuration before trying again.</li>
+      <li>Check Fleet for the execution role and an independent workflow-review Worker. Start the roles required by later steps as well.</li>
+      <li>After fixing the cause, enter a reason and retry the failed task below. Earlier accepted outputs and dependencies remain unchanged.</li>
+    </ol>
+    <p class="help">Retrying keeps the same plan and task IDs and adds a new execution attempt. Check local changes left by the failed attempt before confirming. No earlier step is restarted.</p>
+    <details class="top-gap"><summary>Where to find diagnostics</summary>
+      <p class="help">Run these commands in the TypeScript Worker directory on the machine running the Worker. Replace &lt;role&gt; with requirements, coder or stage-reviewer as appropriate.</p>
+      <pre class="task-report">node scripts/manage-workers.mjs status
+node scripts/manage-workers.mjs logs &lt;role&gt;
+tail -n 80 .ai/worker-manager/&lt;role&gt;.log</pre>
+      <p class="help">Attempt evidence is stored outside the working directory, under AIW_WORKER_EVIDENCE_ROOT or the default .aidev-attempt-evidence directory. Match owner.json by Attempt ID. Historical records may not include command output.</p>
+      <p class="help">New Codex failures log the tool type, call ID, exit code, diagnostic code and evidence directory. Only known error patterns are classified; unrecognized failures remain UNRESOLVED_TOOL_FAILURE. Raw command output is not retained.</p>
+    </details>
+    <form class="form-card top-gap" data-task-retry method="post" th:if="${canOperate and taskDetail.retry.allowed}" th:attr="data-url=@{/ui/plan-editor/plans/{id}/tasks/{taskId}/retry(id=${planId},taskId=${taskDetail.task.id.value})},data-plan-version=${taskDetail.retry.planVersion},data-task-version=${taskDetail.task.version},data-csrf=${csrfToken}">
+      <div class="field"><label for="retry-reason">Retry reason</label><input id="retry-reason" name="reason" required maxlength="2000" placeholder="Describe what was fixed before retrying"></div>
+      <div class="form-actions"><button class="btn primary" type="submit">Retry failed task</button></div>
+    </form>
+    <p class="help" th:unless="${taskDetail.retry.allowed}" th:text="${taskDetail.retry.blockedReason}"></p>
+    <p data-retry-status role="status"></p><p data-retry-error role="alert"></p>
+    <p class="help">To change the goal or selected steps, copy the plan into a new draft.</p>
+    <div class="form-actions"><a class="btn ghost" th:if="${canOperate}" th:href="@{/ui/plans/new(copy=${planId})}">Copy to change the plan</a><a class="btn ghost" href="/ui/workers">View Workers →</a></div>
+  </section>
+  <section class="card section"><h2>Execution history</h2><p class="empty" th:if="${#lists.isEmpty(taskDetail.attempts)}">No Worker has claimed this task yet. Check Fleet matching and task prerequisites.</p>
+    <article class="task-attempt" th:each="attempt : ${taskDetail.attempts}" data-attempt-duration
+             th:attr="data-state=${attempt.state},data-started-at=${attempt.startedAt ?: attempt.createdAt},data-warning-ms=${attemptWarningMs}">
+      <div class="section-title"><h3><span>Attempt</span> <span th:text="${attempt.attemptNo}"></span></h3><span class="badge" th:attr="data-status=${attempt.state}" th:text="${attempt.state}"></span></div>
+      <dl class="kv"><dt>Attempt ID</dt><dd class="mono" th:text="${attempt.id}"></dd>
+        <dt>Worker</dt><dd th:text="${attempt.workerId}"></dd><dt>Instruction revision</dt><dd th:text="${attempt.instructionRevision}"></dd>
+        <dt>Created</dt><dd th:text="${attempt.createdAt}"></dd><dt>Started</dt><dd th:text="${attempt.startedAt ?: 'Not recorded'}"></dd><dt>Finished</dt><dd th:text="${attempt.finishedAt ?: 'Not recorded'}"></dd>
+        <dt>Failure category</dt><dd th:text="${attempt.failureCategory ?: 'Not recorded'}"></dd>
+        <dt>Error code / termination reason</dt><dd class="mono" th:text="${attempt.failureCode ?: 'Not recorded'}"></dd>
+        <dt>Verdict</dt><dd th:text="${attempt.verdict ?: 'Not recorded'}"></dd><dt>Result revision</dt><dd class="mono" th:text="${attempt.resultRevision ?: 'Not recorded'}"></dd>
+      </dl>
+      <p class="help" th:if="${attempt.state == 'FAILED' and attempt.failureCode == null}">This historical attempt has no stored error code. Check its Worker logs; the page cannot reconstruct missing diagnostics.</p>
+      <p class="help" th:if="${attempt.failureCode == 'UNRESOLVED_TOOL_FAILURE' or attempt.failureCategory == 'OUTPUT_INVALID'}">Tool or output validation failed. Check the failed command and its output in Worker-side diagnostics. Restarting a Worker alone does not retry this task.</p>
+      <p class="help" th:if="${attempt.failureCode == 'SANDBOX_NAMESPACE_UNAVAILABLE'}">Sandbox namespace creation failed. Check Linux user-namespace support and the host or container sandbox configuration before retrying.</p>
+      <p class="help" th:if="${attempt.failureCode == 'COMMAND_NOT_FOUND'}">A required command was not found. Check that the tool is installed and available in the Worker process PATH.</p>
+      <p class="help" th:if="${attempt.failureCode == 'COMMAND_PERMISSION_DENIED'}">The command was denied access. Check filesystem permissions and whether the role is using a read-only workspace.</p>
+      <p class="help" th:if="${attempt.failureCode == 'COMMAND_PATH_NOT_FOUND'}">The command referenced a missing path. Check the registered Workspace and the paths used by the tool.</p>
+      <p class="help" th:if="${attempt.failureCode == 'COMMAND_CONNECTION_FAILED'}">A command could not reach its network target. Check the target address from the Worker environment.</p>
+      <h3>Recorded report</h3><pre class="task-report" th:if="${attempt.report != null}" th:text="${attempt.report}"></pre>
+      <p class="muted small" th:unless="${attempt.report != null}">No completion report was recorded for this attempt.</p>
+    </article>
+  </section>
+  <section class="card section" th:unless="${#lists.isEmpty(taskDetail.retries)}"><h2>Manual retries (latest 50)</h2>
+    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Actor</th><th>Reason</th></tr></thead><tbody><tr th:each="retry : ${taskDetail.retries}"><td th:text="${retry.requestedAt}"></td><td th:text="${retry.actor}"></td><td th:text="${retry.reason}"></td></tr></tbody></table></div>
+  </section>
+  <section class="card section" data-task-outputs th:attr="data-task-id=${taskDetail.task.id.value},data-can-operate=${canOperate},data-csrf=${csrfToken}">
+    <h2>Task deliverables</h2><p class="help">Reports and attachments are saved in the persistent Workspace. Project documents require a passed source review, then a publication plan and confirmation.</p>
+    <div data-output-list><p class="muted">Loading deliverables…</p></div>
+    <p data-output-status role="status"></p>
+  </section>
+  <section class="card section"><h2>Task instruction</h2><pre class="task-report" th:text="${taskDetail.task.instruction}"></pre></section>
+</div></main></div><script src="/ui/console.js"></script><script src="/ui/task-detail.js"></script></body></html>

@@ -8,19 +8,25 @@ import { sha256 } from "./evidence.mjs";
 function validRevision(revision) { return typeof revision === "string" && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(revision); }
 function argument(value) { if (typeof value !== "string" || !value || value.startsWith("-") || /[\r\n\0]/.test(value)) throw new RuntimeFault("GIT_ARGUMENT_INVALID", "CONFIGURATION"); return value; }
 
-export async function workspaceSnapshot(cwd, signal) {
+export async function workspaceSnapshot(cwd, signal, publicationTarget = null) {
+  publicationTarget = publicationTarget?.normalize("NFC") ?? null;
   const entries = [];
   let bytes = 0;
   const visit = async directory => {
     checkSignal(signal);
     for (const entry of (await readdir(directory, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
-      if (entry.name.toLowerCase() === ".git") continue;
+      if (entry.name.toLowerCase() === ".git" || (directory === cwd && entry.name.toLowerCase() === ".aiw")) continue;
       const file = path.join(directory, entry.name);
       const relative = path.relative(cwd, file);
+      const portable = relative.split(path.sep).join("/").normalize("NFC");
+      if (portable === publicationTarget) continue;
       const info = await lstat(file);
       if (entries.length > 50000 || bytes > 128 * 1024 * 1024) throw new RuntimeFault("READ_ONLY_SNAPSHOT_BUDGET_EXCEEDED", "CONFIGURATION");
       if (info.isSymbolicLink()) entries.push([relative, "link", await readlink(file)]);
-      else if (info.isDirectory()) { entries.push([relative, "directory"]); await visit(file); }
+      else if (info.isDirectory()) {
+        if (!publicationTarget?.startsWith(portable + "/")) entries.push([relative, "directory"]);
+        await visit(file);
+      }
       else if (info.isFile()) {
         bytes += info.size;
         if (bytes > 128 * 1024 * 1024) throw new RuntimeFault("READ_ONLY_SNAPSHOT_BUDGET_EXCEEDED", "CONFIGURATION");
@@ -110,7 +116,7 @@ export class WorkspaceSession {
     return await this.coordinator.run({ mode: "X" }, this.attempt.signal, async () => {
       await this.validateReadOnly(readOnly);
       if (!readOnly) {
-        await this.gitAt(this.cwd, ["add", "-A"]);
+        await this.gitAt(this.cwd, ["add", "-A", "--", ".", ":(exclude).aiw", ":(exclude).aiw/**"]);
         const staged = await this.gitAt(this.cwd, ["diff", "--cached", "--name-only", "-z"]);
         if (staged.length) await this.gitAt(this.cwd, ["-c", "user.name=AI Dev Worker", "-c", "user.email=aidev-worker@localhost", "commit", "--no-gpg-sign", "-m", `aidev: ${task.taskId} attempt ${task.attemptNo}`]);
       }

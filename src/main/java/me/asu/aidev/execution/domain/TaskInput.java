@@ -15,7 +15,14 @@ public record TaskInput(
         String publicationRef,
         List<String> changedFiles,
         CompletionVerdict completionVerdict,
-        String completionSummary) {
+        String completionSummary,
+        String attemptId) {
+    public TaskInput(TaskId taskId, TaskType taskType, String repositoryRef, String baseRevision,
+                     String resultRevision, String publicationRef, List<String> changedFiles,
+                     CompletionVerdict completionVerdict, String completionSummary) {
+        this(taskId, taskType, repositoryRef, baseRevision, resultRevision, publicationRef,
+                changedFiles, completionVerdict, completionSummary, null);
+    }
     public TaskInput {
         Objects.requireNonNull(taskId, "taskId");
         Objects.requireNonNull(taskType, "taskType");

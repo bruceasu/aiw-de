@@ -3,8 +3,8 @@ export type EvidenceField = "taskId" | "attemptId" | "attemptNo" | "role" | "run
   | "sourceId" | "path" | "digest" | "bytes" | "count" | "inputBytes" | "outputBytes" | "inputTokens" | "outputTokens"
   | "cachedTokens" | "usageKnown" | "usageSource" | "durationMs" | "complete" | "truncated" | "mode" | "sideEffect"
   | "resultRevision" | "publicationRef" | "baseRevision" | "workspaceKey" | "readOnly" | "maxBytes" | "maxTurns"
-  | "deadlineMs" | "model" | "effort" | "sourceIds" | "summaryCalls" | "processTree" | "reportStatus"
-  | "retentionDays" | "verdict" | "capability" | "unknown" | "revision";
+  | "deadlineMs" | "warningMs" | "model" | "effort" | "sourceIds" | "summaryCalls" | "processTree" | "reportStatus"
+  | "retentionDays" | "verdict" | "capability" | "unknown" | "revision" | "exitCode";
 export type Metadata = Partial<Record<EvidenceField, string | number | boolean | null | string[] | undefined>>
   & { versions?: Record<string, string> };
 export interface ResourceRequest { mode: "IS" | "IX" | "S" | "X"; files?: { key: string; mode: "S" | "X" }[] }
@@ -37,6 +37,9 @@ export class EvidenceRecorder {
   finish(status: string): Promise<void>;
 }
 export function commandEnvironment(extra?: Record<string, string>): Record<string, string>;
+export const TOOL_CACHE_ENV_NAMES: string[];
+export function toolCacheEnvironment(environment?: Record<string, string | undefined>): Record<string, string>;
+export function prepareToolCache(workerId: string): { directory: string; temp: string; environment: Record<string, string> };
 export function runCommand(executable: string, args: string[], options?: { cwd?: string; signal?: AbortSignal; timeoutMs?: number; maxBytes?: number; exact?: boolean; env?: Record<string, string>; allowFailure?: boolean }): Promise<{ exitCode: number; stdout: string; stderr: string; complete: boolean; processTree: string }>;
 export function planEdits(original: string, edits: { oldText: string; newText: string }[]): { text: string; diff: string; count: number };
 export function atomicWrite(file: string, text: string, signal: AbortSignal, expectedDigest?: string): Promise<void>;
@@ -72,7 +75,7 @@ export class HistoryCompactor {
 }
 export class AttemptRunner {
   /** Supply recorder here or assign it before step; missing evidence rejects before running the operation. */
-  constructor(config?: { timeoutMs?: number; parentSignal?: AbortSignal; settleTimeoutMs?: number; recorder?: EvidenceRecorder });
+  constructor(config?: { timeoutMs?: number; warningMs?: number; onWarning?: (durationMs: number) => void; parentSignal?: AbortSignal; settleTimeoutMs?: number; recorder?: EvidenceRecorder });
   signal: AbortSignal; recorder: EvidenceRecorder; resourceUncertain: boolean;
   initializeEvidence(root: string, identity: Metadata, options?: { maxBytes?: number; forbiddenRoots?: string[] }): Promise<EvidenceRecorder>;
   cancel(reason?: string): void;
@@ -90,7 +93,7 @@ export class WorkspaceSession {
   finalize(task: any, readOnly: boolean): Promise<WorkspaceResult | null>;
   cleanup(): Promise<void>;
 }
-export function workspaceSnapshot(cwd: string, signal?: AbortSignal): Promise<string>;
+export function workspaceSnapshot(cwd: string, signal?: AbortSignal, publicationTarget?: string | null): Promise<string>;
 export class ProtocolError extends Error { constructor(status: number); status: number }
 export class ControlPlaneClient {
   constructor(cfg: any, runtimeType: string);
@@ -100,13 +103,15 @@ export class ControlPlaneClient {
   heartbeat(task: any, sessionId: string | null): Promise<void>;
   fail(task: any, sessionId: string | null, reason?: string | null, category?: string): Promise<void>;
   complete(task: any, sessionId: string | null, workspace: WorkspaceResult | null, report: unknown, signal?: AbortSignal): Promise<void>;
+  registerOutputs(task: any, report: any, files: any[], resultRevision: string | null, signal?: AbortSignal): Promise<any>;
+  readOutputs(task: any, bundleId: string, signal?: AbortSignal): Promise<any[]>;
 }
 export interface AttemptExecution { task: any; workspace: WorkspaceSession; profile: any; prompt: string; context: ContextAssembler; attempt: AttemptRunner; selection: any; onSession: (id: string) => void }
 export interface AttemptAdapter {
   runtime: string; versions?: Record<string, string>;
   select(task: any): any; profile(task: any): any; prompt(task: any, context: ContextAssembler): string;
   execute(input: AttemptExecution): Promise<string>;
-  report(resultKind: string, response: string): unknown;
+  report(resultKind: string, response: string, outputsEnabled?: boolean): unknown;
   digest?(text: string): string;
   settled?(timeoutMs?: number): Promise<void | boolean>; assertSuccessful?(): void; clear?(): void;
 }
@@ -120,7 +125,7 @@ export function runWorkerSlot(options: {
 }): Promise<void>;
 export function validateModelResponse(response: any, raw?: any, request?: any): void;
 export function guardedModel<T>(model: T, config: { recorder: EvidenceRecorder; signal: AbortSignal; history?: HistoryCompactor; maxInputBytes?: number }): T;
-export interface RuntimeSettings { taskTimeoutMs: number; cleanupTimeoutMs: number; gitTimeoutMs: number; maxInputBytes: number; evidenceMaxBytes: number; evidenceRoot?: string; forceSignal?: AbortSignal }
+export interface RuntimeSettings { taskTimeoutMs: number; taskHardTimeoutMs: number; cleanupTimeoutMs: number; gitTimeoutMs: number; maxInputBytes: number; evidenceMaxBytes: number; evidenceRoot?: string; forceSignal?: AbortSignal }
 export function runtimeSettings(): RuntimeSettings;
 export function positiveSetting(name: string, fallback: number | string): number;
 export class AiwAdapter {

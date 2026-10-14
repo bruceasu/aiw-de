@@ -2,7 +2,7 @@ import type { WorkerBackend, WorkerConfig } from "./index.js";
 import type { AgentRuntime } from "./agent-runtime.js";
 import { buildPrompt, completionReport, resolveTaskProfile } from "./instructions.js";
 import { chooseAiProfile } from "./ai-profiles.js";
-import { CODEX_VERSION } from "./codex-process.js";
+import { CODEX_VERSION, CODEX_SHELL_INSTRUCTIONS } from "./codex-process.js";
 import { sha256 } from "./runtime-core.js";
 
 export function codexBackend(cfg: WorkerConfig, mode: "codex-cli" | "codex-app-server", engine: () => AgentRuntime, shutdown?: () => Promise<void>): WorkerBackend {
@@ -15,7 +15,7 @@ export function codexBackend(cfg: WorkerConfig, mode: "codex-cli" | "codex-app-s
         runtime: mode, versions: { codex: CODEX_VERSION },
         select: task => task.aiGuidance ? chooseAiProfile(task.aiGuidance, mode) : null,
         profile: task => (profile = resolveTaskProfile(task, cfg.role)),
-        prompt: (task, context) => buildPrompt(task, cfg.role, cfg.skillsRoot, context, profile),
+        prompt: (task, context) => `${CODEX_SHELL_INSTRUCTIONS}\n\n${buildPrompt(task, cfg.role, cfg.skillsRoot, context, profile)}`,
         execute: async execution => {
           await execution.context.record(execution.prompt);
           await execution.attempt.recorder.record("runtime-capabilities", { capability: `${mode};resume=false;attemptCancellation=true;eventStreaming=true;tools=true`,

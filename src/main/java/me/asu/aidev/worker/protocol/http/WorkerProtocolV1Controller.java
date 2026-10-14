@@ -40,6 +40,12 @@ public class WorkerProtocolV1Controller {
     private final ExecutionAttemptRepository attempts;
     private final AiProfileCatalog aiProfiles;
     private WorkspaceRegistry workspaceRegistry;
+    private me.asu.aidev.output.application.TaskOutputService outputs;
+
+    @Autowired
+    public void setTaskOutputService(me.asu.aidev.output.application.TaskOutputService outputs) {
+        this.outputs = outputs;
+    }
 
     @Autowired
     public void setWorkspaceRegistry(WorkspaceRegistry workspaceRegistry) {
@@ -119,10 +125,12 @@ public class WorkerProtocolV1Controller {
         CompletionReport report = request.report() == null ? null : new CompletionReport(
                 CompletionVerdict.valueOf(required(request.report().verdict(), "report.verdict")),
                 required(request.report().summary(), "report.summary"));
+        if (outputs != null) outputs.ensureReport(taskId, request.workerId(), request.leaseToken(), report, workspaceResult);
         TaskCompletionResult result = executions.complete(
                 new TaskId(taskId), new WorkerId(required(request.workerId(), "workerId")),
                 new LeaseToken(required(request.leaseToken(), "leaseToken")),
                 request.externalSessionId(), workspaceResult, report);
+        if (outputs != null) outputs.observe(request.leaseToken());
         return new CompletionResponse(
                 result.completedTaskId().value(),
                 result.newlyReadyTaskIds().stream().map(TaskId::value).toList(),
@@ -134,6 +142,7 @@ public class WorkerProtocolV1Controller {
         executions.fail(new TaskId(taskId), new WorkerId(required(request.workerId(), "workerId")),
                 new LeaseToken(required(request.leaseToken(), "leaseToken")),
                 request.externalSessionId(), request.failureReason(), request.failureCategory());
+        if (outputs != null) outputs.observe(request.leaseToken());
     }
 
     private ClaimedTaskResponse toResponse(ClaimedTask claimed, String runtimeType) {
@@ -159,9 +168,10 @@ public class WorkerProtocolV1Controller {
                         input.taskId().value(), input.taskType().name(), input.repositoryRef(), input.baseRevision(),
                         input.resultRevision(), input.publicationRef(), input.changedFiles(),
                         input.completionVerdict() == null ? null : input.completionVerdict().name(),
-                        input.completionSummary())).toList(),
+                        input.completionSummary(), input.attemptId())).toList(),
                 aiProfiles.guidance(task.type(), runtimeType,
-                        attempts.findPreviousAiAttempt(task.id(), claimed.attemptNo()).orElse(null)));
+                        attempts.findPreviousAiAttempt(task.id(), claimed.attemptNo()).orElse(null)),
+                outputs == null ? null : outputs.store(task, claimed.attemptId().value(), claimed.inputs()));
     }
 
     private WorkspaceResponse workspaceResponse(ClaimedTask claimed) {
@@ -228,7 +238,14 @@ public class WorkerProtocolV1Controller {
     }
     public record TaskInputResponse(String taskId, String taskType, String repositoryRef, String baseRevision,
                                     String resultRevision, String publicationRef, List<String> changedFiles,
-                                    String completionVerdict, String completionSummary) {}
+                                    String completionVerdict, String completionSummary, String attemptId) {
+        public TaskInputResponse(String taskId, String taskType, String repositoryRef, String baseRevision,
+                String resultRevision, String publicationRef, List<String> changedFiles,
+                String completionVerdict, String completionSummary) {
+            this(taskId, taskType, repositoryRef, baseRevision, resultRevision, publicationRef,
+                    changedFiles, completionVerdict, completionSummary, null);
+        }
+    }
     public record CompletionResponse(String taskId, List<String> newlyReadyTaskIds, List<String> generatedTaskIds) {}
     public record ClaimedTaskResponse(
             String taskId,
@@ -247,5 +264,16 @@ public class WorkerProtocolV1Controller {
             Instant leaseExpiresAt,
             WorkspaceResponse workspace,
             List<TaskInputResponse> inputs,
-            AiProfileCatalog.Guidance aiGuidance) {}
+            AiProfileCatalog.Guidance aiGuidance,
+            me.asu.aidev.output.application.TaskOutputService.Store outputStore) {
+        public ClaimedTaskResponse(String taskId, String taskType, String subjectType, String subjectId,
+                Set<String> requiredCapabilities, String skillRef, String instruction, int instructionRevision,
+                int priority, String attemptId, int attemptNo, String leaseToken, Instant leaseAcquiredAt,
+                Instant leaseExpiresAt, WorkspaceResponse workspace, List<TaskInputResponse> inputs,
+                AiProfileCatalog.Guidance aiGuidance) {
+            this(taskId, taskType, subjectType, subjectId, requiredCapabilities, skillRef, instruction,
+                    instructionRevision, priority, attemptId, attemptNo, leaseToken, leaseAcquiredAt,
+                    leaseExpiresAt, workspace, inputs, aiGuidance, null);
+        }
+    }
 }
