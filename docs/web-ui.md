@@ -1,8 +1,8 @@
-# AI Dev Manager — Web Control Plane Handoff
+# AI Worker — Web Control Plane Handoff
 
 ## 1. Current Objective
 
-Continue the AI Dev Manager project from the accepted R9 baseline.
+Continue the AI Worker project from the accepted R9 baseline.
 
 The immediate priority is now:
 
@@ -59,7 +59,7 @@ Do not reintroduce old centralized orchestration patterns.
 The system should remain conceptually separated into:
 
 ```text
-                    AI Dev Manager
+                    AI Worker
                          │
          ┌───────────────┴───────────────┐
          │                               │

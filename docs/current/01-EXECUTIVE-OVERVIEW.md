@@ -1,8 +1,8 @@
 # Executive Overview
 
-## 1. What AI Dev Manager is
+## 1. What AI Worker is
 
-AI Dev Manager is a software-engineering **Control Plane for AI workers**. Its purpose is not to replace a coding model with another chat interface. It coordinates multiple AI workers through a durable task graph and keeps engineering authority in deterministic Java services.
+AI Worker is a software-engineering **Control Plane for AI workers**. Its purpose is not to replace a coding model with another chat interface. It coordinates multiple AI workers through a durable task graph and keeps engineering authority in deterministic Java services.
 
 The system accepts a natural-language requirement, turns it into engineering work, lets compatible workers pull tasks, isolates coding attempts in Git worktrees, performs review and verification, creates repair work when required, produces an engineering gate, and can request a human approval before declaring the run successful.
 
@@ -20,7 +20,7 @@ A standalone AI coding CLI is effective at one task, but a development organizat
 - visibility into backlog, worker capacity and concurrency;
 - auditable result revisions instead of “the agent said it finished”.
 
-AI Dev Manager supplies that coordination layer while keeping the AI runtime replaceable.
+AI Worker supplies that coordination layer while keeping the AI runtime replaceable.
 
 ## 3. Current end-to-end flow
 

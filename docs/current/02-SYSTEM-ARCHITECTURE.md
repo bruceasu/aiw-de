@@ -2,7 +2,7 @@
 
 ## 1. Architecture style
 
-AI Dev Manager R8 is a **modular monolith Control Plane** with external AI workers.
+AI Worker R8 is a **modular monolith Control Plane** with external AI workers.
 
 ```text
                        +--------------------------+

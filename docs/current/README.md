@@ -1,4 +1,4 @@
-# AI Dev Manager R9 — Current Documentation
+# AI Worker R9 — Current Documentation
 
 **Execution-platform baseline:** R8-S13 Fix2 (`me.asu.aidev`)
 **Current product layer:** R9 consolidated Web Console  
@@ -10,7 +10,7 @@
 
 Chinese edition: [`../current-zh/README.md`](../current-zh/README.md).
 
-This directory is the current operational and user documentation for AI Dev Manager R9. The older `docs/R3-*` through staged `docs/R9-*` files remain useful design/history records, but they are not the recommended starting point for operating the current system.
+This directory is the current operational and user documentation for AI Worker R9. The older `docs/R3-*` through staged `docs/R9-*` files remain useful design/history records, but they are not the recommended starting point for operating the current system.
 
 ## Start here
 

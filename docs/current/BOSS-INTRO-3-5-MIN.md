@@ -30,7 +30,7 @@ This is a speaking script, not a detailed architecture review.
 
 ## One-sentence summary
 
-> In short: Codex is an AI developer; AI Dev Manager is the engineering organization and control system around a workforce of AI developers.
+> In short: Codex is an AI developer; AI Worker is the engineering organization and control system around a workforce of AI developers.
 
 ## Optional 60-second live demo
 

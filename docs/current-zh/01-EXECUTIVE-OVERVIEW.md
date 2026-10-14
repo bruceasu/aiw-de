@@ -1,8 +1,8 @@
 # 执行摘要
 
-## 1. AI Dev Manager 是什么
+## 1. AI Worker 是什么
 
-AI Dev Manager 是一个面向 AI 软件工程 Worker 的 **Control Plane**。它不是另一个聊天式 Coding UI，而是用来管理一组 AI 员工完成完整工程生命周期。
+AI Worker 是一个面向 AI 软件工程 Worker 的 **Control Plane**。它不是另一个聊天式 Coding UI，而是用来管理一组 AI 员工完成完整工程生命周期。
 
 系统可以从自然语言需求出发，形成 Requirement Analysis、Architecture、Planning、Coding、Review、Verification、Repair、Engineering Gate 和 Human Approval，并把每个步骤变成可恢复、可审计、可并行的工程状态。
 
@@ -20,7 +20,7 @@ AI Dev Manager 是一个面向 AI 软件工程 Worker 的 **Control Plane**。�
 - 能回答“为什么这个任务还没执行”；
 - 用精确 Git revision 证明到底批准了哪份代码。
 
-AI Dev Manager 提供的是这一层软件工程控制能力。
+AI Worker 提供的是这一层软件工程控制能力。
 
 ## 3. 当前完整流程
 

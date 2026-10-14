@@ -1,12 +1,12 @@
 # 公共 Worker 实现来源
 
-FD-005 的公共 ESM 模块是 aiw-dev 的 Worker 实现。保留控制平面协议及 SDK 执行路径；没有嵌入 pi 的 Agent、UI、Provider、持久化会话树或调度系统。
+FD-005 的公共 ESM 模块是 AI Worker 的 Worker 实现。保留控制平面协议及 SDK 执行路径；没有嵌入 pi 的 Agent、UI、Provider、持久化会话树或调度系统。
 
 ## pi 参考
 
 用户提供的源码目录：`D:/03_projects/AI-tools/pi`。该目录没有 Git 元数据，不能给出虚构 commit；参考日期 2026-10-05。下列摘要由实际文件的 Get-FileHash -Algorithm SHA256 取得，运行效果没有测量。
 
-| pi 来源 | 融合内容 | aiw-dev 实现 |
+| pi 来源 | 融合内容 | AI Worker 实现 |
 |---|---|---|
 | packages/agent/src/agent-loop.ts、agent.ts | 调用关联、钩子与等待实际活动资源终态 | tool-host.mjs、attempt.mjs、model-guard.mjs；保留 Agents SDK 循环 |
 | packages/coding-agent/src/core/tools/truncate.ts | UTF-8 边界、首尾保留、行/字节预算和截断说明 | output.mjs；本实现将完整 JSON envelope 和提示标记纳入预算 |

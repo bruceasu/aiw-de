@@ -1,8 +1,8 @@
 # Worker 公共执行基础与 pi 机制融合计划
 
-本文规划各角色 Worker 共用的执行基础，并选择 pi 中适合融入 aiw-dev 的机制。目标是让需求分析、架构、规划、实现、集成、审查、验证和修复共享可靠的执行过程，同时通过角色政策表达不同职责。
+本文规划各角色 Worker 共用的执行基础，并选择 pi 中适合融入 AI Worker 的机制。目标是让需求分析、架构、规划、实现、集成、审查、验证和修复共享可靠的执行过程，同时通过角色政策表达不同职责。
 
-本文保留 2026-10-04 的原始规划背景。后续 FD-009 已将两个 TypeScript Worker 合并到 `workers/process-typescript`，删除旧 API 包和启动路径；当前实现入口见 [统一 Worker](../workers/process-typescript/README.md)。aiw-dev 控制平面继续管理任务、调度、租约、模型授权、重试、审批和验收。pi 提供设计与算法参考，aiw 及其插件提供可选择的工具能力。
+本文保留 2026-10-04 的原始规划背景。后续 FD-009 已将两个 TypeScript Worker 合并到 `workers/process-typescript`，删除旧 API 包和启动路径；当前实现入口见 [统一 Worker](../workers/process-typescript/README.md)。AI Worker 控制平面继续管理任务、调度、租约、模型授权、重试、审批和验收。pi 提供设计与算法参考，aiw 及其插件提供可选择的工具能力。
 
 - 日期：2026-10-04
 - 状态：待评审的整体计划，尚未实施本计划
@@ -35,7 +35,7 @@ API Worker 当前已设置 `parallelToolCalls: true`，并为同一规范化路�
 
 ```mermaid
 flowchart TD
-    CP[aiw-dev 控制平面] --> A[公共任务执行]
+    CP[AI Worker 控制平面] --> A[公共任务执行]
     RP[角色政策与 Skill] --> A
     A --> W[工作区与结果准备]
     A --> C[上下文与预算]
@@ -70,7 +70,7 @@ Worker 内部的执行阶段用于协调一次 attempt，不成为新的持久�
 
 | pi 机制与源码 | 融合方式 | 适用角色 | 必须适配的差异 |
 |---|---|---|---|
-| Agent 状态与执行适配边界，`packages/agent/src/agent.ts` | 借鉴职责划分，为运行时设置小而明确的入口 | 全部 | aiw-dev 以 attempt 为单位，模型与重试受控制平面约束 |
+| Agent 状态与执行适配边界，`packages/agent/src/agent.ts` | 借鉴职责划分，为运行时设置小而明确的入口 | 全部 | AI Worker 以 attempt 为单位，模型与重试受控制平面约束 |
 | 工具执行前后钩子，`packages/agent/src/agent-loop.ts` | 统一校验、授权、执行、结果和事件处理 | 全部 | 租约丢失和权限失效必须终止，不能作为普通模型可修正错误 |
 | 并行执行与按源顺序组织工具结果，`agent-loop.ts` | 比较现有 SDK 的行为，补足调度与关联契约 | 全部 | 保留已允许的并行调用；写入、shell 和外部副作用需资源协调 |
 | 截断响应中的工具调用拒绝，`agent-loop.ts` | 核实 SDK 是否已有保护；缺失时在可检查的执行边界补充 | 全部 | 解析为 JSON 不足以证明参数完整，不执行尚未确认完整的调用 |
@@ -200,7 +200,7 @@ aiw 插件通过 `ToolHost` 适配，各角色按操作取得能力。先盘点�
 
 每项操作登记固定入口、插件版本或摘要、解释器、参数、输出格式、目录、网络及副作用。使用参数数组和有界输出，不把整个 aiw CLI 或任意插件发现机制直接交给模型。
 
-插件输出只有通过 Worker 校验才能成为证据。FD 的管理状态不参与控制平面的任务推进。额外的包安装、网络、审批、持久化和发布操作仍服从 aiw-dev 的政策。
+插件输出只有通过 Worker 校验才能成为证据。FD 的管理状态不参与控制平面的任务推进。额外的包安装、网络、审批、持久化和发布操作仍服从 AI Worker 的政策。
 
 ## 实施阶段与交付项
 
@@ -275,7 +275,7 @@ W08 的自动摘要可以独立禁用，基础预算与错误处理仍应成立�
 
 ## 源码依据与验证状态
 
-aiw-dev 主要依据：
+AI Worker 主要依据：
 
 - [系统架构](current/02-SYSTEM-ARCHITECTURE.md)
 - [统一 Worker 说明](../workers/process-typescript/README.md)

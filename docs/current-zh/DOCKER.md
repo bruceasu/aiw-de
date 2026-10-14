@@ -11,7 +11,7 @@ Codex 默认使用 npm 的 `latest` 标签，可通过 `CODEX_VERSION` 构建参
 在仓库根目录执行：
 
 ```sh
-docker build -t aiw-dev:java25-node24 .
+docker build -t ai-worker:java25-node24 .
 ```
 
 构建仅下载基础镜像、系统包与系统 Codex CLI（包括其平台原生包），不执行 Maven package、npm ci 或 Worker build。镜像保留 Maven/npm 工具供需要时使用，但不会自动编译项目。Codex 全局安装保留 optional 平台包。
@@ -29,7 +29,7 @@ docker run --rm --name aiw-control \
   -p 127.0.0.1:8080:8080 \
   --mount "type=bind,source=$(pwd)/target/ai-dev-manager-10-9.0.0-SNAPSHOT.jar,target=/opt/aiw/app.jar,readonly" \
   -v aiw-data:/opt/aiw/data \
-  aiw-dev:java25-node24
+  ai-worker:java25-node24
 ```
 
 挂载源必须是已经存在的 JAR 文件。`--mount` 在源不存在时直接报错，避免把缺失文件误建为目录。JAR 只读挂载；容器不负责生成或更新它。更换外部产物后停止并重新创建容器，不在运行中覆盖 JAR。镜像无需随每次应用发布重建。
@@ -44,7 +44,7 @@ docker run --rm --name aiw-control \
 
 ```sh
 docker run --rm -it -v aiw-codex:/home/aiw/.codex \
-  aiw-dev:java25-node24 codex
+  ai-worker:java25-node24 codex
 ```
 
 凭据仅在运行时提供，不放入镜像。Codex 卷保存可写状态，不代表全通道禁存。
@@ -55,7 +55,7 @@ TypeScript Worker 同样在容器外编译和准备依赖。挂载目录须包�
 docker run --rm \
   --env-file /absolute/worker.env \
   --mount type=bind,source=/absolute/worker-release,target=/opt/aiw/worker,readonly \
-  aiw-dev:java25-node24 node /opt/aiw/worker/dist/index.js
+  ai-worker:java25-node24 node /opt/aiw/worker/dist/index.js
 ```
 
 按 [TypeScript Worker 指南](../../workers/process-typescript/README.md)配置角色、Runtime、认证、准入与工作区；需要执行仓库操作时另外挂载可写 Workspace。通过 Docker network 让 `AIW_CONTROL_PLANE_URL` 指向控制平面容器；Worker 内 localhost 不指向其他容器。两端仓库引用和路径映射须一致。

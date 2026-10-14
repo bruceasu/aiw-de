@@ -6,7 +6,7 @@
 
 ## 45 秒：为什么需要它
 
-> 现在 AI Coding 本身已经很强，但真实开发不只是“生成代码”。我们还需要任务状态、依赖关系、Worker 崩溃后的恢复、多个 AI 并行工作但不互相覆盖、独立 Review 和测试验证、必要时的人类批准，以及能够证明最终到底接受了哪个 Git Revision。AI Dev Manager 主要解决的是这些软件工程管理问题。
+> 现在 AI Coding 本身已经很强，但真实开发不只是“生成代码”。我们还需要任务状态、依赖关系、Worker 崩溃后的恢复、多个 AI 并行工作但不互相覆盖、独立 Review 和测试验证、必要时的人类批准，以及能够证明最终到底接受了哪个 Git Revision。AI Worker 主要解决的是这些软件工程管理问题。
 
 ## 60 秒：系统如何工作
 
@@ -28,7 +28,7 @@
 
 ## 一句话总结
 
-> 如果 Codex 是一个 AI Developer，那么 AI Dev Manager 就是管理一组 AI Developer 的软件工程组织和 Control System。
+> 如果 Codex 是一个 AI Developer，那么 AI Worker 就是管理一组 AI Developer 的软件工程组织和 Control System。
 
 ## 可选 1 分钟 Demo
 

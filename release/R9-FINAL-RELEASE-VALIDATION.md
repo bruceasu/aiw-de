@@ -1,4 +1,4 @@
-# AI Dev Manager R9 — Final Release Validation
+# AI Worker R9 — Final Release Validation
 
 **Release:** R9 consolidated Web Console  
 **Validation record:** 2026-10-02  

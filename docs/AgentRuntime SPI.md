@@ -1,10 +1,10 @@
-# AI Dev Manager — AgentRuntime SPI 设计方案
+# AI Worker — AgentRuntime SPI 设计方案
 
 > 实施对应 FD-009：TypeScript Worker 使用进程内 AgentRuntime SPI，将 Codex SDK 与 OpenAI Agents SDK 收敛到 `workers/process-typescript` 单包、单入口；通过 `AIW_AGENT_RUNTIME` 显式选后端。旧 `process-typescript-with-api` 包和启动路径已删除。本文下方的 Java/Python 伪代码及 DirectResponses、Copilot 分阶段建议仍是设计参考，不表示这些能力已实现。
 
 ## 1. 目标
 
-AI Dev Manager 的 Worker 不应该直接依赖某个具体 LLM SDK、CLI 或 Provider。
+AI Worker 的 Worker 不应该直接依赖某个具体 LLM SDK、CLI 或 Provider。
 
 目标结构：
 
@@ -57,7 +57,7 @@ Provider/Backend 决定：
 整体结构：
 
 ```text
-                    AI Dev Manager
+                    AI Worker
                      Control Plane
                            |
                     task / lease
@@ -400,7 +400,7 @@ GenericAgentWorker
 
 ## 9.2 CodexCliRuntime
 
-这是 AI Dev Manager 特别重要的一种 runtime。
+这是 AI Worker 特别重要的一种 runtime。
 
 ```text
 CodexCliRuntime
@@ -921,7 +921,7 @@ Runtime 必须不断报告：
 usage
 ```
 
-但最终预算 authority 应属于 AI Dev Manager，而不是 LLM SDK。
+但最终预算 authority 应属于 AI Worker，而不是 LLM SDK。
 
 ---
 
@@ -1551,7 +1551,7 @@ enterprise framework
 
 ## 推荐基线
 
-对于 AI Dev Manager，我建议将下面这个结构作为后续 Worker 实现的正式基线：
+对于 AI Worker，我建议将下面这个结构作为后续 Worker 实现的正式基线：
 
 ```text
 Java Control Plane
@@ -1589,7 +1589,7 @@ Classification / Extraction Worker
 
 这样既不会把系统绑定到 OpenAI Agents SDK，也不会为了“抽象”过早增加一个中央 LLM 微服务。
 
-这会保留 AI Dev Manager 当前 Worker Pull 架构最重要的特征：
+这会保留 AI Worker 当前 Worker Pull 架构最重要的特征：
 
 ```text
 Control Plane 去 Agent 化

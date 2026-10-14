@@ -2,7 +2,7 @@
 
 ## 1. 总体架构
 
-AI Dev Manager R8 是 **Modular Monolith Control Plane + 外部 AI Workers**。
+AI Worker R8 是 **Modular Monolith Control Plane + 外部 AI Workers**。
 
 ```text
                         用户 / Operator / Approver

@@ -1,4 +1,4 @@
-# AI Dev Manager Process Workers (Go)
+# AI Worker Process Workers (Go)
 
 ## FD-016 profile transition
 

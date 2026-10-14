@@ -1,6 +1,6 @@
 # Documentation Baseline
 
-Current product baseline: **AI Dev Manager R9 Web Console consolidated**, built on the accepted **R8-S13 Fix2 execution platform** (`me.asu.aidev`).
+Current product baseline: **AI Worker R9 Web Console consolidated**, built on the accepted **R8-S13 Fix2 execution platform** (`me.asu.aidev`).
 
 Canonical current documentation:
 

@@ -1,5 +1,7 @@
 # Glossary
 
+**AI Worker: Digital Employee** ? The project name. Use **AI Worker** in prose. The platform coordinates digital employees; an individual **Worker** is an execution process. Use **Control Plane** for the Java management service and **Web Console** for its browser interface.
+
 **Control Plane** — The Java application that owns authoritative engineering state, scheduling and lifecycle transitions.
 
 **Worker** — An external process that registers capabilities, pulls tasks and executes AI/tool work.
