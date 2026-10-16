@@ -39,6 +39,11 @@ Load only files that exist and apply to the task:
 - Choose one matching file under `.agents/prompts/task-modes/` for feature,
   bugfix, debugging, review, test, docs, or risky-change work.
 
+## Agent skills
+
+- Read `.agents/agents/work-management.md` before AIW engineering work.
+- Read `.agents/agents/domain.md` before domain exploration.
+
 ## Working Rules
 
 - Plan first for non-trivial work. Briefly state the goal, relevant files or
