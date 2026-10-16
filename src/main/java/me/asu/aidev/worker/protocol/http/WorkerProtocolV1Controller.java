@@ -39,6 +39,13 @@ public class WorkerProtocolV1Controller {
     private final TaskExecutionService executions;
     private final ExecutionAttemptRepository attempts;
     private final AiProfileCatalog aiProfiles;
+    private me.asu.aidev.workflow.application.WorkflowAiPreferences workflowAiPreferences;
+
+    @Autowired
+    public void setWorkflowAiPreferences(me.asu.aidev.workflow.application.WorkflowAiPreferences preferences) {
+        this.workflowAiPreferences = preferences;
+    }
+
     private WorkspaceRegistry workspaceRegistry;
     private me.asu.aidev.output.application.TaskOutputService outputs;
 
@@ -171,7 +178,8 @@ public class WorkerProtocolV1Controller {
                         input.completionSummary(), input.attemptId())).toList(),
                 aiProfiles.guidance(task.type(), runtimeType,
                         attempts.findPreviousAiAttempt(task.id(), claimed.attemptNo()).orElse(null)),
-                outputs == null ? null : outputs.store(task, claimed.attemptId().value(), claimed.inputs()));
+                outputs == null ? null : outputs.store(task, claimed.attemptId().value(), claimed.inputs()),
+                workflowAiPreferences == null ? null : workflowAiPreferences.forTask(task));
     }
 
     private WorkspaceResponse workspaceResponse(ClaimedTask claimed) {
@@ -265,7 +273,17 @@ public class WorkerProtocolV1Controller {
             WorkspaceResponse workspace,
             List<TaskInputResponse> inputs,
             AiProfileCatalog.Guidance aiGuidance,
-            me.asu.aidev.output.application.TaskOutputService.Store outputStore) {
+            me.asu.aidev.output.application.TaskOutputService.Store outputStore,
+            me.asu.aidev.workflow.application.WorkflowAiPreferences.Preferences aiPreferences) {
+        public ClaimedTaskResponse(String taskId, String taskType, String subjectType, String subjectId,
+                Set<String> requiredCapabilities, String skillRef, String instruction, int instructionRevision,
+                int priority, String attemptId, int attemptNo, String leaseToken, Instant leaseAcquiredAt,
+                Instant leaseExpiresAt, WorkspaceResponse workspace, List<TaskInputResponse> inputs,
+                AiProfileCatalog.Guidance aiGuidance, me.asu.aidev.output.application.TaskOutputService.Store outputStore) {
+            this(taskId, taskType, subjectType, subjectId, requiredCapabilities, skillRef, instruction,
+                    instructionRevision, priority, attemptId, attemptNo, leaseToken, leaseAcquiredAt,
+                    leaseExpiresAt, workspace, inputs, aiGuidance, outputStore, null);
+        }
         public ClaimedTaskResponse(String taskId, String taskType, String subjectType, String subjectId,
                 Set<String> requiredCapabilities, String skillRef, String instruction, int instructionRevision,
                 int priority, String attemptId, int attemptNo, String leaseToken, Instant leaseAcquiredAt,

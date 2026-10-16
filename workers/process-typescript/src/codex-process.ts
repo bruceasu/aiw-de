@@ -2,9 +2,9 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import { RuntimeFault, positiveSetting, toolCacheEnvironment } from "./runtime-core.js";
+import { isAiPreferenceRejection } from "./ai-profiles.js";
 import { resolveInstalledCodex } from "./codex-runtime.js";
 
-export const CODEX_VERSION = "0.162.1";
 export const CODEX_BASH_PATH = "/bin/bash";
 export const CODEX_SHELL_INSTRUCTIONS = [
   "Worker shell policy:",
@@ -27,12 +27,14 @@ export function codexCacheConfig(env: Record<string, string>): string {
     .map(([key, value]) => `${JSON.stringify(key)}=${JSON.stringify(value)}`).join(",")}}`;
 }
 export interface CodexSettings {
+  version?: string;
   executablePath: string; env: Record<string, string>; model: string; effort: string;
   network: boolean; sandbox: "read-only" | "workspace-write" | "danger-full-access"; maxBytes: number;
 }
 
 /** One native process; stdout parsing and callbacks are serialized and bounded. */
 export class CodexProcess {
+  aiPreferenceRejected = false;
   readonly child: ChildProcessWithoutNullStreams;
   readonly closed: Promise<number>;
   private queue = Promise.resolve();
@@ -50,7 +52,10 @@ export class CodexProcess {
       this.child.once("close", code => { this.exited = true; resolve(code ?? -1); });
     });
     this.child.stdin.on("error", () => this.fail("CODEX_STDIN_FAILED"));
-    this.child.stderr.on("data", () => { /* Drain without retaining credentials or task text. */ });
+    this.child.stderr.on("data", chunk => {
+      // Classify only; never retain or report raw stderr.
+      this.aiPreferenceRejected ||= isAiPreferenceRejection({ message: chunk.subarray(0, 4096).toString("utf8") });
+    });
     this.child.stdout.on("data", chunk => {
       if (this.error) return;
       this.buffer = Buffer.concat([this.buffer, chunk]);
@@ -149,7 +154,7 @@ export async function codexSettings(roleReadOnly: boolean): Promise<CodexSetting
   const settings: CodexSettings = { ...installed, env, sandbox: configured as CodexSettings["sandbox"],
     network: configured === "danger-full-access" || /^(1|true|yes)$/i.test(process.env.AIW_CODEX_NETWORK_ACCESS || "false"),
     model: process.env.AIW_CODEX_MODEL || "", effort, maxBytes: positiveSetting("AIW_CODEX_MAX_OUTPUT_BYTES", 4 * 1024 * 1024) };
-  await verifyCodexVersion(settings);
+  settings.version = await readCodexVersion(settings);
   return settings;
 }
 
@@ -160,9 +165,17 @@ export function assertCredentialBoundary(settings: CodexSettings, workspace: str
   if (!relative || (!path.isAbsolute(relative) && relative !== ".." && !relative.startsWith(`..${path.sep}`))) throw new RuntimeFault("CODEX_HOME_INSIDE_WORKSPACE", "CONFIGURATION");
 }
 
-export async function verifyCodexVersion(settings: CodexSettings): Promise<void> {
+export function parseCodexVersion(output: string): string {
+  return /^codex-cli\s+(\S+)/m.exec(output)?.[1] ?? "unknown";
+}
+
+/** Record the installed version; compatibility is checked by actual protocol operations. */
+export async function readCodexVersion(settings: CodexSettings): Promise<string> {
   let version = "";
   const check = new CodexProcess(settings, ["--version"], process.cwd(), line => { version += line + "\n"; if (version.length > 4096) throw new RuntimeFault("CODEX_VERSION_INVALID"); }, false);
-  try { if (await check.finish(5000) !== 0 || !version.trim().split(/\s+/).includes(CODEX_VERSION)) throw new RuntimeFault("CODEX_VERSION_MISMATCH", "CONFIGURATION"); }
+  try {
+    if (await check.finish(5000) !== 0) throw new RuntimeFault("CODEX_VERSION_COMMAND_FAILED", "CONFIGURATION");
+    return parseCodexVersion(version);
+  }
   catch (error) { await check.terminate(5000); throw error; }
 }

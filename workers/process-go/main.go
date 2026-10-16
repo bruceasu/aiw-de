@@ -109,6 +109,7 @@ type CompletionReport struct {
 }
 
 type ClaimedTask struct {
+    AIPreferences *AIPreferences `json:"aiPreferences"`
 	TaskID      string               `json:"taskId"`
 	TaskType    string               `json:"taskType"`
 	SubjectType string               `json:"subjectType"`
@@ -302,7 +303,7 @@ func executeTask(parent context.Context, slot int, client *Client, task ClaimedT
 	caps := client.runtime.Capabilities()
 	capability := fmt.Sprintf("%s;resume=%t;attemptCancellation=%t;eventStreaming=%t;tools=%t", client.runtime.Type(), caps.Resume, caps.AttemptCancellation, caps.EventStreaming, caps.Tools)
 	runtimeEvidence := map[string]any{"capability": capability, "processTree": processTree, "unknown": "runtime-specific-tool-policy-and-model-window"}
-	if client.runtime.Type() == "codex-app-server" { runtimeEvidence["cliVersion"] = codexAppServerVersion; runtimeEvidence["protocol"] = "app-server-v2"; runtimeEvidence["threadPersistence"] = "ephemeral"; runtimeEvidence["usage"] = "unknown" }
+	if appServer, ok := client.runtime.(*CodexAppServerRuntime); ok { runtimeEvidence["cliVersion"] = appServer.cliVersion; runtimeEvidence["protocol"] = "app-server-v2"; runtimeEvidence["threadPersistence"] = "ephemeral"; runtimeEvidence["usage"] = "unknown" }
 	if err = evidence.record("runtime-capabilities", runtimeEvidence); err != nil { fmt.Fprintf(os.Stderr, "attempt %s: CRITICAL_EVIDENCE_FAILED\n", task.AttemptID); return true }
     var workspace *GitWorkspace
     var mu sync.RWMutex
@@ -318,6 +319,10 @@ func executeTask(parent context.Context, slot int, client *Client, task ClaimedT
     resultErr := func() error {
 		profileRuntime := cfg.AgentRuntime
 		selection, reason, e := chooseAIProfile(task.AIGuidance, profileRuntime); if e != nil { return e }
+        fallbackSelection := selection
+        effectiveSelection := stepAISelection(task, cfg, selection)
+        if task.AIGuidance != nil && effectiveSelection != selection { selection = effectiveSelection; reason = "Step preference matches an approved profile" }
+        if e = evidence.record("ai-settings", map[string]any{"reason": aiPreferenceReason(task, cfg, effectiveSelection), "model": selectedModel(effectiveSelection, cfg), "effort": selectedEffort(effectiveSelection, workerEffort(cfg))}); e != nil { return e }
         if e = client.start(runCtx, task, selection, reason); e != nil {
             var response struct { StopRequested bool `json:"stopRequested"` }
             if client.heartbeat(runCtx, task, "", &response) == nil && response.StopRequested { stopRequested = true }
@@ -357,9 +362,15 @@ func executeTask(parent context.Context, slot int, client *Client, task ClaimedT
         if cfg.Profile.ReadOnly { baseline, e = workspaceDigest(runCtx, workspace.cwd); if e != nil { return e } }
         instruction, e := assembleGoContextWithSkills(runCtx, cfg, task, evidence, frozenSkills); if e != nil { return e }
 		phase = "MODEL_ERROR"
-		runResult, e := client.runtime.Run(runCtx, AgentRunRequest{Task: task, Workspace: workspace.cwd, ReadOnly: cfg.Profile.ReadOnly,
-			Instruction: instruction, Selection: selection, Evidence: evidence,
-			OnSession: func(id string) { mu.Lock(); sessionID = id; mu.Unlock() }})
+		runRequest := AgentRunRequest{Task: task, Workspace: workspace.cwd, ReadOnly: cfg.Profile.ReadOnly,
+			Instruction: instruction, Selection: effectiveSelection, Evidence: evidence,
+			OnSession: func(id string) { mu.Lock(); sessionID = id; mu.Unlock() }}
+        runResult, e := client.runtime.Run(runCtx, runRequest)
+        if errors.Is(e, errAIPreferencesRejected) && task.AIPreferences != nil && runCtx.Err() == nil && !sameAISettings(effectiveSelection, fallbackSelection, cfg) {
+            if e = evidence.record("ai-settings-fallback", map[string]any{"reason":"Step model or effort rejected before tool execution; use Worker choice", "model": selectedModel(fallbackSelection, cfg), "effort": selectedEffort(fallbackSelection, workerEffort(cfg))}); e != nil { return e }
+            runRequest.Selection = fallbackSelection
+            runResult, e = client.runtime.Run(runCtx, runRequest)
+        }
 		// App Server guarantees terminal confirmation or a successful shared
 		// shutdown on every return except PROCESS_TREE_UNCERTAIN.
 		runtimeStopped = client.runtime.Type() == "codex-app-server" && (e == nil || e.Error() != "PROCESS_TREE_UNCERTAIN")
@@ -442,11 +453,15 @@ func runCodex(ctx context.Context, cfg Config, workspace string, instruction str
 	if err := cmd.Start(); err != nil {
 		return "", "", err
 	}
-	go io.Copy(io.Discard, stderr)
+	stderrClassification := &aiPreferenceCapture{}
+    stderrDone := make(chan struct{})
+    go func() { defer close(stderrDone); _, _ = io.Copy(stderrClassification, stderr) }()
 
 	sessionID := ""
 	finalMessage := ""
 	terminalFailed := ""
+    preferenceRejected, workStarted := false, false
+
 	scanner := bufio.NewScanner(stdout)
 	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
@@ -458,6 +473,7 @@ func runCodex(ctx context.Context, cfg Config, workspace string, instruction str
             break
 		}
 		typ, _ := event["type"].(string)
+        if typ == "item.started" || typ == "item.completed" { if item, ok := event["item"].(map[string]any); ok && item["type"] != "reasoning" { workStarted = true } }
 		switch typ {
 		case "thread.started":
 			if id, ok := event["thread_id"].(string); ok {
@@ -487,16 +503,19 @@ func runCodex(ctx context.Context, cfg Config, workspace string, instruction str
             }
         case "turn.failed", "error":
             terminalFailed = "CODEX_TURN_FAILED"
+            preferenceRejected = preferenceRejected || aiPreferencesRejected(event["error"]) || aiPreferencesRejected(event["message"])
 		}
 	}
 	scanErr := scanner.Err()
 	waitErr := cmd.Wait()
+    <-stderrDone
 	if ctx.Err() != nil {
 		return sessionID, finalMessage, ctx.Err()
 	}
 	if scanErr != nil {
 		return sessionID, finalMessage, scanErr
 	}
+	if !workStarted && (preferenceRejected || stderrClassification.rejected.Load()) { return sessionID, finalMessage, errAIPreferencesRejected }
 	if terminalFailed != "" {
 		return sessionID, finalMessage, errors.New(terminalFailed)
 	}

@@ -17,6 +17,7 @@ import (
 	"time"
 )
 
+// Development baseline only; installed CLI versions are not restricted.
 const codexAppServerVersion = "0.162.1"
 
 type appServerMessage struct {
@@ -37,6 +38,7 @@ type appServerRPCResult struct {
 
 type CodexAppServerRuntime struct {
 	cfg Config
+	cliVersion string
 
 	closeMu sync.Mutex
 	mu      sync.Mutex
@@ -71,9 +73,6 @@ func (*CodexAppServerRuntime) Capabilities() AgentRuntimeCapabilities {
 }
 
 func (runtime *CodexAppServerRuntime) Start(ctx context.Context) error {
-	if runtime.cfg.AppServerVersion != codexAppServerVersion {
-		return fmt.Errorf("unsupported Codex App Server version %q; supported version is %s", runtime.cfg.AppServerVersion, codexAppServerVersion)
-	}
 	if err := checkCodexAuthentication(ctx, runtime.cfg, ""); err != nil {
 		return err
 	}
@@ -86,9 +85,7 @@ func (runtime *CodexAppServerRuntime) Start(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("check Codex CLI version: %w", err)
 	}
-	if !hasVersionToken(string(versionOutput), codexAppServerVersion) {
-		return fmt.Errorf("Codex CLI version mismatch: want %s, got %q", codexAppServerVersion, strings.TrimSpace(string(versionOutput)))
-	}
+	runtime.cliVersion = parseCodexVersion(string(versionOutput))
 
 	// Keep the child context alive for the runtime lifetime. The startup context
 	// only bounds version negotiation and initialization; cancelling it here
@@ -122,7 +119,7 @@ func (runtime *CodexAppServerRuntime) Start(ctx context.Context) error {
 	stderrDone := make(chan struct{})
 	go func() { defer close(stderrDone); _, _ = io.Copy(io.Discard, stderr) }()
 	go func() { defer close(stdoutDone); runtime.readLoop(stdout) }()
-	fmt.Fprintf(os.Stderr, "codex app-server started pid=%d version=%s\n", cmd.Process.Pid, codexAppServerVersion)
+	fmt.Fprintf(os.Stderr, "codex app-server started pid=%d version=%s\n", cmd.Process.Pid, runtime.cliVersion)
 	go func() {
 		<-stdoutDone
 		<-stderrDone
@@ -162,13 +159,12 @@ func (runtime *CodexAppServerRuntime) Start(ctx context.Context) error {
 	return nil
 }
 
-func hasVersionToken(output, want string) bool {
-	for _, field := range strings.Fields(output) {
-		if strings.Trim(field, "v") == want {
-			return true
-		}
+func parseCodexVersion(output string) string {
+	fields := strings.Fields(output)
+	if len(fields) >= 2 && fields[0] == "codex-cli" {
+		return fields[1]
 	}
-	return false
+	return "unknown"
 }
 
 func (runtime *CodexAppServerRuntime) Close(ctx context.Context) error {
@@ -247,11 +243,12 @@ func (runtime *CodexAppServerRuntime) Run(ctx context.Context, request AgentRunR
 	if runtime.cfg.Model != "" {
 		threadParams["model"] = runtime.cfg.Model
 	}
-	if request.Selection != nil {
+	if request.Selection != nil && request.Selection.Profile.Model != "" {
 		threadParams["model"] = request.Selection.Profile.Model
 	}
 	threadResponse, err := runtime.request(ctx, "thread/start", threadParams)
 	if err != nil {
+		if aiPreferencesRejected(err) { return AgentRunResult{}, errAIPreferencesRejected }
 		return AgentRunResult{}, fmt.Errorf("start ephemeral Codex thread: %w", err)
 	}
 	var threadStart struct {
@@ -288,6 +285,7 @@ func (runtime *CodexAppServerRuntime) Run(ctx context.Context, request AgentRunR
 		"serviceTierForTurn": selectedServiceTier(request.Selection),
 	})
 	if err != nil {
+		if aiPreferencesRejected(err) { turnMayBeActive = false; return AgentRunResult{SessionID: threadID}, errAIPreferencesRejected }
 		return AgentRunResult{SessionID: threadID}, fmt.Errorf("start Codex turn: %w", err)
 	}
 	var turnStart struct {
@@ -300,6 +298,7 @@ func (runtime *CodexAppServerRuntime) Run(ctx context.Context, request AgentRunR
 	}
 	turnID := turnStart.Turn.ID
 	var deltas strings.Builder
+    workStarted := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -312,6 +311,7 @@ func (runtime *CodexAppServerRuntime) Run(ctx context.Context, request AgentRunR
 		case <-runtime.fatalDone:
 			return AgentRunResult{SessionID: threadID}, fmt.Errorf("Codex App Server connection failed: %w", runtime.failure())
 		case event := <-events:
+            if event.Method == "item/started" || event.Method == "item/completed" || event.Method == "item/agentMessage/delta" { workStarted = true }
 			if eventErr := runtime.consumeTurnEvent(event, threadID, turnID, &deltas); eventErr != nil {
 				if errors.Is(eventErr, errTurnCompleted) || errors.Is(eventErr, errTurnFailed) || errors.Is(eventErr, errTurnInterrupted) {
 					turnMayBeActive = false
@@ -319,7 +319,11 @@ func (runtime *CodexAppServerRuntime) Run(ctx context.Context, request AgentRunR
 				if errors.Is(eventErr, errTurnCompleted) {
 					return AgentRunResult{SessionID: threadID, Output: turnOutput(event, deltas.String())}, nil
 				}
-				return AgentRunResult{SessionID: threadID, Output: turnOutput(event, deltas.String())}, eventErr
+				if errors.Is(eventErr, errTurnFailed) && !workStarted {
+                    var failure struct { Turn struct { Error any `json:"error"` } `json:"turn"` }
+                    if json.Unmarshal(event.Params, &failure) == nil && aiPreferencesRejected(failure.Turn.Error) { return AgentRunResult{SessionID: threadID}, errAIPreferencesRejected }
+                }
+                return AgentRunResult{SessionID: threadID, Output: turnOutput(event, deltas.String())}, eventErr
 			}
 		}
 	}

@@ -33,8 +33,14 @@ TypeScript 全角色启动器会额外启动一个 `stage-reviewer`。角色能�
 ## 查看任务详情与处理失败
 
 在计划详情页的“执行与独立审核”列，点击具体任务的“查看任务详情”。
+同一步骤内的执行与评审任务按创建时间倒序排列，并标注创建时间；时间相同时按任务 ID 倒序稳定排列。
+表格只显示最新一条记录，多条记录时提供“查看全部记录”，弹窗内展示该步骤的完整倒序记录、报告及任务详情链接。
+弹窗沿用控制台样式，支持关闭按钮、Esc 和点击背景关闭；打开时暂停自动刷新，关闭后恢复。
 计划表格中的报告默认折叠；展开后在最高 320px（不超过半屏）的区域内滚动阅读，
 表格列宽不随报告长度变化。自动刷新保留报告展开状态及报告内滚动位置。
+Plan 详情每 5 秒读取一次最新快照，显示最近成功更新时间；从任务详情返回并恢复浏览器缓存页面时，
+会重新启动刷新。只读快照请求超过 10 秒会中断并在下一次刷新重试，原有数据继续显示。
+后台页面、编辑输入、确认弹窗和选中文字时仍暂停自动刷新，手动刷新按钮可主动读取最新状态。
 详情页显示每次执行的 Worker、开始与结束时间、指令版本、失败分类、结构化错误码、
 审核判定、结果版本及完成报告；没有记录的数据明确显示“未记录”。
 任务必须属于当前计划，页面沿用控制台认证，不展示租约令牌。
@@ -79,6 +85,69 @@ TypeScript Codex Worker 后续会在日志和 `sdk-tool-failed` 证据中记录�
 待停止确认、已跳过、已推进到后续任务、存在其他待执行或活动任务、人工完成/取消和最终审核通过
 都会阻止重试。人工重试不绕过 `REPAIR_REQUIRED` 的三轮纠正上限；已完成的审核任务不能用此入口重排。
 只有需要修改目标或步骤设计时，才复制为新草稿并重新确认。
+
+### 三轮耗尽后补正并重新评审
+
+评审任务会收到当前执行的精确产出，以及此前所有已接受步骤的产出和独立 PASS 评审。
+这些依赖让评审能够读取需求、架构、实施计划正文及其接受依据，不能仅依赖执行者的摘要。
+
+如果第三轮评审仍返回 `REPAIR_REQUIRED`，先修复报告指出的原因。在原 Plan 详情的“步骤控制”中
+填写决策原因，点击“补正后重新评审”并确认。系统在原 Plan 创建
+`~review-3-resume-1`（后续递增）任务，重新评审第三轮的现有执行产出；不会重新编码或重跑已接受步骤。
+原来的三轮执行、报告和判定保留，通过现有纠正关联与 `RESUME_REVIEW` 事件记录操作者、原因和时间，
+无需修改数据库结构。
+
+新的评审 PASS 后继续原 Plan；最终步骤 PASS 则完成。新评审仍需补正时再次等待管理者处理，
+不会自动增加编码轮数；新评审若执行 FAILED，使用其任务详情中的失败重试入口。
+计划已结束、归档、待停止，或存在待执行、运行、失败任务时禁止创建恢复评审。
+提交会检查 Plan、最新评审 ID 和任务版本，防止过期页面或重复提交创建多条任务。
+
+接口为 `POST /ui/plan-editor/plans/{id}/resume-review`，请求包含 `planVersion`、`taskId`、
+`taskVersion`、`reason`、`warningConfirmed: true`；沿用 Operator 权限和 CSRF 校验。详情接口的 `reviewRecovery` 提供当前可恢复性。
+
+### 授权继续修复及独立 AI 决策
+
+需要修改代码或补充验证证据时，使用原 Plan 的“授权一轮修复”，而不是直接重新评审。
+管理者填写决策原因、固定修复范围及允许执行的检查，选择“人工直接批准”，即可创建下一轮执行，
+例如 `~work-4`；完成后生成对应 `~review-4`。已接受步骤及旧报告保留，Git 工作区使用上一轮结果 revision，
+DIRECT 模式继续使用原工作区。新评审 PASS 后继续原 Plan；REPAIR_REQUIRED 再次等待管理者，
+不会自动产生第 5 轮。补正后重新评审、失败重试、后续步骤输入及归档均支持额外授权轮次。
+
+管理者也可选择一个在线 `recovery-decider`，委托它决定是否使用这一次额度。授权固定 Plan、
+最新评审和任务版本、范围、指定 Worker、一次执行及其独立评审，有效期为一小时。
+决策 Worker 必须不同于来源执行 Worker 和来源评审 Worker；其他同能力 Worker 不能领取这份决策任务。
+AI 返回 PASS 仅使用既有授权；REPAIR_REQUIRED 表示拒绝，应由管理者补充决策。AI 报告不能修改授权范围，
+也不能追加轮数、创建新授权或改变需求。管理者确认的范围会保存并传入执行与评审指令，
+用于区分明确批准的需求补充与执行者自行作出的假设。
+
+Plan 页面显示授权历史和 AI 决策报告，允许撤销尚未使用的授权。撤销不会中断已经运行的只读决策，
+但其后续结果不能触发修复。AI 决策执行失败时，可在历史中查看错误，撤销未使用授权，处理原因后重新授权。
+授权过期、计划版本变化、来源评审变化、计划结束或已归档时，不会创建修复任务；每份授权只能使用一次。
+同一 Plan 同时只允许一份待决授权，重复提交会被版本及数据库约束拒绝。
+
+接口为 `POST /ui/plan-editor/plans/{id}/repair-authorizations`，请求包含 `planVersion`、`taskId`、
+`taskVersion`、`reason`、`scope`、可选 `delegateWorkerId` 和 `warningConfirmed: true`。
+撤销使用 `POST /ui/plan-editor/plans/{id}/repair-authorizations/{authorizationId}/revoke`。
+两者只接受现有 Operator 会话及 CSRF，Worker bearer token 不能创建或扩大授权。
+AI 通过正常领取、租约、完成协议交回决策，控制平面校验指定身份后使用授权。
+
+V4 迁移只新增授权表和索引，不修改已有计划及执行记录。授权保留来源 ID、范围、操作者、状态、
+一次性额度和到期时间，计划历史清理后仍保留授权记录；回滚应用时保留新增表，不回写或删除旧报告。
+需先重启 Control Plane 应用迁移，再加载新的 Worker profiles、Skills 和启动程序。
+
+当前问候程序可采用以下已确认范围：
+
+```text
+Continue this implementation for one repair round.
+Keep the Node.js 22.x and npm 10.x requirement.
+With no arguments, print exactly: Hello，I'm AI Worker.
+With one non-empty argument, print: Hi, <argument>. Nice to meet you.
+Reject multiple arguments and an empty string with stderr and a nonzero exit code.
+Preserve the supplied non-empty argument text, including spaces and Unicode.
+Update the implementation, documentation and focused boundary tests.
+Run the build and focused checks in the target environment. Report exact commands and results.
+Do not change acceptance criteria, install a toolchain or download dependencies without separate authorization.
+```
 
 ## 管理接口
 
@@ -138,3 +207,36 @@ TypeScript Codex Worker 后续会在日志和 `sdk-tool-failed` 证据中记录�
 当前单文件 V1 基线包含计划、偏好、控制与归档表，并在末尾删除旧固定 Run 表。无偏好任务保持原排序；偏好位于有效优先级后、同 subject 活跃租约/等待时间排序前，不绕过准入、并发预算或原子领取。
 
 升级按既有运维流程排空/停止应用、备份数据库、启动应用执行 Flyway、确认启动后恢复 Worker。回滚须先停用入口并排空新增工作，按备份恢复兼容的数据库/应用组合；不要删表、修改历史迁移或 Flyway history。本次未执行迁移或数据库集成测试；SQLite/PostgreSQL 兼容性依据 SQL 静态检查，不能作为实际运行通过。
+
+## Step 模型与推理强度
+
+每个 Step 可选填 `model` 和 `effort`。留空的字段由 Worker 自行决定；无效或不可用的配置回退到 Worker 自己的配置。
+执行、返工及独立评审使用同一 Step 偏好。已有 `aidev.ai` 模型策略仍限制可选范围，不能通过 Step 扩权。
+模型参数被明确拒绝且工具尚未执行时，最多用 Worker 配置再尝试一次，并记录本地证据；不因普通代码失败重跑任务。
+旧 Plan 的 JSON 无需补字段，本次不增加迁移。新字段需要更新 Control Plane 和 Worker 后生效。
+
+配置优先级、回退边界及独立环境变量文件见 [Worker 环境变量](../../workers/ENVIRONMENT.md)。
+
+### 完成事件分发
+
+`EXTERNAL_WORK` 统一由 `WorkflowStepCompletedHandler` 注册完成事件处理权。
+普通 Plan 步骤按 `flexible-plan` 主题推进；恢复授权决策按 `workflow-repair-authorization` 主题委托
+`WorkflowRepairDecisionHandler` 处理。后者不独立注册为 `TaskCompletionHandler`，避免重复声明同一任务类型导致应用启动失败。
+调度器对重复处理权的启动检查继续保留。
+
+### 管理员任务指挥台
+
+Manager actions 以任务卡片呈现当前可用操作：待确认草稿展示启动入口，评审要求补正且符合恢复条件时展示修复和重新评审卡片。
+顶部状态徽章及提示说明当前任务阶段；停止、取消、跳转等操作收在“其他任务操作”中。
+修复授权卡片独立填写授权原因、固定范围和决策责任方，校验提示与提交状态在按钮旁显示。
+确认及提交期间禁用重复点击；15 秒请求超时会提示先核对授权历史，不自动重新提交。
+
+Plan 页的“决策历史”和管理员任务指挥台现通过右侧固定工具栏打开浮动窗口，支持拖动、隐藏及最大化；主页面仅保留计划概况和步骤。
+`NEEDS_ATTENTION` 在页面警示、状态及指挥台工具图标上同时突出显示。窗口中的操作规则与授权范围不变。
+
+### 回答阻塞问题后继续
+
+当评审指出 Q-001 等未决策略时，打开右侧“待决问题与文件”，阅读问题上下文和来源附件，填写并确认结论。
+回答会绑定来源版本并进入后续任务输入，不必再在修复范围里重复粘贴同一策略。随后打开 Mission Control，
+授权针对既有评审意见的一轮修复，或对已补正的成果发起重新评审。
+若来源文件已更新、任务仍在执行或有待处理授权，界面会提示先处理对应状态；不会默默复用旧答案或自动再开一轮执行。

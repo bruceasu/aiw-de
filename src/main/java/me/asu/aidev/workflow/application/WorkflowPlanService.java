@@ -17,6 +17,7 @@ import me.asu.aidev.execution.port.ExecutionAttemptRepository;
 import me.asu.aidev.execution.domain.CompletionVerdict;
 import me.asu.aidev.workflow.domain.WorkflowPlan;
 import me.asu.aidev.workflow.domain.WorkflowPlanSpec;
+import me.asu.aidev.workflow.domain.WorkflowTaskPosition;
 import me.asu.aidev.workflow.port.WorkflowPlanRepository;
 import me.asu.aidev.workflow.jdbc.JdbcWorkflowControlRepository;
 import me.asu.aidev.workflow.jdbc.JdbcWorkflowControlRepository.Control;
@@ -27,6 +28,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkflowPlanService {
+    private WorkflowQuestionService questionDecisions;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setQuestionDecisions(WorkflowQuestionService questionDecisions) {
+        this.questionDecisions = questionDecisions;
+    }
+
+    private String questionContext(String instruction, String planId) {
+        return questionDecisions == null ? instruction : questionDecisions.withContext(instruction, planId);
+    }
     private me.asu.aidev.output.jdbc.JdbcTaskOutputRepository taskOutputs;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -43,6 +54,7 @@ public class WorkflowPlanService {
     private final JdbcWorkflowPlanArchiveRepository archives;
 
     public record RetryEligibility(long planVersion, boolean allowed, String blockedReason) {}
+    public record ReviewRecovery(long planVersion, String taskId, long taskVersion, boolean allowed, String blockedReason) {}
 
     public WorkflowPlanService(WorkflowPlanRepository plans, WorkTaskService taskService, WorkTaskRepository tasks,
                                ExecutionAttemptRepository attempts, JdbcWorkflowControlRepository controls,
@@ -105,6 +117,113 @@ public class WorkflowPlanService {
         return new RetryEligibility(plan.version(), blocked == null, blocked);
     }
 
+    @Transactional(readOnly = true)
+    public ReviewRecovery reviewRecovery(String id) {
+        WorkflowPlan plan = get(id);
+        List<WorkTask> current = steps(id);
+        WorkTask latest = current.stream().max(Comparator
+                .comparingLong((WorkTask task) -> taskSequence(plan, task.id()))
+                .thenComparingInt(task -> reviewRecoveryNumber(task.id()))).orElse(null);
+        String blocked = null;
+        if (plan.state() != WorkflowPlan.State.CONFIRMED || archives.archived(id) || outcomes.find(id).isPresent()
+                || controls.pending(id).isPresent()) blocked = "This plan cannot be resumed in its current state.";
+        else if (current.stream().anyMatch(task -> taskSequence(plan, task.id()) < 0
+                || task.state() != TaskState.COMPLETED && task.state() != TaskState.CANCELLED)) {
+            blocked = "Finish or retry the current task before requesting a new review.";
+        } else if (latest == null || latest.state() != TaskState.COMPLETED
+                || !WorkflowTaskPosition.parse(plan, latest.id()).map(position -> position.review()
+                        && position.round() >= MAX_ATTEMPTS_PER_STEP).orElse(false)
+                || controls.skipped(id, stepIndex(plan, latest.id()))
+                || !attempts.findCompletionReport(latest.id())
+                        .map(report -> report.verdict() == CompletionVerdict.REPAIR_REQUIRED).orElse(false)) {
+            blocked = "Only an exhausted step awaiting corrections can be reviewed again.";
+        }
+        return new ReviewRecovery(plan.version(), latest == null ? null : latest.id().value(),
+                latest == null ? -1 : latest.version(), blocked == null, blocked);
+    }
+
+    /** A new review preserves all prior reports and does not rerun accepted execution work. */
+    @Transactional
+    public WorkflowPlan resumeReview(String id, String taskId, long planVersion, long taskVersion,
+                                     String actor, String reason, boolean warningConfirmed) {
+        actor = actor(actor);
+        if (reason == null || reason.isBlank() || reason.length() > 2000) {
+            throw new IllegalArgumentException("Recovery reason must contain 1 to 2000 characters.");
+        }
+        if (!warningConfirmed) throw new IllegalArgumentException("Confirm the recovery warning before continuing.");
+        get(id);
+        lockedTasks(id);
+        ReviewRecovery recovery = reviewRecovery(id);
+        if (!recovery.allowed()) throw new IllegalStateException(recovery.blockedReason());
+        if (recovery.planVersion() != planVersion || recovery.taskVersion() != taskVersion
+                || !java.util.Objects.equals(recovery.taskId(), taskId)) {
+            throw new IllegalStateException("Plan or task changed. Reload before requesting a new review.");
+        }
+        WorkflowPlan plan = get(id);
+        TaskId previous = new TaskId(taskId);
+        int step = stepIndex(plan, previous);
+        int round = WorkflowTaskPosition.parse(plan, previous).orElseThrow().round();
+        TaskId next = new TaskId(reviewId(plan, step, round).value()
+                + "-resume-" + (reviewRecoveryNumber(previous) + 1));
+        Instant now = Instant.now();
+        String audit = "Review recovery: " + reason.strip();
+        if (!plans.transition(id, planVersion, WorkflowPlan.State.CONFIRMED, WorkflowPlan.State.CONFIRMED,
+                actor, audit.substring(0, Math.min(2000, audit.length())), now)) {
+            throw new IllegalStateException("Plan changed. Reload before requesting a new review.");
+        }
+        createReview(plan, step, round, next);
+        tasks.linkCorrection(previous, next, actor, reason.strip(), now);
+        tasks.recordControlEvent(UUID.randomUUID().toString(), next, null, "RESUME_REVIEW", actor, reason.strip(), true, now);
+        return get(id);
+    }
+
+    @Transactional
+    public ReviewRecovery reserveRepair(String id, String taskId, long planVersion, long taskVersion,
+                                         String actor, String reason) {
+        actor = actor(actor);
+        get(id);
+        lockedTasks(id);
+        var recovery = reviewRecovery(id);
+        if (!recovery.allowed() || recovery.planVersion() != planVersion || recovery.taskVersion() != taskVersion
+                || !java.util.Objects.equals(taskId, recovery.taskId())) {
+            throw new IllegalStateException("Plan or review changed; reload before authorizing repair.");
+        }
+        String audit = "One-round repair authorization: " + reason;
+        if (!plans.transition(id, planVersion, WorkflowPlan.State.CONFIRMED, WorkflowPlan.State.CONFIRMED,
+                actor, audit.substring(0, Math.min(2000, audit.length())), Instant.now())) {
+            throw new IllegalStateException("Plan changed while authorizing repair.");
+        }
+        return reviewRecovery(id);
+    }
+
+    @Transactional
+    public java.util.Optional<TaskId> continueAuthorizedRepair(String id, String sourceReview, long planVersion,
+            long taskVersion, String actor, String reason, String scope) {
+        get(id);
+        lockedTasks(id);
+        var recovery = reviewRecovery(id);
+        if (!recovery.allowed() || recovery.planVersion() != planVersion || recovery.taskVersion() != taskVersion
+                || !java.util.Objects.equals(sourceReview, recovery.taskId())) return java.util.Optional.empty();
+        WorkflowPlan plan = get(id);
+        TaskId previous = new TaskId(sourceReview);
+        var position = WorkflowTaskPosition.parse(plan, previous).orElseThrow();
+        if (position.round() >= 999_999_999) throw new IllegalStateException("workflow round limit reached");
+        var inputs = new java.util.LinkedHashSet<TaskId>(acceptedInputs(plan, position.step() - 1));
+        inputs.add(executionId(plan, position.step(), position.round()));
+        inputs.add(previous);
+        Instant now = Instant.now();
+        String audit = "Authorized repair: " + reason;
+        if (!plans.transition(id, planVersion, WorkflowPlan.State.CONFIRMED, WorkflowPlan.State.CONFIRMED,
+                actor(actor), audit.substring(0, Math.min(2000, audit.length())), now)) return java.util.Optional.empty();
+        TaskId next = executionId(plan, position.step(), position.round() + 1);
+        createExecution(plan, position.step(), position.round() + 1, Set.copyOf(inputs),
+                "\nManager-authorized correction scope:\n" + scope
+                + "\nAuthorization permits this one execution and its independent review only. Do not extend the scope or start another round.");
+        tasks.linkCorrection(previous, next, actor, reason, now);
+        tasks.recordControlEvent(UUID.randomUUID().toString(), next, null, "CONTINUE_REPAIR", actor, reason, true, now);
+        return java.util.Optional.of(next);
+    }
+
     @Transactional
     public WorkflowPlan retryFailedTask(String id, String taskId, long planVersion, long taskVersion,
                                         String actor, String reason, boolean warningConfirmed) {
@@ -131,6 +250,11 @@ public class WorkflowPlanService {
                 actor, auditReason.substring(0, Math.min(2000, auditReason.length())), now)) {
             throw new IllegalStateException("Plan or task changed. Reload before retrying.");
         }
+        String instruction = questionContext(task.instruction(), id);
+        if (!instruction.equals(task.instruction()) && !tasks.reviseInstruction(task.id(), TaskState.FAILED,
+                task.version(), task.instructionRevision(), instruction, actor, "Apply confirmed question decisions", now)) {
+            throw new IllegalStateException("Task instruction changed. Reload before retrying.");
+        }
         if (!tasks.retryFailed(task.id(), now)) {
             throw new IllegalStateException("Plan or task changed. Reload before retrying.");
         }
@@ -146,10 +270,12 @@ public class WorkflowPlanService {
         }
         if (controls.pending(plan.id()).isPresent()) return "Resolve the pending stop request before retrying.";
         if (task.state() != TaskState.FAILED) return "Only a failed task can be retried.";
-        int sequence = taskSequence(plan, task.id());
+        long sequence = taskSequence(plan, task.id());
         if (sequence < 0 || controls.skipped(plan.id(), stepIndex(plan, task.id()))
                 || current.stream().anyMatch(row -> taskSequence(plan, row.id()) < 0
-                        || taskSequence(plan, row.id()) > sequence)) {
+                        || taskSequence(plan, row.id()) > sequence
+                        || taskSequence(plan, row.id()) == sequence
+                        && reviewRecoveryNumber(row.id()) > reviewRecoveryNumber(task.id()))) {
             return "Only the current failed task can be retried. This plan has already advanced.";
         }
         if (current.stream().anyMatch(row -> !row.id().equals(task.id())
@@ -158,8 +284,8 @@ public class WorkflowPlanService {
             return "Another task is pending or running. Wait before retrying.";
         }
         int last = plan.spec().steps().size() - 1;
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS_PER_STEP; attempt++) {
-            if (attempts.findCompletionReport(reviewId(plan, last, attempt))
+        for (int attempt : rounds(plan, last)) {
+            if (attempts.findCompletionReport(effectiveReviewId(plan, last, attempt))
                     .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false)) {
                 return "This plan has already passed its final review.";
             }
@@ -167,15 +293,25 @@ public class WorkflowPlanService {
         return null;
     }
 
-    private static int taskSequence(WorkflowPlan plan, TaskId id) {
-        for (int step = 0; step < plan.spec().steps().size(); step++) {
-            for (int attempt = 1; attempt <= MAX_ATTEMPTS_PER_STEP; attempt++) {
-                int sequence = step * MAX_ATTEMPTS_PER_STEP * 2 + (attempt - 1) * 2;
-                if (id.equals(executionId(plan, step, attempt))) return sequence;
-                if (id.equals(reviewId(plan, step, attempt))) return sequence + 1;
-            }
-        }
-        return -1;
+    private static long taskSequence(WorkflowPlan plan, TaskId id) {
+        return WorkflowTaskPosition.parse(plan, id).map(WorkflowTaskPosition::sequence).orElse(-1L);
+    }
+
+    List<Integer> rounds(WorkflowPlan plan, int step) {
+        return tasks.findBySubject(SUBJECT, plan.id()).stream()
+                .map(task -> WorkflowTaskPosition.parse(plan, task.id()))
+                .flatMap(java.util.Optional::stream).filter(position -> position.step() == step)
+                .map(WorkflowTaskPosition::round).distinct().sorted().toList();
+    }
+
+    boolean passed(WorkflowPlan plan, int step) {
+        return rounds(plan, step).stream().anyMatch(round -> attempts.findCompletionReport(effectiveReviewId(plan, step, round))
+                .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false));
+    }
+
+    String completedRevision(TaskId task, String fallback) {
+        var input = attempts.findCompletedInput(task).orElseThrow(() -> new IllegalStateException("Completed source output is missing."));
+        return input.resultRevision() == null ? fallback : input.resultRevision();
     }
 
     @Transactional
@@ -204,8 +340,8 @@ public class WorkflowPlanService {
             throw new IllegalStateException("plan state or version changed; reload before controlling it");
         }
         int finalStep = plan.spec().steps().size() - 1;
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS_PER_STEP; attempt++) {
-            if (attempts.findCompletionReport(reviewId(plan, finalStep, attempt))
+        for (int attempt : rounds(plan, finalStep)) {
+            if (attempts.findCompletionReport(effectiveReviewId(plan, finalStep, attempt))
                     .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false)) {
                 throw new IllegalStateException("plan has already completed its final accepted review");
             }
@@ -370,13 +506,34 @@ public class WorkflowPlanService {
         return new TaskId(plan.id() + "~" + plan.spec().steps().get(step).key() + "~review-" + attempt);
     }
 
+    private static boolean isReviewRound(TaskId id, TaskId original) {
+        return id.equals(original) || id.value().startsWith(original.value() + "-resume-")
+                && id.value().substring(original.value().length() + 8).matches("[1-9][0-9]{0,8}");
+    }
+
+    private static int reviewRecoveryNumber(TaskId id) {
+        var match = java.util.regex.Pattern.compile("~review-[1-9][0-9]{0,8}-resume-([1-9][0-9]{0,8})$").matcher(id.value());
+        return match.find() ? Integer.parseInt(match.group(1)) : 0;
+    }
+
+    TaskId effectiveReviewId(WorkflowPlan plan, int step, int attempt) {
+        TaskId original = reviewId(plan, step, attempt);
+        return tasks.findBySubject(SUBJECT, plan.id()).stream().map(WorkTask::id)
+                .filter(id -> isReviewRound(id, original)).max(Comparator.comparingInt(WorkflowPlanService::reviewRecoveryNumber))
+                .orElse(original);
+    }
+
     void createExecution(WorkflowPlan plan, int stepIndex, int attempt, Set<TaskId> dependencies) {
+        createExecution(plan, stepIndex, attempt, dependencies, "");
+    }
+
+    private void createExecution(WorkflowPlan plan, int stepIndex, int attempt, Set<TaskId> dependencies, String authorization) {
         var step = plan.spec().steps().get(stepIndex);
         String revision = revisionFor(plan, stepIndex, attempt);
         TaskId id = executionId(plan, stepIndex, attempt);
         String feedback = "";
         if (attempt > 1) {
-            var review = attempts.findCompletionReport(reviewId(plan, stepIndex, attempt - 1))
+            var review = attempts.findCompletionReport(effectiveReviewId(plan, stepIndex, attempt - 1))
                     .orElseThrow(() -> new IllegalStateException("prior review is missing"));
             if (review.verdict() != CompletionVerdict.REPAIR_REQUIRED) {
                 throw new IllegalStateException("prior review did not request repair");
@@ -387,7 +544,7 @@ public class WorkflowPlanService {
         taskService.createIfAbsent(new CreateWorkTaskCommand(id, TaskType.EXTERNAL_WORK, SUBJECT, plan.id(),
                 step.requiredSkills(), step.skillRef(),
                 "Goal: " + plan.spec().goal() + "\nStep: " + step.key()
-                        + "\nExecute this step and address its acceptance criteria:\n" + step.instruction() + feedback,
+                        + "\nExecute this step and address its acceptance criteria:\n" + questionContext(step.instruction(), plan.id()) + feedback + authorization,
                 step.repositoryRef(), revision, TaskPriority.NORMAL, dependencies));
         plans.savePreferences(id, step.preferredSkills());
     }
@@ -402,8 +559,8 @@ public class WorkflowPlanService {
             }
         }
         for (int priorStep = stepIndex - 1; priorStep >= 0; priorStep--) {
-            for (int priorAttempt = MAX_ATTEMPTS_PER_STEP; priorAttempt >= 1; priorAttempt--) {
-                TaskId priorReview = reviewId(plan, priorStep, priorAttempt);
+            for (int priorAttempt : rounds(plan, priorStep).reversed()) {
+                TaskId priorReview = effectiveReviewId(plan, priorStep, priorAttempt);
                 if (!attempts.findCompletionReport(priorReview)
                         .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false)) continue;
                 var input = attempts.findCompletedInput(executionId(plan, priorStep, priorAttempt));
@@ -416,36 +573,45 @@ public class WorkflowPlanService {
     }
 
     void createReview(WorkflowPlan plan, int stepIndex, int attempt) {
+        createReview(plan, stepIndex, attempt, reviewId(plan, stepIndex, attempt));
+    }
+
+    private void createReview(WorkflowPlan plan, int stepIndex, int attempt, TaskId id) {
         var step = plan.spec().steps().get(stepIndex);
         TaskId execution = executionId(plan, stepIndex, attempt);
         var output = attempts.findCompletedInput(execution)
                 .orElseThrow(() -> new IllegalStateException("completed workflow output is missing: " + execution.value()));
-        TaskId id = reviewId(plan, stepIndex, attempt);
+        var inputs = new java.util.LinkedHashSet<TaskId>(acceptedInputs(plan, stepIndex - 1));
+        inputs.add(execution);
         var reviewSkills = new java.util.LinkedHashSet<String>();
         reviewSkills.add("workflow-review");
-        if (taskOutputs != null && taskOutputs.completed(execution.value())
+        if (taskOutputs != null && inputs.stream().anyMatch(input -> taskOutputs.completed(input.value())
                 .map(bundle -> bundle.files().stream().anyMatch(file -> Set.of("DOCUMENT", "ATTACHMENT").contains(file.kind())))
-                .orElse(false)) reviewSkills.add("task-outputs-v1");
+                .orElse(false))) reviewSkills.add("task-outputs-v1");
         if ("coding-work-package-executor".equals(step.skillRef())) {
             step.requiredSkills().stream().filter(skill -> !Set.of("coding", "integration", "repair").contains(skill))
                     .forEach(reviewSkills::add);
         }
+        String authorization = tasks.find(execution).map(WorkTask::instruction)
+                .filter(instruction -> instruction.contains("\nManager-authorized correction scope:\n"))
+                .map(instruction -> instruction.substring(instruction.indexOf("\nManager-authorized correction scope:\n")))
+                .orElse("");
         taskService.createIfAbsent(new CreateWorkTaskCommand(id, TaskType.EXTERNAL_WORK, SUBJECT, plan.id(),
                 Set.copyOf(reviewSkills), "workflow-stage-reviewer",
                 "Independently review the authoritative output of step '" + step.key() + "' against this goal and step instruction. "
-                        + "Goal: " + plan.spec().goal() + "\nStep instruction and acceptance criteria: " + step.instruction()
+                        + "Goal: " + plan.spec().goal() + "\nStep instruction and acceptance criteria: " + questionContext(step.instruction(), plan.id()) + authorization
                         + "\nReturn concrete findings when correction is needed. End with exactly one line: "
                         + "AIW_VERDICT: PASS or AIW_VERDICT: REPAIR_REQUIRED.",
                 step.repositoryRef(), output.resultRevision() == null ? step.baseRevision() : output.resultRevision(),
-                TaskPriority.NORMAL, Set.of(execution)));
+                TaskPriority.NORMAL, Set.copyOf(inputs)));
     }
 
     Set<TaskId> acceptedInputs(WorkflowPlan plan, int throughStep) {
         var result = new java.util.LinkedHashSet<TaskId>();
         for (int step = 0; step <= throughStep; step++) {
             boolean accepted = false;
-            for (int attempt = 1; attempt <= MAX_ATTEMPTS_PER_STEP; attempt++) {
-                TaskId review = reviewId(plan, step, attempt);
+            for (int attempt : rounds(plan, step)) {
+                TaskId review = effectiveReviewId(plan, step, attempt);
                 if (attempts.findCompletionReport(review).map(report -> report.verdict() == CompletionVerdict.PASS)
                         .orElse(false)) {
                     result.add(executionId(plan, step, attempt));

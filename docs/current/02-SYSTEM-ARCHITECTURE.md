@@ -76,18 +76,16 @@ Owns task claim and execution-attempt semantics:
 - result handoff and completion reports;
 - completion-handler dispatch.
 
-### `autonomous`
+### `workflow`
 
-Owns autonomous requirement execution:
+Owns flexible workflow plan execution:
 
-- requirement intake;
-- requirement → architecture → planning task materialization;
-- parallel implementation work-item materialization;
-- integration coordination;
-- run lifecycle authority;
-- pause/resume/cancel/recover;
-- per-run concurrency budget;
-- run timeline and dashboard projections.
+- plan draft/version/confirmation;
+- ordered plan steps and generated task/dependency materialization;
+- jump/stop and human complete/cancel controls;
+- task-level execution and replacement coordination.
+
+The current schema does not persist a separate fixed `autonomous_run` aggregate. Historical `autonomous_run` DDL in V1 is dropped before the baseline completes.
 
 ### `development`
 
@@ -125,8 +123,11 @@ The architecture deliberately separates **execution** from **authority**.
 | Task state/dependencies | Java Control Plane + database |
 | Task ownership | atomic DB `READY -> CLAIMED` transition + lease token |
 | Worker capacity | worker row + transactional reservation |
-| Run lifecycle | `autonomous_run` |
-| Run operator control | `autonomous_run.control_state` |
+| Plan specification/lifecycle | `flexible_workflow_plan` |
+| Plan steps and execution ownership | `work_task` + `work_task_dependency` |
+| Plan control/outcome | `flexible_workflow_control` + `flexible_workflow_human_outcome` |
+| Confirmed source-question answers | `workflow_question_decision` (versioned, source file/hash pinned) |
+| One-round repair authority | `workflow_repair_authorization` (human scope, optional delegated decision) |
 | Code result | immutable Git `resultRevision` |
 | Review/verification result | completion report persisted on execution attempt |
 | Engineering acceptance | Engineering Gate |
@@ -172,19 +173,9 @@ The per-run budget is an atomic slot ledger. The fleet-wide budget does not main
 
 ## 6. Persistence
 
-Current schema: nine tables, Flyway V1–V14.
+Current schema: 28 application tables, Flyway V1–V5. V1 is a clean-slate baseline that contains historical DDL internally; it drops the retired fixed-Run tables before completion. V4 adds retained one-round repair grants; V5 adds append-only confirmed question answers that are deleted with their plan. See [the database dictionary](08-DATA-MODEL-AND-MIGRATIONS.md) for fields, constraints, and data flows.
 
-- `worker`
-- `work_task`
-- `work_task_dependency`
-- `execution_attempt`
-- `approval_request`
-- `autonomous_run`
-- `autonomous_run_event`
-- `fleet_admission_budget`
-- `fleet_admission_budget_event`
-
-See [Data Model and Migrations](08-DATA-MODEL-AND-MIGRATIONS.md).
+The complete table/field dictionary, relationships, migration baseline, and persisted data flow are in [Data Model and Migrations](08-DATA-MODEL-AND-MIGRATIONS.md).
 
 ## 7. Local vs shared mode
 

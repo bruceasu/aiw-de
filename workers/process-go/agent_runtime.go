@@ -90,7 +90,7 @@ func (runtime CodexAgentRuntime) Run(ctx context.Context, request AgentRunReques
 		cfg.Model = selection.Profile.Model
 		cfg.ReasoningEffort = selection.Profile.Effort
 		cfg.Fast = selection.Profile.Fast
-		cfg.AIProfileSelected = true
+		cfg.AIProfileSelected = request.Task.AIGuidance != nil
 	}
 	sessionID, output, err := runCodex(ctx, cfg, request.Workspace, request.Instruction,
 		func(id string) { if request.OnSession != nil { request.OnSession(id) } }, request.Evidence)

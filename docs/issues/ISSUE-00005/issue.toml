@@ -1,0 +1,32 @@
+id = "ISSUE-00005"
+title = "AI 推荐功能的运行时配置与模型调用职责边界"
+parent_id = ""
+status = "DECIDED"
+created = "2026-10-16"
+updated = "2026-10-16"
+revision = 2
+
+[approval]
+status = "PENDING"
+by = ""
+at = ""
+reason = ""
+source_digest = ""
+
+[promotion]
+status = "NOT_STARTED"
+task_id = ""
+
+[conversation]
+session_id = ""
+
+[terminal]
+by = ""
+at = ""
+reason = ""
+
+[artifact]
+requirement-plan = "docs/issues/ISSUE-00005/issue-plan.md"
+
+[digest]
+requirement-plan = "73a6b3541aee257eb3ce419cfd2555100d61eac8ec15aba7ff46e2c09a899437"

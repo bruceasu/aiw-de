@@ -4,6 +4,7 @@ import { completed } from "./agent-runtime.js";
 import { AppServerTransport } from "./app-server-transport.js";
 import { codexBackend } from "./codex-adapter-common.js";
 import { codexSettings, assertCredentialBoundary, CODEX_EXECUTION_CONFIG, type CodexSettings } from "./codex-process.js";
+import { isAiPreferenceRejection } from "./ai-profiles.js";
 import { getProfile } from "./profiles.js";
 import { RuntimeFault, toolCacheEnvironment } from "./runtime-core.js";
 import { ToolFailureTracker } from "./failure-diagnostics.js";
@@ -13,6 +14,10 @@ export function matchesCodexSandbox(actual: any, settings: Pick<CodexSettings, "
     : settings.sandbox === "read-only" ? "readOnly" : "workspaceWrite";
   return actual?.type === expectedType && (expectedType === "dangerFullAccess"
     || typeof actual.networkAccess === "boolean" && actual.networkAccess === settings.network);
+}
+
+export function matchesCodexThreadPolicy(started: any, cwd: string, settings: Pick<CodexSettings, "sandbox" | "network">): boolean {
+  return started?.cwd === cwd && started.approvalPolicy === "never" && matchesCodexSandbox(started.sandbox, settings);
 }
 
 class AppServerRuntime implements AgentRuntime {
@@ -33,8 +38,7 @@ class AppServerRuntime implements AgentRuntime {
         "sandbox_read_only.network_access": this.settings.network, "sandbox_workspace_write.exclude_slash_tmp": true, "sandbox_workspace_write.exclude_tmpdir_env_var": true }, ...(selection?.model || this.settings.model ? { model: selection?.model || this.settings.model } : {}) }, signal);
     const threadId = started?.thread?.id;
     if (typeof threadId !== "string" || !threadId || started.thread.ephemeral !== true) throw new RuntimeFault("CODEX_EPHEMERAL_THREAD_UNCONFIRMED", "CONFIGURATION");
-    if (started.thread.cliVersion !== "0.162.1" || started.cwd !== workspace.cwd || started.approvalPolicy !== "never"
-      || !matchesCodexSandbox(started.sandbox, this.settings)) {
+    if (!matchesCodexThreadPolicy(started, workspace.cwd, this.settings)) {
       const observedType = ["dangerFullAccess", "readOnly", "workspaceWrite", "externalSandbox"].includes(started.sandbox?.type)
         ? started.sandbox.type : "unknown";
       await attempt.recorder.record("thread-policy-mismatch", { code: "CODEX_THREAD_POLICY_MISMATCH", mode: sandbox,
@@ -46,7 +50,7 @@ class AppServerRuntime implements AgentRuntime {
     const events = this.transport.subscribe(threadId);
     let turnId: string | undefined;
     const messages = new Map<string, { text: string; phase: string | null }>();
-    let completedBytes = 0, streamedBytes = 0;
+    let completedBytes = 0, streamedBytes = 0, workStarted = false, preferenceRejected = false;
     const message = (item: any) => {
       if (typeof item.id !== "string" || !item.id || typeof item.text !== "string"
         || (item.phase != null && !["commentary", "final_answer"].includes(item.phase))) throw new RuntimeFault("CODEX_MESSAGE_INVALID", "OUTPUT_INVALID");
@@ -70,12 +74,15 @@ class AppServerRuntime implements AgentRuntime {
         if (params.turn?.id !== turnId) return null;
         if (!["completed", "failed", "interrupted"].includes(params.turn.status)) throw new RuntimeFault("CODEX_TERMINAL_UNKNOWN");
         this.confirmed = true;
+        preferenceRejected = isAiPreferenceRejection(params.turn.error);
         for (const item of params.turn.items ?? []) if (item.type === "agentMessage") message(item);
         await attempt.recorder.record("model-terminal", { status: params.turn.status, usageKnown: false, usageSource: "app-server-turn", unknown: "token-usage-may-be-notified-separately" });
         return params.turn.status;
       }
       if (params.turnId !== turnId) return null;
+      if (["item/started", "item/completed"].includes(event.method) && params.item?.type !== "reasoning") workStarted = true;
       if (event.method === "item/agentMessage/delta") {
+        workStarted = true;
         if (typeof params.delta !== "string") throw new RuntimeFault("CODEX_MESSAGE_INVALID", "OUTPUT_INVALID");
         streamedBytes += Buffer.byteLength(params.delta, "utf8");
         if (streamedBytes > this.settings.maxBytes) throw new RuntimeFault("CODEX_OUTPUT_TOO_LARGE", "OUTPUT_INVALID");
@@ -109,6 +116,7 @@ class AppServerRuntime implements AgentRuntime {
       for (;;) {
         const terminal = await consume(await events.next(signal));
         if (!terminal) continue;
+        if (terminal !== "completed" && preferenceRejected && !workStarted) throw new RuntimeFault("AI_PREFERENCES_REJECTED", "MODEL_ERROR");
         if (terminal !== "completed") throw new RuntimeFault("CODEX_TURN_NOT_COMPLETED", "MODEL_ERROR");
         signal.throwIfAborted();
         const output = finalOutput();
@@ -116,6 +124,7 @@ class AppServerRuntime implements AgentRuntime {
         this.assertSuccessful(); return completed(output);
       }
     } catch (error) {
+      if (!turnId && (error as { code?: string })?.code === "AI_PREFERENCES_REJECTED") this.confirmed = true;
       if (!this.confirmed && turnId) {
         const cleanup = AbortSignal.timeout(this.cfg.cleanupTimeoutMs);
         try {
@@ -146,7 +155,7 @@ class AppServerRuntime implements AgentRuntime {
 export async function createCodexAppServerBackend(cfg: WorkerConfig): Promise<WorkerBackend> {
   const settings = await codexSettings(getProfile(cfg.role).readOnly);
   const transport = await AppServerTransport.start(settings);
-  return codexBackend(cfg, "codex-app-server", () => new AppServerRuntime(transport, settings, cfg), async () => {
+  return codexBackend(cfg, "codex-app-server", settings, () => new AppServerRuntime(transport, settings, cfg), async () => {
     if (!await transport.close()) throw new RuntimeFault("PROCESS_TREE_UNCERTAIN");
   });
 }

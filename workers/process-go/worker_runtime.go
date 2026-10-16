@@ -51,7 +51,7 @@ func safeDirectories(target string) error {
 func (e *AttemptEvidence) record(event string, values map[string]any) error {
     e.mu.Lock(); defer e.mu.Unlock()
     if e.failed { return errors.New("CRITICAL_EVIDENCE_FAILED") }
-    allowed := " status runtime unknown usage usageKnown capability processTree cliVersion protocol threadPersistence path digest bytes count phase callId tool inputTokens outputTokens cachedTokens publicationRef resultRevision sideEffect verdict code reportStatus reason "
+    allowed := " status runtime unknown usage usageKnown capability processTree cliVersion protocol threadPersistence path digest bytes count phase callId tool inputTokens outputTokens cachedTokens publicationRef resultRevision sideEffect verdict code reportStatus reason model effort "
     for key := range values { if !strings.Contains(allowed, " "+key+" ") { e.failed = true; return errors.New("EVIDENCE_FIELD_FORBIDDEN") } }
     data := map[string]any{"event": event, "time": time.Now().UTC().Format(time.RFC3339Nano), "taskId": e.taskID, "attemptId": e.attemptID, "role": e.role}
     for key, value := range values { data[key] = value }

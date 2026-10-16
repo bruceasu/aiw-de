@@ -21,7 +21,7 @@ type message struct {
 
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "--version" {
-		fmt.Println("codex-cli 0.162.1")
+		fmt.Println("codex-cli 0.163.0")
 		return
 	}
 	if len(os.Args) < 2 || os.Args[1] != "app-server" {

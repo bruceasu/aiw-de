@@ -1,5 +1,7 @@
 # R10 R2 Process Workers (Python)
 
+环境变量的设置方式、默认值和运行时差异见 [Worker 环境变量](../ENVIRONMENT.md)。
+
 ## FD-016 profile transition
 
 Bundled profiles accept only `EXTERNAL_WORK` and require nine fields including `resultKind`: `REPORT`, `VERDICT`, or `WORKSPACE`. Old task types and eight-field profiles are rejected. The launch role fixes the capability, exact `skillRef` and result kind; verifier never switches to integration-verifier. Release-readiness and orchestrator remain non-executable advisory profiles. See the [shared contract](../WORKER_RUNTIME_CONTRACT.md). This is local delivery; runtime checks, model calls and production no-store certification are separate evidence.

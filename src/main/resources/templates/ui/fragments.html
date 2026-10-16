@@ -1,21 +1,35 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"><body>
 <nav class="sidebar" th:fragment="nav(active)">
-  <div class="brand"><div class="brand-mark">AIW</div><div><strong>AI Dev Manager</strong><span>Web Console · R9</span></div></div>
+  <div class="brand" data-i18n-skip><div class="brand-mark" title="AI Worker" aria-label="AI Worker">AIW</div><span>Digital Employee</span></div>
   <a th:if="${canOperate}" th:classappend="${active == 'new-plan' ? 'active' : ''}" href="/ui/plans/new">New Plan</a>
   <a th:classappend="${active == 'plans' ? 'active' : ''}" href="/ui/plans">Plans</a>
   <a th:if="${canOperate}" th:classappend="${active == 'workspaces' ? 'active' : ''}" href="/ui/workspaces">Workspaces</a>
   <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Fleet</a>
   <a th:classappend="${active == 'system' ? 'active' : ''}" href="/ui/system">System</a>
-  <div class="sidebar-note"><strong th:text="${consolePrincipal}">local-console</strong><br/><span th:text="${consoleRole}">ADMIN</span><br/>Authority remains in the Control Plane.</div>
-  <div class="sidebar-locale"><label for="console-locale" data-i18n="Language">Language</label><select id="console-locale" aria-label="Language"><option value="en">English</option><option value="zh">简体中文</option></select></div>
+  <div class="sidebar-footer">
+    <div class="sidebar-note"><strong th:text="${consolePrincipal}">local-console</strong><br/><span th:text="${consoleRole}">ADMIN</span><br/>Authority remains in the Control Plane.</div>
+    <button class="sidebar-preferences" type="button" data-preferences-open aria-haspopup="dialog" aria-controls="console-preferences"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Personalization</span></button>
+    <div class="sidebar-clock" data-clock-container data-i18n-skip><time data-sidebar-clock>--:--:--</time><span data-sidebar-date></span></div>
+  </div>
+  <dialog id="console-preferences" class="workspace-confirm console-confirm preferences-panel" data-preferences-dialog aria-labelledby="console-preferences-title">
+    <div class="workspace-confirm__top"><span>Personalization</span></div>
+    <div class="workspace-confirm__body"><h2 id="console-preferences-title">Your console, your way</h2><p>Changes apply immediately and are saved in this browser.</p>
+      <section class="preference-group"><h3>Appearance</h3><label class="field"><span>Window background opacity</span><div class="preference-range"><input type="range" min="55" max="100" step="0.1" value="61.8" data-preference-opacity aria-label="Window background opacity"><output data-preference-opacity-value data-i18n-skip>61.8%</output></div></label><p class="help">One setting for all floating windows. Default: 61.8%.</p></section>
+      <section class="preference-group"><h3>Language</h3><label class="field" for="console-locale">Display language<select id="console-locale" aria-label="Language" data-i18n-skip><option value="en">English</option><option value="zh">简体中文</option></select></label></section>
+      <section class="preference-group"><h3>Date and time</h3><label class="preference-check"><input type="checkbox" data-preference="showTime" checked><span>Show sidebar time</span></label><label class="preference-check"><input type="checkbox" data-preference="showDate" checked><span>Show sidebar date and time zone</span></label></section>
+      <section class="preference-group"><h3>Motion</h3><label class="preference-check"><input type="checkbox" data-preference="animations" checked><span>Enable animations</span></label><p class="help">System reduced motion settings always take precedence.</p><p class="callout warn-callout" data-system-motion-note hidden>Your system currently reduces motion. Animations remain disabled.</p></section>
+      <p class="help" data-preferences-status role="status" aria-live="polite"></p>
+    </div>
+    <div class="workspace-confirm__footer"><button class="btn ghost" type="button" data-preferences-reset>Restore defaults</button><button class="btn primary" type="button" data-preferences-close>Done</button></div>
+  </dialog>
+  <script src="/ui/preferences.js" defer></script>
   <script src="/ui/i18n.js" defer></script>
 </nav>
 <header class="topbar" th:fragment="topbar(title, subtitle)">
   <div><h1 th:text="${title}">Title</h1><p th:text="${subtitle}">Subtitle</p></div>
   <div class="topbar-actions">
     <span class="pill neutral" th:text="${consoleRole}">ADMIN</span>
-    <button class="btn ghost small-btn" type="button" data-motion-toggle aria-pressed="false">Motion: on</button>
     <form th:if="${consoleAuthEnabled}" action="/ui/logout" method="post" class="inline-form">
       <input type="hidden" name="_csrf" th:value="${csrfToken}"/>
       <button class="btn ghost small-btn" type="submit">Sign out</button>

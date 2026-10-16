@@ -11,12 +11,13 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 from process_profiles import ProcessProfile, get_profile
 from worker_runtime import Attempt, attempt_scope, current_attempt, git as runtime_git, snapshot, skill_package, workspace_lock, setting, safe_directories
+from ai_preferences import step_selection
 from agent_runtime import AgentRunRequest, AgentRuntime, CodexAgentRuntime
 from openai_api_runtime import OpenAIApiRuntime
 import hashlib
@@ -370,6 +371,11 @@ class ProcessSlot:
             with attempt_scope(attempt):
                 profile = _profile(self.config, task.get("taskType"))
                 selection, reason = choose_ai_profile(task.get("aiGuidance"), self.config.runtime)
+                fallback_selection = selection
+                default_model = self.config.model or (self.runtime.config.model if self.config.runtime == "openai-agents" else None)
+                effective_selection = step_selection(task, self.config.runtime, selection, default_model, self.config.reasoning_effort)
+                if task.get("aiGuidance") and effective_selection is not selection:
+                    selection, reason = effective_selection, "Step preference matches an approved profile"
                 self.client.start(task, self.config.worker_id, selection, reason)
                 started = True
                 attempt.evidence.record("attempt-running", status="running")
@@ -395,7 +401,7 @@ class ProcessSlot:
                     workspace = GitWorkspace.materialize(self.config, task)
                 gate = workspace_lock(workspace.cwd, attempt)
                 baseline = snapshot(workspace.cwd, attempt) if not profile.writable else None
-                selected = selection["profile"] if selection else None
+                selected = effective_selection["profile"] if effective_selection else None
                 for name in ("AGENTS.md", "CODEX.md"):
                     file = Path(workspace.cwd) / name
                     if not file.exists(): continue
@@ -414,15 +420,35 @@ class ProcessSlot:
                     model=selected["model"] if selected else self.config.model,
                     reasoning_effort=selected["effort"] if selected else self.config.reasoning_effort,
                     network_access=self.config.network_access,
-                    service_tier=("fast" if selected["fast"] else "default") if selected and self.config.runtime == "codex-sdk" else None,
+                    service_tier=("fast" if selected["fast"] else "default") if selected and task.get("aiGuidance") and self.config.runtime == "codex-sdk" else None,
                     sandbox=self.config.sandbox, approval_mode=self.config.approval_mode,
                 )
                 def set_session(runtime_session_id, handle=None):
                     nonlocal session_id
                     session_id = runtime_session_id
                     heartbeat.set_session(runtime_session_id, handle)
+                preferences = task.get("aiPreferences") or {}
+                settings_reason = "Step preference" if preferences.get("model") or preferences.get("effort") else "Worker choice"
+                if ((preferences.get("model") and preferences["model"] != request.model)
+                        or (preferences.get("effort") and preferences["effort"] != request.reasoning_effort)):
+                    settings_reason = "Invalid or unavailable Step preference; use Worker choice for unavailable fields"
+                attempt.evidence.record("ai-settings", model=request.model, effort=request.reasoning_effort, reason=settings_reason)
                 try:
-                    final_response = self.runtime.run(runtime_client, request, set_session)
+                    try:
+                        final_response = self.runtime.run(runtime_client, request, set_session)
+                    except RuntimeError as error:
+                        fallback = fallback_selection["profile"] if fallback_selection else {}
+                        if (str(error) != "AI_PREFERENCES_REJECTED" or not task.get("aiPreferences")
+                                or (request.model == fallback.get("model", default_model)
+                                    and request.reasoning_effort == fallback.get("effort", self.config.reasoning_effort))):
+                            raise
+                        attempt.check()
+                        request = replace(request, model=fallback.get("model", default_model),
+                                          reasoning_effort=fallback.get("effort", self.config.reasoning_effort),
+                                          service_tier=("fast" if fallback.get("fast") else "default") if fallback_selection and self.config.runtime == "codex-sdk" else None)
+                        attempt.evidence.record("ai-settings-fallback", model=request.model, effort=request.reasoning_effort,
+                                                reason="Step model or effort rejected before tool execution; use Worker choice")
+                        final_response = self.runtime.run(runtime_client, request, set_session)
                 except RuntimeError as error:
                     if str(error) == "UNRESOLVED_TOOL_FAILURE": phase = "OUTPUT_INVALID"
                     raise

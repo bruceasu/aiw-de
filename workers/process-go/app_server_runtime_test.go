@@ -21,13 +21,16 @@ import (
 func TestCodexAppServerFakeLifecycle(t *testing.T) {
 	fake := buildFakeCodex(t)
 	runtime := NewCodexAppServerRuntime(Config{
-		CodexPath: fake, AppServerVersion: codexAppServerVersion,
+		CodexPath: fake, AppServerVersion: "0.163.0",
 		ApprovalPolicy: "never", Sandbox: "read-only", ReasoningEffort: "low",
 	})
 	startCtx, cancelStart := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancelStart()
 	if err := runtime.Start(startCtx); err != nil {
 		t.Fatal(err)
+	}
+	if runtime.cliVersion != "0.163.0" {
+		t.Fatalf("expected installed version in evidence, got %q", runtime.cliVersion)
 	}
 	closeRuntime := func() {
 		t.Helper()
@@ -89,10 +92,20 @@ func TestCodexAppServerFakeLifecycle(t *testing.T) {
 	}
 }
 
-func TestCodexAppServerRejectsUnpinnedVersion(t *testing.T) {
-	runtime := NewCodexAppServerRuntime(Config{AppServerVersion: "0.0.0"})
-	if err := runtime.Start(context.Background()); err == nil || !strings.Contains(err.Error(), "unsupported Codex App Server version") {
-		t.Fatalf("Start error = %v, want unsupported version", err)
+func TestCodexAppServerIgnoresLegacyVersionPin(t *testing.T) {
+	runtime := NewCodexAppServerRuntime(Config{
+		CodexPath: buildFakeCodex(t), AppServerVersion: "0.0.0",
+		ApprovalPolicy: "never", Sandbox: "read-only", ReasoningEffort: "low",
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if err := runtime.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	closeCtx, cancelClose := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelClose()
+	if err := runtime.Close(closeCtx); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -383,8 +396,14 @@ func buildCodexNodeLauncher(t *testing.T, nodePath, codexJS string) string {
 	return output
 }
 
-func TestVersionTokenParser(t *testing.T) {
-	if !hasVersionToken("codex-cli 0.162.1\n", codexAppServerVersion) || hasVersionToken("codex-cli 0.162.10\n", codexAppServerVersion) {
-		t.Fatal("version parser did not require the exact version token")
+func TestCodexVersionDiagnostics(t *testing.T) {
+	for output, want := range map[string]string{
+		"codex-cli 0.163.0\n": "0.163.0",
+		"codex-cli 2.0.0-beta.1\n": "2.0.0-beta.1",
+		"new output format\n": "unknown",
+	} {
+		if got := parseCodexVersion(output); got != want {
+			t.Fatalf("parseCodexVersion(%q) = %q, want %q", output, got, want)
+		}
 	}
 }

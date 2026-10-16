@@ -9,7 +9,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const entry = join(root, "dist", "index.js");
 const stateDir = join(root, ".ai", "worker-manager");
 const roles = ["requirements", "architect", "planner", "coder", "integrator", "reviewer",
-  "stage-reviewer", "verifier", "integration-verifier", "repairer"];
+  "stage-reviewer", "recovery-decider", "verifier", "integration-verifier", "repairer"];
 const runtimes = ["codex-cli", "codex-app-server", "openai-agents"];
 
 function fail(message) { console.error(message); process.exit(2); }

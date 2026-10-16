@@ -41,12 +41,14 @@ public class WorkflowEditorController {
     private final FleetDashboardService fleet;
     private final WebConsoleSecurityService security;
     private final ManagedWorkspaceService workspaces;
+    private final me.asu.aidev.workflow.application.WorkflowRepairAuthorizationService repairs;
 
     public WorkflowEditorController(WorkflowEditorService editor, WorkflowPlanService plans,
                                     WorkflowCancellationService cancellation,
                                     WorkflowPlanArchiveService archives,
                                     WorkflowRecommendationService recommendations, FleetDashboardService fleet,
-                                    WebConsoleSecurityService security, ManagedWorkspaceService workspaces) {
+                                    WebConsoleSecurityService security, ManagedWorkspaceService workspaces,
+                                    me.asu.aidev.workflow.application.WorkflowRepairAuthorizationService repairs) {
         this.editor = editor;
         this.plans = plans;
         this.cancellation = cancellation;
@@ -55,6 +57,7 @@ public class WorkflowEditorController {
         this.fleet = fleet;
         this.security = security;
         this.workspaces = workspaces;
+        this.repairs = repairs;
     }
 
     @GetMapping("/plans")
@@ -146,6 +149,34 @@ public class WorkflowEditorController {
     }
 
     public record RetryTaskRequest(long planVersion, long taskVersion, String reason, boolean warningConfirmed) {}
+    public record ReviewRecoveryRequest(long planVersion, String taskId, long taskVersion, String reason, boolean warningConfirmed) {}
+    public record RepairAuthorizationRequest(long planVersion, String taskId, long taskVersion, String reason,
+                                             String scope, String delegateWorkerId, boolean warningConfirmed) {}
+
+    @PostMapping("/plan-editor/plans/{id}/repair-authorizations")
+    @ResponseBody
+    public me.asu.aidev.workflow.jdbc.JdbcWorkflowRepairAuthorizationRepository.Authorization authorizeRepair(
+            @PathVariable String id, @RequestBody RepairAuthorizationRequest request, HttpSession session) {
+        requireWrite(session);
+        return repairs.authorize(id, request.taskId(), request.planVersion(), request.taskVersion(), request.scope(),
+                request.reason(), request.delegateWorkerId(), request.warningConfirmed(), security.actor(session));
+    }
+
+    @PostMapping("/plan-editor/plans/{id}/repair-authorizations/{authorizationId}/revoke")
+    @ResponseBody
+    public java.util.Map<String, String> revokeRepair(@PathVariable String id, @PathVariable String authorizationId, HttpSession session) {
+        requireWrite(session);
+        repairs.revoke(id, authorizationId, security.actor(session));
+        return java.util.Map.of("status", "REVOKED");
+    }
+
+    @PostMapping("/plan-editor/plans/{id}/resume-review")
+    @ResponseBody
+    public WorkflowPlan resumeReview(@PathVariable String id, @RequestBody ReviewRecoveryRequest request, HttpSession session) {
+        requireWrite(session);
+        return plans.resumeReview(id, request.taskId(), request.planVersion(), request.taskVersion(),
+                security.actor(session), request.reason(), request.warningConfirmed());
+    }
 
     @PostMapping("/plan-editor/plans/{id}/tasks/{taskId}/retry")
     @ResponseBody

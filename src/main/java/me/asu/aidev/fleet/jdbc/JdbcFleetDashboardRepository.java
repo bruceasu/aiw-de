@@ -8,6 +8,8 @@ import me.asu.aidev.fleet.domain.FleetDashboard;
 import me.asu.aidev.fleet.port.FleetAdmissionBudgetRepository;
 import me.asu.aidev.fleet.port.FleetDashboardRepository;
 import me.asu.aidev.work.domain.CapabilitySetCodec;
+import me.asu.aidev.worker.domain.WorkerLiveness;
+import me.asu.aidev.worker.domain.WorkerStatus;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -35,7 +37,7 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
     @Override
     public FleetDashboard project(int detailLimit) {
         Instant capturedAt = Instant.now();
-        List<WorkerRow> workerRows = workers();
+        List<WorkerRow> workerRows = workers(capturedAt);
         List<TaskRow> unfinishedTasks = unfinishedTasks();
         FleetAdmissionBudget admissionBudget = admissionBudgets.snapshot();
         RunCounts runCounts = new RunCounts(0, Map.of(), Map.of(), 0);
@@ -52,7 +54,7 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
         return new FleetDashboard(capturedAt, workers, admission, backlog, runs, execution);
     }
 
-    private List<WorkerRow> workers() {
+    private List<WorkerRow> workers(Instant capturedAt) {
         return jdbc.query("""
                 SELECT id,runtime_type,capabilities,max_concurrency,active_leases,status,
                        last_heartbeat_at_epoch_ms
@@ -60,7 +62,9 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
                  ORDER BY id
                 """, (rs, n) -> new WorkerRow(
                 rs.getString("id"), rs.getString("runtime_type"), CapabilitySetCodec.decode(rs.getString("capabilities")),
-                rs.getInt("max_concurrency"), rs.getInt("active_leases"), rs.getString("status"),
+                rs.getInt("max_concurrency"), rs.getInt("active_leases"),
+                WorkerLiveness.observedStatus(WorkerStatus.valueOf(rs.getString("status")),
+                        Instant.ofEpochMilli(rs.getLong("last_heartbeat_at_epoch_ms")), capturedAt).name(),
                 Instant.ofEpochMilli(rs.getLong("last_heartbeat_at_epoch_ms"))));
     }
 

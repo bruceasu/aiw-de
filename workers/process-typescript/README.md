@@ -1,12 +1,14 @@
 # TypeScript Process Worker
 
+环境变量的设置方式、默认值和运行时差异见 [Worker 环境变量](../ENVIRONMENT.md)。
+
 ## 新手快速上手
 
 实际目录是 `workers/process-typescript`（单数）。下面的命令都在该目录中执行；
 Windows 请使用 PowerShell，Linux/macOS 请使用终端。
 
 **交付范围：** FD-016 提供本地 Worker 执行；生产准入与认证由 FD-015 承接。
-`codex-cli` / `codex-app-server` 使用系统 CLI 0.162.1，无 Worker-local Codex 包。
+`codex-cli` / `codex-app-server` 使用系统已安装的 CLI，无 Worker-local Codex 包；不限制精确版本。
 原生 Windows 的两种 Codex 模式因进程树能力未核定而在启动前拒绝；可用 Unix/WSL，
 或按下例在 Windows 选择 `openai-agents`（需要 `OPENAI_API_KEY`）。
 真实 CLI、模型、类型检查及测试未运行，生产禁存认证归 FD-015。
@@ -47,7 +49,7 @@ node scripts/manage-workers.mjs stop coder
 node scripts/manage-workers.mjs stop all
 ```
 
-需要全部十个角色时执行 `node scripts/manage-workers.mjs start all codex-app-server`。也可选择 `codex-cli` 或 `openai-agents`；后者须在启动终端配置 `OPENAI_API_KEY`。技术能力使用 `AIW_WORKER_CAPABILITIES_<ROLE>` 独立设置；未设置的角色不会继承共享的 `AIW_WORKER_CAPABILITIES`。默认 ID 是 `test-ts-<role>-1`，通过 `AIW_WORKER_ID_PREFIX` 改前缀以避开其他实例。`logs` 输出日志路径，可用 `tail -f <path>` 跟踪。状态和日志存在已忽略的 `.ai/worker-manager/`，日志文件仅当前用户可读写；退出管理命令不会停止 Worker。
+需要全部十一个角色时执行 `node scripts/manage-workers.mjs start all codex-app-server`。也可选择 `codex-cli` 或 `openai-agents`；后者须在启动终端配置 `OPENAI_API_KEY`。技术能力使用 `AIW_WORKER_CAPABILITIES_<ROLE>` 独立设置；未设置的角色不会继承共享的 `AIW_WORKER_CAPABILITIES`。默认 ID 是 `test-ts-<role>-1`，通过 `AIW_WORKER_ID_PREFIX` 改前缀以避开其他实例。`logs` 输出日志路径，可用 `tail -f <path>` 跟踪。状态和日志存在已忽略的 `.ai/worker-manager/`，日志文件仅当前用户可读写；退出管理命令不会停止 Worker。
 
 `stop` 发送 SIGTERM，请求 Worker 排空并下线，不强制杀掉进行中的任务；随后用 `status` 确认停止。管理器不自动重启崩溃进程，也不证明 Worker 已成功向 Control Plane 注册；实际注册与匹配仍查看 `/ui/workers`。修改 Worker 源码后先停止对应角色、重新 `npm run build`，再启动。原生 Windows 请使用 WSL 或下文的前台 PowerShell 脚本。
 
@@ -93,7 +95,7 @@ npm start
 这会启动一个 `requirements` worker。换成 `coder`、`reviewer` 等角色即可运行其他角色。
 环境变量只对当前终端及其子进程生效，新开终端需要重新设置。
 
-4. 如果要一次启动全部十个角色，先用 Ctrl+C 停止上面的单角色进程，
+4. 如果要一次启动全部十一个角色，先用 Ctrl+C 停止上面的单角色进程，
    然后保留共享环境变量，在同一终端执行：
 
 ```sh
@@ -284,9 +286,9 @@ node start-all.mjs openai-agents
 
 ### 用 systemd 管理分发后的 Worker（Linux / 启用 systemd 的 WSL）
 
-发布包中的 `scripts/ai-workers.service` 管理全部十个角色；
+发布包中的 `scripts/ai-workers.service` 管理全部十一个角色；
 `scripts/ai-worker@.service` 按角色管理单个 Worker。两者默认使用
-`codex-app-server`，需要目标机器已安装并登录 Codex CLI 0.162.1。
+`codex-app-server`，需要目标机器已安装并登录 Codex CLI。
 先把 `/opt/aiw/process-typescript` 指向实际发布目录，创建运行用户 `aiw`，
 并确认该用户能访问仓库、Control Plane 和 Codex 登录信息。若 Node 不在
 `/usr/bin/node`，修改两个 service 文件中的 `ExecStart` 绝对路径。
@@ -347,7 +349,11 @@ Bundled profiles accept only `EXTERNAL_WORK` and require nine fields including `
 
 This is the single TypeScript Worker package for the R9 Worker Pull protocol. Each process runs one R2 role with an explicit `AIW_AGENT_RUNTIME`: `codex-cli`, `codex-app-server`, or `openai-agents`. The Java Control Plane owns task state, leases, retries, scheduling, approvals, and persistence. The Worker owns task instructions and result interpretation; the selected AgentRuntime owns model execution. The former `process-typescript-with-api` package and launcher have been removed.
 
-The Codex backends launch the system-installed CLI 0.162.1: `codex-cli` uses `codex exec` per attempt; `codex-app-server` manages one stdio service with independent ephemeral threads per slot. They use `AIW_CODEX_PATH` or system `PATH`; no Worker-local Codex binary, SDK, download or fallback is included. Native login is inherited. Approval is `never`; the default is direct host access (`danger-full-access`), including host network access. Read-only roles remain constrained by task instructions, without OS-enforced read-only isolation in this mode.
+The Codex backends launch the system-installed CLI: `codex-cli` uses `codex exec` per attempt; `codex-app-server` manages one stdio service with independent ephemeral threads per slot. They use `AIW_CODEX_PATH` or system `PATH`; no Worker-local Codex binary, SDK, download or fallback is included. Native login is inherited. Approval is `never`; the default is direct host access (`danger-full-access`), including host network access. Read-only roles remain constrained by task instructions, without OS-enforced read-only isolation in this mode.
+
+Codex 0.162.1 是开发时参考的版本，不是运行版本限制。启动日志和执行证据记录实际 CLI 版本；
+升级本身不阻止启动。兼容性由实际 CLI 命令及 App Server 握手、响应校验判断，未知版本输出格式
+记为 unknown。真正的协议或权限不兼容仍会失败，不自动切换运行时或放宽权限。
 
 App Server 的 thread 响应须与请求模式一致：直接访问对应 `dangerFullAccess`，该结构不要求
 `networkAccess`；`readOnly/workspaceWrite` 必须校验明确返回的网络权限。只读角色的指令约束
@@ -409,7 +415,7 @@ node start-all.mjs openai-agents
 npm run start:all -- openai-agents
 ```
 
-The launcher accepts all three explicit runtimes. Codex modes use system CLI 0.162.1 on Unix/WSL; native Windows is refused before task text because process-tree termination is unverified. It excludes the advisory
+The launcher accepts all three explicit runtimes. Codex modes use the installed system CLI on Unix/WSL; native Windows is refused before task text because process-tree termination is unverified. It excludes the advisory
 `release-readiness` and `orchestrator` profiles. All workers inherit the caller's
 working directory and environment; configure `AIW_REPOSITORY_REF` and
 `AIW_REPOSITORY_ROOT` together. Each worker receives its own default role ID.
@@ -526,3 +532,20 @@ All executable roles accept `EXTERNAL_WORK`. `skillRef` must equal the role’s 
 ## Local platform limit
 
 The two TypeScript Codex modes currently refuse native Windows startup with `CODEX_WINDOWS_PROCESS_TREE_UNVERIFIED`: Node cannot prove that descendants ended after a parent exits. Use the local Unix/WSL Codex runtime or `openai-agents` on Windows. Windows npm native path resolution remains implemented, but it is not a termination certification. Production platform containment and certification belong to FD-015. A failed taskkill never becomes success merely because the parent closed.
+
+## Bounded repair decision Worker
+
+`recovery-decider` uses the read-only `workflow-recovery-decider` Skill and
+automatically registers `workflow-recovery-decision` and `task-outputs-v1`.
+Start it after updating the Worker and applying the Control Plane V4 migration:
+
+```sh
+node scripts/manage-workers.mjs start recovery-decider codex-app-server
+```
+
+An Operator grants one repair round with a fixed scope and may assign this Worker
+to decide whether to use it. Only the named Worker can claim that decision task.
+It must be independent of the source executor and reviewer. PASS consumes the
+existing human grant; it cannot change requirements, extend scope or renew a grant.
+The grant expires after one hour. No decision task exists without a human grant.
+See [repair authorization](../../docs/current-zh/FLEXIBLE-WORKFLOW-PLANS.md).

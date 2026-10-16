@@ -37,8 +37,17 @@ public record WorkflowPlanSpec(String goal, Source source, List<Step> steps) {
 
     public record Step(String key, Set<String> requiredSkills, Set<String> preferredSkills,
                        String skillRef, String instruction, String repositoryRef,
-                       String baseRevision, Set<String> dependsOn) {
+                       String baseRevision, Set<String> dependsOn, String model, String effort) {
+        public Step(String key, Set<String> requiredSkills, Set<String> preferredSkills,
+                    String skillRef, String instruction, String repositoryRef,
+                    String baseRevision, Set<String> dependsOn) {
+            this(key, requiredSkills, preferredSkills, skillRef, instruction, repositoryRef,
+                    baseRevision, dependsOn, null, null);
+        }
+
         public Step {
+            model = preference(model);
+            effort = preference(effort);
             if (key == null || !key.matches("[a-z][a-z0-9._-]{0,31}")) {
                 throw new IllegalArgumentException("invalid step key");
             }
@@ -63,6 +72,12 @@ public record WorkflowPlanSpec(String goal, Source source, List<Step> steps) {
             instruction = validated.instruction();
             repositoryRef = validated.repositoryRef();
             baseRevision = validated.baseRevision();
+        }
+
+        private static String preference(String value) {
+            if (value == null || value.isBlank()) return null;
+            if (value.length() > 160) throw new IllegalArgumentException("AI preference must not exceed 160 characters");
+            return value.strip();
         }
 
         private static Set<String> skills(Set<String> input) {

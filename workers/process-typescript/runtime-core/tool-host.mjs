@@ -8,6 +8,7 @@ export class ToolHost {
   #active = new Set();
   #calls = new Map();
   #known = new Set();
+  get hasStartedTools() { return this.#known.size > 0; }
   constructor({ cwd, readOnly, allowShell, signal, recorder, coordinator, abort, maxOutputBytes = 24000, toolTimeoutMs = 60000 }) {
     Object.assign(this, { cwd, readOnly, allowShell, signal, recorder, coordinator, abort, maxOutputBytes, toolTimeoutMs });
   }

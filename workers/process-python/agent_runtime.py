@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from ai_preferences import preference_rejected
 from process_profiles import ProcessProfile
 from worker_runtime import Attempt
 
@@ -46,7 +47,7 @@ class CodexAgentRuntime:
         }
         if request.service_tier is not None:
             model_config["service_tier"] = request.service_tier
-        thread = attempt.run_operation(lambda: client.thread_start(
+        thread = _configuration_operation(attempt, lambda: client.thread_start(
             ephemeral=True,
             approval_mode=_approval_mode(ApprovalMode, request.approval_mode),
             cwd=request.workspace,
@@ -59,7 +60,7 @@ class CodexAgentRuntime:
         if metadata.ephemeral is not True or metadata.path is not None:
             raise RuntimeError("SESSION_EPHEMERAL_NOT_CONFIRMED")
         attempt.check()
-        turn = attempt.run_operation(lambda: thread.turn(request.instruction))
+        turn = _configuration_operation(attempt, lambda: thread.turn(request.instruction))
         on_session(session_id, turn)
         attempt.check()
         result = attempt.run_turn(turn)
@@ -89,3 +90,13 @@ def _approval_mode(approval_type: Any, value: str) -> Any:
     if key not in mapping:
         raise ValueError(f"unsupported AIW_CODEX_APPROVAL_MODE: {value}")
     return mapping[key]
+
+
+def _configuration_operation(attempt, operation):
+    try:
+        return attempt.run_operation(operation)
+    except Exception as error:
+        attempt.check()
+        if preference_rejected(error):
+            raise RuntimeError("AI_PREFERENCES_REJECTED") from None
+        raise

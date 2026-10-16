@@ -22,7 +22,10 @@ public class WorkflowEditorService {
     public record Template(String id, String title, String use, WorkflowPlanSpec plan) {}
     public record StepDetail(WorkTask task, List<String> dependencies, String report, String verdict) {}
     public record Detail(WorkflowPlan plan, List<StepDetail> steps, List<Control> controls,
-                         JdbcWorkflowHumanOutcomeRepository.Outcome humanOutcome) {}
+                         JdbcWorkflowHumanOutcomeRepository.Outcome humanOutcome,
+                         WorkflowPlanService.ReviewRecovery reviewRecovery,
+                         List<me.asu.aidev.workflow.jdbc.JdbcWorkflowRepairAuthorizationRepository.Authorization> repairAuthorizations,
+                         List<String> decisionWorkers, java.util.Map<String, String> repairDecisionReports) {}
     public record TaskDetail(WorkTask task, List<JdbcWorkflowTaskReadRepository.Attempt> attempts,
                              WorkflowPlanService.RetryEligibility retry,
                              List<JdbcWorkflowTaskReadRepository.RetryEvent> retries) {}
@@ -36,22 +39,24 @@ public class WorkflowEditorService {
             new Role("repair", "coding-work-package-executor", "WORKSPACE", true));
     private static final Set<String> ROLE_CAPABILITIES = Set.of("requirement-analysis", "solution-architecture",
             "implementation-planning", "coding", "integration", "repair", "code-review", "verification",
-            "integration-verification", "workflow-review");
+            "integration-verification", "workflow-review", "workflow-recovery-decision");
 
     private final WorkflowPlanService plans;
     private final TaskDependencyRepository dependencies;
     private final ExecutionAttemptRepository attempts;
     private final JdbcWorkflowHumanOutcomeRepository outcomes;
     private final JdbcWorkflowTaskReadRepository taskReads;
+    private final WorkflowRepairAuthorizationService repairs;
 
     public WorkflowEditorService(WorkflowPlanService plans, TaskDependencyRepository dependencies,
                                  ExecutionAttemptRepository attempts, JdbcWorkflowHumanOutcomeRepository outcomes,
-                                 JdbcWorkflowTaskReadRepository taskReads) {
+                                 JdbcWorkflowTaskReadRepository taskReads, WorkflowRepairAuthorizationService repairs) {
         this.plans = plans;
         this.dependencies = dependencies;
         this.attempts = attempts;
         this.outcomes = outcomes;
         this.taskReads = taskReads;
+        this.repairs = repairs;
     }
 
     public List<Role> roles() { return ROLES; }
@@ -139,6 +144,7 @@ public class WorkflowEditorService {
             rows.add(new StepDetail(task, deps, report.map(r -> r.summary()).orElse(null),
                     report.map(r -> r.verdict().name()).orElse(null)));
         }
-        return new Detail(plan, rows, plans.controlHistory(id), outcomes.find(id).orElse(null));
+        return new Detail(plan, rows, plans.controlHistory(id), outcomes.find(id).orElse(null), plans.reviewRecovery(id),
+                repairs.list(id), repairs.decisionWorkers(id), repairs.decisionReports(id));
     }
 }

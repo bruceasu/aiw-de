@@ -39,8 +39,8 @@ public class WorkflowPlanArchiveService {
             if (plan.state() != WorkflowPlan.State.CONFIRMED) return false;
             int last = plan.spec().steps().size() - 1;
             boolean passed = false;
-            for (int attempt = 1; attempt <= WorkflowPlanService.MAX_ATTEMPTS_PER_STEP; attempt++) {
-                passed |= attempts.findCompletionReport(WorkflowPlanService.reviewId(plan, last, attempt))
+            for (int attempt : plans.rounds(plan, last)) {
+                passed |= attempts.findCompletionReport(plans.effectiveReviewId(plan, last, attempt))
                         .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false);
             }
             if (!passed) return false;

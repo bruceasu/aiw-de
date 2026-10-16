@@ -5,11 +5,13 @@
   const root = editor || detail;
   const csrf = root.dataset.csrf;
   let pendingWrites = 0;
-  const api = async (path, body) => {
+  const api = async (path, body, options = {}) => {
     if (body !== undefined) pendingWrites++;
     try {
       const response = await fetch(`/ui/plan-editor${path}${body === undefined ? '' : `?_csrf=${encodeURIComponent(csrf)}`}`, {
         method: body === undefined ? 'GET' : 'POST',
+        signal: options.signal,
+        cache: options.cache,
         headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
         body: body === undefined ? undefined : JSON.stringify(body)
       });
@@ -175,6 +177,11 @@
         field(grid, 'Required technical skills (comma separated)', step.requiredSkills.filter(s => s !== role.capability).join(', '),
           value => { step.requiredSkills = [role.capability, ...skillNames(value)]; });
         field(grid, 'Preferred skills (comma separated)', step.preferredSkills.join(', '), value => { step.preferredSkills = skillNames(value); });
+        const model = field(grid, 'Model (optional)', step.model, value => { step.model = value.trim() || null; });
+        model.maxLength = 160;
+        const effort = field(grid, 'Reasoning effort (optional)', step.effort, value => { step.effort = value.trim() || null; });
+        effort.maxLength = 160;
+        line(effort.parentElement, 'span', 'Leave empty to let the Worker decide. Invalid or unavailable settings fall back to the Worker configuration.', 'help');
         workspaceField(grid, step, index);
         const revisionInput = field(grid, 'Base revision (optional full Git commit)', step.baseRevision,
           value => { step.baseRevision = value.trim() || null; });
@@ -359,29 +366,87 @@
   if (detail) {
     const id = detail.dataset.id;
     let plan;
+    let reviewRecovery;
+    let repairSubmitting = false;
     const actionStatus = detail.querySelector('[data-action-status]');
     const refreshStatus = detail.querySelector('[data-plan-refresh-status]');
+    const historyDialog = detail.querySelector('[data-task-history-dialog]');
+    const historyBody = detail.querySelector('[data-task-history-body]');
+    let historyOpener = null;
+    detail.querySelector('[data-task-history-close]')?.addEventListener('click', () => historyDialog.close());
+    historyDialog?.addEventListener('click', event => { if (event.target === historyDialog) historyDialog.close(); });
+    historyDialog?.addEventListener('close', () => {
+      historyBody.replaceChildren();
+      if (historyOpener?.isConnected) historyOpener.focus();
+      historyOpener = null;
+    });
+    const taskRecord = (row, reportStates = new Map()) => {
+      const kind = row.task.id.value.includes('~review-') ? 'Independent review' : 'Execution';
+      const record = el('div', undefined, 'workflow-task-record');
+      line(record, 'div', kind, 'small muted');
+      if (row.task.createdAt) {
+        const time = line(record, 'time', new Date(row.task.createdAt).toLocaleString(), 'small muted');
+        time.dateTime = row.task.createdAt;
+      }
+      line(record, 'div', row.task.id.value, 'mono');
+      line(record, 'span', row.task.state, 'badge');
+      if (row.verdict) line(record, 'span', row.verdict, 'badge');
+      const link = line(record, 'a', 'View task details', 'btn ghost small-btn');
+      link.href = `/ui/plans/${encodeURIComponent(id)}/tasks/${encodeURIComponent(row.task.id.value)}`;
+      if (row.report) {
+        const report = el('details', undefined, 'workflow-task-report');
+        report.dataset.taskReport = row.task.id.value;
+        line(report, 'summary', 'View report', 'small muted');
+        const content = line(report, 'pre', row.report, 'code task-report');
+        const previous = reportStates.get(row.task.id.value);
+        report.open = previous?.open || false;
+        record.appendChild(report);
+        if (previous?.open) requestAnimationFrame(() => { content.scrollTop = previous.scrollTop; });
+      }
+      return record;
+    };
     let loading = false;
+    let request = null;
     const load = async () => {
       if (loading) return;
       loading = true;
+      request = new AbortController();
+      const timeout = setTimeout(() => request?.abort(), 10000);
       try {
-        const data = await api(`/plans/${encodeURIComponent(id)}`); plan = data.plan;
+        const data = await api(`/plans/${encodeURIComponent(id)}`, undefined, { signal: request.signal, cache: 'no-store' }); plan = data.plan;
+        reviewRecovery = data.reviewRecovery;
+        const grants = data.repairAuthorizations || [];
+        const pendingGrant = grants.find(grant => grant.status === 'PENDING' && grant.planVersion === plan.version
+          && Date.parse(grant.expiresAt) > Date.now());
         detail.querySelector('[data-detail-goal]').textContent = plan.spec.goal;
-        const finalStep = plan.spec.steps.at(-1);
-        const finalReview = data.steps.filter(row => row.task.id.value.startsWith(`${id}~${finalStep.key}~review-`))
-          .sort((a, b) => a.task.id.value.localeCompare(b.task.id.value)).at(-1);
-        const exhausted = data.steps.some(row => (row.task.id.value.endsWith('~review-3') &&
-          row.task.state === 'COMPLETED' && row.verdict === 'REPAIR_REQUIRED') || row.task.state === 'FAILED');
+        const latestReviews = plan.spec.steps.map(step => data.steps.filter(row =>
+          row.task.id.value.startsWith(`${id}~${step.key}~review-`)).sort((a, b) => {
+            const sequence = row => row.task.id.value.match(/~review-(\d+)(?:-resume-(\d+))?$/);
+            const left = sequence(a), right = sequence(b);
+            return Number(left?.[1] || 0) - Number(right?.[1] || 0)
+              || Number(left?.[2] || 0) - Number(right?.[2] || 0);
+          }).at(-1));
+        const finalReview = latestReviews.at(-1);
+        const activeWork = data.steps.some(row => ['READY', 'BLOCKED', 'CLAIMED', 'RUNNING'].includes(row.task.state));
+        const exhausted = !activeWork && latestReviews.some(row => row
+          && Number(row.task.id.value.match(/~review-(\d+)/)?.[1]) >= 3
+          && row.task.state === 'COMPLETED' && row.verdict === 'REPAIR_REQUIRED')
+          || data.steps.some(row => row.task.state === 'FAILED');
         const pendingControl = data.controls.find(control => control.status === 'PENDING_STOP');
         const attention = detail.querySelector('[data-plan-attention]');
-        if (attention) attention.hidden = !exhausted;
+
         detail.querySelector('[data-detail-state]').textContent = data.humanOutcome?.status === 'APPLIED'
           ? data.humanOutcome.outcome === 'COMPLETE' ? 'COMPLETED_BY_HUMAN' : 'CANCELLED'
           : data.humanOutcome?.status === 'PENDING' ? 'WAITING_FOR_WORKER_STOP'
+          : pendingGrant ? 'WAITING_FOR_RECOVERY_DECISION'
           : plan.state === 'CONFIRMED'
           ? pendingControl ? 'WAITING_FOR_WORKER_STOP' : finalReview?.verdict === 'PASS' ? 'COMPLETED' : exhausted ? 'NEEDS_ATTENTION' : 'IN_PROGRESS'
           : plan.state;
+        const needsAttention = detail.querySelector('[data-detail-state]').textContent === 'NEEDS_ATTENTION';
+        detail.dataset.planAttention = String(needsAttention);
+        if (attention) attention.hidden = !needsAttention;
+        const missionAlert = detail.querySelector('#plan-mission-alert');
+        if (missionAlert) missionAlert.hidden = !needsAttention;
         detail.querySelector('[data-detail-source]').textContent = plan.spec.source;
         detail.querySelector('[data-detail-version]').textContent = plan.version;
         detail.querySelector('[data-detail-created-by]').textContent = plan.createdBy;
@@ -394,41 +459,33 @@
         rows.replaceChildren();
         plan.spec.steps.forEach((step, index) => {
           const actual = data.steps.filter(row => row.task.id.value.startsWith(`${id}~${step.key}~`))
-            .sort((a, b) => a.task.id.value.localeCompare(b.task.id.value));
+            .sort((a, b) => (Date.parse(b.task.createdAt) || 0) - (Date.parse(a.task.createdAt) || 0)
+              || b.task.id.value.localeCompare(a.task.id.value));
           const tr = el('tr');
-          [ `${step.key} / ${step.skillRef}`, step.instruction, step.dependsOn.join(', ') || 'Listed order',
+          [ `${step.key} / ${step.skillRef}`, `${step.instruction}\nModel: ${step.model || 'Worker choice'} · Effort: ${step.effort || 'Worker choice'}`,  step.dependsOn.join(', ') || 'Listed order',
             `${step.repositoryRef || 'No workspace'} / ${step.baseRevision || 'No fixed revision'}`
           ].forEach(value => line(tr, 'td', value));
           const resultCell = el('td');
           const skipped = data.controls.some(control => control.status === 'APPLIED' && control.action === 'JUMP'
             && index >= control.fromStep && index < control.targetStep);
           if (!actual.length) line(resultCell, 'div', skipped ? 'Skipped by manager decision' : 'Waiting for the previous step to pass review');
-          for (const row of actual) {
-            const kind = row.task.id.value.includes('~review-') ? 'Independent review' : 'Execution';
-            const record = el('div', undefined, 'workflow-task-record');
-            line(record, 'div', kind, 'small muted');
-            line(record, 'div', row.task.id.value, 'mono');
-            line(record, 'span', row.task.state, 'badge');
-            if (row.verdict) line(record, 'span', row.verdict, 'badge');
-            const link = line(record, 'a', 'View task details', 'btn ghost small-btn');
-            link.href = `/ui/plans/${encodeURIComponent(id)}/tasks/${encodeURIComponent(row.task.id.value)}`;
-            if (row.report) {
-              const report = el('details', undefined, 'workflow-task-report');
-              report.dataset.taskReport = row.task.id.value;
-              line(report, 'summary', 'View report', 'small muted');
-              const content = line(report, 'pre', row.report, 'code task-report');
-              const previous = reportStates.get(row.task.id.value);
-              report.open = previous?.open || false;
-              record.appendChild(report);
-              // Restore scrolling after the expanded content has been attached to the document.
-              if (previous?.open) requestAnimationFrame(() => { content.scrollTop = previous.scrollTop; });
-            }
-            resultCell.appendChild(record);
+          if (actual.length) resultCell.appendChild(taskRecord(actual[0], reportStates));
+          if (actual.length > 1) {
+            const more = line(resultCell, 'button', 'View all records', 'btn ghost small-btn');
+            more.type = 'button';
+            more.setAttribute('aria-haspopup', 'dialog');
+            more.setAttribute('aria-controls', 'plan-task-history');
+            more.addEventListener('click', () => {
+              historyOpener = more;
+              detail.querySelector('[data-task-history-step]').textContent = step.key;
+              historyBody.replaceChildren(...actual.map(row => taskRecord(row)));
+              historyDialog.showModal();
+            });
           }
           tr.appendChild(resultCell); rows.appendChild(tr);
         });
         const history = detail.querySelector('[data-control-history]'); history.replaceChildren();
-        if (!data.controls.length) line(history, 'p', 'No step override recorded.');
+        if (!data.controls.length && !data.humanOutcome) line(history, 'p', 'No decision recorded.');
         for (const control of data.controls) line(history, 'p',
           `${control.requestedAt} · ${control.actor} · ${control.action === 'STOP' ? 'Stop early' : `Jump from step ${control.fromStep + 1} to ${control.targetStep + 1}`} · ${control.status} · ${control.reason}`);
         if (data.humanOutcome) line(history, 'p',
@@ -456,12 +513,87 @@
         const resolve = detail.querySelector('[data-resolve-stop]');
         if (resolve) resolve.hidden = !pendingControl || data.steps.some(row =>
           row.task.id.value === pendingControl.taskId && ['CLAIMED', 'RUNNING'].includes(row.task.state));
+        const resume = detail.querySelector('[data-resume-review]');
+        if (resume) resume.hidden = !reviewRecovery?.allowed || !!pendingGrant;
+        const managerPhase = detail.querySelector('[data-manager-phase]');
+        if (managerPhase) {
+          managerPhase.textContent = detail.querySelector('[data-detail-state]').textContent;
+          managerPhase.dataset.status = exhausted ? 'WAITING_APPROVAL' : activeWork ? 'RUNNING' : plan.state;
+        }
+        const guidance = detail.querySelector('[data-manager-guidance]');
+        if (guidance) guidance.textContent = pendingGrant
+          ? 'A decision Worker is assessing the fixed repair scope.'
+          : exhausted ? 'Review needs changes. Authorize a bounded repair or request another review.'
+          : activeWork ? 'Workers are active. Follow task progress before choosing another action.'
+          : plan.state === 'DRAFT' ? 'Review your selected steps, then confirm the draft to start.'
+          : 'Choose your next move. Every decision stays in the mission history.';
+        const reviewCard = detail.querySelector('[data-review-recovery]');
+        if (reviewCard) reviewCard.hidden = !reviewRecovery?.allowed || !!pendingGrant;
+        const draftCard = detail.querySelector('[data-draft-action]');
+        if (draftCard) draftCard.hidden = plan.state !== 'DRAFT';
+        const repair = detail.querySelector('[data-repair-authorization]');
+        if (repair) repair.hidden = !reviewRecovery?.allowed || !!pendingGrant;
+        const delegate = detail.querySelector('[data-repair-delegate]');
+        if (delegate) {
+          const selected = delegate.value;
+          delegate.replaceChildren();
+          const human = line(delegate, 'option', 'Human approval now'); human.value = '';
+          for (const workerId of data.decisionWorkers || []) {
+            const option = line(delegate, 'option', workerId); option.value = workerId;
+          }
+          if (selected && !(data.decisionWorkers || []).includes(selected)) {
+            const unavailable = line(delegate, 'option', selected); unavailable.value = selected; unavailable.disabled = true;
+          }
+          delegate.value = selected || '';
+        }
+        const grantHistory = detail.querySelector('[data-repair-authorizations]');
+        if (grantHistory) {
+          detail.querySelector('[data-repair-authorization-history]').hidden = !grants.length;
+          const repairEmpty = detail.querySelector('[data-repair-history-empty]');
+          if (repairEmpty) repairEmpty.hidden = !!grants.length;
+          grantHistory.replaceChildren();
+          for (const grant of grants) {
+            const card = line(grantHistory, 'article', undefined, 'form-card top-gap');
+            line(card, 'div', grant.id, 'mono');
+            const grantStatus = grant.status !== 'PENDING' ? grant.status : Date.parse(grant.expiresAt) <= Date.now()
+              ? 'EXPIRED' : grant.planVersion !== plan.version ? 'STALE' : 'PENDING';
+            line(card, 'span', grantStatus, 'badge');
+            line(card, 'p', `${grant.createdAt} · ${grant.grantedBy} · ${grant.delegateWorkerId || grant.grantedBy}`, 'small muted');
+            line(card, 'pre', grant.scope, 'code task-report');
+            line(card, 'p', grant.reason, 'small');
+            if (grant.repairTaskId) {
+              const link = line(card, 'a', 'View task details', 'btn ghost small-btn');
+              link.href = `/ui/plans/${encodeURIComponent(id)}/tasks/${encodeURIComponent(grant.repairTaskId)}`;
+            }
+            if (data.repairDecisionReports?.[grant.id]) {
+              const report = line(card, 'details');
+              line(report, 'summary', 'Decision report');
+              line(report, 'pre', data.repairDecisionReports[grant.id], 'code task-report');
+            }
+            if (grant.status === 'PENDING' && detail.dataset.canOperate === 'true') {
+              const revoke = line(card, 'button', 'Revoke authorization', 'btn ghost small-btn'); revoke.type = 'button';
+              revoke.addEventListener('click', async () => {
+                if (!await window.aiwConfirm('Revoke this unused repair authorization? No new repair will be started.')) return;
+                try { await api(`/plans/${encodeURIComponent(id)}/repair-authorizations/${encodeURIComponent(grant.id)}/revoke`, {}); await load(); }
+                catch (error) {
+                  actionStatus.textContent = error.message;
+                  detail.dispatchEvent(new CustomEvent('aiw:open-plan-window', { detail: 'mission' }));
+                }
+              });
+            }
+          }
+        }
         detail.querySelector('[data-detail-error]').textContent = '';
-        if (refreshStatus) refreshStatus.textContent = 'Updates every 5 seconds';
+        if (typeof CustomEvent === 'function') detail.dispatchEvent(new CustomEvent('aiw:plan-snapshot', {
+          detail: { version: plan.version, tasks: data.steps.map(row => `${row.task.id.value}:${row.task.state}:${row.task.version}`).join('|') }
+        }));
+        if (refreshStatus) refreshStatus.replaceChildren(el('span', 'Updates every 5 seconds'),
+          document.createTextNode(' · '), el('time', new Date().toLocaleTimeString()));
       } catch (error) {
-        detail.querySelector('[data-detail-error]').textContent = error.message;
+        detail.querySelector('[data-detail-error]').textContent = error.name === 'AbortError'
+          ? 'Status request timed out or was interrupted. The next update will retry.' : error.message;
         if (refreshStatus) refreshStatus.textContent = 'Status refresh failed. Previous data remains visible.';
-      } finally { loading = false; }
+      } finally { clearTimeout(timeout); request = null; loading = false; }
     };
     detail.querySelector('[data-copy]')?.addEventListener('click', () => { location.href = `/ui/plans/new?copy=${encodeURIComponent(id)}`; });
     detail.querySelector('[data-confirm]')?.addEventListener('click', async () => {
@@ -516,9 +648,84 @@
       } catch (error) { actionStatus.textContent = `Resolution failed: ${error.message}`; }
     });
     detail.querySelector('[data-plan-refresh]')?.addEventListener('click', load);
+    detail.addEventListener?.('aiw:refresh-plan', load);
+    detail.querySelector('[data-authorize-repair]')?.addEventListener('click', async () => {
+      if (repairSubmitting) return;
+      const button = detail.querySelector('[data-authorize-repair]');
+      const reasonInput = detail.querySelector('[data-repair-reason]') || detail.querySelector('[data-control-reason]');
+      const scopeInput = detail.querySelector('[data-repair-scope]');
+      const status = detail.querySelector('[data-repair-status]');
+      const feedback = (message, tone = 'info') => {
+        actionStatus.textContent = message; actionStatus.dataset.tone = tone;
+        if (status) { status.hidden = false; status.textContent = message; status.dataset.tone = tone; }
+      };
+      if (!reviewRecovery?.allowed) {
+        feedback(reviewRecovery?.blockedReason || 'Repair is unavailable. Refresh the plan to check its current state.', 'error');
+        actionStatus.scrollIntoView?.({ block: 'nearest' });
+        return;
+      }
+      const reason = reasonInput.value.trim() || detail.querySelector('[data-control-reason]')?.value.trim();
+      const scope = scopeInput.value.trim();
+      const delegateWorkerId = detail.querySelector('[data-repair-delegate]').value || null;
+      reasonInput.removeAttribute('aria-invalid'); scopeInput.removeAttribute('aria-invalid');
+      if (!reason || !scope) {
+        const missing = !reason ? reasonInput : scopeInput;
+        missing.setAttribute('aria-invalid', 'true');
+        feedback(!reason ? 'Enter a repair decision reason.' : 'Enter a fixed repair scope.', 'error');
+        missing.focus();
+        return;
+      }
+      const snapshot = { ...reviewRecovery };
+      repairSubmitting = true; button.disabled = true; button.setAttribute('aria-busy', 'true');
+      button.textContent = 'Waiting for confirmation…';
+      let timeout;
+      try {
+        if (!await window.aiwConfirm('Authorize one repair round within the entered scope? An assigned AI cannot change the scope or add rounds.')) {
+          feedback('Repair authorization cancelled.');
+          return;
+        }
+        button.textContent = 'Submitting authorization…';
+        feedback('Submitting authorization…');
+        const controller = new AbortController();
+        timeout = setTimeout(() => controller.abort(), 15000);
+        const grant = await api(`/plans/${encodeURIComponent(id)}/repair-authorizations`, {
+          planVersion: snapshot.planVersion, taskId: snapshot.taskId, taskVersion: snapshot.taskVersion,
+          reason, scope, delegateWorkerId, warningConfirmed: true,
+        }, { signal: controller.signal });
+        clearTimeout(timeout);
+        feedback(grant.status === 'STALE' || grant.status === 'EXPIRED'
+          ? 'Authorization was not used because the plan changed or the grant expired. Check authorization history.'
+          : 'One-round repair authorization recorded.', grant.status === 'STALE' || grant.status === 'EXPIRED' ? 'error' : 'success');
+        await load();
+        actionStatus.scrollIntoView?.({ block: 'nearest' });
+      } catch (error) {
+        feedback(error.name === 'AbortError'
+          ? 'Authorization request timed out. Refresh and check authorization history before submitting again.'
+          : `Repair authorization failed: ${error.message}`, 'error');
+      } finally {
+        clearTimeout(timeout); repairSubmitting = false;
+        button.disabled = false; button.removeAttribute('aria-busy'); button.textContent = 'Authorize continued repair';
+      }
+    });
+    detail.querySelector('[data-resume-review]')?.addEventListener('click', async () => {
+      if (!reviewRecovery?.allowed) return;
+      const reasonInput = detail.querySelector('[data-review-reason]') || detail.querySelector('[data-control-reason]');
+      const reason = reasonInput.value.trim();
+      if (!reason) { actionStatus.textContent = 'Enter a decision reason.'; reasonInput.focus(); return; }
+      const snapshot = reviewRecovery;
+      if (!await window.aiwConfirm('Review the current implementation again with the accepted upstream outputs? Prior attempts remain. Coding is not rerun.')) return;
+      try {
+        await api(`/plans/${encodeURIComponent(id)}/resume-review`, {
+          planVersion: snapshot.planVersion, taskId: snapshot.taskId, taskVersion: snapshot.taskVersion, reason, warningConfirmed: true,
+        });
+        actionStatus.textContent = 'New independent review queued. Prior attempts remain unchanged.';
+        await load();
+      } catch (error) { actionStatus.textContent = `Review recovery failed: ${error.message}`; }
+    });
     const refresh = () => {
       const selection = window.getSelection();
-      const paused = document.hidden || pendingWrites > 0 || document.querySelector('dialog[open]')
+      const paused = document.hidden || pendingWrites > 0 || detail.dataset.windowDragging === 'true' || document.querySelector('dialog[open]')
+        || document.querySelector('[data-plan-window]:not([hidden]) details[open]')
         || detail.contains(document.activeElement) && document.activeElement?.matches('input, textarea, select')
         || selection && !selection.isCollapsed;
       if (paused) {
@@ -527,9 +734,17 @@
       }
       void load();
     };
-    const timer = setInterval(refresh, 5000);
+    let timer = null;
+    const startRefresh = () => { if (timer === null) timer = setInterval(refresh, 5000); };
+    startRefresh();
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
-    window.addEventListener('pagehide', () => clearInterval(timer), { once: true });
+    window.addEventListener('pagehide', () => {
+      clearInterval(timer); timer = null;
+      request?.abort();
+    });
+    window.addEventListener('pageshow', event => {
+      if (event.persisted) { startRefresh(); refresh(); }
+    });
     load();
   }
 })();

@@ -49,9 +49,11 @@ Control Plane 不会在一个 Handler 里“调用下一个 Agent”。上游完
 
 管理 Pull claim、Lease Token、ExecutionAttempt、start/heartbeat/complete/fail、lease expiry recovery、result handoff、completion handler dispatch。
 
-### `autonomous`
+### `workflow`
 
-管理自然语言 Requirement 到 Architecture/Planning/Implementation 的自动展开、并行 WorkItem、Integration、Run 生命周期、Pause/Resume/Cancel/Recover、Run concurrency budget、Timeline/Dashboard。
+管理 Flexible Workflow Plan 的 draft/version/confirmation、有序步骤及任务/依赖生成、jump/stop 与人工 complete/cancel 控制、任务执行和替换协调。
+
+当前 Schema 不再持久化单独的固定 `autonomous_run` aggregate。V1 中历史 `autonomous_run` DDL 会在基线结束前删除。
 
 ### `development`
 
@@ -72,8 +74,11 @@ Control Plane 不会在一个 Handler 里“调用下一个 Agent”。上游完
 | Task 状态和依赖 | Java Control Plane + DB |
 | Task ownership | `READY -> CLAIMED` 原子更新 + Lease Token |
 | Worker capacity | worker row + transaction |
-| Run 生命周期 | `autonomous_run` |
-| Operator Pause/Cancel | `autonomous_run.control_state` |
+| Plan 规格和生命周期 | `flexible_workflow_plan` |
+| Plan 步骤和执行 ownership | `work_task` + `work_task_dependency` |
+| Plan 控制/人工结果 | `flexible_workflow_control` + `flexible_workflow_human_outcome` |
+| 来源问题的已确认答复 | `workflow_question_decision`（绑定来源文件/哈希及计划版本） |
+| 单轮修复授权 | `workflow_repair_authorization`（人工确定范围，可委托独立 Worker 决策） |
 | 代码结果 | Git `resultRevision` |
 | Review/Verification | ExecutionAttempt Completion Report |
 | Engineering acceptance | Engineering Gate |
@@ -110,21 +115,9 @@ Run 使用持久化 `active_slots` 作为 semaphore；Fleet 不保存第二套 a
 
 ## 6. 数据库
 
-当前 9 张表、Flyway V1～V14：
+当前为 28 张应用表，Flyway V1～V5。V1 是全新数据库基线，文件中包含历史 DDL，并在完成前删除退役的固定 Run 表。V4 新增清理后保留的单轮修复授权；V5 新增追加保存、随计划删除的已确认问题答复。字段、约束和数据流见[数据库字典](08-DATA-MODEL-AND-MIGRATIONS.md)。
 
-```text
-worker
-work_task
-work_task_dependency
-execution_attempt
-approval_request
-autonomous_run
-autonomous_run_event
-fleet_admission_budget
-fleet_admission_budget_event
-```
-
-详见 [数据模型与迁移](08-DATA-MODEL-AND-MIGRATIONS.md)。
+完整表/字段字典、表关系、迁移基线和数据流转见[数据模型与迁移](08-DATA-MODEL-AND-MIGRATIONS.md)。
 
 ## 7. Local 与 Shared 模式
 

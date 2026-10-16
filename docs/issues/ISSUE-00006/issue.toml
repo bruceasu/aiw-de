@@ -1,0 +1,32 @@
+id = "ISSUE-00006"
+title = "有限授权的代理决策 Worker：可编辑授权、人工启停、授权查看与模板复用"
+parent_id = ""
+status = "DECIDED"
+created = "2026-10-16"
+updated = "2026-10-16"
+revision = 2
+
+[approval]
+status = "PENDING"
+by = ""
+at = ""
+reason = ""
+source_digest = ""
+
+[promotion]
+status = "NOT_STARTED"
+task_id = ""
+
+[conversation]
+session_id = ""
+
+[terminal]
+by = ""
+at = ""
+reason = ""
+
+[artifact]
+requirement-plan = "docs/issues/ISSUE-00006/issue-plan.md"
+
+[digest]
+requirement-plan = "7bc6a790a807ae43dfefca53a59ab5f58d0ce8fa6dabe5276c8015bd68a89599"

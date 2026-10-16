@@ -6,7 +6,7 @@ import type { AgentRuntime, AgentRunRequest } from "./agent-runtime.js";
 import { completed } from "./agent-runtime.js";
 import { ApiRuntime, type ApiRuntimeConfig } from "./api-runtime.js";
 import { buildPrompt, completionReport, resolveTaskProfile } from "./instructions.js";
-import { chooseAiProfile } from "./ai-profiles.js";
+import { chooseStepAiProfile, withAiPreferences } from "./ai-profiles.js";
 import { RuntimeFault, positiveSetting, sha256 } from "./runtime-core.js";
 
 class AgentsRuntime implements AgentRuntime {
@@ -77,13 +77,13 @@ export async function createApiBackend(cfg: WorkerConfig): Promise<WorkerBackend
       let frozenProfile: ReturnType<typeof resolveTaskProfile>;
       return {
         runtime: engine.type, versions,
-        select: task => task.aiGuidance ? chooseAiProfile(task.aiGuidance, "openai-agents") : null,
+        select: task => task.aiGuidance ? chooseStepAiProfile(task.aiGuidance, "openai-agents", task.aiPreferences) : null,
         profile: task => (frozenProfile = resolveTaskProfile(task, cfg.role)),
         prompt: (task, context) => buildPrompt(task, cfg.role, cfg.skillsRoot, context, frozenProfile),
-        execute: async execution => (await engine.run({ execution, emit: event => {
+        execute: async execution => (await withAiPreferences(execution, "openai-agents", { model: settings.model, effort: settings.reasoningEffort }, selected => engine.run({ execution: selected, emit: event => {
           if (event.type === "session-started") execution.onSession(event.sessionId);
           else console.log(`slot ${slot}: task=${task.taskId} ${event.name}`);
-        } })).output,
+        } }))).output,
         report: completionReport, digest: sha256,
         settled: timeoutMs => engine.settled(timeoutMs),
         assertSuccessful: () => engine.assertSuccessful(),

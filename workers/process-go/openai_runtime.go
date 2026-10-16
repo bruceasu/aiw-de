@@ -69,7 +69,7 @@ func (r *OpenAIAgentRuntime) Run(ctx context.Context, request AgentRunRequest) (
 			"parallel_tool_calls":false, "store":false, "max_output_tokens":4096}
 		if supportsReasoning(model) && effort != "" && effort != "none" { body["reasoning"] = map[string]any{"effort":effort} }
 		response, err := r.createResponse(ctx, body)
-		if err != nil { return result, err }
+		if err != nil { if turn == 0 && aiPreferencesRejected(err) { return result, errAIPreferencesRejected }; return result, err }
 		if response.Status != "completed" { return result, errors.New("OPENAI_RESPONSE_NOT_COMPLETED") }
 		result.InputTokens += response.Usage.InputTokens
 		result.OutputTokens += response.Usage.OutputTokens

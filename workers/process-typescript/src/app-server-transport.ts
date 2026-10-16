@@ -1,4 +1,5 @@
 import { CodexProcess, CODEX_EXECUTION_ARGS, type CodexSettings } from "./codex-process.js";
+import { isAiPreferenceRejection } from "./ai-profiles.js";
 import { RuntimeFault } from "./runtime-core.js";
 
 export class ThreadEvents {
@@ -41,7 +42,7 @@ export class AppServerTransport {
         const pending = this.pending.get(message.id);
         if (!pending) return;
         this.pending.delete(message.id);
-        if (message.error) pending.reject(new RuntimeFault("CODEX_RPC_REJECTED", "MODEL_ERROR"));
+        if (message.error) pending.reject(new RuntimeFault(isAiPreferenceRejection(message.error) ? "AI_PREFERENCES_REJECTED" : "CODEX_RPC_REJECTED", "MODEL_ERROR"));
         else pending.resolve(message.result);
       } else if (message.id !== undefined && message.method) {
         if (["item/commandExecution/requestApproval", "item/fileChange/requestApproval"].includes(message.method)) {

@@ -9,11 +9,13 @@ import me.asu.aidev.execution.domain.LeaseToken;
 import me.asu.aidev.execution.domain.WorkspaceAssignment;
 import me.asu.aidev.execution.port.ExecutionAttemptRepository;
 import me.asu.aidev.execution.port.TaskClaimPolicy;
+import me.asu.aidev.execution.port.WorkerTaskClaimPolicy;
 import me.asu.aidev.execution.port.TaskConcurrencyBudget;
 import me.asu.aidev.execution.scheduling.PullSchedulingPolicy;
 import me.asu.aidev.work.port.TaskDependencyRepository;
 import me.asu.aidev.work.port.WorkTaskRepository;
 import me.asu.aidev.worker.domain.WorkerId;
+import me.asu.aidev.worker.domain.WorkerLiveness;
 import me.asu.aidev.worker.port.WorkerRepository;
 import java.time.Clock;
 import java.time.Duration;
@@ -28,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TaskClaimService {
     private static final Duration SPECIALIST_WINDOW = Duration.ofSeconds(30);
-    private static final Duration WORKER_FRESHNESS = Duration.ofSeconds(90);
     private final WorkTaskRepository tasks;
     private final WorkerRepository workers;
     private final ExecutionAttemptRepository attempts;
@@ -99,7 +100,7 @@ public class TaskClaimService {
         var preferred = planPreferences == null ? java.util.Map.<me.asu.aidev.work.domain.TaskId, java.util.Set<String>>of()
                 : planPreferences.preferences();
         var available = preferred.isEmpty() ? List.<me.asu.aidev.worker.domain.Worker>of()
-                : workers.findAvailable(now.minus(WORKER_FRESHNESS));
+                : workers.findAvailable(now.minus(WorkerLiveness.HEARTBEAT_WINDOW));
         var rankedCandidates = PullSchedulingPolicy.rank(
                 tasks.findReadySchedulingCandidates().stream()
                         .filter(candidate -> worker.supports(candidate.task().requiredCapabilities()))
@@ -122,7 +123,9 @@ public class TaskClaimService {
             if (!aiProfiles.canRun(candidate.type(), worker.runtimeType())) continue;
             boolean allowed = true;
             for (TaskClaimPolicy policy : claimPolicies) {
-                if (!policy.canClaim(candidate)) { allowed = false; break; }
+                boolean accepted = policy instanceof WorkerTaskClaimPolicy workerPolicy
+                        ? workerPolicy.canClaim(candidate, worker) : policy.canClaim(candidate);
+                if (!accepted) { allowed = false; break; }
             }
             if (!allowed) continue;
 

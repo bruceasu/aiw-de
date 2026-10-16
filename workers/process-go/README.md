@@ -1,5 +1,7 @@
 # AI Worker Process Workers (Go)
 
+环境变量的设置方式、默认值和运行时差异见 [Worker 环境变量](../ENVIRONMENT.md)。
+
 ## FD-016 profile transition
 
 Bundled profiles accept only `EXTERNAL_WORK` and require nine fields including `resultKind`: `REPORT`, `VERDICT`, or `WORKSPACE`. Old task types and eight-field profiles are rejected. The launch role fixes the capability, exact `skillRef` and result kind; verifier never switches to integration-verifier. Release-readiness and orchestrator remain non-executable advisory profiles. See the [shared contract](../WORKER_RUNTIME_CONTRACT.md). This is local delivery; runtime checks, model calls and production no-store certification are separate evidence.
@@ -78,9 +80,9 @@ openai-api  OpenAI Responses API; requires OPENAI_API_KEY and provides bounded w
 All runtimes use the same role profile and Worker lifecycle. AI guidance must contain an approved profile whose `provider` is `openai` and whose `runtime` matches the selected runtime family. `codex-app-server` uses the approved Codex CLI profile; `openai-api` skips fast-tier profiles because the Go API adapter does not implement the Codex service-tier setting.
 
 See [CODEX-RUNTIME.md](CODEX-RUNTIME.md) for the source-level runtime baseline,
-cross-mode contract, pinned App Server protocol and capability matrix. The
-App Server runtime accepts Codex CLI `0.162.1`; other versions fail before
-Worker registration. Deployments install and upgrade the CLI themselves.
+cross-mode contract, App Server protocol baseline and capability matrix. The
+App Server runtime records the installed CLI version without restricting it.
+Actual command and handshake failures prevent registration. Deployments install and upgrade the CLI themselves.
 
 ## Required runtime
 
@@ -135,7 +137,7 @@ AIW_CODEX_APPROVAL_POLICY      default never
 AIW_CODEX_NETWORK_ACCESS       false only; Codex workspace network access is forbidden
 AIW_CODEX_SANDBOX              read-only roles force read-only; writable roles default workspace-write
 AIW_AGENT_RUNTIME              required: codex-cli, codex-app-server, or openai-api
-AIW_CODEX_APP_SERVER_VERSION   default 0.162.1; App Server requires this exact supported version
+AIW_CODEX_APP_SERVER_VERSION   deprecated compatibility setting; ignored, no version restriction
 AIW_CODEX_AUTH_MODE            default inherit; explicit api-key or chatgpt for Codex runtimes
 AIW_CODEX_AUTH_HOME            absolute prepared CODEX_HOME required for explicit authentication
 AIW_OPENAI_MODEL               OpenAI API default gpt-4.1

@@ -16,6 +16,7 @@ from typing import Any
 os.environ.setdefault("OPENAI_AGENTS_DONT_LOG_MODEL_DATA", "1")
 os.environ.setdefault("OPENAI_AGENTS_DONT_LOG_TOOL_DATA", "1")
 from agents import RunContextWrapper, function_tool
+from ai_preferences import preference_rejected
 from agent_runtime import AgentRunRequest
 from agents.models.interface import Model
 
@@ -42,6 +43,7 @@ class ToolContext:
     request: AgentRunRequest
     max_output_bytes: int
     tool_timeout_ms: int
+    work_started: bool = False
     failures: dict[str, str] = field(default_factory=dict)
     lock: threading.RLock = field(default_factory=threading.RLock)
 
@@ -88,6 +90,11 @@ class OpenAIApiRuntime:
         except asyncio.CancelledError as error:
             request.attempt.check()
             raise RuntimeError("ATTEMPT_CANCELLED") from error
+        except Exception as error:
+            request.attempt.check()
+            if not context.work_started and preference_rejected(error):
+                raise RuntimeError("AI_PREFERENCES_REJECTED") from None
+            raise
 
     async def _run(self, request: AgentRunRequest, context: ToolContext, on_session: Any) -> str:
         from agents import Agent, ModelSettings, OpenAIProvider, RunConfig, Runner, set_tracing_disabled
@@ -138,6 +145,7 @@ class OpenAIApiRuntime:
             if request.attempt.cancelled.is_set():
                 result.cancel(mode="immediate")
             async for event in result.stream_events():
+                if event.type == "run_item_stream_event": context.work_started = True
                 if request.attempt.cancelled.is_set():
                     result.cancel(mode="immediate")
                 if getattr(event, "type", "") == "run_item_stream_event":
@@ -322,6 +330,7 @@ def _create_tools(context: ToolContext) -> list[Any]:
 
 
 async def _invoke_tool(context: ToolContext, name: str, path: str, args: dict[str, Any], call_id: str | None, operation: Any) -> str:
+    context.work_started = True
     attempt = context.request.attempt
     key = f"{name}:{path}"
     call_id = call_id or hashlib.sha256(f"{time.monotonic_ns()}:{name}:{path}".encode()).hexdigest()[:32]

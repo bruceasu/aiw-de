@@ -4,6 +4,7 @@ import { z } from "zod";
 import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import type { ProcessProfile } from "./profiles.js";
+import { isAiPreferenceRejection } from "./ai-profiles.js";
 import type { AiProfile } from "./ai-profiles.js";
 import { createWorkspaceTools } from "./tools.js";
 import { createAiwTools } from "./aiw-tools.js";
@@ -67,16 +68,22 @@ export class ApiRuntime {
     const runner = new Runner({ tracingDisabled: true, modelProvider: {
       getModel: async name => guardedModel(await this.provider.getModel(name), { recorder, signal, history: this.history, maxInputBytes: this.cfg.maxInputBytes }),
     } });
-    const result = await runner.run(agent, "Execute the assigned task and return its final report.", { signal, maxTurns: this.cfg.maxTurns, stream: true });
-    for await (const event of result) {
+    let workStarted = false;
+    try {
+      const result = await runner.run(agent, "Execute the assigned task and return its final report.", { signal, maxTurns: this.cfg.maxTurns, stream: true });
+      for await (const event of result) {
+        signal.throwIfAborted();
+        if (event.type === "run_item_stream_event") { workStarted = true; input.onEvent(`event=${event.name}`); }
+      }
+      await result.completed;
       signal.throwIfAborted();
-      if (event.type === "run_item_stream_event") input.onEvent(`event=${event.name}`);
+      if (typeof result.finalOutput !== "string" || !result.finalOutput.trim()) throw new InvalidAgentOutput("Agent must return a non-empty text report");
+      if (Buffer.byteLength(result.finalOutput, "utf8") > this.cfg.maxOutputChars) throw new InvalidAgentOutput("Agent output exceeds configured budget");
+      return result.finalOutput;
+    } catch (error) {
+      if (!workStarted && !this.host?.hasStartedTools && isAiPreferenceRejection(error)) throw new RuntimeFault("AI_PREFERENCES_REJECTED", "MODEL_ERROR");
+      throw error;
     }
-    await result.completed;
-    signal.throwIfAborted();
-    if (typeof result.finalOutput !== "string" || !result.finalOutput.trim()) throw new InvalidAgentOutput("Agent must return a non-empty text report");
-    if (Buffer.byteLength(result.finalOutput, "utf8") > this.cfg.maxOutputChars) throw new InvalidAgentOutput("Agent output exceeds configured budget");
-    return result.finalOutput;
   }
   async settled(timeoutMs?: number): Promise<boolean> { return this.host ? await this.host.settled(timeoutMs) : true; }
   assertSuccessful(): void { this.host?.assertSuccessful(); }

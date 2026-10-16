@@ -60,11 +60,12 @@ evidence does not establish behavior. It is not equivalent to unsupported.
 | Usage | Unknown in `CodexAgentRuntime` result | Supported when the response includes usage; otherwise marked unknown | Unknown in this adapter; result marks usage unknown |
 | Approval | Unknown to this Go adapter beyond configured CLI policy | Not a Codex App Server capability | Approval policy is passed to the thread; approval interaction is unsupported by this adapter and is not a cross-mode guarantee |
 
-## Pinned App Server protocol
+## App Server protocol baseline
 
-The implementation is pinned to OpenAI Codex CLI `0.162.1`, official tag
-`rust-v0.162.1`, and that tag's App Server v2 JSON schema. At process startup
-the Worker checks the CLI version, starts one `codex app-server --listen
+The implementation was developed against OpenAI Codex CLI `0.162.1`, official tag
+`rust-v0.162.1`, and that tag's App Server v2 JSON schema. This is a reference
+baseline, not a version restriction. At process startup the Worker records the
+installed CLI version, starts one `codex app-server --listen
 stdio://` child, completes `initialize`/`initialized`, and only then registers
 with the Control Plane. Every attempt starts a separate `ephemeral` thread in
 its assigned workspace and sends one `turn/start` request. The runtime reads
@@ -80,7 +81,7 @@ forcing the managed process tree down.
 
 Primary sources, checked 2026-10-13:
 
-- [Latest stable Codex CLI release](https://github.com/openai/codex/releases/tag/rust-v0.162.1).
+- [Development baseline Codex CLI release](https://github.com/openai/codex/releases/tag/rust-v0.162.1).
 - [ThreadStartParams v2](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/ThreadStartParams.json) (`ephemeral`).
 - [TurnStartParams v2](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/TurnStartParams.json) (`threadId`, `input`, `effort`, `serviceTierForTurn`).
 - [TurnInterruptParams v2](https://github.com/openai/codex/blob/rust-v0.162.1/codex-rs/app-server-protocol/schema/json/v2/TurnInterruptParams.json) (`threadId`, `turnId`).
@@ -101,20 +102,20 @@ does not certify production readiness.
 
 | CLI version | App Server runtime | Policy |
 |---|---|---|
-| `0.162.1` (`rust-v0.162.1`) | Supported by this implementation | Exact version check and v2 handshake must succeed before Worker registration. |
-| Any other version | Unsupported by this implementation | Startup fails; no silent Exec fallback. |
+| Installed CLI, any version | Compatibility checked by actual commands and the v2 handshake | Version changes alone do not fail startup. Actual protocol or permission incompatibility fails without silent Exec fallback. |
 
 The deployment owner installs, authenticates, upgrades, and rolls back Codex
 CLI. The Worker does not download or replace it. To roll back the App Server
 mode, explicitly change `AIW_AGENT_RUNTIME` to the existing `codex-cli` mode
-and restart the Worker. Returning to another App Server version requires a
-separately reviewed protocol pin and compatibility check. No operational-cost
+and restart the Worker. Changing the installed CLI version does not require a
+Worker version pin. Protocol incompatibilities may require adapter changes and
+focused compatibility checks. No operational-cost
 reduction is claimed because no comparative measurements were collected.
 
 For Java, Python, and TypeScript follow-up, reuse the attempt-scoped request,
 session correlation, terminal-result, cancellation, and capability semantics.
-Keep process ownership and workspace isolation language-specific, pin each
-CLI/protocol version, and do not infer approval, resume, usage, or persistence
+Keep process ownership and workspace isolation language-specific, record the
+installed CLI version, validate actual protocol behavior, and do not infer approval, resume, usage, or persistence
 behavior across adapters. This is a migration recommendation only; those
 workers are not implemented by this FD.
 

@@ -20,7 +20,7 @@ skillRef 必须精确匹配启动角色的 primarySkill；技能在模型与工�
 
 REPORT 返回非空 PASS summary；VERDICT 返回非空报告且末行 AIW_VERDICT: PASS/REPAIR_REQUIRED；WORKSPACE 返回有效 resultRevision、changedFiles、适用 publicationRef 和非空 PASS summary。写角色必须有固定 Git baseRevision；审查与输入结果 revision 一致，不自行选择新 HEAD。只读角色不 stage/commit/push。
 
-TypeScript 明确选择 codex-cli、codex-app-server 或 openai-agents；两 Codex 模式使用系统 CLI 0.162.1，无 SDK/CLI/平台包依赖，无下载或自动回退。Exec 为独立 attempt 进程；App Server 是受管 stdio 服务，每 slot 独立 thread/turn。Go 保留原三 Runtime，Python 保留原 SDK/API Runtime，本 FD 仅统一其任务契约。
+TypeScript 明确选择 codex-cli、codex-app-server 或 openai-agents；两 Codex 模式使用系统已安装 CLI，不限制精确版本，无 SDK/CLI/平台包依赖，无下载或自动回退。Exec 为独立 attempt 进程；App Server 是受管 stdio 服务，每 slot 独立 thread/turn。Go 保留原三 Runtime，Python 保留原 SDK/API Runtime，本 FD 仅统一其任务契约。
 
 操作授权与资源协调分别处理。只读 API 无写入/host shell；Codex 内部 shell 受原生 sandbox 和主机政策约束。任务、Skill、报告不能提升 shell、网络、测试、发布权限。计划须经理确认；preferredSkills 仅排序；报告不形成第二工作流或自动修复。
 
@@ -71,8 +71,8 @@ G2：必存执行元数据，访问沿用主机文件权限。新增 attempt 日
 | 运行时 | 当前源码与基线 | 验证边界 |
 |---|---|---|
 | API TypeScript | Agents 0.20.0 / OpenAI 7.32.0 / Zod 4.6.7；完整终态保护、公共工具与九角色适配；parallelToolCalls=true | 独立离线验收进行中，真实部署端点未运行 |
-| Codex TypeScript | 系统 CLI 0.162.1；Exec/App Server 直接 stdio 接入，共享任务/结果生命周期 | 内部工具细节明确 unknown；本地交付；生产禁存认证归 FD-015 |
-| Go | `AgentRuntime` SPI 显式选择 `codex-cli`、`codex-app-server` 或 `openai-api`；App Server 固定 CLI `0.162.1`，共享期限、证据、workspace 与 Git 生命周期 | App Server lifecycle、隔离、取消及关闭尚未运行验证；OpenAI tool loop 与各 API/CLI 部署行为也需运行验证 |
+| Codex TypeScript | 系统已安装 CLI；记录实际版本，不设版本锁；Exec/App Server 直接 stdio 接入，共享任务/结果生命周期 | 内部工具细节明确 unknown；本地交付；生产禁存认证归 FD-015 |
+| Go | `AgentRuntime` SPI 显式选择 `codex-cli`、`codex-app-server` 或 `openai-api`；App Server 记录实际 CLI 版本，以真实握手和协议校验判断兼容性，共享期限、证据、workspace 与 Git 生命周期 | App Server lifecycle、隔离、取消及关闭尚未运行验证；OpenAI tool loop 与各 API/CLI 部署行为也需运行验证 |
 | Python | SDK 0.157.0 wheel 静态核对；公开 launch_args_override 与 ephemeral/read 回执入口已接入 | 未安装或启动真实 SDK；禁存平台能力未知时拒绝准入 |
 
 这个基线不是端点支持声明。不可观察的能力明确记录 unknown/unsupported，不静默将并行要求改为全局串行。
@@ -88,3 +88,13 @@ G2：必存执行元数据，访问沿用主机文件权限。新增 attempt 日
 静态读取了 API Worker 的 Profile、工具、上下文与生命周期，已安装 SDK 源码、Codex SDK 声明和 TaskExecutionService。首轮源码的一次编译检查通过；首轮独立离线测试 138 个用例执行，78 通过、60 失败。第二轮 261 个用例执行，256 个原始 pass-case、5 个失败；完整场景通过 255/285=89.47%，全 FD 分支尚未测量，两轮均已被 PM 退回。后续源码修复尚待新的独立授权验证，历史编译结果不代表新源码通过。以上样例仍是验收输入，完整 FD 尚未验收，真实端点或模型未调用。SDK 细节见 [SDK 能力基线](SDK_CAPABILITIES.md)，当前证据以 FD 报告与角色交接收据为准。
 
 FD-016 本地平台限制：TypeScript Codex 原生 Windows 进程树能力未核定，启动前拒绝 CODEX_WINDOWS_PROCESS_TREE_UNVERIFIED；系统路径解析保留，Unix/WSL 与 Agents API 按各自准入。App Server 确认终态后调用 thread/unsubscribe 并验证释放回执；未知释放保留工作区，不用删除本地 inbox 冒充服务端清理。
+
+## Optional Step AI preferences
+
+Claim responses may include `aiPreferences: { model: string | null, effort: string | null }`.
+These are preferences from the confirmed Plan Step, shared by its execution and review tasks.
+Missing or invalid values keep Worker settings. An approved Control Plane profile policy still applies.
+A Worker may retry once with its own settings after a clear model/effort rejection before any tool has run.
+Do not repeat task side effects, retry ordinary code failures, or loop after the fallback fails.
+Record effective settings and fallback reasons in local attempt evidence. Older Workers may ignore this optional field.
+See [Worker environment variables](ENVIRONMENT.md) for configuration and runtime-specific limits.

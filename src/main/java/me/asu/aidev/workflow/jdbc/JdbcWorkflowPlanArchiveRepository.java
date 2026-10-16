@@ -88,6 +88,7 @@ public class JdbcWorkflowPlanArchiveRepository {
         jdbc.update("DELETE FROM web_console_plan_archive WHERE plan_id=?", id);
         jdbc.update("DELETE FROM flexible_workflow_skipped_step WHERE plan_id=?", id);
         jdbc.update("DELETE FROM flexible_workflow_control WHERE plan_id=?", id);
+        jdbc.update("DELETE FROM workflow_question_decision WHERE plan_id=?", id);
         jdbc.update("DELETE FROM flexible_workflow_human_outcome WHERE plan_id=?", id);
         jdbc.update("DELETE FROM approval_request WHERE source_task_id IN (" + TASKS + ")", id);
         jdbc.update("DELETE FROM knowledge_document WHERE id IN (" + TASKS + ")", id);

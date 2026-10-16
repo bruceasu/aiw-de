@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 if [ "$#" -ne 2 ]; then
-  echo "usage: $0 <requirements|architect|planner|coder|integrator|reviewer|stage-reviewer|verifier|integration-verifier|repairer> <codex-cli|codex-app-server|openai-agents>" >&2
+  echo "usage: $0 <requirements|architect|planner|coder|integrator|reviewer|stage-reviewer|recovery-decider|verifier|integration-verifier|repairer> <codex-cli|codex-app-server|openai-agents>" >&2
   exit 2
 fi
 ROLE="$1"

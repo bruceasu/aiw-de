@@ -1,5 +1,16 @@
 # Worker 能力与分配
 
+`recovery-decider` 是独立的恢复决策角色，自动声明 `workflow-recovery-decision` 和
+`task-outputs-v1`，使用 `workflow-recovery-decider` Skill。TypeScript 启动器提供该角色；
+它只能处理管理者指定给自己的单次授权，不是计划中的编码或评审步骤，也不拥有新的授权签发权。
+角色使用只读 profile；PASS 仅表示使用现有人类授权，不代表代码验收通过。
+
+Fleet、Worker 页面和计划编辑器使用 90 秒心跳窗口，与调度的候选 Worker 新鲜度窗口一致。
+超过 90 秒无心跳的 ACTIVE 或 DRAINING Worker 在快照中显示 OFFLINE，不计入可领取容量或
+能力匹配；刷新快照后生效。历史注册信息及已有任务租约保留，租约仍由原恢复机制处理。
+超时判定不修改管理员设置的状态：新心跳到达后恢复原 ACTIVE/DRAINING 显示，手动设为
+OFFLINE 的 Worker 不会仅因心跳而恢复 ACTIVE，需重新注册。
+
 TypeScript Worker 自动声明 `task-outputs-v1`，表示实现附件登记、带租约的固定版本读取和
 正式文档入库校验。正式文档入库计划要求此能力，其 stage-reviewer 也必须具备它。
 这不是语言专长；未实现协议的 Worker 不应声明它。已有任务的技术必需能力匹配保持不变。

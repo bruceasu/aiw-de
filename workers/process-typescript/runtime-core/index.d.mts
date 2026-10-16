@@ -50,6 +50,7 @@ export interface ToolDefinition {
   run: (args: any, context: { file?: string; signal: AbortSignal; callId: string; host: ToolHost }) => Promise<string | { content: string; complete?: boolean; status?: string; mode?: string; data?: unknown }>;
 }
 export class ToolHost {
+  readonly hasStartedTools: boolean;
   constructor(config: { cwd: string; readOnly: boolean; allowShell: boolean; signal: AbortSignal; recorder: EvidenceRecorder; coordinator: ResourceCoordinator; abort?: (reason: string) => void; maxOutputBytes?: number; toolTimeoutMs?: number });
   execute(definition: ToolDefinition, args: unknown, details?: { callId?: string; parentCallId?: string }): Promise<string>;
   settled(timeoutMs?: number): Promise<boolean>;

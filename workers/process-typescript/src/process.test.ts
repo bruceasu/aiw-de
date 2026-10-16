@@ -9,7 +9,22 @@ import { ToolFailureTracker } from "./failure-diagnostics.js";
 import { ToolHost, RuntimeFault } from "./runtime-core.js";
 import { AttemptRunner } from "../runtime-core/index.mjs";
 import type { EvidenceRecorder } from "../runtime-core/index.mjs";
-import { matchesCodexSandbox } from "./app-server-adapter.js";
+import { matchesCodexSandbox, matchesCodexThreadPolicy } from "./app-server-adapter.js";
+import { parseCodexVersion } from "./codex-process.js";
+
+test("Codex version changes do not override actual thread policy checks", () => {
+  const settings = { sandbox: "danger-full-access" as const, network: true };
+  for (const version of ["0.162.1", "0.163.0", "1.0.0", "2.0.0-beta.1", undefined]) {
+    const response = { thread: { cliVersion: version }, cwd: "/workspace", approvalPolicy: "never", sandbox: { type: "dangerFullAccess" } };
+    assert.equal(matchesCodexThreadPolicy(response, "/workspace", settings), true);
+    assert.equal(matchesCodexThreadPolicy({ ...response, cwd: "/other" }, "/workspace", settings), false);
+    assert.equal(matchesCodexThreadPolicy({ ...response, approvalPolicy: "on-request" }, "/workspace", settings), false);
+    assert.equal(matchesCodexThreadPolicy({ ...response, sandbox: { type: "workspaceWrite" } }, "/workspace", settings), false);
+  }
+  assert.equal(parseCodexVersion("codex-cli 0.163.0\n"), "0.163.0");
+  assert.equal(parseCodexVersion("codex-cli 2.0.0-beta.1\n"), "2.0.0-beta.1");
+  assert.equal(parseCodexVersion("new version output format\n"), "unknown");
+});
 
 test("App Server direct host access accepts its response without a networkAccess field", () => {
   const settings = { sandbox: "danger-full-access" as const, network: true };
@@ -134,4 +149,35 @@ test("completion reports require evidence and a final review verdict", () => {
   });
   assert.throws(() => completionReport("VERDICT", "AIW_VERDICT: PASS\nextra text"), /COMPLETION_VERDICT_INVALID/);
   assert.deepEqual(completionReport("WORKSPACE", "done"), { verdict: "PASS", summary: "done" });
+});
+
+test("document-only task output preserves the actual report and file declarations", () => {
+  const content = "# Requirements\n\nWith a name, print a personal greeting. Otherwise print the default greeting.";
+  const files = [{ path: "requirements.md", kind: "DOCUMENT", content }];
+  const response = `\`\`\`aiw-output-files\n${JSON.stringify(files)}\n\`\`\``;
+  for (const kind of ["REPORT", "WORKSPACE"]) {
+    assert.deepEqual(completionReport(kind, response, true), { verdict: "PASS", summary: content, outputFiles: files });
+  }
+  assert.deepEqual(completionReport("REPORT", `Explicit report\n${response}`, true), {
+    verdict: "PASS", summary: "Explicit report", outputFiles: files,
+  });
+  assert.deepEqual(completionReport("REPORT", response), { verdict: "PASS", summary: response });
+  assert.throws(() => completionReport("VERDICT", response, true), /COMPLETION_REPORT_EMPTY/);
+  assert.deepEqual(completionReport("VERDICT", `${response}\nReviewed the document.\nAIW_VERDICT: PASS`, true), {
+    verdict: "PASS", summary: "Reviewed the document.\nAIW_VERDICT: PASS", outputFiles: files,
+  });
+});
+
+test("file-only reports distinguish declarations from reviewed content and reject empty delivery", () => {
+  const block = (files: unknown) => `\`\`\`aiw-output-files\n${JSON.stringify(files)}\n\`\`\``;
+  const files = [{ path: "evidence.json", kind: "ATTACHMENT", sourcePath: "evidence/result.json" }];
+  assert.deepEqual(completionReport("REPORT", block(files), true), {
+    verdict: "PASS", summary: "Declared task output files:\n- evidence.json", outputFiles: files,
+  });
+  for (const empty of [[], [null], [{}], [{ path: "empty.md", kind: "DOCUMENT", content: "  " }],
+    [{ path: "missing.md", kind: "DOCUMENT" }], [{ path: "both.md", kind: "DOCUMENT", content: "text", sourcePath: "file.md" }]]) {
+    assert.throws(() => completionReport("REPORT", block(empty), true), /COMPLETION_REPORT_EMPTY/);
+  }
+  assert.throws(() => completionReport("REPORT", "```aiw-output-files\ninvalid JSON\n```", true), /OUTPUT_FILE_DECLARATIONS_INVALID/);
+  assert.throws(() => completionReport("REPORT", `${block(files)}\n${block(files)}`, true), /OUTPUT_FILE_DECLARATIONS_INVALID/);
 });
