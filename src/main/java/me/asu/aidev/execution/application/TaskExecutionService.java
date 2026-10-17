@@ -46,6 +46,9 @@ public class TaskExecutionService {
     private final Duration leaseDuration;
     private TaskWorkspaceReplacementService workspaceReplacements;
     private WorkflowPlanService workflowPlans;
+    private me.asu.aidev.workflow.application.RecommendationTaskPolicy recommendationPolicy;
+    @Autowired
+    public void setRecommendationPolicy(me.asu.aidev.workflow.application.RecommendationTaskPolicy policy) { this.recommendationPolicy = policy; }
 
     @Autowired
     public void setWorkflowPlans(WorkflowPlanService workflowPlans) {
@@ -112,7 +115,12 @@ public class TaskExecutionService {
         if (task.state() == TaskState.CLAIMED && attempts.stopRequested(leaseToken, workerId)) {
             throw new IllegalStateException("Worker stop requested before task start; acknowledge stop instead");
         }
-        if (aiProfiles.hasPolicy(task.type())) {
+        if (recommendationPolicy != null && recommendationPolicy.managed(task)) {
+            var worker = workers.find(workerId).orElseThrow(() -> new IllegalStateException("worker not found"));
+            AiSelection selection = recommendationPolicy.select(task, worker.runtimeType(), profileId, profileVersion, selectionReason);
+            if (selection != null && !attempts.attachAiSelection(leaseToken, workerId, selection))
+                throw new IllegalStateException("cannot attach frozen recommendation selection");
+        } else if (aiProfiles.hasPolicy(task.type())) {
             var worker = workers.find(workerId).orElseThrow(() -> new IllegalStateException("worker not found"));
             AiSelection selection = aiProfiles.select(task.type(), worker.runtimeType(),
                     profileId, profileVersion, selectionReason);
@@ -445,6 +453,12 @@ public class TaskExecutionService {
             }
             var recoveredTask = tasks.find(lease.taskId())
                     .orElseThrow(() -> new IllegalStateException("recovered task not found: " + lease.taskId().value()));
+            if ("workflow-recommendation".equals(recoveredTask.subjectType())) {
+                tasks.recordControlEvent(UUID.randomUUID().toString(), lease.taskId(),
+                        attempts.findAttemptId(lease.token()).map(id -> id.value()).orElse(null),
+                        "RECOMMENDATION_LEASE_EXPIRED", "system", "Analysis lease expired; manual retry required; the original model call may still incur cost",
+                        false, now);
+            }
             releaseConcurrency(recoveredTask, now);
             if (!workers.releaseCapacity(lease.workerId(), now)) {
                 throw new IllegalStateException("worker capacity accounting underflow: " + lease.workerId().value());

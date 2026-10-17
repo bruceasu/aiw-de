@@ -137,8 +137,9 @@ public class WorkflowEditorController {
     @ResponseBody
     public Catalog catalog() {
         requireEnabled();
-        return new Catalog(editor.roles(), editor.templates(), recommendations.available(),
-                fleet.dashboard(100).workers().workers());
+        var availability = recommendations.availability();
+        return new Catalog(editor.roles(), editor.templates(), availability.available(),
+                fleet.dashboard(100).workers().workers(), availability);
     }
 
     @GetMapping("/plan-editor/plans/{id}")
@@ -258,6 +259,42 @@ public class WorkflowEditorController {
         return recommendations.request(request, security.actor(session));
     }
 
+    @GetMapping("/plan-editor/recommendation-contexts")
+    @ResponseBody
+    public List<me.asu.aidev.workflow.jdbc.JdbcRecommendationRepository.Context> recommendationContexts(HttpSession session) {
+        requireWrite(session);
+        return recommendations.contexts(security.actor(session));
+    }
+    @GetMapping("/plan-editor/plans/{id}/recommendation-context")
+    @ResponseBody
+    public java.util.Map<String, String> recommendationContextForPlan(@PathVariable String id, HttpSession session) {
+        requireWrite(session);
+        String contextId = recommendations.contextForPlan(id, security.actor(session));
+        return contextId == null ? java.util.Map.of() : java.util.Map.of("id", contextId);
+    }
+
+    @PostMapping("/plan-editor/recommendation-contexts")
+    @ResponseBody
+    public me.asu.aidev.workflow.jdbc.JdbcRecommendationRepository.Context newRecommendationContext(HttpSession session) {
+        requireWrite(session);
+        return recommendations.createContext(security.actor(session));
+    }
+
+    @GetMapping("/plan-editor/recommendation-contexts/{id}")
+    @ResponseBody
+    public WorkflowRecommendationService.Recovery recoverRecommendation(@PathVariable String id, HttpSession session) {
+        requireWrite(session);
+        return recommendations.recover(id, security.actor(session));
+    }
+
+    public record ContextDraft(long revision, WorkflowPlanSpec plan) {}
+    @PostMapping("/plan-editor/recommendation-contexts/{id}/draft")
+    @ResponseBody
+    public WorkflowPlan saveContextDraft(@PathVariable String id, @RequestBody ContextDraft request, HttpSession session) {
+        requireWrite(session);
+        return recommendations.saveDraft(id, request.revision(), request.plan(), security.actor(session));
+    }
+
     @GetMapping("/plan-editor/recommendations/{id}")
     @ResponseBody
     public WorkflowRecommendationService.Result recommendation(@PathVariable String id, HttpSession session) {
@@ -302,5 +339,6 @@ public class WorkflowEditorController {
     }
 
     public record Catalog(List<WorkflowEditorService.Role> roles, List<WorkflowEditorService.Template> templates,
-                          boolean recommendationAvailable, List<me.asu.aidev.fleet.domain.FleetDashboard.WorkerSummary> workers) {}
+                          boolean recommendationAvailable, List<me.asu.aidev.fleet.domain.FleetDashboard.WorkerSummary> workers,
+                          WorkflowRecommendationService.Availability recommendationStatus) {}
 }

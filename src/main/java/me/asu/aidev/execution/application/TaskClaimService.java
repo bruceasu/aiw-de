@@ -40,6 +40,10 @@ public class TaskClaimService {
     private final me.asu.aidev.workflow.port.WorkflowPlanRepository planPreferences;
     private final Clock clock;
     private final Duration leaseDuration;
+    private me.asu.aidev.workflow.application.RecommendationTaskPolicy recommendationPolicy;
+
+    @Autowired
+    public void setRecommendationPolicy(me.asu.aidev.workflow.application.RecommendationTaskPolicy policy) { this.recommendationPolicy = policy; }
 
     @Autowired
     public TaskClaimService(WorkTaskRepository tasks,
@@ -120,7 +124,8 @@ public class TaskClaimService {
                         && skills.stream().filter(other.capabilities()::contains).count() > currentScore);
                 if (betterAvailable) continue;
             }
-            if (!aiProfiles.canRun(candidate.type(), worker.runtimeType())) continue;
+            if ((recommendationPolicy == null || !recommendationPolicy.managed(candidate))
+                    && !aiProfiles.canRun(candidate.type(), worker.runtimeType())) continue;
             boolean allowed = true;
             for (TaskClaimPolicy policy : claimPolicies) {
                 boolean accepted = policy instanceof WorkerTaskClaimPolicy workerPolicy

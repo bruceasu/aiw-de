@@ -23,9 +23,6 @@ spring:
     locations: classpath:db/migration
 
 aidev:
-  flexible-workflow:
-    recommendations:
-      enabled: ${AIW_FLEXIBLE_WORKFLOW_RECOMMENDATIONS_ENABLED:true}
   database:
     mode: postgresql
   # Local, single-machine Workspace registry. repositoryRef values must be unique across Workspaces.

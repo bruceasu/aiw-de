@@ -1,0 +1,14 @@
+{
+  "schema": "aiw.fd.evidence.v1", "kind": "blocker-feedback", "fd_id": "FD-018",
+  "source_event": "FD-018-000005-changes-requested", "human_report": "FD-018-blocker-profile-fast-20261017-c94e7b.md",
+  "data": {
+    "stage": "Worker repair after review 1", "role": "worker",
+    "observed_symptom": "codex-app-server fast profile was admitted but existing Go selector rejects it before start",
+    "confirmed_cause": "Recommendation compatibility used a broader set than existing Worker selectors",
+    "recovery_attempts": ["Claimed actual changes-requested event", "Restricted recommendation app-server profiles to fast=false and added explicit reason"],
+    "status": "resolved", "resolved_at": "2026-10-17", "human_decision_need": "none",
+    "resolution": "27f17259 fix and independent r2 A09 regression with original cases: 10 tests passed, exit 0, 8.964 seconds",
+    "next_step_or_risk": "Second independent implementation review pending; regression evidence does not replace Reviewer verdict",
+    "reusable_improvement": "Check profile qualifier combinations against each actual Worker selector, not runtime names alone"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-018",
+  "source_event": "FD-018-000003-design-ready",
+  "human_report": "FD-018-implementation-r1.md",
+  "data": {
+    "session": "fd018-worker-20261017-c94e7b",
+    "summary": "Persistent default-on admin settings, frozen existing AI Profiles, strict Worker admission/guidance/start, actor-owned context/Plan recovery, queued cancellation and expired recommendation failure.",
+    "changed_paths": ["src/main/java/me/asu/aidev/workflow", "src/main/java/me/asu/aidev/ai/application/AiProfileCatalog.java", "src/main/java/me/asu/aidev/execution/application", "src/main/java/me/asu/aidev/work/jdbc/JdbcWorkTaskRepository.java", "src/main/java/me/asu/aidev/worker/protocol/http/WorkerProtocolV1Controller.java", "src/main/resources", "tests/fd018", "docs/current-zh/FLEXIBLE-WORKFLOW-PLANS.md"],
+    "commands": [
+      {"command": "mvn.cmd -o -f tests/fd018/pom.xml -Dtest=RecommendationPolicyTest test", "results": ["setup POM error, corrected once", "target assertion Red", "1 test Green"]},
+      {"command": "mvn.cmd -o -DskipTests compile", "exit_code": 0, "sources": 223},
+      {"command": "mvn.cmd -o -f tests/fd018/pom.xml -Dtest=RecommendationAcceptanceTest,RecommendationPolicyTest test", "runner": "independent fd-test", "revision": "9108cf4532a46894386530ed0acf2035a6e32180", "exit_code": 0, "tests": 9, "failures": 0, "errors": 0, "skipped": 0, "reruns": 0}
+    ],
+    "results": ["Implementation Work Items 1.1-1.7 complete; lifecycle item 1.8 remains with Reviewer/PM", "Plan deletion FK regression corrected before independent execution", "Post-test JS-only copy/restore condition corrected; backend evidence remains applicable"],
+    "residual_risk": "No browser, PostgreSQL, real concurrency, full Worker protocol, model, deployment or full-suite execution. See independent acceptance report for mocks and access limits."
+  }
+}

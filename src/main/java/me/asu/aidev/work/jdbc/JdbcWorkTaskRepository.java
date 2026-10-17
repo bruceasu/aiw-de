@@ -331,7 +331,7 @@ public class JdbcWorkTaskRepository implements WorkTaskRepository {
                   FROM work_task
                  WHERE state IN ('CLAIMED','RUNNING')
                    AND lease_token IS NOT NULL AND lease_expires_at_epoch_ms<=?
-                   AND (NOT EXISTS (SELECT 1 FROM execution_attempt ea
+                   AND (subject_type='workflow-recommendation' OR NOT EXISTS (SELECT 1 FROM execution_attempt ea
                                     WHERE ea.lease_token=work_task.lease_token
                                       AND ea.stop_requested_at_epoch_ms IS NOT NULL)
                         OR EXISTS (SELECT 1 FROM work_task_workspace_replacement r
@@ -350,12 +350,13 @@ public class JdbcWorkTaskRepository implements WorkTaskRepository {
     public boolean requeueExpired(TaskId taskId, WorkerId workerId, LeaseToken leaseToken, Instant updatedAt) {
         boolean changed = jdbc.update("""
                 UPDATE work_task
-                   SET state='READY', current_worker_id=NULL, lease_token=NULL,
+                   SET state=CASE WHEN subject_type='workflow-recommendation' THEN 'FAILED' ELSE 'READY' END,
+                       current_worker_id=NULL, lease_token=NULL,
                        lease_acquired_at_epoch_ms=NULL, lease_expires_at_epoch_ms=NULL, lease_heartbeat_at_epoch_ms=NULL,
                        version=version+1, updated_at_epoch_ms=?
                  WHERE id=? AND state IN ('CLAIMED','RUNNING')
                    AND current_worker_id=? AND lease_token=? AND lease_expires_at_epoch_ms<=?
-                   AND (NOT EXISTS (SELECT 1 FROM execution_attempt ea
+                   AND (subject_type='workflow-recommendation' OR NOT EXISTS (SELECT 1 FROM execution_attempt ea
                                     WHERE ea.lease_token=work_task.lease_token
                                       AND ea.stop_requested_at_epoch_ms IS NOT NULL)
                         OR EXISTS (SELECT 1 FROM work_task_workspace_replacement r

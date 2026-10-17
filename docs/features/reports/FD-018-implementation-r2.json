@@ -1,0 +1,13 @@
+{
+  "schema": "aiw.fd.evidence.v1", "kind": "worker-report", "fd_id": "FD-018",
+  "source_event": "FD-018-000005-changes-requested", "human_report": "FD-018-implementation-r2.md",
+  "data": {
+    "session": "fd018-worker-20261017-c94e7b",
+    "summary": "Resolve review R1 with common Worker support: recommendation codex-app-server requires fast=false, explicit incompatible planner never falls back.",
+    "changed_paths": ["src/main/java/me/asu/aidev/workflow/application/RecommendationProfiles.java", "docs/current-zh/FLEXIBLE-WORKFLOW-PLANS.md", "tests/fd018"],
+    "implementation_revision": "27f172597226e75ae60c01794e5c015f50fa74ac",
+    "commands": [{"command": "mvn.cmd -o -f tests/fd018/pom.xml -Dtest=RecommendationAcceptanceTest,RecommendationPolicyTest test", "runner": "independent fd-test", "exit_code": 0, "tests": 10, "failures": 0, "errors": 0, "skipped": 0, "seconds": 8.964}],
+    "results": ["R1 code fix and independently derived regression A09 passed", "Original evidence retained; one failed review so far; no budget reset"],
+    "residual_risk": "Browser, PostgreSQL, real concurrency, actual Worker protocol/runtime and model execution remain unrun. Independent implementation re-review pending."
+  }
+}

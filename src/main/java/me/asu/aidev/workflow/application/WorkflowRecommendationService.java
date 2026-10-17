@@ -19,21 +19,29 @@ import me.asu.aidev.work.domain.TaskType;
 import me.asu.aidev.work.domain.WorkTask;
 import me.asu.aidev.work.port.WorkTaskRepository;
 import me.asu.aidev.workflow.domain.WorkflowPlanSpec;
-import org.springframework.beans.factory.annotation.Value;
+import me.asu.aidev.workflow.domain.WorkflowPlan;
+import me.asu.aidev.workflow.jdbc.JdbcRecommendationRepository;
+import me.asu.aidev.workflow.jdbc.JdbcRecommendationRepository.*;
+import me.asu.aidev.worker.domain.WorkerLiveness;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Opt-in recommendation analysis through the existing read-only planner Worker. */
+/** Runtime-configured recommendation analysis through the existing read-only planner Worker. */
 @Service
 public class WorkflowRecommendationService {
-    public record Request(String requestKey, long inputVersion, String goal) {}
+    public record Request(String requestKey, long inputVersion, String goal, String contextId, Long contextRevision) {
+        public Request(String requestKey, long inputVersion, String goal) { this(requestKey, inputVersion, goal, null, null); }
+    }
+    public record Configuration(boolean enabled, String planner, String model, String effort, long expectedRevision) {}
+    public record Availability(boolean available, String code, String reason) {}
+    public record Recovery(Context context, Result result) {}
     public record Result(String id, String state, String requestKey, long inputVersion,
                          String reason, WorkflowPlanSpec plan, String error) {}
     private record Envelope(String requestKey, long inputVersion, String goal, String actor) {}
 
     private static final String SUBJECT = "workflow-recommendation";
     private static final String PREFIX = "AIW_RECOMMENDATION_V1 ";
-    private final boolean enabled;
+    private final JdbcRecommendationRepository repository;
     private final AiProfileCatalog profiles;
     private final WorkTaskService taskService;
     private final WorkTaskRepository tasks;
@@ -41,11 +49,11 @@ public class WorkflowRecommendationService {
     private final WorkflowEditorService editor;
     private final ObjectMapper json = new ObjectMapper().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 
-    public WorkflowRecommendationService(@Value("${aidev.flexible-workflow.recommendations.enabled:false}") boolean enabled,
+    public WorkflowRecommendationService(JdbcRecommendationRepository repository,
                                          AiProfileCatalog profiles, WorkTaskService taskService,
                                          WorkTaskRepository tasks, ExecutionAttemptRepository attempts,
                                          WorkflowEditorService editor) {
-        this.enabled = enabled;
+        this.repository = repository;
         this.profiles = profiles;
         this.taskService = taskService;
         this.tasks = tasks;
@@ -53,11 +61,76 @@ public class WorkflowRecommendationService {
         this.editor = editor;
     }
 
-    public boolean available() { return enabled && profiles.hasPolicy(TaskType.EXTERNAL_WORK); }
+    public boolean available() { return availability().available(); }
+
+    public Settings settings() { return repository.settings(); }
+    public List<Audit> audit() { return repository.audit(); }
+    public List<AiProfileCatalog.NamedProfile> profileOptions() { return profiles.approved(TaskType.EXTERNAL_WORK); }
+    private Frozen resolve(Settings settings) {
+        var approved = profiles.approved(TaskType.EXTERNAL_WORK);
+        if (approved.isEmpty() && settings.planner() == null && settings.model() == null && settings.effort() == null)
+            return new Frozen(profiles.version(), List.of());
+        return new Frozen(profiles.version(), RecommendationProfiles.filter(approved, settings.planner(), settings.model(), settings.effort()));
+    }
+    public Availability availability() {
+        var settings = repository.settings();
+        if (!settings.enabled()) return new Availability(false, "DISABLED", "AI recommendation was disabled by an administrator.");
+        try { return availability(resolve(settings)); }
+        catch (IllegalArgumentException error) { return new Availability(false, "CONFIGURATION_UNAVAILABLE", error.getMessage()); }
+    }
+    private Availability availability(Frozen frozen) {
+        boolean online = repository.online(Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW)).stream()
+                .anyMatch(worker -> worker.supports(Set.of("implementation-planning"))
+                        && RecommendationTaskPolicy.matches(frozen, worker.runtimeType()));
+        return online ? new Availability(true, "AVAILABLE", "An online analysis Worker can accept the request; busy Workers will queue it.")
+                : new Availability(false, "NO_ONLINE_WORKER", "No online analysis Worker matches the configured profiles. Retry after a Worker is online.");
+    }
+    private static String option(String value) {
+        if (value == null || value.isBlank()) return null;
+        value = value.strip();
+        if (!value.matches("[A-Za-z0-9._:/-]{1,120}")) throw new IllegalArgumentException("invalid recommendation setting");
+        return value;
+    }
+    @Transactional
+    public Settings configure(Configuration config, String actor) {
+        repository.lockSettings();
+        var before = repository.settings();
+        if (before.revision() != config.expectedRevision()) throw new IllegalStateException("settings changed; reload");
+        var after = new Settings(config.enabled(), option(config.planner()), option(config.model()), option(config.effort()),
+                before.revision() + 1, actor, Instant.now());
+        if (after.enabled()) resolve(after);
+        repository.save(before, after, actor);
+        if (!after.enabled()) {
+            for (TaskId id : repository.queued()) {
+                for (TaskState state : List.of(TaskState.READY, TaskState.BLOCKED)) {
+                    if (tasks.cancelInactive(id, state, Instant.now())) {
+                        tasks.recordControlEvent(UUID.randomUUID().toString(), id, null, "RECOMMENDATION_DISABLED", actor,
+                                "Administrator disabled recommendation; queued analysis cancelled", false, Instant.now());
+                        break;
+                    }
+                }
+            }
+        }
+        return after;
+    }
+    @Transactional public Context createContext(String actor) { return repository.createContext(actor); }
+    public List<Context> contexts(String actor) { return repository.contexts(actor); }
+    public Recovery recover(String contextId, String actor) {
+        Context context = repository.context(contextId, actor, false);
+        return new Recovery(context, repository.latest(contextId).map(id -> get(id, actor)).orElse(null));
+    }
+    public String contextForPlan(String planId, String actor) { return repository.contextForPlan(planId, actor).orElse(null); }
+    @Transactional
+    public WorkflowPlan saveDraft(String contextId, long revision, WorkflowPlanSpec spec, String actor) {
+        Context context = repository.context(contextId, actor, true);
+        if (context.revision() != revision) throw new IllegalStateException("context changed; reload");
+        var plan = editor.draft(spec, actor);
+        repository.bind(context, plan.id());
+        return plan;
+    }
 
     @Transactional
     public Result request(Request request, String actor) {
-        if (!available()) throw new IllegalStateException("AI recommendation is disabled or no EXTERNAL_WORK AI policy is configured");
         if (request == null || request.requestKey() == null || request.inputVersion() < 0
                 || request.goal() == null || request.goal().isBlank() || request.goal().length() > 8000) {
             throw new IllegalArgumentException("requestKey, nonnegative inputVersion and goal of 1-8000 characters are required");
@@ -65,6 +138,32 @@ public class WorkflowRecommendationService {
         try { UUID.fromString(request.requestKey()); }
         catch (IllegalArgumentException e) { throw new IllegalArgumentException("requestKey must be a UUID"); }
         String id = "WR-" + request.requestKey();
+        repository.lockSettings();
+        var existing = repository.request(id);
+        if (existing.isPresent()) {
+            var row = existing.orElseThrow();
+            if (!actor.equals(row.actor())) throw new SecurityException("recommendation is not owned by this operator");
+            if (!row.goal().equals(request.goal().strip()) || row.inputVersion() != request.inputVersion()
+                    || (request.contextId() != null && !request.contextId().equals(row.contextId())))
+                throw new IllegalArgumentException("requestKey is already associated with different input");
+            return get(id, actor);
+        }
+        var legacy = tasks.find(new TaskId(id));
+        if (legacy.isPresent()) {
+            var original = envelope(owned(id, actor));
+            if (!original.goal().equals(request.goal().strip()) || original.inputVersion() != request.inputVersion())
+                throw new IllegalArgumentException("requestKey is already associated with different input");
+            return get(id, actor);
+        }
+        var settings = repository.settings();
+        if (!settings.enabled()) throw new IllegalStateException("AI recommendation was disabled by an administrator");
+        Frozen frozen = resolve(settings);
+        var ready = availability(frozen);
+        if (!ready.available()) throw new IllegalStateException(ready.reason());
+        Context context = request.contextId() == null ? repository.createContext(actor)
+                : repository.context(request.contextId(), actor, true);
+        long expected = request.contextId() == null ? 0 : request.contextRevision() == null ? -1 : request.contextRevision();
+        repository.advance(context, expected, request.goal().strip(), request.inputVersion());
         Envelope envelope = new Envelope(request.requestKey(), request.inputVersion(), request.goal().strip(), actor);
         String encoded;
         try { encoded = json.writeValueAsString(envelope); }
@@ -83,6 +182,8 @@ public class WorkflowRecommendationService {
         taskService.createIfAbsent(new CreateWorkTaskCommand(new TaskId(id), TaskType.EXTERNAL_WORK,
                 SUBJECT, id, Set.of("implementation-planning"), "implementation-planner",
                 instruction, null, null, TaskPriority.NORMAL, Set.of()));
+        repository.insert(new RequestRow(id, request.requestKey(), context.id(), actor, request.goal().strip(),
+                request.inputVersion(), settings.revision(), frozen));
         return get(id, actor);
     }
 

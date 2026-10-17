@@ -39,6 +39,9 @@ public class WorkerProtocolV1Controller {
     private final TaskExecutionService executions;
     private final ExecutionAttemptRepository attempts;
     private final AiProfileCatalog aiProfiles;
+    private me.asu.aidev.workflow.application.RecommendationTaskPolicy recommendationPolicy;
+    @Autowired
+    public void setRecommendationPolicy(me.asu.aidev.workflow.application.RecommendationTaskPolicy policy) { this.recommendationPolicy = policy; }
     private me.asu.aidev.workflow.application.WorkflowAiPreferences workflowAiPreferences;
 
     @Autowired
@@ -176,7 +179,8 @@ public class WorkerProtocolV1Controller {
                         input.resultRevision(), input.publicationRef(), input.changedFiles(),
                         input.completionVerdict() == null ? null : input.completionVerdict().name(),
                         input.completionSummary(), input.attemptId())).toList(),
-                aiProfiles.guidance(task.type(), runtimeType,
+                recommendationPolicy != null && recommendationPolicy.managed(task) ? recommendationPolicy.guidance(task, runtimeType)
+                        : aiProfiles.guidance(task.type(), runtimeType,
                         attempts.findPreviousAiAttempt(task.id(), claimed.attemptNo()).orElse(null)),
                 outputs == null ? null : outputs.store(task, claimed.attemptId().value(), claimed.inputs()),
                 workflowAiPreferences == null ? null : workflowAiPreferences.forTask(task));

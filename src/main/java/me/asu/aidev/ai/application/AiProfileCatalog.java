@@ -55,6 +55,11 @@ public class AiProfileCatalog {
 
     public boolean hasPolicy(TaskType type) { return policies.containsKey(type); }
 
+    public String version() { return version; }
+    public List<NamedProfile> approved(TaskType type) {
+        return policies.getOrDefault(type, List.of()).stream().map(id -> new NamedProfile(id, profiles.get(id))).toList();
+    }
+
     public boolean canRun(TaskType type, String workerRuntime) {
         if (!hasPolicy(type)) return true;
         return policies.get(type).stream().map(profiles::get)

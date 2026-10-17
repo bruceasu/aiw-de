@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Recommendation · AI Worker</title><link rel="stylesheet" href="/ui/console.css"></head>
+<body><div class="app"><nav th:replace="~{ui/fragments :: nav('system')}"></nav><main class="main"><header th:replace="~{ui/fragments :: topbar('AI Recommendation','System settings for all Plans')}"></header><div class="content">
+<div th:replace="~{ui/fragments :: flash}"></div><a href="/ui/system">Back to System</a>
+<div class="card section"><h2>Recommendation settings</h2><p class="callout" th:text="${availability.reason}"></p>
+<form action="/ui/system/recommendations" method="post">
+<input type="hidden" name="_csrf" th:value="${csrfToken}"><input type="hidden" name="revision" th:value="${settings.revision}">
+<label class="field"><span>Enable AI recommendation</span><input type="checkbox" name="enabled" value="true" th:checked="${settings.enabled}"></label>
+<label class="field"><span>Planner AI Profile</span><select name="planner"><option value="">Worker choice within approved profiles</option><option th:each="p : ${profiles}" th:value="${p.id}" th:selected="${p.id == settings.planner}" th:text="${p.id + ' · ' + p.profile.runtime + ' · ' + p.profile.model + ' · ' + p.profile.effort}"></option><option th:if="${settings.planner != null and !#lists.contains(profiles.![id], settings.planner)}" th:value="${settings.planner}" th:text="${settings.planner + ' (unavailable)'}" selected></option></select></label>
+<label class="field"><span>Model constraint (optional)</span><input name="model" maxlength="120" th:value="${settings.model}"></label>
+<label class="field"><span>Effort constraint (optional)</span><input name="effort" maxlength="120" th:value="${settings.effort}"></label>
+<p class="help">Empty fields let the Worker choose. Explicit fields must match an existing approved Profile; unavailable values never fall back. Settings apply to all Plans and new requests. Submitted requests keep their frozen configuration.</p>
+<p class="help">Disabling cancels queued analyses and blocks new requests. Claimed and running analyses continue. Existing results remain available for manual review and application.</p>
+<button class="btn primary" type="submit">Save settings</button></form>
+<p class="help">Enabled by default. Changes persist on the server and take effect without a restart.</p></div>
+<div class="section card"><h2>Configuration audit</h2><p th:if="${#lists.isEmpty(audit)}" class="muted">No changes recorded.</p><div th:each="entry : ${audit}" class="section"><strong th:text="${entry.actor}"></strong> · <time th:text="${entry.occurredAt}"></time><p class="mono" th:text="${entry.previous}"></p><p class="mono" th:text="${entry.current}"></p></div></div>
+</div></main></div></body></html>

@@ -1,0 +1,27 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-018",
+  "source_event": "FD-018-000006-implementation-ready",
+  "human_report": "FD-018-review-r2.md",
+  "data": {
+    "session": "fd018-reviewer-20261017-independent-r1",
+    "fd_revision": 6,
+    "base": "2959fb6",
+    "reviewed_commit": "bbdefde70830ce7dc70f9a9864de4760ee7d97c2",
+    "verdict": "verification-passed",
+    "findings": [],
+    "prior_findings": [{"id": "R1", "status": "resolved", "fix_commit": "27f172597226e75ae60c01794e5c015f50fa74ac", "evidence": "App Server fast rejected before guidance/claim, explicit planner constraints preserved, non-fast remains allowed; Go selector statically matched; independently derived A09 passed"}],
+    "failed_review_count": 1,
+    "budget_reset": false,
+    "results": [
+      "Actual current production delta reviewed; unchanged full-scope implementation retains prior static assessment",
+      "Independent 10-test related-fix run checked against actual assertions and raw log; 0 failures/errors/skipped",
+      "Test SHA256 C988797C9D3AA0C60296DA7051235C9941D7D893C5AC3531D80ADD220D064817 matches recorded dirty snapshot",
+      "No additional runtime validation executed by Reviewer"
+    ],
+    "commands": ["Get-Content targeted source, evidence and logs", "git diff 0e6b535 HEAD --stat and relevant paths", "git rev-parse HEAD", "git status --short", "Get-FileHash RecommendationAcceptanceTest.java", "aiw fd claim FD-018 FD-018-000006-implementation-ready --session fd018-reviewer-20261017-independent-r1", "git diff --check and JSON parsing", "aiw fd emit verification-passed with exact source event"],
+    "not_run": ["new tests", "compile/build", "network", "agents", "browser", "live Go Worker/model", "PostgreSQL", "concurrency interleaving", "full HTTP claim/start", "actual budget integration", "cross-process restart"],
+    "residual_risk": "Existing test fixture/mocks and missing runtime environments remain explicit. Local implementation Verification only; delivery gates remain with Host PM."
+  }
+}

@@ -5,7 +5,7 @@
 - 阶段 / 角色：Design / Planner。
 - 来源事件：FD-018-000002-design-requested。
 - Session：fd018-planner-20261017-c94e7b。
-- 状态：unresolved。
+- 状态：resolved（原始阻塞与解除经过见下文）。
 
 ## 事实与未知
 

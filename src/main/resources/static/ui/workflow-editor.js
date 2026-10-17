@@ -49,6 +49,7 @@
     let recommendation = null;
     let currentRequest = null;
     let timer = null;
+    let context = null;
     const goal = editor.querySelector('[data-goal]');
     const rows = editor.querySelector('[data-steps]');
     const notice = editor.querySelector('[data-validation]');
@@ -255,7 +256,8 @@
       const payload = { goal: goal.value, source, steps };
       try {
         saveStatus.textContent = 'Saving draft…';
-        const plan = await api('/drafts', payload);
+        if (!context) throw new Error('Editor recovery context is still loading.');
+        const plan = await api(`/recommendation-contexts/${encodeURIComponent(context.id)}/draft`, { revision: context.revision, plan: payload });
         location.href = `/ui/plans/${encodeURIComponent(plan.id)}`;
       } catch (error) { saveStatus.textContent = `Draft was not saved: ${error.message}. ${csrfError} Your input is still here.`; }
     });
@@ -266,6 +268,7 @@
       check.addEventListener('click', async () => {
         try {
           const reply = await api(`/recommendations/${encodeURIComponent(snapshot.id)}`);
+          withdraw.hidden = !['READY', 'BLOCKED'].includes(reply.state);
           state.textContent = `${snapshot.id} · ${snapshot.stale ? 'stale · ' : ''}${reply.state}${reply.error ? ` · ${reply.error}` : ''}`;
           if (!snapshot.stale && snapshot === currentRequest) await poll();
         } catch (error) { state.textContent = `${snapshot.id} · check failed: ${error.message}`; }
@@ -275,9 +278,13 @@
         try {
           const reply = await api(`/recommendations/${encodeURIComponent(snapshot.id)}/withdraw`, {});
           state.textContent = `${snapshot.id} · ${reply.state}`;
+          withdraw.hidden = true;
         } catch (error) { state.textContent = `${snapshot.id} · cannot withdraw: ${error.message}`; }
       });
+      withdraw.hidden = true;
+      snapshot.withdraw = withdraw;
       row.append(check, withdraw); history.prepend(row);
+      check.click();
     };
     const poll = async () => {
       if (!currentRequest) return;
@@ -285,7 +292,10 @@
       if (!snapshot.id || snapshot.stale) return;
       try {
         const reply = await api(`/recommendations/${encodeURIComponent(snapshot.id)}`);
+        const queued = ['READY', 'BLOCKED'].includes(reply.state);
+        if (snapshot.withdraw) snapshot.withdraw.hidden = !queued;
         if (snapshot !== currentRequest || snapshot.stale || snapshot.version !== inputVersion || snapshot.goal !== goal.value) return;
+        editor.querySelector('[data-withdraw-recommend]').hidden = !queued;
         if (reply.state === 'READY_TO_APPLY') {
           clearInterval(timer); timer = null; recommendation = reply;
           editor.querySelector('[data-refresh-recommend]').hidden = true;
@@ -303,6 +313,7 @@
     };
     editor.querySelector('[data-recommend]').addEventListener('click', async () => {
       if (!goal.value.trim()) { status.textContent = 'Enter a goal first.'; return; }
+      if (!context || context.planId) { status.textContent = 'Open a new editor context to request another analysis.'; return; }
       if (goal.value.length > 8000) { status.textContent = 'AI recommendation accepts up to 8000 characters; edit the goal or continue manually.'; return; }
       clearInterval(timer); recommendation = null; result.hidden = true;
       editor.querySelector('[data-refresh-recommend]').hidden = true;
@@ -311,7 +322,9 @@
       const snapshot = { key: crypto.randomUUID(), version: inputVersion, goal: goal.value, id: null, stale: false };
       currentRequest = snapshot; status.textContent = 'Requesting one bounded analysis task…';
       try {
-        const reply = await api('/recommendations', { requestKey: snapshot.key, inputVersion: snapshot.version, goal: snapshot.goal });
+        const reply = await api('/recommendations', { requestKey: snapshot.key, inputVersion: snapshot.version, goal: snapshot.goal,
+          contextId: context.id, contextRevision: context.revision });
+        context = (await api(`/recommendation-contexts/${encodeURIComponent(context.id)}`)).context;
         snapshot.id = reply.id;
         snapshot.stale = snapshot.stale || snapshot !== currentRequest || snapshot.version !== inputVersion || snapshot.goal !== goal.value;
         exposeRequest(snapshot);
@@ -319,7 +332,7 @@
           if (snapshot === currentRequest) status.textContent = `Previous analysis ${snapshot.id} is stale. Check or withdraw it below.`;
           return;
         }
-        editor.querySelector('[data-withdraw-recommend]').hidden = false;
+        editor.querySelector('[data-withdraw-recommend]').hidden = !['READY', 'BLOCKED'].includes(reply.state);
         timer = setInterval(poll, 5000);
         await poll();
         setTimeout(() => { if (snapshot === currentRequest && timer) {
@@ -334,6 +347,8 @@
       if (!currentRequest?.id) return;
       try { const reply = await api(`/recommendations/${encodeURIComponent(currentRequest.id)}/withdraw`, {});
         status.textContent = reply.error || reply.state; clearInterval(timer); timer = null;
+        editor.querySelector('[data-withdraw-recommend]').hidden = true;
+        if (currentRequest.withdraw) currentRequest.withdraw.hidden = true;
       } catch (error) { status.textContent = `Cannot withdraw active analysis: ${error.message}`; }
     });
     editor.querySelector('[data-refresh-recommend]').addEventListener('click', poll);
@@ -345,26 +360,62 @@
       result.hidden = true; status.textContent = 'Suggestion applied. Add required workspace details, review and save a draft.';
       renderSteps();
     });
-    api('/catalog').then(data => {
+    api('/catalog').then(async data => {
       catalog = data;
       renderCapabilityGuide();
       const select = editor.querySelector('[data-template]');
       data.templates.forEach(t => { const option = el('option', `${t.title} — ${t.use}`); option.value = t.id; select.appendChild(option); });
       if (!data.recommendationAvailable) {
         editor.querySelector('[data-recommend]').disabled = true;
-        status.textContent = 'AI recommendation is not configured. Templates and manual editing are available.';
+        status.textContent = data.recommendationStatus.reason;
+      }
+      const recent = await api('/recommendation-contexts');
+      const recoveryList = editor.querySelector('[data-recovery-contexts]');
+      for (const item of recent.filter(item => item.goal)) {
+        const link = el('a', `${item.planId || 'Unsaved editor'} · ${item.goal.slice(0, 80)}`, 'btn ghost small-btn');
+        link.href = `/ui/plans/new?context=${encodeURIComponent(item.id)}`;
+        recoveryList.append(link);
+      }
+      const contextId = new URLSearchParams(location.search).get('context');
+      if (contextId) {
+        const recovered = await api(`/recommendation-contexts/${encodeURIComponent(contextId)}`);
+        context = recovered.context;
+        goal.value = context.goal; inputVersion = context.inputVersion;
+        if (recovered.result) {
+          const reply = recovered.result;
+          const snapshot = { key: reply.requestKey, version: reply.inputVersion, goal: context.goal, id: reply.id, stale: false };
+          currentRequest = snapshot; exposeRequest(snapshot);
+          timer = setInterval(poll, 5000); await poll();
+        }
+        if (context.planId) {
+          editor.querySelector('[data-recommend]').disabled = true;
+          editor.querySelector('[data-save]').textContent = 'Save as a new draft';
+          const link = el('a', 'View the saved Plan', 'btn ghost'); link.href = `/ui/plans/${encodeURIComponent(context.planId)}`;
+          recoveryList.prepend(link);
+          line(recoveryList, 'p', 'This analysis is linked to a saved Plan. Applying and saving creates a new draft; the saved Plan keeps its confirmed selection. To request a new analysis, open a new editor.', 'help');
+        }
+      } else {
+        context = await api('/recommendation-contexts', {});
+        const url = new URL(location.href); url.searchParams.set('context', context.id); historyReplace(url);
       }
       const copy = new URLSearchParams(location.search).get('copy');
-      if (copy) return api(`/plans/${encodeURIComponent(copy)}`).then(data => {
+      if (copy && !context.goal) return api(`/plans/${encodeURIComponent(copy)}`).then(data => {
         goal.value = data.plan.spec.goal; source = data.plan.spec.source;
         steps = data.plan.spec.steps.map(stepCopy); renderSteps();
       });
       renderSteps();
     }).catch(error => { notice.textContent = `Editor data unavailable: ${error.message}`; });
+    const historyReplace = url => window.history.replaceState(null, '', url);
   }
 
   if (detail) {
     const id = detail.dataset.id;
+    if (detail.dataset.canOperate === 'true') api(`/plans/${encodeURIComponent(id)}/recommendation-context`).then(context => {
+      if (!context.id) return;
+      const link = el('a', 'View recommendation analysis', 'btn ghost small-btn');
+      link.href = `/ui/plans/new?context=${encodeURIComponent(context.id)}`;
+      detail.querySelector('[data-detail-goal]').parentElement.append(link);
+    }).catch(() => {});
     let plan;
     let reviewRecovery;
     let repairSubmitting = false;

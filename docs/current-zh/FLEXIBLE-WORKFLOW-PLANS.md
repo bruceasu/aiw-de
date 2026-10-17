@@ -20,11 +20,25 @@ TypeScript 全角色启动器会额外启动一个 `stage-reviewer`。角色能�
 
 ### AI 推荐边界
 
-`AIW_FLEXIBLE_WORKFLOW_RECOMMENDATIONS_ENABLED=true` 单独开启推荐，且必须配置现有 `aidev.ai` 的 EXTERNAL_WORK policy 和可用只读 planner Worker；默认关闭。模型、凭据、预算及 Worker attempt 期限由管理员现有策略决定，不在浏览器配置。点击一次会创建一个 `workflow-recommendation` 的只读规划分析任务，可能产生模型费用；仅发送最多 8000 字符目标和固定可信角色目录，不附带工作区或源码。任务使用现有 Pull/lease、报告与审计机制，建议不能自行确认业务图。
+管理员从 **System → Configure AI recommendation**（`/ui/system/recommendations`）调整系统级推荐设置。设置在服务端持久化，保存后无需重启，并记录操作者、时间和前后值；普通用户不能修改。无历史设置时默认启用。旧环境变量 `AIW_FLEXIBLE_WORKFLOW_RECOMMENDATIONS_ENABLED` 已退出控制，也不作为迁移输入；升级后请检查系统设置。
 
-推荐返回必须是单个关联当前 requestKey/inputVersion 的 JSON 对象，包含理由与合法 WorkflowPlanSpec。未知角色能力、越界字段、不一致目标或自行指定工作区会拒绝应用。页面等待最多 10 分钟；停止等待不代表终止 Worker。排队分析可收回，已领取/运行的分析不能强停。需求或编辑内容变化后旧建议失效；管理者主动应用并补足工作区后，仍需保存草稿和另行确认。推荐失败时可继续手动编辑。
+planner 选择现有 `aidev.ai` 的 EXTERNAL_WORK policy 中的 AI Profile（包含 Runtime、模型和强度）。model/effort 可空；填写后作为精确筛选条件，与所选 Profile 不符或无可用组合时明确拒绝，不自动回退。全部留空时由 Worker 在批准的 Profile 中选择；没有 policy 时使用 Worker 本地默认值。凭据仍在 Worker，设置页不保存凭据。每次请求冻结完整 Profile 候选内容及版本，配置编辑或重启不会重新解释已排队请求。
 
-写操作沿用 Web Console 会话 OPERATOR/ADMIN 和 URL 查询参数 `_csrf`，只读角色不能保存、推荐、确认或收回。`/ui/plan-editor/**` 是页面专用接口；`/ui/workflow-plans/**` 使用相同的步骤角色校验和逐步评审执行语义。AI 推荐仍须有可用策略并由用户显式点击，页面不会自行发起模型任务。
+推荐只接受现有 Worker 的共同支持组合：provider 为 openai；codex-app-server 要求 fast=false，openai-api/openai-agents 还要求支持的 effort。显式选择不兼容组合会说明原因，不会切换到其他 Profile。此限制不改变普通业务任务的 Profile 策略。
+
+全部适配的分析 Worker 离线时拒绝新请求，并说明原因；在线但忙碌时接受并排队。关闭功能会拒绝新请求并取消 READY/BLOCKED 分析，已领取和运行中的分析继续完成。关闭后已有结果及随后完成的结果仍可查看、手动应用。
+
+点击推荐会创建一个 `workflow-recommendation` 的只读规划分析任务，可能产生模型费用；仅发送最多 8000 字符目标和固定可信角色目录，不附带工作区或源码。任务使用现有 Pull/lease、报告与审计机制，建议不能自行确认业务图。
+
+推荐返回必须是单个关联当前 requestKey/inputVersion 的 JSON 对象，包含理由与合法 WorkflowPlanSpec。未知角色能力、越界字段、不一致目标或自行指定工作区会拒绝应用。页面等待最多 10 分钟；停止等待不代表终止 Worker。仅排队时显示撤回，已领取/运行及结束后不提供撤回。需求或编辑内容变化后旧建议失效；管理者主动应用并补足工作区后，仍需保存草稿和另行确认。推荐失败时可继续手动编辑。
+
+已提交目标及任务关联保存在服务端；刷新或离开不会取消分析，原 URL 的 `context` 标识及编辑页的 **Resume a previous analysis** 可以恢复。未提交的本地编辑不保证恢复。保存 Plan 后，详情页 **View recommendation analysis** 可查看关联状态和结果；从已保存上下文应用建议再保存会创建新草稿，不会改写原 Plan。恢复入口与结果按操作者隔离。升级前没有上下文关联的历史任务仍可按原任务 ID 查询，不伪造恢复入口。
+
+分析失联后等待有效租约到期（当前 60 秒租约，默认每 5 秒执行恢复；停机或积压可能延迟）即失败，不自动重新派发；旧 token 的迟到完成不再成为可应用结果。手动重试创建新的请求，原模型调用未必已经停止，可能产生重复调用及费用。
+
+写操作沿用 Web Console 会话 OPERATOR/ADMIN 和 URL 查询参数 `_csrf`，只读角色不能保存、推荐、确认或收回；系统设置另限 ADMIN。`/ui/plan-editor/**` 是页面专用接口；`/ui/workflow-plans/**` 使用相同的步骤角色校验和逐步评审执行语义。AI 推荐须有在线适配 Worker 并由用户显式点击，页面不会自行发起模型任务。
+
+数据库迁移 V6 仅新增推荐设置、审计、上下文、请求快照及 Plan 关联表；原任务与 Plan 数据保留。原 Plan 到期删除时清除其上下文关联和映射，推荐上下文与历史结果保留。回滚应用时保留这些表，不自动删除审计；旧应用仍使用其旧启动配置语义，因此回滚后应重新核对开关。
 
 管理者可以只委派一次分析或自己选择的有限步骤。技能说明 Worker 能做什么；步骤与依赖说明执行流程。技能名称使用现有 Worker capabilities，`skillRef` 是实际执行技能引用；必需技能决定资格，偏好技能用于同一有效优先级下的匹配排序。管理者须确保引用能被所选 Worker 执行，系统不会安装新技能或扩大内部工具权限。
 

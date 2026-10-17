@@ -1,0 +1,35 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-018",
+  "source_event": "FD-018-000004-implementation-ready",
+  "human_report": "FD-018-review-r1.md",
+  "data": {
+    "session": "fd018-reviewer-20261017-independent-r1",
+    "base": "2959fb6",
+    "reviewed_commit": "0e6b53548644545ec29258434cb9441ce56e2781",
+    "fd_revision": 4,
+    "verdict": "changes-requested",
+    "findings": [
+      {
+        "id": "R1",
+        "severity": "P1",
+        "dimension": "Correctness/Spec",
+        "file": "src/main/java/me/asu/aidev/workflow/application/RecommendationProfiles.java",
+        "line": 23,
+        "requirement": "FD D2 common supported runtime/provider/fast/effort and Acceptance 3 availability",
+        "defect": "codex-app-server fast=true is accepted by recommendation policy, but Go chooseAIProfile in main.go:154 rejects fast for every runtime except codex-cli before start",
+        "impact": "Only online Go App Server can appear ready and claim an explicit frozen profile that it cannot execute",
+        "correction": "Conservatively disallow App Server fast in the shared compatible set, or filter readiness and claim by actual executable Worker capability; preserve no-fallback semantics",
+        "evidence": "static source control-flow; not runtime reproduction"
+      }
+    ],
+    "results": [
+      "Reviewed actual changed source, approved Issue and FD, independent acceptance assertions and raw logs",
+      "Existing focused acceptance truthfully passed 9 tests at 9108cf4532a46894386530ed0acf2035a6e32180; it does not cover R1",
+      "Reviewer executed static reads and real claim only; no new runtime checks"
+    ],
+    "skipped": ["tests", "compile", "build", "network", "subagents", "browser", "PostgreSQL", "live Worker/model", "concurrency stress"],
+    "residual_risk": "Existing mocked budgets/catalog, single-connection SQLite and missing full protocol/browser execution remain explicitly limited. No delivery or deployment verdict."
+  }
+}
