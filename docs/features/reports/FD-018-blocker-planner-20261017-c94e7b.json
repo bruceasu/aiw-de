@@ -1,0 +1,23 @@
+{
+    "schema":  "aiw.fd.evidence.v1",
+    "kind":  "blocker-feedback",
+    "fd_id":  "FD-018",
+    "source_event":  "FD-018-000002-design-requested",
+    "human_report":  "FD-018-blocker-planner-20261017-c94e7b.md",
+    "data":  {
+                 "stage":  "Design",
+                 "role":  "planner",
+                 "observed_symptom":  "Planner setting has no defined value type or example in the approved Issue.",
+                 "confirmed_cause":  "Runtime selection, pinned Worker selection and AI Profile selection imply materially different dispatch and validation contracts.",
+                 "recovery_attempts":  [
+                                           "Read the approved Issue and current recommendation, policy, dispatch, preference and lease paths.",
+                                           "Prepared the FD design and requested a bounded independent static design review.",
+                                           "Asked the user to distinguish Runtime, Worker and AI Profile through the active session."
+                                       ],
+                 "status":  "resolved",
+                 "human_decision_need":  "none",
+                 "next_step_or_risk":  "User selected existing AI Profile; reconcile design and continue auto with test.",
+                 "reusable_improvement":  "Include an example value and owning concept for configurable planner fields during discovery. Blocker templates are absent; existing paired evidence schema was reused.",
+                 "resolved_at":  "2026-10-17"
+             }
+}

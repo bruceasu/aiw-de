@@ -6,7 +6,7 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
-| - | - | - | - |
+| [FD-018](FD-018_AI.md) | AI 推荐功能的运行时配置与模型调用职责边界 | Open | Medium |
 
 ## Completed
 

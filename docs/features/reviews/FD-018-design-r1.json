@@ -1,0 +1,63 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-018",
+  "source_event": "FD-018-000002-design-requested",
+  "human_report": "FD-018-design-r1.md",
+  "data": {
+    "reviewed_revision": 2,
+    "recommendation": "changes-needed",
+    "findings": [
+      {
+        "id": "D1",
+        "severity": "high",
+        "title": "单例配置首次写入和关闭/领取的数据库线性化点未定义",
+        "evidence": [
+          "FD-018 Solution 目前只声明事务串行化，没有单例初始化、行锁/版本条件、锁顺序或并发结果规则。",
+          "TaskClaimService.claimNext 明确采用 admission/run → worker → task 顺序，JdbcWorkTaskRepository.claim/cancelInactive 用状态条件裁决。"
+        ],
+        "risk": "两个事务都读到无设置记录，或关闭与提交/领取交错时，仅有 @Transactional 不能保证无重复设置、关闭后无新排队，以及无反向加锁死锁。",
+        "required_change": "指定固定单例主键及迁移初始化或原子缺行插入策略；给出保存设置、创建请求、领取及撤回的事务步骤和统一锁顺序；明确领取先赢则 CLAIMED 继续、关闭先赢则取消的线性化结果。分别解释 SQLite 与 PostgreSQL 的实现方式。"
+      },
+      {
+        "id": "D2",
+        "severity": "high",
+        "title": "严格配置与冻结配置尚无跨语言可执行契约",
+        "evidence": [
+          "AiProfileCatalog 构造时绑定 Environment；canRun 只看 runtime，guidance 返回 approved profiles，select 按全局 version/profileId 校验。",
+          "Python choose_ai_profile 会过滤 provider/runtime/fast/effort，并按历史失败选择下一 profile；既有 profile 路径不能自动视为显式配置的严格支持。",
+          "FD 把配置取值和 guidance/start 精确契约标为待完成，planner 含义也明确未决。"
+        ],
+        "risk": "控制面认为在线适配，Worker 实际过滤后拒绝；显式配置被选择器回退；进程重启或 catalog 修改后按当前 profile 解析旧请求，导致冻结配置不可重现。",
+        "required_change": "待用户定义 planner 后，明确其取值与 runtime/profile/worker 的关系、model/effort 空值与非法值规则；冻结解析后的有效 profile 内容及版本或等价不可变引用；明确三语言适配能力和拒绝原因，并让 readiness/claim/guidance/start 共用同一约束。说明旧 Worker 能力不足时如何排除，而非仅新增可忽略字段。"
+      },
+      {
+        "id": "D3",
+        "severity": "high",
+        "title": "租约失败需定义 task/attempt/容量的原子收敛，而非只改状态",
+        "evidence": [
+          "TaskExecutionService.recoverExpiredLeases 当前在单事务中 requeueExpired、将 attempt 转 EXPIRED、释放并发预算与 Worker capacity。",
+          "JdbcWorkTaskRepository.findExpiredLeases/requeueExpired 有 stop_requested/PENDING_STOP 条件；terminalTransition 只允许未过期 RUNNING lease，不能直接复用来处理过期 CLAIMED/RUNNING。"
+        ],
+        "risk": "只将推荐 task 写 FAILED 可能泄漏容量、留下活动 attempt 或继续进入重排；并发 heartbeat/complete/recovery 竞争可能双释放或接受错误结果。原有 stop 条件也可能使推荐永久滞留。",
+        "required_change": "给出仅推荐任务的过期失败 repository 条件更新与 transaction 步骤，包含原 token、到期时间、活动状态的 CAS、attempt 终态、容量/预算一次释放、失败原因/审计；说明 stop 条件适用性与非推荐保持旧行为。定义 heartbeat/complete/recovery 谁先提交的结果，并检视迟到 report/output 写入与最终可应用结果的边界。给出 60 秒租约加调度周期的实际等待上界/配置来源，而不声称固定精确秒数。"
+      },
+      {
+        "id": "D4",
+        "severity": "medium",
+        "title": "刷新恢复的上下文生命周期与版本规则未形成接口契约",
+        "evidence": [
+          "workflow-editor.js 当前 requestKey/inputVersion/currentRequest 保存在内存，并以 goal/version 比较防旧结果应用；inputVersion 初始化为 0。",
+          "FD 提议 context/Plan 关联及 URL 标识，但未指定上下文创建、保存 Plan 绑定、恢复 DTO、版本和重复请求策略。"
+        ],
+        "risk": "刷新后版本重置或 goal 未恢复会使有效结果不可用或旧结果误用；新 Plan 保存后断开上下文关联；多标签页、多次请求或猜测上下文 ID 时行为不明确。",
+        "required_change": "明确 actor 所有的上下文创建/读取/绑定 Plan 接口与 DTO，恢复所需 goal/inputVersion/requestKey/状态/结果及最新请求选择规则；定义服务端 version 的生成/更新、重复 requestKey 幂等性、编辑后过期判定与多标签页冲突；对历史任务无关联给出不伪造恢复的用户体验。"
+      }
+    ],
+    "unresolved": [
+      "planner 含义等待用户明确，不由审阅者选择"
+    ],
+    "validation": "bounded static review only; no tests, network, implementation or workflow events",
+    "design_ready": false
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-018",
+  "source_event": "FD-018-000002-design-requested",
+  "human_report": "FD-018-design-r2.md",
+  "data": {
+    "reviewed_revision": 2,
+    "reviewed_sections": [
+      "Solution/设计审阅 D1–D4 的落实",
+      "Verification"
+    ],
+    "recommendation": "ready",
+    "findings": [],
+    "prior_findings": [
+      {
+        "id": "D1",
+        "status": "resolved-in-design",
+        "evidence": "固定 id=1 的迁移初始化、settings 写锁与 expectedRevision CAS、settings→context/task 和原领取 admission→worker→task 顺序均已明确；关闭与领取由 task 状态 CAS 裁决，双数据库的锁机制已说明。"
+      },
+      {
+        "id": "D2",
+        "status": "resolved-in-design",
+        "evidence": "用户明确 planner 为现有 AI Profile；planner/model/effort 精确筛选已批准组合，不产生新组合；冻结完整候选内容及 catalog version，guidance/start/claim 使用同一快照；既有 wire guidance 兼容并保守限定三语言 runtime/provider/fast/effort。"
+      },
+      {
+        "id": "D3",
+        "status": "resolved-in-design",
+        "evidence": "推荐专用过期 CAS、task FAILED、attempt EXPIRED、一次容量/并发释放、审计和 stopRequested 例外均已明确；迟到调用不能形成可应用结果；健康调度等待与墙钟上界已区分，普通任务继续旧重排路径。"
+      },
+      {
+        "id": "D4",
+        "status": "resolved-in-design",
+        "evidence": "actor-owned context 生命周期与 URL/近期上下文恢复、contextRevision 并发裁决、requestKey 内容幂等、刷新 goal/version、一次绑定 Plan 与旧任务兼容均已明确；未提交编辑不承诺恢复的边界可检验。"
+      }
+    ],
+    "unresolved": [],
+    "validation": "one bounded static design recheck; no implementation, compile, tests, network, Git or workflow events",
+    "implementation_verification_passed": false
+  }
+}
