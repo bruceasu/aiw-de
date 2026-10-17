@@ -5,6 +5,13 @@ description: "Analyze the current software-engineering lifecycle context and pro
 
 # Software Development Orchestrator
 
+## Adapted task methods
+
+Use decision dependencies and evidence-based routing to propose the smallest next action set. This skill remains advisory; the Control Plane owns scheduling and workflow state.
+Use [task methods](references/task-methods.md) when that resource is included in
+the frozen context. Apply only the relevant sections. These methods do not invoke
+another Skill or change permissions, task scope, output schemas, or lifecycle authority.
+
 Coordinate specialist work semantically. Do not become the workflow engine, scheduler, command bus, or lifecycle authority.
 
 ## Authority boundary

@@ -5,6 +5,13 @@ description: Independently verify an implemented WorkItem or cross-repository in
 
 # Software Test Verifier
 
+## Adapted task methods
+
+Derive independent expected results from accepted rules, challenge key assertions with plausible defects, and bind observed status to the exact tested versions and authorization.
+Use [task methods](references/task-methods.md) when that resource is included in
+the frozen context. Apply only the relevant sections. These methods do not invoke
+another Skill or change permissions, task scope, output schemas, or lifecycle authority.
+
 ## Mission
 
 Produce independent verification evidence for the exact execution scope supplied by the Java Control Plane.

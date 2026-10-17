@@ -9,6 +9,10 @@ Follow `skills/reviewed-skill-contract.md` and `skills/work-management.md`.
 Prototype output is explicitly throwaway and must return through handoff before
 becoming implementation scope; do not create a parallel lifecycle silently.
 
+For built-in `aiw prototype`, apply [auxiliary-cli.md](references/auxiliary-cli.md).
+Its isolated host-generated artifacts replace the production-route, execution
+and Git capture defaults below only in that command mode.
+
 A prototype is **throwaway code that answers a question**. The question decides the shape.
 
 ## Pick a branch

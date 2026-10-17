@@ -1,15 +1,18 @@
-# Triage Labels
+# Optional intake labels
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker.
+Map existing tracker labels only when the repository uses them. They describe
+queue routing, not a second Issue/FD lifecycle or implementation permission.
+No mandatory category/state label pair or new label setup is required.
 
-| Label in mattpocock/skills | Label in our tracker | Meaning                                  |
-| -------------------------- | -------------------- | ---------------------------------------- |
-| `needs-triage`             | `needs-triage`       | Maintainer needs to evaluate this issue  |
-| `needs-info`               | `needs-info`         | Waiting on reporter for more information |
-| `ready-for-agent`          | `ready-for-agent`    | Fully specified, ready for an AFK agent  |
-| `ready-for-human`          | `ready-for-human`    | Requires human implementation            |
-| `wontfix`                  | `wontfix`            | Will not be actioned                     |
+| Suggested role | Tracker label | Meaning |
+| --- | --- | --- |
+| needs-triage | needs-triage | Routing recommendation needed |
+| needs-info | needs-info | Specific source information missing |
+| ready-for-agent | ready-for-agent | Scoped next action described; not FD readiness |
+| ready-for-human | ready-for-human | A human decision/action is named; not merge approval |
+| wontfix | wontfix | Explicit rejection with rationale; not merely deferred |
 
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
-
-Edit the right-hand column to match whatever vocabulary you actually use.
+Respect established names, category labels and priority conventions. A request
+for queue advice does not authorize applying labels or closing issues. Conflicts
+are reported with the proposed correction, never guessed. Existing authorization
+for a concrete action suffices; do not add a repeated approval checkpoint.

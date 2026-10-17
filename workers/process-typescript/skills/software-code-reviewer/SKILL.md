@@ -5,6 +5,13 @@ description: Independently review a repository-scoped implementation or cross-re
 
 # Software Code Reviewer
 
+## Adapted task methods
+
+Review actual behavior across Correctness, Standards, Spec, and Evidence. Distinguish concrete violations from style heuristics and respect the current acceptance revision.
+Use [task methods](references/task-methods.md) when that resource is included in
+the frozen context. Apply only the relevant sections. These methods do not invoke
+another Skill or change permissions, task scope, output schemas, or lifecycle authority.
+
 ## Mission
 
 Review the exact immutable engineering inputs supplied by the Java Control Plane and identify correctness, architecture, security, compatibility, reliability, test, and scope risks.

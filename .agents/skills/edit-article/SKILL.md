@@ -5,8 +5,12 @@ disable-model-invocation: true
 ---
 
 Follow `skills/reviewed-skill-contract.md` and `skills/work-management.md`.
-Return the revised article or explicit proposed edits; do not create Tasks,
+Return the revised article or explicit proposed edits; do not create FDs,
 OpenSpec artifacts, or commits implicitly.
+
+For built-in `aiw edit-article`, follow
+[auxiliary-cli.md](references/auxiliary-cli.md) for brief readiness and host-saved
+copies. The ordinary Agent editing method below remains available otherwise.
 
 1. First, divide the article into sections based on its headings. Think about the main points you want to make during those sections.
 

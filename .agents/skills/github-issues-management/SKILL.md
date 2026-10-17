@@ -40,5 +40,5 @@ safe action.
 - Require `GITHUB_TOKEN` before any GitHub request.
 - Never create a replacement Issue when an existing Issue mapping or number
   is invalid; report the conflict and ask for direction.
-- Keep remote Issue changes separate from local Requirement, Task, and
+- Keep remote Issue changes separate from local Requirement, FD, and
   OpenSpec lifecycle changes unless the human explicitly requests both.

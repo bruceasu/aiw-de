@@ -1,92 +1,42 @@
-# Good and Bad Tests
+# Assertion design examples
 
-## Good tests
+Use the shared Design method. Select only scenarios relevant to changed risk.
 
-Test through public interfaces with the project's native test style.
+## Exact business rule
 
-Characteristics:
-
-- Verify behavior callers care about
-- Use public APIs only
-- Survive internal refactors
-- Describe WHAT, not HOW
-- Keep each test focused on one behavior
-
-Examples:
-
-```java
-@Test
-void userCanCheckoutWithValidCart() {
-  Cart cart = createCart();
-  cart.add(product);
-
-  Receipt receipt = checkout(cart, paymentMethod);
-  assertEquals("confirmed", receipt.status());
-}
-```
-
-```go
-func TestCheckout(t *testing.T) {
-  cart := NewCart()
-  cart.Add(product)
-
-  got, err := Checkout(cart, paymentMethod)
-  if err != nil {
-    t.Fatal(err)
-  }
-  if got.Status != "confirmed" {
-    t.Fatalf("status = %q, want confirmed", got.Status)
-  }
-}
-```
+Given the confirmed decimal rounding rule in testing-methods.md:
 
 ```python
-def test_user_can_checkout_with_valid_cart():
-    cart = create_cart()
-    cart.add(product)
-
-    receipt = checkout(cart, payment_method)
-    assert receipt.status == "confirmed"
+def test_fee_rounds_half_up_at_cent_boundary():
+    # Approved R-03: exact 10.05 * 0.10 = 1.005, rounds to 1.01.
+    assert fee(Decimal("10.05"), Decimal("0.10")) == Decimal("1.01")
 ```
 
-## Bad tests
+This distinguishes truncation for that case. It does not prove every amount
+or another rounding policy. Imports and fixtures use the existing test stack.
+Using `fee(...)` or its production rounding helper to generate the expected
+value would remove the independent oracle.
 
-Implementation-detail tests are coupled to internal structure.
+## Rejection and side effects
 
-Red flags:
+For a confirmed ownership rule, submit another user's record ID. Assert the
+specified denial and that no prohibited state change occurred through the
+agreed observable boundary. A success-path assertion alone cannot detect a
+missing ownership check. Do not invent the error code or disclosure policy.
 
-- Mocking internal collaborators
-- Testing private methods
-- Asserting on call counts or call order
-- Test breaks when refactoring without behavior change
-- Test name describes HOW, not WHAT
-- Verifying through external side effects instead of the interface
+## Persistence and protocols
 
-```python
-def test_create_user_saves_to_database():
-    create_user({"name": "Alice"})
-    row = db.query("SELECT * FROM users WHERE name = ?", ["Alice"])
-    assert row is not None
-```
+For create-and-retrieve, use create plus retrieval APIs if that is the contract.
+For a data export, inspect the exported file: it is the actual output. A direct
+storage assertion is appropriate for a storage contract, but incidental table
+layout assertions couple a higher-level test to internals. Call order/count
+is appropriate when a retry or protocol contract explicitly specifies it.
 
-Good:
+## Characterization
 
-```python
-def test_create_user_makes_user_retrievable():
-    user = create_user({"name": "Alice"})
-    retrieved = get_user(user.id)
-    assert retrieved.name == "Alice"
-```
+Snapshotting current output may protect a refactor, but label it as existing
+behavior and state whether correctness was independently checked. Never rename
+a copied output into an approved business expectation.
 
-Tautological tests restate the implementation, so they pass by construction.
-
-```go
-func TestCalculateTotal(t *testing.T) {
-  items := []Item{{Price: 10}, {Price: 5}}
-  expected := sumPrices(items) // same logic as production code
-
-  if got := CalculateTotal(items); got != expected {
-    t.Fatalf("got %d, want %d", got, expected)
-  }
-}
-```
+For every key scenario, state a plausible error the assertions distinguish.
+Static reasoning about that error is not an executed mutation check.

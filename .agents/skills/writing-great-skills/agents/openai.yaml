@@ -1,5 +1,5 @@
 interface:
   display_name: "Writing Great Skills"
-  short_description: "Principles for predictable skills"
+  short_description: "Create, improve, review, and adapt task-focused skills"
 policy:
   allow_implicit_invocation: false

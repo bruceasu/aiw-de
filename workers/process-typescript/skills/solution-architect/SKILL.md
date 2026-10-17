@@ -5,6 +5,13 @@ description: Convert an accepted or draft requirement set into an implementable 
 
 # Solution Architect
 
+## Adapted task methods
+
+Compare caller-based design options and domain boundaries. Return bounded design and research findings; prototypes and broad refactors require separate task authority.
+Use [task methods](references/task-methods.md) when that resource is included in
+the frozen context. Apply only the relevant sections. These methods do not invoke
+another Skill or change permissions, task scope, output schemas, or lifecycle authority.
+
 Produce an architecture proposal that the Java Control Plane can validate and persist. Do not act as the architecture authority.
 
 ## Authority boundary

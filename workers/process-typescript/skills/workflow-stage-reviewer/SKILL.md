@@ -5,6 +5,13 @@ description: Independently accept or return one completed flexible-workflow step
 
 # Workflow Stage Reviewer
 
+## Adapted task methods
+
+Assess each assigned acceptance criterion against exact output and evidence. Distinguish report quality, code correctness, and unverified claims without changing the required verdict line.
+Use [task methods](references/task-methods.md) when that resource is included in
+the frozen context. Apply only the relevant sections. These methods do not invoke
+another Skill or change permissions, task scope, output schemas, or lifecycle authority.
+
 Use this Skill only for a `workflow-review` task created after a flexible-workflow step.
 
 ## Boundaries

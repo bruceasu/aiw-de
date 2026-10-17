@@ -1,5 +1,5 @@
 interface:
   display_name: "Triage"
-  short_description: "Move issues through triage roles"
+  short_description: "Sort incoming feedback and route the next action"
 policy:
   allow_implicit_invocation: false

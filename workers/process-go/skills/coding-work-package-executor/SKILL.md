@@ -5,6 +5,13 @@ description: Execute one approved repository-scoped software Work Package under 
 
 # Coding Work Package Executor
 
+## Adapted task methods
+
+Use evidence-led diagnosis for failures and preserve both sides' intent in authorized conflict repair. Implement only the assigned work package; do not run an FD lifecycle.
+Use [task methods](references/task-methods.md) when that resource is included in
+the frozen context. Apply only the relevant sections. These methods do not invoke
+another Skill or change permissions, task scope, output schemas, or lifecycle authority.
+
 ## Mission
 
 Implement exactly one approved Work Package as a small, reviewable engineering change.

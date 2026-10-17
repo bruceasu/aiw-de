@@ -1,5 +1,9 @@
 # TypeScript Process Worker
 
+The bundled Skill version is `R2+aiw-methods-1`, recorded in `skills/VERSION`.
+R2 role contracts remain in place; adapted task methods extend their procedures.
+See [method provenance and coverage](../SKILL_METHODS.md).
+
 环境变量的设置方式、默认值和运行时差异见 [Worker 环境变量](../ENVIRONMENT.md)。
 
 ## 新手快速上手

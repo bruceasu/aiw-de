@@ -5,6 +5,13 @@ description: Assess a verified and independently reviewed multi-repository incre
 
 # Release Readiness Manager
 
+## Adapted task methods
+
+Assess candidate- and environment-specific release evidence, separating technical readiness from permission. This skill remains advisory and is not registered as an executable role.
+Use [task methods](references/task-methods.md) when that resource is included in
+the frozen context. Apply only the relevant sections. These methods do not invoke
+another Skill or change permissions, task scope, output schemas, or lifecycle authority.
+
 Assess whether the reviewed increment has sufficient engineering, operational, and governance evidence to be considered ready for controlled release. Treat readiness as an assessment, never as deployment authority.
 
 ## Authority boundary

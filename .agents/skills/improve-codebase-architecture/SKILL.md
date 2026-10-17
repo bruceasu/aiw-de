@@ -1,77 +1,85 @@
 ---
 name: improve-codebase-architecture
-description: Scan a codebase for deepening opportunities, present them as a visual HTML report, then grill through whichever one you pick.
+description: Assess scoped architectural friction and compare worthwhile structural improvements; use for architecture exploration or a concrete structural obstacle in FD design.
 disable-model-invocation: true
 ---
 
-# Improve Codebase Architecture
+# Improve codebase architecture
 
-Follow `skills/reviewed-skill-contract.md` and `skills/work-management.md`.
-Architecture exploration returns recommendations; implementation requires a
-separate approved lifecycle step.
+Follow `skills/reviewed-skill-contract.md`, `skills/work-management.md` and
+repository rules. Use for requested architecture exploration, or a structural
+obstacle routed by the current FD. Ordinary changes and passing tests do not
+require an architecture scan. Produce recommendations, not implementation or
+approval. Keep the standalone entry; loading a method does not start agents,
+rewrite domain records, create an FD or expand existing work.
 
-Surface architectural friction and propose **deepening opportunities** — refactors that turn shallow modules into deep ones. The aim is testability and AI-navigability.
+## Focus the investigation
 
-This command is _informed_ by the project's domain model and built on a shared design vocabulary:
+Start with the named module, affected FD paths or observed problem: repeated
+cross-module changes, leaked rules, complex call ordering, hidden side effects,
+or a behavior that cannot be observed at a suitable test seam. If scope is
+missing, use bounded existing history to choose a focus or ask for it; do not
+widen to the entire codebase simply because a hot spot is not obvious.
 
-- Run the `/codebase-design` skill for the architecture vocabulary (**module**, **interface**, **depth**, **seam**, **adapter**, **leverage**, **locality**) and its principles (the deletion test, "the interface is the test surface", "one adapter = hypothetical seam, two = real"). Use these terms exactly in every suggestion — don't drift into "component," "service," "API," or "boundary."
-- The domain language in `CONTEXT.md` gives names to good seams; ADRs in `docs/adr/` record decisions this command should not re-litigate.
+Read relevant domain terms and ADRs when present. Use codebase-design for actual
+interface/seam decisions if available; retain the project's names such as
+service, API or boundary and clarify ambiguous terms instead of banning them.
+If a supporting Skill is missing, record that limitation and use the available
+evidence; do not pretend it ran or block a straightforward analysis solely for
+that reason. Static inspection by the current agent is the default.
 
-## Process
+## Compare proportionate options
 
-### 1. Explore
+Describe the concrete friction with file/caller evidence and its effect on
+correctness, change cost or testability. Compare keeping the current design,
+a local improvement and a broader redesign only when justified. For each
+credible option identify:
 
-**Scope before you scan — YAGNI.** Deepening a module pays off by making future changes to it easier, so put extra weight on the parts of the codebase that have recently changed. Decide *where* to look before you look:
+- what callers must know and what complexity moves or becomes hidden;
+- behavior/contracts to preserve, affected dependencies and failure paths;
+- benefit, migration effort, compatibility and verification risks;
+- existing tests/evidence that remain valuable and any real coverage gap.
 
-- If the user named a direction — a module, a subsystem, a pain point — take it, and skip the inference below.
-- Otherwise, walk back a good stretch of the commit history (`git log --oneline`) to find the codebase's hot spots — the files and areas that keep coming up — and let those paths pull your attention first. If the changes are scattered with no clear hot spot, widen the net.
+Apply the deletion thought experiment: if a wrapper disappears, does complexity
+vanish or return across callers? Do not use line count or the number of
+interfaces/adapters as an architectural score. A thin adapter can still provide
+useful isolation. A fake alone does not prove integration behavior. Do not
+recommend a broad refactor merely to make tests easier.
 
-Read the project's domain glossary (`CONTEXT.md`) and any ADRs in the area you're touching first.
+Give a recommendation with evidence strength and unresolved questions. Revisit
+an ADR only with a concrete changed assumption or cost, not a theoretical
+preference. A small routine decision can proceed within the active FD; ask the
+user only for material business ambiguity, scope or trade-offs that evidence
+cannot settle. Grilling is optional for those questions, not a mandatory loop.
 
-Then use the Agent tool with `subagent_type=Explore` to walk the codebase. Don't follow rigid heuristics — explore organically and note where you experience friction:
+## Output and optional presentation
 
-- Where does understanding one concept require bouncing between many small modules?
-- Where are modules **shallow** — interface nearly as complex as the implementation?
-- Where have pure functions been extracted just for testability, but the real bugs hide in how they're called (no **locality**)?
-- Where do tightly-coupled modules leak across their seams?
-- Which parts of the codebase are untested, or hard to test through their current interface?
+Default to concise Markdown in conversation or the existing FD/design report.
+Do not create a second plan or report for every candidate. An in-scope approved
+design stays in the current FD; an out-of-scope redesign remains a proposed
+follow-up for the owning Issue/Planner, without automatically creating it.
 
-Apply the **deletion test** to anything you suspect is shallow: would deleting it concentrate complexity, or just move it? A "yes, concentrates" is the signal you want.
+When the user requests an HTML presentation, read
+[HTML-REPORT.md](HTML-REPORT.md). Write one unique offline file under
+`<workspace>/.ai/tmp/architecture-review-<timestamp>.html`; report its absolute
+path. Do not load CDN resources, use the OS temporary directory, open a browser
+or install dependencies automatically. File output does not grant validation or
+implementation authority.
 
-### 2. Present candidates as an HTML report
+If independent alternative design is explicitly authorized, codebase-design's
+optional method permits at most two bounded static agent passes within the
+host's budget. Otherwise compare alternatives in the current session. Lack of
+delegation does not require a fabricated independent result.
 
-**Workspace temporary-output rule (takes precedence over the historical path wording below):** write the report to `<workspace>/.ai/tmp/architecture-review-<timestamp>.html`. Create `.ai/tmp` when needed, use a unique filename, and report the absolute path. Do not use the OS temporary directory or a version-controlled repository directory.
+## Completion and boundaries
 
-Write a self-contained HTML file to the OS temp directory so nothing lands in the repo. Resolve the temp dir from `$TMPDIR`, falling back to `/tmp` (or `%TEMP%` on Windows), and write to `<tmpdir>/architecture-review-<timestamp>.html` so each run gets a fresh file. Open it for the user — `xdg-open <path>` on Linux, `open <path>` on macOS, `start <path>` on Windows — and tell them the absolute path.
+Complete when the focused friction, options, recommendation, scope and next
+action are clear with sources and uncertainty. Use `%% NEEDS_INPUT: ...` and
+BLOCKED/INCOMPLETE for a material missing decision; unaffected options may still
+be discussed. Review references and scope statically. Do not run tests/builds,
+network, formatters or validation commands to produce recommendations.
 
-The report uses **Tailwind via CDN** for layout and styling, and **Mermaid via CDN** for diagrams where a graph/flow/sequence reliably communicates the structure. Mix Mermaid with hand-crafted CSS/SVG visuals — use Mermaid when relationships are graph-shaped (call graphs, dependencies, sequences), and hand-built divs/SVG when you want something more editorial (mass diagrams, cross-sections, collapse animations). Each candidate gets a **before/after visualisation**. Be visual.
-
-For each candidate, render a card with:
-
-- **Files** — which files/modules are involved
-- **Problem** — why the current architecture is causing friction
-- **Solution** — plain English description of what would change
-- **Benefits** — explained in terms of locality and leverage, and how tests would improve
-- **Before / After diagram** — side-by-side, custom-drawn, illustrating the shallowness and the deepening
-- **Recommendation strength** — one of `Strong`, `Worth exploring`, `Speculative`, rendered as a badge
-
-End the report with a **Top recommendation** section: which candidate you'd tackle first and why.
-
-**Use CONTEXT.md vocabulary for the domain, and the `/codebase-design` vocabulary for the architecture.** If `CONTEXT.md` defines "Order," talk about "the Order intake module" — not "the FooBarHandler," and not "the Order service."
-
-**ADR conflicts**: if a candidate contradicts an existing ADR, only surface it when the friction is real enough to warrant revisiting the ADR. Mark it clearly in the card (e.g. a warning callout: _"contradicts ADR-0007 — but worth reopening because…"_). Don't list every theoretical refactor an ADR forbids.
-
-See [HTML-REPORT.md](HTML-REPORT.md) for the full HTML scaffold, diagram patterns, and styling guidance.
-
-Do NOT propose interfaces yet. After the file is written, ask the user: "Which of these would you like to explore?"
-
-### 3. Grilling loop
-
-Once the user picks a candidate, run the `/grilling` skill to walk the decision tree with them — constraints, dependencies, the shape of the deepened module, what sits behind the seam, what tests survive.
-
-Side effects happen inline as decisions crystallize — run the `/domain-modeling` skill to keep the domain model current as you go:
-
-- **Naming a deepened module after a concept not in `CONTEXT.md`?** Add the term to `CONTEXT.md`. Create the file lazily if it doesn't exist.
-- **Sharpening a fuzzy term during the conversation?** Update `CONTEXT.md` right there.
-- **User rejects the candidate with a load-bearing reason?** Offer an ADR, framed as: _"Want me to record this as an ADR so future architecture reviews don't re-suggest it?"_ Only offer when the reason would actually be needed by a future explorer to avoid re-suggesting the same thing — skip ephemeral reasons ("not worth it right now") and self-evident ones.
-- **Want to explore alternative interfaces for the deepened module?** Run the `/codebase-design` skill and use its design-it-twice parallel sub-agent pattern.
+Return design decisions to Planner and diagnostic evidence to Worker. Domain
+model changes use domain-modeling only for a real terminology/rule gap and
+within the owning artifact's authority. fd-review retains the independent
+implementation verdict; this Skill is neither a release nor delivery gate.

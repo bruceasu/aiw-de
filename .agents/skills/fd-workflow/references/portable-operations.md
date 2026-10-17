@@ -51,11 +51,21 @@ parent branch, feature branch, and worktree path in
 creation; use its parent branch as the merge target. Stop if the record is
 missing or inconsistent. Use `aiw git wt status FD-001` to inspect both worktrees.
 
-Use `aiw git wt local-merge FD-001` for squash delivery after review. Content
-conflicts are recovered in the FD worktree and require an explicit retry.
+Use `aiw git wt local-merge FD-001` directly for squash delivery after review.
+Do not proactively sync every FD. Diagnose delivery failure first; CLI
+recovery may already have started the parent merge. If a separate sync is
+needed, explicitly use the recorded parent: `aiw git wt sync FD-001 develop`
+only when `develop` is that recorded parent. Follow the recovery section in
+`../SKILL.md`, including fresh review when recovery changes implementation
+beyond the current pass. `wt commit` stages and commits; it does not choose
+correct conflict resolutions. Local-merge cleans Git resources but does not
+archive; the host separately closes the FD and commits the archive. Content
+conflicts are recovered in the FD worktree. The host loads
+`resolving-merge-conflicts` for one bounded attempt; unresolved conflicts keep
+their merge state. A changed recovered implementation needs current review
+before the host invokes a separate local-merge retry.
 Successful delivery validates the squash source and removes the FD worktree
-and branch while preserving `.ai/fd/` receipts. Never create a Task to satisfy
-a Task-only command. Archive only after delivery succeeds. Commit each completed
+and branch while preserving `.ai/fd/` receipts. Archive only after delivery succeeds. Commit each completed
 Work Item separately before the Reviewer handoff. Do not rebase either branch.
 
 ## Auto

@@ -5,6 +5,13 @@ description: Define how software-engineering agents exchange structured artifact
 
 # Engineering Artifact Protocol
 
+## Adapted task methods
+
+Use source-backed evidence and a continuation brief inside the current output contract. Keep observations, causes, proposals, and permissions separate.
+Use [task methods](references/task-methods.md) when that resource is included in
+the frozen context. Apply only the relevant sections. These methods do not invoke
+another Skill or change permissions, task scope, output schemas, or lifecycle authority.
+
 ## Purpose
 
 Produce structured engineering results that the Java vNext Control Plane can validate, persist, trace, freeze, and replay.

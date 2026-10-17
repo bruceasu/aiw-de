@@ -4,6 +4,10 @@ This directory contains the R9 process workers, small Codex examples, and a sepa
 
 ## Process workers
 
+The bundled role Skills include adapted AIW task methods. See
+[Worker Skill methods](SKILL_METHODS.md) for the source-to-role map, loading
+behavior, version, boundaries, and unrun evaluation scenarios.
+
 These are the maintained multi-role workers:
 
 | Package | Language | Runtime choices | Details |

@@ -1,61 +1,27 @@
-# When to Mock
+# Replacement dependencies
 
-Mock at system boundaries only:
+Choose replacements relative to the rule under test, not ownership of code.
+Use fakes or existing boundary adapters when they keep the rule real and the
+test deterministic. Do not add a mocking framework by default.
 
-- External APIs and SDKs
-- Databases when a real test database is not practical
-- Time and randomness
-- File system access
-- Queues, email, and other infrastructure clients
+- Business payment logic can replace an external payment client. Testing the
+  payment adapter itself must exercise that adapter rather than replace it.
+- Replace time/randomness when exact control matters. Avoid global state leaks;
+  restore fixtures and use assigned temporary paths.
+- An in-memory database cannot establish real database transaction, locking or
+  constraint behavior. State the limit instead of claiming integration proof.
+- File content, persisted outcomes and call order/count may be required contract
+  assertions. Avoid incidental implementation structure.
+- Internal collaborators can be replaced at a justified module boundary; never
+  replace the calculation, permission check or transition being tested.
 
-Don't mock:
+Prefer existing injection points. Changing public interfaces, persistence or
+concurrency for testability needs the normal design/authorization process.
 
-- Your own classes or modules
-- Internal collaborators
-- Private methods
-- Anything you control directly
+Use native conventions: Java JUnit/TestNG and existing Mockito boundaries; Go
+hand-written fakes/httptest only when allowed; Python pytest/unittest fixtures
+and scoped monkeypatches. Repository restrictions override these examples.
 
-## Designing for Mockability
-
-At boundaries, make dependencies easy to replace:
-
-- Inject clients or ports instead of constructing them internally.
-- Keep interfaces small and specific.
-- Prefer fakes or in-memory adapters when they are simpler than mocks.
-
-Language cues:
-
-- Java: inject interfaces or clients; use Mockito at boundaries only.
-- Go: define small interfaces on the consumer side; prefer hand-written fakes and `httptest` before third-party mocking.
-- Python: pass collaborators in, or monkeypatch imported boundary objects; use `unittest.mock` or `pytest.monkeypatch` for external boundaries.
-
-Examples:
-
-```java
-class PaymentService {
-  private final PaymentClient client;
-
-  PaymentService(PaymentClient client) {
-    this.client = client;
-  }
-
-  Receipt process(Order order) {
-    return client.charge(order.total());
-  }
-}
-```
-
-```go
-type PaymentClient interface {
-  Charge(total Money) Receipt
-}
-
-func ProcessPayment(order Order, client PaymentClient) Receipt {
-  return client.Charge(order.Total)
-}
-```
-
-```python
-def process_payment(order, payment_client):
-    return payment_client.charge(order.total)
-```
+Record which dependency was replaced, why, which behavior remained real and
+which claims the replacement cannot support. Verify fixture setup and cleanup
+before authorizing execution; avoid secrets and live external services.

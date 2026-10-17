@@ -1,63 +1,75 @@
 ---
 name: fd-test
-description: Generate and run optional black-box tests for a numbered FD when explicitly invoked.
+description: Design optional black-box acceptance tests for a numbered FD and run them within authorization when requested, directly or through FD test support.
 disable-model-invocation: true
 ---
 
 # FD Test
 
 Read `skills/reviewed-skill-contract.md`, `skills/work-management.md`, the
-repository instructions, the target FD, and relevant stable specs. Use this
-Skill only when the user explicitly invokes `fd-test` or asks for a standalone
-FD test round. The normal `fd-workflow` does not invoke this Skill.
+needed sections of `skills/testing-methods.md`, repository rules, target FD
+and relevant stable specs. Use when explicitly requested, including a workflow
+request for test support in any wording/language. No default test round for
+ordinary FD implementation. Cases-only, execution-only and other narrower
+limits prevail; the selection does not itself approve arbitrary commands.
 
 ## Inputs and outputs
 
-Inputs are an FD ID or path, its acceptance conditions and public contracts,
-the requested test scope, and whether the user wants cases, test code, or
-execution. When black-box independence matters, work in a session separate
-from the implementation session. If that separation cannot be established,
-state the limitation before claiming independent evidence.
-
-Write assigned repository test code under the root `tests/` directory. Write
-a factual report under `docs/features/reports/` using
+Resolve the FD, acceptance/public contracts, test scope, requested cases/code/
+execution and command authorization. Write assigned test code under root
+`tests/`, respecting ownership and repository conventions. Write Chinese
+Markdown and same-name JSON under `docs/features/reports/` using
 `docs/templates/FD_TEST_REPORT_TEMPLATE.md` and
-`docs/templates/FD_TEST_REPORT_DATA_TEMPLATE.json`. Keep the same FD, revision,
-scenario IDs, commands, and results in both files.
+`docs/templates/FD_TEST_REPORT_DATA_TEMPLATE.json`. Standalone missing
+material inputs produce INCOMPLETE/BLOCKED, not guessed policies.
+
+For orchestrated FD testing use a session separate from Worker. If unavailable,
+record the limitation; never claim independent evidence. Derive expectations
+independently even in a separate session. Report session identity and access
+scope. Return the report to the host, not a fabricated Tester event.
 
 ## Process
 
-1. Derive observable scenarios from the FD acceptance and public contracts.
-   Split broad conditions into distinct behaviors. Do not inspect
-   implementation source while deriving black-box cases.
-2. Create or modify only the assigned test files. Preserve existing test
-   ownership and use repository conventions.
-3. If execution was requested, inspect the exact command and its invoked code
-   and side effects. State the command, working directory, scope, expected
-   duration, and side effects before running it. Follow the repository runtime
-   authorization rules; a request to generate cases alone does not authorize
-   execution. Run one focused command first and do not widen its scope without
-   user authorization.
-4. Record actual outcomes, unrun scenarios and reasons, commands, evidence,
-   optional coverage measurements and their raw source, and residual risks.
-   Report counts and coverage only as test facts; do not turn them into FD
-   acceptance thresholds or a delivery recommendation.
+1. Fix FD revision and acceptance source. Before inspecting implementation or
+   existing tests, record scenario IDs, rule references, inputs, expected
+   results/derivations and key assertions using shared Design. Block only
+   ambiguous scenarios and continue independent ones.
+2. Then inspect only necessary adapters, signatures and test facilities. Record
+   implementation access and reused tests; adapt or add only missing checks.
+   Do not treat reuse as independently generated evidence, or count duplicate
+   executions as independent assurance. Existing code must not redefine oracles.
+3. Statically check whether assertions detect the intended errors, replacements
+   leave the rule real, and fixtures/cleanup are confined. This does not count
+   as observed test success or an executed mutation check.
+4. For requested execution, follow shared Execution and exact repository
+   authorization. State the command/cwd/scope/duration/side effects first;
+   record actual revisions, dirty diff identities, phase and raw output. No
+   suite widening, coverage run, network or downloads without authority.
+5. Classify observed outcomes separately from causes. Return confirmed defects
+   and material unknowns with rule references; do not silently fix production
+   code. Host Worker handles authorized repair before budget exhaustion.
+6. On exhausted budget, no safe repair or unclear cause, stop test execution
+   and test-related automatic repair; produce bounded static diagnosis-only
+   evidence. Preserve original failures, candidate fix, remaining scenarios,
+   budget ledger and dependencies. Continue independent assigned work only.
 
-## Boundaries
+## Boundaries and completion
 
-- This Skill does not claim or emit FD workflow events, change FD status, or
-  update Work Item acceptance.
-- Do not send this report to a Reviewer, PM, or risk assessor for evaluation.
-  It is optional test evidence and is not an input to normal FD acceptance.
-- Never describe a prepared, partial, blocked, or unrun scenario as passed.
-- Do not run tests, measure coverage, access external services, download
-  dependencies, or make unrelated changes without the authorization required
-  by repository instructions. Treat a coverage command as a separate exact
-  command that needs the same authorization as a test command.
+For unclear failures after the independent scenarios are fixed, diagnosing-bugs
+may supply bounded cause analysis within the existing evidence/access scope.
+At diagnosis-only use preserved evidence once, or cite the existing diagnosis;
+never repair production/tests, instrument or run again through that method.
+Report structural test-seam gaps to Worker/Planner as proposals, not permission
+for an architecture refactor. Missing diagnostic Skill does not restart or
+block the existing bounded shared method; record which method was actually used.
 
-## Completion
+This Skill does not claim/emit FD events, change FD status or acceptance, merge,
+archive, or own a delivery recommendation. Relevant facts may be read by Worker,
+PM and Reviewer. Confirmed acceptance defects are not erased by optionality;
+counts/coverage add no automatic thresholds or risk voting stage.
 
-Complete when the requested cases and test code are recorded, the optional
-report matches the observed evidence, skipped execution is explicit, and no
-FD workflow state has changed. If a required input or authorization is
-missing, report `INCOMPLETE` or `BLOCKED` with the precise missing item.
+Complete the requested deliverables when the report matches actual evidence,
+including not-run/blocked/diagnosis-only and missing-input reasons. Completion
+of a report is not acceptance of the FD. Never describe prepared, partial,
+stale or unrun evidence as passed. Preserve historical reports; changed code
+requires new version-bound evidence or an explicit unverified limitation.

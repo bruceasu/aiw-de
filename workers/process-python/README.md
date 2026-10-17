@@ -17,7 +17,7 @@ Model execution is isolated behind the `AgentRuntime` protocol in
 the runtime owns SDK session creation, execution, and final output validation.
 The current `CodexAgentRuntime` preserves the existing Codex SDK behavior.
 
-The bundled Skill source version is recorded in `skills/VERSION` (currently `R2`).
+The bundled Skill source version is recorded in `skills/VERSION` (currently `R2+aiw-methods-1`).
 Directory names stay stable when the Skill source version changes. If you set
 `AIW_PROCESS_SKILLS_ROOT` explicitly, point it at the current `skills/` directory.
 
@@ -45,7 +45,10 @@ Two additional frozen R2 profiles are preserved in `profiles/advisory/` and thei
 
 The `verifier` launch role registers only verification. Integration verification requires an independently launched `integration-verifier`.
 
-The complete frozen R2 `skills/` tree is retained under `skills/`. At execution time the worker composes:
+The R2-derived `skills/` tree is retained under `skills/`, with adapted task methods
+in the role entries and `references/task-methods.md`. These are procedure changes,
+not new role registration or output schemas. See [method provenance](../SKILL_METHODS.md).
+At execution time the worker composes:
 
 1. R2 authority-boundary instructions;
 2. `engineering-artifact-protocol`;

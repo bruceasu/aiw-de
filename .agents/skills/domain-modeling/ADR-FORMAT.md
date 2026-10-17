@@ -1,8 +1,13 @@
 # ADR Format
 
+Load only for an authorized durable decision record, never in snapshot
+Requirement mode. Keep current engineering planning in the FD and stable
+behavior in specs; link them instead of copying execution items or rules.
+Discussion alone does not authorize file creation.
+
 ADRs live in `docs/adr/` and use sequential numbering: `0001-slug.md`, `0002-slug.md`, etc.
 
-Create the `docs/adr/` directory lazily — only when the first ADR is needed.
+Within approved write scope, create the `docs/adr/` directory lazily — only when the first ADR is needed.
 
 ## Template
 

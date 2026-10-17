@@ -11,6 +11,10 @@ Follow `skills/reviewed-skill-contract.md` and `skills/work-management.md`.
 Teaching returns learning guidance and does not create implementation lifecycle
 artifacts implicitly.
 
+For built-in `aiw teach`, follow [auxiliary-cli.md](references/auxiliary-cli.md)
+for lightweight resumable courses. It does not create the full teaching
+workspace below unless separately requested in an Agent host.
+
 ## Teaching Workspace
 
 Treat the current directory as a teaching workspace. The state of their learning is captured in this directory in several files:

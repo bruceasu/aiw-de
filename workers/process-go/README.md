@@ -12,7 +12,7 @@ One Go runtime is started multiple times with different role profiles. Go profil
 
 ## Why this design
 
-The bundled Skill source version is recorded in `skills/VERSION` (currently `R2`).
+The bundled Skill source version is recorded in `skills/VERSION` (currently `R2+aiw-methods-1`).
 Directory names stay stable when the Skill source version changes. If you set
 `AIW_PROCESS_SKILLS_ROOT` explicitly, point it at the current `skills/` directory.
 
@@ -258,7 +258,10 @@ All are ordinary independent pull workers. They can be stopped, restarted, multi
 
 ## Exact R2 process assets
 
-This directory now contains `skills/`, copied from the actual frozen R2 source package rather than reconstructed from documentation. At execution time the worker composes:
+This directory contains `skills/`, derived from the actual R2 source package rather
+than reconstructed from documentation. Role entries and `references/task-methods.md`
+add adapted AIW procedures without changing profiles or output schemas. See
+[method provenance](../SKILL_METHODS.md). At execution time the worker composes:
 
 ```text
 engineering-artifact-protocol

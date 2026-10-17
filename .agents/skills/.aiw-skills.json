@@ -3,223 +3,163 @@
   "skills": {
     "ask-asu": {
       "mode": "copy",
-      "sha256": "42f5d3c4e46d5c29bd7328db319a145b97a7d16e04289e29c9b47677957dcaf5",
+      "sha256": "01d8ab52be3a7299f9ab167f5cb53caa3c799c1aa1fb206f0e9f3eb2b099e62e",
       "source_identity": "D:\\green\\aiw\\skills\\ask-asu",
       "source_revision": null
     },
     "code-review": {
       "mode": "copy",
-      "sha256": "18a6befcaff23ed5e31832e780f15b8aa7cf0fa2afc6b38916ac7b2a6efe1899",
+      "sha256": "a292e1b4bf742b09aadba1ea34b1fdad4d70305bd44b84861a10971d734ca568",
       "source_identity": "D:\\green\\aiw\\skills\\code-review",
       "source_revision": null
     },
     "codebase-design": {
       "mode": "copy",
-      "sha256": "9b17152804a823e8e25e33bea18fef1f9b269f1dd75085d928006ac9a336c92c",
+      "sha256": "b65acca43c3cf87ea5742556ef8986053433e9a782df05e6c46296dad78370a8",
       "source_identity": "D:\\green\\aiw\\skills\\codebase-design",
       "source_revision": null
     },
     "diagnosing-bugs": {
       "mode": "copy",
-      "sha256": "d6813717dfaf39b6c7ae374668e8d115eb611ac9f0c137fdd221d3bcb79f7659",
+      "sha256": "7d357a7b120b81fa569126efb605ca377e0a319bd872bac19766f77935abaf04",
       "source_identity": "D:\\green\\aiw\\skills\\diagnosing-bugs",
       "source_revision": null
     },
     "domain-modeling": {
       "mode": "copy",
-      "sha256": "afe21bd8167991c50c381473f20159d430dc86b5bfecf322a4a45c4b4ad1a29d",
+      "sha256": "b1887872122701869ef4719e642336ea82eb8d445f95d02b9a4a3ec7f20ae5be",
       "source_identity": "D:\\green\\aiw\\skills\\domain-modeling",
       "source_revision": null
     },
     "edit-article": {
       "mode": "copy",
-      "sha256": "227e4b6b0f7ed6dfd27f983c8789bcc1a7995d6ac80b53dc7c761df5d1e34cd8",
+      "sha256": "7fb5d99138a22f3688e0cc852dc79a994b5d07495023f00fb3d1d2fb697a21bb",
       "source_identity": "D:\\green\\aiw\\skills\\edit-article",
+      "source_revision": null
+    },
+    "fd-release-gate": {
+      "mode": "copy",
+      "sha256": "8eaeb55035ebd171092668b1182b194e6c271ea5f71383aca915ebe6b1b5b877",
+      "source_identity": "D:\\green\\aiw\\skills\\fd-release-gate",
       "source_revision": null
     },
     "fd-review": {
       "mode": "copy",
-      "sha256": "46ea8b7bb44690863f6a990c83fe8efaa3898b7e5b140d0155b8deeb55b839fc",
+      "sha256": "c875c77130befd91761fe1272e2a1b58422135a6acc2a000a38596c7e9c55a50",
       "source_identity": "D:\\green\\aiw\\skills\\fd-review",
       "source_revision": null
     },
     "fd-test": {
       "mode": "copy",
-      "sha256": "d09b6223f4f237ded7574a44d971d374144424439fc88c04cc4dcde5fa7c7027",
+      "sha256": "17f5bcb32f7501fa8b8f8e3e0c8739912dc4dd740d8d97d32c6c973cf8591d6d",
       "source_identity": "D:\\green\\aiw\\skills\\fd-test",
       "source_revision": null
     },
     "fd-workflow": {
       "mode": "copy",
-      "sha256": "b35818fd3efc656db627efad8f0837a2f9a4d5a6aceef2dbf0887316967a7502",
+      "sha256": "ff7eba1c3c534122572eb1daf76c937d8e6e5c39419bdb096c33abe38536d451",
       "source_identity": "D:\\green\\aiw\\skills\\fd-workflow",
-      "source_revision": null
-    },
-    "finance-engineering-options": {
-      "mode": "copy",
-      "sha256": "22763a2446b1d247cb4003068dacdc5e35ba9e1caa8581e0258fc15fe894eccd",
-      "source_identity": "D:\\green\\aiw\\skills\\finance-engineering-options",
-      "source_revision": null
-    },
-    "finance-metric-brief": {
-      "mode": "copy",
-      "sha256": "fd4848d607c3bb57b51599a4ce5f4d300b608d649c3c904df8daaf224df9a89d",
-      "source_identity": "D:\\green\\aiw\\skills\\finance-metric-brief",
-      "source_revision": null
-    },
-    "finance-release-gate": {
-      "mode": "copy",
-      "sha256": "82b6167a871430430fcca30a16a7b62d4324ec20f793023e3357cfbc2c5895fa",
-      "source_identity": "D:\\green\\aiw\\skills\\finance-release-gate",
-      "source_revision": null
-    },
-    "finance-requirement-intake": {
-      "mode": "copy",
-      "sha256": "08ce0299ad323b2606e2ba9a445c68abb049c091be618830b480c6449a01b8f1",
-      "source_identity": "D:\\green\\aiw\\skills\\finance-requirement-intake",
-      "source_revision": null
-    },
-    "finance-requirement-synthesis": {
-      "mode": "copy",
-      "sha256": "469f74938d494562ee036c526cce3696f11ef3052ab22c3ab4f6d25733c0a675",
-      "source_identity": "D:\\green\\aiw\\skills\\finance-requirement-synthesis",
-      "source_revision": null
-    },
-    "finance-value-assessment": {
-      "mode": "copy",
-      "sha256": "1b7a36b7740b2c662e69776d86626612ec8527c6b71a0c45c9087c4bc3f279db",
-      "source_identity": "D:\\green\\aiw\\skills\\finance-value-assessment",
       "source_revision": null
     },
     "github-issues-management": {
       "mode": "copy",
-      "sha256": "3ae3b8f46a9c67a84d5e88d3296feaf70d7c5b410ae782c031bf310e7ca7b4e4",
+      "sha256": "b479c67f1e67ae322b46f93ff322fcc514ce2ada460d45e1c9b91e8e47f426f3",
       "source_identity": "D:\\green\\aiw\\skills\\github-issues-management",
       "source_revision": null
     },
     "grill-me": {
       "mode": "copy",
-      "sha256": "e1b339915e77b4f3f7db9da62c291d4a10d20c6a7ce3f81795af7180ec4503ff",
+      "sha256": "8e81302b933275974760607334a0a1ad9e7d71b9d4dcdecaa4ce86ba57ca8354",
       "source_identity": "D:\\green\\aiw\\skills\\grill-me",
       "source_revision": null
     },
     "grill-with-docs": {
       "mode": "copy",
-      "sha256": "f3935b388920891d1794a4bfb22c5f7d2e22ead03012bd7fe8fb3bea2a3c23df",
+      "sha256": "6548cb9096651f3d1893cb045c14b731a177e95bc51b25169d71f4684d6ba9a6",
       "source_identity": "D:\\green\\aiw\\skills\\grill-with-docs",
       "source_revision": null
     },
     "grilling": {
       "mode": "copy",
-      "sha256": "7868231650a52c119fe5f579ed13ad47ac90e020ac926a26779963facd755127",
+      "sha256": "fb9ed9baa3773a3a26a9d75087b379023b9bd6e35978e730efeb020fac69b197",
       "source_identity": "D:\\green\\aiw\\skills\\grilling",
       "source_revision": null
     },
     "handoff": {
       "mode": "copy",
-      "sha256": "90b46cc0fda541259cb0f59176f3ecfc0347faf65a11a91c698bab57db2a129b",
+      "sha256": "a57414bded0e5d743f39756c0f0a20177a75f030d03529cf5ec71b42641ce813",
       "source_identity": "D:\\green\\aiw\\skills\\handoff",
-      "source_revision": null
-    },
-    "implement": {
-      "mode": "copy",
-      "sha256": "b32bb3c39a4a3dfef44937481aed34037c9197ccb321f865c851483661b1ff54",
-      "source_identity": "D:\\green\\aiw\\skills\\implement",
       "source_revision": null
     },
     "improve-codebase-architecture": {
       "mode": "copy",
-      "sha256": "6efefa6f0f6e51eb189ff214e4d18487a55d29c5641ab3942bde1965598d09a7",
+      "sha256": "b327f8898c998c678c8671ade392cb9f6cbb231b2c5f2d0293b1ce894d3da2cf",
       "source_identity": "D:\\green\\aiw\\skills\\improve-codebase-architecture",
       "source_revision": null
     },
     "issue-management": {
       "mode": "copy",
-      "sha256": "1825429dec860e102a812f1055a5bc2e0bc5e036a57cfb458b4689e62dae3d10",
+      "sha256": "b8c9d2fba276c92b76ed19e6892b3f3a979d231648fbd6dec1eb1855fca90267",
       "source_identity": "D:\\green\\aiw\\skills\\issue-management",
       "source_revision": null
     },
     "prototype": {
       "mode": "copy",
-      "sha256": "531bf9c72eff8ea689685dd9935e01004ab36f49f87a2ed4399aa8a0d8e4de62",
+      "sha256": "f088e2896629687b74df2b2a2c69bb728561755af16ec23405f8b658c2934cc2",
       "source_identity": "D:\\green\\aiw\\skills\\prototype",
       "source_revision": null
     },
     "publish-github-issue": {
       "mode": "copy",
-      "sha256": "523518388edc9630211a16b309d3da71e9c5d78b506785e7dc97dd8ed6655263",
+      "sha256": "63db44cf6f82e5a893898d36cba457aefba2b441ae93d676dd693ef52f9602e9",
       "source_identity": "D:\\green\\aiw\\skills\\publish-github-issue",
-      "source_revision": null
-    },
-    "requirement-management": {
-      "mode": "copy",
-      "sha256": "9bba8c2ee83cf03002760add58989cff8cfbacfae16c5bc207f7b80d04bd0675",
-      "source_identity": "D:\\green\\aiw\\skills\\requirement-management",
       "source_revision": null
     },
     "research": {
       "mode": "copy",
-      "sha256": "271d8743a33e7d23fef3567734b992efbf086c0e5c0b89ce7ccfb31ab872eca6",
+      "sha256": "6fc98ddf85b19e09b725761171a8bce64c1b3e86504e0e79fe9fb1f5724574bb",
       "source_identity": "D:\\green\\aiw\\skills\\research",
       "source_revision": null
     },
     "resolving-merge-conflicts": {
       "mode": "copy",
-      "sha256": "904b79922262b9b9b4bb2e73d4d435028ec60535734f42341896785544272040",
+      "sha256": "a762861b67a3a38fe54cb2ff26de782bdde409ae7fdde40e3db94c6d904ef007",
       "source_identity": "D:\\green\\aiw\\skills\\resolving-merge-conflicts",
-      "source_revision": null
-    },
-    "resume-ext": {
-      "mode": "copy",
-      "sha256": "0b0f0b41f3f180b775404f8a65ba0a68ac30197f896147cbf5e8251ff677316b",
-      "source_identity": "D:\\green\\aiw\\skills\\resume-ext",
       "source_revision": null
     },
     "setup-project": {
       "mode": "copy",
-      "sha256": "207ba142d0c2fb73053ba4e64b540c6ab803e71bfbd8af69ee4d9c7160543c16",
+      "sha256": "a103613f26f3a4556196c29da7706f2942e7e1ac388d57bb7ee94453c8b52b91",
       "source_identity": "D:\\green\\aiw\\skills\\setup-project",
       "source_revision": null
     },
     "tdd": {
       "mode": "copy",
-      "sha256": "8339ac062d21b7ff6b7961aca85c422f5812640715947e18e95377473f38c213",
+      "sha256": "1559cd98a023b50daa92a21e5ba4f7e028109385faec82619dfd88814268dc30",
       "source_identity": "D:\\green\\aiw\\skills\\tdd",
       "source_revision": null
     },
     "teach": {
       "mode": "copy",
-      "sha256": "6d45ecb7d0a814670c4a77eda8890c6fee2c5a239c092a1dccffd165b2040fa7",
+      "sha256": "7488c6a66e31a736195b78b007ccaa6d448b4c6a26298a69d97b7139b5499c74",
       "source_identity": "D:\\green\\aiw\\skills\\teach",
       "source_revision": null
     },
     "to-spec": {
       "mode": "copy",
-      "sha256": "10135bc2138570b94ade5945eae030bc25cfc3b404d8e2eacafe1431170f92e9",
+      "sha256": "e9e66014a1bd3b98f56f128b38e8b02ccfd468f77f157e349b31998b2bd8f8c2",
       "source_identity": "D:\\green\\aiw\\skills\\to-spec",
-      "source_revision": null
-    },
-    "to-tickets": {
-      "mode": "copy",
-      "sha256": "b4ef1b8d177e12b4ed84106d37619334adc5665a91567995c7c263f32b766d5d",
-      "source_identity": "D:\\green\\aiw\\skills\\to-tickets",
       "source_revision": null
     },
     "triage": {
       "mode": "copy",
-      "sha256": "f76a8c7e234b5edff048bec7f494c58ac90a6f7437e32816737e1d60082d062b",
+      "sha256": "ca3d621445f6a93d6df821169f50d6122a7cda759994a845bf55a8ee0e114121",
       "source_identity": "D:\\green\\aiw\\skills\\triage",
-      "source_revision": null
-    },
-    "wayfinder": {
-      "mode": "copy",
-      "sha256": "57213576a0ce8cc6a91d421fae734b0dd0f8118ebb21499e57a7eb9db95d8982",
-      "source_identity": "D:\\green\\aiw\\skills\\wayfinder",
       "source_revision": null
     },
     "writing-great-skills": {
       "mode": "copy",
-      "sha256": "3d32be1cb8bebfc27b69ef6298d1c19eab3c781635bddd7f649bff3229e5dd9b",
+      "sha256": "57d24de3bc8a6abb98a6a94f14bcdbfaa11a9d21c51ff602cd52b40f07bee8ca",
       "source_identity": "D:\\green\\aiw\\skills\\writing-great-skills",
       "source_revision": null
     }

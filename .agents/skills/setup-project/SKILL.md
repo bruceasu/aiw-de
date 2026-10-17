@@ -17,7 +17,7 @@ to inspect a repository, use another Skill, create an Issue or FD, or discuss
 workflow conventions.
 
 This Skill configures local project documentation and agent instructions. It
-does not create Issues, Tasks, FDs, OpenSpec changes, external tracker
+does not create Issues, FDs, OpenSpec changes, external tracker
 configuration, branches, worktrees, commits, or run tests. Create an OpenSpec
 change only on a separate, explicit request.
 
@@ -46,17 +46,17 @@ If no `AGENTS.md` exists, include creating it in the proposal. If a legacy
 
 Propose the AIW ownership contract in `.agents/agents/work-management.md`:
 
-- AIW owns Issue and Task lifecycle, branch, worktree, Session, and handoff
+- AIW owns Issue and FD lifecycle, branch, worktree, Session, and handoff
   state.
 - FD owns design decisions and ordered work items.
 - OpenSpec owns stable capability specs; change artifacts are optional.
 - External Issues are optional projections used only on explicit request.
 
 Do not create a separate issue-tracker configuration for an AIW/OpenSpec
-repository. If triage is installed, ask once whether to keep the default role
-labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`,
-`wontfix`). Propose `.agents/agents/triage-labels.md` only if the answer or
-existing project conventions require it. Use root `CONTEXT.md` and `docs/adr/`
+repository. Triage labels are optional queue vocabulary, not a required new
+workflow. Propose `.agents/agents/triage-labels.md` only when requested or
+existing project conventions require a mapping; do not add a label decision
+merely because triage is installed. Use root `CONTEXT.md` and `docs/adr/`
 by default; propose a multi-context layout only when repository evidence shows
 clear monorepo boundaries.
 

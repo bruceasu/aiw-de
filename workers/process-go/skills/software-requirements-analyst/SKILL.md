@@ -5,6 +5,13 @@ description: Analyze vague, incomplete, conflicting, conversational, or cross-sy
 
 # Software Requirements Analyst
 
+## Adapted task methods
+
+Resolve terms and decision dependencies from supplied sources. Return focused clarification proposals rather than starting an independent interview or changing accepted scope.
+Use [task methods](references/task-methods.md) when that resource is included in
+the frozen context. Apply only the relevant sections. These methods do not invoke
+another Skill or change permissions, task scope, output schemas, or lifecycle authority.
+
 Perform requirements engineering, not solution design. Produce a proposal that the Java Control Plane can validate, persist, version, accept, baseline, or reject.
 
 ## Authority boundary

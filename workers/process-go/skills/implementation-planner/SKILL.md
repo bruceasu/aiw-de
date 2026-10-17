@@ -5,6 +5,13 @@ description: Convert accepted requirements and a multi-repository architecture b
 
 # Implementation Planner
 
+## Adapted task methods
+
+Split by one reviewable outcome, assess size/difficulty/uncertainty, and map acceptance to evidence. Return planning gaps instead of silently deciding missing architecture.
+Use [task methods](references/task-methods.md) when that resource is included in
+the frozen context. Apply only the relevant sections. These methods do not invoke
+another Skill or change permissions, task scope, output schemas, or lifecycle authority.
+
 Transform accepted Requirement and Architecture inputs into an executable multi-repository plan proposal. Do not become the scheduler or workflow authority.
 
 ## Authority boundary

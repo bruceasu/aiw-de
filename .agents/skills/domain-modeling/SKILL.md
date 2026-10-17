@@ -1,88 +1,56 @@
 ---
 name: domain-modeling
-description: Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, record an architectural decision, or when another skill needs to maintain the domain model.
+description: Clarify conflicting domain terms, concept boundaries, relationships, states and invariants during Issue discovery or FD design; maintain scoped vocabulary and durable decisions when authorized.
 ---
 
 # Domain Modeling
 
 Follow `skills/reviewed-skill-contract.md` and `skills/work-management.md`.
-Return agreed vocabulary and decisions; stable file changes require explicit
-scope and must remain attached to the current Task/change when applicable.
+Declare `skills/workflow-methods.md`; outside Requirement mode read only
+Domain clarification. This Skill changes or sharpens meaning; ordinary reading
+of an existing glossary does not require a full modeling session.
 
-Actively build and sharpen the project's domain model as you design. This is the *active* discipline — challenging terms, inventing edge-case scenarios, and writing the glossary and decisions down the moment they crystallise. (Merely *reading* `CONTEXT.md` for vocabulary is not this skill — that's a one-line habit any skill can do. This skill is for when you're changing the model, not just consuming it.)
+Inputs: current goal/scope, terms or rule conflicts, confirmed evidence and
+unresolved questions. Return precise distinctions and their implications for
+acceptance/design. Preserve user goals through software requirements and FD
+engineering decisions; do not let a technical term replace the original need.
 
-## Requirement mode
+## Requirement mode: snapshot only
 
-When supplied as a Requirement conversation method, work only on the vocabulary
-and boundaries in the current host snapshot. Return proposed terms, conflicts,
-and questions; only host-confirmed fragments are confirmed facts. Follow the
-current call's output contract instead of creating a glossary or ADR.
-Do not write CONTEXT.md, ADRs, engineering files, or Session records, and do not
-load linked format files or scan code in this mode. The engineering file rules
-below apply only outside Requirement mode with an explicitly scoped Task.
+When used as a Requirement/Issue conversation method, use only the current
+host snapshot and its output contract. Do not load linked formats or shared
+method files, scan code, write CONTEXT/specs/ADRs/FDs, or alter Session records.
+The entry itself supplies this mode's complete compact output discipline:
 
-## File structure
+- Return preferred term/definition, distinctions, relationships/ownership,
+  relevant states/transitions/invariants, normal and boundary examples.
+- Mark non-applicable dimensions rather than inventing a state model.
+- Cite supplied evidence and distinguish proposed, code-observed and confirmed
+  facts. Only host-confirmed fragments become confirmed rules.
+- Name unresolved conflicts, a focused question and its readiness impact.
+  Missing evidence is INCOMPLETE/BLOCKED only for affected scope, not guessed.
 
-Most repos have a single context:
+Host returns conclusions to the same Issue Plan under its confirmation rules.
+This mode preserves the existing TermsUnclear supplement and does not require
+another Skill directory or create an approval checkpoint.
 
-```
-/
-├── CONTEXT.md
-├── docs/
-│   └── adr/
-│       ├── 0001-event-sourced-orders.md
-│       └── 0002-postgres-for-write-model.md
-└── src/
-```
+## Scoped engineering or standalone discussion
 
-If a `CONTEXT-MAP.md` exists at the root, the repo has multiple contexts. The map points to where each one lives:
+Read relevant existing CONTEXT.md/CONTEXT-MAP.md and ADRs only. Follow shared
+Domain clarification; compare scoped code when authorized and distinguish
+observed behavior from the intended rule. Reuse established terms unless a
+confirmed decision changes them. Return a proposal by default; a discussion
+request alone does not authorize stable writes.
 
-```
-/
-├── CONTEXT-MAP.md
-├── docs/
-│   └── adr/                          ← system-wide decisions
-├── src/
-│   ├── ordering/
-│   │   ├── CONTEXT.md
-│   │   └── docs/adr/                 ← context-specific decisions
-│   └── billing/
-│       ├── CONTEXT.md
-│       └── docs/adr/
-```
+Within explicitly authorized file/FD scope, maintain confirmed vocabulary with
+[CONTEXT-FORMAT.md](CONTEXT-FORMAT.md). Link settled states/invariants to stable
+specs, current engineering choices to the FD, and important durable trade-offs
+to [ADR-FORMAT.md](ADR-FORMAT.md). Create files lazily only with actual approved
+content. No duplicate behavior specification in the glossary. A standalone
+scoped documentation request need not invent an FD, and grants no Git/runtime
+or FD lifecycle authority.
 
-Create files lazily — only when you have something to write. If no `CONTEXT.md` exists, create one when the first term is resolved. If no `docs/adr/` exists, create it when the first ADR is needed.
-
-## During the session
-
-### Challenge against the glossary
-
-When the user uses a term that conflicts with the existing language in `CONTEXT.md`, call it out immediately. "Your glossary defines 'cancellation' as X, but you seem to mean Y — which is it?"
-
-### Sharpen fuzzy language
-
-When the user uses vague or overloaded terms, propose a precise canonical term. "You're saying 'account' — do you mean the Customer or the User? Those are different things."
-
-### Discuss concrete scenarios
-
-When domain relationships are being discussed, stress-test them with specific scenarios. Invent scenarios that probe edge cases and force the user to be precise about the boundaries between concepts.
-
-### Cross-reference with code
-
-When the user states how something works, check whether the code agrees. If you find a contradiction, surface it: "Your code cancels entire Orders, but you just said partial cancellation is possible — which is right?"
-
-### Update CONTEXT.md inline
-
-When a term is resolved, update `CONTEXT.md` right there. Don't batch these up — capture them as they happen. Use the format in [CONTEXT-FORMAT.md](./CONTEXT-FORMAT.md).
-
-`CONTEXT.md` should be totally devoid of implementation details. Do not treat `CONTEXT.md` as a spec, a scratch pad, or a repository for implementation decisions. It is a glossary and nothing else.
-
-### Offer ADRs sparingly
-
-Only offer to create an ADR when all three are true:
-
-1. **Hard to reverse** — the cost of changing your mind later is meaningful
-2. **Surprising without context** — a future reader will wonder "why did they do it this way?"
-3. **The result of a real trade-off** — there were genuine alternatives and you picked one for specific reasons
-
-If any of the three is missing, skip the ADR. Use the format in [ADR-FORMAT.md](./ADR-FORMAT.md).
+Complete when relevant definitions/examples are confirmed or clearly proposed,
+remaining questions and impact are explicit, and any authorized edits match
+the owning artifacts. Report changes, sources, skipped checks and limits.
+No default tests, network, subagents, ADRs or context-map creation.

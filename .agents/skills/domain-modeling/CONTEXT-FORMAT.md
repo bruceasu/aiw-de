@@ -1,60 +1,27 @@
-# CONTEXT.md Format
+# Vocabulary format
 
-## Structure
+Load only for an authorized glossary edit, never for snapshot Requirement mode.
+Prefer the repository's existing format. Keep a term to a short definition,
+its distinctions/avoided synonyms, and links to rules or decisions where useful.
 
-```md
-# {Context Name}
-
-{One or two sentence description of what this context is and why it exists.}
+```markdown
+# Context name
 
 ## Language
 
-**Order**:
-{A one or two sentence description of the term}
-_Avoid_: Purchase, transaction
-
-**Invoice**:
-A request for payment sent to a customer after delivery.
-_Avoid_: Bill, payment request
-
-**Customer**:
-A person or organization that places orders.
-_Avoid_: Client, buyer, account
+**Delivery**: The reviewed FD changes have been placed on the recorded parent.
+Distinguish from release readiness and production deployment.
+Rule: [delivery contract](relative-path-to-owning-spec).
 ```
 
-## Rules
+Use only terms relevant to this domain; no generic programming dictionary.
+Relationships can clarify identity/ownership in a definition, but state machines,
+invariants and acceptance rules belong in stable specs or proposed Issue rules,
+not copied into CONTEXT.md. Keep ordinary/boundary examples in the relevant
+Issue/FD discussion or owning spec; link instead of duplicating them.
 
-- **Be opinionated.** When multiple words exist for the same concept, pick the best one and list the others under `_Avoid_`.
-- **Keep definitions tight.** One or two sentences max. Define what it IS, not what it does.
-- **Only include terms specific to this project's context.** General programming concepts (timeouts, error types, utility patterns) don't belong even if the project uses them extensively. Before adding a term, ask: is this a concept unique to this context, or a general programming concept? Only the former belongs.
-- **Group terms under subheadings** when natural clusters emerge. If all terms belong to a single cohesive area, a flat list is fine.
-
-## Single vs multi-context repos
-
-**Single context (most repos):** One `CONTEXT.md` at the repo root.
-
-**Multiple contexts:** A `CONTEXT-MAP.md` at the repo root lists the contexts, where they live, and how they relate to each other:
-
-```md
-# Context Map
-
-## Contexts
-
-- [Ordering](./src/ordering/CONTEXT.md) — receives and tracks customer orders
-- [Billing](./src/billing/CONTEXT.md) — generates invoices and processes payments
-- [Fulfillment](./src/fulfillment/CONTEXT.md) — manages warehouse picking and shipping
-
-## Relationships
-
-- **Ordering → Fulfillment**: Ordering emits `OrderPlaced` events; Fulfillment consumes them to start picking
-- **Fulfillment → Billing**: Fulfillment emits `ShipmentDispatched` events; Billing consumes them to generate invoices
-- **Ordering ↔ Billing**: Shared types for `CustomerId` and `Money`
-```
-
-The skill infers which structure applies:
-
-- If `CONTEXT-MAP.md` exists, read it to find contexts
-- If only a root `CONTEXT.md` exists, single context
-- If neither exists, create a root `CONTEXT.md` lazily when the first term is resolved
-
-When multiple contexts exist, infer which one the current topic relates to. If unclear, ask.
+If CONTEXT-MAP.md already exists, use it to locate the relevant context and
+preserve distinct meanings across contexts. Otherwise prefer the existing root
+glossary. Missing files are not a problem: create a glossary/map only within
+approved scope when actual confirmed terms or multiple contexts justify it.
+Ambiguous ownership is a question, not permission to create a new context.

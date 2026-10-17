@@ -35,6 +35,6 @@ core/ 相对 packages/coding-agent/src/。没有对参考目录进行构建或�
 - Agents SDK 0.3.9 和 OpenAI 6.49.0 的实际安装源码用于核对 Model、stream、usage、tool call ID 和 parallel 设置；SDK 仍作为依赖使用，没有把其实现复制到公共模块。
 - Codex SDK 0.155.1 的公开选项、spawn 和事件定义用于直接启动已安装 CLI。经授权下载的 Python 0.157.0 wheel 仅用于阅读公开接口，未安装/导入；摘要见 SDK_CAPABILITIES.md。实际 Codex 平台禁存尚未验证，未知组合拒绝注册。
 - WorkspaceResult、六种 failureCategory、complete/fail 非幂等语义来自当前 TaskExecutionService；不增加 Worker 工作流权威。
-- 冻结 R2 `skills/` 树和角色 Profile 保持原材料来源，未改写其正文。Go/Python 共享行为契约，分别实现本语言的 I/O/进程适配。
+- R2 `skills/` 树和角色 Profile 保留原材料来源。`R2+aiw-methods-1` 在 Skill 入口和 `references/task-methods.md` 增补改编的 AIW 工作方法；原有角色权限和输出契约保留，Profile 未修改。来源、覆盖范围及验证限制见 [Worker Skill 方法说明](../../SKILL_METHODS.md)。Go/Python 共享行为契约，分别实现本语言的 I/O/进程适配。
 
 来源说明不等于行为证明。独立 Tester 和 Reviewer 对照公共契约、实际源码及命令证据验收。

@@ -5,7 +5,11 @@ description: Investigate a question against high-trust primary sources and captu
 
 Follow `skills/reviewed-skill-contract.md` and `skills/work-management.md`.
 Return cited findings and distinguish sourced facts from inference; research
-does not create Tasks or implementation changes unless explicitly requested.
+does not create FD execution work or implementation changes unless explicitly requested.
+
+For built-in `aiw research`, use [auxiliary-cli.md](references/auxiliary-cli.md)
+instead of the background-agent process below; its local-source, host-written
+JSON result contract applies only to that explicitly selected command mode.
 
 Spin up a **background agent** to do the research, so you keep working while it reads.
 
