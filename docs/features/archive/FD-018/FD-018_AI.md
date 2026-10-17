@@ -108,3 +108,5 @@ Issue 的 13 条已确认规则均为验收基线，不能因可选测试未执�
 
 ### 第 1 轮评审返修证据
 R1 已修复：codex-app-server 推荐 Profile 限 fast=false，不回退到其他 planner；实现提交 27f17259。独立验收 r2 新增 A09，10 tests 全部通过，exit 0，8.964 秒，未重置台账。证据为 reports/FD-018-implementation-r2.md 与 reports/FD-018-acceptance-r2.md。旧 changes-requested 为历史，当前等待新的独立 Reviewer 结论。
+
+**Completed:** 2026-10-17
