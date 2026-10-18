@@ -3,8 +3,8 @@ title = "有限授权的代理决策 Worker：可编辑授权、人工启停、�
 parent_id = ""
 status = "DECIDED"
 created = "2026-10-16"
-updated = "2026-10-16"
-revision = 2
+updated = "2026-10-18"
+revision = 15
 
 [approval]
 status = "PENDING"
@@ -29,4 +29,4 @@ reason = ""
 requirement-plan = "docs/issues/ISSUE-00006/issue-plan.md"
 
 [digest]
-requirement-plan = "7bc6a790a807ae43dfefca53a59ab5f58d0ce8fa6dabe5276c8015bd68a89599"
+requirement-plan = "e7d96798fe2ad3b9a50200a0e54597489a7ac175851db6915e01c933b432cae9"
