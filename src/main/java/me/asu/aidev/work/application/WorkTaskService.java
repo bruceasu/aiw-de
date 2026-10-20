@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkTaskService {
+    private me.asu.aidev.secretary.application.SecretaryPlanGate secretaryGate;
+    @Autowired
+    public void setSecretaryGate(me.asu.aidev.secretary.application.SecretaryPlanGate gate) { this.secretaryGate=gate; }
     private final WorkTaskRepository tasks;
     private final TaskDependencyRepository dependencies;
     private final DependencyResolver dependencyResolver;
@@ -52,6 +55,7 @@ public class WorkTaskService {
     }
 
     private WorkTask createInternal(CreateWorkTaskCommand command, boolean idempotent) {
+        if (secretaryGate!=null && "flexible-plan".equals(command.subjectType())) secretaryGate.admitTask(command.subjectId(),command.id().value());
         var now = clock.instant();
         TaskState initialState = command.dependencies().isEmpty() ? TaskState.READY : TaskState.BLOCKED;
         WorkTask task = new WorkTask(

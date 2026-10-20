@@ -80,6 +80,17 @@ public class WebConsoleSecurityService {
         return "web:" + username(session);
     }
 
+    /** Re-evaluate durable human delegations against current configuration, not an old session. */
+    public String currentOperatorAuthority(String actor) {
+        String expected = "web:" + (enabled ? configuredUsername : "local-console");
+        if (!expected.equals(actor) || enabled && !configuredRole.canOperate()) return "";
+        try {
+            String source = enabled + "\n" + configuredUsername + "\n" + configuredRole;
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(source.getBytes(StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
+    }
+
     public String ensureCsrf(HttpSession session) {
         Object existing = session.getAttribute(SESSION_CSRF);
         if (existing != null) return existing.toString();

@@ -1,0 +1,16 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-021",
+  "source_event": "FD-021-000007-changes-requested",
+  "human_report": "FD-021-implementation-r3.md",
+  "data": {
+    "session": "codex-root-fd021-20261021",
+    "result": "implementation-ready",
+    "findings_addressed": ["R2-1"],
+    "changes": ["serialize managed Plan controls before all task/Plan locks", "serialize stop acknowledgement before task lock without denying terminal evidence", "serialize managed archive/purge and remove only secretary edges to purged source tasks"],
+    "commands": [{"command": "C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests compile", "java_home": "C:/green/jdk-25.0.1+8", "exit_code": 0, "source_files": 240, "log": "FD-021-compile-r3.log"}],
+    "not_run": ["tests", "concurrency reproduction", "migration/purge execution", "service", "worker/model execution", "network", "browser", "final build", "TypeScript type check"],
+    "limitations": ["runtime SQL and integration unverified", "third independent review pending", "prior failed outcomes retained"]
+  }
+}

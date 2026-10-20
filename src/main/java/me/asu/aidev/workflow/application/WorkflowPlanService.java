@@ -28,6 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkflowPlanService {
+    private me.asu.aidev.secretary.application.SecretaryPlanGate secretaryGate;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setSecretaryGate(me.asu.aidev.secretary.application.SecretaryPlanGate gate) { this.secretaryGate=gate; }
+    private void secretaryAdmission(String id) { if(secretaryGate!=null) secretaryGate.check(id); }
+    private void secretarySerialization(String id) { if(secretaryGate!=null) secretaryGate.serializePlan(id); }
     private WorkflowQuestionService questionDecisions;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -146,6 +151,7 @@ public class WorkflowPlanService {
     @Transactional
     public WorkflowPlan resumeReview(String id, String taskId, long planVersion, long taskVersion,
                                      String actor, String reason, boolean warningConfirmed) {
+        secretaryAdmission(id);
         actor = actor(actor);
         if (reason == null || reason.isBlank() || reason.length() > 2000) {
             throw new IllegalArgumentException("Recovery reason must contain 1 to 2000 characters.");
@@ -180,6 +186,7 @@ public class WorkflowPlanService {
     @Transactional
     public ReviewRecovery reserveRepair(String id, String taskId, long planVersion, long taskVersion,
                                          String actor, String reason) {
+        secretaryAdmission(id);
         actor = actor(actor);
         get(id);
         lockedTasks(id);
@@ -199,6 +206,7 @@ public class WorkflowPlanService {
     @Transactional
     public java.util.Optional<TaskId> continueAuthorizedRepair(String id, String sourceReview, long planVersion,
             long taskVersion, String actor, String reason, String scope) {
+        secretaryAdmission(id);
         get(id);
         lockedTasks(id);
         var recovery = reviewRecovery(id);
@@ -227,6 +235,7 @@ public class WorkflowPlanService {
     @Transactional
     public WorkflowPlan retryFailedTask(String id, String taskId, long planVersion, long taskVersion,
                                         String actor, String reason, boolean warningConfirmed) {
+        secretaryAdmission(id);
         actor = actor(actor);
         if (reason == null || reason.isBlank() || reason.length() > 2000) {
             throw new IllegalArgumentException("Retry reason must contain 1 to 2000 characters.");
@@ -316,6 +325,7 @@ public class WorkflowPlanService {
 
     @Transactional
     public WorkflowPlan jump(String id, long version, int targetStep, String actor, String reason) {
+        secretaryAdmission(id);
         return control(id, version, targetStep, actor, reason, false);
     }
 
@@ -331,6 +341,7 @@ public class WorkflowPlanService {
 
     private WorkflowPlan control(String id, long version, Integer targetStep, String actor, String reason,
                                  boolean complete) {
+        secretarySerialization(id);
         actor = actor(actor);
         if (reason == null || reason.isBlank() || reason.length() > 2000) {
             throw new IllegalArgumentException("control reason must contain 1 to 2000 characters");
@@ -384,6 +395,8 @@ public class WorkflowPlanService {
     public void afterStopAcknowledged(TaskId taskId, String workerId, String leaseToken) {
         WorkTask task = tasks.find(taskId).orElseThrow();
         if (!SUBJECT.equals(task.subjectType())) return;
+        // TaskExecutionService acquired the same lock before fencing the task lease.
+        secretarySerialization(task.subjectId());
         Control decision = controls.pending(task.subjectId()).orElse(null);
         if (decision == null) return;
         if (!taskId.value().equals(decision.taskId()) || !workerId.equals(decision.leaseWorker())
@@ -408,6 +421,7 @@ public class WorkflowPlanService {
 
     @Transactional
     public WorkflowPlan clearStaleControl(String id, long version, String actor) {
+        secretarySerialization(id);
         actor = actor(actor);
         WorkflowPlan plan = get(id);
         if (plan.state() != WorkflowPlan.State.CONFIRMED || plan.version() != version) {
@@ -479,6 +493,7 @@ public class WorkflowPlanService {
 
     @Transactional
     public WorkflowPlan confirm(String id, long version, String actor) {
+        if(secretaryGate!=null) secretaryGate.initialConfirmation(id);
         actor = actor(actor);
         WorkflowPlan plan = get(id);
         WorkflowEditorService.validateSpec(plan.spec(), false);
@@ -528,6 +543,7 @@ public class WorkflowPlanService {
     }
 
     private void createExecution(WorkflowPlan plan, int stepIndex, int attempt, Set<TaskId> dependencies, String authorization) {
+        secretaryAdmission(plan.id());
         var step = plan.spec().steps().get(stepIndex);
         String revision = revisionFor(plan, stepIndex, attempt);
         TaskId id = executionId(plan, stepIndex, attempt);
@@ -577,6 +593,7 @@ public class WorkflowPlanService {
     }
 
     private void createReview(WorkflowPlan plan, int stepIndex, int attempt, TaskId id) {
+        secretaryAdmission(plan.id());
         var step = plan.spec().steps().get(stepIndex);
         TaskId execution = executionId(plan, stepIndex, attempt);
         var output = attempts.findCompletedInput(execution)
@@ -637,6 +654,8 @@ public class WorkflowPlanService {
     }
 
     private WorkflowPlan withdraw(String id, long version, String actor, String reason, boolean rollbackComplete) {
+        // WorkflowCancellationService also serializes before taking any task locks.
+        secretarySerialization(id);
         actor = actor(actor);
         if (reason == null || reason.isBlank() || reason.length() > 2000) {
             throw new IllegalArgumentException("withdrawal reason must contain 1 to 2000 characters");

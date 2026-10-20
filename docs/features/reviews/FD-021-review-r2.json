@@ -1,0 +1,28 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-021",
+  "source_event": "FD-021-000006-implementation-ready",
+  "human_report": "FD-021-review-r2.md",
+  "data": {
+    "session": "codex-reviewer-fd021-r2-20261021",
+    "result": "changes-requested",
+    "review_round": 2,
+    "base": "4b61b2f",
+    "incremental_base": "2ed44e6",
+    "head": "3167fb7a78000c6b2866260edc8a14979eefdb9b",
+    "resolved": ["R1-1", "R1-2"],
+    "findings": [{
+      "id": "R2-1", "severity": "high", "blocking": true,
+      "file": "src/main/java/me/asu/aidev/secretary/application/SecretaryCoordinator.java", "line": 75,
+      "related": ["WorkflowPlanService.java:362", "WorkflowPlanService.java:371", "WorkTaskService.java:92", "DependencyResolver.java:43"],
+      "requirement": "FD D2 consistent lock ordering and safe managed Plan controls",
+      "fact": "Coordinator holds Plan then locks source task through dependency refresh; stop/complete holds source task then updates Plan. PostgreSQL can form a two-transaction lock cycle.",
+      "correction": "Serialize managed Plan controls and coordination before either obtains task/Plan locks; inspect entry and callback order without adding task-to-secretary inversions."
+    }],
+    "validation": {"mode": "static-only", "worker_compile_log": "../reports/FD-021-compile-r2.log", "post_edit": "JSON parse, aiw-data count and git diff --check", "runtime_pass": false},
+    "commands": ["aiw fd show FD-021", "aiw fd claim FD-021 FD-021-000006-implementation-ready --session codex-reviewer-fd021-r2-20261021", "git show --stat", "git diff 2ed44e6..3167fb7", "git rev-parse HEAD", "Get-Content", "Select-Object", "rg", "apply_patch", "aiw fd emit FD-021 changes-requested --producer reviewer --artifact docs/features/reviews/FD-021-review-r2.md --source-event FD-021-000006-implementation-ready"],
+    "not_run": ["tests", "compile", "migration", "service", "worker/model execution", "network", "browser", "concurrent reproduction", "TypeScript type check", "final build", "sub-agents", "merge", "archive"],
+    "risks": ["PostgreSQL dependency lock cycle remains", "SQL and runtime integration not executed"]
+  }
+}

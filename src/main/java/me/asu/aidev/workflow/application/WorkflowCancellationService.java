@@ -23,6 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 /** Cancels a plan only after its local, isolated Git branches can be safely discarded. */
 @Service
 public class WorkflowCancellationService {
+    private me.asu.aidev.secretary.application.SecretaryPlanGate secretaryGate;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setSecretaryGate(me.asu.aidev.secretary.application.SecretaryPlanGate gate) { this.secretaryGate=gate; }
     private static final Duration GIT_TIMEOUT = Duration.ofSeconds(15);
     private final WorkflowPlanService service;
     private final WorkflowPlanRepository plans;
@@ -45,6 +48,7 @@ public class WorkflowCancellationService {
 
     @Transactional
     public WorkflowPlan cancel(String id, long version, String actor, String reason) {
+        if(secretaryGate!=null) secretaryGate.serializePlan(id);
         if (reason == null || reason.isBlank() || reason.length() > 2000) {
             throw new IllegalArgumentException("cancellation reason must contain 1 to 2000 characters");
         }

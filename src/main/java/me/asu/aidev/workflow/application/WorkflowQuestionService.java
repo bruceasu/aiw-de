@@ -33,6 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
 /** Source artifacts propose questions; only a separately confirmed manager answer is authority. */
 @Service
 public class WorkflowQuestionService {
+    private me.asu.aidev.secretary.application.SecretaryPlanGate secretaryGate;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setSecretaryGate(me.asu.aidev.secretary.application.SecretaryPlanGate gate) { this.secretaryGate=gate; }
     public record Document(String taskId, String attemptId, String reviewState, TaskOutputBundle.File file) {}
     public record Question(String key, String id, String question, String impact, String sourceState,
             List<String> affects, String context, Document source, Answer decision) {}
@@ -113,6 +116,7 @@ public class WorkflowQuestionService {
     @Transactional
     public Answer answer(String id, long version, String key, String fileId, String sourceHash,
             String answer, boolean confirmed, String actor) {
+        if(secretaryGate!=null) secretaryGate.serializePlan(id);
         if (!confirmed) throw new IllegalArgumentException("Confirm this answer before saving.");
         if (answer == null || answer.isBlank() || answer.length() > 2000 || answer.contains("[AIW_CONFIRMED_DECISIONS]") || answer.contains("[/AIW_CONFIRMED_DECISIONS]")) throw new IllegalArgumentException("Answer must contain 1 to 2000 characters.");
         if (actor == null || actor.isBlank() || actor.length() > 256) throw new IllegalArgumentException("Decision actor is required.");

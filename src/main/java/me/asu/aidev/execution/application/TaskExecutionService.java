@@ -47,6 +47,15 @@ public class TaskExecutionService {
     private final AiProfileCatalog aiProfiles;
     private final Clock clock;
     private final Duration leaseDuration;
+    private me.asu.aidev.secretary.application.SecretaryPlanGate secretaryGate;
+    @Autowired
+    public void setSecretaryGate(me.asu.aidev.secretary.application.SecretaryPlanGate gate) { this.secretaryGate=gate; }
+    private void secretaryMutation(TaskId taskId) {
+        if(secretaryGate!=null) tasks.find(taskId).ifPresent(secretaryGate::checkTask);
+    }
+    private void secretarySerialization(TaskId taskId) {
+        if(secretaryGate!=null) tasks.find(taskId).ifPresent(secretaryGate::serializeTask);
+    }
     private TaskWorkspaceReplacementService workspaceReplacements;
     private WorkflowPlanService workflowPlans;
     private me.asu.aidev.workflow.application.RecommendationTaskPolicy recommendationPolicy;
@@ -112,9 +121,10 @@ public class TaskExecutionService {
     @Transactional
     public void start(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                       String profileId, String profileVersion, String selectionReason) {
-        if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
         assertExecutionAllowed(task);
+        if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
+        task = tasks.find(taskId).orElseThrow();
         if (task.state() == TaskState.CLAIMED && attempts.stopRequested(leaseToken, workerId)) {
             throw new IllegalStateException("Worker stop requested before task start; acknowledge stop instead");
         }
@@ -173,6 +183,7 @@ public class TaskExecutionService {
     @Transactional
     public void reviseInstruction(TaskId taskId, long expectedTaskVersion, int expectedInstructionRevision,
                                   String instruction, String actor, String reason) {
+        secretaryMutation(taskId);
         requireAudit(actor, reason);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow();
@@ -201,6 +212,7 @@ public class TaskExecutionService {
 
     @Transactional
     public void requestStop(TaskId taskId, String actor, String reason) {
+        secretarySerialization(taskId);
         requireAudit(actor, reason);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow();
@@ -215,6 +227,7 @@ public class TaskExecutionService {
 
     @Transactional
     public void acknowledgeStop(TaskId taskId, WorkerId workerId, LeaseToken leaseToken) {
+        secretarySerialization(taskId);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow();
         if (attempts.stopAcknowledged(taskId, workerId, leaseToken)) return;
@@ -238,6 +251,7 @@ public class TaskExecutionService {
 
     @Transactional
     public void forceRequeue(TaskId taskId, String actor, String reason, boolean warningConfirmed) {
+        secretaryMutation(taskId);
         requireAudit(actor, reason);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow();

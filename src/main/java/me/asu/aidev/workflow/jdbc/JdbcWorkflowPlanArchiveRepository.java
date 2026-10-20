@@ -9,6 +9,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class JdbcWorkflowPlanArchiveRepository {
+    private me.asu.aidev.secretary.application.SecretaryPlanGate secretaryGate;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setSecretaryGate(me.asu.aidev.secretary.application.SecretaryPlanGate gate) { this.secretaryGate=gate; }
     private me.asu.aidev.output.jdbc.JdbcTaskOutputRepository taskOutputs;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -67,6 +70,7 @@ public class JdbcWorkflowPlanArchiveRepository {
 
     @Transactional
     public boolean purge(String id, Instant now) {
+        if(secretaryGate!=null) secretaryGate.serializePlan(id);
         if (jdbc.update("""
                 UPDATE web_console_plan_archive SET delete_after_epoch_ms=delete_after_epoch_ms
                  WHERE plan_id=? AND delete_after_epoch_ms<=?
@@ -100,6 +104,9 @@ public class JdbcWorkflowPlanArchiveRepository {
         // Keep immutable deliverables even when their source plan/task history is removed.
         if (taskOutputs != null) taskOutputs.snapshotPlan(id);
         jdbc.update("DELETE FROM execution_attempt WHERE task_id IN (" + TASKS + ")", id);
+        // Secretary requests keep their frozen identity/report history after the old source is purged.
+        // Remove only their dependency edges to this plan; other external references retain old safeguards.
+        jdbc.update("DELETE FROM work_task_dependency WHERE task_id IN (SELECT r.id FROM secretary_request r JOIN secretary_work w ON w.id=r.work_id WHERE w.plan_id=?) AND depends_on_task_id IN (" + TASKS + ")",id,id);
         jdbc.update("DELETE FROM work_task_dependency WHERE task_id IN (" + TASKS + ")", id);
         jdbc.update("DELETE FROM work_task WHERE subject_type='flexible-plan' AND subject_id=?", id);
         if (jdbc.update("DELETE FROM flexible_workflow_plan WHERE id=?", id) != 1) {

@@ -1,0 +1,16 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-021",
+  "source_event": "FD-021-000005-changes-requested",
+  "human_report": "FD-021-implementation-r2.md",
+  "data": {
+    "session": "codex-root-fd021-20261021",
+    "result": "implementation-ready",
+    "findings_addressed": ["R1-1", "R1-2"],
+    "changes": ["lock-free ordinary gate with draft-only adoption serialization", "durable professional admission bound to generation and ACTIVE state", "missing source evidence produces NEEDS_HUMAN without rolling back terminal reports"],
+    "commands": [{"command": "C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests compile", "java_home": "C:/green/jdk-25.0.1+8", "exit_code": 0, "source_files": 240, "log": "FD-021-compile-r2.log"}],
+    "not_run": ["tests", "concurrent reproducer", "migration", "service", "worker/model execution", "network", "browser", "final build", "TypeScript type check"],
+    "limitations": ["runtime integration and SQL behavior remain unexecuted", "reviewer R2 pending"]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-021",
+  "source_event": "FD-021-000008-implementation-ready",
+  "human_report": "FD-021-review-r3.md",
+  "data": {
+    "session": "codex-reviewer-fd021-r3-20261021",
+    "result": "verification-passed",
+    "review_round": 3,
+    "prior_changes_requested": 2,
+    "base": "4b61b2f",
+    "incremental_base": "3167fb7",
+    "head": "dc4c802142e72e3519ea86ab764203725f2038a0",
+    "resolved": ["R1-1", "R1-2", "R2-1"],
+    "findings": [],
+    "scope": "current full FD using R1 static review and R2/R3 actual source and contract diffs",
+    "dimensions": {"correctness": "supported by static evidence", "standards": "no remaining hard violation found", "spec": "approved A+B supported by static evidence", "evidence": "compile evidence reviewed; all runtime limits retained"},
+    "validation": {"mode": "static-only", "worker_compile_log": "../reports/FD-021-compile-r3.log", "worker_compile_source_files": 240, "worker_compile_exit_code": 0, "post_edit": "JSON parse, aiw-data count and git diff --check", "runtime_pass": false},
+    "commands": ["aiw fd show FD-021", "aiw fd claim FD-021 FD-021-000008-implementation-ready --session codex-reviewer-fd021-r3-20261021", "git show --stat", "git diff 3167fb7..dc4c802", "git diff dc4c802 -- src/main/java", "git rev-parse HEAD", "Get-Content", "Select-Object", "rg", "apply_patch", "aiw fd emit FD-021 verification-passed --producer reviewer --artifact docs/features/reviews/FD-021-review-r3.md --source-event FD-021-000008-implementation-ready"],
+    "not_run": ["tests", "compile", "concurrency reproduction", "PostgreSQL/SQLite runtime", "migration/purge execution", "service startup", "worker/model execution", "network", "browser", "TypeScript type check", "final build", "sub-agents", "merge", "archive"],
+    "risks": ["runtime SQL, time recovery, worker and browser integration remain unexecuted", "single-machine secretary serialization limits throughput", "V8 upgrade requires backup and safe rollback procedure"]
+  }
+}

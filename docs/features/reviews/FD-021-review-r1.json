@@ -1,0 +1,35 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-021",
+  "source_event": "FD-021-000004-implementation-ready",
+  "human_report": "FD-021-review-r1.md",
+  "data": {
+    "session": "codex-reviewer-fd021-r1-20261021",
+    "result": "changes-requested",
+    "review_round": 1,
+    "base": "4b61b2f",
+    "head": "2ed44e626c06921d3c652305bfee895df2773b9c",
+    "findings": [
+      {
+        "id": "R1-1", "severity": "high", "blocking": true,
+        "file": "src/main/java/me/asu/aidev/secretary/application/SecretaryPlanGate.java", "line": 16,
+        "requirement": "FD acceptance 4; D2 consistent lock order; old Plan compatibility",
+        "fact": "Unmanaged Plan instruction mutation locks Plan then task; its completion locks task then Plan through createReview. PostgreSQL can form a two-transaction lock cycle.",
+        "correction": "Unify admission, mutation and completion lock ordering without reopening the Plan-association race."
+      },
+      {
+        "id": "R1-2", "severity": "medium", "blocking": true,
+        "file": "src/main/java/me/asu/aidev/secretary/application/SecretaryCoordinator.java", "line": 98,
+        "requirement": "FD acceptance 6; invalid evidence must require human handling and retain facts",
+        "fact": "EXTERNAL_WORK may complete without a report; coordinator PROCEED then throws on missing source report and rolls back its completion and consumed flag instead of recording NEEDS_HUMAN.",
+        "correction": "Handle missing source input/report as explicit NEEDS_HUMAN before delegation and consumption; commit terminal facts without advancing."
+      }
+    ],
+    "dimensions": {"correctness": "blocked", "standards": "no separate hard violation", "spec": "blocked", "evidence": "compile evidence reviewed; runtime limits disclosed"},
+    "validation": {"mode": "static-only", "post_edit": "JSON parse, aiw-data count and git diff --check", "runtime_pass": false},
+    "commands": ["Get-Content", "Select-Object", "rg", "git diff --stat/--name-only and scoped diff", "git rev-parse HEAD", "git status --short", "aiw fd show FD-021", "aiw fd claim FD-021 FD-021-000004-implementation-ready --session codex-reviewer-fd021-r1-20261021", "aiw fd emit --help", "apply_patch", "aiw fd emit FD-021 changes-requested --producer reviewer --artifact docs/features/reviews/FD-021-review-r1.md --source-event FD-021-000004-implementation-ready"],
+    "not_run": ["tests", "compile", "migration execution", "service startup", "worker/model execution", "network", "browser", "concurrency reproduction", "full TypeScript type check", "final build", "sub-agents", "merge", "archive"],
+    "risks": ["PostgreSQL lock cycle is statically derived, not runtime reproduced", "SQLite migration and complete runtime behavior remain unverified"]
+  }
+}
