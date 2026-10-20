@@ -1,10 +1,10 @@
 id = "ISSUE-00006"
 title = "有限授权的代理决策 Worker：可编辑授权、人工启停、授权查看与模板复用"
 parent_id = ""
-status = "APPROVED"
+status = "ARCHIVED"
 created = "2026-10-16"
 updated = "2026-10-21"
-revision = 17
+revision = 18
 
 [approval]
 status = "APPROVED"
@@ -21,9 +21,9 @@ task_id = ""
 session_id = ""
 
 [terminal]
-by = ""
-at = ""
-reason = ""
+by = "LAPTOP-P8VM6T16\\suk"
+at = "2026-10-21T07:46:56+09:00"
+reason = "done"
 
 [artifact]
 requirement-plan = "docs/issues/ISSUE-00006/issue-plan.md"

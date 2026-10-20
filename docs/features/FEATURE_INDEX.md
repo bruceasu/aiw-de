@@ -6,7 +6,7 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
-| - | - | - | - |
+| [FD-023](FD-023_API_API_R1.md) | 统一所有控制平面 API 到 /api/r1 路径 | Design | Medium |
 
 ## Completed
 

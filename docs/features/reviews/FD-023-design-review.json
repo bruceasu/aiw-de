@@ -1,0 +1,29 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-023",
+  "source_event": "FD-023-000002-design-requested",
+  "human_report": "FD-023-design-review.md",
+  "data": {
+    "recommendation": "changes-needed",
+    "session": "fd023-design-review-20261021-6e85bc",
+    "artifact": "docs/features/FD-023_API_API_R1.md",
+    "findings": [
+      {
+        "id": "D1",
+        "severity": "high",
+        "blocking": true,
+        "location": "FD Solution 1-2; WorkflowPlanController:24; WorkflowEditorController:136; WorkflowQuestionController:19",
+        "finding": "控制台 API 分类遗漏 /ui/workflow-plans 和 /ui/plan-editor（含 questions），会留下非 r1 JSON API，或在迁移后遗漏原有会话、CSRF 边界。",
+        "recommendation": "明确迁移到 /api/r1/workflow-plans 与 /api/r1/plan-editor；共享控制台认证分类及 DelegationManagement 排除清单覆盖六个 API 根；保留 HTML 页面路径并同步浏览器、测试及文档。"
+      }
+    ],
+    "human_decisions_required": [],
+    "validation": {
+      "mode": "bounded-static-design-review",
+      "commands": ["Get-Content", "rg", "Select-Object", "Select-String", "apply_patch"],
+      "not_run": ["tests", "compile", "services", "HTTP", "browser", "network", "workflow state commands", "subagents"]
+    },
+    "limitations": ["无实现 diff，结论仅评价设计。", "context path、首次启用并发和认证顺序均未运行验证。", "未 claim 主 Planner 的 design-requested 事件，未产生实现验收事件。"]
+  }
+}
