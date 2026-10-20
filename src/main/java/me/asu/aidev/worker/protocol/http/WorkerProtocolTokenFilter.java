@@ -17,7 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 @Component
 public class WorkerProtocolTokenFilter extends OncePerRequestFilter {
-    private static final String PREFIX = "/api/worker-protocol/";
+    private static final String PREFIX = "/api/r1/worker-protocol/";
     private final String configuredToken;
 
     public WorkerProtocolTokenFilter(@Value("${aidev.worker-protocol.token:}") String configuredToken) {

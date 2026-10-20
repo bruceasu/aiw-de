@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/ui/plan-editor/plans/{planId}/questions")
+@RequestMapping("/api/r1/plan-editor/plans/{planId}/questions")
 public class WorkflowQuestionController {
     private final WorkflowQuestionService questions;
     private final WebConsoleSecurityService security;

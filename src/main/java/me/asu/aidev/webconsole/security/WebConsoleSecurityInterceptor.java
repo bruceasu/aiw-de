@@ -24,7 +24,7 @@ public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         if (path.equals("/ui/login") || path.equals("/ui/console.css") || path.equals("/ui/console.js")) return true;
-        if (!path.equals("/ui") && !path.startsWith("/ui/")) return true;
+        if (!path.equals("/ui") && !path.startsWith("/ui/") && !WebConsoleApiRoutes.matches(path)) return true;
         if(delegation!=null && delegation.legacyAuthRequired() && !security.enabled()) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED,"Human console authentication must remain enabled after delegation activation");return false;
         }

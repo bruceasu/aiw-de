@@ -105,7 +105,7 @@ class R7S2TelegramApprovalIT {
     void telegramInlineButtonIsAuthorizedAndBecomesImmutableApprovalAuthority() throws Exception {
         TaskId implementationId = preparePassedGate();
 
-        HttpResponse<String> requested = post("/api/r7/approvals", """
+        HttpResponse<String> requested = post("/api/r1/approvals", """
                 {"sourceTaskId":"R7-S2-IMPL-1","requestedBy":"control-plane","channel":"TELEGRAM","channelRef":"chat:123"}
                 """);
         assertThat(requested.statusCode()).isEqualTo(200);

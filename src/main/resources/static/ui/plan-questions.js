@@ -3,7 +3,7 @@
   const section = root?.querySelector('[data-question-board]');
   if (!section) return;
   const planId = root.dataset.id;
-  const base = `/ui/plan-editor/plans/${encodeURIComponent(planId)}/questions`;
+  const base = `/api/r1/plan-editor/plans/${encodeURIComponent(planId)}/questions`;
   const status = section.querySelector('[data-question-status]');
   const list = section.querySelector('[data-question-list]');
   const drafts = new Map();
@@ -54,7 +54,7 @@
       const button = node('button', 'Preview source', 'btn ghost small-btn'); button.type = 'button';
       button.addEventListener('click', () => preview(document)); row.append(button);
     }
-    const download = node('a', 'Download source', 'btn ghost small-btn'); download.href = `/ui/api/task-outputs/files/${encodeURIComponent(document.file.id)}`;
+    const download = node('a', 'Download source', 'btn ghost small-btn'); download.href = `/api/r1/task-outputs/files/${encodeURIComponent(document.file.id)}`;
     const task = node('a', 'View source task', 'btn ghost small-btn'); task.href = `/ui/plans/${encodeURIComponent(planId)}/tasks/${encodeURIComponent(document.taskId)}`;
     row.append(download, task);
     return row;
@@ -133,7 +133,7 @@
       const item = node('article', undefined, 'question-file-row');
       item.append(node('h3', answer.questionId), node('p', answer.questionText), node('p', answer.answer, 'question-confirmed-answer'),
         node('p', `${answer.actor} · ${new Date(answer.decidedAt).toLocaleString()} · v${answer.planVersion}`, 'small muted'));
-      const source = node('a', 'Download source', 'btn ghost small-btn'); source.href = `/ui/api/task-outputs/files/${encodeURIComponent(answer.sourceFileId)}`;
+      const source = node('a', 'Download source', 'btn ghost small-btn'); source.href = `/api/r1/task-outputs/files/${encodeURIComponent(answer.sourceFileId)}`;
       item.append(source); history.append(item);
     }
     for (const warning of board.warnings) list.append(node('p', warning, 'callout warn-callout'));

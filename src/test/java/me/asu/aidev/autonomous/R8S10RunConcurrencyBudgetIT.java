@@ -134,11 +134,11 @@ class R8S10RunConcurrencyBudgetIT {
     }
 
     private JsonNode runDashboard(String runId) throws Exception {
-        return get("/api/r8/runs/" + runId + "/dashboard");
+        return get("/api/r1/runs/" + runId + "/dashboard");
     }
 
     private JsonNode fleetDashboard() throws Exception {
-        return get("/api/r8/fleet/dashboard?detailLimit=20");
+        return get("/api/r1/fleet/dashboard?detailLimit=20");
     }
 
     private JsonNode get(String path) throws Exception {

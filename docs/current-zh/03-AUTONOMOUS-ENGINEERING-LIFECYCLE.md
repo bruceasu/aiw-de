@@ -5,7 +5,7 @@
 入口：
 
 ```text
-POST /api/r8/requirements
+POST /api/r1/requirements
 ```
 
 第一项持久化任务是 `REQUIREMENT_ANALYSIS`。

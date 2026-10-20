@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-023",
+  "source_event": "FD-023-000004-implementation-ready",
+  "human_report": "FD-023-review.md",
+  "data": {
+    "reviewer_session": "fd023-reviewer-20261021-01",
+    "review_round": 1,
+    "base": "6f34bf4",
+    "reviewed_commit": "ea00861",
+    "fd_revision": 4,
+    "outcome": "changes-requested",
+    "findings": [{
+      "id": "R1",
+      "severity": "medium",
+      "blocking": true,
+      "requirement": "FD Work 2.2 and current-documentation acceptance",
+      "locations": ["docs/current/README.md:15", "docs/current/04-WORKER-PROTOCOL-AND-WORKERS.md:10", "docs/current/QUICK-START.md:43", "docs/current/QUICK-START.md:203"],
+      "observed": "Ten English current operational/user documents retain old unversioned and r6/r7/r8 control-plane API URLs.",
+      "impact": "Documented Worker registration, Fleet and approval requests target removed routes without aliases.",
+      "correction": "Update current English API URLs and namespace/compatibility guidance; correct Worker evidence. Preserve historical validation records and external URLs. No recompilation required for docs-only repair."
+    }],
+    "supported_static": ["production canonical mappings and HTML routes", "six console roots with session/CSRF/role/owner preservation", "interceptor order and first-enable receipt exclusion", "Worker bearer and dedicated identities", "machine lease whitelist with administrative drain/offline", "context-relative route classification", "current Worker/browser/template/source-test URLs", "Chinese current documentation and stable specs"],
+    "commands_run": ["aiw fd show FD-023", "aiw fd claim FD-023 FD-023-000004-implementation-ready --session fd023-reviewer-20261021-01", "aiw fd emit --help", "git diff --stat and --numstat 6f34bf4..ea00861", "targeted git diff 6f34bf4..ea00861", "git log", "git status --short", "rg and PowerShell targeted source/document reads"],
+    "checks_not_run": ["tests", "compile", "typecheck", "service", "HTTP", "browser", "network", "migration", "final build", "subagents"],
+    "worker_evidence_limits": ["compile results are Worker evidence, not rerun by Reviewer", "standalone Java example javac and cleanup were blocked by automatic approval and not executed or bypassed"],
+    "residual_risks": ["actual Spring routing and security integration untested", "nonempty context path end-to-end behavior untested", "external clients must update API paths"],
+    "human_decisions_required": []
+  }
+}

@@ -424,7 +424,7 @@ func (c *Client) postStatus(ctx context.Context, path string, payload any, out a
 		}
 		body = bytes.NewReader(data)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.cfg.BaseURL+"/api/worker-protocol/v1"+path, body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.cfg.BaseURL+"/api/r1/worker-protocol/v1"+path, body)
 	if err != nil {
 		return 0, err
 	}

@@ -8,7 +8,7 @@
   const api = async (path, body, options = {}) => {
     if (body !== undefined) pendingWrites++;
     try {
-      const response = await fetch(`/ui/plan-editor${path}${body === undefined ? '' : `?_csrf=${encodeURIComponent(csrf)}`}`, {
+      const response = await fetch(`/api/r1/plan-editor${path}${body === undefined ? '' : `?_csrf=${encodeURIComponent(csrf)}`}`, {
         method: body === undefined ? 'GET' : 'POST',
         signal: options.signal,
         cache: options.cache,

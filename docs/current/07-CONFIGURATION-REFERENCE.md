@@ -18,7 +18,7 @@
 
 ### Important Fleet bootstrap behavior
 
-`AIW_FLEET_MAX_PARALLELISM` initializes a new database’s singleton fleet budget. Runtime updates through `/api/r8/fleet/scheduling` persist and are not overwritten by the environment value after restart.
+`AIW_FLEET_MAX_PARALLELISM` initializes a new database’s singleton fleet budget. Runtime updates through `/api/r1/fleet/scheduling` persist and are not overwritten by the environment value after restart.
 
 ## 2. Approval policy
 

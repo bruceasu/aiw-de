@@ -32,7 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 /** Generic, bounded DAG submission for independently implemented workflows. */
 @RestController
-@RequestMapping("/api/workflows")
+@RequestMapping("/api/r1/workflows")
 @ConditionalOnProperty(prefix = "aidev.external-workflow", name = "enabled", havingValue = "true")
 public class ExternalWorkflowController {
     private final WorkTaskService taskService;

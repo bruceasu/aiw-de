@@ -1,5 +1,7 @@
 # aiw-de Control Plane API
 
+全部现行 API 统一使用 `/api/r1/...`。旧 r6/r7/r8、未编号 API 及 UI 下的旧 API 不保留兼容路由；外部客户端须同步升级。Worker 基础路径为 `/api/r1/worker-protocol/v1`。原计划编辑、问题答复和工作流计划 API 分别迁至 `/api/r1/plan-editor/...` 与 `/api/r1/workflow-plans/...`，继续要求原人工会话、CSRF 和角色校验。HTML 页面及表单重定向继续使用 `/ui/...`。
+
 本文档描述仓库当前 Spring MVC 控制器实现的 HTTP 接口，作为独立、按接口和 DTO 查阅的参考，与现有 API 用户手册互补。目前项目未集成 springdoc/Swagger，也没有可供其生成的 OpenAPI 文档。路径以应用根路径为基准，部署时可替换主机和端口。
 
 ## 基本信息
@@ -13,16 +15,17 @@
 
 | 接口组 | 鉴权 |
 | --- | --- |
-| Worker Protocol `/api/worker-protocol/v1/**`（含 Worker outputs） | 当 `AIW_WORKER_TOKEN` 非空时，发送 `Authorization: Bearer <token>`；为空时过滤器不校验 token。任务操作仍会校验 Worker/lease 状态。 |
-| External Workflow `/api/workflows/**` | 仅 `aidev.external-workflow.enabled=true` 时注册。使用 `X-Workflow-Token`；intake request 使用单独的 request token，其余调用使用 submission token。 |
-| `/api/r6/**`、`/api/r7/**`、`/api/r8/**`、`/api/knowledge/**` | 控制器未声明额外认证；仍应由部署网络边界保护。 |
-| Web Console `/ui/**` 的 JSON 管理/输出 API | 已登录的 Web Console session cookie。非 GET 请求还需 `_csrf` 请求参数；操作受当前 session role 限制。认证是否启用由 `AIW_WEB_CONSOLE_AUTH_ENABLED` 控制。 |
+| `/api/r1/worker-protocol/v1/**` 中的注册、心跳、领取、启动、结果上报和输出操作 | `AIW_WORKER_TOKEN` 非空时需 `Authorization: Bearer <token>`。已登记的代理 ID 另需 `X-AIW-Delegate-Key`，Worker/lease 校验保留；这些机器操作不要求浏览器 session。 |
+| `/api/r1/worker-protocol/v1/workers/{workerId}` 下的 Drain/Offline | 原 Worker bearer 和专用身份校验仍适用；它们属于管理写入，首次代理启用后另受下述持久人工认证要求保护。 |
+| External Workflow `/api/r1/workflows/**` | 仅 `aidev.external-workflow.enabled=true` 时注册。使用 `X-Workflow-Token`；intake request 使用单独的 request token，其余使用 submission token；写入同时适用下述通用管理写入规则。 |
+| 控制台 JSON/文件 API：`/api/r1/goals`、`/api/r1/secretary`、`/api/r1/delegation`、`/api/r1/task-outputs`、`/api/r1/workflow-plans`、`/api/r1/plan-editor` 及其子路径 | 保留控制台 session 边界及认证关闭时原共享本地模式。启用登录时需已认证 session cookie；非 GET/HEAD 请求需 `_csrf`，并校验当前动作角色和所有者。首次代理启用要求已配置人工登录，启用后不能通过停用代理或重启取消此持久认证要求。 |
+| 其余 `/api/r1/` 管理写入，包括 Fleet、审批、工程及知识操作 | 首次代理启用前保留原本地信任策略；首次启用后持久要求人工 session 与 CSRF（`X-CSRF-Token` 或 `_csrf`）：审批决定需 Approver，删除需 Admin，其余写入需 Operator。该写入规则不额外改变普通旧 GET 的读取认证策略。 |
 
 Worker 协议和 Worker output 的错误格式：`{"code":"bad_request|state_conflict","message":"...","timestamp":"..."}`，分别对应 400 和 409；无效 token 返回 401。Fleet API 使用相同结构。Workflow Plan 管理 API 错误体是纯文本，常见状态为 400、403、404、409。具体状态也可能受底层 Spring 异常处理影响。
 
 ## Worker Protocol v1
 
-基础路径：`/api/worker-protocol/v1`。Worker 注册及任务租约操作使用 POST。
+基础路径：`/api/r1/worker-protocol/v1`。Worker 注册及任务租约操作使用 POST。
 
 | 方法与路径 | 功能 | 参数/请求体 | 成功返回 |
 | --- | --- | --- | --- |
@@ -40,7 +43,7 @@ Worker 协议和 Worker output 的错误格式：`{"code":"bad_request|state_con
 注册示例：
 
 ```http
-POST /api/worker-protocol/v1/workers/register
+POST /api/r1/worker-protocol/v1/workers/register
 Authorization: Bearer <worker-token>
 Content-Type: application/json
 
@@ -54,7 +57,7 @@ Content-Type: application/json
 领取示例：
 
 ```http
-POST /api/worker-protocol/v1/tasks/claim
+POST /api/r1/worker-protocol/v1/tasks/claim
 Authorization: Bearer <worker-token>
 Content-Type: application/json
 
@@ -100,18 +103,18 @@ Content-Type: application/json
 
 ## Worker task outputs
 
-基础路径：`/api/worker-protocol/v1/tasks/{taskId}/outputs`，使用 Worker token，并校验对应租约。
+基础路径：`/api/r1/worker-protocol/v1/tasks/{taskId}/outputs`，使用 Worker token，并校验对应租约。
 
 | 方法与路径 | 功能 | 请求体 | 成功返回 |
 | --- | --- | --- | --- |
-| `POST /api/worker-protocol/v1/tasks/{taskId}/outputs` | 注册输出 bundle | `TaskOutputService.Registration`：按当前实现的输出注册模型提供 bundle 元数据和文件 | 已存储的 `TaskOutputBundle` JSON |
-| `POST /api/worker-protocol/v1/tasks/{taskId}/outputs/read` | 读取先前登记的文件清单 | `workerId`、`leaseToken`、`attemptId`、`bundleId` | 文件记录数组 |
+| `POST /api/r1/worker-protocol/v1/tasks/{taskId}/outputs` | 注册输出 bundle | `TaskOutputService.Registration`：按当前实现的输出注册模型提供 bundle 元数据和文件 | 已存储的 `TaskOutputBundle` JSON |
+| `POST /api/r1/worker-protocol/v1/tasks/{taskId}/outputs/read` | 读取先前登记的文件清单 | `workerId`、`leaseToken`、`attemptId`、`bundleId` | 文件记录数组 |
 
 读取请求示例：`{"workerId":"worker-east-01","leaseToken":"<lease-token>","attemptId":"ATT-456","bundleId":"BUNDLE-9"}`。响应文件结构由 `StoredFile` 定义；文件二进制通过 Web Console 文件下载接口获取。注册体具体字段以 `TaskOutputService.Registration` 当前 DTO 为准。
 
 ## External Workflow API
 
-基础路径：`/api/workflows/{workflowId}`。接口仅在 `aidev.external-workflow.enabled=true` 时启用。`workflowId` 格式为小写字母开头、包含小写字母/数字/连字符，并以 `@v<数字>` 结尾（例如 `code-review@v1`）。
+基础路径：`/api/r1/workflows/{workflowId}`。接口仅在 `aidev.external-workflow.enabled=true` 时启用。`workflowId` 格式为小写字母开头、包含小写字母/数字/连字符，并以 `@v<数字>` 结尾（例如 `code-review@v1`）。
 
 | 方法与路径 | 功能 | 参数/请求体 | 成功返回 |
 | --- | --- | --- | --- |
@@ -123,7 +126,7 @@ Content-Type: application/json
 步骤数组长度须为 1–32。每个步骤包含 `key`、`capability`、`instruction`、可选 `repositoryRef`、`baseRevision`、`dependsOn`。key/capability 使用小写字母开头的标识；依赖必须指向请求中较早定义的步骤。intake 后的步骤若未指定依赖，会依赖 intake 步骤。
 
 ```http
-POST /api/workflows/code-review@v1/runs
+POST /api/r1/workflows/code-review@v1/runs
 X-Workflow-Token: <submission-token>
 Content-Type: application/json
 
@@ -141,11 +144,11 @@ Content-Type: application/json
 
 ## Approval API
 
-前缀：`/api/r7/approvals`。
+前缀：`/api/r1/approvals`。
 
 | 方法与路径 | 功能 | 参数/请求体 | 成功返回 |
 | --- | --- | --- | --- |
-| `POST /api/r7/approvals` | 为源任务创建审批请求 | `sourceTaskId`、`requestedBy`；可选 `channel`、`channelRef` | 审批记录 |
+| `POST /api/r1/approvals` | 为源任务创建审批请求 | `sourceTaskId`、`requestedBy`；可选 `channel`、`channelRef` | 审批记录 |
 | `POST /{approvalRequestId}/decision` | 提交审批决定 | `decision`、`decidedBy`；可选 `note` | 更新后的审批记录 |
 | `GET /{approvalRequestId}` | 按 ID 查询审批 | 路径 `approvalRequestId` | 审批记录或 404 |
 | `GET /by-source/{sourceTaskId}` | 按源任务查询审批 | 路径 `sourceTaskId` | 审批记录或 404 |
@@ -175,10 +178,10 @@ Content-Type: application/json
 
 ### Fleet dashboard
 
-`GET /api/r8/fleet/dashboard` 返回 Fleet 当前投影。可传可选整数查询参数 `detailLimit` 控制详情数量。响应类型是 `FleetDashboard`，包含 Worker、租约、就绪任务及汇总等投影字段；具体字段随该 DTO 版本变化。示例：
+`GET /api/r1/fleet/dashboard` 返回 Fleet 当前投影。可传可选整数查询参数 `detailLimit` 控制详情数量。响应类型是 `FleetDashboard`，包含 Worker、租约、就绪任务及汇总等投影字段；具体字段随该 DTO 版本变化。示例：
 
 ```http
-GET /api/r8/fleet/dashboard?detailLimit=20
+GET /api/r1/fleet/dashboard?detailLimit=20
 ```
 
 ```json
@@ -191,39 +194,39 @@ GET /api/r8/fleet/dashboard?detailLimit=20
 
 | 方法与路径 | 功能 | 参数/请求体 | 返回 |
 | --- | --- | --- | --- |
-| `GET /api/r8/fleet/scheduling` | 当前并发预算 | 无 | `maxParallelism`、`activeLeases`、`availableSlots`、`overcommittedSlots`、`saturated`、`updatedAt` |
-| `POST /api/r8/fleet/scheduling` | 修改并发上限 | `maxParallelism`、`controlledBy`、`reason` | 更新后的预算对象 |
-| `GET /api/r8/fleet/scheduling/events?limit=100` | 最近调度变更 | 可选整数 `limit`，默认 100 | 调度事件数组 |
+| `GET /api/r1/fleet/scheduling` | 当前并发预算 | 无 | `maxParallelism`、`activeLeases`、`availableSlots`、`overcommittedSlots`、`saturated`、`updatedAt` |
+| `POST /api/r1/fleet/scheduling` | 修改并发上限 | `maxParallelism`、`controlledBy`、`reason` | 更新后的预算对象 |
+| `GET /api/r1/fleet/scheduling/events?limit=100` | 最近调度变更 | 可选整数 `limit`，默认 100 | 调度事件数组 |
 
 更新示例：`{"maxParallelism":8,"controlledBy":"operator@example.com","reason":"Increase capacity"}`。响应示例：`{"maxParallelism":8,"activeLeases":3,"availableSlots":5,"overcommittedSlots":0,"saturated":false,"updatedAt":"2026-10-16T01:00:00Z"}`。
 
 ### Engineering Gate
 
-- `GET /api/r6/engineering-gates/{sourceTaskId}`：按源任务查询 gate；无记录返回 404。
-- `GET /api/r6/engineering-gates/latest-passed?subjectType=issue&subjectId=ISSUE-42`：按 subject 查询最近通过项；需要 `subjectType`、`subjectId`，无记录返回 404。
+- `GET /api/r1/engineering-gates/{sourceTaskId}`：按源任务查询 gate；无记录返回 404。
+- `GET /api/r1/engineering-gates/latest-passed?subjectType=issue&subjectId=ISSUE-42`：按 subject 查询最近通过项；需要 `subjectType`、`subjectId`，无记录返回 404。
 
 成功响应字段包括 `sourceTaskId`、`sourceTaskType`、`subjectType`、`subjectId`、`status`、repository/revision/publication 信息、`changedFiles`、`review` 与 `verification` 证据（各含 `taskId`、`verdict`、`summary`）及 `closedAt`。
 
 ### Knowledge documents
 
-- `GET /api/knowledge/documents`：查询文档。可选查询参数 `repositoryRef`、`runId`、`q`；`limit` 默认 50。
-- `GET /api/knowledge/documents/{id}`：读取文档；不存在返回 404。
+- `GET /api/r1/knowledge/documents`：查询文档。可选查询参数 `repositoryRef`、`runId`、`q`；`limit` 默认 50。
+- `GET /api/r1/knowledge/documents/{id}`：读取文档；不存在返回 404。
 
 两者返回 `KnowledgeDocument`（列表或单个对象）。属性由领域 DTO 定义，示意列表响应为 `[ {"id":"DOC-1"} ]`；此处不代表对象只有 `id` 一个属性。
 
 ## Web Console 管理 API
 
-这些路径受 Web Console session/role 保护，适用于已登录控制台，不是 Worker token 接口。针对 `/ui/**` 的写请求还需有效 CSRF token（请求参数 `_csrf`）。
+上表六个控制台 API 根均保留 Web Console session/role 边界，不是 Worker token 决策接口。启用登录时使用已认证 session；它们的非 GET/HEAD 请求需 `_csrf` 参数。HTML 页面及重定向表单仍在 `/ui/**`，保留其 session/CSRF 检查；控制台数据迁入 `/api/r1` 不会取消保护。
 
 ### Workflow plans
 
-基础路径：`/ui/workflow-plans`。
+基础路径：`/api/r1/workflow-plans`。
 
 | 方法与路径 | 功能 | 参数/请求体 | 成功返回 |
 | --- | --- | --- | --- |
-| `GET /ui/workflow-plans?view=current` | 列出计划；`view=archived` 列归档 | 可选 `view`，默认 `current` | WorkflowPlan 数组 |
-| `GET /ui/workflow-plans/{id}` | 计划详情 | 路径 `id` | `{plan,tasks,controls}` |
-| `POST /ui/workflow-plans` | 创建草稿 | WorkflowPlanSpec JSON | WorkflowPlan |
+| `GET /api/r1/workflow-plans?view=current` | 列出计划；`view=archived` 列归档 | 可选 `view`，默认 `current` | WorkflowPlan 数组 |
+| `GET /api/r1/workflow-plans/{id}` | 计划详情 | 路径 `id` | `{plan,tasks,controls}` |
+| `POST /api/r1/workflow-plans` | 创建草稿 | WorkflowPlanSpec JSON | WorkflowPlan |
 | `POST /{id}/copy` | 复制计划 | 无业务请求体 | WorkflowPlan |
 | `POST /{id}/confirm` | 确认计划 | `{"version":<非负整数>}` | WorkflowPlan |
 | `POST /{id}/withdraw`、`/stop`、`/complete`、`/cancel` | 改变计划控制状态 | `{"version":<非负整数>,"reason":"..."}` | WorkflowPlan |
@@ -236,7 +239,7 @@ GET /api/r8/fleet/dashboard?detailLimit=20
 
 ### 来源问题与已确认答复
 
-基础路径：`/ui/plan-editor/plans/{planId}/questions`。读取要求控制台登录会话；答复要求 operator 权限及 CSRF。这些是控制台接口，不是 Worker token 决策接口。以下例子用于说明契约，尚未实际调用。
+基础路径：`/api/r1/plan-editor/plans/{planId}/questions`。读取要求控制台登录会话；答复要求 operator 权限及 CSRF。这些是控制台接口，不是 Worker token 决策接口。以下例子用于说明契约，尚未实际调用。
 
 | 方法与路径（相对基础路径） | 功能 | 参数/请求体 | 成功返回 |
 | --- | --- | --- | --- |
@@ -262,8 +265,8 @@ Board 字段：`planVersion`、可空的 `blockedReason`、`questions`、`docume
 读取例子（使用已有登录会话的 cookie 文件）：
 
 ```sh
-curl -b cookies.txt 'http://localhost:8080/ui/plan-editor/plans/FP-1/questions'
-curl -b cookies.txt 'http://localhost:8080/ui/plan-editor/plans/FP-1/questions/files/FILE-1'
+curl -b cookies.txt 'http://localhost:8080/api/r1/plan-editor/plans/FP-1/questions'
+curl -b cookies.txt 'http://localhost:8080/api/r1/plan-editor/plans/FP-1/questions/files/FILE-1'
 ```
 
 尚无输出问题的面板响应例子，以及已有输出文件时的预览响应例子：
@@ -287,7 +290,7 @@ curl -b cookies.txt 'http://localhost:8080/ui/plan-editor/plans/FP-1/questions/f
 ```sh
 curl -b cookies.txt -H 'Content-Type: application/json' \
   --data-binary @answer.json \
-  "http://localhost:8080/ui/plan-editor/plans/FP-1/questions/answers?_csrf=${CSRF_TOKEN}"
+  "http://localhost:8080/api/r1/plan-editor/plans/FP-1/questions/answers?_csrf=${CSRF_TOKEN}"
 ```
 
 响应例子（生成的 ID、哈希及时间为示意）：
@@ -300,7 +303,7 @@ curl -b cookies.txt -H 'Content-Type: application/json' \
 
 ### 单轮修复授权
 
-基础路径：`/ui/plan-editor/plans/{id}/repair-authorizations`。两项操作均要求 operator 权限和 CSRF。当前实现固定一轮、有效期一小时；可配置策略模板仍属独立需求方案。
+基础路径：`/api/r1/plan-editor/plans/{id}/repair-authorizations`。两项操作均要求 operator 权限和 CSRF。当前实现固定一轮、有效期一小时；可配置策略模板仍属独立需求方案。
 
 | 方法与路径 | 功能 | 请求 | 返回 |
 | --- | --- | --- | --- |
@@ -311,9 +314,9 @@ curl -b cookies.txt -H 'Content-Type: application/json' \
 
 ```sh
 curl -b cookies.txt -H 'Content-Type: application/json' --data-binary @repair.json \
-  "http://localhost:8080/ui/plan-editor/plans/FP-1/repair-authorizations?_csrf=${CSRF_TOKEN}"
+  "http://localhost:8080/api/r1/plan-editor/plans/FP-1/repair-authorizations?_csrf=${CSRF_TOKEN}"
 curl -b cookies.txt -X POST \
-  "http://localhost:8080/ui/plan-editor/plans/FP-1/repair-authorizations/RA-example/revoke?_csrf=${CSRF_TOKEN}"
+  "http://localhost:8080/api/r1/plan-editor/plans/FP-1/repair-authorizations/RA-example/revoke?_csrf=${CSRF_TOKEN}"
 ```
 
 代理授权响应例子：`{"id":"RA-example","planId":"FP-1","planVersion":9,"sourceReviewId":"FP-1~coder~review-3","sourceTaskVersion":2,"scope":"Correct the timestamp formatting only.","reason":"Fix review findings","grantedBy":"operator@example.com","delegateWorkerId":"decision-worker-1","decisionTaskId":"RA-example~decision","repairTaskId":null,"status":"PENDING","createdAt":"2026-10-16T01:00:00Z","expiresAt":"2026-10-16T02:00:00Z"}`。响应 DTO 不含数据库字段 `round_budget` 和 `decided_at_epoch_ms`。不指定代理时服务立即尝试消费，因此返回状态不一定是 `PENDING`。
@@ -324,9 +327,9 @@ curl -b cookies.txt -X POST \
 
 | 方法与路径 | 功能 | 参数 | 成功返回 |
 | --- | --- | --- | --- |
-| `GET /ui/api/task-outputs/tasks/{taskId}` | 列出任务输出 bundle | 路径 `taskId` | `TaskOutputBundle[]` |
-| `GET /ui/api/task-outputs/files/{fileId}` | 下载文件 | 路径 `fileId` | 原始二进制；附 `X-Content-SHA256` header |
-| `POST /ui/api/task-outputs/files/{fileId}/publication-plans` | 创建发布计划 | `reviewTaskId`、`targetPath`、`reason` | WorkflowPlan JSON |
+| `GET /api/r1/task-outputs/tasks/{taskId}` | 列出任务输出 bundle | 路径 `taskId` | `TaskOutputBundle[]` |
+| `GET /api/r1/task-outputs/files/{fileId}` | 下载文件 | 路径 `fileId` | 原始二进制；附 `X-Content-SHA256` header |
+| `POST /api/r1/task-outputs/files/{fileId}/publication-plans` | 创建发布计划 | `reviewTaskId`、`targetPath`、`reason` | WorkflowPlan JSON |
 
 读接口需登录；创建发布计划需要 operator role。文件响应使用 `application/octet-stream`，下载名由文件路径生成。
 

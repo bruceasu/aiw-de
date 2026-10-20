@@ -22,6 +22,6 @@ public class DelegateIdentityMvc implements WebMvcConfigurer {
                     boundary.authenticate(worker, request.getHeader("X-AIW-Delegate-Key"));
                 return true;
             }
-        }).addPathPatterns("/api/worker-protocol/**");
+        }).addPathPatterns("/api/r1/worker-protocol/**");
     }
 }

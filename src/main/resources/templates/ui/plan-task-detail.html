@@ -33,7 +33,7 @@ tail -n 80 .ai/worker-manager/&lt;role&gt;.log</pre>
       <p class="help">Attempt evidence is stored outside the working directory, under AIW_WORKER_EVIDENCE_ROOT or the default .aidev-attempt-evidence directory. Match owner.json by Attempt ID. Historical records may not include command output.</p>
       <p class="help">New Codex failures log the tool type, call ID, exit code, diagnostic code and evidence directory. Only known error patterns are classified; unrecognized failures remain UNRESOLVED_TOOL_FAILURE. Raw command output is not retained.</p>
     </details>
-    <form class="form-card top-gap" data-task-retry method="post" th:if="${canOperate and taskDetail.retry.allowed}" th:attr="data-url=@{/ui/plan-editor/plans/{id}/tasks/{taskId}/retry(id=${planId},taskId=${taskDetail.task.id.value})},data-plan-version=${taskDetail.retry.planVersion},data-task-version=${taskDetail.task.version},data-csrf=${csrfToken}">
+    <form class="form-card top-gap" data-task-retry method="post" th:if="${canOperate and taskDetail.retry.allowed}" th:attr="data-url=@{/api/r1/plan-editor/plans/{id}/tasks/{taskId}/retry(id=${planId},taskId=${taskDetail.task.id.value})},data-plan-version=${taskDetail.retry.planVersion},data-task-version=${taskDetail.task.version},data-csrf=${csrfToken}">
       <div class="field"><label for="retry-reason">Retry reason</label><input id="retry-reason" name="reason" required maxlength="2000" placeholder="Describe what was fixed before retrying"></div>
       <div class="form-actions"><button class="btn primary" type="submit">Retry failed task</button></div>
     </form>

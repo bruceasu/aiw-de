@@ -109,13 +109,13 @@ class R8S4AutonomousRunAuthorityIT {
         assertThat(failed.failureCount()).isEqualTo(1);
         assertThat(tasks.get(firstAttempt.task().id()).state()).isEqualTo(TaskState.FAILED);
 
-        HttpResponse<String> failedQuery = get("/api/r8/runs/" + started.runId());
+        HttpResponse<String> failedQuery = get("/api/r1/runs/" + started.runId());
         assertThat(failedQuery.statusCode()).isEqualTo(200);
         JsonNode failedJson = json.readTree(failedQuery.body());
         assertThat(failedJson.path("status").asText()).isEqualTo("FAILED");
         assertThat(failedJson.path("lastFailedTaskId").asText()).isEqualTo(firstAttempt.task().id().value());
 
-        HttpResponse<String> recovered = post("/api/r8/runs/" + started.runId() + "/recover",
+        HttpResponse<String> recovered = post("/api/r1/runs/" + started.runId() + "/recover",
                 "{\"recoveredBy\":\"operator:test\"}");
         assertThat(recovered.statusCode()).isEqualTo(200);
         JsonNode recoveredJson = json.readTree(recovered.body());
@@ -162,7 +162,7 @@ class R8S4AutonomousRunAuthorityIT {
         assertThat(succeeded.failureCount()).isEqualTo(1);
         assertThat(succeeded.recoveryCount()).isEqualTo(1);
 
-        JsonNode finalJson = json.readTree(get("/api/r8/runs/" + started.runId()).body());
+        JsonNode finalJson = json.readTree(get("/api/r1/runs/" + started.runId()).body());
         assertThat(finalJson.path("status").asText()).isEqualTo("SUCCEEDED");
         assertThat(finalJson.path("resultRevision").asText()).isEqualTo(RESULT);
     }

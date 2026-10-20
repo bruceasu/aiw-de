@@ -13,7 +13,7 @@ R8-S13 当前适合本地和受信任内部环境。它具备较强的工程 Aut
 
 ## 2. Worker Protocol
 
-设置 `AIW_WORKER_TOKEN` 后，所有 `/api/worker-protocol/...` 请求必须：
+设置 `AIW_WORKER_TOKEN` 后，所有 `/api/r1/worker-protocol/...` 请求必须：
 
 ```text
 Authorization: Bearer <token>
@@ -23,16 +23,18 @@ Authorization: Bearer <token>
 
 ## 3. Management API 当前限制
 
-以下 API 当前没有统一 Spring Security/RBAC：
+以下旧管理 API 未使用 Spring Security；这不代表应用层没有认证。自定义 MVC 拦截器保护 `/ui/**`，以及 `/api/r1/` 下六个控制台数据根（goals、secretary、delegation、task-outputs、workflow-plans、plan-editor），保留 session、CSRF、当前角色和所有者边界。
 
 ```text
-/api/r8/requirements
-/api/r8/runs/...
-/api/r8/fleet/...
-/api/r7/approvals/...
+/api/r1/requirements
+/api/r1/runs/...
+/api/r1/fleet/...
+/api/r1/approvals/...
 ```
 
-所以：
+其余旧管理写入在首次代理启用前保留原本地信任策略；首次启用后持久要求人工 session、CSRF，审批决定需 Approver、删除需 Admin、其他写入需 Operator。普通旧 GET 保留原读取策略。Worker 租约操作保持机器认证，Drain/Offline 是管理写入并额外适用该持久规则。停用代理或重启不取消要求；激活后关闭登录会使控制台拒绝访问。这些自定义检查仍不是完整的生产边缘安全框架。
+
+因此：
 
 - 本地继续使用默认 `127.0.0.1`；
 - 服务器部署应放在有认证的内部 Gateway/Reverse Proxy 后，或先补应用认证；

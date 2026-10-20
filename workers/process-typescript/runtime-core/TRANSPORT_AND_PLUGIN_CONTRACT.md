@@ -4,7 +4,7 @@
 
 ## ControlPlaneClient
 
-构造为 `new ControlPlaneClient(config, runtimeType)`。config 字段为 baseUrl（服务根 URL，不包含下方前缀）、workerId、token（可为空）、capabilities（字符串数组）、maxConcurrency、httpTimeoutMs（毫秒）。内部传输固定前缀 `/api/worker-protocol/v1`；全部 POST、Accept: application/json，有 payload 时 Content-Type: application/json。非空 token 用 Bearer 头，任务 leaseToken 只进入协议请求，不落常规日志。
+构造为 `new ControlPlaneClient(config, runtimeType)`。config 字段为 baseUrl（服务根 URL，不包含下方前缀）、workerId、token（可为空）、capabilities（字符串数组）、maxConcurrency、httpTimeoutMs（毫秒）。内部传输固定前缀 `/api/r1/worker-protocol/v1`；全部 POST、Accept: application/json，有 payload 时 Content-Type: application/json。非空 token 用 Bearer 头，任务 leaseToken 只进入协议请求，不落常规日志。
 
 | 公开方法 | 路径 | 请求 JSON |
 |---|---|---|

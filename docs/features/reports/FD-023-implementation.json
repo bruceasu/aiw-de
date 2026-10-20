@@ -1,0 +1,15 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"worker-report", "fd_id":"FD-023",
+  "source_event":"FD-023-000003-design-ready", "human_report":"FD-023-implementation.md",
+  "data":{
+    "worker_session":"01a15a47-fc32-7362-ac13-f660487b7632", "base":"6f34bf4", "implementation_commit":"806fac9",
+    "implemented_items":["1.1","1.2","2.1","2.2","3.1"],
+    "canonical_prefix":"/api/r1", "worker_base":"/api/r1/worker-protocol/v1",
+    "console_roots":["goals","secretary","delegation","task-outputs","workflow-plans","plan-editor"],
+    "checks_passed":["offline Java25 production compile, 261 files", "repository compile-worker-runtime", "demo Go build to NUL, offline", "changed browser/demo JS syntax", "demo Python in-memory compile", "3 demo TypeScript in-memory syntax compile", "static diff and residual URL scan"],
+    "checks_not_run":["tests","typecheck","service","HTTP/browser","network","migration","final package","deployment"],
+    "rejected_check":{"action":"Java example javac and temporary directory cleanup", "reason":"automatic approval: blocked by policy; no more specific reason", "executed":false, "bypassed":false},
+    "residual_risks":["external clients must update URLs", "actual Spring routing and security flows unverified", "standalone Java example compile not run"],
+    "next_action":"independent fd-review"
+  }
+}

@@ -7,7 +7,7 @@ Worker 是外部 AI 员工，不直接访问数据库。只要实现 Worker Prot
 Base path：
 
 ```text
-/api/worker-protocol/v1
+/api/r1/worker-protocol/v1
 ```
 
 ## 2. 生命周期

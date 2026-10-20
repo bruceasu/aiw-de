@@ -6,7 +6,7 @@ The current R8-S13 baseline is designed primarily for local/trusted-internal ope
 
 The most important rule is to distinguish **engineering authority** from **network authentication**.
 
-The system has strong internal ownership/state controls, but the general R6/R7/R8 management APIs are not currently protected by a comprehensive authentication/authorization framework.
+The system has internal ownership/state controls and custom MVC authentication checks. These are not a complete production edge-security framework. The six console API roots under `/api/r1/` (goals, secretary, delegation, task-outputs, workflow-plans, plan-editor) retain their session, CSRF, current role and ownership boundary after moving out of `/ui`.
 
 ## 2. Trust boundaries
 
@@ -37,7 +37,7 @@ When `AIW_WORKER_TOKEN` is non-empty, every Worker Protocol request requires:
 Authorization: Bearer <token>
 ```
 
-The filter applies only to `/api/worker-protocol/...`.
+The filter applies only to `/api/r1/worker-protocol/...`.
 
 Local mode may deliberately leave the token empty. Remote/shared operation should not.
 
@@ -46,13 +46,13 @@ Local mode may deliberately leave the token empty. Remote/shared operation shoul
 Current endpoints such as:
 
 ```text
-/api/r8/requirements
-/api/r8/runs/...
-/api/r8/fleet/...
-/api/r7/approvals/...
+/api/r1/requirements
+/api/r1/runs/...
+/api/r1/fleet/...
+/api/r1/approvals/...
 ```
 
-are not protected by Spring Security in the current codebase.
+do not use Spring Security in the current codebase. This does not mean they have no authentication: custom MVC interceptors protect the six console API roots. Other legacy administrative writes keep their original local trust policy before first delegate activation; first activation permanently requires a human session and CSRF for writes, with Approver for approval decisions, Admin for deletion and Operator for other writes. Ordinary legacy GET requests retain their existing read policy. Worker lease operations remain machine-authenticated; Drain/Offline are administrative writes and additionally follow this persistent rule. Disabling a delegate or restarting does not remove the rule, and console access fails closed if login is disabled after activation.
 
 Therefore:
 

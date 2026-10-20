@@ -30,7 +30,7 @@ const cfg = {
 class Client {
   async post(pathPart, payload, allowNoContent = false) {
     const headers = { Accept: "application/json" }; if (payload !== undefined) headers["Content-Type"] = "application/json"; if (cfg.token) headers.Authorization = `Bearer ${cfg.token}`;
-    const response = await fetch(`${cfg.baseUrl}/api/worker-protocol/v1${pathPart}`, { method: "POST", headers, body: payload === undefined ? undefined : JSON.stringify(payload) });
+    const response = await fetch(`${cfg.baseUrl}/api/r1/worker-protocol/v1${pathPart}`, { method: "POST", headers, body: payload === undefined ? undefined : JSON.stringify(payload) });
     if (response.status === 204 && allowNoContent) return null; if (!response.ok) throw new ProtocolError(response.status, await response.text());
     const text = await response.text(); return text ? JSON.parse(text) : null;
   }

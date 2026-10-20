@@ -72,14 +72,14 @@ PostgreSQL 使用组织标准的 pg_dump/快照/托管备份机制，并定期�
 Graceful maintenance 可先调用：
 
 ```text
-POST /api/worker-protocol/v1/workers/{workerId}/drain
+POST /api/r1/worker-protocol/v1/workers/{workerId}/drain
 ```
 
 当前任务自然结束后再 offline。
 
 ### R10 流程 Worker 运维
 
-[TypeScript](../../workers/process-typescript/README.md)、[Go](../../workers/process-go/README.md) 和 [Python](../../workers/process-python/README.md) 流程 Worker 按角色分别运行。保持需求分析、架构、规划、编码、审查、验证和修复角色在线；可能出现集成任务时也要运行集成执行和集成验证角色。启动或调整 Worker 后检查 `GET /api/r8/fleet/dashboard`，确认 READY 任务没有因角色或技术能力不匹配而积压。
+[TypeScript](../../workers/process-typescript/README.md)、[Go](../../workers/process-go/README.md) 和 [Python](../../workers/process-python/README.md) 流程 Worker 按角色分别运行。保持需求分析、架构、规划、编码、审查、验证和修复角色在线；可能出现集成任务时也要运行集成执行和集成验证角色。启动或调整 Worker 后检查 `GET /api/r1/fleet/dashboard`，确认 READY 任务没有因角色或技术能力不匹配而积压。
 
 [TypeScript 流程 Worker](../../workers/process-typescript/README.md) 在单一入口显式选择 `codex-sdk` 或 `openai-agents`；旧 API 包及启动路径已删除。选择 Agents 时配置 `OPENAI_API_KEY`，并在 AI 策略中批准相应 `openai-agents` profile。只读角色仅有文件检查工具；写入角色可显式开启主机命令工具，但该工具没有操作系统沙箱，须在隔离主机或容器中运行。配置和验证限制见 Worker 指南。
 
@@ -119,8 +119,8 @@ Run 和 Fleet 都支持 runtime maxParallelism。收缩不会 kill 健康 Lease�
 当前没有 Actuator health endpoint。建议：
 
 ```text
-GET /api/r8/fleet/dashboard
-GET /api/r8/fleet/scheduling
+GET /api/r1/fleet/dashboard
+GET /api/r1/fleet/scheduling
 ```
 
 关注：

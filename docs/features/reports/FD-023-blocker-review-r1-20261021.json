@@ -1,0 +1,11 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"blocker-feedback", "fd_id":"FD-023",
+  "source_event":"FD-023-000005-changes-requested", "human_report":"FD-023-blocker-review-r1-20261021.md",
+  "data":{
+    "stage":"worker-repair", "role":"worker", "status":"resolved", "resolved_event":"FD-023-000009-verification-passed", "resolved_on":"2026-10-21 Asia/Tokyo",
+    "symptom":"10 current English manuals retain old APIs", "confirmed_cause":"language-specific discovery omitted docs/current",
+    "attempts":["claimed real repair event", "updated current English manuals", "added compatibility note", "corrected report scope", "static diff/residual checks passed"],
+    "human_decision_required":false, "next_step":"second independent implementation review",
+    "reusable_improvement":"Inventory current docs from indexes across languages", "template_status":"required templates absent; skill fields used"
+  }
+}

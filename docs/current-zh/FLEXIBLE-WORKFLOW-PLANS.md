@@ -1,6 +1,6 @@
 # 计划与 Worker 委派
 
-当前产品只提供计划流程。FD-011 最初以独立入口实现，FD-017 增加页面；现在 `/ui`、创建入口、列表和详情统一使用 `/ui/plans`。固定自主 Run 的 HTTP 创建与管理入口已移除，旧 `/ui/runs` 只重定向。`/ui/workflow-plans` 保留为计划 JSON API。开发库按单文件 V1 基线从空数据库初始化；旧 Run 数据不会自动转换。
+当前产品只提供计划流程。FD-011 最初以独立入口实现，FD-017 增加页面；现在 `/ui`、创建入口、列表和详情统一使用 `/ui/plans`。固定自主 Run 的 HTTP 创建与管理入口已移除，旧 `/ui/runs` 只重定向。`/api/r1/workflow-plans` 保留为计划 JSON API。开发库按单文件 V1 基线从空数据库初始化；旧 Run 数据不会自动转换。
 
 页面提供“Core development”核心开发模板（需求分析→方案设计→实施规划→编码与必要测试）、单步分析、分析→架构→规划、单步编码模板及空白编辑。核心开发模板的终点是代码通过阶段评审，不包含代码专项审查、独立测试验证、集成、集成验证、专项修复、部署或生产发布；编码步骤保存前必须选择有效工作区，并按实际需要设置语言能力。Git 基准提交可选：非 Git 目录保持为空，直接使用工作区目录；填写时必须为完整不可变 Git commit，并使用隔离 Git worktree。模板可修改和删除步骤；步骤按列表顺序执行，删除或改序后须由管理者修正声明的依赖。每一步可独立设置角色、必需技能及偏好技能，步骤指令同时写明验收条件。保存草稿不创建业务任务；确认后只创建第一步。每步执行完成后生成独立 `workflow-review` 评审任务；PASS 才生成下一步，REPAIR_REQUIRED 则将评审意见与原产出交给同一步的下一次执行。每步最多三次执行；第三次评审仍需返工时停止自动推进，详情显示 NEEDS_ATTENTION，由管理者另行决定。后续步骤接收此前已接受的产出，代码步骤在同一工作区使用最新已接受的结果 revision。显式 Worker 执行失败仍按现有任务失败规则处理，不伪装成评审返工。复制会创建新草稿，不改原计划。模板不包含固定 AR 的工程 Gate 或人工批准。
 
@@ -36,7 +36,7 @@ planner 选择现有 `aidev.ai` 的 EXTERNAL_WORK policy 中的 AI Profile（包
 
 分析失联后等待有效租约到期（当前 60 秒租约，默认每 5 秒执行恢复；停机或积压可能延迟）即失败，不自动重新派发；旧 token 的迟到完成不再成为可应用结果。手动重试创建新的请求，原模型调用未必已经停止，可能产生重复调用及费用。
 
-写操作沿用 Web Console 会话 OPERATOR/ADMIN 和 URL 查询参数 `_csrf`，只读角色不能保存、推荐、确认或收回；系统设置另限 ADMIN。`/ui/plan-editor/**` 是页面专用接口；`/ui/workflow-plans/**` 使用相同的步骤角色校验和逐步评审执行语义。AI 推荐须有在线适配 Worker 并由用户显式点击，页面不会自行发起模型任务。
+写操作沿用 Web Console 会话 OPERATOR/ADMIN 和 URL 查询参数 `_csrf`，只读角色不能保存、推荐、确认或收回；系统设置另限 ADMIN。`/api/r1/plan-editor/**` 是页面专用接口；`/api/r1/workflow-plans/**` 使用相同的步骤角色校验和逐步评审执行语义。AI 推荐须有在线适配 Worker 并由用户显式点击，页面不会自行发起模型任务。
 
 数据库迁移 V6 仅新增推荐设置、审计、上下文、请求快照及 Plan 关联表；原任务与 Plan 数据保留。原 Plan 到期删除时清除其上下文关联和映射，推荐上下文与历史结果保留。回滚应用时保留这些表，不自动删除审计；旧应用仍使用其旧启动配置语义，因此回滚后应重新核对开关。
 
@@ -116,7 +116,7 @@ TypeScript Codex Worker 后续会在日志和 `sdk-tool-failed` 证据中记录�
 计划已结束、归档、待停止，或存在待执行、运行、失败任务时禁止创建恢复评审。
 提交会检查 Plan、最新评审 ID 和任务版本，防止过期页面或重复提交创建多条任务。
 
-接口为 `POST /ui/plan-editor/plans/{id}/resume-review`，请求包含 `planVersion`、`taskId`、
+接口为 `POST /api/r1/plan-editor/plans/{id}/resume-review`，请求包含 `planVersion`、`taskId`、
 `taskVersion`、`reason`、`warningConfirmed: true`；沿用 Operator 权限和 CSRF 校验。详情接口的 `reviewRecovery` 提供当前可恢复性。
 
 ### 授权继续修复及独立 AI 决策
@@ -139,9 +139,9 @@ Plan 页面显示授权历史和 AI 决策报告，允许撤销尚未使用的�
 授权过期、计划版本变化、来源评审变化、计划结束或已归档时，不会创建修复任务；每份授权只能使用一次。
 同一 Plan 同时只允许一份待决授权，重复提交会被版本及数据库约束拒绝。
 
-接口为 `POST /ui/plan-editor/plans/{id}/repair-authorizations`，请求包含 `planVersion`、`taskId`、
+接口为 `POST /api/r1/plan-editor/plans/{id}/repair-authorizations`，请求包含 `planVersion`、`taskId`、
 `taskVersion`、`reason`、`scope`、可选 `delegateWorkerId` 和 `warningConfirmed: true`。
-撤销使用 `POST /ui/plan-editor/plans/{id}/repair-authorizations/{authorizationId}/revoke`。
+撤销使用 `POST /api/r1/plan-editor/plans/{id}/repair-authorizations/{authorizationId}/revoke`。
 两者只接受现有 Operator 会话及 CSRF，Worker bearer token 不能创建或扩大授权。
 AI 通过正常领取、租约、完成协议交回决策，控制平面校验指定身份后使用授权。
 
@@ -169,19 +169,19 @@ Do not change acceptance criteria, install a toolchain or download dependencies 
 
 | 方法 / 路径 | 行为 |
 |---|---|
-| GET `/ui/workflow-plans` | 最近 100 个计划，包含版本、来源和审计信息 |
-| GET `/ui/workflow-plans/{id}` | 计划及创建后的任务状态 |
-| POST `/ui/workflow-plans` | 保存草稿；body 为下方计划格式 |
-| POST `/ui/workflow-plans/{id}/copy` | 复制为全新草稿，可复用模板；不会启动 |
-| POST `/ui/plan-editor/plans/{id}/tasks/{taskId}/retry` | 页面重试当前失败任务；body 为 `{"planVersion":1,"taskVersion":6,"reason":"已修复运行环境","warningConfirmed":true}`；保留原计划、任务与执行历史 |
-| POST `/ui/workflow-plans/{id}/confirm` | body `{"version":0}`，明确确认当前草稿版本 |
-| POST `/ui/workflow-plans/{id}/withdraw` | body `{"version":1,"reason":"收回剩余委派"}` |
-| POST `/ui/workflow-plans/{id}/jump` | body `{"version":1,"targetStep":2,"reason":"跳过中间步骤"}`；`targetStep` 从 0 开始 |
-| POST `/ui/workflow-plans/{id}/stop` | body `{"version":1,"reason":"已有产出足够"}`；提前停止 |
-| POST `/ui/workflow-plans/{id}/resolve-stop` | body `{"version":2}`；仅在原租约不再活动且未确认停止时，将滞留请求记为冲突 |
-| POST `/ui/workflow-plans/{id}/archive` | 已结束计划从当前列表隐藏 |
-| POST `/ui/workflow-plans/{id}/schedule-delete` | 管理员标记 30 天后删除数据库记录 |
-| POST `/ui/workflow-plans/{id}/undo-delete` | 管理员在到期前撤销删除标记 |
+| GET `/api/r1/workflow-plans` | 最近 100 个计划，包含版本、来源和审计信息 |
+| GET `/api/r1/workflow-plans/{id}` | 计划及创建后的任务状态 |
+| POST `/api/r1/workflow-plans` | 保存草稿；body 为下方计划格式 |
+| POST `/api/r1/workflow-plans/{id}/copy` | 复制为全新草稿，可复用模板；不会启动 |
+| POST `/api/r1/plan-editor/plans/{id}/tasks/{taskId}/retry` | 页面重试当前失败任务；body 为 `{"planVersion":1,"taskVersion":6,"reason":"已修复运行环境","warningConfirmed":true}`；保留原计划、任务与执行历史 |
+| POST `/api/r1/workflow-plans/{id}/confirm` | body `{"version":0}`，明确确认当前草稿版本 |
+| POST `/api/r1/workflow-plans/{id}/withdraw` | body `{"version":1,"reason":"收回剩余委派"}` |
+| POST `/api/r1/workflow-plans/{id}/jump` | body `{"version":1,"targetStep":2,"reason":"跳过中间步骤"}`；`targetStep` 从 0 开始 |
+| POST `/api/r1/workflow-plans/{id}/stop` | body `{"version":1,"reason":"已有产出足够"}`；提前停止 |
+| POST `/api/r1/workflow-plans/{id}/resolve-stop` | body `{"version":2}`；仅在原租约不再活动且未确认停止时，将滞留请求记为冲突 |
+| POST `/api/r1/workflow-plans/{id}/archive` | 已结束计划从当前列表隐藏 |
+| POST `/api/r1/workflow-plans/{id}/schedule-delete` | 管理员标记 30 天后删除数据库记录 |
+| POST `/api/r1/workflow-plans/{id}/undo-delete` | 管理员在到期前撤销删除标记 |
 
 示例仅委派分析，不自动增加代码、审查或部署阶段：
 

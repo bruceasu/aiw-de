@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Session/CSRF protected management API. No Worker submission token can confirm a plan. */
 @RestController
-@RequestMapping("/ui/workflow-plans")
+@RequestMapping("/api/r1/workflow-plans")
 public class WorkflowPlanController {
     private final WorkflowPlanService plans;
     private final WorkflowCancellationService cancellation;

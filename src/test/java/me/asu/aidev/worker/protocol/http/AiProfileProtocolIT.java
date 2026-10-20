@@ -114,7 +114,7 @@ class AiProfileProtocolIT {
     }
 
     private HttpResponse<String> post(String endpoint, String body) throws Exception {
-        return http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/worker-protocol/v1" + endpoint))
+        return http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/r1/worker-protocol/v1" + endpoint))
                 .header("Authorization", "Bearer test-worker-token")
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());

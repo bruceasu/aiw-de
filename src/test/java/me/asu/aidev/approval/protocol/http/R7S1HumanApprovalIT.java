@@ -100,7 +100,7 @@ class R7S1HumanApprovalIT {
         String requestBody = """
                 {"sourceTaskId":"R7-S1-IMPL-1","requestedBy":"control-plane","channel":"TELEGRAM","channelRef":"chat:123"}
                 """;
-        HttpResponse<String> requested = post("/api/r7/approvals", requestBody);
+        HttpResponse<String> requested = post("/api/r1/approvals", requestBody);
         assertThat(requested.statusCode()).isEqualTo(200);
         JsonNode pending = json.readTree(requested.body());
         String approvalId = pending.path("approvalRequestId").asText();
@@ -111,28 +111,28 @@ class R7S1HumanApprovalIT {
         assertThat(pending.path("channel").asText()).isEqualTo("TELEGRAM");
         assertThat(pending.path("channelRef").asText()).isEqualTo("chat:123");
 
-        HttpResponse<String> duplicate = post("/api/r7/approvals", requestBody);
+        HttpResponse<String> duplicate = post("/api/r1/approvals", requestBody);
         assertThat(duplicate.statusCode()).isEqualTo(200);
         assertThat(json.readTree(duplicate.body()).path("approvalRequestId").asText()).isEqualTo(approvalId);
 
         String decision = """
                 {"decision":"APPROVE","decidedBy":"human:s","note":"Approved after review"}
                 """;
-        HttpResponse<String> approved = post("/api/r7/approvals/" + approvalId + "/decision", decision);
+        HttpResponse<String> approved = post("/api/r1/approvals/" + approvalId + "/decision", decision);
         assertThat(approved.statusCode()).isEqualTo(200);
         JsonNode approvedJson = json.readTree(approved.body());
         assertThat(approvedJson.path("status").asText()).isEqualTo("APPROVED");
         assertThat(approvedJson.path("decidedBy").asText()).isEqualTo("human:s");
 
-        HttpResponse<String> replay = post("/api/r7/approvals/" + approvalId + "/decision", decision);
+        HttpResponse<String> replay = post("/api/r1/approvals/" + approvalId + "/decision", decision);
         assertThat(replay.statusCode()).isEqualTo(200);
         assertThat(json.readTree(replay.body()).path("status").asText()).isEqualTo("APPROVED");
 
-        HttpResponse<String> conflicting = post("/api/r7/approvals/" + approvalId + "/decision",
+        HttpResponse<String> conflicting = post("/api/r1/approvals/" + approvalId + "/decision",
                 "{\"decision\":\"REJECT\",\"decidedBy\":\"human:s\",\"note\":\"changed mind\"}");
         assertThat(conflicting.statusCode()).isEqualTo(409);
 
-        HttpResponse<String> bySource = get("/api/r7/approvals/by-source/" + implementationId.value());
+        HttpResponse<String> bySource = get("/api/r1/approvals/by-source/" + implementationId.value());
         assertThat(bySource.statusCode()).isEqualTo(200);
         assertThat(json.readTree(bySource.body()).path("approvalRequestId").asText()).isEqualTo(approvalId);
     }

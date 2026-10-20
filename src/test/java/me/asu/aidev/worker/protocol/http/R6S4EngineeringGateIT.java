@@ -150,7 +150,7 @@ class R6S4EngineeringGateIT {
         assertThat(gateService.findLatestPassed("WORK_ITEM", "WI-R6-S4-1").orElseThrow().sourceTaskId())
                 .isEqualTo(repairId);
 
-        HttpResponse<String> byTask = get("/api/r6/engineering-gates/" + repairId.value());
+        HttpResponse<String> byTask = get("/api/r1/engineering-gates/" + repairId.value());
         assertThat(byTask.statusCode()).isEqualTo(200);
         JsonNode taskJson = json.readTree(byTask.body());
         assertThat(taskJson.path("status").asText()).isEqualTo("PASSED");
@@ -158,7 +158,7 @@ class R6S4EngineeringGateIT {
         assertThat(taskJson.path("review").path("verdict").asText()).isEqualTo("PASS");
         assertThat(taskJson.path("verification").path("verdict").asText()).isEqualTo("PASS");
 
-        HttpResponse<String> latest = get("/api/r6/engineering-gates/latest-passed?subjectType=WORK_ITEM&subjectId=WI-R6-S4-1");
+        HttpResponse<String> latest = get("/api/r1/engineering-gates/latest-passed?subjectType=WORK_ITEM&subjectId=WI-R6-S4-1");
         assertThat(latest.statusCode()).isEqualTo(200);
         assertThat(json.readTree(latest.body()).path("sourceTaskId").asText()).isEqualTo(repairId.value());
     }

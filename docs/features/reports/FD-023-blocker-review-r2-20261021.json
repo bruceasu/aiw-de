@@ -1,0 +1,11 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"blocker-feedback", "fd_id":"FD-023",
+  "source_event":"FD-023-000007-changes-requested", "human_report":"FD-023-blocker-review-r2-20261021.md",
+  "data":{
+    "stage":"worker-repair", "role":"worker", "status":"resolved", "resolved_event":"FD-023-000009-verification-passed", "resolved_on":"2026-10-21 Asia/Tokyo",
+    "symptom":"current authentication descriptions use obsolete path sets", "confirmed_cause":"mechanical URL replacement without semantic table review",
+    "attempts":["claimed real repair event", "corrected six current API/security/console docs", "corrected FD status and encoding damage", "static diff and language checks passed", "confirmed no source drift"],
+    "human_decision_required":false, "next_step":"third independent review",
+    "reusable_improvement":"Review set semantics after namespace migration; reliable UTF-8 writes", "template_status":"required templates absent; skill fields used"
+  }
+}

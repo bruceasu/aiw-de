@@ -63,7 +63,7 @@ Mission Control 入口仅向有操作权限的用户显示。窗口默认隐藏�
 数据库迁移未在本次开发中执行；上线前备份并由正常 Flyway 启动流程应用。回退应用时保留新增表及审计数据，
 不要通过删表回滚回答。计划按既定保留策略永久删除时，同时清理其回答记录。
 
-接口：`GET /ui/plan-editor/plans/{id}/questions`、`GET .../questions/files/{fileId}`、
+接口：`GET /api/r1/plan-editor/plans/{id}/questions`、`GET .../questions/files/{fileId}`、
 `POST .../questions/answers`。写请求使用现有操作员权限与 CSRF，包含计划版本、问题 key、来源文件 ID/哈希、回答及显式确认。
 接口验证最新来源和版本，不接受客户端指定确认人。决策正文每条最多 2000 字符，总任务决策上下文最多 8000 字符；超限明确拒绝，不静默丢弃决策。
 

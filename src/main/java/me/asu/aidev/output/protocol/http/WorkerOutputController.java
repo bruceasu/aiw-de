@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /** Protected by the existing WorkerProtocolTokenFilter; each operation also checks the task lease. */
 @RestController
-@RequestMapping("/api/worker-protocol/v1/tasks/{taskId}/outputs")
+@RequestMapping("/api/r1/worker-protocol/v1/tasks/{taskId}/outputs")
 public class WorkerOutputController {
     private final TaskOutputService outputs;
     public WorkerOutputController(TaskOutputService outputs) { this.outputs = outputs; }

@@ -8,7 +8,7 @@
   const node = (tag, text, className) => { const n = document.createElement(tag); if (text != null) n.textContent = text; if (className) n.className = className; return n; };
   async function api(path, value, options = {}) {
     const post = value !== undefined;
-    const response = await fetch(`/ui/api/goals${path}${post ? (path.includes('?') ? '&' : '?') + '_csrf=' + encodeURIComponent(csrf) : ''}`, {
+    const response = await fetch(`/api/r1/goals${path}${post ? (path.includes('?') ? '&' : '?') + '_csrf=' + encodeURIComponent(csrf) : ''}`, {
       method: post ? 'POST' : 'GET', headers: post ? {'Content-Type':'application/json'} : {},
       ...(post ? {body:JSON.stringify(value)} : {}), ...options
     });
@@ -95,7 +95,7 @@
   });
   function renderFiles(){
     $('goal-attachments').replaceChildren(); data.attachments.forEach(a=>{
-      const box=node('div',null,'goal-attachment'); const link=node('a',a.filename); link.href=`/ui/api/goals/${current.id}/attachments/${a.id}`;
+      const box=node('div',null,'goal-attachment'); const link=node('a',a.filename); link.href=`/api/r1/goals/${current.id}/attachments/${a.id}`;
       const convert=node('button','Convert locally','btn ghost'); convert.onclick=()=>run(async()=>{clean();status('Converting locally…');await api(`/${current.id}/attachments/${a.id}/convert`,{});await load(current.id);status('Conversion status updated.');});
       box.append(link,node('p',`${a.status}: ${a.detail}`),convert);
       if(a.extracted){const detail=node('details');detail.append(node('summary','Review extracted text'),node('pre',a.extracted));box.append(detail);}

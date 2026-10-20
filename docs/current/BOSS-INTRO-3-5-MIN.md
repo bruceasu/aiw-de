@@ -36,7 +36,7 @@ This is a speaking script, not a detailed architecture review.
 
 If a live demo is appropriate:
 
-1. show `POST /api/r8/requirements` with one small requirement;
+1. show `POST /api/r1/requirements` with one small requirement;
 2. show the Run Dashboard as tasks move through phases;
 3. show two implementation tasks being claimed by different workers if available;
 4. show Review + Verification and the Engineering Gate;

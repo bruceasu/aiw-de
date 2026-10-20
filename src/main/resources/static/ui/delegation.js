@@ -23,7 +23,7 @@
   function button(text, action) { const item = node("button", text, "btn ghost small-btn"); item.type = "button"; item.onclick = () => run(action); return item; }
   async function api(path = "", body) {
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
-    const response = await fetch(`/ui/api/delegation${path}${body === undefined ? "" : `?_csrf=${encodeURIComponent(csrf)}`}`, {
+    const response = await fetch(`/api/r1/delegation${path}${body === undefined ? "" : `?_csrf=${encodeURIComponent(csrf)}`}`, {
       method: body === undefined ? "GET" : "POST", headers: body === undefined ? {} : { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body)
     });

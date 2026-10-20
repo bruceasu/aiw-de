@@ -36,14 +36,14 @@ TypeScript Worker 的 REPORT/WORKSPACE 最终回复可以只有一个非空 `aiw
 
 ## 接口
 
-- `POST /api/worker-protocol/v1/tasks/{taskId}/outputs`：登记报告和附件。
+- `POST /api/r1/worker-protocol/v1/tasks/{taskId}/outputs`：登记报告和附件。
   请求含 workerId、leaseToken、attemptId、verdict、summary、resultRevision、files。
   files 含 path、kind（DOCUMENT/ATTACHMENT）、contentBase64。
-- `POST /api/worker-protocol/v1/tasks/{taskId}/outputs/read`：读取固定输入 bundle。
+- `POST /api/r1/worker-protocol/v1/tasks/{taskId}/outputs/read`：读取固定输入 bundle。
   请求含 workerId、leaseToken、attemptId、bundleId。仅允许当前运行租约及依赖/文档入库的固定来源。
-- `GET /ui/api/task-outputs/tasks/{taskId}`：按执行版本列出交付物。
-- `GET /ui/api/task-outputs/files/{fileId}`：下载文件，响应头包含 SHA-256。
-- `POST /ui/api/task-outputs/files/{fileId}/publication-plans`：创建正式文档入库草稿。
+- `GET /api/r1/task-outputs/tasks/{taskId}`：按执行版本列出交付物。
+- `GET /api/r1/task-outputs/files/{fileId}`：下载文件，响应头包含 SHA-256。
+- `POST /api/r1/task-outputs/files/{fileId}/publication-plans`：创建正式文档入库草稿。
   请求含 reviewTaskId、targetPath、reason。来源须已完成，且有依赖该来源的已完成 PASS 评审。
   来源与评审须由不同 Worker ID 完成；带文档或附件的步骤会要求评审 Worker 具备 task-outputs-v1。
 

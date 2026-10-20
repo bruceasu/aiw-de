@@ -119,7 +119,7 @@ class ControlPlaneClient {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (payload !== undefined) headers["Content-Type"] = "application/json";
     if (this.cfg.token) headers.Authorization = `Bearer ${this.cfg.token}`;
-    const response = await fetch(`${this.cfg.baseUrl}/api/worker-protocol/v1${pathPart}`, {
+    const response = await fetch(`${this.cfg.baseUrl}/api/r1/worker-protocol/v1${pathPart}`, {
       method: "POST", headers, body: payload === undefined ? undefined : JSON.stringify(payload),
     });
     if (response.status === 204 && allowNoContent) return null;

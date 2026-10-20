@@ -14,7 +14,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 @Controller
-@RequestMapping("/ui")
 public class GoalController {
     private final GoalRepository repo;
     private final GoalDiscussionService discussion;
@@ -27,65 +26,65 @@ public class GoalController {
     private String actor(HttpSession session) { security.requireOperator(session); return security.actor(session); }
     public record Revision(long revision, boolean confirmed) {}
     public record EditorRequest(long revision, JsonNode editor) {}
-    @GetMapping("/goals") public String page(HttpSession session, Model model) { actor(session); return "ui/goals"; }
-    @GetMapping("/api/goals") @ResponseBody public Object list(HttpSession session) { return repo.list(actor(session)); }
-    @PostMapping("/api/goals") @ResponseBody public Object create(HttpSession session) { return discussion.create(actor(session)); }
-    @GetMapping("/api/goals/sources") @ResponseBody public Object sources(@RequestParam(defaultValue="") String query, HttpSession session) {
+    @GetMapping("/ui/goals") public String page(HttpSession session, Model model) { actor(session); return "ui/goals"; }
+    @GetMapping("/api/r1/goals") @ResponseBody public Object list(HttpSession session) { return repo.list(actor(session)); }
+    @PostMapping("/api/r1/goals") @ResponseBody public Object create(HttpSession session) { return discussion.create(actor(session)); }
+    @GetMapping("/api/r1/goals/sources") @ResponseBody public Object sources(@RequestParam(defaultValue="") String query, HttpSession session) {
         actor(session); return discussion.sources(query.isBlank() ? null : GoalDiscussionService.bounded(query, "Query", 160, true));
     }
-    @GetMapping("/api/goals/{id}") @ResponseBody public Object detail(@PathVariable String id, HttpSession session) {
+    @GetMapping("/api/r1/goals/{id}") @ResponseBody public Object detail(@PathVariable String id, HttpSession session) {
         String a = actor(session); Draft draft = repo.get(id, a);
         return Map.of("draft", draft, "attachments", draft.deleted() ? List.of() : repo.attachments(id,a),
             "versions", draft.deleted() ? List.of() : repo.versions(id,a), "requests", discussion.requests(id,a));
     }
-    @PostMapping("/api/goals/{id}/edit") @ResponseBody public Object edit(@PathVariable String id, @RequestBody Edit edit, HttpSession session) {
+    @PostMapping("/api/r1/goals/{id}/edit") @ResponseBody public Object edit(@PathVariable String id, @RequestBody Edit edit, HttpSession session) {
         return discussion.edit(id, actor(session), edit);
     }
-    @PostMapping("/api/goals/{id}/delete") @ResponseBody public Object delete(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
+    @PostMapping("/api/r1/goals/{id}/delete") @ResponseBody public Object delete(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
         return discussion.deleted(id, actor(session), request.revision(), true);
     }
-    @PostMapping("/api/goals/{id}/restore") @ResponseBody public Object restore(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
+    @PostMapping("/api/r1/goals/{id}/restore") @ResponseBody public Object restore(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
         return discussion.deleted(id, actor(session), request.revision(), false);
     }
-    @PostMapping("/api/goals/{id}/messages") @ResponseBody public Object send(@PathVariable String id, @RequestBody GoalDiscussionService.Send request, HttpSession session) {
+    @PostMapping("/api/r1/goals/{id}/messages") @ResponseBody public Object send(@PathVariable String id, @RequestBody GoalDiscussionService.Send request, HttpSession session) {
         return discussion.send(id, actor(session), request);
     }
-    @PostMapping("/api/goals/{id}/replies/{request}") @ResponseBody public Object reply(@PathVariable String id, @PathVariable String request, HttpSession session) {
+    @PostMapping("/api/r1/goals/{id}/replies/{request}") @ResponseBody public Object reply(@PathVariable String id, @PathVariable String request, HttpSession session) {
         return discussion.reply(request, id, actor(session));
     }
-    @PostMapping("/api/goals/{id}/attachments") @ResponseBody public Object upload(@PathVariable String id, @RequestParam long revision,
+    @PostMapping("/api/r1/goals/{id}/attachments") @ResponseBody public Object upload(@PathVariable String id, @RequestParam long revision,
         @RequestParam String filename, HttpServletRequest request, HttpSession session) throws java.io.IOException {
         String a = actor(session);
         attachments.active(id, a);
         if (request.getContentLengthLong() > 10 * 1024 * 1024) throw new IllegalArgumentException("Attachment exceeds 10 MiB");
         return attachments.upload(id, a, revision, filename, request.getInputStream().readNBytes(10 * 1024 * 1024 + 1));
     }
-    @PostMapping("/api/goals/{id}/attachments/{file}/convert") @ResponseBody public Object convert(@PathVariable String id, @PathVariable String file, HttpSession session) {
+    @PostMapping("/api/r1/goals/{id}/attachments/{file}/convert") @ResponseBody public Object convert(@PathVariable String id, @PathVariable String file, HttpSession session) {
         String a = actor(session); var result = attachments.convert(id, file, a); return attachments.finish(id, file, a, result);
     }
-    @GetMapping("/api/goals/{id}/attachments/{file}") public ResponseEntity<byte[]> download(@PathVariable String id, @PathVariable String file, HttpSession session) {
+    @GetMapping("/api/r1/goals/{id}/attachments/{file}") public ResponseEntity<byte[]> download(@PathVariable String id, @PathVariable String file, HttpSession session) {
         String a = actor(session);
         var selected = repo.attachments(id, a).stream().filter(f -> f.id().equals(file)).findFirst().orElseThrow();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM)
             .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(selected.filename(), StandardCharsets.UTF_8).build().toString())
             .header("X-Content-Type-Options", "nosniff").cacheControl(CacheControl.noStore()).body(attachments.bytes(id, file, a));
     }
-    @PostMapping("/api/goals/{id}/formalize") @ResponseBody public Object formalize(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
+    @PostMapping("/api/r1/goals/{id}/formalize") @ResponseBody public Object formalize(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
         return plans.formalize(id, actor(session), request.revision(), request.confirmed());
     }
-    @PostMapping("/api/goals/versions/{id}/editor") @ResponseBody public Object editor(@PathVariable String id, @RequestBody EditorRequest request, HttpSession session) {
+    @PostMapping("/api/r1/goals/versions/{id}/editor") @ResponseBody public Object editor(@PathVariable String id, @RequestBody EditorRequest request, HttpSession session) {
         return plans.saveEditor(id, actor(session), request.revision(), request.editor());
     }
-    @PostMapping("/api/goals/versions/{id}/analyze") @ResponseBody public Object analyze(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
+    @PostMapping("/api/r1/goals/versions/{id}/analyze") @ResponseBody public Object analyze(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
         return plans.analyze(id, actor(session), request.revision());
     }
-    @GetMapping("/api/goals/versions/{id}/analysis") @ResponseBody public Object analysis(@PathVariable String id, HttpSession session) {
+    @GetMapping("/api/r1/goals/versions/{id}/analysis") @ResponseBody public Object analysis(@PathVariable String id, HttpSession session) {
         return plans.analysis(id, actor(session));
     }
-    @PostMapping("/api/goals/versions/{id}/apply") @ResponseBody public Object apply(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
+    @PostMapping("/api/r1/goals/versions/{id}/apply") @ResponseBody public Object apply(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
         return plans.applyAnalysis(id, actor(session), request.revision());
     }
-    @PostMapping("/api/goals/versions/{id}/prepare") @ResponseBody public Object prepare(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
+    @PostMapping("/api/r1/goals/versions/{id}/prepare") @ResponseBody public Object prepare(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
         return plans.prepare(id, actor(session), request.revision(), request.confirmed());
     }
     @ExceptionHandler(SecurityException.class) public ResponseEntity<?> denied(SecurityException e) { return ResponseEntity.status(403).body(Map.of("error", e.getMessage())); }

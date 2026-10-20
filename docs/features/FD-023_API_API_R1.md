@@ -1,7 +1,7 @@
 # FD-023: 所有控制平面 API 统一使用 /api/r1
 
-**Status:** Open
-**Revision:** 2
+**Status:** Complete
+**Revision:** 9
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -30,11 +30,11 @@
 
 每项规模小、难度中，预计半天以内；无未决业务政策。实现后默认静态及 compile-only，无测试执行授权。
 
-- [ ] 1.1 服务端统一 API 路径并保持 HTML 页面路径；检查所有 controller 和公开 URL。无依赖。
-- [ ] 1.2 同步机器认证、额外代理身份和控制台会话边界，处理迁出 UI 的首次启用及角色兼容；依赖1.1。完成标准：六个 console API 根受原边界保护，机器不受人工 session 误拦。
-- [ ] 2.1 同步所有在库当前 Worker、浏览器客户端及源测试 URL；依赖1.2。完成标准：生产调用方无旧控制平面 URL，不改原始历史证据。
-- [ ] 2.2 更新当前文档和稳定规范；依赖2.1。完成标准：说明canonical路径和无alias兼容影响。
-- [ ] 3.1 允许范围内生产 compile-only 与一次最终静态检查，提交完整 Worker MD/JSON 证据；依赖2.2。不将静态或编译当运行时通过。
+- [x] 1.1 服务端统一 API 路径并保持 HTML 页面路径；检查所有 controller 和公开 URL。无依赖。
+- [x] 1.2 同步机器认证、额外代理身份和控制台会话边界，处理迁出 UI 的首次启用及角色兼容；依赖1.1。完成标准：六个 console API 根受原边界保护，机器不受人工 session 误拦。
+- [x] 2.1 同步所有在库当前 Worker、浏览器客户端及源测试 URL；依赖1.2。完成标准：生产调用方无旧控制平面 URL，不改原始历史证据。
+- [x] 2.2 更新当前文档和稳定规范；依赖1.2及2.1。中英文现行URL、canonical/no-alias说明及六根控制台、机器协议、其他管理写入认证分类均已同步；历史证据不改写。
+- [x] 3.1 允许范围内生产 compile-only 与一次最终静态检查，提交完整 Worker MD/JSON 证据；依赖2.2。不将静态或编译当运行时通过。
 
 ## Acceptance
 
@@ -46,11 +46,20 @@
 
 ## Verification
 
+- 第3轮独立实现评审：`reviews/FD-023-review-r3.md` / `.json`，Reviewer `fd023-reviewer-20261021-01`，源事件 `FD-023-000008-implementation-ready`，结论 verification-passed。R1已解决：两语言16手册、09安全说明、英文15控制台和中文QUICK-START认证分类与既有六根及管理/机器边界一致；两次返工仅文档，源码未漂移。未运行测试或重跑编译，既有编译证据和未验证限制保留。
+
+第2轮结果：`reviews/FD-023-review-r2.md` / `.json`，changes-requested，源事件 `FD-023-000006-implementation-ready`。旧地址已修正，但认证路径分类文档仍与六个console根冲突；原源代码静态结论和编译限制不变。
+
 默认静态审查和离线 compile-only。生产 Java 使用本地 JDK25/Maven；Worker TS 用内存语法编译、Python内存compile、Go直接编译到NUL、Java示例编译至临时classes、JS node --check，使用已有依赖，不联网或生成分发包。无测试、服务、HTTP、浏览器、迁移、安装或部署。独立设计评审覆盖公开接口及认证分类，最终独立 fd-review 后默认本地交付、清理和归档。
+
+- 实现证据：reports/FD-023-implementation.md。生产Java25离线compile261文件、Worker多语言compile及修改客户端语法检查通过，未运行测试或HTTP。Java示例单独javac/清理被自动审批拒绝，未执行或绕过；保留静态差异与同语言生产compile证据。原设计中该示例独立编译未完成，不列为已通过。
+
+- 第1轮独立实现评审：`reviews/FD-023-review.md` / `.json`，Reviewer `fd023-reviewer-20261021-01`，源事件 `FD-023-000004-implementation-ready`，结论 changes-requested。生产路由及认证边界获得静态支持；R1要求同步英文当前文档。未运行测试或重跑编译，Java示例被拒绝检查继续记录为未执行。
+
 
 ## TODO
 
-先做有界独立设计评审；实施、独立实现评审、本地交付、清理、Complete 归档由真实阶段推进。
+全部实现项完成；独立设计D1及实现评审R1均已解决，第3轮独立实现评审通过。主PM继续既定本地交付、清理及Complete归档；这些动作尚未由Reviewer执行。实际路由/认证集成、非空context path端到端和Java示例独立编译仍未验证，未推送或部署。
 
 ## Sources
 

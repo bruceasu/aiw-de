@@ -122,15 +122,15 @@ Reference workers normally:
 Manual worker state endpoints are available through Worker Protocol:
 
 ```text
-POST /api/worker-protocol/v1/workers/{workerId}/drain
-POST /api/worker-protocol/v1/workers/{workerId}/offline
+POST /api/r1/worker-protocol/v1/workers/{workerId}/drain
+POST /api/r1/worker-protocol/v1/workers/{workerId}/offline
 ```
 
 Use `DRAINING` before planned maintenance if you want a worker to stop receiving new work while current work finishes naturally.
 
 ### R10 process-worker fleet
 
-The [TypeScript](../../workers/process-typescript/README.md), [Go](../../workers/process-go/README.md), and [Python](../../workers/process-python/README.md) process workers run as independent processes, one role profile per process. Keep an active worker for each stage that a run may reach: requirement analysis, architecture, planning, coding, review, verification, and repair. Add integration execution and integration verification where runs can create integration tasks. Missing role coverage leaves compatible READY work in the unmatched backlog; inspect `GET /api/r8/fleet/dashboard` after startup and after changing the fleet.
+The [TypeScript](../../workers/process-typescript/README.md), [Go](../../workers/process-go/README.md), and [Python](../../workers/process-python/README.md) process workers run as independent processes, one role profile per process. Keep an active worker for each stage that a run may reach: requirement analysis, architecture, planning, coding, review, verification, and repair. Add integration execution and integration verification where runs can create integration tasks. Missing role coverage leaves compatible READY work in the unmatched backlog; inspect `GET /api/r1/fleet/dashboard` after startup and after changing the fleet.
 
 The single [TypeScript process worker](../../workers/process-typescript/README.md) selects `codex-sdk` or `openai-agents` explicitly at startup. The former API package and launcher have been removed. For Agents, configure `OPENAI_API_KEY` and approve `openai-agents` runtime profiles in relevant task policies. Read-only roles have file inspection tools; writable roles can explicitly enable a host shell on an isolated host/container because it is not an OS sandbox. See the worker guide for configuration and validation limits.
 
@@ -175,7 +175,7 @@ Use `cancel`. Cancellation is irreversible.
 
 ### Per-run
 
-Use `/api/r8/runs/{runId}/scheduling`.
+Use `/api/r1/runs/{runId}/scheduling`.
 
 - lower values: block new claims as current work drains;
 - higher values: make capacity available to subsequent pulls;
@@ -183,7 +183,7 @@ Use `/api/r8/runs/{runId}/scheduling`.
 
 ### Fleet-wide
 
-Use `/api/r8/fleet/scheduling` with the same contraction semantics.
+Use `/api/r1/fleet/scheduling` with the same contraction semantics.
 
 A positive `overcommittedSlots` after contraction is expected and not an accounting error.
 
@@ -192,8 +192,8 @@ A positive `overcommittedSlots` after contraction is expected and not an account
 There is no Spring Actuator health endpoint in the current baseline. Operational checks should use:
 
 ```text
-GET /api/r8/fleet/dashboard
-GET /api/r8/fleet/scheduling
+GET /api/r1/fleet/dashboard
+GET /api/r1/fleet/scheduling
 ```
 
 Important consistency indicators:

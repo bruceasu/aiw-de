@@ -71,7 +71,7 @@
     if (!response.ok) throw new Error(String(body.message || 'Deliverable request failed.').slice(0, 500));
     return body;
   };
-  fetch(`/ui/api/task-outputs/tasks/${encodeURIComponent(section.dataset.taskId)}`).then(json).then(bundles => {
+  fetch(`/api/r1/task-outputs/tasks/${encodeURIComponent(section.dataset.taskId)}`).then(json).then(bundles => {
     list.replaceChildren();
     if (!bundles.length) { list.append(element('p', 'No deliverables registered yet.', 'muted')); return; }
     for (const bundle of bundles) {
@@ -91,7 +91,7 @@
         const link = element('a', '');
         const path = element('span', file.path); path.dataset.i18nSkip = '';
         link.append(path, ` (${file.bytes} `, element('span', 'bytes'), ')');
-        link.href = `/ui/api/task-outputs/files/${encodeURIComponent(file.id)}`;
+        link.href = `/api/r1/task-outputs/files/${encodeURIComponent(file.id)}`;
         row.append(link);
         if (section.dataset.canOperate === 'true' && bundle.executionState === 'COMPLETED' && bundle.reviewState === 'PASS'
             && ['REPORT', 'DOCUMENT'].includes(file.kind) && file.path.endsWith('.md')) {
@@ -111,7 +111,7 @@
             event.preventDefault(); button.disabled = true; status.textContent = '';
             try {
               const data = Object.fromEntries(new FormData(form));
-              const url = new URL(`/ui/api/task-outputs/files/${encodeURIComponent(file.id)}/publication-plans`, location.origin);
+              const url = new URL(`/api/r1/task-outputs/files/${encodeURIComponent(file.id)}/publication-plans`, location.origin);
               url.searchParams.set('_csrf', section.dataset.csrf);
               const plan = await json(await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }));
               location.assign(`/ui/plans/${encodeURIComponent(plan.id)}`);

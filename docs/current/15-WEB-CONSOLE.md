@@ -80,7 +80,7 @@ When authentication is enabled, all browser mutations also require a per-session
 
 ## Security boundary
 
-Web Console authentication protects `/ui/**`. It does **not** retroactively add authentication/RBAC to the existing management REST APIs. Default bind remains `127.0.0.1`; remote deployment should use a protected internal network or reverse-proxy/network access control until management API security is implemented.
+Web Console authentication protects `/ui/**` and the six console data roots under `/api/r1/`: goals, secretary, delegation, task-outputs, workflow-plans and plan-editor. They retain session, CSRF, current role and ownership checks. Other legacy administrative writes retain their original local policy until first delegate activation, which permanently requires human session, CSRF and action roles for those writes; Worker lease operations remain machine-authenticated. Default bind remains `127.0.0.1`. Remote deployment still needs an appropriate network/edge boundary; these custom application checks are not a complete production edge-security framework.
 
 ## Technology
 

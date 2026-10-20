@@ -108,7 +108,7 @@ class R5WorkspaceProtocolIT {
 
     private HttpResponse<String> post(String path, String body) throws Exception {
         return http.send(HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:" + port + "/api/worker-protocol/v1" + path))
+                .uri(URI.create("http://127.0.0.1:" + port + "/api/r1/worker-protocol/v1" + path))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + TOKEN)
                 .POST(HttpRequest.BodyPublishers.ofString(body == null ? "" : body))

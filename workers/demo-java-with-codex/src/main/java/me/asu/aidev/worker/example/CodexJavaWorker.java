@@ -403,7 +403,7 @@ public final class CodexJavaWorker {
         ControlPlaneClient(Config cfg) {
             this.cfg = cfg;
             this.http = HttpClient.newBuilder().connectTimeout(cfg.httpTimeout()).build();
-            this.base = URI.create(cfg.baseUrl() + "/api/worker-protocol/v1");
+            this.base = URI.create(cfg.baseUrl() + "/api/r1/worker-protocol/v1");
         }
 
         void register() throws Exception {

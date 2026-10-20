@@ -106,7 +106,7 @@ test('two legacy refs resolving to one physical directory cannot both claim DIRE
   try {
     await waitForServer(base, child, () => output);
     const workerId = 'fd006-alias-worker';
-    const registered = await post(base, '/api/worker-protocol/v1/workers/register', {
+    const registered = await post(base, '/api/r1/worker-protocol/v1/workers/register', {
       workerId,
       runtimeType: 'test-only',
       capabilities: ['requirement-analysis', 'repo:fd006first', 'repo:fd006alias', 'repo:fd006other'],
@@ -115,7 +115,7 @@ test('two legacy refs resolving to one physical directory cannot both claim DIRE
     assert.ok(registered.status >= 200 && registered.status < 300, JSON.stringify(registered));
 
     async function createRun(requestId, repositoryRef) {
-      const response = await post(base, '/api/r8/requirements', {
+      const response = await post(base, '/api/r1/requirements', {
         requestId,
         requirement: 'Isolated FD-006 directory admission check.',
         repositoryRef,
@@ -127,17 +127,17 @@ test('two legacy refs resolving to one physical directory cannot both claim DIRE
     }
 
     await createRun('fd006-first', 'fd006first');
-    const first = await post(base, '/api/worker-protocol/v1/tasks/claim', { workerId }, token);
+    const first = await post(base, '/api/r1/worker-protocol/v1/tasks/claim', { workerId }, token);
     assert.equal(first.status, 200, JSON.stringify(first));
     assert.equal(first.data.workspace.repositoryRef, 'fd006first');
     assert.equal(first.data.workspace.mode, 'DIRECT');
 
     await createRun('fd006-alias', 'fd006alias');
-    const blockedAlias = await post(base, '/api/worker-protocol/v1/tasks/claim', { workerId }, token);
+    const blockedAlias = await post(base, '/api/r1/worker-protocol/v1/tasks/claim', { workerId }, token);
     assert.equal(blockedAlias.status, 204, 'Same physical directory was claimed twice: ' + JSON.stringify(blockedAlias));
 
     await createRun('fd006-other', 'fd006other');
-    const differentDirectory = await post(base, '/api/worker-protocol/v1/tasks/claim', { workerId }, token);
+    const differentDirectory = await post(base, '/api/r1/worker-protocol/v1/tasks/claim', { workerId }, token);
     assert.equal(differentDirectory.status, 200, JSON.stringify(differentDirectory));
     assert.equal(differentDirectory.data.workspace.repositoryRef, 'fd006other');
   } finally {

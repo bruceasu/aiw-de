@@ -87,7 +87,7 @@ class R8S6RunTimelineIT {
         runs.resume(started.runId(), "operator:two", "continue retry later");
         runs.cancel(started.runId(), "operator:cancel", "requirement withdrawn");
 
-        JsonNode response = json.readTree(get("/api/r8/runs/" + started.runId() + "/timeline").body());
+        JsonNode response = json.readTree(get("/api/r1/runs/" + started.runId() + "/timeline").body());
         assertThat(response.path("runId").asText()).isEqualTo(started.runId());
         assertThat(response.path("effectiveStatus").asText()).isEqualTo("CANCELLED");
         assertThat(response.path("truncated").asBoolean()).isFalse();
@@ -121,7 +121,7 @@ class R8S6RunTimelineIT {
                 "SELECT COUNT(*) FROM autonomous_run_event WHERE run_id=?", Integer.class, started.runId()))
                 .isEqualTo(7);
 
-        JsonNode limited = json.readTree(get("/api/r8/runs/" + started.runId() + "/timeline?limit=3").body());
+        JsonNode limited = json.readTree(get("/api/r1/runs/" + started.runId() + "/timeline?limit=3").body());
         assertThat(limited.path("returnedEntries").asInt()).isEqualTo(3);
         assertThat(limited.path("truncated").asBoolean()).isTrue();
         assertThat(limited.path("totalEntries").asInt()).isGreaterThan(3);

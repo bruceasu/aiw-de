@@ -1,0 +1,14 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"blocker-feedback", "fd_id":"FD-023",
+  "source_event":"FD-023-000003-design-ready", "human_report":"FD-023-blocker-workflow-and-compile-20261021.md",
+  "data":{
+    "stage":"worker", "role":"worker", "status":"workflow-resolved-verification-limitation-recorded",
+    "planner_event":"FD-023-000002-design-requested",
+    "symptoms":["design-ready invalid from Open", "claim latest event requirement", "Java example compile/cleanup automatically rejected"],
+    "confirmed_causes":["premature Open state", "no Worker event yet", "automatic approval blocked by policy; detailed reason unavailable"],
+    "attempts":["restored Design and emitted real design-ready then claimed", "production Java compile passed", "did not bypass rejected standalone Java compile"],
+    "human_decision_required":false, "next_step":"independent static implementation review with compile limitation",
+    "reusable_improvement":"CLI-owned state progression; UTF-8 paths; stdin scripts; no bypass after policy rejection",
+    "template_status":"required feedback templates absent; skill fields used"
+  }
+}

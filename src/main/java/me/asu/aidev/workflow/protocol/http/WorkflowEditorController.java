@@ -29,7 +29,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
-@RequestMapping("/ui")
 public class WorkflowEditorController {
     @Value("${aidev.worker.attempt-warning-ms:${AIW_WORKER_ATTEMPT_TIMEOUT_MS:${AIW_AGENT_TASK_TIMEOUT_MS:900000}}}")
     private long attemptWarningMs = 900000;
@@ -60,7 +59,7 @@ public class WorkflowEditorController {
         this.repairs = repairs;
     }
 
-    @GetMapping("/plans")
+    @GetMapping("/ui/plans")
     public String listPage(@RequestParam(defaultValue = "current") String view, Model model) {
         model.addAttribute("page", "plans");
         boolean archived = "archived".equals(view);
@@ -75,7 +74,7 @@ public class WorkflowEditorController {
         return "ui/plans";
     }
 
-    @GetMapping("/plans/new")
+    @GetMapping("/ui/plans/new")
     public String newPage(HttpSession session, Model model) {
         security.requireOperator(session);
         model.addAttribute("page", "plans");
@@ -83,7 +82,7 @@ public class WorkflowEditorController {
         return "ui/plan-editor";
     }
 
-    @GetMapping("/plans/{id}")
+    @GetMapping("/ui/plans/{id}")
     public String detailPage(@PathVariable String id, Model model) {
         requireEnabled();
         model.addAttribute("page", "plans");
@@ -94,7 +93,7 @@ public class WorkflowEditorController {
         return "ui/plan-detail";
     }
 
-    @GetMapping("/plans/{id}/tasks/{taskId}")
+    @GetMapping("/ui/plans/{id}/tasks/{taskId}")
     public String taskPage(@PathVariable String id, @PathVariable String taskId, Model model) {
         requireEnabled();
         var detail = editor.taskDetail(id, taskId);
@@ -109,7 +108,7 @@ public class WorkflowEditorController {
         return "ui/plan-task-detail";
     }
 
-    @PostMapping("/plans/{id}/archive")
+    @PostMapping("/ui/plans/{id}/archive")
     public String archive(@PathVariable String id, HttpSession session, RedirectAttributes flash) {
         security.requireOperator(session);
         try { archives.archive(id, security.actor(session)); flash.addFlashAttribute("successMessage", "Plan archived."); }
@@ -117,7 +116,7 @@ public class WorkflowEditorController {
         return "redirect:/ui/plans";
     }
 
-    @PostMapping("/plans/{id}/schedule-delete")
+    @PostMapping("/ui/plans/{id}/schedule-delete")
     public String scheduleDelete(@PathVariable String id, HttpSession session, RedirectAttributes flash) {
         security.requireAdmin(session);
         try { archives.scheduleDeletion(id, security.actor(session)); flash.addFlashAttribute("successMessage", "Plan scheduled for deletion in 30 days."); }
@@ -125,7 +124,7 @@ public class WorkflowEditorController {
         return "redirect:/ui/plans?view=archived";
     }
 
-    @PostMapping("/plans/{id}/undo-delete")
+    @PostMapping("/ui/plans/{id}/undo-delete")
     public String undoDelete(@PathVariable String id, HttpSession session, RedirectAttributes flash) {
         security.requireAdmin(session);
         try { archives.undoDeletion(id); flash.addFlashAttribute("successMessage", "Plan deletion cancelled."); }
@@ -133,7 +132,7 @@ public class WorkflowEditorController {
         return "redirect:/ui/plans?view=archived";
     }
 
-    @GetMapping("/plan-editor/catalog")
+    @GetMapping("/api/r1/plan-editor/catalog")
     @ResponseBody
     public Catalog catalog() {
         requireEnabled();
@@ -142,7 +141,7 @@ public class WorkflowEditorController {
                 fleet.dashboard(100).workers().workers(), availability);
     }
 
-    @GetMapping("/plan-editor/plans/{id}")
+    @GetMapping("/api/r1/plan-editor/plans/{id}")
     @ResponseBody
     public WorkflowEditorService.Detail detail(@PathVariable String id) {
         requireEnabled();
@@ -154,7 +153,7 @@ public class WorkflowEditorController {
     public record RepairAuthorizationRequest(long planVersion, String taskId, long taskVersion, String reason,
                                              String scope, String delegateWorkerId, boolean warningConfirmed) {}
 
-    @PostMapping("/plan-editor/plans/{id}/repair-authorizations")
+    @PostMapping("/api/r1/plan-editor/plans/{id}/repair-authorizations")
     @ResponseBody
     public me.asu.aidev.workflow.jdbc.JdbcWorkflowRepairAuthorizationRepository.Authorization authorizeRepair(
             @PathVariable String id, @RequestBody RepairAuthorizationRequest request, HttpSession session) {
@@ -163,7 +162,7 @@ public class WorkflowEditorController {
                 request.reason(), request.delegateWorkerId(), request.warningConfirmed(), security.actor(session));
     }
 
-    @PostMapping("/plan-editor/plans/{id}/repair-authorizations/{authorizationId}/revoke")
+    @PostMapping("/api/r1/plan-editor/plans/{id}/repair-authorizations/{authorizationId}/revoke")
     @ResponseBody
     public java.util.Map<String, String> revokeRepair(@PathVariable String id, @PathVariable String authorizationId, HttpSession session) {
         requireWrite(session);
@@ -171,7 +170,7 @@ public class WorkflowEditorController {
         return java.util.Map.of("status", "REVOKED");
     }
 
-    @PostMapping("/plan-editor/plans/{id}/resume-review")
+    @PostMapping("/api/r1/plan-editor/plans/{id}/resume-review")
     @ResponseBody
     public WorkflowPlan resumeReview(@PathVariable String id, @RequestBody ReviewRecoveryRequest request, HttpSession session) {
         requireWrite(session);
@@ -179,7 +178,7 @@ public class WorkflowEditorController {
                 security.actor(session), request.reason(), request.warningConfirmed());
     }
 
-    @PostMapping("/plan-editor/plans/{id}/tasks/{taskId}/retry")
+    @PostMapping("/api/r1/plan-editor/plans/{id}/tasks/{taskId}/retry")
     @ResponseBody
     public WorkflowPlan retryTask(@PathVariable String id, @PathVariable String taskId,
                                   @RequestBody RetryTaskRequest request, HttpSession session) {
@@ -188,14 +187,14 @@ public class WorkflowEditorController {
                 security.actor(session), request.reason(), request.warningConfirmed());
     }
 
-    @PostMapping("/plan-editor/drafts")
+    @PostMapping("/api/r1/plan-editor/drafts")
     @ResponseBody
     public WorkflowPlan draft(@RequestBody WorkflowPlanSpec spec, HttpSession session) {
         requireWrite(session);
         return editor.draft(spec, security.actor(session));
     }
 
-    @PostMapping("/plan-editor/plans/{id}/confirm")
+    @PostMapping("/api/r1/plan-editor/plans/{id}/confirm")
     @ResponseBody
     public WorkflowPlan confirm(@PathVariable String id, @RequestBody WorkflowPlanController.Version request,
                                 HttpSession session) {
@@ -203,7 +202,7 @@ public class WorkflowEditorController {
         return editor.confirm(id, request.version(), security.actor(session));
     }
 
-    @PostMapping("/plan-editor/plans/{id}/withdraw")
+    @PostMapping("/api/r1/plan-editor/plans/{id}/withdraw")
     @ResponseBody
     public WorkflowPlan withdraw(@PathVariable String id, @RequestBody WorkflowPlanController.Withdrawal request,
                                  HttpSession session) {
@@ -211,7 +210,7 @@ public class WorkflowEditorController {
         return plans.withdraw(id, request.version(), security.actor(session), request.reason());
     }
 
-    @PostMapping("/plan-editor/plans/{id}/jump")
+    @PostMapping("/api/r1/plan-editor/plans/{id}/jump")
     @ResponseBody
     public WorkflowPlan jump(@PathVariable String id, @RequestBody WorkflowPlanController.Jump request,
                              HttpSession session) {
@@ -219,7 +218,7 @@ public class WorkflowEditorController {
         return plans.jump(id, request.version(), request.targetStep(), security.actor(session), request.reason());
     }
 
-    @PostMapping("/plan-editor/plans/{id}/stop")
+    @PostMapping("/api/r1/plan-editor/plans/{id}/stop")
     @ResponseBody
     public WorkflowPlan stop(@PathVariable String id, @RequestBody WorkflowPlanController.Withdrawal request,
                              HttpSession session) {
@@ -227,7 +226,7 @@ public class WorkflowEditorController {
         return plans.stop(id, request.version(), security.actor(session), request.reason());
     }
 
-    @PostMapping("/plan-editor/plans/{id}/complete")
+    @PostMapping("/api/r1/plan-editor/plans/{id}/complete")
     @ResponseBody
     public WorkflowPlan complete(@PathVariable String id, @RequestBody WorkflowPlanController.Withdrawal request,
                                  HttpSession session) {
@@ -235,7 +234,7 @@ public class WorkflowEditorController {
         return plans.complete(id, request.version(), security.actor(session), request.reason());
     }
 
-    @PostMapping("/plan-editor/plans/{id}/cancel")
+    @PostMapping("/api/r1/plan-editor/plans/{id}/cancel")
     @ResponseBody
     public WorkflowPlan cancel(@PathVariable String id, @RequestBody WorkflowPlanController.Withdrawal request,
                                HttpSession session) {
@@ -243,7 +242,7 @@ public class WorkflowEditorController {
         return cancellation.cancel(id, request.version(), security.actor(session), request.reason());
     }
 
-    @PostMapping("/plan-editor/plans/{id}/resolve-stop")
+    @PostMapping("/api/r1/plan-editor/plans/{id}/resolve-stop")
     @ResponseBody
     public WorkflowPlan resolveStop(@PathVariable String id, @RequestBody WorkflowPlanController.Version request,
                                     HttpSession session) {
@@ -251,7 +250,7 @@ public class WorkflowEditorController {
         return plans.clearStaleControl(id, request.version(), security.actor(session));
     }
 
-    @PostMapping("/plan-editor/recommendations")
+    @PostMapping("/api/r1/plan-editor/recommendations")
     @ResponseBody
     public WorkflowRecommendationService.Result recommend(@RequestBody WorkflowRecommendationService.Request request,
                                                           HttpSession session) {
@@ -259,13 +258,13 @@ public class WorkflowEditorController {
         return recommendations.request(request, security.actor(session));
     }
 
-    @GetMapping("/plan-editor/recommendation-contexts")
+    @GetMapping("/api/r1/plan-editor/recommendation-contexts")
     @ResponseBody
     public List<me.asu.aidev.workflow.jdbc.JdbcRecommendationRepository.Context> recommendationContexts(HttpSession session) {
         requireWrite(session);
         return recommendations.contexts(security.actor(session));
     }
-    @GetMapping("/plan-editor/plans/{id}/recommendation-context")
+    @GetMapping("/api/r1/plan-editor/plans/{id}/recommendation-context")
     @ResponseBody
     public java.util.Map<String, String> recommendationContextForPlan(@PathVariable String id, HttpSession session) {
         requireWrite(session);
@@ -273,14 +272,14 @@ public class WorkflowEditorController {
         return contextId == null ? java.util.Map.of() : java.util.Map.of("id", contextId);
     }
 
-    @PostMapping("/plan-editor/recommendation-contexts")
+    @PostMapping("/api/r1/plan-editor/recommendation-contexts")
     @ResponseBody
     public me.asu.aidev.workflow.jdbc.JdbcRecommendationRepository.Context newRecommendationContext(HttpSession session) {
         requireWrite(session);
         return recommendations.createContext(security.actor(session));
     }
 
-    @GetMapping("/plan-editor/recommendation-contexts/{id}")
+    @GetMapping("/api/r1/plan-editor/recommendation-contexts/{id}")
     @ResponseBody
     public WorkflowRecommendationService.Recovery recoverRecommendation(@PathVariable String id, HttpSession session) {
         requireWrite(session);
@@ -288,21 +287,21 @@ public class WorkflowEditorController {
     }
 
     public record ContextDraft(long revision, WorkflowPlanSpec plan) {}
-    @PostMapping("/plan-editor/recommendation-contexts/{id}/draft")
+    @PostMapping("/api/r1/plan-editor/recommendation-contexts/{id}/draft")
     @ResponseBody
     public WorkflowPlan saveContextDraft(@PathVariable String id, @RequestBody ContextDraft request, HttpSession session) {
         requireWrite(session);
         return recommendations.saveDraft(id, request.revision(), request.plan(), security.actor(session));
     }
 
-    @GetMapping("/plan-editor/recommendations/{id}")
+    @GetMapping("/api/r1/plan-editor/recommendations/{id}")
     @ResponseBody
     public WorkflowRecommendationService.Result recommendation(@PathVariable String id, HttpSession session) {
         requireWrite(session);
         return recommendations.get(id, security.actor(session));
     }
 
-    @PostMapping("/plan-editor/recommendations/{id}/withdraw")
+    @PostMapping("/api/r1/plan-editor/recommendations/{id}/withdraw")
     @ResponseBody
     public WorkflowRecommendationService.Result withdrawRecommendation(@PathVariable String id, HttpSession session) {
         requireWrite(session);

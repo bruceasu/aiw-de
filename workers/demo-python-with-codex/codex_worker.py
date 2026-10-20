@@ -85,7 +85,7 @@ class WorkerConfig:
 
 class ControlPlaneClient:
     def __init__(self, config: WorkerConfig):
-        self.base = config.control_plane_url + "/api/worker-protocol/v1"
+        self.base = config.control_plane_url + "/api/r1/worker-protocol/v1"
         self.token = config.worker_token
         self.timeout = config.http_timeout
 

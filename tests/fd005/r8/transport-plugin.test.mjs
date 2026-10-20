@@ -19,12 +19,12 @@ const response = value => new Response(JSON.stringify(value), { status: 200, hea
 const task = { taskId: 'synthetic task/one', attemptId: 'synthetic-attempt', attemptNo: 1, taskType: 'IMPLEMENTATION', leaseToken: 'SYNTHETIC_LEASE_ONLY', inputs: [], aiGuidance: { version: 'synthetic-guidance-v1' } };
 behavior('CP-register', async () => {
   const run = await cpFixture(() => response({ workerId: 'synthetic worker/one', status: 'ACTIVE', activeLeases: 0, maxConcurrency: 2 }), client => client.register());
-  assert.equal(run.requests[0].pathname, '/api/worker-protocol/v1/workers/register');
+  assert.equal(run.requests[0].pathname, '/api/r1/worker-protocol/v1/workers/register');
   assert.deepEqual(run.requests[0].body, { workerId: 'synthetic worker/one', runtimeType: 'synthetic-test-only', capabilities: ['coding'], maxConcurrency: 2 });
 });
 behavior('CP-claim-empty', async () => {
   const run = await cpFixture(() => new Response(null, { status: 204 }), client => client.claim());
-  assert.equal(run.result, null); assert.equal(run.requests[0].pathname, '/api/worker-protocol/v1/tasks/claim');
+  assert.equal(run.result, null); assert.equal(run.requests[0].pathname, '/api/r1/worker-protocol/v1/tasks/claim');
   assert.deepEqual(run.requests[0].body, { workerId: 'synthetic worker/one' });
 });
 behavior('CP-claim-task', async () => {
@@ -33,7 +33,7 @@ behavior('CP-claim-task', async () => {
 behavior('CP-start-selection', async () => {
   const selection = { id: 'approved-a', reason: 'synthetic approved selection', profile: { model: 'synthetic-model-a' } };
   const run = await cpFixture(() => response({}), client => client.start(task, selection));
-  assert.equal(run.requests[0].pathname, '/api/worker-protocol/v1/tasks/synthetic%20task%2Fone/start');
+  assert.equal(run.requests[0].pathname, '/api/r1/worker-protocol/v1/tasks/synthetic%20task%2Fone/start');
   assert.deepEqual(run.requests[0].body, { workerId: 'synthetic worker/one', leaseToken: task.leaseToken, profileId: selection.id, profileVersion: task.aiGuidance.version, selectionReason: selection.reason });
 });
 behavior('CP-heartbeat', async () => {
@@ -68,7 +68,7 @@ behavior('CP-attempt-cancel', async () => {
 });
 behavior('CP-worker-controls', async () => {
   const run = await cpFixture(() => new Response(null, { status: 204 }), async client => { await client.workerHeartbeat(); await client.drain(); await client.offline(); });
-  assert.deepEqual(run.requests.map(item => item.pathname), ['heartbeat', 'drain', 'offline'].map(suffix => `/api/worker-protocol/v1/workers/synthetic%20worker%2Fone/${suffix}`));
+  assert.deepEqual(run.requests.map(item => item.pathname), ['heartbeat', 'drain', 'offline'].map(suffix => `/api/r1/worker-protocol/v1/workers/synthetic%20worker%2Fone/${suffix}`));
   assert.ok(run.requests.every(item => item.body === null));
 });
 

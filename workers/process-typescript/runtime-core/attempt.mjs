@@ -116,7 +116,7 @@ export class ControlPlaneClient {
     if (this.cfg.token) headers.Authorization = `Bearer ${this.cfg.token}`;
     if (this.cfg.delegateKey) headers["X-AIW-Delegate-Key"] = this.cfg.delegateKey;
     const timeout = AbortSignal.timeout(this.cfg.httpTimeoutMs);
-    const response = await fetch(`${this.cfg.baseUrl}/api/worker-protocol/v1${pathPart}`, { method: "POST", headers,
+    const response = await fetch(`${this.cfg.baseUrl}/api/r1/worker-protocol/v1${pathPart}`, { method: "POST", headers,
       body: payload === undefined ? undefined : JSON.stringify(payload), signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
     if (response.status === 204 && allowNoContent) return null;
     if (!response.ok) throw new ProtocolError(response.status);

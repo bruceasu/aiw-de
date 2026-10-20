@@ -5,7 +5,7 @@
 A run starts with:
 
 ```http
-POST /api/r8/requirements
+POST /api/r1/requirements
 ```
 
 The first durable task is `REQUIREMENT_ANALYSIS`. The request must identify an immutable repository revision.

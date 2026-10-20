@@ -458,7 +458,7 @@ sh ./scripts/run-role.sh reviewer openai-agents
 
 Both scripts require the role and runtime. You may instead set `AIW_PROCESS_ROLE` and `AIW_AGENT_RUNTIME` explicitly, then run `npm start`. Missing or unknown runtime fails before registration; there is no automatic fallback. Use a unique `AIW_WORKER_ID` for each replica. The default is `process-exec-<role>-1` for Exec, `process-<role>-1` for App Server, and `process-api-<role>-1` for Agents, preserving existing Control Plane identities. The runtime registration labels are `codex-cli:<role>`, `codex-app-server:<role>` and `openai-agents:<role>`; task AI profiles must approve the selected runtime.
 
-For a small run without integration work, `integrator` is optional. Check `GET /api/r8/fleet/dashboard` for unmatched READY tasks after starting the fleet.
+For a small run without integration work, `integrator` is optional. Check `GET /api/r1/fleet/dashboard` for unmatched READY tasks after starting the fleet.
 
 Select `sh ./scripts/run-role.sh coder codex-cli` for a bounded one-shot process, or `sh ./scripts/run-role.sh coder codex-app-server` for managed thread/turn interaction. Exec cancellation targets its process tree; App Server cancellation targets its current turn and requires a real terminal event. Unknown termination preserves the workspace and drains the Worker.
 

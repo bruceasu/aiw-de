@@ -130,7 +130,7 @@ class R8S8FleetDashboardIT {
 
     private JsonNode dashboard(int detailLimit) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:" + port + "/api/r8/fleet/dashboard?detailLimit=" + detailLimit))
+                .uri(URI.create("http://127.0.0.1:" + port + "/api/r1/fleet/dashboard?detailLimit=" + detailLimit))
                 .timeout(Duration.ofSeconds(5))
                 .GET().build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());

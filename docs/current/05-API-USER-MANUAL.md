@@ -11,7 +11,7 @@ Examples assume the local default address `http://127.0.0.1:8080`.
 ## 1. Submit a requirement
 
 ```http
-POST /api/r8/requirements
+POST /api/r1/requirements
 Content-Type: application/json
 ```
 
@@ -51,7 +51,7 @@ Rules:
 ## 2. Inspect run state
 
 ```http
-GET /api/r8/runs/{runId}
+GET /api/r1/runs/{runId}
 ```
 
 Important fields:
@@ -67,7 +67,7 @@ Important fields:
 ## 3. Dashboard
 
 ```http
-GET /api/r8/runs/{runId}/dashboard
+GET /api/r1/runs/{runId}/dashboard
 ```
 
 Use it for a human-oriented view of:
@@ -84,8 +84,8 @@ Use it for a human-oriented view of:
 ## 4. Timeline
 
 ```http
-GET /api/r8/runs/{runId}/timeline
-GET /api/r8/runs/{runId}/timeline?limit=200
+GET /api/r1/runs/{runId}/timeline
+GET /api/r1/runs/{runId}/timeline?limit=200
 ```
 
 Default limit is 500; maximum is 2000. If truncated, the API returns the newest N entries in chronological order.
@@ -95,7 +95,7 @@ Timeline entries combine task/attempt/gate/approval projections with retained ru
 ## 5. Recover an explicitly failed run
 
 ```http
-POST /api/r8/runs/{runId}/recover
+POST /api/r1/runs/{runId}/recover
 Content-Type: application/json
 
 { "recoveredBy": "operator:alice" }
@@ -108,7 +108,7 @@ Recovery is valid when lifecycle status is `FAILED` and operator control is `ACT
 Pause:
 
 ```http
-POST /api/r8/runs/{runId}/pause
+POST /api/r1/runs/{runId}/pause
 
 {
   "controlledBy": "operator:alice",
@@ -119,7 +119,7 @@ POST /api/r8/runs/{runId}/pause
 Resume:
 
 ```http
-POST /api/r8/runs/{runId}/resume
+POST /api/r1/runs/{runId}/resume
 
 {
   "controlledBy": "operator:alice",
@@ -132,7 +132,7 @@ Pause is a hard execution pause: active leases are revoked and the tasks are req
 ## 7. Cancel
 
 ```http
-POST /api/r8/runs/{runId}/cancel
+POST /api/r1/runs/{runId}/cancel
 
 {
   "controlledBy": "operator:alice",
@@ -145,7 +145,7 @@ Cancellation is irreversible. Use it only when the run should not resume.
 ## 8. Change per-run scheduling limit
 
 ```http
-POST /api/r8/runs/{runId}/scheduling
+POST /api/r1/runs/{runId}/scheduling
 
 {
   "maxParallelism": 1,
@@ -159,8 +159,8 @@ Contraction does not terminate healthy leases. New claims are blocked until acti
 ## 9. Fleet dashboard
 
 ```http
-GET /api/r8/fleet/dashboard
-GET /api/r8/fleet/dashboard?detailLimit=100
+GET /api/r1/fleet/dashboard
+GET /api/r1/fleet/dashboard?detailLimit=100
 ```
 
 The fleet dashboard explains READY backlog using categories such as:
@@ -179,13 +179,13 @@ It also reports worker capacity, run distribution, capability demand and account
 Current state:
 
 ```http
-GET /api/r8/fleet/scheduling
+GET /api/r1/fleet/scheduling
 ```
 
 Update:
 
 ```http
-POST /api/r8/fleet/scheduling
+POST /api/r1/fleet/scheduling
 
 {
   "maxParallelism": 8,
@@ -197,7 +197,7 @@ POST /api/r8/fleet/scheduling
 Audit history:
 
 ```http
-GET /api/r8/fleet/scheduling/events?limit=100
+GET /api/r1/fleet/scheduling/events?limit=100
 ```
 
 `0` means unlimited. A runtime update is persistent; `AIW_FLEET_MAX_PARALLELISM` is a bootstrap default for a new database, not a value that overwrites runtime authority on every restart.
@@ -207,13 +207,13 @@ GET /api/r8/fleet/scheduling/events?limit=100
 Exact code result:
 
 ```http
-GET /api/r6/engineering-gates/{sourceTaskId}
+GET /api/r1/engineering-gates/{sourceTaskId}
 ```
 
 Convenience lookup:
 
 ```http
-GET /api/r6/engineering-gates/latest-passed?subjectType=AUTONOMOUS_REQUIREMENT&subjectId={runId}
+GET /api/r1/engineering-gates/latest-passed?subjectType=AUTONOMOUS_REQUIREMENT&subjectId={runId}
 ```
 
 For long-lived approval/release authority, persist the exact source task/result identity; do not treat `latest-passed` as a historical authorization reference.
@@ -223,7 +223,7 @@ For long-lived approval/release authority, persist the exact source task/result 
 Create manually:
 
 ```http
-POST /api/r7/approvals
+POST /api/r1/approvals
 
 {
   "sourceTaskId": "...",
@@ -236,7 +236,7 @@ POST /api/r7/approvals
 Decide:
 
 ```http
-POST /api/r7/approvals/{approvalRequestId}/decision
+POST /api/r1/approvals/{approvalRequestId}/decision
 
 {
   "decision": "APPROVE",
@@ -250,8 +250,8 @@ Other valid decision: `REJECT`.
 Query:
 
 ```text
-GET /api/r7/approvals/{approvalRequestId}
-GET /api/r7/approvals/by-source/{sourceTaskId}
+GET /api/r1/approvals/{approvalRequestId}
+GET /api/r1/approvals/by-source/{sourceTaskId}
 ```
 
 ## 13. Common HTTP behavior

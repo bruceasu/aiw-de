@@ -9,7 +9,7 @@ http://127.0.0.1:8080
 ## 1. 创建自主 Requirement Run
 
 ```text
-POST /api/r8/requirements
+POST /api/r1/requirements
 ```
 
 ```json
@@ -34,7 +34,7 @@ POST /api/r8/requirements
 ## 2. 查看 Run
 
 ```text
-GET /api/r8/runs/{runId}
+GET /api/r1/runs/{runId}
 ```
 
 重点字段：status、controlState、effectiveStatus、terminalSourceTaskId、resultRevision、failure/recovery count、pause/resume 信息以及 Run scheduling slots。
@@ -42,8 +42,8 @@ GET /api/r8/runs/{runId}
 ## 3. Dashboard / Timeline
 
 ```text
-GET /api/r8/runs/{runId}/dashboard
-GET /api/r8/runs/{runId}/timeline?limit=200
+GET /api/r1/runs/{runId}/dashboard
+GET /api/r1/runs/{runId}/timeline?limit=200
 ```
 
 Timeline 默认 500，最大 2000。
@@ -51,7 +51,7 @@ Timeline 默认 500，最大 2000。
 ## 4. Recover
 
 ```text
-POST /api/r8/runs/{runId}/recover
+POST /api/r1/runs/{runId}/recover
 {"recoveredBy":"operator:alice"}
 ```
 
@@ -60,9 +60,9 @@ POST /api/r8/runs/{runId}/recover
 ## 5. Pause / Resume / Cancel
 
 ```text
-POST /api/r8/runs/{runId}/pause
-POST /api/r8/runs/{runId}/resume
-POST /api/r8/runs/{runId}/cancel
+POST /api/r1/runs/{runId}/pause
+POST /api/r1/runs/{runId}/resume
+POST /api/r1/runs/{runId}/cancel
 ```
 
 请求：
@@ -79,7 +79,7 @@ Cancel 不可逆。
 ## 6. 修改 Run 并发上限
 
 ```text
-POST /api/r8/runs/{runId}/scheduling
+POST /api/r1/runs/{runId}/scheduling
 ```
 
 ```json
@@ -95,10 +95,10 @@ POST /api/r8/runs/{runId}/scheduling
 ## 7. Fleet
 
 ```text
-GET /api/r8/fleet/dashboard
-GET /api/r8/fleet/scheduling
-POST /api/r8/fleet/scheduling
-GET /api/r8/fleet/scheduling/events?limit=100
+GET /api/r1/fleet/dashboard
+GET /api/r1/fleet/scheduling
+POST /api/r1/fleet/scheduling
+GET /api/r1/fleet/scheduling/events?limit=100
 ```
 
 Fleet Dashboard 将 READY Backlog 分成：
@@ -117,8 +117,8 @@ policyBlockedReady
 ## 8. Engineering Gate
 
 ```text
-GET /api/r6/engineering-gates/{sourceTaskId}
-GET /api/r6/engineering-gates/latest-passed?subjectType=AUTONOMOUS_REQUIREMENT&subjectId={runId}
+GET /api/r1/engineering-gates/{sourceTaskId}
+GET /api/r1/engineering-gates/latest-passed?subjectType=AUTONOMOUS_REQUIREMENT&subjectId={runId}
 ```
 
 长期 Authority 应记录精确 sourceTaskId，不要使用 `latest-passed` 作为历史批准依据。
@@ -128,7 +128,7 @@ GET /api/r6/engineering-gates/latest-passed?subjectType=AUTONOMOUS_REQUIREMENT&s
 创建：
 
 ```text
-POST /api/r7/approvals
+POST /api/r1/approvals
 ```
 
 ```json
@@ -142,7 +142,7 @@ POST /api/r7/approvals
 Decision：
 
 ```text
-POST /api/r7/approvals/{approvalRequestId}/decision
+POST /api/r1/approvals/{approvalRequestId}/decision
 ```
 
 ```json
@@ -158,8 +158,8 @@ POST /api/r7/approvals/{approvalRequestId}/decision
 查询：
 
 ```text
-GET /api/r7/approvals/{approvalRequestId}
-GET /api/r7/approvals/by-source/{sourceTaskId}
+GET /api/r1/approvals/{approvalRequestId}
+GET /api/r1/approvals/by-source/{sourceTaskId}
 ```
 
 ## 10. 常见 HTTP 状态

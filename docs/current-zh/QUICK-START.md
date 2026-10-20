@@ -35,7 +35,7 @@ mvn spring-boot:run
 新终端检查：
 
 ```powershell
-curl.exe http://127.0.0.1:8080/api/r8/fleet/dashboard
+curl.exe http://127.0.0.1:8080/api/r1/fleet/dashboard
 ```
 
 ## 3. 取得 Repository Base Revision
@@ -102,7 +102,7 @@ $body = @{
 
 Invoke-RestMethod `
   -Method Post `
-  -Uri http://127.0.0.1:8080/api/r8/requirements `
+  -Uri http://127.0.0.1:8080/api/r1/requirements `
   -ContentType "application/json" `
   -Body $body
 ```
@@ -119,9 +119,9 @@ Invoke-RestMethod `
 ## 6. 看进度
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8080/api/r8/runs/AR-quickstart-001/dashboard
-Invoke-RestMethod http://127.0.0.1:8080/api/r8/runs/AR-quickstart-001/timeline
-Invoke-RestMethod http://127.0.0.1:8080/api/r8/fleet/dashboard
+Invoke-RestMethod http://127.0.0.1:8080/api/r1/runs/AR-quickstart-001/dashboard
+Invoke-RestMethod http://127.0.0.1:8080/api/r1/runs/AR-quickstart-001/timeline
+Invoke-RestMethod http://127.0.0.1:8080/api/r1/fleet/dashboard
 ```
 
 预期流程：
@@ -146,7 +146,7 @@ AIW_APPROVAL_POLICY=MANUAL
 先查询 Run，取 `terminalSourceTaskId`：
 
 ```powershell
-$run = Invoke-RestMethod http://127.0.0.1:8080/api/r8/runs/AR-quickstart-001
+$run = Invoke-RestMethod http://127.0.0.1:8080/api/r1/runs/AR-quickstart-001
 $run.terminalSourceTaskId
 ```
 
@@ -155,7 +155,7 @@ $run.terminalSourceTaskId
 ```powershell
 $approval = Invoke-RestMethod `
   -Method Post `
-  -Uri http://127.0.0.1:8080/api/r7/approvals `
+  -Uri http://127.0.0.1:8080/api/r1/approvals `
   -ContentType "application/json" `
   -Body (@{
     sourceTaskId = $run.terminalSourceTaskId
@@ -169,7 +169,7 @@ $approval = Invoke-RestMethod `
 ```powershell
 Invoke-RestMethod `
   -Method Post `
-  -Uri "http://127.0.0.1:8080/api/r7/approvals/$($approval.approvalRequestId)/decision" `
+  -Uri "http://127.0.0.1:8080/api/r1/approvals/$($approval.approvalRequestId)/decision" `
   -ContentType "application/json" `
   -Body (@{
     decision = "APPROVE"
@@ -229,4 +229,4 @@ AIW_WEB_CONSOLE_PASSWORD=<strong secret>
 AIW_WEB_CONSOLE_ROLE=ADMIN
 ```
 
-注意：该登录目前只保护 `/ui/**`。Management REST API 仍保持原有信任边界，因此 Control Plane 仍应绑定 localhost 或放在受保护内网。
+注意：该登录保护 `/ui/**` 及 `/api/r1/` 下六个控制台数据根：goals、secretary、delegation、task-outputs、workflow-plans、plan-editor，保留 session、CSRF、角色及所有者校验。其他旧管理写入在首次代理启用前保持原本地策略，首次启用后持久要求人工 session、CSRF 和动作角色；Worker 租约协议继续使用机器认证。Control Plane 仍应绑定 localhost 或置于合适的内网/边缘访问保护后。

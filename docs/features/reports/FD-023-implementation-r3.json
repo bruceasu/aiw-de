@@ -1,0 +1,14 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"worker-report", "fd_id":"FD-023",
+  "source_event":"FD-023-000007-changes-requested", "human_report":"FD-023-implementation-r3.md",
+  "data":{
+    "worker_session":"01a15a47-fc32-7362-ac13-f660487b7632",
+    "addressed_findings":["R1 remaining authentication grouping and CSRF scope in current English and Chinese manuals"],
+    "docs_changed":["current/16", "current-zh/16", "current/09", "current-zh/09", "current/15", "current-zh/QUICK-START"],
+    "source_changed_since_first_implementation_handoff":false,
+    "checks_passed":["git diff --check", "targeted stale authentication-language scan", "source/runtime/test/config/spec diff empty since ea00861"],
+    "checks_not_run":["repeat compile for docs-only repair", "tests", "HTTP/services/browser/network", "previously rejected Java example compile/cleanup"],
+    "review_outcomes_so_far":2, "requested_review_number":3,
+    "residual_risks":["actual Spring and client authentication not exercised", "standalone Java example compile not run"]
+  }
+}

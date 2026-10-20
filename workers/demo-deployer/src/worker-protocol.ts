@@ -16,7 +16,7 @@ const baseUrl = (process.env.AIW_CONTROL_PLANE_URL || "http://127.0.0.1:8080").r
 const token = process.env.AIW_WORKER_TOKEN || "";
 
 async function post<T>(endpoint: string, body: unknown): Promise<T | null> {
-  const response = await fetch(`${baseUrl}/api/worker-protocol/v1${endpoint}`, {
+  const response = await fetch(`${baseUrl}/api/r1/worker-protocol/v1${endpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify(body),

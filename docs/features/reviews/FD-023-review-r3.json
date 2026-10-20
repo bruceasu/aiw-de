@@ -1,0 +1,33 @@
+{
+  "schema":"aiw.fd.evidence.v1",
+  "kind":"reviewer-report",
+  "fd_id":"FD-023",
+  "source_event":"FD-023-000008-implementation-ready",
+  "human_report":"FD-023-review-r3.md",
+  "data":{
+    "reviewer_session":"fd023-reviewer-20261021-01",
+    "review_round":3,
+    "base":"6f34bf4",
+    "repair_base":"d987dc7",
+    "reviewed_commit":"3cf4f46",
+    "fd_revision":8,
+    "outcome":"verification-passed",
+    "findings":[],
+    "resolved_findings":[{"id":"R1","evidence":"Ten English current documents have canonical URLs; both language API/auth manuals and related security/login guides now precisely separate six console roots, machine lease operations, administrative Drain/Offline, external workflow tokens and persistent legacy human-auth conditions."}],
+    "acceptance_results":[
+      {"requirement":"canonical mappings without aliases","result":"supported by first-round actual source review; unchanged"},
+      {"requirement":"HTML routes and payload contracts preserved; callers synchronized","result":"supported by first-round Worker/browser/template/source-test review; unchanged"},
+      {"requirement":"console session/CSRF/role/owner and first-activation boundary","result":"supported by actual shared route/order/receipt logic; documentation aligned"},
+      {"requirement":"machine credentials, administrative controls and context-relative classification","result":"supported statically; integration untested"},
+      {"requirement":"current documentation and source-test URLs; historical evidence and compatibility notices","result":"R1 resolved; no tests executed"}
+    ],
+    "source_changed_since_first_review":false,
+    "commands_run":["aiw fd show FD-023", "aiw fd claim FD-023 FD-023-000008-implementation-ready --session fd023-reviewer-20261021-01", "git diff --stat d987dc7..3cf4f46", "targeted git diff d987dc7..3cf4f46 -- docs/current docs/current-zh", "git diff --name-only ea00861..3cf4f46 -- src workers tests scripts openspec", "git status --short", "Get-Content and rg targeted FD/evidence/current-documentation review"],
+    "checks_not_run":["compile","tests","typecheck","service","HTTP","browser","network","migration","final build","subagents"],
+    "retained_worker_evidence":["Java25 offline production compile: 261 files", "Worker multi-language compile and changed-client syntax checks"],
+    "unexecuted_rejected_check":"Standalone Java example javac and cleanup were blocked by automatic approval and never executed or bypassed.",
+    "residual_risks":["actual Spring routing and credential/CSRF integration untested", "nonempty context path end-to-end behavior untested", "external clients must update URLs without old aliases", "standalone Java example compile unverified"],
+    "human_decisions_required":[],
+    "delivery_owner":"host PM; Reviewer did not merge, archive, push or deploy"
+  }
+}

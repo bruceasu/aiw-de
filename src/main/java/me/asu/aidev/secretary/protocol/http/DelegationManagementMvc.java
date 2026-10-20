@@ -23,15 +23,18 @@ public class DelegationManagementMvc implements WebMvcConfigurer {
         this.transaction=new org.springframework.transaction.support.TransactionTemplate(manager);
     }
     private boolean machine(String path) {
-        if(path.equals("/api/worker-protocol/v1/workers/register") || path.equals("/api/worker-protocol/v1/tasks/claim")) return true;
-        if(path.matches("/api/worker-protocol/v1/workers/[^/]+/heartbeat")) return true;
-        return path.matches("/api/worker-protocol/v1/tasks/[^/]+/(start|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
+        if(path.equals("/api/r1/worker-protocol/v1/workers/register") || path.equals("/api/r1/worker-protocol/v1/tasks/claim")) return true;
+        if(path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/heartbeat")) return true;
+        return path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
     }
     @Override public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new HandlerInterceptor() {
             @Override public boolean preHandle(HttpServletRequest request,HttpServletResponse response,Object handler) throws Exception {
-                boundary.clearHuman();
                 String path=request.getRequestURI().substring(request.getContextPath().length());
+                // The console interceptor already authenticates these paths before this interceptor.
+                // Do not clear its trusted identity or create a first-enable legacy receipt here.
+                if(me.asu.aidev.webconsole.security.WebConsoleApiRoutes.matches(path)) return true;
+                boundary.clearHuman();
                 if(Set.of("GET","HEAD","OPTIONS").contains(request.getMethod()) || machine(path)) return true;
                 // Register legacy requests under the same DB lock used by first activation.
                 // Activation refuses while any such request is in flight; no lock spans HTTP processing.
@@ -51,7 +54,7 @@ public class DelegationManagementMvc implements WebMvcConfigurer {
                 if(csrf==null) csrf=request.getParameter("_csrf");
                 if(!security.validCsrf(session,csrf)) { response.sendError(403,"A current human CSRF token is required");return false; }
                 try {
-                    if(path.matches("/api/r7/approvals/[^/]+/decision")) security.requireApprover(session);
+                    if(path.matches("/api/r1/approvals/[^/]+/decision")) security.requireApprover(session);
                     else if(path.contains("delete") || path.contains("deletion")) security.requireAdmin(session);
                     else security.requireOperator(session);
                 } catch(SecurityException error) { response.sendError(403,error.getMessage());return false; }
@@ -64,6 +67,6 @@ public class DelegationManagementMvc implements WebMvcConfigurer {
                     boundary.lock();jdbc.update("UPDATE delegation_legacy_request SET state='DONE',finished_ms=? WHERE id=? AND state='ACTIVE'",System.currentTimeMillis(),id);
                 });
             }
-        }).addPathPatterns("/api/**");
+        }).addPathPatterns("/api/r1/**");
     }
 }

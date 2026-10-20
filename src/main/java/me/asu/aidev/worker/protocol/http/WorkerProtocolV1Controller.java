@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
  * The controller owns no lifecycle rules. All authority remains in the application services.
  */
 @RestController
-@RequestMapping("/api/worker-protocol/v1")
+@RequestMapping("/api/r1/worker-protocol/v1")
 public class WorkerProtocolV1Controller {
     private me.asu.aidev.secretary.application.DelegationTaskPolicy delegationPolicy;
     @Autowired

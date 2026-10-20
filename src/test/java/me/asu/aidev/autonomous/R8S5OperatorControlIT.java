@@ -82,7 +82,7 @@ class R8S5OperatorControlIT {
         var firstAttempt = claims.claimNext(analyst).orElseThrow();
         executions.start(firstAttempt.task().id(), analyst, firstAttempt.lease().token());
 
-        HttpResponse<String> pausedResponse = post("/api/r8/runs/" + started.runId() + "/pause",
+        HttpResponse<String> pausedResponse = post("/api/r1/runs/" + started.runId() + "/pause",
                 "{\"controlledBy\":\"operator:test\",\"reason\":\"inspect repository state\"}");
         assertThat(pausedResponse.statusCode()).isEqualTo(200);
         JsonNode pausedJson = json.readTree(pausedResponse.body());
@@ -104,7 +104,7 @@ class R8S5OperatorControlIT {
                 "SELECT termination_reason FROM execution_attempt WHERE lease_token=?", String.class, firstAttempt.lease().token().value()))
                 .isEqualTo("OPERATOR_PAUSED");
 
-        HttpResponse<String> resumedResponse = post("/api/r8/runs/" + started.runId() + "/resume",
+        HttpResponse<String> resumedResponse = post("/api/r1/runs/" + started.runId() + "/resume",
                 "{\"controlledBy\":\"operator:test\",\"reason\":\"inspection complete\"}");
         assertThat(resumedResponse.statusCode()).isEqualTo(200);
         JsonNode resumedJson = json.readTree(resumedResponse.body());
@@ -123,7 +123,7 @@ class R8S5OperatorControlIT {
         // Return the lease to an active state so cancellation proves active ownership revocation too.
         executions.start(architecture.task().id(), architect, architecture.lease().token());
 
-        HttpResponse<String> cancelledResponse = post("/api/r8/runs/" + started.runId() + "/cancel",
+        HttpResponse<String> cancelledResponse = post("/api/r1/runs/" + started.runId() + "/cancel",
                 "{\"controlledBy\":\"operator:test\",\"reason\":\"requirement withdrawn\"}");
         assertThat(cancelledResponse.statusCode()).isEqualTo(200);
         JsonNode cancelledJson = json.readTree(cancelledResponse.body());
@@ -146,7 +146,7 @@ class R8S5OperatorControlIT {
         assertThat(cancelled.controlState()).isEqualTo(AutonomousRunControlState.CANCELLED);
         assertThat(cancelled.terminal()).isTrue();
 
-        HttpResponse<String> resumeCancelled = post("/api/r8/runs/" + started.runId() + "/resume",
+        HttpResponse<String> resumeCancelled = post("/api/r1/runs/" + started.runId() + "/resume",
                 "{\"controlledBy\":\"operator:test\",\"reason\":\"should not resume\"}");
         assertThat(resumeCancelled.statusCode()).isEqualTo(409);
     }

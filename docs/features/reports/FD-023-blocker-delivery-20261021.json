@@ -1,0 +1,13 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"blocker-feedback", "fd_id":"FD-023",
+  "source_event":"FD-023-000009-verification-passed", "human_report":"FD-023-blocker-delivery-20261021.md",
+  "data":{
+    "stage":"pm-delivery", "role":"pm", "status":"resolved-conflict-pending-delivery",
+    "original_head":"e05f3ed", "parent":"565282b", "original_plan":"6f34bf4",
+    "symptom":"FD add/add conflict during local-merge", "confirmed_cause":"parent plan commit rewritten to include user Issue6 archive",
+    "attempts":["inspected actual merge metadata and both histories", "preserved exact reviewed FD and matching index", "retained all independent user Issue archive changes", "unmerged index empty", "git diff --check passed", "source/current docs/spec/FD unchanged from passed HEAD"],
+    "human_decision_required":false, "next_step":"commit recovery merge then resume local delivery",
+    "reusable_improvement":"Preserve shared plan commit identity after branching; reconcile add/add by file intent",
+    "checks_not_run":["tests","compile","runtime","network"], "template_status":"required templates absent; skill fields used"
+  }
+}

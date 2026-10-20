@@ -5,16 +5,16 @@
 For an autonomous run:
 
 ```text
-GET /api/r8/runs/{runId}
-GET /api/r8/runs/{runId}/dashboard
-GET /api/r8/runs/{runId}/timeline
+GET /api/r1/runs/{runId}
+GET /api/r1/runs/{runId}/dashboard
+GET /api/r1/runs/{runId}/timeline
 ```
 
 For fleet-wide issues:
 
 ```text
-GET /api/r8/fleet/dashboard
-GET /api/r8/fleet/scheduling
+GET /api/r1/fleet/dashboard
+GET /api/r1/fleet/scheduling
 ```
 
 These usually answer whether the problem is engineering failure, operator policy, missing worker capability, worker capacity, run admission or fleet admission.
@@ -62,7 +62,7 @@ An explicit worker failure sets the run to `FAILED`.
 3. call:
 
 ```text
-POST /api/r8/runs/{runId}/recover
+POST /api/r1/runs/{runId}/recover
 ```
 
 Do not manually update task rows.

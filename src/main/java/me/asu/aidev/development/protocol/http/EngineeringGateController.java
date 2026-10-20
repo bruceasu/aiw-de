@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/r6/engineering-gates")
+@RequestMapping("/api/r1/engineering-gates")
 public class EngineeringGateController {
     private final EngineeringGateService gates;
 

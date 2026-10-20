@@ -86,7 +86,7 @@ class R8S13RuntimeFleetSchedulingControlIT {
         assertThat(tasks.get(second.task().id()).state()).isEqualTo(TaskState.CLAIMED);
         assertThat(claims.claimNext(worker)).isEmpty();
 
-        JsonNode dashboard = get("/api/r8/fleet/dashboard?detailLimit=20");
+        JsonNode dashboard = get("/api/r1/fleet/dashboard?detailLimit=20");
         assertThat(dashboard.path("admission").path("maxParallelism").asInt()).isEqualTo(1);
         assertThat(dashboard.path("admission").path("activeLeases").asInt()).isEqualTo(2);
         assertThat(dashboard.path("admission").path("overcommittedSlots").asInt()).isEqualTo(1);
@@ -112,7 +112,7 @@ class R8S13RuntimeFleetSchedulingControlIT {
         assertThat(fleetBudget.snapshot().activeLeases()).isEqualTo(3);
         assertThat(claims.claimNext(worker)).isEmpty();
 
-        JsonNode eventsBeforeReplay = get("/api/r8/fleet/scheduling/events?limit=20");
+        JsonNode eventsBeforeReplay = get("/api/r1/fleet/scheduling/events?limit=20");
         assertThat(eventsBeforeReplay.size()).isEqualTo(2);
         assertThat(eventsBeforeReplay.get(0).path("previousMaxParallelism").asInt()).isEqualTo(1);
         assertThat(eventsBeforeReplay.get(0).path("maxParallelism").asInt()).isEqualTo(3);
@@ -123,7 +123,7 @@ class R8S13RuntimeFleetSchedulingControlIT {
 
         // Same value is idempotent and does not append audit noise.
         postScheduling(3, "operator:r8s13", "same value replay", 200);
-        assertThat(get("/api/r8/fleet/scheduling/events?limit=20").size()).isEqualTo(2);
+        assertThat(get("/api/r1/fleet/scheduling/events?limit=20").size()).isEqualTo(2);
 
         // Startup configuration is bootstrap-only after V13 initialization; runtime authority survives re-application.
         assertThat(fleetBudget.configureFromDeployment().maxParallelism()).isEqualTo(3);
@@ -146,7 +146,7 @@ class R8S13RuntimeFleetSchedulingControlIT {
                 .put("reason", reason)
                 .toString();
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:" + port + "/api/r8/fleet/scheduling"))
+                .uri(URI.create("http://127.0.0.1:" + port + "/api/r1/fleet/scheduling"))
                 .timeout(Duration.ofSeconds(5))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body))

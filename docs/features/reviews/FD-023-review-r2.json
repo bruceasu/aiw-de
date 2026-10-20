@@ -1,0 +1,32 @@
+{
+  "schema":"aiw.fd.evidence.v1",
+  "kind":"reviewer-report",
+  "fd_id":"FD-023",
+  "source_event":"FD-023-000006-implementation-ready",
+  "human_report":"FD-023-review-r2.md",
+  "data":{
+    "reviewer_session":"fd023-reviewer-20261021-01",
+    "review_round":2,
+    "base":"6f34bf4",
+    "repair_base":"5f454d5",
+    "reviewed_commit":"901afda",
+    "fd_revision":6,
+    "outcome":"changes-requested",
+    "findings":[{
+      "id":"R1",
+      "severity":"medium",
+      "blocking":true,
+      "requirement":"FD Work 2.2 and canonical console authentication documentation",
+      "locations":["docs/current/16-CONTROL-PLANE-API.md:20", "docs/current/16-CONTROL-PLANE-API.md:21", "docs/current/16-CONTROL-PLANE-API.md:218", "docs/current-zh/16-CONTROL-PLANE-API.md:20", "docs/current-zh/16-CONTROL-PLANE-API.md:21", "docs/current-zh/16-CONTROL-PLANE-API.md:218", "docs/current/15-WEB-CONSOLE.md:83", "docs/current-zh/QUICK-START.md:232"],
+      "observed":"Old endpoint URLs are gone, but auth tables broaden no-additional-auth groups to all /api/r1/** while retaining /ui-only console API and CSRF descriptions.",
+      "impact":"Current authentication guidance contradicts migrated console and machine routing boundaries and leads clients to choose wrong credentials or omit CSRF.",
+      "correction":"Precisely separate six console roots, machine lease routes and conditional legacy management authentication in both language manuals; synchronize 15/QUICK-START and clarify custom interceptor conditions in both 09 security documents. Preserve read policies and network-hardening caveats."
+    }],
+    "resolved_portion":"All ten English current documents now use canonical endpoint URLs and API reference explains no aliases.",
+    "source_changed_since_first_review":false,
+    "commands_run":["aiw fd show FD-023", "aiw fd claim FD-023 FD-023-000006-implementation-ready --session fd023-reviewer-20261021-01", "git status --short", "git diff --stat 5f454d5..901afda", "git diff 5f454d5..901afda -- docs/current", "git diff --name-only ea00861..901afda -- src workers tests scripts openspec", "rg and Get-Content targeted documentation scans"],
+    "checks_not_run":["tests","compile","typecheck","service","HTTP","browser","network","migration","final build","subagents"],
+    "residual_risks":["actual Spring routing and authentication untested","nonempty context path integration untested","external clients must migrate URLs","standalone Java example compile was blocked by automatic approval and remains unexecuted"],
+    "human_decisions_required":[]
+  }
+}

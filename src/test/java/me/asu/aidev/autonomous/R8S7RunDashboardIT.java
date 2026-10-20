@@ -115,7 +115,7 @@ class R8S7RunDashboardIT {
 
     private JsonNode dashboard(String runId) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:" + port + "/api/r8/runs/" + runId + "/dashboard"))
+                .uri(URI.create("http://127.0.0.1:" + port + "/api/r1/runs/" + runId + "/dashboard"))
                 .timeout(Duration.ofSeconds(5))
                 .GET().build();
         HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());

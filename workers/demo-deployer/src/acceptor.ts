@@ -29,7 +29,7 @@ await runProtocolWorker("demo-deploy-acceptor", "demo-deploy-acceptor", [], asyn
   if (task.taskType !== "EXTERNAL_WORK" || task.skillRef !== "demo-deploy-acceptor" ||
       task.subjectType !== workflowId || !/^WF-[a-f0-9]{32}$/.test(task.subjectId) ||
       task.taskId !== `${task.subjectId}~intake`) throw new Error("unexpected intake task");
-  const response = await fetch(`${controlPlane}/api/workflows/${workflowId}/runs/${task.subjectId}/steps`, {
+  const response = await fetch(`${controlPlane}/api/r1/workflows/${workflowId}/runs/${task.subjectId}/steps`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Workflow-Token": submissionToken },
     body: JSON.stringify(deploymentSteps(task.instruction)),

@@ -6,7 +6,7 @@
   let busy = false;
   async function api(path = '', data) {
     const token = document.querySelector('meta[name="csrf-token"]').content;
-    const response = await fetch(`/ui/api/secretary${path}${data === undefined ? '' : `?_csrf=${encodeURIComponent(token)}`}`, {
+    const response = await fetch(`/api/r1/secretary${path}${data === undefined ? '' : `?_csrf=${encodeURIComponent(token)}`}`, {
       method: data === undefined ? 'GET' : 'POST', credentials: 'same-origin',
       headers: data === undefined ? {} : {'Content-Type': 'application/json'},
       body: data === undefined ? undefined : JSON.stringify(data)

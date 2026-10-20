@@ -94,13 +94,13 @@ class R8S11RuntimeSchedulingControlIT {
         assertThat(taskService.get(second.task().id()).state()).isEqualTo(TaskState.CLAIMED);
         assertThat(claims.claimNext(worker)).isEmpty();
 
-        JsonNode dashboard = get("/api/r8/runs/" + started.runId() + "/dashboard");
+        JsonNode dashboard = get("/api/r1/runs/" + started.runId() + "/dashboard");
         assertThat(dashboard.path("scheduling").path("maxParallelism").asInt()).isEqualTo(1);
         assertThat(dashboard.path("scheduling").path("activeSlots").asInt()).isEqualTo(2);
         assertThat(dashboard.path("scheduling").path("overcommittedSlots").asInt()).isEqualTo(1);
         assertThat(dashboard.path("scheduling").path("accountingDelta").asInt()).isZero();
 
-        JsonNode fleet = get("/api/r8/fleet/dashboard?detailLimit=20");
+        JsonNode fleet = get("/api/r1/fleet/dashboard?detailLimit=20");
         JsonNode runSummary = findRun(fleet.path("runs").path("activeRuns"), started.runId());
         assertThat(runSummary.path("maxParallelism").asInt()).isEqualTo(1);
         assertThat(runSummary.path("activeSlots").asInt()).isEqualTo(2);
@@ -108,10 +108,10 @@ class R8S11RuntimeSchedulingControlIT {
         assertThat(fleet.path("backlog").path("admissionBlockedReady").asInt()).isGreaterThanOrEqualTo(1);
 
         // Idempotent replay of the same value must not create another audit event.
-        JsonNode beforeReplay = get("/api/r8/runs/" + started.runId() + "/timeline");
+        JsonNode beforeReplay = get("/api/r1/runs/" + started.runId() + "/timeline");
         long schedulingEventsBefore = countSchedulingEvents(beforeReplay);
         postScheduling(started.runId(), 1, "operator:r8s11", "same value replay", 200);
-        JsonNode afterReplay = get("/api/r8/runs/" + started.runId() + "/timeline");
+        JsonNode afterReplay = get("/api/r1/runs/" + started.runId() + "/timeline");
         assertThat(countSchedulingEvents(afterReplay)).isEqualTo(schedulingEventsBefore);
 
         // Pause is the explicit way to revoke leases. Changing the scheduling limit itself never does it.
@@ -136,7 +136,7 @@ class R8S11RuntimeSchedulingControlIT {
         assertThat(unlimited.path("availableSlots").isNull()).isTrue();
         assertThat(claims.claimNext(worker)).isPresent();
 
-        JsonNode timeline = get("/api/r8/runs/" + started.runId() + "/timeline");
+        JsonNode timeline = get("/api/r1/runs/" + started.runId() + "/timeline");
         assertThat(countSchedulingEvents(timeline)).isEqualTo(3);
         assertThat(timeline.toString()).contains("maxParallelism=2->1");
         assertThat(timeline.toString()).contains("maxParallelism=1->3");
@@ -155,7 +155,7 @@ class R8S11RuntimeSchedulingControlIT {
                 .put("reason", reason)
                 .toString();
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:" + port + "/api/r8/runs/" + runId + "/scheduling"))
+                .uri(URI.create("http://127.0.0.1:" + port + "/api/r1/runs/" + runId + "/scheduling"))
                 .timeout(Duration.ofSeconds(5))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body))

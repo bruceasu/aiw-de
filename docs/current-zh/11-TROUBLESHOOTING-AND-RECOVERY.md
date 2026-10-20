@@ -3,16 +3,16 @@
 ## 1. 先看三个接口
 
 ```text
-GET /api/r8/runs/{runId}
-GET /api/r8/runs/{runId}/dashboard
-GET /api/r8/runs/{runId}/timeline
+GET /api/r1/runs/{runId}
+GET /api/r1/runs/{runId}/dashboard
+GET /api/r1/runs/{runId}/timeline
 ```
 
 Fleet 问题看：
 
 ```text
-GET /api/r8/fleet/dashboard
-GET /api/r8/fleet/scheduling
+GET /api/r1/fleet/dashboard
+GET /api/r1/fleet/scheduling
 ```
 
 ## 2. READY 但一直不执行

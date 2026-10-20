@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/knowledge/documents")
+@RequestMapping("/api/r1/knowledge/documents")
 public class KnowledgeController {
     private final KnowledgeService knowledge;
 

@@ -50,8 +50,8 @@ $body = @{
 } | ConvertTo-Json
 $request = @{ capability = 'demo-deploy-acceptor'; instruction = $body } | ConvertTo-Json
 $headers = @{ 'X-Workflow-Token' = $env:AIW_EXTERNAL_WORKFLOW_REQUEST_TOKEN }
-$run = Invoke-RestMethod 'http://127.0.0.1:8080/api/workflows/demo-java-deploy@v1/requests' -Method Post -Headers $headers -ContentType 'application/json' -Body $request
-Invoke-RestMethod "http://127.0.0.1:8080/api/workflows/demo-java-deploy@v1/runs/$($run.runId)" -Headers $headers
+$run = Invoke-RestMethod 'http://127.0.0.1:8080/api/r1/workflows/demo-java-deploy@v1/requests' -Method Post -Headers $headers -ContentType 'application/json' -Body $request
+Invoke-RestMethod "http://127.0.0.1:8080/api/r1/workflows/demo-java-deploy@v1/runs/$($run.runId)" -Headers $headers
 ```
 
 The intake task becomes `READY` first. After it submits the fixed steps and completes, the package task becomes `READY`. The upload task remains `BLOCKED` until packaging completes. The packager writes a versioned jar and SHA-256 record to staging; the uploader verifies both before copying the jar and its hash record to the target directory. Repeated execution accepts an existing artifact only if the hash record matches. The demo does not restart the application, change a `current` pointer, or roll back a release.

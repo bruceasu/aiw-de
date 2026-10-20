@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/r8/fleet/scheduling")
+@RequestMapping("/api/r1/fleet/scheduling")
 public class FleetSchedulingController {
     private final FleetAdmissionBudgetService service;
 

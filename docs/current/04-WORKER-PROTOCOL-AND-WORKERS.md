@@ -7,7 +7,7 @@ Workers are external AI employees. They do not access the Control Plane database
 Base path:
 
 ```text
-/api/worker-protocol/v1
+/api/r1/worker-protocol/v1
 ```
 
 ## 2. Worker lifecycle
@@ -38,7 +38,7 @@ shutdown: drain -> offline
 ### Register
 
 ```http
-POST /api/worker-protocol/v1/workers/register
+POST /api/r1/worker-protocol/v1/workers/register
 Content-Type: application/json
 ```
 
@@ -54,14 +54,14 @@ Content-Type: application/json
 ### Worker heartbeat
 
 ```http
-POST /api/worker-protocol/v1/workers/{workerId}/heartbeat
+POST /api/r1/worker-protocol/v1/workers/{workerId}/heartbeat
 ```
 
 ### Drain / offline
 
 ```http
-POST /api/worker-protocol/v1/workers/{workerId}/drain
-POST /api/worker-protocol/v1/workers/{workerId}/offline
+POST /api/r1/worker-protocol/v1/workers/{workerId}/drain
+POST /api/r1/worker-protocol/v1/workers/{workerId}/offline
 ```
 
 `DRAINING` should not accept new work; `OFFLINE` represents a stopped worker.
@@ -69,7 +69,7 @@ POST /api/worker-protocol/v1/workers/{workerId}/offline
 ### Claim
 
 ```http
-POST /api/worker-protocol/v1/tasks/claim
+POST /api/r1/worker-protocol/v1/tasks/claim
 ```
 
 ```json
@@ -83,8 +83,8 @@ The claim response carries task authority needed by the worker: task type, instr
 ### Start and heartbeat
 
 ```http
-POST /api/worker-protocol/v1/tasks/{taskId}/start
-POST /api/worker-protocol/v1/tasks/{taskId}/heartbeat
+POST /api/r1/worker-protocol/v1/tasks/{taskId}/start
+POST /api/r1/worker-protocol/v1/tasks/{taskId}/heartbeat
 ```
 
 ```json
@@ -98,7 +98,7 @@ POST /api/worker-protocol/v1/tasks/{taskId}/heartbeat
 ### Complete
 
 ```http
-POST /api/worker-protocol/v1/tasks/{taskId}/complete
+POST /api/r1/worker-protocol/v1/tasks/{taskId}/complete
 ```
 
 Repository task example:
@@ -125,7 +125,7 @@ Repository task example:
 ### Fail
 
 ```http
-POST /api/worker-protocol/v1/tasks/{taskId}/fail
+POST /api/r1/worker-protocol/v1/tasks/{taskId}/fail
 ```
 
 ```json
@@ -147,7 +147,7 @@ Worker protocol protection is optional in local mode. Set:
 AIW_WORKER_TOKEN=<shared-secret>
 ```
 
-When non-empty, every `/api/worker-protocol/...` request must include:
+When non-empty, every `/api/r1/worker-protocol/...` request must include:
 
 ```http
 Authorization: Bearer <shared-secret>

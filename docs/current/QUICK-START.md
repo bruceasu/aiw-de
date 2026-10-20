@@ -40,7 +40,7 @@ mvn spring-boot:run
 In another terminal:
 
 ```bash
-curl http://127.0.0.1:8080/api/r8/fleet/dashboard
+curl http://127.0.0.1:8080/api/r1/fleet/dashboard
 ```
 
 You should receive JSON rather than a connection error.
@@ -122,7 +122,7 @@ The process workers add their role and `repo:<AIW_REPOSITORY_REF>` capabilities 
 Replace `<BASE_SHA>` with the full commit from step 3.
 
 ```bash
-curl -X POST http://127.0.0.1:8080/api/r8/requirements \
+curl -X POST http://127.0.0.1:8080/api/r1/requirements \
   -H 'Content-Type: application/json' \
   -d '{
     "requestId":"quickstart-001",
@@ -147,14 +147,14 @@ Response contains `runId`, for example:
 ## 6. Watch progress
 
 ```bash
-curl http://127.0.0.1:8080/api/r8/runs/AR-quickstart-001/dashboard
-curl http://127.0.0.1:8080/api/r8/runs/AR-quickstart-001/timeline
+curl http://127.0.0.1:8080/api/r1/runs/AR-quickstart-001/dashboard
+curl http://127.0.0.1:8080/api/r1/runs/AR-quickstart-001/timeline
 ```
 
 Fleet view:
 
 ```bash
-curl http://127.0.0.1:8080/api/r8/fleet/dashboard
+curl http://127.0.0.1:8080/api/r1/fleet/dashboard
 ```
 
 The expected sequence is approximately:
@@ -182,13 +182,13 @@ AIW_APPROVAL_POLICY=MANUAL
 Therefore a successfully engineered run stops at `ENGINEERING_PASSED` until an approval is requested. Query the run and use its exact `terminalSourceTaskId`:
 
 ```bash
-curl http://127.0.0.1:8080/api/r8/runs/AR-quickstart-001
+curl http://127.0.0.1:8080/api/r1/runs/AR-quickstart-001
 ```
 
 Create the approval request:
 
 ```bash
-curl -X POST http://127.0.0.1:8080/api/r7/approvals \
+curl -X POST http://127.0.0.1:8080/api/r1/approvals \
   -H 'Content-Type: application/json' \
   -d '{
     "sourceTaskId":"<terminalSourceTaskId>",
@@ -200,7 +200,7 @@ curl -X POST http://127.0.0.1:8080/api/r7/approvals \
 The response contains `approvalRequestId`. Approve it:
 
 ```bash
-curl -X POST http://127.0.0.1:8080/api/r7/approvals/<approvalRequestId>/decision \
+curl -X POST http://127.0.0.1:8080/api/r1/approvals/<approvalRequestId>/decision \
   -H 'Content-Type: application/json' \
   -d '{
     "decision":"APPROVE",
@@ -218,7 +218,7 @@ If automatic approval-request materialization is desired, set `AIW_APPROVAL_POLI
 Use:
 
 ```text
-GET /api/r8/fleet/dashboard
+GET /api/r1/fleet/dashboard
 ```
 
 and inspect whether the task is:

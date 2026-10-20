@@ -12,7 +12,7 @@ The system SHALL allow a Worker to register its identity, runtime type, capabili
 - **THEN** the Control Plane makes it eligible for matching tasks subject to its availability and capacity
 
 ### Requirement: Pull-based task assignment
-The system SHALL expose Worker Protocol v1 under `/api/worker-protocol/v1`. A Worker SHALL request work by claiming a task, and the Control Plane SHALL return only work compatible with its capabilities and available capacity.
+The system SHALL expose Worker Protocol v1 under `/api/r1/worker-protocol/v1`. A Worker SHALL request work by claiming a task, and the Control Plane SHALL return only work compatible with its capabilities and available capacity.
 
 #### Scenario: No compatible task is available
 - **WHEN** a Worker claims work and no eligible task is available

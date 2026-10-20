@@ -14,6 +14,7 @@ public class WebConsoleWebMvcConfiguration implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(interceptor).addPathPatterns("/ui", "/ui/**");
+        registry.addInterceptor(interceptor).addPathPatterns("/ui", "/ui/**")
+                .addPathPatterns(WebConsoleApiRoutes.patterns()).order(-100);
     }
 }

@@ -7,7 +7,7 @@ FD-022 为秘书工作流增加独立的 `decision-delegate` Worker。默认关�
 1. 配置 Web Console 人工认证。使用独立 Worker ID，选择 `decision-delegate` profile。
 2. 在授权中心 `/ui/delegation` 登记已注册且无活动租约的 Worker，生成并私下保存专用随机凭证。在 Worker 环境设置 `AIW_DELEGATE_KEY`，不要写进提示词、版本库或业务报告。原共享 bearer 仍独立校验。
 3. Worker 重新注册会关闭代理。确认在线状态及当前身份版本后，由管理员明确启用。
-4. 第一次启用会持久收紧旧 `/api/**` 管理写入：要求人工 session、CSRF 和动作角色，忽略客户端伪造的操作者字段。审批需 Approver，删除需 Admin，其余管理写入需 Operator。Drain/Offline 是管理动作；Worker 注册、心跳、领取、执行上报和输出协议保留机器认证。
+4. 第一次启用会持久收紧旧 `/api/r1/**` 管理写入：要求人工 session、CSRF 和动作角色，忽略客户端伪造的操作者字段。审批需 Approver，删除需 Admin，其余管理写入需 Operator。Drain/Offline 是管理动作；Worker 注册、心跳、领取、执行上报和输出协议保留机器认证。
 
 首次启用须等待旧管理请求结束。进程异常退出留下的在途记录可在授权中心由管理员确认原进程已停止并填写依据后清理；不得清理仍在执行的其他实例请求。启用后关闭代理或重启不会撤销认证要求；若重启时关闭人工认证，管理 API 与控制台写入均拒绝执行。服务器重启后须重新人工启用代理。
 

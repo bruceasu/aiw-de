@@ -126,7 +126,7 @@ class R4WorkerProtocolIT {
 
     private HttpResponse<String> post(String path, String body, boolean authenticated) throws Exception {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create("http://127.0.0.1:" + port + "/api/worker-protocol/v1" + path))
+                .uri(URI.create("http://127.0.0.1:" + port + "/api/r1/worker-protocol/v1" + path))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body == null ? "" : body));
         if (authenticated) builder.header("Authorization", "Bearer " + TOKEN);

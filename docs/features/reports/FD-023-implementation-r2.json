@@ -1,0 +1,14 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"worker-report", "fd_id":"FD-023",
+  "source_event":"FD-023-000005-changes-requested", "human_report":"FD-023-implementation-r2.md",
+  "data":{
+    "worker_session":"01a15a47-fc32-7362-ac13-f660487b7632", "repair_commit":"cc9230d",
+    "addressed_findings":["R1 current English manuals canonical API URLs and no-alias compatibility notice"],
+    "corrected_evidence":"Initial no-old-path scan omitted docs/current; superseded by this complete English manual scan",
+    "source_changed":false, "current_english_manuals_updated":10,
+    "checks_passed":["git diff --check", "targeted old API/UI JSON-root scan in docs/current"],
+    "checks_not_run":["compile repeated for docs-only repair", "tests", "runtime", "network", "previously rejected Java example compile"],
+    "review_outcomes_so_far":1, "requested_review_number":2,
+    "residual_risks":["actual routing/authentication not exercised", "standalone Java example compile not run due automatic approval rejection"]
+  }
+}

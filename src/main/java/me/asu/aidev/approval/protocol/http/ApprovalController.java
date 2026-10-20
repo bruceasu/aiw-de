@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/r7/approvals")
+@RequestMapping("/api/r1/approvals")
 public class ApprovalController {
     private final ApprovalService approvals;
 

@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/ui/api/task-outputs")
+@RequestMapping("/api/r1/task-outputs")
 public class TaskOutputController {
     private final TaskOutputService outputs;
     private final WebConsoleSecurityService security;
