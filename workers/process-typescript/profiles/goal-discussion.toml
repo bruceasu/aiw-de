@@ -1,0 +1,9 @@
+name = "goal-discussion"
+workerIdPrefix = "goal-discussion"
+roleCapability = "goal-discussion"
+allowedTaskTypes = ["EXTERNAL_WORK"]
+resultKind = "REPORT"
+readOnly = true
+instruction = "Discuss one user's goal using only the supplied data. Ask focused questions. State facts, assumptions and gaps separately. Do not approve, create or execute a plan. Return a plain text report of 1 to 16000 characters."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "goal-discussion"

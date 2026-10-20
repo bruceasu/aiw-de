@@ -6,6 +6,11 @@ See [method provenance and coverage](../SKILL_METHODS.md).
 
 环境变量的设置方式、默认值和运行时差异见 [Worker 环境变量](../ENVIRONMENT.md)。
 
+FD-019 新增独立 `goal-discussion` 角色，`start:all` 与管理器 `all` 均包含它。
+该角色通过 `goal-discussion` capability/Skill 处理目标讨论，默认使用 `openai-agents`，
+可由工作台显式选择 Codex。无工作区讨论使用独立空目录，OpenAI 讨论不开放工具。
+运行与资料/权限边界见 [目标讨论工作台](../../docs/current-zh/GOAL-WORKSHOP.md)。
+
 ## 新手快速上手
 
 实际目录是 `workers/process-typescript`（单数）。下面的命令都在该目录中执行；

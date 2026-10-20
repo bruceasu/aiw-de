@@ -92,5 +92,6 @@ class ExecRuntime implements AgentRuntime {
 
 export async function createCodexExecBackend(cfg: WorkerConfig): Promise<WorkerBackend> {
   const settings = await codexSettings(getProfile(cfg.role).readOnly);
+  if (cfg.role === "goal-discussion") { settings.sandbox = "read-only"; settings.network = false; }
   return codexBackend(cfg, "codex-cli", settings, () => new ExecRuntime(settings, cfg));
 }

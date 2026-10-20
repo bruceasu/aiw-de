@@ -1,5 +1,6 @@
 import path from "node:path";
-import { mkdir, realpath, lstat, readdir, readFile, readlink } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, lstat, readdir, readFile, readlink } from "node:fs/promises";
+import os from "node:os";
 import { RuntimeFault, checkSignal, errorCode } from "./errors.mjs";
 import { ResourceCoordinator, isInside, safePath } from "./resources.mjs";
 import { runCommand } from "./process.mjs";
@@ -45,6 +46,12 @@ export class WorkspaceSession {
   static async materialize(cfg, task, attempt) {
     checkSignal(attempt.signal);
     if (!task.workspace) {
+      if (task.subjectType === "goal-discussion") {
+        const cwd = await mkdtemp(path.join(os.tmpdir(), "aiw-goal-"));
+        const session = new WorkspaceSession(await realpath(cwd), null, cfg, attempt);
+        session.coordinator = await ResourceCoordinator.forWorkspace(session.cwd);
+        return session;
+      }
       const session = new WorkspaceSession(await realpath(cfg.fallbackWorkspace), null, cfg, attempt);
       session.coordinator = await ResourceCoordinator.forWorkspace(session.cwd);
       return session;

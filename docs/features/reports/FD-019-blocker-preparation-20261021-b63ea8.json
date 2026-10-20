@@ -1,0 +1,10 @@
+{
+ "schema":"aiw.fd.evidence.v1","kind":"blocker-feedback","fd_id":"FD-019",
+ "source_event":"FD-019-000004-design-ready","human_report":"FD-019-blocker-preparation-20261021-b63ea8.md",
+ "data":{"stage":"preflight","role":"worker","status":"resolved","resolved_at":"2026-10-21",
+ "observed_symptom":"Worktree creation rejected a dirty parent; mvn was absent from PATH.",
+ "confirmed_cause":"The authorized Issue approval generated an untracked decision-log; this host uses explicit Maven/JDK paths.",
+ "recovery_attempts":["Committed only the Issue decision audit and created the isolated worktree.","Used the Maven/JDK paths recorded by FD-018; offline compilation passed."],
+ "human_decision_need":"none","next_step_or_risk":"Continue independent implementation review; runtime validation remains unperformed.",
+ "reusable_improvement":"Include approval decision-log in isolation preparation; reuse known toolchain paths. Requested blocker templates are missing; existing paired evidence schema reused."}
+}

@@ -31,9 +31,10 @@ export class ApiRuntime {
       coordinator: input.workspace.coordinator, abort: reason => input.attempt.cancel(reason), maxOutputBytes: this.cfg.maxOutputChars, toolTimeoutMs: this.cfg.toolTimeoutMs });
     this.history = new HistoryCompactor({ enabled: this.cfg.compactHistory, thresholdBytes: this.cfg.compactAfterBytes,
       summaryMaxTokens: this.cfg.summaryMaxTokens, recorder, signal });
-    const tools = createWorkspaceTools({ cwd, host: this.host, readOnly: input.profile.readOnly, allowShell: this.cfg.allowShell,
+    const goalDiscussion = input.profile.primarySkill === "goal-discussion";
+    const tools = goalDiscussion ? [] : createWorkspaceTools({ cwd, host: this.host, readOnly: input.profile.readOnly, allowShell: this.cfg.allowShell,
       toolTimeoutMs: this.cfg.toolTimeoutMs, maxOutputBytes: this.cfg.maxOutputChars });
-    tools.push(...await createAiwTools(this.cfg.aiwToolCatalog, this.host, cwd));
+    if (!goalDiscussion) tools.push(...await createAiwTools(this.cfg.aiwToolCatalog, this.host, cwd));
     if (this.history.enabled) {
       const history = this.history;
       const host = this.host;

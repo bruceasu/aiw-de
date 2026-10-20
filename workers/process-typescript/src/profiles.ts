@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import * as toml from "@iarna/toml";
 
 export const ROLE_FILES = {
+  "goal-discussion": "goal-discussion",
   requirements: "requirements",
   architect: "architect",
   planner: "planner",

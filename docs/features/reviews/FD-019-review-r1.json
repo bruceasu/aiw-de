@@ -1,0 +1,29 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-019",
+  "source_event": "FD-019-000005-implementation-ready",
+  "human_report": "FD-019-review-r1.md",
+  "data": {
+    "reviewer_session": "fd019-reviewer-20261021-c814fa",
+    "reviewed_base": "d1a0286",
+    "reviewed_head": "8314bee",
+    "reviewed_fd_revision": 5,
+    "verdict": "changes-requested",
+    "findings": [
+      {
+        "id": "R1",
+        "severity": "medium",
+        "title": "领取预过滤仍应用当前配置，破坏持久讨论请求的冻结策略",
+        "locations": ["src/main/java/me/asu/aidev/execution/application/TaskClaimService.java:127", "src/main/java/me/asu/aidev/goal/application/GoalTaskPolicy.java:40"],
+        "requirement": "FD-019: claim, guidance and start must share the frozen discussion backend policy",
+        "evidence": "TaskClaimService exempts only managed recommendations from current aiProfiles.canRun; goal claims subsequently apply persisted frozen profiles. After a profile runtime is removed on restart, neither the old frozen runtime nor the newly configured runtime can claim an existing queued goal request.",
+        "required_change": "Exempt managed goal-discussion requests from the generic current-profile prefilter and retain GoalTaskPolicy frozen admission; leave ordinary task checks unchanged."
+      }
+    ],
+    "results": ["Static review completed; one actionable correctness defect blocks verification", "No additional runtime checks requested"],
+    "commands": ["Get-Content", "rg", "git diff --stat d1a0286..8314bee", "git diff d1a0286..8314bee -- <targeted paths>", "git status --short", "aiw fd show FD-019", "aiw fd claim FD-019 FD-019-000005-implementation-ready --session fd019-reviewer-20261021-c814fa", "aiw fd --help", "aiw fd emit --help", "git diff --check"],
+    "skipped": ["tests", "compile", "type checking", "services", "browser", "network", "database migration", "real models", "file conversion", "concurrency runtime"],
+    "residual_risk": "Runtime behavior remains unverified. Worker-reported compilation is not an independent runtime pass."
+  }
+}

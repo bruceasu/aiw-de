@@ -1,0 +1,9 @@
+.goal-layout {display:grid;grid-template-columns:minmax(200px,260px) minmax(0,1fr);gap:var(--space-4,20px);align-items:start}
+.goal-layout .card {margin-bottom:20px;padding:20px}.goal-layout .field {display:grid;gap:8px;margin:12px 0}
+.goal-layout textarea,.goal-layout input:not([type=checkbox]),.goal-layout select {width:100%;max-width:100%}
+.goal-list-item {display:block;width:100%;text-align:left;margin:8px 0}.goal-messages {max-height:460px;overflow:auto}
+.goal-message {border-left:2px solid var(--accent,#60e6dc);padding:12px;margin:12px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.goal-source,.goal-attachment,.goal-version {padding:12px 0;border-bottom:1px solid var(--border,rgba(255,255,255,.12))}
+.goal-step {margin:16px 0;padding:14px;border:1px solid var(--border,rgba(255,255,255,.12));border-radius:10px}
+.goal-version pre {white-space:pre-wrap;overflow-wrap:anywhere}.goal-layout .form-actions {display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+@media(max-width:900px){.goal-layout{grid-template-columns:1fr}}

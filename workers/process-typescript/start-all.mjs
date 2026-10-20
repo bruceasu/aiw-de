@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const roles = ["requirements", "architect", "planner", "coder", "integrator",
+const roles = ["goal-discussion", "requirements", "architect", "planner", "coder", "integrator",
   "reviewer", "stage-reviewer", "recovery-decider", "verifier", "integration-verifier", "repairer"];
 const prefixes = { "codex-cli": "process-exec", "codex-app-server": "process", "openai-agents": "process-api" };
 const runtime = process.argv[2];

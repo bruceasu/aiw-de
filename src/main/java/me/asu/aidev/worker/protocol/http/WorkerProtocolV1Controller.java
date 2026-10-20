@@ -34,6 +34,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/worker-protocol/v1")
 public class WorkerProtocolV1Controller {
+    private me.asu.aidev.goal.application.GoalTaskPolicy goalPolicy;
+    @Autowired
+    public void setGoalPolicy(me.asu.aidev.goal.application.GoalTaskPolicy policy) { this.goalPolicy = policy; }
     private final WorkerService workers;
     private final TaskClaimService claims;
     private final TaskExecutionService executions;
@@ -179,7 +182,8 @@ public class WorkerProtocolV1Controller {
                         input.resultRevision(), input.publicationRef(), input.changedFiles(),
                         input.completionVerdict() == null ? null : input.completionVerdict().name(),
                         input.completionSummary(), input.attemptId())).toList(),
-                recommendationPolicy != null && recommendationPolicy.managed(task) ? recommendationPolicy.guidance(task, runtimeType)
+                goalPolicy != null && goalPolicy.managed(task) ? goalPolicy.guidance(task, runtimeType)
+                    : recommendationPolicy != null && recommendationPolicy.managed(task) ? recommendationPolicy.guidance(task, runtimeType)
                         : aiProfiles.guidance(task.type(), runtimeType,
                         attempts.findPreviousAiAttempt(task.id(), claimed.attemptNo()).orElse(null)),
                 outputs == null ? null : outputs.store(task, claimed.attemptId().value(), claimed.inputs()),

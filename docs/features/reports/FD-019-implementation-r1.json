@@ -1,0 +1,11 @@
+{
+ "schema":"aiw.fd.evidence.v1","kind":"worker-report","fd_id":"FD-019",
+ "source_event":"FD-019-000004-design-ready","human_report":"FD-019-implementation-r1.md",
+ "data":{"session":"fd019-worker-20261021-b63ea8","base":"d1a0286","implementation_head":"9ba3ff5",
+ "summary":"Actor-owned durable goal workshop, independent frozen-backend discussion Worker, bounded attachments, immutable formal snapshots and recoverable plan editing with explicit execution preparation.",
+ "changed_paths":["src/main/java/me/asu/aidev/goal","src/main/java/me/asu/aidev/execution/application/TaskExecutionService.java","src/main/java/me/asu/aidev/worker/protocol/http/WorkerProtocolV1Controller.java","src/main/resources","workers/process-typescript","docs/current-zh/GOAL-WORKSHOP.md","openspec/specs/goal-discussion/spec.md"],
+ "commands":[{"command":"mvn -o -DskipTests compile","result":"not started: mvn absent from PATH"},{"command":"D:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests compile","exit_code":0,"sources":231,"runs":2},{"command":"node workers/process-typescript/scripts/compile.mjs","exit_code":0,"runs":2,"scope":"syntax only; existing parent typescript dependency"},{"command":"node --check goals.js, workspace.mjs, start-all.mjs, manage-workers.mjs individually","exit_code":0},{"command":"git diff --check develop...HEAD","exit_code":0}],
+ "results":["Implementation Work Items complete; independent implementation review remains pending","Preparation/toolchain blockers resolved"],
+ "unrun":["tests","browser","HTTP","database migrations","real concurrency","models","file conversion","network","installation","type checking","final build","deployment"],
+ "residual_risk":"Runtime behavior and format quality unverified; console actor isolation retains existing local-console/operator-visible handoff boundaries. Native Windows Codex restrictions remain."}
+}

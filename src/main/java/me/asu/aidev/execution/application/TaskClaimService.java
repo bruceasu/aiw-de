@@ -41,6 +41,10 @@ public class TaskClaimService {
     private final Clock clock;
     private final Duration leaseDuration;
     private me.asu.aidev.workflow.application.RecommendationTaskPolicy recommendationPolicy;
+    private me.asu.aidev.goal.application.GoalTaskPolicy goalPolicy;
+
+    @Autowired
+    public void setGoalPolicy(me.asu.aidev.goal.application.GoalTaskPolicy policy) { this.goalPolicy = policy; }
 
     @Autowired
     public void setRecommendationPolicy(me.asu.aidev.workflow.application.RecommendationTaskPolicy policy) { this.recommendationPolicy = policy; }
@@ -125,6 +129,7 @@ public class TaskClaimService {
                 if (betterAvailable) continue;
             }
             if ((recommendationPolicy == null || !recommendationPolicy.managed(candidate))
+                    && (goalPolicy == null || !goalPolicy.managed(candidate))
                     && !aiProfiles.canRun(candidate.type(), worker.runtimeType())) continue;
             boolean allowed = true;
             for (TaskClaimPolicy policy : claimPolicies) {

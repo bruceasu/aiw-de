@@ -154,6 +154,7 @@ class AppServerRuntime implements AgentRuntime {
 
 export async function createCodexAppServerBackend(cfg: WorkerConfig): Promise<WorkerBackend> {
   const settings = await codexSettings(getProfile(cfg.role).readOnly);
+  if (cfg.role === "goal-discussion") { settings.sandbox = "read-only"; settings.network = false; }
   const transport = await AppServerTransport.start(settings);
   return codexBackend(cfg, "codex-app-server", settings, () => new AppServerRuntime(transport, settings, cfg), async () => {
     if (!await transport.close()) throw new RuntimeFault("PROCESS_TREE_UNCERTAIN");

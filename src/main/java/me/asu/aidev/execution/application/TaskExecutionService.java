@@ -32,6 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskExecutionService {
+    private me.asu.aidev.goal.application.GoalTaskPolicy goalPolicy;
+    @Autowired
+    public void setGoalPolicy(me.asu.aidev.goal.application.GoalTaskPolicy policy) { this.goalPolicy = policy; }
     private final WorkTaskRepository tasks;
     private final WorkerRepository workers;
     private final ExecutionAttemptRepository attempts;
@@ -115,7 +118,12 @@ public class TaskExecutionService {
         if (task.state() == TaskState.CLAIMED && attempts.stopRequested(leaseToken, workerId)) {
             throw new IllegalStateException("Worker stop requested before task start; acknowledge stop instead");
         }
-        if (recommendationPolicy != null && recommendationPolicy.managed(task)) {
+        if (goalPolicy != null && goalPolicy.managed(task)) {
+            var worker = workers.find(workerId).orElseThrow(() -> new IllegalStateException("worker not found"));
+            AiSelection selection = goalPolicy.select(task, worker.runtimeType(), profileId, profileVersion, selectionReason);
+            if (selection != null && !attempts.attachAiSelection(leaseToken, workerId, selection))
+                throw new IllegalStateException("cannot attach frozen goal selection");
+        } else if (recommendationPolicy != null && recommendationPolicy.managed(task)) {
             var worker = workers.find(workerId).orElseThrow(() -> new IllegalStateException("worker not found"));
             AiSelection selection = recommendationPolicy.select(task, worker.runtimeType(), profileId, profileVersion, selectionReason);
             if (selection != null && !attempts.attachAiSelection(leaseToken, workerId, selection))

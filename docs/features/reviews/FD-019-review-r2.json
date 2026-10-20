@@ -1,0 +1,21 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-019",
+  "source_event": "FD-019-000007-implementation-ready",
+  "human_report": "FD-019-review-r2.md",
+  "data": {
+    "reviewer_session": "fd019-reviewer-20261021-c814fa",
+    "reviewed_base": "f8f7a4a",
+    "reviewed_head": "b6fdea7",
+    "reviewed_fd_revision": 7,
+    "prior_full_review": "FD-019-review-r1.md",
+    "verdict": "verification-passed",
+    "findings": [],
+    "resolved_findings": ["R1: current-profile prefilter now exempts goal-discussion; existing claimPolicies still apply persisted frozen GoalTaskPolicy"],
+    "results": ["Bounded static re-review passed", "Ordinary task filtering and recommendation exemption preserved", "Claim, guidance and start use consistent frozen goal policy"],
+    "commands": ["aiw fd show FD-019", "aiw fd claim FD-019 FD-019-000007-implementation-ready --session fd019-reviewer-20261021-c814fa", "Get-Content", "rg", "git diff f8f7a4a..b6fdea7 -- src/main/java/me/asu/aidev/execution/application/TaskClaimService.java", "git diff --name-only f8f7a4a..b6fdea7", "git status --short", "git diff --check"],
+    "skipped": ["tests", "compile", "type checking", "services", "network", "database migration", "browser", "file conversion", "real models", "concurrency runtime"],
+    "residual_risk": "Original R1 runtime limits remain; configuration-switch execution was not run. Worker-reported Java compilation was not rerun by Reviewer."
+  }
+}
