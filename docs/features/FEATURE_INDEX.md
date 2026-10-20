@@ -12,7 +12,6 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
-| [FD-020](FD-020_FEATURE.md) | 三语言目标讨论角色与后端能力对齐 | Complete | Medium |
 | [FD-001](archive/FD-001/FD-001_MISSION_CONTROL_OVERVIEW_AND_SHARED_VISUAL_FOUND.md) | Mission Control Overview and Shared Visual Foundation | Complete | Medium |
 | [FD-003](archive/FD-003/FD-003_WORKER_FLEET_AND_SCHEDULING_EXPERIENCE.md) | Worker Fleet and Scheduling Experience | Complete | Medium |
 | [FD-004](archive/FD-004/FD-004_APPROVAL_AND_ENGINEERING_EVIDENCE.md) | Approval and Engineering Evidence | Complete | Medium |
@@ -29,6 +28,7 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 | [FD-017](archive/FD-017/FD-017_WEB_CONSOLE_AI.md) | 灵活流程 Web Console：自定义、推荐模板与 AI 推荐 | Complete | Medium |
 | [FD-018](archive/FD-018/FD-018_AI.md) | AI 推荐功能的运行时配置与模型调用职责边界 | Complete | Medium |
 | [FD-019](archive/FD-019/FD-019_CHAT_AI_WORKER.md) | 多目标草案 Chat 工作台与独立 AI Worker | Complete | Medium |
+| [FD-020](archive/FD-020/FD-020_FEATURE.md) | 三语言目标讨论角色与后端能力对齐 | Complete | Medium |
 
 ## Deferred / Closed
 

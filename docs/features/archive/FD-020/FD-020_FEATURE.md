@@ -73,3 +73,5 @@ FD-019 仅为 TypeScript 增加 goal-discussion，Python/Go 虽有同等任务�
 - 用户本轮明确指令；FD-019及其已确认产品边界。
 - GoalTaskPolicy.java；workers/WORKER_RUNTIME_CONTRACT.md；各语言profiles/运行适配/启动脚本；现有workers/README.md。
 - Planner Session fd020-planner-20261021-d95a41，来源FD-020-000002-design-requested。
+
+**Completed:** 2026-10-20
