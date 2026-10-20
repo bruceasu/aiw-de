@@ -7,6 +7,7 @@ from pathlib import Path
 
 PROFILE_DIR = Path(__file__).resolve().parent / "profiles"
 ROLE_FILES = {
+    "goal-discussion": "goal-discussion",
     "requirements": "requirement-analyst",
     "architect": "solution-architect",
     "planner": "implementation-planner",

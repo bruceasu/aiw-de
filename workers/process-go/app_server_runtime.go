@@ -91,7 +91,8 @@ func (runtime *CodexAppServerRuntime) Start(ctx context.Context) error {
 	// only bounds version negotiation and initialization; cancelling it here
 	// would terminate the managed server as soon as Start returns.
 	cmd := exec.CommandContext(context.Background(), runtime.cfg.CodexPath, "app-server", "--listen", "stdio://",
-		"--config", fmt.Sprintf("sandbox_workspace_write.network_access=%t", runtime.cfg.NetworkAccess))
+		"--config", fmt.Sprintf("sandbox_workspace_write.network_access=%t", runtime.cfg.NetworkAccess),
+		"--config", "sandbox_read_only.network_access=false")
 	cmd.Env = codexChildEnvironment(runtime.cfg)
 	configureProcessTree(cmd)
 	stdin, err := cmd.StdinPipe()

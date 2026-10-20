@@ -105,7 +105,7 @@ class OpenAIApiRuntime:
                              timeout=self.config.api_timeout_ms / 1000, max_retries=0)
         provider = OpenAIProvider(openai_client=client, use_responses=True)
         base_model = provider.get_model(request.model or self.config.model)
-        tools = _create_tools(context)
+        tools = [] if request.profile.primary_skill == "goal-discussion" else _create_tools(context)
         guarded_model = _GuardedModel(base_model, request, self.config,
                                       {tool.name: tool.params_json_schema for tool in tools})
         effort = request.reasoning_effort or self.config.reasoning_effort

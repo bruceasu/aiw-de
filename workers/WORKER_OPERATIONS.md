@@ -1,5 +1,7 @@
 # Worker 公共基础运维说明
 
+**FD-020 当前变更优先：** Python 已删除 Codex SDK，支持 codex-app-server/openai-agents；App Server 为每 attempt 受管 stdio 进程，仅 Unix/WSL 准入，原生 Windows 需 Agents。它的账号/ephemeral/策略回执和本地终止处理已写入源码，但尚未经过真实 CLI、取消竞争或生产禁存认证。下文 Python wheel/SDK版本/SDK线程与FD-005准入记录为历史设计，不是当前启动步骤。迁移环境、审批模式和 AI Profiles 见 [Python README](process-python/README.md#codex-app-server-migration)；各角色语言/后端源码支持以 [主矩阵](README.md) 为准。
+
 关联：FD-005 / FD-016。FD-016 本地交付优先于下文历史生产预览：TypeScript 使用系统 codex-cli/codex-app-server/openai-agents，生产禁存认证移交 FD-015；Python 保留原准入。**当前为实施预览：公共基础与 Codex 全会话禁存入口源码已接入，独立测试和审查未完成；没有实际平台的禁存认证，不能作为已验收发布包部署。**
 
 ## 维护范围与角色

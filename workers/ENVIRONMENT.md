@@ -4,6 +4,8 @@
 主要运行入口是 [TypeScript Worker](process-typescript/README.md)；Go/Python 的差异列在后面。
 变量在 **Worker 进程启动时**读取。修改后需停止并重新启动对应 Worker，不能只刷新页面。
 
+FD-020 更新：Python 仅支持 `codex-app-server`（新默认）与 `openai-agents`，删除 SDK 路径；显式 `codex-sdk`、SDK `auto-review` 审批和 `full-access` 沙箱配置会拒绝启动。App Server 使用 `AIW_CODEX_PATH` 指定已安装 CLI、`AIW_CODEX_APPROVAL_MODE=deny-all`（或 `never`）、只读/workspace-write 沙箱；仅 Unix/WSL 准入，native Windows 使用 Agents 路径。旧环境/AI Profiles/冻结请求不会自动迁移。详见 [Python 迁移](process-python/README.md#codex-app-server-migration) 和 [支持矩阵](README.md)。本节优先于下文历史 SDK 差异记录。
+
 ## 设置方法
 
 TypeScript Worker 的完整起点见 [worker.env.example](process-typescript/worker.env.example)。
@@ -38,8 +40,7 @@ Plan 编辑页的每个 Step 可以独立填写 `model`、`effort`，两项都�
 
 TypeScript/Go 记录 `ai-settings` 和 `ai-settings-fallback` 本地 attempt evidence；Python 同名记录包含有效模型与强度。
 Control Plane 的 start profile 记录初始选择；回退后的运行选择以本地 evidence 为准。
-没有填写 Step 配置时，不额外增加参数失败重试。Python Codex SDK 的异步 turn 失败证据不含可靠的工具执行边界，
-因此仅在创建 thread/turn 被明确拒绝时进行参数回退。
+没有填写 Step 配置时，不额外增加参数失败重试。Python App Server 仅在创建 thread/turn 明确拒绝参数，或终态失败且没有 item 执行证据时允许沿用既有的一次参数回退；工具开始后不回退。
 
 常用 Codex 强度：`none`、`minimal`、`low`、`medium`、`high`、`xhigh`；Agents/API 模式支持的范围更窄，
 最终可用性取决于模型及运行时，拒绝时按上面的规则处理。模型名不固定在 UI 下拉列表，也不按 CLI 小版本限制 Worker 启动。
@@ -137,7 +138,7 @@ Worker 自动设置工具缓存变量：`TMPDIR`、`TMP`、`TEMP`、`XDG_CACHE_H
 
 | 项目 | Go | Python |
 | --- | --- | --- |
-| `AIW_AGENT_RUNTIME` | codex-cli / codex-app-server / openai-api | codex-sdk（默认）/ openai-agents |
+| `AIW_AGENT_RUNTIME` | codex-cli / codex-app-server / openai-api | codex-app-server（默认）/ openai-agents |
 | 角色入口 | `AIW_PROCESS_PROFILE` 必填，为 TOML 文件路径 | `AIW_PROCESS_ROLE`，默认 requirements |
 | `AIW_PROCESS_INCLUDE_REFERENCES` | 默认 true | 技能包读取规则由入口决定 |
 | `AIW_CODEX_REASONING_EFFORT` | high | high |
@@ -150,7 +151,7 @@ Worker 自动设置工具缓存变量：`TMPDIR`、`TMP`、`TEMP`、`XDG_CACHE_H
 
 Go Codex 认证支持 `AIW_CODEX_AUTH_MODE=inherit` 和 `AIW_CODEX_AUTH_HOME`；细节见
 [CODEX-RUNTIME.md](process-go/CODEX-RUNTIME.md)。`AIW_CODEX_APP_SERVER_VERSION` 保留历史配置兼容，
-不再是启动时的精确版本门槛。Python SDK 的启动校验和安装方式见其 README。
+不再是启动时的精确版本门槛。Python 已删除 Codex SDK，其 App Server 启动/迁移方式见 Python README。
 Go/Python 的 `AIW_WORKER_ATTEMPT_TIMEOUT_MS`（默认 900000，兼容 `AIW_AGENT_TASK_TIMEOUT_MS`）仍是硬期限，并非上面 TypeScript 的耗时提示。
 Go/Python 的时间预算和 evidence 实现独立于 TypeScript runtime-core；不要将 TypeScript 特有的缓存或历史压缩变量直接照搬。
 

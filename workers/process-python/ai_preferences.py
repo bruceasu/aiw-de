@@ -22,12 +22,13 @@ def step_selection(task, runtime, baseline, model, effort):
             if (p["provider"] == "openai" and p["runtime"] == runtime
                     and (not preferences.get("model") or preferences["model"] == p["model"])
                     and (not preferences.get("effort") or preferences["effort"] == p["effort"])
-                    and (runtime == "codex-sdk" or (not p.get("fast", False)
-                         and p.get("effort") in {"none", "minimal", "low", "medium", "high"}))):
+                    and not p.get("fast", False)
+                    and p.get("effort") in ({"none", "minimal", "low", "medium", "high", "xhigh"}
+                         if runtime == "codex-app-server" else {"none", "minimal", "low", "medium", "high"})):
                 return item
         return baseline
     efforts = {"none", "minimal", "low", "medium", "high"}
-    if runtime == "codex-sdk": efforts.add("xhigh")
+    if runtime == "codex-app-server": efforts.add("xhigh")
     return {"profile": {"model": preferences["model"] if _VALUE.fullmatch(preferences.get("model") or "") else model,
                         "effort": preferences["effort"] if preferences.get("effort") in efforts else effort,
                         "fast": False}}

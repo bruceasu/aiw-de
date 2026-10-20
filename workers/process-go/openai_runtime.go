@@ -64,8 +64,11 @@ func (r *OpenAIAgentRuntime) Run(ctx context.Context, request AgentRunRequest) (
 	if request.Selection != nil { model, effort = request.Selection.Profile.Model, request.Selection.Profile.Effort }
 	input := []any{map[string]any{"role":"user", "content": request.Instruction}}
 	result := AgentRunResult{SessionID:"openai:" + request.Task.AttemptID}
+	goalDiscussion := cfg.Profile.PrimarySkill == "goal-discussion"
 	for turn := 0; turn < cfg.AgentMaxTurns; turn++ {
-		body := map[string]any{"model":model, "input":input, "tools":openAITools(cfg.AgentAllowShell, request.ReadOnly), "tool_choice":"auto",
+		tools := openAITools(cfg.AgentAllowShell, request.ReadOnly)
+		if goalDiscussion { tools = []any{} }
+		body := map[string]any{"model":model, "input":input, "tools":tools, "tool_choice":"auto",
 			"parallel_tool_calls":false, "store":false, "max_output_tokens":4096}
 		if supportsReasoning(model) && effort != "" && effort != "none" { body["reasoning"] = map[string]any{"effort":effort} }
 		response, err := r.createResponse(ctx, body)
@@ -94,6 +97,7 @@ func (r *OpenAIAgentRuntime) Run(ctx context.Context, request AgentRunRequest) (
 			if result.Output == "" { return result, errors.New("OPENAI_OUTPUT_EMPTY") }
 			return result, nil
 		}
+		if goalDiscussion { return result, errors.New("GOAL_TOOL_CALL_DENIED") }
 		for _, raw := range response.Output { input = append(input, json.RawMessage(raw)) }
 		for _, call := range calls {
 			if call.CallID == "" || call.Name == "" { return result, errors.New("OPENAI_FUNCTION_CALL_INVALID") }

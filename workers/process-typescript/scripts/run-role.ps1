@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("requirements","architect","planner","coder","integrator","reviewer","stage-reviewer","recovery-decider","verifier","integration-verifier","repairer")]
+    [ValidateSet("goal-discussion","requirements","architect","planner","coder","integrator","reviewer","stage-reviewer","recovery-decider","verifier","integration-verifier","repairer")]
     [string]$Role,
     [Parameter(Mandatory=$true)]
     [ValidateSet("codex-cli","codex-app-server","openai-agents")]

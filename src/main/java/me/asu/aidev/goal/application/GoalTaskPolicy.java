@@ -17,8 +17,8 @@ public class GoalTaskPolicy implements WorkerTaskClaimPolicy {
     public GoalTaskPolicy(GoalRepository repo, AiProfileCatalog profiles) { this.repo = repo; this.profiles = profiles; }
     public boolean managed(WorkTask task) { return "goal-discussion".equals(task.subjectType()); }
     public static boolean runtime(String backend, String runtime) {
-        return "openai".equals(backend) ? runtime.startsWith("openai-agents:")
-            : List.of("codex-cli:", "codex-app-server:").stream().anyMatch(runtime::startsWith);
+        if ("openai".equals(backend)) return List.of("openai-agents:", "openai-api:").stream().anyMatch(runtime::startsWith);
+        return "codex".equals(backend) && List.of("codex-cli:", "codex-app-server:").stream().anyMatch(runtime::startsWith);
     }
     public Frozen freeze(String backend) {
         var selected = profiles.approved(TaskType.EXTERNAL_WORK).stream()

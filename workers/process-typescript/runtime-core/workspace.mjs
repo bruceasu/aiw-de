@@ -45,8 +45,11 @@ export class WorkspaceSession {
   }
   static async materialize(cfg, task, attempt) {
     checkSignal(attempt.signal);
+    if ((task.subjectType === "goal-discussion" || cfg.role === "goal-discussion") && task.workspace) {
+      throw new RuntimeFault("GOAL_WORKSPACE_ASSIGNMENT_DENIED", "CONFIGURATION");
+    }
     if (!task.workspace) {
-      if (task.subjectType === "goal-discussion") {
+      if (task.subjectType === "goal-discussion" || cfg.role === "goal-discussion") {
         const cwd = await mkdtemp(path.join(os.tmpdir(), "aiw-goal-"));
         const session = new WorkspaceSession(await realpath(cwd), null, cfg, attempt);
         session.coordinator = await ResourceCoordinator.forWorkspace(session.cwd);

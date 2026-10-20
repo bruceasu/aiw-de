@@ -6,9 +6,9 @@
 
 ## Worker 与后端
 
-新增 TypeScript 角色 `goal-discussion`，不是原 requirements/planner 角色。现有 `start:all` 和管理器的 `all` 包含它，也可单独设置 `AIW_PROCESS_ROLE=goal-discussion` 启动，运行步骤沿用 [Worker 说明](../../workers/process-typescript/README.md)。默认 OpenAI 对应 `openai-agents`；显式 Codex 对应 `codex-cli` 或 `codex-app-server`，仍受现有平台准入、凭证、网络和只读策略限制。原生 Windows Codex 的已有启动限制不变，需使用受支持环境；没有在线匹配 Worker 时显示原因，人工编辑仍可用。
+独立角色 `goal-discussion` 已在 TypeScript、Python、Go 三包实现，共享角色与 Skill 契约。TS/Python 用 `AIW_PROCESS_ROLE=goal-discussion`（TS 的 start:all/管理器 all 也包含它），Go 用 `profiles/goal-discussion.toml` 启动。默认 OpenAI backend 接受 TS/Python 的 `openai-agents` 和 Go 的 `openai-api`；显式 Codex backend 接受 TS/Go 的 `codex-cli`/`codex-app-server` 及 Python 的 `codex-app-server`。Python 已删除 `codex-sdk`，需显式迁移旧配置。TS/Python 的原生 Windows Codex 路径拒绝启动，使用 Unix/WSL 或 Agents。完整 [角色/语言/后端矩阵](../../workers/README.md) 明确源码支持与未验证限制。没有在线匹配 Worker 时显示原因，人工编辑仍可用。
 
-每次发送冻结完整已保存对话、当前正文、缺失清单、选择的项目知识和本次明确同意外发的附件文本。配置 AI Profile 时只允许对应后端的已批准配置；缺少匹配配置不回退到其他后端。OpenAI 讨论角色不提供文件、shell 或 AIW 工具。无工作区的讨论使用独立空临时目录，避免读取运营者的默认源码目录；Codex 仍依赖既有宿主沙箱边界，空目录不等于操作系统访问隔离。此版本不自动执行工作区 research；可显式选择既有项目知识或上传分析资料。其他知识库和新索引平台不属于首版。
+每次发送冻结完整已保存对话、当前正文、缺失清单、选择的项目知识和本次明确同意外发的附件文本。配置 AI Profile 时只允许对应后端的已批准配置；缺少匹配配置不回退到其他后端。三语言的 OpenAI 讨论角色均不提供文件、shell 或 AIW 工具。讨论使用独立空临时目录并拒绝意外工作区 assignment，避免读取运营者的默认源码目录；Codex 仍依赖宿主沙箱边界，空目录不等于操作系统访问隔离。此版本不自动执行工作区 research；可显式选择既有项目知识或上传分析资料。其他知识库和新索引平台不属于首版。
 
 每目标上限 100 条已有消息；模型输入上限 60000 字符，超限明确拒绝，不静默截断。Worker 报告为 1–16000 字符的建议文本；失败、无效报告和旧输入有明确状态。人工编辑不被晚到建议覆盖；删除/恢复后的旧请求不能写回。点击“检查回复”获取结果；重进工作台仍能查询未完成请求。
 

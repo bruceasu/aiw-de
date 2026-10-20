@@ -1,7 +1,7 @@
 # FD-020: 三语言目标讨论角色与后端能力对齐
 
-**Status:** Open
-**Revision:** 5
+**Status:** Complete
+**Revision:** 7
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -36,18 +36,18 @@ FD-019 仅为 TypeScript 增加 goal-discussion，Python/Go 虽有同等任务�
 
 ## Work items
 
-- [ ] 1.1 共享契约与资产源；小/低；无依赖；完成规范 profile/Skill、同步工具和三包独立部署副本。
-- [ ] 1.2.1 Python App Server 传输；小/中；无依赖；有界 JSONRPC、无交互宿主授权、启动/账号回执及故障传播。
-- [ ] 1.2.2 Python App Server attempt 生命周期；小/中；依赖1.2.1；ephemeral/策略回执、模型输出关联、取消、终态确认与资源不明停止slot。
-- [ ] 1.2.3 Python SDK移除与启动迁移；小/中；依赖1.2.2；只接受 app-server/agents、依赖/import移除、配置与profile选择一致、nativeWindows明确拒绝。
-- [ ] 1.2.4 Python讨论角色与权限；小/中；依赖1.1、1.2.3；注册/launcher/预留能力、独立空目录、无工具API与只读Codex。
-- [ ] 1.3 Go 角色与运行边界；小/中；依赖1.1；profile、预留能力、空目录、API 禁用工具及意外调用拒绝、Codex 策略可追踪。
-- [ ] 1.4 TS 对齐与 Java runtime 筛选；小/中；依赖1.1–1.3；TS launcher/assignment防御一致，Java接受四种已支持runtime并拒绝未知类别，保留冻结链。
-- [ ] 1.5 角色×语言×后端文档；小/低；依赖1.1–1.4；主矩阵与各包说明一致，明确未运行认证及现有平台限制。
+- [x] 1.1 共享契约与资产源；小/低；无依赖；完成规范 profile/Skill、同步工具和三包独立部署副本。
+- [x] 1.2.1 Python App Server 传输；小/中；无依赖；有界 JSONRPC、无交互宿主授权、启动/账号回执及故障传播。
+- [x] 1.2.2 Python App Server attempt 生命周期；小/中；依赖1.2.1；ephemeral/策略回执、模型输出关联、取消、终态确认与资源不明停止slot。
+- [x] 1.2.3 Python SDK移除与启动迁移；小/中；依赖1.2.2；只接受 app-server/agents、依赖/import移除、配置与profile选择一致、nativeWindows明确拒绝。
+- [x] 1.2.4 Python讨论角色与权限；小/中；依赖1.1、1.2.3；注册/launcher/预留能力、独立空目录、无工具API与只读Codex。
+- [x] 1.3 Go 角色与运行边界；小/中；依赖1.1；profile、预留能力、空目录、API 禁用工具及意外调用拒绝、Codex 策略可追踪。
+- [x] 1.4 TS 对齐与 Java runtime 筛选；小/中；依赖1.1–1.3；TS launcher/assignment防御一致，Java接受四种已支持runtime并拒绝未知类别，保留冻结链。
+- [x] 1.5 角色×语言×后端文档；小/低；依赖1.1–1.4；主矩阵与各包说明一致，明确未运行认证及现有平台限制。
 
 ## TODO
 
-设计 r2 已就绪；继续 design-ready，提交设计并创建隔离 worktree，按项实现；离线 compile-only 和一次静态检查后独立实现审阅，通过后本地合并/清理/归档。
+设计 r2 已就绪并完成隔离实现；源代码和支持矩阵均已完成，Worker报告见 reports/FD-020-implementation-r1.md。交独立实现审阅，通过后继续本地合并/清理/归档。
 
 ## Acceptance
 
@@ -60,10 +60,12 @@ FD-019 仅为 TypeScript 增加 goal-discussion，Python/Go 虽有同等任务�
 
 ## Verification
 
+- 独立实现审查 R1 通过（Reviewer `fd020-reviewer-20261021-7c2d91`；来源 `FD-020-000006-implementation-ready`；基线 `1625cf5`、受审 HEAD `af42880`）。报告：`reviews/FD-020-review-r1.md` 及同名 JSON。未发现确定性阻断缺陷；仅静态审查，未重跑编译或测试，真实 CLI/进程组/租约取消竞争及生产禁存仍未验证。
+
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
 - 无测试授权；使用现有 scripts/compile-worker-runtime.mjs 的适用范围，避免无关验证/下载；源码独立worktree缺依赖时复用父工作区已有编译器，不安装。Java离线Maven compile；Go临时编译产物在受检临时路径删除，Python内存compile、TS内存transpile；只编译，不执行模型或Worker。
-- 独立设计审阅与独立实现Reviewer为默认技能流程；最多三次失败review，不自审。尚未实现或运行任何验证。
+- 独立设计 r1 为用户范围变更前历史，r2 对 Python 新适配定向复核 ready。源码完成，现有 Worker compile-only（TS/JS/Python语法、Go编译）两次 exit0，Java离线compile exit0；修复后第二次Worker编译覆盖最终Go上下文与TS工具边界。同步工具仅内存语法编译，未执行同步/检查脚本；规范资产和三包副本的SHA256逐项一致。git diff --check通过。未运行测试、CLI、模型、网络、服务、真实协议/取消竞争或生产禁存检查，类型检查未运行。独立实现Reviewer待进行，最多三次失败review，不自审。
 
 ## Sources
 

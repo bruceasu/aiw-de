@@ -6,6 +6,7 @@ import json
 import os
 import signal
 import subprocess
+import tempfile
 import sys
 import threading
 import time
@@ -18,7 +19,8 @@ from typing import Any
 from process_profiles import ProcessProfile, get_profile
 from worker_runtime import Attempt, attempt_scope, current_attempt, git as runtime_git, snapshot, skill_package, workspace_lock, setting, safe_directories
 from ai_preferences import step_selection
-from agent_runtime import AgentRunRequest, AgentRuntime, CodexAgentRuntime
+from agent_runtime import AgentRunRequest, AgentRuntime
+from app_server_runtime import CodexAppServerRuntime, preflight as app_server_preflight
 from openai_api_runtime import OpenAIApiRuntime
 import hashlib
 from contextlib import nullcontext
@@ -30,13 +32,14 @@ class ProtocolError(RuntimeError):
         self.status = status
 
 
-def choose_ai_profile(guidance: dict[str, Any] | None, runtime: str = "codex-sdk") -> tuple[dict[str, Any] | None, str | None]:
+def choose_ai_profile(guidance: dict[str, Any] | None, runtime: str = "codex-app-server") -> tuple[dict[str, Any] | None, str | None]:
     if guidance is None:
         return None, None
     allowed = [item for item in guidance["allowedProfiles"]
                if item["profile"]["provider"] == "openai" and item["profile"]["runtime"] == runtime
-               and (runtime == "codex-sdk" or (not item["profile"].get("fast", False)
-                    and item["profile"].get("effort") in {"none", "minimal", "low", "medium", "high"}))]
+               and not item["profile"].get("fast", False)
+               and item["profile"].get("effort") in ({"none", "minimal", "low", "medium", "high", "xhigh"}
+                     if runtime == "codex-app-server" else {"none", "minimal", "low", "medium", "high"})]
     if not allowed:
         raise ValueError(f"no approved compatible profile for runtime {runtime}")
     previous = guidance.get("previous")
@@ -82,9 +85,15 @@ class WorkerConfig:
         if bool(repository_ref) != bool(repository_root):
             raise ValueError("AIW_REPOSITORY_REF and AIW_REPOSITORY_ROOT must be configured together")
         process_role = os.getenv("AIW_PROCESS_ROLE", "requirements").strip().lower()
-        runtime = os.getenv("AIW_AGENT_RUNTIME", "codex-sdk").strip().lower()
-        if runtime not in {"codex-sdk", "openai-agents"}:
-            raise ValueError("AIW_AGENT_RUNTIME must be codex-sdk or openai-agents")
+        runtime = os.getenv("AIW_AGENT_RUNTIME", "codex-app-server").strip().lower()
+        if runtime not in {"codex-app-server", "openai-agents"}:
+            raise ValueError("AIW_AGENT_RUNTIME must be codex-app-server or openai-agents; codex-sdk was removed")
+        if runtime == "codex-app-server":
+            app_server_preflight()
+            if os.getenv("AIW_CODEX_APPROVAL_MODE", "deny-all") not in {"deny-all", "never"}:
+                raise ValueError("Python App Server requires AIW_CODEX_APPROVAL_MODE=deny-all (or never); migrate SDK auto-review explicitly")
+            if os.getenv("AIW_CODEX_SANDBOX", "workspace-write") not in {"read-only", "workspace-write"}:
+                raise ValueError("Python App Server supports read-only or workspace-write sandbox only")
         if runtime == "openai-agents" and not os.getenv("OPENAI_API_KEY", "").strip():
             raise ValueError("OPENAI_API_KEY is required for openai-agents runtime")
         if runtime == "openai-agents" and _bool_env("AIW_AGENT_ALLOW_SHELL", False):
@@ -93,7 +102,7 @@ class WorkerConfig:
             raise ValueError("ROLE_NONEXECUTABLE")
         profile = get_profile(process_role)
         capabilities = {part.strip() for part in os.getenv("AIW_WORKER_CAPABILITIES", "").split(",") if part.strip()}
-        role_capabilities = {"requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
+        role_capabilities = {"goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
         if any(part == "*" or part == "flexible-work-v1" or part.startswith("repo:") or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
@@ -120,7 +129,7 @@ class WorkerConfig:
             model=(os.getenv("AIW_OPENAI_MODEL") if runtime == "openai-agents" else os.getenv("AIW_CODEX_MODEL")) or None,
             reasoning_effort=os.getenv("AIW_OPENAI_REASONING_EFFORT", "") if runtime == "openai-agents" else os.getenv("AIW_CODEX_REASONING_EFFORT", "high"),
             sandbox=os.getenv("AIW_CODEX_SANDBOX", "workspace-write"),
-            approval_mode=os.getenv("AIW_CODEX_APPROVAL_MODE", "auto-review"),
+            approval_mode=os.getenv("AIW_CODEX_APPROVAL_MODE", "deny-all"),
             network_access=False,
             poll_interval=float(os.getenv("AIW_WORKER_POLL_SECONDS", "1")),
             heartbeat_interval=float(os.getenv("AIW_WORKER_HEARTBEAT_SECONDS", "20")),
@@ -205,6 +214,10 @@ class GitWorkspace:
     @staticmethod
     def materialize(config: WorkerConfig, task: dict[str, Any]) -> "GitWorkspace":
         assignment = task.get("workspace")
+        if config.process_role == "goal-discussion" or task.get("subjectType") == "goal-discussion":
+            if assignment:
+                raise RuntimeError("GOAL_WORKSPACE_ASSIGNMENT_DENIED")
+            return GitWorkspace(config, str(Path(tempfile.mkdtemp(prefix="aiw-goal-")).resolve()), None)
         if not assignment:
             return GitWorkspace(config, config.fallback_workspace, None)
         repository_root = assignment.get("repositoryPath") or config.repository_root
@@ -336,18 +349,14 @@ class LeaseHeartbeat:
 class ProcessSlot:
     def __init__(self, slot_no: int, config: WorkerConfig, client: ControlPlaneClient, stop_event: threading.Event, force_event=None):
         self.force_event = force_event or threading.Event()
-        self.runtime: AgentRuntime = CodexAgentRuntime() if config.runtime == "codex-sdk" else OpenAIApiRuntime.from_env()
+        self.runtime: AgentRuntime = CodexAppServerRuntime() if config.runtime == "codex-app-server" else OpenAIApiRuntime.from_env()
         self.slot_no = slot_no; self.config = config; self.client = client; self.stop_event = stop_event
         self.thread = threading.Thread(target=self._run, name=f"process-slot-{slot_no}", daemon=False)
     def start(self) -> None: self.thread.start()
     def join(self) -> None: self.thread.join()
     def _run(self) -> None:
         try:
-            if self.config.runtime == "codex-sdk":
-                from openai_codex import Codex
-                runtime_context = Codex()
-            else:
-                runtime_context = nullcontext(None)
+            runtime_context = nullcontext(None)
             with runtime_context as runtime_client:
                 while not self.stop_event.is_set():
                     try:
@@ -420,7 +429,7 @@ class ProcessSlot:
                     model=selected["model"] if selected else self.config.model,
                     reasoning_effort=selected["effort"] if selected else self.config.reasoning_effort,
                     network_access=self.config.network_access,
-                    service_tier=("fast" if selected["fast"] else "default") if selected and task.get("aiGuidance") and self.config.runtime == "codex-sdk" else None,
+                    service_tier="default" if selected and task.get("aiGuidance") and self.config.runtime == "codex-app-server" else None,
                     sandbox=self.config.sandbox, approval_mode=self.config.approval_mode,
                 )
                 def set_session(runtime_session_id, handle=None):
@@ -445,7 +454,7 @@ class ProcessSlot:
                         attempt.check()
                         request = replace(request, model=fallback.get("model", default_model),
                                           reasoning_effort=fallback.get("effort", self.config.reasoning_effort),
-                                          service_tier=("fast" if fallback.get("fast") else "default") if fallback_selection and self.config.runtime == "codex-sdk" else None)
+                                          service_tier="default" if fallback_selection and self.config.runtime == "codex-app-server" else None)
                         attempt.evidence.record("ai-settings-fallback", model=request.model, effort=request.reasoning_effort,
                                                 reason="Step model or effort rejected before tool execution; use Worker choice")
                         final_response = self.runtime.run(runtime_client, request, set_session)

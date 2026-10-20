@@ -1,5 +1,7 @@
 # Worker SDK 能力基线
 
+FD-020：Python Codex SDK 运行路径与 openai-codex 依赖已删除，改为已安装 CLI 的 codex-app-server；只保留 App Server/openai-agents。以下 Python SDK/wheel 分析是历史证据，不代表现行依赖或生产准入。新适配的源码支持、平台限制与未运行验证见 [Python README](process-python/README.md#codex-app-server-migration) 及 [三语言矩阵](README.md)。
+
 ## 当前决定：移除 TypeScript Codex SDK，直接使用系统 App Server
 
 用户要求 Worker 分发完全不带本地 Codex 包。已移除 @openai/codex-sdk 及其传递依赖 @openai/codex，清理旧 SDK adapter。TypeScript Runtime 明确支持 codex-cli 与 codex-app-server 两个目标入口，分别从 AIW_CODEX_PATH/PATH 调用系统 codex exec 或 codex app-server，不自动下载或回退。两个 adapter 已实现独立 Exec 与共享 App Server 本地执行；事件/取消/ephemeral 和结果策略静态接入。生产认证由 FD-015 承接；未运行真实 CLI/模型，不借用 Go 证据宣称 TypeScript 运行通过。

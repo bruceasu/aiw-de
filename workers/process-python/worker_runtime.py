@@ -49,8 +49,8 @@ class Evidence:
         header = json.dumps({"owner": OWNER, **self.identity}, ensure_ascii=False).encode("utf-8")
         self._write("owner.json", header)
         self.bytes = len(header)
-        api_runtime = getattr(config, "runtime", "codex-sdk") == "openai-agents"
-        self.record("attempt-started", status="running", runtime="openai-agents-python" if api_runtime else "codex-python-sdk", usageKnown=False,
+        api_runtime = getattr(config, "runtime", "codex-app-server") == "openai-agents"
+        self.record("attempt-started", status="running", runtime="openai-agents-python" if api_runtime else "codex-app-server", usageKnown=False,
                     unknown="model-window-and-token-count" if api_runtime else "inner-tool-policies-and-model-window")
 
     def _write(self, name, data):

@@ -80,7 +80,7 @@ export function assertExecutableRole(role: string): void {
   }
 }
 
-export const ROLE_CAPABILITIES = new Set(["requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "workflow-recovery-decision", "release-readiness", "development-orchestration"]);
+export const ROLE_CAPABILITIES = new Set(["goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "workflow-recovery-decision", "release-readiness", "development-orchestration"]);
 export function assertRoleCapabilities(capabilities: Iterable<string>, _profile: ProcessProfile): void {
   for (const capability of capabilities) {
     if (capability === "*" || capability === "flexible-work-v1" || capability.startsWith("repo:") || ROLE_CAPABILITIES.has(capability)) {

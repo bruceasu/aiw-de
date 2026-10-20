@@ -15,18 +15,20 @@ It deliberately does **not** port R2 lifecycle authority into workers. The R9 Ja
 Model execution is isolated behind the `AgentRuntime` protocol in
 `agent_runtime.py`. The worker owns task, lease, workspace, and report handling;
 the runtime owns SDK session creation, execution, and final output validation.
-The current `CodexAgentRuntime` preserves the existing Codex SDK behavior.
+`CodexAppServerRuntime` uses an installed Codex CLI over bounded stdio JSON-RPC.
+The Python Codex SDK runtime and `openai-codex` dependency have been removed.
 
 The bundled Skill source version is recorded in `skills/VERSION` (currently `R2+aiw-methods-1`).
 Directory names stay stable when the Skill source version changes. If you set
 `AIW_PROCESS_SKILLS_ROOT` explicitly, point it at the current `skills/` directory.
 
-One Python runtime is started as multiple independent worker processes by selecting `AIW_PROCESS_ROLE`. `AIW_AGENT_RUNTIME` selects `codex-sdk` (default) or `openai-agents`. Role names resolve to Python's TOML profiles in `profiles/`. Go uses the same TOML field format but keeps its own files and role instructions. Python 3.11 or newer is required for `tomllib`.
+One Python runtime is started as multiple independent worker processes by selecting `AIW_PROCESS_ROLE`. `AIW_AGENT_RUNTIME` selects `codex-app-server` (default) or `openai-agents`. Role names resolve to Python's TOML profiles in `profiles/`. Go uses the same TOML field format but keeps its own files and role instructions. Python 3.11 or newer is required for `tomllib`.
 
 The OpenAI Agents runtime uses `openai-agents==0.23.1` with `openai==3.26.0`, requires `OPENAI_API_KEY`, and does not require Codex CLI authentication. It provides bounded workspace read/list/search and write/edit tools; shell tools are not available in this Python API runtime. Set `AIW_AGENT_RUNTIME=openai-agents` before starting the role process. Use `AIW_OPENAI_MODEL`, `AIW_OPENAI_REASONING_EFFORT`, and `OPENAI_BASE_URL` to configure the API runtime.
 
 | Role | R9 task type(s) | R2 primary Skill | Workspace |
 |---|---|---|---|
+| `goal-discussion` | `EXTERNAL_WORK` | `goal-discussion` | independent empty directory, read-only |
 | `requirements` | `EXTERNAL_WORK` | `software-requirements-analyst` | read-only |
 | `architect` | `EXTERNAL_WORK` | `solution-architect` | read-only |
 | `planner` | `EXTERNAL_WORK` | `implementation-planner` | read-only |
@@ -66,7 +68,21 @@ python -m pip install -r requirements.txt
 
 Codex authentication is the same as the existing `workers/codex-python` reference worker.
 
-For the OpenAI API runtime, set `$env:AIW_AGENT_RUNTIME = "openai-agents"` and `$env:OPENAI_API_KEY = "..."` in PowerShell, or export those variables in Linux/WSL before starting role scripts. `AIW_AGENT_RUNTIME` defaults to `codex-sdk` for existing deployments.
+For the OpenAI API runtime, set `$env:AIW_AGENT_RUNTIME = "openai-agents"` and `$env:OPENAI_API_KEY = "..."` in PowerShell, or export those variables in Linux/WSL before starting role scripts. The default is now `codex-app-server`; explicit `codex-sdk` is rejected.
+
+## Codex App Server migration
+
+FD-020 removes the Python Codex SDK dependency and execution path. Set `AIW_AGENT_RUNTIME=codex-app-server` (default), configure the installed CLI via `AIW_CODEX_PATH` if needed, and prepare CLI authentication separately. The Worker never installs the CLI, logs in, or modifies credentials. It verifies an existing account with `account/read` and rejects missing authentication.
+
+Use Unix/WSL for this runtime. Native Windows is rejected before registration because its process-tree termination is not established. On Windows, `openai-agents` remains the supported API path. API registration does not require a Codex binary.
+
+Set `AIW_CODEX_APPROVAL_MODE=deny-all` (default) or `never`; both use the native `never` policy and decline host approval requests. The SDK-only `auto-review` setting is rejected. Sandbox choices are `read-only` or `workspace-write`; old `full-access` is rejected. Read-only roles always use the read-only sandbox. Network access remains disabled. App Server profiles require `fast=false`; `xhigh` is accepted only for the App Server effort path within existing profile constraints. No fallback to removed SDK or to another provider occurs.
+
+Each attempt starts its own App Server process group and ephemeral thread. The adapter checks thread metadata and sandbox/cwd/approval receipts, bounds RPC frames, event queues and output, and rejects unknown host interactions. Cancellation, lease loss and protocol errors interrupt the turn where possible, then terminate and confirm the process group before resources can be released. Unknown termination stops the slot and preserves the workspace. Normal completion also stops the attempt's server before reporting. This local implementation has compile/static evidence only; real CLI/protocol, cancellation, model and production no-store certification remain unverified.
+
+Update deployed environment files and approved AI Profiles explicitly from `codex-sdk` to the intended supported runtime. Existing frozen requests are not rewritten; manage old queued/in-flight work through the control plane. Old processes must be stopped before replacing a deployment. Merely installing new source does not migrate existing deployments or validate an installed CLI version.
+
+`goal-discussion` is shared with Go/TypeScript through the [canonical assets](../shared/goal-discussion) and [runtime contract](../WORKER_RUNTIME_CONTRACT.md). Start it with `AIW_PROCESS_ROLE=goal-discussion` or the role launcher. It uses a new empty directory for each task, rejects assigned workspaces and disables API tools. Source changes belong in the canonical assets, then sync bundled copies. The [role/language/backend matrix](../README.md) is the current support reference.
 
 ## Start a complete process-worker fleet
 

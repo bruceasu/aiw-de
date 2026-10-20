@@ -162,6 +162,7 @@ func assembleGoContextWithSkills(ctx context.Context, cfg Config, task ClaimedTa
     for _, part := range parts { used += len([]byte(part)) }
     inputs, err := json.MarshalIndent(task.Inputs, "", "  "); if err != nil { return "", err }
     for _, name := range []string{"AGENTS.md", "CODEX.md"} {
+        if cfg.Profile.PrimarySkill == "goal-discussion" || task.SubjectType == "goal-discussion" { break }
         root := cfg.FallbackWorkspace
         if task.Workspace != nil { root = filepath.Join(cfg.WorktreeRoot, task.Workspace.WorkspaceKey) }
         file := filepath.Join(root, name); info, e := os.Lstat(file)

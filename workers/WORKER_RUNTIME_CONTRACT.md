@@ -6,6 +6,7 @@
 
 | 启动角色 | TaskType | 注册能力 | primarySkill / skillRef | resultKind |
 |---|---|---|---|---|
+| goal-discussion | EXTERNAL_WORK | goal-discussion | goal-discussion | REPORT |
 | requirements | EXTERNAL_WORK | requirement-analysis | software-requirements-analyst | REPORT |
 | architect | EXTERNAL_WORK | solution-architecture | solution-architect | REPORT |
 | planner | EXTERNAL_WORK | implementation-planning | implementation-planner | REPORT |
@@ -20,7 +21,13 @@ skillRef 必须精确匹配启动角色的 primarySkill；技能在模型与工�
 
 REPORT 返回非空 PASS summary；VERDICT 返回非空报告且末行 AIW_VERDICT: PASS/REPAIR_REQUIRED；WORKSPACE 返回有效 resultRevision、changedFiles、适用 publicationRef 和非空 PASS summary。写角色必须有固定 Git baseRevision；审查与输入结果 revision 一致，不自行选择新 HEAD。只读角色不 stage/commit/push。
 
-TypeScript 明确选择 codex-cli、codex-app-server 或 openai-agents；两 Codex 模式使用系统已安装 CLI，不限制精确版本，无 SDK/CLI/平台包依赖，无下载或自动回退。Exec 为独立 attempt 进程；App Server 是受管 stdio 服务，每 slot 独立 thread/turn。Go 保留原三 Runtime，Python 保留原 SDK/API Runtime，本 FD 仅统一其任务契约。
+TypeScript 明确选择 codex-cli、codex-app-server 或 openai-agents；两 Codex 模式使用系统已安装 CLI，不限制精确版本，无 SDK/CLI/平台包依赖，无下载或自动回退。Exec 为独立 attempt 进程；App Server 是受管 stdio 服务，每 slot 独立 thread/turn。Go 保留 codex-cli/codex-app-server/openai-api。FD-020 将 Python 替换为 codex-app-server/openai-agents，删除 codex-sdk；Python 每 attempt 独立 App Server 进程与 ephemeral thread，正常及异常返回前核对进程组终态，不明时停止 slot并保留资源。详见 [源码支持矩阵](README.md#角色--语言--后端支持矩阵)。
+
+### 共同 goal-discussion 角色
+
+三包共享 `shared/goal-discussion/profile.toml` 和 `SKILL.md` 规范源，各包的 bundled 副本只用于独立部署。注册角色/capability/skillRef 同名，角色只读、REPORT纯文本；Java 仅接纳有效 PASS/终态及1–16000字符，不将建议当作修改或批准。API模型仅接收冻结资料，不开放workspace/shell/AIW工具；任务拒绝workspace assignment，使用每attempt独立空目录。Codex只读且禁网络，原生沙箱与凭证/宿主权限限制仍适用。
+
+Java `openai` backend允许openai-agents/openai-api，`codex` backend允许codex-cli/codex-app-server；无语言白名单，仍受各包实际实现、角色能力及冻结批准profile约束。Python配置codex-sdk明确拒绝，不替旧冻结任务自动改profile或提供方。新增/删除支持必须同时更新本契约、规范资产、包内副本及主矩阵。
 
 操作授权与资源协调分别处理。只读 API 无写入/host shell；Codex 内部 shell 受原生 sandbox 和主机政策约束。任务、Skill、报告不能提升 shell、网络、测试、发布权限。计划须经理确认；preferredSkills 仅排序；报告不形成第二工作流或自动修复。
 

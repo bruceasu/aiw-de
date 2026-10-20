@@ -29,6 +29,7 @@ R9 already provides decentralized worker pull, leases, attempts, isolated Git wo
 
 | Profile | R2/R9 process role | Registered capability | Allowed task type | Repository access |
 |---|---|---|---|---|
+| `goal-discussion.toml` | shared goal discussion | `goal-discussion` | `EXTERNAL_WORK` | independent empty directory, read-only |
 | `requirement-analyst.toml` | software-requirements-analyst | `requirement-analysis` | `EXTERNAL_WORK` | read-only |
 | `solution-architect.toml` | solution-architect | `solution-architecture` | `EXTERNAL_WORK` | read-only |
 | `implementation-planner.toml` | implementation-planner | `implementation-planning` | `EXTERNAL_WORK` | read-only |
@@ -50,6 +51,16 @@ These R2 definitions live in `profiles/advisory/`, with their Skill packages in 
 `engineering-artifact-protocol` is intentionally not a worker. It is a protocol/authority layer. The worker runtime embeds its core authority boundary in every role instruction: agents propose/execute; the Control Plane owns durable IDs, lifecycle state, approval and authoritative transitions.
 
 ## Build
+
+FD-020 adds the shared `goal-discussion` role. Select `profiles/goal-discussion.toml`
+with `AIW_PROCESS_PROFILE` or `scripts/run-profile.* goal-discussion`, and explicitly
+choose `codex-cli`, `codex-app-server` or `openai-api`. This is the same role and
+Skill contract as Python/TypeScript; canonical assets are in
+[`../shared/goal-discussion`](../shared/goal-discussion), with bundled copies for standalone deployment.
+Discussion rejects workspace assignments and uses a new empty directory per attempt.
+The API path supplies no workspace/shell tools and rejects unexpected tool calls;
+Codex remains read-only with network access disabled. Host sandbox and platform
+limits still apply. See the [support matrix](../README.md); source support is not runtime certification.
 
 ```bash
 cd workers/process-go

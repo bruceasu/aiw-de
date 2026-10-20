@@ -428,6 +428,7 @@ func runCodex(ctx context.Context, cfg Config, workspace string, instruction str
 		"--config", fmt.Sprintf("approval_policy=\"%s\"", cfg.ApprovalPolicy),
 		"--config", fmt.Sprintf("model_reasoning_effort=\"%s\"", cfg.ReasoningEffort),
 		"--config", fmt.Sprintf("sandbox_workspace_write.network_access=%t", cfg.NetworkAccess),
+		"--config", "sandbox_read_only.network_access=false",
 	}
 	if cfg.AIProfileSelected {
 		tier := "default"
@@ -631,6 +632,12 @@ func (c *Client) postStatus(ctx context.Context, path string, payload any, out a
 }
 
 func materializeWorkspace(ctx context.Context, cfg Config, task ClaimedTask, recorder *AttemptEvidence) (*GitWorkspace, error) {
+    if cfg.Profile.PrimarySkill == "goal-discussion" || task.SubjectType == "goal-discussion" {
+        if task.Workspace != nil { return nil, errors.New("GOAL_WORKSPACE_ASSIGNMENT_DENIED") }
+        directory, err := os.MkdirTemp("", "aiw-goal-")
+        if err != nil { return nil, err }
+        return &GitWorkspace{cfg: cfg, cwd: directory, ctx: ctx, recorder: recorder}, nil
+    }
 	if task.Workspace == nil {
 		return &GitWorkspace{cfg: cfg, cwd: cfg.FallbackWorkspace, ctx: ctx, recorder: recorder}, nil
 	}
@@ -1023,6 +1030,6 @@ func validResultRevision(revision string) bool {
     return true
 }
 func roleCapability(value string) bool {
-    switch value { case "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration": return true }
+    switch value { case "goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration": return true }
     return false
 }

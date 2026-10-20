@@ -1,0 +1,19 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-020",
+  "source_event": "FD-020-000006-implementation-ready",
+  "human_report": "FD-020-review-r1.md",
+  "data": {
+    "session": "fd020-reviewer-20261021-7c2d91",
+    "base": "1625cf5",
+    "reviewed_head": "af42880",
+    "fd_revision": 6,
+    "verdict": "verification-passed",
+    "findings": [],
+    "results": ["三语言角色、共享资产和支持矩阵一致", "Java 分类兼容保留冻结批准边界", "Python SDK 移除及显式配置迁移完整", "新 App Server 正常、失败和取消路径静态可追踪且失败关闭", "未发现确定性阻断缺陷"],
+    "commands": ["Get-Content / rg / Select-Object 定向静态读取", "git diff --stat 1625cf5 af42880", "git diff 1625cf5 af42880 -- targeted paths", "aiw fd show FD-020", "aiw fd --help", "aiw fd claim FD-020 FD-020-000006-implementation-ready --session fd020-reviewer-20261021-7c2d91"],
+    "unrun": ["tests", "compile", "type checking", "verification or sync scripts", "SDK imports", "real or fake App Server", "CLI execution", "model calls", "network", "services", "browser", "lease/cancellation runtime scenarios", "production no-storage certification"],
+    "residual_risk": "新 Python App Server 仅获静态与 Worker 编译证据；安装 CLI 的协议回执、Unix 后代进程、取消竞争、真实端点尚未验证。native Windows Codex 路径明确拒绝。"
+  }
+}

@@ -15,6 +15,8 @@ The system SHALL persist each goal's content, conversation, selected sources and
 ### Requirement: Frozen discussion input and backend
 The system SHALL dispatch goal discussion to the independent goal-discussion Worker using the selected backend and frozen approved AI profiles. It SHALL send only saved goal data, selected project knowledge and explicitly selected extracted attachment text. Missing matching Workers or profiles SHALL produce an actionable failure without switching providers.
 
+The maintained TypeScript, Python and Go Workers SHALL share the goal-discussion role, capability, Skill and read-only REPORT contract. The OpenAI backend SHALL accept implemented openai-agents/openai-api runtimes and the Codex backend SHALL accept implemented codex-cli/codex-app-server runtimes, subject to frozen approved profiles and documented platform restrictions. Python SHALL reject the removed codex-sdk configuration. Each discussion attempt SHALL use an independent empty directory and reject assigned workspaces. API discussion SHALL expose no workspace, shell or AIW tools.
+
 #### Scenario: Attachment conversion cannot establish readable content
 - **WHEN** conversion fails, extracts no text, or an image needs visual review
 - **THEN** the original file remains available with an explicit status

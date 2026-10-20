@@ -1,3 +1,4 @@
+# Canonical role asset. Sync bundled copies with scripts/sync-goal-discussion-assets.py.
 name = "goal-discussion"
 workerIdPrefix = "goal-discussion"
 roleCapability = "goal-discussion"

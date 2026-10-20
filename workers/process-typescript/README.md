@@ -7,9 +7,10 @@ See [method provenance and coverage](../SKILL_METHODS.md).
 环境变量的设置方式、默认值和运行时差异见 [Worker 环境变量](../ENVIRONMENT.md)。
 
 FD-019 新增独立 `goal-discussion` 角色，`start:all` 与管理器 `all` 均包含它。
-该角色通过 `goal-discussion` capability/Skill 处理目标讨论，默认使用 `openai-agents`，
+该角色通过三语言共享的 `goal-discussion` capability/Skill 处理目标讨论，默认使用 `openai-agents`，
 可由工作台显式选择 Codex。无工作区讨论使用独立空目录，OpenAI 讨论不开放工具。
 运行与资料/权限边界见 [目标讨论工作台](../../docs/current-zh/GOAL-WORKSHOP.md)。
+角色/Skill规范源位于 [shared/goal-discussion](../shared/goal-discussion)，包内副本用于独立部署，使用根目录同步工具更新；完整语言/后端支持见 [Workers矩阵](../README.md)。FD-020补齐角色启动脚本并拒绝讨论任务的workspace assignment，保留独立空目录及API无工具边界。
 
 ## 新手快速上手
 
