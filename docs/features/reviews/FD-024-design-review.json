@@ -1,0 +1,45 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-024",
+  "source_event": "FD-024-000002-design-requested",
+  "human_report": "docs/features/reviews/FD-024-design-review.md",
+  "data": {
+    "artifact": "docs/features/FD-024_WORKER.md",
+    "revision": 2,
+    "session_ref": "/root/fd024_design_review",
+    "recommendation": "changes-needed",
+    "design_status": "INCOMPLETE",
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "high",
+        "blocking_design_ready": true,
+        "location": "Solution 3-4; Work 1.3/3.2; AC4",
+        "finding": "缺少外部副作用已发生但平台业务事务及回执未提交的未知结果窗口约束。",
+        "required_change": "逐类适配器标注副作用；效果无法确认时禁止自动重放/返还/换ID，持久意图或进入人工对账，并纳入G2故障窗口表。"
+      },
+      {
+        "id": "F2",
+        "severity": "medium",
+        "blocking_design_ready": true,
+        "location": "Solution 3 idempotency; Work 1.2; AC4/AC7",
+        "finding": "owner/授权身份作为幂等域存在依赖可替换grant ID/版本的歧义。",
+        "required_change": "幂等命名空间不因授权/Worker/凭证/实例变更创建新空间；历史回执受限查询与旧请求重新执行分开。"
+      }
+    ],
+    "acknowledged_gates": [
+      {"id":"G1","status":"appropriately-gated","topic":"实际owner、源库、在途及切换回退人工决定"},
+      {"id":"G2","status":"appropriately-gated","topic":"20动作契约、私有DENY的可验证收窄/同步、回执/故障状态与准入映射"},
+      {"id":"G3","status":"appropriately-gated","topic":"私人UI浏览器认证/跨源及旧入口禁用"}
+    ],
+    "nonblocking_advice": ["1.x完成时进一步拆分3.3-3.6/4.2-4.3/5.1，给出明确产物和静态证据。"],
+    "validation": {
+      "mode": "bounded-static-design-review",
+      "commands_run": ["Get-Content", "rg", "apply_patch"],
+      "failed_reads_corrected": ["Windows rg路径src/main/java/*", "未归档的FD-022-design-review-auth.json路径"],
+      "not_run": ["tests", "compile", "network", "services", "HTTP", "migration", "fault injection", "workflow claim/emit", "commit"]
+    },
+    "limitations": ["只读有限源码/稳定规范，风险为静态推导，未运行复现。", "不是实现Reviewer verdict；未决Gate不能由本报告豁免。"]
+  }
+}
