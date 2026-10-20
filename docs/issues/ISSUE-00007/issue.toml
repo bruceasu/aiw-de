@@ -1,17 +1,17 @@
 id = "ISSUE-00007"
 title = "多目标草案 Chat 工作台与独立 AI Worker"
 parent_id = ""
-status = "DECIDED"
+status = "APPROVED"
 created = "2026-10-18"
-updated = "2026-10-18"
-revision = 2
+updated = "2026-10-21"
+revision = 4
 
 [approval]
-status = "PENDING"
-by = ""
-at = ""
-reason = ""
-source_digest = ""
+status = "APPROVED"
+by = "user"
+at = "2026-10-21T00:29:55+09:00"
+reason = "用户明确要求批准 ISSUE-00007 并交接 FD；Plan 中未决业务边界保留，在设计就绪前解决。"
+source_digest = "da4620fc46020eb5c5f4376a1ffe0c4545a1afb51c5aff71fa8eb44d836fc63b"
 
 [promotion]
 status = "NOT_STARTED"
@@ -29,4 +29,4 @@ reason = ""
 requirement-plan = "docs/issues/ISSUE-00007/issue-plan.md"
 
 [digest]
-requirement-plan = "f7e5226e54c251caf5bf97d26e5a5240a305d54747044192f4ea7084df92b67b"
+requirement-plan = "ce1da273c48325b1d1736dbb1808e1acf7e73745be11e16c1cfddca79a048498"

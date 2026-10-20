@@ -1,0 +1,61 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-019",
+  "source_event": "FD-019-000002-design-requested",
+  "human_report": "FD-019-design-review-r1.md",
+  "data": {
+    "reviewed_revision": 3,
+    "reviewer_session": "fd019-design-review-20261021-r1",
+    "planner_session": "fd019-planner-20261021-a71c93",
+    "recommendation": "changes-needed",
+    "design_ready": false,
+    "findings": [
+      {
+        "id": "D1",
+        "severity": "high",
+        "title": "执行前创建工作区与实际计划保存校验存在冲突",
+        "evidence": ["WorkflowEditorService.validateSpec:113 requires repositoryRef for workspace roles", "draft and confirm call validate"],
+        "required_change": "定义编辑快照分配工作区、真实计划保存/确认与启动的兼容顺序，以及幂等和失败恢复；不得绕过旧保存校验。"
+      },
+      {
+        "id": "D2",
+        "severity": "high",
+        "title": "讨论 Worker 缺可执行角色、工具边界与结果接入契约",
+        "evidence": ["profiles.ts ROLE_FILES is fixed", "instructions.ts verifies primarySkill and describes upstream inputs as authoritative", "existing RecommendationTaskPolicy is subject-specific"],
+        "required_change": "定义独立角色注册、REPORT/Skill、无 workspace 运行目录与仅所选数据可见的工具策略；定义冻结 task/result 协议并贯通 claim/guidance/start。"
+      },
+      {
+        "id": "D3",
+        "severity": "high",
+        "title": "CAS 未覆盖跨记录幂等与删除后结果原子裁决",
+        "evidence": ["FD declares CAS and prevention of duplicate promotion/plan creation without transaction or unique-key rules"],
+        "required_change": "指定 revision/删除世代、冻结请求字段、唯一键、CAS 事务步骤以及双提交、删除恢复、任务重试与完成竞争的胜负规则。"
+      },
+      {
+        "id": "D4",
+        "severity": "high",
+        "title": "个人私有目标到通用计划后的读取边界未定义",
+        "evidence": ["WebConsoleSecurityService.actor uses configured principal", "auth-disabled username is local-console", "FD only explicitly scopes goal queries by actor"],
+        "required_change": "明确 principal 私有含义与认证关闭的共享身份限制，定义计划、编辑快照、推荐和输出的归属及数据最小化，保持与私有验收一致。"
+      },
+      {
+        "id": "D5",
+        "severity": "medium",
+        "title": "Work Items 多结果组合超出小项规划要求",
+        "evidence": ["Items 1.2, 1.3, 1.4 and 1.6 each combine independent mechanisms and outcomes"],
+        "required_change": "按附件/转换/知识、角色/冻结策略/结果接入、版本/编辑快照/AI Steps/有效计划交接及 UI 独立结果拆项，更新依赖与 Acceptance 映射。"
+      }
+    ],
+    "recheck": {
+      "scope": "same-round reread of updated FD revision 3 only",
+      "design_resolved": ["D1", "D3", "D4"],
+      "partially_resolved": ["D2"],
+      "remaining": ["D2 input/result/workspace isolation contract", "D5 work item splitting"],
+      "next_action": "Planner records remaining contracts and child work items before design-ready; no automatic extra review round required"
+    },
+    "unresolved": ["D2 的 REPORT/结果大小/无效处理、无工作区隔离运行目录与资料工具边界", "D5 独立结果拆项及验收映射"],
+    "validation": "bounded local static design review only; no tests, compilation, migration, model, conversion, network, implementation or workflow events",
+    "files_changed": ["docs/features/reviews/FD-019-design-review-r1.md", "docs/features/reviews/FD-019-design-review-r1.json"]
+  }
+}
