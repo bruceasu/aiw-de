@@ -106,3 +106,5 @@ Acceptance 1 对应 1.1/1.3.3/1.6.1；2 对应 1.2.3/1.3.1–3/1.6.1；3 对应 
 - 静态来源：WorkflowEditorService / WorkflowRecommendationService / JdbcRecommendationRepository / RecommendationTaskPolicy；WorkerProtocolV1Controller / TaskExecutionService；ManagedWorkspaceService；WebConsoleSecurityService；V6__recommendation_configuration.sql；process-typescript README。
 - 稳定规范参考：`openspec/specs/task-orchestration/spec.md`；新增目标能力规范在实现完成时落入 stable specs，不建立 OpenSpec change。
 - Planner Session：fd019-planner-20261021-a71c93；来源事件：FD-019-000002-design-requested。
+
+**Completed:** 2026-10-20
