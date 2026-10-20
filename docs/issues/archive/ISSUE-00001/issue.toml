@@ -1,10 +1,10 @@
 id = "ISSUE-00001"
 title = "Worker 灵活任务与流程编排"
 parent_id = ""
-status = "APPROVED"
+status = "ARCHIVED"
 created = "2026-10-12"
-updated = "2026-10-12"
-revision = 3
+updated = "2026-10-20"
+revision = 4
 
 [approval]
 status = "APPROVED"
@@ -21,9 +21,9 @@ task_id = ""
 session_id = ""
 
 [terminal]
-by = ""
-at = ""
-reason = ""
+by = "LAPTOP-P8VM6T16\\suk"
+at = "2026-10-20T22:43:12+09:00"
+reason = "done"
 
 [artifact]
 requirement-plan = "docs/issues/ISSUE-00001/issue-plan.md"

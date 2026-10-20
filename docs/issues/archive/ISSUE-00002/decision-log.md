@@ -3,3 +3,8 @@
 - Decision: APPROVED
 - By: user
 - Reason: 用户在当前会话确认批准REQ00001并仅将M1交接到FD；M2-M4及自动健康分级、完整历史、外部制品全文保留为后续未决范围；本次不启动UI实现。
+
+## 2026-10-20T22:44:52+09:00
+- Decision: ARCHIVED
+- By: LAPTOP-P8VM6T16\suk
+- Reason: done

@@ -1,10 +1,10 @@
 id = "ISSUE-00005"
 title = "AI 推荐功能的运行时配置与模型调用职责边界"
 parent_id = ""
-status = "APPROVED"
+status = "ARCHIVED"
 created = "2026-10-16"
-updated = "2026-10-17"
-revision = 4
+updated = "2026-10-20"
+revision = 5
 
 [approval]
 status = "APPROVED"
@@ -21,9 +21,9 @@ task_id = ""
 session_id = ""
 
 [terminal]
-by = ""
-at = ""
-reason = ""
+by = "LAPTOP-P8VM6T16\\suk"
+at = "2026-10-20T22:42:11+09:00"
+reason = "done"
 
 [artifact]
 requirement-plan = "docs/issues/ISSUE-00005/issue-plan.md"

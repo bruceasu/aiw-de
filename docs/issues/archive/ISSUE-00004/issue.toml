@@ -1,10 +1,10 @@
 id = "ISSUE-00004"
 title = "统一多语言 Codex Runtime：Go 先行试点"
 parent_id = ""
-status = "APPROVED"
+status = "ARCHIVED"
 created = "2026-10-09"
-updated = "2026-10-12"
-revision = 3
+updated = "2026-10-20"
+revision = 4
 
 [approval]
 status = "APPROVED"
@@ -21,9 +21,9 @@ task_id = ""
 session_id = ""
 
 [terminal]
-by = ""
-at = ""
-reason = ""
+by = "LAPTOP-P8VM6T16\\suk"
+at = "2026-10-20T22:47:32+09:00"
+reason = "done"
 
 [artifact]
 requirement-plan = "docs/issues/ISSUE-00004/issue-plan.md"

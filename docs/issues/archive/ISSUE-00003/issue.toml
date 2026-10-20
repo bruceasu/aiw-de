@@ -1,10 +1,10 @@
 id = "ISSUE-00003"
 title = "Worker 公共执行基础与 pi 机制融合"
 parent_id = ""
-status = "APPROVED"
+status = "ARCHIVED"
 created = "2026-10-04"
-updated = "2026-10-04"
-revision = 4
+updated = "2026-10-20"
+revision = 5
 
 [approval]
 status = "APPROVED"
@@ -21,9 +21,9 @@ task_id = ""
 session_id = ""
 
 [terminal]
-by = ""
-at = ""
-reason = ""
+by = "LAPTOP-P8VM6T16\\suk"
+at = "2026-10-20T22:45:49+09:00"
+reason = "done"
 
 [artifact]
 requirement-plan = "docs/issues/ISSUE-00003/issue-plan.md"

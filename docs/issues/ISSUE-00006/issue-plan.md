@@ -365,8 +365,8 @@ A12 范围已确认：创建发布计划与实际执行发布均纳入，且分�
 
 | 来源（项目相对路径） | SHA-256 |
 | --- | --- |
-| `.ai/issues/drafts/delegated-decision-worker.md` | `a9b6d3b3af34efb309634019fdee6a21ebf587cd0e3d1ca87b94a33206b110ea` |
-| `.ai/issues/drafts/delegated-decision-worker-authorization-catalog.md` | `5ed176c30b18438fb29d13bff3c147ea0223ee20aab9ed13766a5e57e158b025` |
+| [原始需求草案](sources/delegated-decision-worker.md) | `a9b6d3b3af34efb309634019fdee6a21ebf587cd0e3d1ca87b94a33206b110ea` |
+| [原始授权事项目录](sources/delegated-decision-worker-authorization-catalog.md) | `5ed176c30b18438fb29d13bff3c147ea0223ee20aab9ed13766a5e57e158b025` |
 | `src/main/resources/db/migration/V4__workflow_repair_authorization.sql` | `529dcc7124316c2f6466ba90c59802791b1e9969215e22a9c50ecab7cc205d45` |
 | `src/main/resources/db/migration/V5__workflow_question_decision.sql` | `b36fd673cb3203b0c691b412e24c803c63a83af36a5263de5cfa15e44b048ea8` |
 | `src/main/java/me/asu/aidev/workflow/application/WorkflowPlanService.java` | `3220efbbb9fbc5a54669cd86dd331b29eab2ade2d727fb9c5545e1072611c8db` |
