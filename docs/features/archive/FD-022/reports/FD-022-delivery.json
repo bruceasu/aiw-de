@@ -1,0 +1,18 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"delivery-report", "fd_id":"FD-022",
+  "source_event":"FD-022-000009-verification-passed",
+  "human_report":"FD-022-delivery.md",
+  "data":{
+    "role":"pm", "status":"local-delivery-and-archive-complete",
+    "review_outcomes":3, "last_review":"verification-passed",
+    "recovery_commit":"08a752c", "squash_commit":"5ba823c",
+    "fd_source":"08a752c21f454453bd6a02b3f4b23aa7fe552ee1",
+    "parent_branch":"develop", "worktree_removed":true, "feature_branch_removed":true,
+    "receipts_retained":true, "archive":"docs/features/archive/FD-022/FD-022_WORKER.md",
+    "source_changed_during_recovery":false,
+    "blockers":"resolved",
+    "checks_passed":["offline Java25 production compile 260 files", "TypeScript syntax compile", "changed JS node --check", "static diff check", "independent implementation review"],
+    "checks_not_run":["tests","migration","services","HTTP/browser/model","network","final package","push","deployment"],
+    "residual_risks":["runtime concurrency and cross-instance recovery unverified", "database dialect migration and wiring unverified", "publication side effects unverified", "approved persistent legacy administrative API authentication compatibility change"]
+  }
+}

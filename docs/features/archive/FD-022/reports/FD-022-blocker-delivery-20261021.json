@@ -3,7 +3,7 @@
   "source_event":"FD-022-000009-verification-passed",
   "human_report":"FD-022-blocker-delivery-20261021.md",
   "data":{
-    "stage":"pm-delivery", "role":"pm", "status":"resolved-conflicts-pending-delivery",
+    "stage":"pm-delivery", "role":"pm", "status":"resolved", "resolved_on":"2026-10-21 Asia/Tokyo", "recovery_commit":"08a752c", "delivery_commit":"5ba823c", "archive_complete":true,
     "original_fd_head":"8f56860", "parent_commit":"b37d109", "original_plan_commit":"375ee82",
     "symptoms":["PM receipt cannot be claimed by agent", "local-merge add/add conflicts in FD and stable spec"],
     "confirmed_cause":"parallel plan commits contain same initial FD/spec; parent independently changed Worker language advice",

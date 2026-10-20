@@ -156,6 +156,8 @@ A02 的约束保存为精确任务/执行或评审角色对应的 model/effort/p
 
 ## Verification
 
+- PM 最终交付：`5ba823c` 已 squash 到 `develop`，FD-Source 为 `08a752c`；CLI 已删除隔离分支及 worktree 并保留 receipts，随后 `aiw fd close FD-022 Complete` 成功。下列“等待”条目为历史阶段记录，已由第3轮 pass 及本地交付结案。恢复只继承父分支独立文档，已评审源码和规范保持精确不变。详见 `reports/FD-022-delivery.md`。
+
 - 2026-10-21 独立实现评审第 3 轮：verification-passed；报告 [reviews/FD-022-review-r3.md](reviews/FD-022-review-r3.md)，源事件 FD-022-000008-implementation-ready，Reviewer fd022-independent-review-20261021-r1。R4 已复用当前许可判定修复，R1–R3 约束保持；无剩余阻断发现。依据静态源审查及 Worker 最终编译证据通过，未执行运行时验证；PM 仍须实际完成本地交付及归档。本循环共 3 次 outcome，未重置计数。
 
 - 2026-10-21 独立实现评审第 2 轮：changes-requested；报告 [reviews/FD-022-review-r2.md](reviews/FD-022-review-r2.md)，源事件 FD-022-000006-implementation-ready。R1 原绕过通道及 R2/R3 有静态修复证据，但新增 R4：旧发布许可失效后仍占据同 attempt，显式人工交回无法重新授权。当前循环已产生 2 次 outcome，尚有 1 次；未运行额外测试/编译。
@@ -164,7 +166,7 @@ A02 的约束保存为精确任务/执行或评审角色对应的 model/effort/p
 
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
-- 本次未请求测试支持。只运行一次适用的离线编译，不执行测试、最终构建、网络、依赖下载或发布。设计评审不代表运行时通过。
+- 本次未请求测试支持。初次实现及有实际源变更的评审修复后执行对应离线生产编译；最终260生产文件通过。不执行测试、最终构建、网络、依赖下载或发布。设计评审不代表运行时通过。
 
 - 2026-10-21：Java 25 离线 Maven compile 通过（259 个生产源文件）；TypeScript 内存语法编译及 delegation.js、runtime-core/attempt.mjs 语法检查通过。未运行测试、迁移、服务或网络。认证增量设计 AUTH1–AUTH3 已增加控制台 fail-closed、context-path 归一和首次激活在途请求屏障；实际并发仍未验证。
 
@@ -174,13 +176,15 @@ A02 的约束保存为精确任务/执行或评审角色对应的 model/effort/p
 
 ## TODO
 
-- PM 生命周期待办：独立实现评审通过后本地交付、CLI 清理、Complete 归档及归档提交。5.6 不作为 Worker implementation-ready 的先决实现项，未将待执行生命周期标记为实际完成。
+- PM 生命周期：独立评审、本地交付、CLI 清理和 Complete 归档已完成；本文件及配套证据纳入随后专用归档提交。5.6 作为 Worker 项取消的历史保留，没有省略其实际 PM 生命周期。
 
 - 2026-10-21 用户已明确授权兼容变更：首次启用代理时收紧旧管理写入 API 的人工认证。参见 reports/FD-022-blocker-auth-contract-20261021-01.md（政策问题已解决，运行时未验证）。旧未启用实例保持契约；首次启用后认证要求持久保留。Worker 租约协议与管理 Drain/Offline 分离，旧请求身份字段使用已登录人工身份。
 
-- 设计就绪，1.2 起尚未实现。实现须核对普通协议身份保护、秘书 admission、旧 V4 纳入互斥和两处 legacyCompletion 的实际封闭边界。
+- 实现1.1–5.5及默认本地生命周期已完成；普通协议身份保护、秘书 admission、旧 V4 纳入互斥和两处固定 legacyCompletion 已纳入静态评审。运行时、迁移和发布限制保留，未作为已通过检查。
 - 设计证据：reviews/FD-022-design-review.md（changes-needed）、reviews/FD-022-design-review-r2.md（ready）。稳定规格：openspec/specs/delegated-decisions/spec.md。
 
 ## Sources
 
 - Issue: ISSUE-00006
+
+**Completed:** 2026-10-20
