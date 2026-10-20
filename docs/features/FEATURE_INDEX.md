@@ -6,7 +6,7 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
-| - | - | - | - |
+| [FD-020](FD-020_FEATURE.md) | 三语言目标讨论角色与后端能力对齐 | Open | Medium |
 
 ## Completed
 

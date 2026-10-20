@@ -1,0 +1,44 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-020",
+  "source_event": "FD-020-000002-design-requested",
+  "session": "fd020-design-review-r1-20261021",
+  "artifact": "docs/features/FD-020_FEATURE.md",
+  "revision": 4,
+  "recommendation": "ready",
+  "findings": [
+    {
+      "id": "D2-1",
+      "severity": "low",
+      "blocking": false,
+      "location": "FD-020 Work Item 1.4",
+      "finding": "The retained five-runtime wording contradicts the new four-runtime decision.",
+      "action": "Change five to four before design-ready."
+    },
+    {
+      "id": "D2-2",
+      "severity": "low",
+      "blocking": false,
+      "location": "FD-020 Solution risk paragraph",
+      "finding": "The claim that all added runtimes already exist no longer applies to the new Python App Server adapter.",
+      "action": "Describe the existing local protocol references and the new unverified Python implementation separately."
+    }
+  ],
+  "implementation_checkpoints": [
+    "Delete SDK dependency, imports, client contexts, obsolete identity and runtime branches consistently.",
+    "Bound JSONRPC transport and enforce ephemeral, policy, account and terminal checks.",
+    "Confirm process-group termination before completion and workspace release; preserve resources and stop slot on uncertainty.",
+    "Reject native Windows before registration; reject explicit codex-sdk configuration and document profile migration.",
+    "Preserve frozen profiles and explicit backend selection; do not silently ignore unsupported fast or approval settings."
+  ],
+  "validation": {
+    "mode": "local-static-review",
+    "commands": ["Get-Content", "rg", "Select-Object"],
+    "not_run": ["tests", "compile", "verification scripts", "network", "real CLI", "model execution", "worker execution"]
+  },
+  "limitations": [
+    "No new Python App Server implementation exists at review time.",
+    "Installed CLI protocol compatibility and production no-storage behavior remain unverified."
+  ]
+}

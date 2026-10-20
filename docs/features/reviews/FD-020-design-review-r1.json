@@ -1,0 +1,29 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-020",
+  "source_event": "FD-020-000002-design-requested",
+  "session": "fd020-design-review-r1-20261021",
+  "artifact": "docs/features/FD-020_FEATURE.md",
+  "revision": 3,
+  "recommendation": "ready",
+  "superseded_for_current_scope": true,
+  "superseded_reason": "User changed Python Codex scope after this revision 3 review: remove codex-sdk and add codex-app-server. Updated design requires a focused review.",
+  "findings": [],
+  "implementation_checkpoints": [
+    "Reserve goal-discussion capability and use independent Python launcher worker identity.",
+    "Enforce no assignment, isolated per-attempt directory, no API tools and reject unexpected tool calls before dispatch.",
+    "Propagate read-only network policy for Python SDK and Go CLI/App Server; preserve existing terminal and cancellation behavior.",
+    "Keep standalone packaged assets and restrict synchronization to the three fixed goal-discussion targets.",
+    "Preserve nonempty frozen profile restrictions; document that empty frozen profiles use supported runtime defaults."
+  ],
+  "validation": {
+    "mode": "local-static-review",
+    "commands": ["Get-Content", "rg", "Select-Object"],
+    "not_run": ["tests", "compile", "verification scripts", "network", "model execution", "worker execution"]
+  },
+  "limitations": [
+    "No implementation exists for this FD at review time.",
+    "External SDK behavior was not independently verified."
+  ]
+}
