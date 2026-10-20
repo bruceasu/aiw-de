@@ -5,6 +5,7 @@
   <a th:if="${canOperate}" th:classappend="${active == 'new-plan' ? 'active' : ''}" href="/ui/plans/new">New Plan</a>
   <a th:if="${canOperate}" th:classappend="${active == 'goals' ? 'active' : ''}" href="/ui/goals">Goals</a>
   <a th:if="${canOperate}" th:classappend="${active == 'secretary' ? 'active' : ''}" href="/ui/secretary">Secretary</a>
+  <a th:if="${canOperate or canApprove or canAdmin}" th:classappend="${active == 'delegation' ? 'active' : ''}" href="/ui/delegation">Authorization center</a>
   <a th:classappend="${active == 'plans' ? 'active' : ''}" href="/ui/plans">Plans</a>
   <a th:if="${canOperate}" th:classappend="${active == 'workspaces' ? 'active' : ''}" href="/ui/workspaces">Workspaces</a>
   <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Fleet</a>

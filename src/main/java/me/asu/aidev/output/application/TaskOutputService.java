@@ -33,6 +33,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Immutable deliverables at a persistent workspace; never a second owner of task state. */
 @Service
 public class TaskOutputService {
+    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation=boundary; }
     private static final int MAX_FILE = 4 * 1024 * 1024;
     private static final int MAX_BUNDLE = 8 * 1024 * 1024;
     private final WorkTaskRepository tasks;
@@ -237,6 +240,14 @@ public class TaskOutputService {
 
     @Transactional
     public WorkflowPlan publication(String fileId, String reviewTaskId, String targetPath, String reason, String actor) {
+        if(delegation!=null) {
+            delegation.lock();
+            try { delegation.changing(publicationTarget(fileId,targetPath)); }
+            catch(IllegalArgumentException | IllegalStateException error) {
+                // Preserve legacy human drafting semantics; uncertain aliases cannot retain proxy candidates.
+                delegation.changing("PUBLICATION");
+            }
+        }
         validatePath(targetPath);
         if (targetPath.startsWith(".aiw/") || !targetPath.endsWith(".md")) throw new IllegalArgumentException("publication target must be a Markdown project document");
         if (reason == null || reason.isBlank() || reason.length() > 2000) throw new IllegalArgumentException("publication reason required");
@@ -258,6 +269,40 @@ public class TaskOutputService {
                 WorkflowPlanSpec.Source.MANAGER, List.of(step)), actor);
         outputs.publication(plan.id(), fileId, reviewTaskId, targetPath, actor, reason, clock.millis());
         return plan;
+    }
+
+    public String publicationTarget(String fileId,String targetPath) {
+        validatePath(targetPath);
+        var source=outputs.file(fileId);var bundle=outputs.find(source.attemptId()).orElseThrow();
+        String path;
+        try {
+            var root=workspaces.location(bundle.repositoryRef()).repositoryPath().toRealPath();
+            var target=root.resolve(targetPath).normalize();
+            for(var current=target;current!=null && !current.equals(root);current=current.getParent())
+                if(Files.isSymbolicLink(current) || (Files.exists(current, LinkOption.NOFOLLOW_LINKS)
+                        && !current.toRealPath().equals(current.toAbsolutePath().normalize())))
+                    throw new IllegalArgumentException("Publication target aliases require human handling");
+            path=target.toString();
+        } catch(IOException error) { throw new IllegalStateException("Cannot verify publication target identity",error); }
+        if(System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT).contains("win")) path=path.toLowerCase(java.util.Locale.ROOT);
+        return "PUBLICATION:"+me.asu.aidev.secretary.jdbc.SecretaryRepository.hash(path);
+    }
+
+    /** A delegate cannot reuse a publication association after its executable Plan was edited. */
+    public void requirePublication(String planId) {
+        var link=outputs.publication(planId).orElseThrow();
+        var source=outputs.file(link.fileId());var bundle=outputs.find(source.attemptId()).orElseThrow();
+        if(!"COMPLETED".equals(bundle.executionState()) || !outputs.reviewed(bundle.taskId(),bundle.attemptId(),link.reviewTaskId()))
+            throw new IllegalStateException("Authoritative publication source and PASS review are required");
+        String instruction="Publish the reviewed document from the authoritative output input. Source file ID: "+link.fileId()
+                +". SHA-256: "+source.file().sha256()+". Target path: "+link.targetPath()
+                +". Preserve the document content exactly. Verify its hash before writing. Do not modify other files. "
+                +"Report the source ID, hash, target path and local result revision when a Git baseline is assigned. "
+                +"Do not push. Reason: "+outputs.publicationReason(planId);
+        var expected=new WorkflowPlanSpec.Step("publish-document",Set.of("coding","task-outputs-v1"),Set.of(),"coding-work-package-executor",
+                instruction,bundle.repositoryRef(),bundle.resultRevision()==null?bundle.baseRevision():bundle.resultRevision(),Set.of());
+        if(!plans.get(planId).spec().steps().equals(List.of(expected)))
+            throw new IllegalStateException("Publication plan differs from its fixed reviewed source and target");
     }
 
     private static Upload text(String path, String kind, String text) {

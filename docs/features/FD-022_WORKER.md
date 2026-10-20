@@ -1,7 +1,7 @@
 # FD-022: 有限授权的代理决策 Worker：可编辑授权、人工启停、授权查看与模板复用
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 9
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -86,36 +86,36 @@ A02 的约束保存为精确任务/执行或评审角色对应的 model/effort/p
 各项预期规模为小、难度中；未解决的接口问题仍阻止该项就绪，不因拆小而豁免。证据均为对应静态调用/状态/异常路径与实际编译结果，不能标作运行时验收通过。
 
 - [x] 1.1 完成工程决定、验收映射及有界独立设计复核；产出稳定规则。依赖：设计发现全部闭合。
-- [ ] 1.2 增量持久化、独立代理凭证与普通协议身份保护；证据：所有 Worker-ID 写入/输出入口覆盖。依赖 1.1。
-- [ ] 1.3 默认关闭、启动 nonce、人工启停/凭证更新及旧候选失效；证据：重注册/重启不自动恢复。依赖 1.2。
-- [ ] 1.4 有类型的版本化授权、禁止/显式替代、到期/撤销和当前人工权限；证据：所有适用规则一起校验。依赖 1.3。
-- [ ] 1.5 目标纳入、旧 V4 pending/在途互斥及历史消耗基线；证据：旧路径不可绕过纳入边界。依赖 1.4。
-- [ ] 1.6 同目标累计账本、预留结算/释放及人工增加量补充；证据：换授权不改已用量。依赖 1.5。
-- [ ] 1.7 版本化待办、幂等结果及失败独立事务审计；证据：同一键不重复执行、异常保留 HUMAN。依赖 1.6。
-- [ ] 1.8 人工入口 generation/锁、接管与明确交回；证据：全部受影响服务入口及锁序。依赖 1.7。
-- [ ] 1.9 托管 Plan 的有限代理协调 admission 与快照更新；证据：取消/失效授权不可恢复，独立 coordinator 后续仍有效。依赖 1.8。
-- [ ] 2.1 A01 完整续修轮次接入；证据：执行与独立评审、预留及轮次上限。依赖 1.9。
-- [ ] 2.2 A02 精确角色模型约束与 guidance/start 强制检查；证据：无白名单配置转人工，不回退扩权。依赖 2.1。
-- [ ] 2.3 A03 失败重试接入；证据：失败类别、副作用确认及独立技术重试账本。依赖 2.2。
-- [ ] 2.4 A04 仅重评接入；证据：绑定旧产物且不新建执行轮次。依赖 2.3。
-- [ ] 3.1 A05 计划确认，发布关联要求额外 EXECUTE；证据：固定 spec/version。依赖 2.4。
-- [ ] 3.2 A06 跳步接入；证据：原业务条件及不伪造 PASS。依赖 3.1。
-- [ ] 3.3 A07 停止接入；证据：原租约停止流程。依赖 3.2。
-- [ ] 3.4 A08 收回委派接入；证据：原收回条件。依赖 3.3。
-- [ ] 3.5 A09 人工完成接入；证据：原成果约束、明确代理身份。依赖 3.4。
-- [ ] 3.6 A10 取消接入；证据：原停工与本地回退检查、失败副作用如实记录。依赖 3.5。
-- [ ] 3.7 A11 approve/reject 接入；证据：当前 APPROVER/ADMIN、PASSED Gate 及历史参与独立性。依赖 3.6。
-- [ ] 3.8 A12 CREATE/EXECUTE 接入；证据：可信发布目标、源哈希/PASS review、分别授权/记账及所有准入路径防绕过。依赖 3.7。
-- [ ] 4.1 A13 Fleet 调整接入；证据：固定 GLOBAL 目标、区间/次数及旧人工入口。依赖 3.8。
-- [ ] 4.2 A14/A15 Worker Drain/Offline 接入；证据：稳定 ID、租约条件及不启用代理。依赖 4.1。
-- [ ] 4.3 A16 结束 Plan 归档接入；证据：原 archivable Gate。依赖 4.2。
-- [ ] 4.4 A17 schedule/undo 接入；证据：当前 ADMIN、原延迟窗口及独立账本。依赖 4.3。
-- [ ] 5.1 真实 Worker `decision-delegate` profile、凭证传输、定向任务与服务器处理循环；证据：只读候选与业务执行分事务。依赖 4.4。
-- [ ] 5.2 自然语言→结构化草稿及显式人工确认；证据：原文保留、模糊字段不能启用。依赖 5.1。
-- [ ] 5.3 授权中心、Worker/Plan 入口、人工待办和消耗/审计查看；证据：复用控制台组件，无秘密回显。依赖 5.2。
-- [ ] 5.4 规则模板另存/复制/重新绑定；证据：独立新授权、不复制凭证/启用/消耗。依赖 5.3。
-- [ ] 5.5 更新近旁使用/兼容文档，完成 compile-only 和静态证据；依赖 5.4。
-- [ ] 5.6 独立实现评审后本地交付/清理/Complete 归档；依赖 5.5 及当前 passed receipt。
+- [x] 1.2 增量持久化、独立代理凭证与普通协议身份保护；证据：DelegateIdentityAdvice 覆盖协议 body/输出入口，DelegateIdentityMvc 覆盖 URL identity。依赖 1.1。静态证据及生产编译通过；运行时未验证。
+- [x] 1.3 默认关闭、启动 nonce、人工启停/凭证更新及旧候选失效；证据：DelegationIdentityService、WorkerService.register、DelegationBoundary.boot。依赖 1.2。静态证据及生产编译通过；运行时未验证。
+- [x] 1.4 有类型的版本化授权、禁止/显式替代、到期/撤销和当前人工权限；证据：DelegationRule/GrantService、currentDelegationAuthority；禁止草稿编辑解除活动禁止，动作适配仍待后续 Work Items。依赖 1.3。静态证据及生产编译通过；运行时未验证。
+- [x] 1.5 目标纳入、旧 V4 pending/在途互斥及历史消耗基线；证据：DelegationAdmission、旧 authorize/consume 纳入保护；目标适配器将在后续接入。依赖 1.4。仅静态证据。
+- [x] 1.6 同目标累计账本、预留结算/释放及人工增加量补充；证据：DelegationBudgets；消费接口与动作/settlement 循环在后续接入。依赖 1.5。仅静态证据。
+- [x] 1.7 版本化待办、幂等结果及失败独立事务审计；证据：DelegationRequests 的事务分离和唯一 fingerprint。依赖 1.6。仅静态证据。
+- [x] 1.8 人工入口 generation/锁、接管与明确交回；证据：各 application service 入口、DelegationRequests.control；HTTP 人工权限将在 5.3 接入。依赖 1.7。仅静态证据。
+- [x] 1.9 托管 Plan 的有限代理协调 admission 与快照更新；证据：SecretaryCoordinator.delegatedAdmission、participant/readmit、legacyCompletion 固定完成例外。依赖 1.8。仅静态证据。
+- [x] 2.1 A01 完整续修轮次接入；证据：DelegationActions 的固定 A01、原 continueAuthorizedRepair 和按 target 的预留记录。结算/过期处理在 5.1 接入。依赖 1.9。仅静态证据。
+- [x] 2.2 A02 精确角色模型约束与 guidance/start 强制检查；证据：configureModels、DelegationTaskPolicy、协议 guidance 与 start 的实际白名单检查；受影响活动任务禁止改配。依赖 2.1。仅静态证据。
+- [x] 2.3 A03 失败重试接入；证据：固定 source/version、failureCategory/interval/sideEffectsConfirmed、独立 A03 账本及允许一次新 attempt 的 receipt；秘书 readmit 保持一致。依赖 2.2。仅静态证据。
+- [x] 2.4 A04 仅重评接入；证据：固定 A04 调用 resumeReview、warningConfirmed、同一步源评审版本、独立 A04 账本。依赖 2.3。仅静态证据。
+- [x] 3.1 A05 计划确认，发布关联要求额外 EXECUTE；证据：固定 spec/version。依赖 2.4。
+- [x] 3.2 A06 跳步接入；证据：原业务条件及不伪造 PASS。依赖 3.1。
+- [x] 3.3 A07 停止接入；证据：原租约停止流程。依赖 3.2。
+- [x] 3.4 A08 收回委派接入；证据：原收回条件。依赖 3.3。
+- [x] 3.5 A09 人工完成接入；证据：原成果约束、明确代理身份。依赖 3.4。
+- [x] 3.6 A10 取消接入；证据：原停工与本地回退检查、失败副作用如实记录。依赖 3.5。
+- [x] 3.7 A11 approve/reject 接入；证据：当前 APPROVER/ADMIN、PASSED Gate 及历史参与独立性。依赖 3.6。
+- [x] 3.8 A12 CREATE/EXECUTE 接入；证据：可信发布目标、源哈希/PASS review、分别授权/记账及所有准入路径防绕过。依赖 3.7。
+- [x] 4.1 A13 Fleet 调整接入；证据：固定 GLOBAL 目标、区间/次数及旧人工入口。依赖 3.8。
+- [x] 4.2 A14/A15 Worker Drain/Offline 接入；证据：稳定 ID、租约条件及不启用代理。依赖 4.1。
+- [x] 4.3 A16 结束 Plan 归档接入；证据：原 archivable Gate。依赖 4.2。
+- [x] 4.4 A17 schedule/undo 接入；证据：当前 ADMIN、原延迟窗口及独立账本。依赖 4.3。
+- [x] 5.1 真实 Worker `decision-delegate` profile、凭证传输、定向任务与服务器处理循环；证据：只读候选与业务执行分事务。依赖 4.4。
+- [x] 5.2 自然语言→结构化草稿及显式人工确认；证据：原文保留、模糊字段不能启用。依赖 5.1。
+- [x] 5.3 授权中心、Worker/Plan 入口、人工待办和消耗/审计查看；证据：复用控制台组件，无秘密回显。依赖 5.2。
+- [x] 5.4 规则模板另存/复制/重新绑定；证据：独立新授权、不复制凭证/启用/消耗。依赖 5.3。
+- [x] 5.5 更新近旁使用/兼容文档，完成 compile-only 和静态证据；依赖 5.4。
+- [x] 5.6 已取消作为 Worker 实现项：独立评审、本地交付、清理及 Complete 归档属于交接后的 PM 生命周期，继续在 TODO 跟踪，未宣称已执行。原依赖 5.5 及 passed receipt 保留为交付 Gate。
 
 ## Acceptance
 
@@ -156,11 +156,27 @@ A02 的约束保存为精确任务/执行或评审角色对应的 model/effort/p
 
 ## Verification
 
+- 2026-10-21 独立实现评审第 3 轮：verification-passed；报告 [reviews/FD-022-review-r3.md](reviews/FD-022-review-r3.md)，源事件 FD-022-000008-implementation-ready，Reviewer fd022-independent-review-20261021-r1。R4 已复用当前许可判定修复，R1–R3 约束保持；无剩余阻断发现。依据静态源审查及 Worker 最终编译证据通过，未执行运行时验证；PM 仍须实际完成本地交付及归档。本循环共 3 次 outcome，未重置计数。
+
+- 2026-10-21 独立实现评审第 2 轮：changes-requested；报告 [reviews/FD-022-review-r2.md](reviews/FD-022-review-r2.md)，源事件 FD-022-000006-implementation-ready。R1 原绕过通道及 R2/R3 有静态修复证据，但新增 R4：旧发布许可失效后仍占据同 attempt，显式人工交回无法重新授权。当前循环已产生 2 次 outcome，尚有 1 次；未运行额外测试/编译。
+
+- 2026-10-21 独立实现评审第 1 轮：changes-requested；报告 [reviews/FD-022-review.md](reviews/FD-022-review.md)，源事件 FD-022-000004-implementation-ready，Reviewer fd022-independent-review-20261021-r1。R1 发布后续尝试绕过 A12_EXECUTE、R2 执行/评审同 Worker 未排除、R3 禁止适用条件遗漏，均须修复后重新交接；未运行额外测试或编译。
+
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
 - 本次未请求测试支持。只运行一次适用的离线编译，不执行测试、最终构建、网络、依赖下载或发布。设计评审不代表运行时通过。
 
+- 2026-10-21：Java 25 离线 Maven compile 通过（259 个生产源文件）；TypeScript 内存语法编译及 delegation.js、runtime-core/attempt.mjs 语法检查通过。未运行测试、迁移、服务或网络。认证增量设计 AUTH1–AUTH3 已增加控制台 fail-closed、context-path 归一和首次激活在途请求屏障；实际并发仍未验证。
+
+- 第一轮实现评审 `reviews/FD-022-review.md` 为 changes-requested；R1–R3 在 `9306b35` 修复，见 `reports/FD-022-implementation-r2.md`。最终源版本离线 Java25 compile（260生产文件）通过，静态差异无错误；等待第2轮独立评审，未运行测试/服务/迁移。
+
+- 第2轮 `reviews/FD-022-review-r2.md` 确认 R1–R3 静态修复并提出 R4；已复用许可有效性谓词修复，见 `reports/FD-022-implementation-r3.md`。离线 compile 260生产文件通过；等待第3轮最终评审，不重置已有2次outcome。
+
 ## TODO
+
+- PM 生命周期待办：独立实现评审通过后本地交付、CLI 清理、Complete 归档及归档提交。5.6 不作为 Worker implementation-ready 的先决实现项，未将待执行生命周期标记为实际完成。
+
+- 2026-10-21 用户已明确授权兼容变更：首次启用代理时收紧旧管理写入 API 的人工认证。参见 reports/FD-022-blocker-auth-contract-20261021-01.md（政策问题已解决，运行时未验证）。旧未启用实例保持契约；首次启用后认证要求持久保留。Worker 租约协议与管理 Drain/Offline 分离，旧请求身份字段使用已登录人工身份。
 
 - 设计就绪，1.2 起尚未实现。实现须核对普通协议身份保护、秘书 admission、旧 V4 纳入互斥和两处 legacyCompletion 的实际封闭边界。
 - 设计证据：reviews/FD-022-design-review.md（changes-needed）、reviews/FD-022-design-review-r2.md（ready）。稳定规格：openspec/specs/delegated-decisions/spec.md。

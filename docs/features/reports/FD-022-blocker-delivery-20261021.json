@@ -1,0 +1,17 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"blocker-feedback", "fd_id":"FD-022",
+  "source_event":"FD-022-000009-verification-passed",
+  "human_report":"FD-022-blocker-delivery-20261021.md",
+  "data":{
+    "stage":"pm-delivery", "role":"pm", "status":"resolved-conflicts-pending-delivery",
+    "original_fd_head":"8f56860", "parent_commit":"b37d109", "original_plan_commit":"375ee82",
+    "symptoms":["PM receipt cannot be claimed by agent", "local-merge add/add conflicts in FD and stable spec"],
+    "confirmed_cause":"parallel plan commits contain same initial FD/spec; parent independently changed Worker language advice",
+    "attempts":["preserved actual CLI recovery merge", "compared both histories and each conflict", "retained exact reviewed FD/spec and matching Complete index", "retained independent parent document", "unmerged index empty and git diff --check passed", "source/runtime/FD/spec unchanged from current passed HEAD"],
+    "human_decision_required":false,
+    "next_step":"commit bounded recovery merge and retry local delivery",
+    "reusable_improvement":"Do not rewrite a shared plan commit after branching; compare add/add content and preserve reviewed evolution",
+    "checks_not_run":["tests","build","compile","runtime","network"],
+    "template_status":"required templates absent; explicit skill fields used"
+  }
+}

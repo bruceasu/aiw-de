@@ -1,0 +1,19 @@
+{
+  "fd_id": "FD-022",
+  "stage": "worker",
+  "role": "worker",
+  "source_event": "FD-022-000003-design-ready",
+  "markdown": "FD-022-blocker-auth-contract-20261021-01.md",
+  "status": "resolved",
+  "resolution_scope": "human compatibility policy decision only; implementation verification pending",
+  "observed_symptom": "Legacy ApprovalController accepts decidedBy without human authentication",
+  "cause_status": "confirmed by static source inspection",
+  "attempts": ["Read the legacy controller", "Presented compatibility options", "Received explicit user authorization"],
+  "human_decision_required": false,
+  "human_decision": "启用代理时，同步收紧旧管理写入 API 的认证（推荐）",
+  "resolved_on": "2026-10-21 Asia/Tokyo",
+  "next_step": "Review the material authentication design delta, compile, then independently review implementation",
+  "reusable_improvement": "Inventory all legacy management write endpoints when designing bounded delegation",
+  "template_status": "Both required blocker feedback templates are absent; explicit skill fields used",
+  "runtime_verified": false
+}

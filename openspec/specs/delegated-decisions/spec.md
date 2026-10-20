@@ -41,6 +41,14 @@ explicitly return an unresolved request, requiring a fresh candidate and checks.
 Already committed decisions SHALL remain truthful historical facts; revocation
 SHALL NOT imply rollback of running work or external effects.
 
+The first explicit delegate enablement SHALL require configured human console
+authentication and durably enable authenticated human administrative API writes.
+Legacy administrative writes SHALL require a current human session, CSRF and
+the action's role; client-supplied actor labels SHALL NOT establish identity.
+Worker lease operations SHALL retain their machine protocol, while Worker
+Drain/Offline remain administrative writes. Disabling delegates or restarting
+SHALL NOT silently remove this administrative authentication requirement.
+
 #### Scenario: Human revokes before a candidate commits
 - WHEN revocation commits before the candidate's effect transaction
 - THEN the candidate SHALL have no authority to execute
@@ -66,6 +74,13 @@ Model identity equality SHALL NOT by itself violate independence. Delegated mode
 upgrades SHALL be enforced at actual task start, not only expressed as preferences.
 Publication creation and execution, approval and rejection, and deletion scheduling
 and undo SHALL be separate authorized subactions.
+Publication execution admission SHALL bind one fixed task attempt and the current
+grant revision and delegate identity. Lease reclaim and automatically created
+repair rounds SHALL NOT reuse that admission. Missing admission SHALL retain human
+handling or require a fresh A12_EXECUTE decision and cumulative debit. Execution
+and review role separation SHALL use historical attempts across step rounds,
+including profile changes, retries and recovery reviews. ALLOW and DENY SHALL use
+the same current state and round-condition interpretation.
 
 #### Scenario: Publication creation without execution authority
 - WHEN a delegate can create a publication plan but lacks execution authority
@@ -80,6 +95,13 @@ new target's authority or budget. Secretary-managed Plans SHALL retain bounded
 admission, cancellation, frozen input and independent coordination checks.
 
 ### Requirement: Truthful pending requests and reusable drafts
+First activation SHALL wait for all unauthenticated legacy management writes
+to finish, using database-backed in-flight receipts under the activation lock.
+Only an administrator explicitly confirming that the original process stopped
+may abandon a receipt from another server boot. After first activation, the
+persistent human-auth requirement SHALL survive disablement and restart; the
+console SHALL fail closed when human authentication is not configured.
+
 Unknown applicability, stale inputs or failed conditions SHALL retain the request,
 evidence, suggestion and reason for human handling. They SHALL NOT become business
 rejections or pass after a timeout. The grant owner and authorized administrators

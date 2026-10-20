@@ -14,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FleetAdmissionBudgetService {
+    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    @Autowired
+    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation=boundary; }
     private final FleetAdmissionBudgetRepository repository;
     private final FleetAdmissionBudgetEventRepository events;
     private final int configuredMaxParallelism;
@@ -51,6 +54,7 @@ public class FleetAdmissionBudgetService {
 
     @Transactional
     public FleetAdmissionBudget updateMaxParallelism(int maxParallelism, String controlledBy, String reason) {
+        if(delegation!=null) delegation.changing("GLOBAL:FLEET");
         validate(maxParallelism);
         String actor = normalizeActor(controlledBy);
         String normalizedReason = normalizeReason(reason);

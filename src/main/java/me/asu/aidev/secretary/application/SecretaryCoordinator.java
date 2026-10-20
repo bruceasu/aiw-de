@@ -17,6 +17,9 @@ import org.springframework.stereotype.Service;
 /** The model chooses continue or human attention; it never supplies executable steps. */
 @Service
 public class SecretaryCoordinator {
+    private DelegationBoundary delegation;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setDelegationBoundary(DelegationBoundary boundary) { this.delegation=boundary; }
     private final SecretaryRepository repo;
     private final SecretaryPlanGate gate;
     private final SecretaryTaskPolicy policy;
@@ -33,6 +36,29 @@ public class SecretaryCoordinator {
     public String planHash(WorkflowPlan p) { return repo.planHash(p.id()); }
     public boolean unchanged(Work w,WorkflowPlan p) {
         return p.version()==w.content().planVersion() && planHash(p).equals(w.content().planHash()) && !repo.planBlocked(p.id());
+    }
+    /** Only a fully checked dedicated candidate may supply this single coordination result. */
+    public <T> T delegatedAdmission(String planId,String worker,java.util.function.Supplier<T> action) {
+        if(delegation==null || !delegation.delegated()) throw new SecurityException("Server-validated delegation scope required");
+        repo.lock();
+        var managed=repo.plan(planId);
+        if(managed.isEmpty()) return action.get();
+        Work w=managed.get();
+        if(!Set.of(State.ACTIVE,State.NEEDS_HUMAN,State.QUEUED).contains(w.state()) || !policy.authorized(w))
+            throw new IllegalStateException("Secretary arrangement is cancelled, unconfirmed or no longer authorized");
+        WorkflowPlan before=plans.get(planId);
+        if(!unchanged(w,before)) throw new IllegalStateException("Frozen secretary input changed; human confirmation is required");
+        boolean pending=tasks.findBySubject("secretary-coordinate",w.id()).stream().anyMatch(t->Set.of(TaskState.READY,TaskState.BLOCKED,TaskState.CLAIMED,TaskState.RUNNING).contains(t.state()));
+        if(pending) throw new IllegalStateException("Resolve the original in-flight coordinator before delegated admission");
+        if(!repo.participant(w,worker,"COORDINATOR",true)) throw new IllegalStateException("Delegate participated as a specialist in this managed Plan");
+        T result=gate.advance(planId,action);
+        WorkflowPlan after=plans.get(planId);
+        Content c=w.content();
+        Work renewed=repo.save(w,planId,State.ACTIVE,w.dueMs(),new Content(c.title(),c.body(),c.kind(),c.zone(),c.snapshot(),
+                after.version(),planHash(after),c.authority(),"Fixed action admitted after an authenticated independent delegate decision"),true);
+        for(var task:plans.steps(planId)) if(Set.of(TaskState.READY,TaskState.BLOCKED,TaskState.CLAIMED,TaskState.RUNNING).contains(task.state()))
+            repo.readmit(task.id().value(),renewed);
+        return result;
     }
     public TaskId request(Work w,String phase,String sourceAttempt) {
         WorkflowPlan p=plans.get(w.planId());
@@ -88,7 +114,8 @@ public class SecretaryCoordinator {
         }
         if("START".equals(r.phase())) {
             if(p.state()!=WorkflowPlan.State.DRAFT) { repo.state(w,State.NEEDS_HUMAN,"Plan is no longer a draft");return List.of(); }
-            WorkflowPlan confirmed=gate.advance(p.id(),()->plans.confirm(p.id(),p.version(),w.actor()));
+            java.util.function.Supplier<WorkflowPlan> confirm=()->gate.advance(p.id(),()->plans.confirm(p.id(),p.version(),w.actor()));
+            WorkflowPlan confirmed=delegation==null?confirm.get():delegation.legacyCompletion(confirm);
             Content c=w.content();
             repo.save(w,w.planId(),State.ACTIVE,w.dueMs(),new Content(c.title(),c.body(),c.kind(),c.zone(),c.snapshot(),confirmed.version(),planHash(confirmed),c.authority(),"Plan started after independent coordination"),false);
             return List.of();

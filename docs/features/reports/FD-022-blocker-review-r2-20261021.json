@@ -1,0 +1,14 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"blocker-feedback", "fd_id":"FD-022",
+  "source_event":"FD-022-000007-changes-requested",
+  "human_report":"FD-022-blocker-review-r2-20261021.md",
+  "data":{
+    "stage":"worker-repair", "role":"worker", "status":"resolved", "resolved_event":"FD-022-000009-verification-passed", "resolved_on":"2026-10-21 Asia/Tokyo",
+    "symptom":"obsolete publication permit prevents same-attempt reauthorization",
+    "confirmed_cause":"candidate and claim/start validity predicates differ",
+    "attempts":["claimed exact repair event", "reused claim policy predicate", "offline production compile passed", "static diff check passed"],
+    "human_decision_required":false, "next_step":"third and final independent implementation review",
+    "reusable_improvement":"Reuse current validity predicates for recovery and execution",
+    "template_status":"required templates absent; explicit skill fields used"
+  }
+}

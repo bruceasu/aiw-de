@@ -33,7 +33,8 @@ public class SecretaryTaskPolicy implements WorkerTaskClaimPolicy, TaskExecution
         if ("secretary-coordinate".equals(task.subjectType())) return repo.request(task.id().value())
             .filter(r->!r.consumed() && r.generation()==w.generation()).isPresent();
         // An expired professional attempt has an unknown outcome. Never repeat it implicitly.
-        return w.state()==State.ACTIVE && repo.admitted(task.id().value(),w) && !repo.interrupted(task.id().value());
+        return w.state()==State.ACTIVE && repo.admitted(task.id().value(),w)
+                && (!repo.interrupted(task.id().value()) || repo.delegatedRetry(task.id().value()));
     }
     @Override public boolean canClaim(WorkTask task) { return work(task).isEmpty(); }
     @Override public boolean canClaim(WorkTask task,Worker worker) {

@@ -1,0 +1,15 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"worker-report", "fd_id":"FD-022",
+  "source_event":"FD-022-000007-changes-requested",
+  "human_report":"FD-022-implementation-r3.md",
+  "data":{
+    "worker_session":"01a15a47-fc32-7362-ac13-f660487b7632",
+    "addressed_findings":["R4 replace obsolete same-attempt publication permit using the shared current claim predicate"],
+    "prior_reports":["FD-022-implementation.md","FD-022-implementation-r2.md"],
+    "review_outcomes_so_far":2, "requested_review_number":3,
+    "compile":"offline Maven production compile passed, Java25, 260 sources",
+    "static_check":"git diff --check passed; sole source repair diff read",
+    "checks_not_run":["tests","service","migration","HTTP/browser","model","network","deployment"],
+    "residual_risks":["dialect and wiring unverified", "actual concurrency and recovery unverified", "publication side effects unverified"]
+  }
+}

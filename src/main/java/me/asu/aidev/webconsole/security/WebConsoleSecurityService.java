@@ -91,6 +91,17 @@ public class WebConsoleSecurityService {
         } catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
     }
 
+    /** A grant cannot retain a role that its owner no longer has. */
+    public String currentDelegationAuthority(String actor, String action) {
+        String expected = "web:" + (enabled ? configuredUsername : "local-console");
+        if (!expected.equals(actor)) return "";
+        WebConsoleRole current = enabled ? configuredRole : WebConsoleRole.ADMIN;
+        boolean allowed = action.startsWith("A11_") ? current.canApprove()
+                : action.startsWith("A17_") ? current.canAdmin() : current.canOperate();
+        if (!allowed) return "";
+        return me.asu.aidev.secretary.jdbc.SecretaryRepository.hash(enabled + "\n" + expected + "\n" + current + "\n" + action);
+    }
+
     public String ensureCsrf(HttpSession session) {
         Object existing = session.getAttribute(SESSION_CSRF);
         if (existing != null) return existing.toString();

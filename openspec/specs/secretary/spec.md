@@ -65,5 +65,6 @@ Automatic analysis and external notification delivery are outside this scope.
 ## Limits
 
 With authentication disabled, local-console is shared. This capability does
-not introduce multi-user isolation, historical ownership migration, agent
-permission grants, recurring/conditional schedules or long-term memory.
+not introduce multi-user isolation, historical ownership migration,
+recurring/conditional schedules or long-term memory. Explicit agent permission
+grants are defined separately in `../delegated-decisions/spec.md`.

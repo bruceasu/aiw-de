@@ -34,6 +34,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/worker-protocol/v1")
 public class WorkerProtocolV1Controller {
+    private me.asu.aidev.secretary.application.DelegationTaskPolicy delegationPolicy;
+    @Autowired
+    public void setDelegationPolicy(me.asu.aidev.secretary.application.DelegationTaskPolicy policy) { this.delegationPolicy=policy; }
     private me.asu.aidev.goal.application.GoalTaskPolicy goalPolicy;
     @Autowired
     public void setGoalPolicy(me.asu.aidev.goal.application.GoalTaskPolicy policy) { this.goalPolicy = policy; }
@@ -184,10 +187,14 @@ public class WorkerProtocolV1Controller {
                         input.completionSummary(), input.attemptId())).toList(),
                 goalPolicy != null && goalPolicy.managed(task) ? goalPolicy.guidance(task, runtimeType)
                     : recommendationPolicy != null && recommendationPolicy.managed(task) ? recommendationPolicy.guidance(task, runtimeType)
-                        : aiProfiles.guidance(task.type(), runtimeType,
-                        attempts.findPreviousAiAttempt(task.id(), claimed.attemptNo()).orElse(null)),
+                        : delegatedGuidance(task,runtimeType,claimed.attemptNo()),
                 outputs == null ? null : outputs.store(task, claimed.attemptId().value(), claimed.inputs()),
                 workflowAiPreferences == null ? null : workflowAiPreferences.forTask(task));
+    }
+
+    private AiProfileCatalog.Guidance delegatedGuidance(me.asu.aidev.work.domain.WorkTask task,String runtime,int attempt) {
+        var normal=aiProfiles.guidance(task.type(),runtime,attempts.findPreviousAiAttempt(task.id(),attempt).orElse(null));
+        return delegationPolicy==null?normal:delegationPolicy.guidance(task,runtime,normal);
     }
 
     private WorkspaceResponse workspaceResponse(ClaimedTask claimed) {

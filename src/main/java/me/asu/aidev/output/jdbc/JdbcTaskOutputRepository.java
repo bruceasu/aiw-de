@@ -136,6 +136,9 @@ public class JdbcTaskOutputRepository {
         return jdbc.query("SELECT file_id,review_task_id,target_path FROM task_output_publication WHERE plan_id=?",
                 (rs, row) -> new Publication(rs.getString(1), rs.getString(2), rs.getString(3)), planId).stream().findFirst();
     }
+    public String publicationReason(String planId) {
+        return jdbc.queryForObject("SELECT reason FROM task_output_publication WHERE plan_id=?",String.class,planId);
+    }
 
     public void publication(String planId, String fileId, String reviewTaskId, String targetPath, String actor, String reason, long createdAt) {
         jdbc.update("INSERT INTO task_output_publication VALUES(?,?,?,?,?,?,?)",

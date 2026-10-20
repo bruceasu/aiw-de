@@ -1,0 +1,22 @@
+{
+  "schema":"aiw.fd.evidence.v1",
+  "kind":"reviewer-report",
+  "fd_id":"FD-022",
+  "source_event":"FD-022-000006-implementation-ready",
+  "human_report":"FD-022-review-r2.md",
+  "data":{
+    "session_ref":"fd022-independent-review-20261021-r1",
+    "review_round":2,
+    "verdict":"changes-requested",
+    "base_commit":"375ee82",
+    "repair_base":"db98391",
+    "reviewed_commit":"fb0422a",
+    "implementation_commit":"9306b35",
+    "findings":[{"id":"R4","severity":"P2","path":"src/main/java/me/asu/aidev/secretary/application/DelegationActions.java","line":352,"summary":"An invalid same-attempt publication receipt permanently excludes the unclaimed task from explicit reauthorization","required_change":"Allow a fully validated fresh action to replace an invalid same-attempt receipt while preserving cumulative consumption and audit; reject duplicate still-valid authorization"}],
+    "prior_findings":[{"id":"R1","result":"Original automatic replay paths statically blocked; recovery regression R4 remains"},{"id":"R2","result":"Historical role separation implemented in claim/start and approval"},{"id":"R3","result":"Shared applicability and human conflict evidence implemented"}],
+    "results":[{"check":"Independent repair source review","result":"changes-requested"},{"check":"Worker offline Java25 compile evidence","result":"inspected; not rerun"}],
+    "not_run":["tests","compile","service startup","migration","HTTP/browser","network","subagents"],
+    "residual_risks":["Runtime wiring/migration","Actual concurrency and multi-instance recovery","Real publication effects"],
+    "remaining_review_outcomes_in_cycle":1
+  }
+}

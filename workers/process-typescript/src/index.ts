@@ -15,6 +15,7 @@ export interface WorkerConfig extends RuntimeSettings {
   baseUrl: string;
   workerId: string;
   token: string;
+  delegateKey: string;
   capabilities: string[];
   maxConcurrency: number;
   fallbackWorkspace: string;
@@ -64,6 +65,7 @@ function loadConfig(runtime: RuntimeType): WorkerConfig {
     baseUrl: env("AIW_CONTROL_PLANE_URL", "http://127.0.0.1:8080").replace(/\/$/, ""),
     workerId: env("AIW_WORKER_ID", runtime === "codex-cli" ? `process-exec-${role}-1` : runtime === "codex-app-server" ? `process-${role}-1` : `process-api-${role}-1`),
     token: env("AIW_WORKER_TOKEN", ""),
+    delegateKey: env("AIW_DELEGATE_KEY", ""),
     capabilities: [...capabilities].sort(), maxConcurrency: positiveSetting("AIW_WORKER_MAX_CONCURRENCY", 1),
     fallbackWorkspace, repositoryRef, repositoryRoot: repositoryRoot ? path.resolve(repositoryRoot) : "",
     worktreeRoot: path.resolve(env("AIW_WORKTREE_ROOT", path.resolve(repositoryRoot || fallbackWorkspace, "..", ".aidev-worktrees"))),
@@ -75,6 +77,8 @@ function loadConfig(runtime: RuntimeType): WorkerConfig {
 
 const runtime = selectedRuntime();
 const cfg = loadConfig(runtime);
+// Keep the dedicated key in the transport configuration, outside model subprocess environments.
+delete process.env.AIW_DELEGATE_KEY;
 const toolCache = prepareToolCache(cfg.workerId);
 Object.assign(process.env, toolCache.environment);
 console.log(`worker cache=${toolCache.directory} temp=${toolCache.temp}`);

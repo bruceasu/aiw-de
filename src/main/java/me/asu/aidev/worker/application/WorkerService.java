@@ -11,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkerService {
+    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    @Autowired
+    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary delegation) { this.delegation = delegation; }
     private final WorkerRepository workers;
     private final Clock clock;
 
@@ -26,6 +29,9 @@ public class WorkerService {
 
     @Transactional
     public Worker register(RegisterWorkerCommand command) {
+        if (delegation != null) {
+            delegation.registered(command.workerId().value());
+        }
         var now = clock.instant();
         Worker worker = new Worker(command.workerId(), command.runtimeType(), command.capabilities(),
                 command.maxConcurrency(), 0, WorkerStatus.ACTIVE, now, now, now);
@@ -42,6 +48,7 @@ public class WorkerService {
 
     @Transactional
     public void drain(WorkerId workerId) {
+        if (delegation != null) delegation.changing("WORKER:" + workerId.value());
         if (!workers.changeStatus(workerId, WorkerStatus.DRAINING, clock.instant())) {
             throw new IllegalStateException("worker not found: " + workerId.value());
         }
@@ -49,6 +56,7 @@ public class WorkerService {
 
     @Transactional
     public void offline(WorkerId workerId) {
+        if (delegation != null) delegation.changing("WORKER:" + workerId.value());
         if (!workers.changeStatus(workerId, WorkerStatus.OFFLINE, clock.instant())) {
             throw new IllegalStateException("worker not found: " + workerId.value());
         }

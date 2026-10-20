@@ -32,6 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskExecutionService {
+    private me.asu.aidev.secretary.application.DelegationTaskPolicy delegationPolicy;
+    @Autowired
+    public void setDelegationPolicy(me.asu.aidev.secretary.application.DelegationTaskPolicy policy) { this.delegationPolicy=policy; }
     private me.asu.aidev.goal.application.GoalTaskPolicy goalPolicy;
     @Autowired
     public void setGoalPolicy(me.asu.aidev.goal.application.GoalTaskPolicy policy) { this.goalPolicy = policy; }
@@ -122,9 +125,12 @@ public class TaskExecutionService {
     public void start(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                       String profileId, String profileVersion, String selectionReason) {
         var task = tasks.find(taskId).orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
+        if(delegationPolicy!=null) delegationPolicy.beforeStart(task);
         assertExecutionAllowed(task);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         task = tasks.find(taskId).orElseThrow();
+        if(delegationPolicy!=null) delegationPolicy.starting(task,workerId.value());
+        if(delegationPolicy!=null) delegationPolicy.selection(task,profileId,profileVersion);
         if (task.state() == TaskState.CLAIMED && attempts.stopRequested(leaseToken, workerId)) {
             throw new IllegalStateException("Worker stop requested before task start; acknowledge stop instead");
         }
@@ -155,6 +161,7 @@ public class TaskExecutionService {
         if (!attempts.transition(leaseToken, ExecutionAttemptState.CLAIMED, ExecutionAttemptState.RUNNING, now, null)) {
             throw new IllegalStateException("execution attempt is not CLAIMED");
         }
+        if(delegationPolicy!=null) delegationPolicy.started(task);
     }
 
     @Transactional

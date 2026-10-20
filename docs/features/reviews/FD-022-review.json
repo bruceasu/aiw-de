@@ -1,0 +1,22 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-022",
+  "source_event": "FD-022-000004-implementation-ready",
+  "human_report": "FD-022-review.md",
+  "data": {
+    "session_ref": "fd022-independent-review-20261021-r1",
+    "verdict": "changes-requested",
+    "review_round": 1,
+    "base_commit": "375ee82",
+    "reviewed_commit": "ebf68e12859bfb4c27dbbb39e63ea23fc9cf4b2e",
+    "findings": [
+      {"id":"R1","severity":"P1","path":"src/main/java/me/asu/aidev/secretary/application/DelegationActions.java","line":222,"summary":"Publication lease replay and automatically generated repair rounds bypass separate A12_EXECUTE authorization and accounting","required_change":"Persist publication Plan management and per-task/attempt execution admission; block unaccounted automatic execution without reversing lock order"},
+      {"id":"R2","severity":"P1","path":"src/main/java/me/asu/aidev/secretary/application/DelegationTaskPolicy.java","line":36,"summary":"The same Worker may execute and review one result; only delegate approval independence is enforced","required_change":"Exclude historical result executors at applicable review claim/start boundaries, including retries, review recovery and stable-ID re-registration"},
+      {"id":"R3","severity":"P2","path":"src/main/java/me/asu/aidev/secretary/application/DelegationGrantService.java","line":112,"summary":"DENY applicability ignores configured state and round conditions and differs from publication authority evaluation","required_change":"Centralize trusted-snapshot applicability and retain conflict or unknown reasons as human requests"}
+    ],
+    "results":[{"check":"Independent source and contract review","result":"changes-requested"},{"check":"Worker compile evidence","result":"inspected; not rerun"}],
+    "not_run":["tests","compilation","builds","service startup","HTTP/browser","migration","network","subagents"],
+    "residual_risks":["Runtime wiring and migrations","Multi-instance concurrency/recovery","Real Worker/model and publication side effects"]
+  }
+}

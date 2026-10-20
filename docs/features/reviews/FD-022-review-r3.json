@@ -1,0 +1,23 @@
+{
+  "schema":"aiw.fd.evidence.v1",
+  "kind":"reviewer-report",
+  "fd_id":"FD-022",
+  "source_event":"FD-022-000008-implementation-ready",
+  "human_report":"FD-022-review-r3.md",
+  "data":{
+    "session_ref":"fd022-independent-review-20261021-r1",
+    "review_round":3,
+    "verdict":"verification-passed",
+    "base_commit":"375ee82",
+    "repair_base":"4700833",
+    "reviewed_commit":"e642d09",
+    "implementation_commit":"a0862a2",
+    "findings":[],
+    "resolved_findings":["R1 fixed publication task/attempt admission remains enforced","R2 historical executor/reviewer/delegate independence remains enforced","R3 common applicability and human conflict evidence remain enforced","R4 obsolete same-attempt permits are replaceable through fresh validated decisions; valid permits are excluded"],
+    "results":[{"check":"Independent implementation and repair review","result":"passed within static evidence scope"},{"check":"Final Worker Java25 offline production compile evidence","result":"inspected; not rerun"}],
+    "not_run":["tests","compile","build","service startup","migration","HTTP/browser","model","network","subagents"],
+    "residual_risks":["Database dialect and runtime wiring not exercised","Actual concurrency and multi-instance recovery unverified","Real Worker/model and publication side effects unverified"],
+    "remaining_pm_actions":["local delivery","verified cleanup","Complete archive","archive commit"],
+    "remaining_review_outcomes_in_cycle":0
+  }
+}

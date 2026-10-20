@@ -18,6 +18,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SecretaryService {
+    private DelegationBoundary delegation;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setDelegationBoundary(DelegationBoundary boundary) { this.delegation=boundary; }
+    private void beforeControl(String id) {
+        if(delegation==null) return;
+        delegation.lock();
+        repo.find(id).filter(w->w.planId()!=null).ifPresent(w->delegation.changing("PLAN:"+w.planId()));
+    }
     private final SecretaryRepository repo;
     private final WorkflowPlanService plans;
     private final SecretaryCoordinator coordinator;
@@ -67,6 +75,7 @@ public class SecretaryService {
         return new Detail(w,repo.messages(id),rows,attention,plan,plan==null?"":coordinator.planHash(plan),due);
     }
     @Transactional public Work edit(String id,String actor,Edit input) {
+        beforeControl(id);
         repo.lock(); Work w=expected(id,actor,input.revision());
         if(!Set.of(State.DRAFT,State.SCHEDULED,State.NEEDS_CONFIRMATION,State.CANCELLED).contains(w.state()))
             throw new IllegalStateException("Queued or active work cannot be edited; cancel it and prepare a new work item");
@@ -85,6 +94,7 @@ public class SecretaryService {
         return repo.save(w,plan,State.DRAFT,null,new Content(text(input.title(),160,false),text(input.body(),16000,false),kind,c.zone(),"",-1,"","","Saved; review and confirm the latest work before arranging it"),true);
     }
     @Transactional public Work confirm(String id,String actor,Confirm input) {
+        beforeControl(id);
         repo.lock(); Work w=repo.owned(id,actor);
         if(!input.confirmed()) throw new IllegalArgumentException("Explicit confirmation of the displayed content is required");
         ZoneId zone=ZoneId.of(text(input.zone(),100,false));
@@ -111,6 +121,7 @@ public class SecretaryService {
         return repo.save(w,w.planId(),State.SCHEDULED,due,new Content(c.title(),c.body(),c.kind(),zone.getId(),snapshot,version,hash,authority,"Confirmed for queue admission; this is not an actual start time"),true);
     }
     @Transactional public Work cancel(String id,String actor,long revision) {
+        beforeControl(id);
         repo.lock(); Work w=expected(id,actor,revision);
         if(w.state()==State.DONE || w.state()==State.CANCELLED || w.state()==State.STOP_REQUESTED) return w;
         boolean active=workTasks(w).stream().filter(t->!t.subjectType().equals("secretary-chat"))
@@ -154,6 +165,7 @@ public class SecretaryService {
         return detail(id,actor);
     }
     @Transactional public Work retryCoordination(String id,String actor,long revision,boolean confirmed) {
+        beforeControl(id);
         repo.lock();Work w=expected(id,actor,revision);
         if(!confirmed || !Set.of(State.NEEDS_HUMAN,State.ACTIVE,State.QUEUED).contains(w.state()) || w.planId()==null)
             throw new IllegalStateException("Explicit confirmation of a blocked Plan coordination is required");

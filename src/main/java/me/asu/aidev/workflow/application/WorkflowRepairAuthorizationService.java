@@ -27,6 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 /** Human authority fixes the scope; a designated independent Worker may only consume one grant. */
 @Service
 public class WorkflowRepairAuthorizationService {
+    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation = boundary; }
     private WorkflowQuestionService questionDecisions;
     @org.springframework.beans.factory.annotation.Autowired
     public void setQuestionDecisions(WorkflowQuestionService questionDecisions) { this.questionDecisions = questionDecisions; }
@@ -56,6 +59,11 @@ public class WorkflowRepairAuthorizationService {
     @Transactional
     public Authorization authorize(String planId, String sourceReview, long planVersion, long taskVersion,
             String scope, String reason, String delegateWorkerId, boolean confirmed, String actor) {
+        if (delegation != null) {
+            delegation.changing("PLAN:" + planId);
+            if (delegateWorkerId != null && !delegateWorkerId.isBlank() && delegation.managedPlan(planId))
+                throw new IllegalStateException("This target uses versioned delegation; the legacy proxy grant cannot bypass its policy");
+        }
         if (!confirmed) throw new IllegalArgumentException("Confirm the one-round repair authorization.");
         if (scope == null || scope.isBlank() || scope.length() > 4000
                 || reason == null || reason.isBlank() || reason.length() > 2000) {
@@ -108,12 +116,17 @@ public class WorkflowRepairAuthorizationService {
     }
 
     private List<TaskId> consume(Authorization grant, String actor) {
+        if (delegation != null && grant.delegateWorkerId() != null && delegation.managedPlan(grant.planId())) {
+            authorizations.finish(grant.id(), "STALE", null, Instant.now());
+            return List.of();
+        }
         if (!grant.expiresAt().isAfter(Instant.now()) || !authorizations.planUnchanged(grant)) {
             authorizations.finish(grant.id(), grant.expiresAt().isAfter(Instant.now()) ? "STALE" : "EXPIRED", null, Instant.now());
             return List.of();
         }
-        var task = plans.continueAuthorizedRepair(grant.planId(), grant.sourceReviewId(), grant.planVersion(),
-                grant.sourceTaskVersion(), actor, grant.reason(), grant.scope());
+        java.util.function.Supplier<java.util.Optional<TaskId>> continuation = () -> plans.continueAuthorizedRepair(
+                grant.planId(), grant.sourceReviewId(), grant.planVersion(), grant.sourceTaskVersion(), actor, grant.reason(), grant.scope());
+        var task = delegation == null ? continuation.get() : delegation.legacyCompletion(continuation);
         if (!authorizations.finish(grant.id(), task.isPresent() ? "CONSUMED" : "STALE",
                 task.map(TaskId::value).orElse(null), Instant.now())) {
             throw new IllegalStateException("Repair authorization was already consumed or revoked.");

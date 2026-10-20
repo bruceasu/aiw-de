@@ -26,6 +26,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 @Service
 public class ApprovalService {
+    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    @Autowired
+    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation=boundary; }
     private static final Logger LOG = Logger.getLogger(ApprovalService.class.getName());
     private final ApprovalRequestRepository approvals;
     private final EngineeringGateService engineeringGates;
@@ -100,6 +103,7 @@ public class ApprovalService {
 
     @Transactional
     public ApprovalRequest decide(DecideApprovalCommand command) {
+        if(delegation!=null) delegation.lock();
         Objects.requireNonNull(command, "command");
         Objects.requireNonNull(command.approvalRequestId(), "approvalRequestId");
         Objects.requireNonNull(command.decision(), "decision");
@@ -110,6 +114,7 @@ public class ApprovalService {
         ApprovalRequest current = approvals.find(command.approvalRequestId())
                 .orElseThrow(() -> new NoSuchElementException("approval request not found: " + command.approvalRequestId().value()));
         ApprovalStatus target = command.decision().terminalStatus();
+        if(delegation!=null) delegation.changing("APPROVAL:"+current.sourceTaskId().value());
         String actor = command.decidedBy().strip();
         String note = normalize(command.note());
 

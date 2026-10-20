@@ -28,6 +28,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkflowPlanService {
+    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation=boundary; }
+    private void humanChange(String id) { if(delegation!=null) delegation.changing("PLAN:"+id); }
     private me.asu.aidev.secretary.application.SecretaryPlanGate secretaryGate;
     @org.springframework.beans.factory.annotation.Autowired
     public void setSecretaryGate(me.asu.aidev.secretary.application.SecretaryPlanGate gate) { this.secretaryGate=gate; }
@@ -151,6 +155,7 @@ public class WorkflowPlanService {
     @Transactional
     public WorkflowPlan resumeReview(String id, String taskId, long planVersion, long taskVersion,
                                      String actor, String reason, boolean warningConfirmed) {
+        humanChange(id);
         secretaryAdmission(id);
         actor = actor(actor);
         if (reason == null || reason.isBlank() || reason.length() > 2000) {
@@ -186,6 +191,7 @@ public class WorkflowPlanService {
     @Transactional
     public ReviewRecovery reserveRepair(String id, String taskId, long planVersion, long taskVersion,
                                          String actor, String reason) {
+        humanChange(id);
         secretaryAdmission(id);
         actor = actor(actor);
         get(id);
@@ -206,6 +212,7 @@ public class WorkflowPlanService {
     @Transactional
     public java.util.Optional<TaskId> continueAuthorizedRepair(String id, String sourceReview, long planVersion,
             long taskVersion, String actor, String reason, String scope) {
+        humanChange(id);
         secretaryAdmission(id);
         get(id);
         lockedTasks(id);
@@ -235,6 +242,7 @@ public class WorkflowPlanService {
     @Transactional
     public WorkflowPlan retryFailedTask(String id, String taskId, long planVersion, long taskVersion,
                                         String actor, String reason, boolean warningConfirmed) {
+        humanChange(id);
         secretaryAdmission(id);
         actor = actor(actor);
         if (reason == null || reason.isBlank() || reason.length() > 2000) {
@@ -267,6 +275,7 @@ public class WorkflowPlanService {
         if (!tasks.retryFailed(task.id(), now)) {
             throw new IllegalStateException("Plan or task changed. Reload before retrying.");
         }
+        if(delegation!=null) delegation.allowHumanTask(task.id().value());
         tasks.recordControlEvent(UUID.randomUUID().toString(), task.id(), null,
                 "RETRY_FAILED", actor, reason.strip(), true, now);
         return get(id);
@@ -325,17 +334,20 @@ public class WorkflowPlanService {
 
     @Transactional
     public WorkflowPlan jump(String id, long version, int targetStep, String actor, String reason) {
+        humanChange(id);
         secretaryAdmission(id);
         return control(id, version, targetStep, actor, reason, false);
     }
 
     @Transactional
     public WorkflowPlan stop(String id, long version, String actor, String reason) {
+        humanChange(id);
         return control(id, version, null, actor, reason, false);
     }
 
     @Transactional
     public WorkflowPlan complete(String id, long version, String actor, String reason) {
+        humanChange(id);
         return control(id, version, null, actor, reason, true);
     }
 
@@ -421,6 +433,7 @@ public class WorkflowPlanService {
 
     @Transactional
     public WorkflowPlan clearStaleControl(String id, long version, String actor) {
+        humanChange(id);
         secretarySerialization(id);
         actor = actor(actor);
         WorkflowPlan plan = get(id);
@@ -493,6 +506,7 @@ public class WorkflowPlanService {
 
     @Transactional
     public WorkflowPlan confirm(String id, long version, String actor) {
+        humanChange(id);
         if(secretaryGate!=null) secretaryGate.initialConfirmation(id);
         actor = actor(actor);
         WorkflowPlan plan = get(id);
@@ -563,6 +577,7 @@ public class WorkflowPlanService {
                         + "\nExecute this step and address its acceptance criteria:\n" + questionContext(step.instruction(), plan.id()) + feedback + authorization,
                 step.repositoryRef(), revision, TaskPriority.NORMAL, dependencies));
         plans.savePreferences(id, step.preferredSkills());
+        if(delegation!=null) delegation.allowHumanTask(id.value());
     }
 
     private String revisionFor(WorkflowPlan plan, int stepIndex, int attempt) {
@@ -646,6 +661,7 @@ public class WorkflowPlanService {
 
     @Transactional
     public WorkflowPlan withdraw(String id, long version, String actor, String reason) {
+        humanChange(id);
         return withdraw(id, version, actor, reason, false);
     }
 

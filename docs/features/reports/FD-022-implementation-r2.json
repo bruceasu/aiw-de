@@ -1,0 +1,20 @@
+{
+  "schema":"aiw.fd.evidence.v1",
+  "kind":"worker-report",
+  "fd_id":"FD-022",
+  "source_event":"FD-022-000005-changes-requested",
+  "human_report":"FD-022-implementation-r2.md",
+  "data":{
+    "worker_session":"01a15a47-fc32-7362-ac13-f660487b7632",
+    "implementation_commit":"9306b35",
+    "prior_report":"FD-022-implementation.md",
+    "addressed_findings":["R1 fixed publication task-attempt admission and stable cumulative baseline", "R2 historical execution/review independence in claim/start and approval", "R3 shared state/round applicability with human conflict evidence"],
+    "review_outcomes_so_far":1,
+    "requested_review_number":2,
+    "compile":{"command":"JAVA_HOME=D:/green/jdk-25.0.1+8 D:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests=true -Dmaven.test.skip=true compile", "result":"passed", "production_sources":260},
+    "static_check":"git diff --check passed; scoped repair diff reviewed",
+    "checks_not_run":["tests","service startup","migration","HTTP/browser","real model","network","deployment"],
+    "residual_risks":["database dialect migration not exercised", "actual lock contention and multi-instance recovery unverified", "publication side effects unverified"],
+    "next_action":"independent fd-review"
+  }
+}

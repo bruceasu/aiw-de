@@ -1,0 +1,23 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-022",
+  "source_event": "FD-022-000003-design-ready",
+  "markdown": "FD-022-design-review-auth.md",
+  "artifact": "docs/features/FD-022_WORKER.md",
+  "recommendation": "changes-needed",
+  "scope": "用户已确认的旧管理写入认证兼容增量，不是全 FD 实现验收",
+  "findings": [
+    {"id":"AUTH1","severity":"high","blocking":true,"location":"DelegationManagementMvc.addPathPatterns; WebConsoleSecurityInterceptor; WebConsoleSecurityService.authenticated/role","finding":"持久认证只覆盖 /api；认证配置关闭后 /ui 管理写入仍允许匿名 local ADMIN。","action":"flag 开启后全部管理入口 fail-closed，或禁止认证配置关闭时启动管理服务。"},
+    {"id":"AUTH2","severity":"medium","blocking":true,"location":"DelegationManagementMvc.preHandle/machine","finding":"原始 requestURI 在 context path 部署下使审批从 APPROVER 降为 OPERATOR，同时机器白名单失配。","action":"使用应用相对规范路径或 HandlerMethod 路由元数据分类。","condition":"非空 servlet context path"},
+    {"id":"AUTH3","severity":"high","blocking":true,"location":"DelegationManagementMvc.preHandle; DelegationIdentityService.enabled; ApprovalService.decide","finding":"匿名请求可在首次启用提交前读取旧 flag，通过拦截后等待业务锁，再在启用提交后未复核认证而决定审批。","action":"取得激活共享锁后复核持久认证状态及可信人工上下文，覆盖所有管理写入并保留机器/内部可信上下文边界。"}
+  ],
+  "human_decisions_required": [],
+  "identity_fields_reviewed": ["ApprovalRequestBody.requestedBy", "DecisionBody.decidedBy", "FleetSchedulingRequest.controlledBy"],
+  "validation": {
+    "mode": "bounded-static-design-delta-review",
+    "commands": ["Get-Content", "rg", "Select-Object", "Select-String", "apply_patch", "ConvertFrom-Json"],
+    "not_run": ["tests", "compile", "network", "HTTP requests", "migration", "workflow commands"]
+  },
+  "limitations": ["并发时序和 context path 行为是静态推导，未运行复现。", "仅新增评审证据，不修改实现/状态，不产生实现 Reviewer verdict。"]
+}

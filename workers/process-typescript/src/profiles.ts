@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import * as toml from "@iarna/toml";
 
 export const ROLE_FILES = {
+  "decision-delegate": "decision-delegate",
   secretary: "secretary",
   "plan-coordinator": "plan-coordinator",
   "goal-discussion": "goal-discussion",
@@ -85,7 +86,7 @@ export function assertExecutableRole(role: string): void {
 export const ROLE_CAPABILITIES = new Set(["secretary-chat", "plan-coordination", "goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "workflow-recovery-decision", "release-readiness", "development-orchestration"]);
 export function assertRoleCapabilities(capabilities: Iterable<string>, _profile: ProcessProfile): void {
   for (const capability of capabilities) {
-    if (capability === "*" || capability === "flexible-work-v1" || capability.startsWith("repo:") || ROLE_CAPABILITIES.has(capability)) {
+    if (capability === "*" || capability === "delegated-decision" || capability === "flexible-work-v1" || capability.startsWith("repo:") || ROLE_CAPABILITIES.has(capability)) {
       throw new Error("ROLE_CAPABILITY_DENIED");
     }
   }

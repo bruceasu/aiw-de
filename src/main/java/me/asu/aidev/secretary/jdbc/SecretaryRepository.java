@@ -94,8 +94,16 @@ public class SecretaryRepository {
         Integer n=jdbc.queryForObject("SELECT COUNT(*) FROM work_task WHERE id=? AND attempt_no>0 AND state='READY'",Integer.class,task);
         return n!=null && n>0;
     }
+    public boolean delegatedRetry(String task) {
+        Long count=jdbc.queryForObject("SELECT COUNT(*) FROM delegation_task d JOIN work_task t ON t.id=d.task_id WHERE d.task_id=? AND d.allowed_attempt>t.attempt_no",Long.class,task);
+        return count!=null && count>0;
+    }
     public void admit(String task,Work w) {
         jdbc.update("INSERT INTO secretary_admitted_task VALUES (?,?,?) ON CONFLICT(task_id) DO NOTHING",task,w.id(),w.generation());
+    }
+    public void readmit(String task,Work w) {
+        jdbc.update("INSERT INTO secretary_admitted_task VALUES (?,?,?) ON CONFLICT(task_id) DO UPDATE SET work_id=excluded.work_id,generation=excluded.generation",
+                task,w.id(),w.generation());
     }
     public boolean admitted(String task,Work w) {
         Integer n=jdbc.queryForObject("SELECT COUNT(*) FROM secretary_admitted_task WHERE task_id=? AND work_id=? AND generation=?",Integer.class,task,w.id(),w.generation());

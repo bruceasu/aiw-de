@@ -26,7 +26,7 @@ public class WorkerProtocolTokenFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return configuredToken.isEmpty() || !request.getRequestURI().startsWith(PREFIX);
+        return configuredToken.isEmpty() || !request.getRequestURI().substring(request.getContextPath().length()).startsWith(PREFIX);
     }
 
     @Override

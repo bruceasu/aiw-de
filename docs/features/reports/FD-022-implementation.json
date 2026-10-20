@@ -1,0 +1,100 @@
+{
+    "schema":  "aiw.fd.evidence.v1",
+    "kind":  "worker-report",
+    "fd_id":  "FD-022",
+    "source_event":  "FD-022-000003-design-ready",
+    "human_report":  "FD-022-implementation.md",
+    "data":  {
+                 "schema":  "aiw.fd.evidence.v1",
+                 "kind":  "worker-report",
+                 "fd_id":  "FD-022",
+                 "source_event":  "FD-022-000003-design-ready",
+                 "session_ref":  "01a15a47-fc32-7362-ac13-f660487b7632",
+                 "markdown":  "FD-022-implementation.md",
+                 "implementation_commit":  "2f10fcd",
+                 "base_commit":  "375ee82",
+                 "implemented_items":  [
+                                           "1.1",
+                                           "1.2",
+                                           "1.3",
+                                           "1.4",
+                                           "1.5",
+                                           "1.6",
+                                           "1.7",
+                                           "1.8",
+                                           "1.9",
+                                           "2.1",
+                                           "2.2",
+                                           "2.3",
+                                           "2.4",
+                                           "3.1",
+                                           "3.2",
+                                           "3.3",
+                                           "3.4",
+                                           "3.5",
+                                           "3.6",
+                                           "3.7",
+                                           "3.8",
+                                           "4.1",
+                                           "4.2",
+                                           "4.3",
+                                           "4.4",
+                                           "5.1",
+                                           "5.2",
+                                           "5.3",
+                                           "5.4",
+                                           "5.5"
+                                       ],
+                 "cancelled_lifecycle_items":  [
+                                                   "5.6"
+                                               ],
+                 "pending_pm_lifecycle":  [
+                                              "independent review",
+                                              "local delivery",
+                                              "cleanup",
+                                              "archive"
+                                          ],
+                 "results":  [
+                                 {
+                                     "check":  "offline production Java 25 compile",
+                                     "result":  "passed",
+                                     "source_files":  259
+                                 },
+                                 {
+                                     "check":  "TypeScript in-memory syntax compilation",
+                                     "result":  "passed",
+                                     "limitation":  "no dependency/type validation"
+                                 },
+                                 {
+                                     "check":  "delegation.js and runtime-core/attempt.mjs node --check",
+                                     "result":  "passed"
+                                 },
+                                 {
+                                     "check":  "git diff --check develop",
+                                     "result":  "passed"
+                                 }
+                             ],
+                 "command_entry_corrections":  [
+                                                   "mvn missing from PATH; used installed Maven with JDK25",
+                                                   "runtime-core/attempt.mjs path corrected to workers/process-typescript/runtime-core/attempt.mjs"
+                                               ],
+                 "not_run":  [
+                                 "tests",
+                                 "service startup",
+                                 "HTTP/browser checks",
+                                 "database migration",
+                                 "lint",
+                                 "typecheck",
+                                 "final build",
+                                 "network",
+                                 "deployment"
+                             ],
+                 "risks":  [
+                               "Runtime wiring and database dialect migration unverified",
+                               "Concurrent activation and multi-instance recovery unverified",
+                               "Worker/model and publication side effects unverified",
+                               "Approved legacy management API authentication compatibility change"
+                           ],
+                 "next_action":  "independent fd-review"
+             }
+}

@@ -13,6 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkflowPlanArchiveService {
+    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation=boundary; }
     private me.asu.aidev.secretary.application.SecretaryPlanGate secretaryGate;
     @org.springframework.beans.factory.annotation.Autowired
     public void setSecretaryGate(me.asu.aidev.secretary.application.SecretaryPlanGate gate) { this.secretaryGate=gate; }
@@ -55,6 +58,7 @@ public class WorkflowPlanArchiveService {
 
     @Transactional
     public void archive(String id, String actor) {
+        if(delegation!=null) delegation.changing("PLAN:"+id);
         secretarySerialization(id);
         if (!archivable(id)) throw new IllegalStateException("only finished plans can be archived");
         if (!archives.archive(id, actor, Instant.now())) throw new IllegalStateException("plan is already archived");
@@ -62,6 +66,7 @@ public class WorkflowPlanArchiveService {
 
     @Transactional
     public void scheduleDeletion(String id, String actor) {
+        if(delegation!=null) delegation.changing("PLAN:"+id);
         secretarySerialization(id);
         Instant now = Instant.now();
         if (!archives.scheduleDeletion(id, actor, now, now.plus(DELETE_DELAY))) {
@@ -71,6 +76,7 @@ public class WorkflowPlanArchiveService {
 
     @Transactional
     public void undoDeletion(String id) {
+        if(delegation!=null) delegation.changing("PLAN:"+id);
         secretarySerialization(id);
         if (!archives.undoDeletion(id, Instant.now())) {
             throw new IllegalStateException("plan has no pending deletion or the 30-day period expired");
