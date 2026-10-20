@@ -6,7 +6,7 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
-| - | - | - | - |
+| [FD-021](FD-021_AI_SECRETARY.md) | AI Secretary：通用工作安排、持久调度与结果跟踪 | Open | Medium |
 
 ## Completed
 

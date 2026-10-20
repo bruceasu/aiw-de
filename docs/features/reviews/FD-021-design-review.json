@@ -1,0 +1,54 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-021",
+  "source_event": "FD-021-000002-design-requested",
+  "artifact": "docs/features/FD-021_AI_SECRETARY.md",
+  "revision": 2,
+  "recommendation": "ready",
+  "initial_recommendation": "changes-needed",
+  "findings": [
+    {
+      "id": "D1",
+      "severity": "high",
+      "blocking": false,
+      "resolution": "设计修订已加入集中托管 gate 及精确 Plan 服务端 scope；原 finding 保留为历史，实施仍须验证所有入口。",
+      "location": "FD-021 Solution / Work Item 1.4; WorkflowPlanService.confirm, jump, retryFailedTask, resumeReview, continueAuthorizedRepair",
+      "finding": "旧 Plan 写入口未纳入秘书托管控制，可提前启动或绕过取消与独立协调。",
+      "action": "定义托管 Plan 的统一写入口 gate，拒绝原 confirm 直接启动；逐一限定会创建/重开任务的旧控制入口，保留未托管 Plan 语义，内部推进仍需同一秘书锁、版本与授权校验。"
+    },
+    {
+      "id": "D2",
+      "severity": "high",
+      "blocking": false,
+      "resolution": "设计修订选用单机全局 secretary_lock，start policy 前移，取消仅写秘书事实，RUNNING 终态继续上报；实施按统一锁序及协调唯一键落实。",
+      "location": "FD-021 Solution / Work Items 1.1, 1.3, 1.4; TaskClaimService.claimNext; TaskExecutionService.complete",
+      "finding": "同一秘书记录锁的描述未明确领取持锁至提交及完成路径的交叉锁顺序，也未给出协调唯一请求和原子消费约束。",
+      "action": "明确领取事务的持锁/再校验和身份预留，统一完成、取消、调度及消费的写锁顺序或使用无交叉锁 CAS 模型；为 Plan 关联及 revision+源事件协调请求建唯一约束；消费 CAS 与创建下一任务同事务。允许取消后的在途 complete/fail 记账及释放资源。"
+    }
+  ],
+  "follow_up": {
+    "scope": "仅复核 FD Solution 新增 D1/D2 三段及 TaskExecutionPolicy/TaskExecutionService 实际检查顺序",
+    "recommendation": "ready",
+    "resolved_findings": ["D1", "D2"],
+    "confirmed_final_constraints": ["FD 明确逻辑取消，不更新旧 READY 任务。", "FD 明确 reviseInstruction/forceRequeue gate 在 tasks.lock 前。", "FD 明确 UNIQUE(work_id, revision, phase)，phase 为 START 或源 task ID。", "FD 明确 start 检查前移后重读任务状态。"],
+    "implementation_checkpoints": [
+      "reviseInstruction/forceRequeue gate 在 tasks.lock 前；所有需秘书锁的入口遵循全局互斥行先行。",
+      "取消为秘书事实的逻辑取消，保留 READY，禁止 claim/start；不得反向更新旧任务。",
+      "协调唯一键覆盖 secretary ID + revision + source task/phase；消费 CAS 与下一任务创建同事务。",
+      "RUNNING complete/fail 继续记录与释放资源，取消状态的 completion 不推进。",
+      "实现与最终独立评审核对事务代理、旧 stop/acknowledgeStop、锁序及数据库 SQL 兼容性。"
+    ],
+    "limitations": ["仅设计就绪，不是实现验收或运行验证通过。", "不扩展设计评审轮次。"]
+  },
+  "validation": {
+    "mode": "local-static-review",
+    "commands": ["Get-Content", "rg", "Select-Object", "ConvertFrom-Json", "apply_patch"],
+    "not_run": ["tests", "compile", "migration", "service startup", "worker execution", "browser", "network", "verification scripts"]
+  },
+  "limitations": [
+    "仅静态设计评审，实现尚未存在。",
+    "未修改实现、状态或 receipt，未 commit 或委派。",
+    "本报告不是实现验证通过凭证。"
+  ]
+}

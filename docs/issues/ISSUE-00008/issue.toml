@@ -1,17 +1,17 @@
 id = "ISSUE-00008"
 title = "AI Secretary：通用工作安排、持久调度与结果跟踪"
 parent_id = ""
-status = "DECIDED"
+status = "APPROVED"
 created = "2026-10-21"
 updated = "2026-10-21"
-revision = 4
+revision = 6
 
 [approval]
-status = "PENDING"
-by = ""
-at = ""
-reason = ""
-source_digest = ""
+status = "APPROVED"
+by = "user"
+at = "2026-10-21T01:34:28+09:00"
+reason = "User explicitly approved A+B, a separate Plan coordinator Worker, and console feedback with user-initiated analysis on 2026-10-21."
+source_digest = "7530762ab5f2e5b1be7fe4824cb17ea86aefa32d50ca66f7bf06d8391966011f"
 
 [promotion]
 status = "NOT_STARTED"
@@ -29,4 +29,4 @@ reason = ""
 requirement-plan = "docs/issues/ISSUE-00008/issue-plan.md"
 
 [digest]
-requirement-plan = "3489c50b6826fd62195f6103cf7dbf6adb0e4797e552129ddd0ca286cfadaa21"
+requirement-plan = "c97bc2d7b291a4c2a60abb1480b3df17e53e18ee406ee6fb67819e58295c003e"
