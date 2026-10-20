@@ -1,0 +1,15 @@
+{
+  "schema":"aiw.fd.evidence.v1", "kind":"delivery-report", "fd_id":"FD-023",
+  "source_event":"FD-023-000009-verification-passed", "human_report":"FD-023-delivery.md",
+  "data":{
+    "role":"pm", "status":"local-delivery-and-archive-complete", "parent":"develop",
+    "review_outcomes":3, "last_review":"verification-passed", "recovery_commit":"480edca", "squash_commit":"6ef25e3",
+    "fd_source":"480edcae4ddcb1c41333cde006528d6535cdc166",
+    "worktree_removed":true, "feature_branch_removed":true, "receipts_retained":true,
+    "archive":"docs/features/archive/FD-023/FD-023_API_API_R1.md", "source_changed_during_recovery":false,
+    "gate_status":"workflow, documentation and delivery resolved; rejected optional example check retained as unrun limitation",
+    "checks_passed":["Java25 offline production compile 261 files", "compile-worker-runtime", "demo Go to NUL", "changed JS/Python/TS syntax", "static diff", "independent implementation review"],
+    "checks_not_run":["tests","real Spring/browser/Worker/HTTP integration","network","install","final package","push","deployment","automatically rejected standalone Java example compile/cleanup"],
+    "remaining_risks":["external clients must update URLs", "actual routing/authentication interactions unverified", "standalone Java example compile not run"]
+  }
+}

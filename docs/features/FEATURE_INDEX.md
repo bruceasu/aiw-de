@@ -12,7 +12,6 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
-| [FD-023](FD-023_API_API_R1.md) | 所有控制平面 API 统一使用 /api/r1 | Complete | Medium |
 | [FD-001](archive/FD-001/FD-001_MISSION_CONTROL_OVERVIEW_AND_SHARED_VISUAL_FOUND.md) | Mission Control Overview and Shared Visual Foundation | Complete | Medium |
 | [FD-003](archive/FD-003/FD-003_WORKER_FLEET_AND_SCHEDULING_EXPERIENCE.md) | Worker Fleet and Scheduling Experience | Complete | Medium |
 | [FD-004](archive/FD-004/FD-004_APPROVAL_AND_ENGINEERING_EVIDENCE.md) | Approval and Engineering Evidence | Complete | Medium |
@@ -32,6 +31,7 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 | [FD-020](archive/FD-020/FD-020_FEATURE.md) | 三语言目标讨论角色与后端能力对齐 | Complete | Medium |
 | [FD-021](archive/FD-021/FD-021_AI_SECRETARY.md) | ﻿# FD-021: AI Secretary：通用工作安排、持久调度与结果跟踪 | Complete | Medium |
 | [FD-022](archive/FD-022/FD-022_WORKER.md) | 有限授权的代理决策 Worker：可编辑授权、人工启停、授权查看与模板复用 | Complete | Medium |
+| [FD-023](archive/FD-023/FD-023_API_API_R1.md) | 所有控制平面 API 统一使用 /api/r1 | Complete | Medium |
 
 ## Deferred / Closed
 

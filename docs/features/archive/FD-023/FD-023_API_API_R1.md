@@ -59,8 +59,10 @@
 
 ## TODO
 
-全部实现项完成；独立设计D1及实现评审R1均已解决，第3轮独立实现评审通过。主PM继续既定本地交付、清理及Complete归档；这些动作尚未由Reviewer执行。实际路由/认证集成、非空context path端到端和Java示例独立编译仍未验证，未推送或部署。
+全部实现项完成；独立设计D1及实现评审R1均已解决，第3轮独立实现评审通过。PM已将 `480edca` 本地交付至 develop，squash提交 `6ef25e3`；CLI已清理隔离分支和worktree并保留receipts，Complete归档成功。恢复仅保留用户独立Issue归档和已评审计划，没有源码或验收漂移。实际路由/认证集成、非空context path端到端和Java示例独立编译仍未验证，未推送或部署。详见 `reports/FD-023-delivery.md`。
 
 ## Sources
 
 - 用户2026-10-21指令：目前api都属于r1，把其他路径统一到 `/api/r1/...`。
+
+**Completed:** 2026-10-20
