@@ -1,10 +1,10 @@
 id = "ISSUE-00008"
 title = "AI Secretary：通用工作安排、持久调度与结果跟踪"
 parent_id = ""
-status = "APPROVED"
+status = "ARCHIVED"
 created = "2026-10-21"
 updated = "2026-10-21"
-revision = 6
+revision = 7
 
 [approval]
 status = "APPROVED"
@@ -21,9 +21,9 @@ task_id = ""
 session_id = ""
 
 [terminal]
-by = ""
-at = ""
-reason = ""
+by = "LAPTOP-P8VM6T16\\suk"
+at = "2026-10-21T02:06:46+09:00"
+reason = "Done"
 
 [artifact]
 requirement-plan = "docs/issues/ISSUE-00008/issue-plan.md"
