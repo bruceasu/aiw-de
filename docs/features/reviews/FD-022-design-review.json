@@ -1,0 +1,27 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-022",
+  "source_event": "FD-022-000002-design-requested",
+  "markdown": "FD-022-design-review.md",
+  "artifact": "docs/features/FD-022_WORKER.md",
+  "revision": 2,
+  "planner_session": "01a15a47-fc32-7362-ac13-f660487b7632",
+  "recommendation": "changes-needed",
+  "findings": [
+    {"id":"D1","severity":"high","blocking":true,"location":"Solution 8; WorkflowRepairAuthorizationService.authorize/consume/decide","finding":"新旧授权未定义目标纳入、旧在途及累计历史的闭合边界。","action":"明确纳入前旧 PENDING/在途策略、历史消耗基线和纳入后所有旧入口的统一检查；保持兼容承诺一致。","decision_owner":"planner"},
+    {"id":"D2","severity":"high","blocking":true,"location":"Solution 1; WorkerProtocolTokenFilter; WorkerProtocolV1Controller; WorkerService.register","finding":"仅新入口认证不能保护可由普通协议自报的专用 Worker ID 和参与历史。","action":"保留并保护专用 ID；旧协议涉及该 ID 时逐身份认证或拒绝，保留历史参与，缺少独立性证据转人工。","decision_owner":"planner"},
+    {"id":"D3","severity":"high","blocking":true,"location":"Solution 5; SecretaryPlanGate; SecretaryCoordinator.completed; WorkflowPlanService.reserveRepair/continueAuthorizedRepair","finding":"未定义代理合法通过秘书托管 admission 并维护协调快照的方式。","action":"定义 bounded admission、协调和取消约束、快照更新及事务 owner；禁止任意 gate.advance 绕过。","decision_owner":"planner"},
+    {"id":"D4","severity":"high","blocking":true,"location":"Solution 3/6","finding":"同事务校验未给出人工与代理共享的串行化和锁序。","action":"确定并核对统一锁序、人工入口 generation/锁、提交线性化、原子记账及失败审计持久化。","decision_owner":"planner"},
+    {"id":"D5","severity":"high","blocking":true,"location":"Solution 4/5; TaskOutputService.publication","finding":"普通 confirm 等路径的 A12_EXECUTE 防绕过及跨 Plan 稳定目标键未定义。","action":"绑定发布源/哈希/证据/目标/版本，所有代理启动路径检查独立 EXECUTE 权限，明确 A12-A17 稳定额度目标。","decision_owner":"planner"},
+    {"id":"D6","severity":"medium","blocking":true,"location":"Work items; Acceptance","finding":"缺少工作项规模难度依赖完成标准和 30 例实际映射，多项混合多个独立成果。","action":"实施前拆分，落实实际 Worker loop/runtime、自然语言草稿流程，映射全部动作和 30 例验收。","decision_owner":"planner"}
+  ],
+  "human_decisions_required": [],
+  "engineering_choices": ["旧授权目标纳入及历史账本","专用身份与普通协议兼容","秘书 bounded admission","事务与锁序","发布与非步骤稳定身份","工作项拆分及证据映射"],
+  "validation": {
+    "mode": "local-static-review",
+    "commands": ["Get-Content", "Get-ChildItem", "Select-Object", "Select-String", "rg", "apply_patch"],
+    "not_run": ["tests", "compile", "migration", "service startup", "worker execution", "browser", "network", "workflow commands"]
+  },
+  "limitations": ["结论针对设计 Revision 2；不代表实现验证通过。", "未修改源码、FD 或工作流状态，未 emit Reviewer 事件。", "后续 Planner 拟议修订未在本报告中视为已落盘或已解决。"]
+}

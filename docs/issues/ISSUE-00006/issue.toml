@@ -1,17 +1,17 @@
 id = "ISSUE-00006"
 title = "有限授权的代理决策 Worker：可编辑授权、人工启停、授权查看与模板复用"
 parent_id = ""
-status = "DECIDED"
+status = "APPROVED"
 created = "2026-10-16"
 updated = "2026-10-21"
-revision = 16
+revision = 17
 
 [approval]
-status = "PENDING"
-by = ""
-at = ""
-reason = ""
-source_digest = ""
+status = "APPROVED"
+by = "user"
+at = "2026-10-21T02:09:01+09:00"
+reason = "User explicitly approved ISSUE-00006 and requested promotion and full FD auto implementation on 2026-10-21; engineering safety and compatibility gates remain required."
+source_digest = "6606fe494e78cb2ac4ce1bea28710ce847e9bcd803fe1090dd26a2e2a7fd9aab"
 
 [promotion]
 status = "NOT_STARTED"

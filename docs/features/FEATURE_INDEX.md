@@ -6,7 +6,7 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
-| - | - | - | - |
+| [FD-022](FD-022_WORKER.md) | 有限授权的代理决策 Worker：可编辑授权、人工启停、授权查看与模板复用 | Open | Medium |
 
 ## Completed
 

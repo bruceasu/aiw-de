@@ -35,12 +35,12 @@ Python 与 TypeScript 的 AI 生态对比
 
 
 
-# HANDOFF — AI Dev Manager R10
+# HANDOFF — AIW:DE
 ## Worker Runtime Reliability & Process Isolation
 
 **Status:** Design approved, implementation pending  
-**Baseline:** R9 Web Console Fix1 (Accepted / Frozen)  
-**Target:** R10 Worker Runtime Hardening  
+**Baseline:** commit id: d3c92ac
+**Target:** Worker Runtime Hardening  
 **Date:** 2026-10-21  
 **Primary language:** Java 21 (Control Plane), Python / Go / TypeScript (Workers)
 
@@ -48,7 +48,7 @@ Python 与 TypeScript 的 AI 生态对比
 
 # 1. Current Objective
 
-Continue the AI Dev Manager project from the accepted R9 baseline.
+Continue the AIW:DE project from the accepted baseline.
 
 The immediate objective is to improve the reliability, cancellation handling, process isolation, and recovery behavior of the existing Worker implementations.
 

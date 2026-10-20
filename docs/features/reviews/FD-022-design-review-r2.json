@@ -1,0 +1,32 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-022",
+  "source_event": "FD-022-000002-design-requested",
+  "markdown": "FD-022-design-review-r2.md",
+  "artifact": "docs/features/FD-022_WORKER.md",
+  "revision": 2,
+  "recommendation": "ready",
+  "initial_recommendation": "changes-needed",
+  "scope": "仅首轮 D1-D6 实质修订的有界复核",
+  "resolved_findings": ["D1", "D2", "D3", "D4", "D5", "D6"],
+  "findings": [
+    {
+      "id": "D4",
+      "severity": "high",
+      "blocking": false,
+      "location": "FD 具体接入方案；TaskExecutionService.complete；SecretaryCoordinator.completed START；WorkflowRepairAuthorizationService.consume",
+      "finding": "普通完成/V4 consume 不获取新锁与 confirm/repair 服务入口统一获取新锁矛盾；旧内部调用会在已有 task/secretary/plan 锁后间接取得 delegation_lock。",
+      "action": "明确可信内部无新锁 continuation 与外部加锁包装入口，或延后相关 continuation 到独立事务；核对全部间接调用，不允许客户端设置绕过上下文。",
+      "resolution": "已定向核实 FD：仅 SecretaryCoordinator.completed START→confirm 及 V4 consume→continueAuthorizedRepair 两个可信内部 continuation 使用 legacyCompletion scope，不获取新锁或标人工接管；其余入口先取新锁。纳入排除旧 pending/在途修复及秘书在途协调并在原锁下复核。",
+      "decision_owner": "planner"
+    }
+  ],
+  "human_decisions_required": [],
+  "validation": {
+    "mode": "bounded-local-static-recheck",
+    "commands": ["Get-Content", "rg", "Select-Object", "Select-String", "ConvertFrom-Json", "apply_patch"],
+    "not_run": ["tests", "compile", "network", "migration", "workflow commands", "runtime concurrency"]
+  },
+  "limitations": ["不是实现验收或 verification-passed 凭证。", "仅新增本轮评审证据，不修改实现、FD 或工作流状态。"]
+}
