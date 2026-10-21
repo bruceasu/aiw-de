@@ -6,7 +6,7 @@ FD 文件是设计与进度的主记录；本索引可由 `aiw fd` 重建。
 
 | FD | Title | Status | Priority |
 | --- | --- | --- | --- |
-| [FD-024](FD-024_WORKER.md) | 个人秘书 Worker 独立实现、私有数据库与平台授权边界拆分 | Design | Medium |
+| [FD-024](FD-024_WORKER.md) | 个人秘书 Worker 独立实现、私有数据库与平台授权边界拆分 | Open | Medium |
 
 ## Completed
 
