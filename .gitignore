@@ -16,3 +16,4 @@ replay_pid*.log
 *.zip
 /patches/
 .aidev-attempt-evidence/
+__pycache__/
