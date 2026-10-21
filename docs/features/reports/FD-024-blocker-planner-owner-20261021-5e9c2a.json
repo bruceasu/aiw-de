@@ -1,0 +1,26 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-024",
+  "source_event": "FD-024-000002-design-requested",
+  "human_report": "FD-024-blocker-planner-owner-20261021-5e9c2a.md",
+  "data": {
+    "stage": "preflight",
+    "role": "pm",
+    "status": "unresolved",
+    "recorded_at": "2026-10-21T21:15:06+09:00",
+    "session_ref": "01a15e5f-d79d-73e0-bb3b-480e76aa474c",
+    "owner_session_ref": "01a15a47-fc32-7362-ac13-f660487b7632",
+    "symptoms": ["Design revision 2 has a dispatched Planner event owned by another session", "G1, G2 and G3 remain unresolved"],
+    "confirmed_causes": ["The latest receipt remains dispatched to the prior Planner session", "The skill prohibits takeover of a foreign claim"],
+    "unknowns": ["Why the prior design session did not release its handoff", "Whether the original Agent is still running"],
+    "attempts": ["Read FD, receipt and existing design-review evidence", "Ran aiw fd show and resume; resume instructed inspection of the original session", "Read the original local rollout tail and its final design-only response", "Read fd, cancel-event and emit help; no recovery mutation attempted"],
+    "human_decision_required": true,
+    "human_decision": "Continue in the original session, or explicitly authorize cancellation of the exact dispatched Planner event and a new design request",
+    "next_step": "Reconcile Planner ownership first, then refine Work Items 1.1-1.4 and G2/G3; obtain actual environment decisions separately for G1",
+    "risks": ["Concurrent ownership or incorrect role provenance", "Implementing unresolved security and persistence contracts", "Guessing migration ownership or rollout policy"],
+    "reusable_improvement": ["Define managed recovery for a completed but unreleased Planner session through separately reviewed scope", "Restore the missing blocker feedback templates"],
+    "template_status": "Required Markdown and JSON templates absent; used existing blocker format and skill-required fields",
+    "not_run": ["tests", "compile", "build", "network", "migration", "subagents", "claim", "cancel-event", "emit", "merge", "archive"]
+  }
+}
