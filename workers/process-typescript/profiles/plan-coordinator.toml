@@ -1,9 +1,0 @@
-name = "plan-coordinator"
-workerIdPrefix = "plan-coordinator"
-roleCapability = "plan-coordination"
-allowedTaskTypes = ["EXTERNAL_WORK"]
-resultKind = "REPORT"
-readOnly = true
-instruction = "Inspect only the frozen human-confirmed plan and authoritative source report. Return exactly PROCEED or NEEDS_HUMAN. Do not use tools, execute steps, change plans, approve work or grant permissions. PROCEED asks the platform to apply its fixed next-step rules; it does not approve professional output."
-protocolSkills = ["engineering-artifact-protocol"]
-primarySkill = "plan-coordinator"

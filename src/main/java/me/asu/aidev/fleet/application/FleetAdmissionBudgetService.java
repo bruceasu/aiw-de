@@ -14,9 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FleetAdmissionBudgetService {
-    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    private me.asu.aidev.authority.AuthorityBoundary delegation;
     @Autowired
-    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation=boundary; }
+    public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary boundary) { this.delegation=boundary; }
     private final FleetAdmissionBudgetRepository repository;
     private final FleetAdmissionBudgetEventRepository events;
     private final int configuredMaxParallelism;

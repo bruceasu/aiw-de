@@ -1,112 +1,34 @@
+# Personal decisions and platform action authority
+
 ## Purpose
 
-Define bounded, human-controlled secretary delegation. Design owner: FD-022;
-approved business source: ISSUE-00006. This specification states required
-behavior; its presence does not establish implementation or runtime success.
+FD-024 moves private decision business into a user-owned Worker. The platform retains minimal effective capabilities, prohibitions, cumulative consumption, fixed attempts, receipts and execution audit. It does not retain new private policy originals or reasoning.
 
 ## Requirements
 
-### Requirement: Authenticated, disabled-by-default identity
-Only a human-enrolled, authenticated delegate Worker SHALL act for an identified
-grant owner. Dedicated identity SHALL be checked separately from action authority.
-Ordinary registration, capabilities, actor text and a shared protocol token SHALL
-NOT establish a delegate identity. Reserved delegate identities SHALL also be
-protected on ordinary Worker protocol writes. Restart, registration and heartbeat
-SHALL NOT enable delegation. Credential rotation SHALL invalidate old candidates.
+### Requirement: Closed minimal capabilities
+Human-confirmed capabilities SHALL bind one owner, enrolled Worker, exact target/action/step, fixed business parameters, states, conditions, total ceiling, version and expiry. Every execution SHALL recheck current human role and identity generation. A11 requires approval authority, A17 administration authority, and other actions operation authority. Model text and private database edits SHALL NOT issue or expand capabilities.
 
-#### Scenario: Ordinary Worker impersonates a delegate
-- WHEN a Worker submits a reserved identity without its dedicated credential
-- THEN registration, claim and decision submission SHALL be rejected
+### Requirement: Effective prohibition before private activation
+Private prohibitions SHALL be projected only as necessary target/action/condition fields and a salted private revision digest. Machine updates may only narrow their explicit target scope, pause it and advance its restriction generation. Applicable prohibitions SHALL defeat ALLOW regardless of grant replacement. Removing an exact prohibition or expanding a ceiling SHALL require a current authorized human. A private write failure after narrowing SHALL leave the platform paused; a private backup SHALL NOT roll back platform restrictions.
 
-### Requirement: Explicit versioned authority
-Each enabled grant SHALL identify its owner, delegate, stable target, actions,
-conditions, limits and expiry. The system SHALL retain the original text and
-the confirmed structured version. Natural language and model output SHALL only
-produce drafts; ambiguous or unconfirmed fields SHALL NOT grant authority.
-All applicable prohibitions SHALL take precedence unless a later human-confirmed
-rule explicitly replaces the applicable prohibition version. The server SHALL
-record effective times and replacement relationships.
+### Requirement: Durable request identity and receipts
+The deduplication identity SHALL be persistent platform instance plus stable owner plus requestId, independent of Worker, grant, credential or boot. The canonical digest SHALL cover business input, not replaceable authority identity. The same key and digest returns its original receipt with no new execution or debit; conflicting content is rejected. Read permission SHALL be checked separately from execution, including after revocation and for a replacement Worker. Stable target references, request tombstones, budgets and execution facts SHALL remain durable; restoration with missing deduplication history requires a separate human recovery decision.
 
-#### Scenario: A later allow does not replace a prohibition
-- WHEN an applicable allow lacks an explicit replacement of an applicable deny
-- THEN the request SHALL remain for human handling
+### Requirement: Complete fixed action vocabulary
+The platform SHALL preserve all twenty existing subactions: A01, A02, A03, A04, A05, A06, A07, A08, A09, A10, A11_APPROVE, A11_REJECT, A12_CREATE, A12_EXECUTE, A13, A14, A15, A16, A17_SCHEDULE and A17_UNDO. Each adapter SHALL retain the original business service's state/version Gates and its independent cumulative ledger. Execution rounds, technical retries and review-only recovery SHALL not share consumption counters. Templates, new grants and replacement Workers SHALL not reset history.
 
-### Requirement: Current authority and human priority
-Before effects, the server SHALL recheck authenticated identity, human enablement,
-current owner permissions, unexpired rule versions, target state and remaining
-budgets. Human actions and delegate commits SHALL share a defined serialization
-boundary. A completed human takeover SHALL invalidate earlier candidates;
-reenablement SHALL NOT return ownership automatically. An authorized human may
-explicitly return an unresolved request, requiring a fresh candidate and checks.
-Already committed decisions SHALL remain truthful historical facts; revocation
-SHALL NOT imply rollback of running work or external effects.
+A01 includes execution and independent review. A02 SHALL enforce its approved profile catalog and scope at actual task start. A03 SHALL bind an exact failed task, confirmed failure category, explicit side-effect consent and interval; unconfirmed effects cannot be retried. A04 SHALL not repeat execution. Approval SHALL preserve historical specialist/delegate separation. A12 creation SHALL NOT imply execution authority. Publication execution SHALL require a separate current capability and one exact fixed attempt, including when reached through confirmation, repair or retry. Fleet changes SHALL respect explicit interval, bounds and the special meaning of zero. Drain/Offline SHALL affect only ordinary Workers and retain lease constraints. Archive and deletion scheduling/undo SHALL retain original result and retention Gates.
 
-The first explicit delegate enablement SHALL require configured human console
-authentication and durably enable authenticated human administrative API writes.
-Legacy administrative writes SHALL require a current human session, CSRF and
-the action's role; client-supplied actor labels SHALL NOT establish identity.
-Worker lease operations SHALL retain their machine protocol, while Worker
-Drain/Offline remain administrative writes. Disabling delegates or restarting
-SHALL NOT silently remove this administrative authentication requirement.
+### Requirement: Start is a new authority boundary
+Database mutation, cumulative debit and receipt SHALL commit atomically behind the platform authority first lock. A generated task SHALL carry a durable single-attempt permit before any external effect. Actual start SHALL lock and recheck current capability/role/expiry, identity and target generation, restriction revision, applicable DENY, pause/takeover, captured post-action business version, models and historical independence. A normal DRAFT-to-CONFIRMED postcondition does not require the old DRAFT precondition to remain true. A stale permit SHALL not be renewed by claim, heartbeat, lease reclaim or automatic repair. Real running outcomes remain recordable.
 
-#### Scenario: Human revokes before a candidate commits
-- WHEN revocation commits before the candidate's effect transaction
-- THEN the candidate SHALL have no authority to execute
+### Requirement: Unknown effects are not failed effects
+The platform SHALL persist intent and occupied budget before external work starts and SHALL not hold a database transaction across external IO. Accepted/admitted, running and completed are different facts. An unconfirmed external effect SHALL remain UNKNOWN, keep consumption and never replay, refund or create a replacement request automatically. Human reconciliation SHALL bind an exact attempt and explicit evidence, preserve history and create no effect. Any later retry still needs a new explicit capability/candidate, fixed attempt and independent debit.
 
-### Requirement: Durable independent budgets
-Execution rounds, technical retries and review-only recoveries SHALL use separate
-budgets. A full round includes execution and independent review regardless of
-review verdict. History SHALL be shared by the same Plan and step across grants
-and Workers. Non-step actions SHALL share history by a server-verified stable
-target and action. Copying templates, grants or Plans SHALL NOT reset the same
-target's consumption. Human supplements SHALL record increments and preserve
-history. Missing reliable consumption evidence SHALL require human handling.
+### Requirement: No private schema or old mode
+The current engine SHALL use only platform authority tables and public business services. Private SQLite records are not permission evidence. Old in-platform secretary execution is retired by explicit user decision. V8/V9 records are sealed, not automatically copied, deleted, activated or assigned to a current login. Ordinary specialist lease protocols remain separate.
 
-#### Scenario: Replacing a grant after exhaustion
-- WHEN a new grant addresses the same exhausted target and action
-- THEN the old consumption SHALL still limit execution until an explicit supplement
+## Validation limit
 
-### Requirement: Complete bounded action adapters
-The system SHALL support A01–A17 through fixed business adapters, retaining each
-existing business Gate. Execution, review and delegate approval of one result
-SHALL use different Workers, including historical participation before promotion.
-Model identity equality SHALL NOT by itself violate independence. Delegated model
-upgrades SHALL be enforced at actual task start, not only expressed as preferences.
-Publication creation and execution, approval and rejection, and deletion scheduling
-and undo SHALL be separate authorized subactions.
-Publication execution admission SHALL bind one fixed task attempt and the current
-grant revision and delegate identity. Lease reclaim and automatically created
-repair rounds SHALL NOT reuse that admission. Missing admission SHALL retain human
-handling or require a fresh A12_EXECUTE decision and cumulative debit. Execution
-and review role separation SHALL use historical attempts across step rounds,
-including profile changes, retries and recovery reviews. ALLOW and DENY SHALL use
-the same current state and round-condition interpretation.
-
-#### Scenario: Publication creation without execution authority
-- WHEN a delegate can create a publication plan but lacks execution authority
-- THEN neither ordinary plan confirmation nor a retry SHALL start publication
-
-### Requirement: Compatibility and safe admission
-Existing V4 grants SHALL NOT silently gain broader scope, lifetime or budget.
-A target with pending or unsettled legacy repair/coordination SHALL NOT enter
-new delegation until that work is resolved. History SHALL be retained and imported
-as a budget baseline. Once admitted, legacy entry points SHALL NOT bypass the
-new target's authority or budget. Secretary-managed Plans SHALL retain bounded
-admission, cancellation, frozen input and independent coordination checks.
-
-### Requirement: Truthful pending requests and reusable drafts
-First activation SHALL wait for all unauthenticated legacy management writes
-to finish, using database-backed in-flight receipts under the activation lock.
-Only an administrator explicitly confirming that the original process stopped
-may abandon a receipt from another server boot. After first activation, the
-persistent human-auth requirement SHALL survive disablement and restart; the
-console SHALL fail closed when human authentication is not configured.
-
-Unknown applicability, stale inputs or failed conditions SHALL retain the request,
-evidence, suggestion and reason for human handling. They SHALL NOT become business
-rejections or pass after a timeout. The grant owner and authorized administrators
-SHALL be able to inspect the request, current authority and consumption. Idempotent
-replays SHALL NOT repeat effects. Failure evidence SHALL survive a rolled-back
-business transaction. Templates SHALL copy rules and provenance, not credentials,
-enablement, consumption or decision history; new targets and expiry SHALL require
-explicit confirmation. Template edits SHALL NOT silently change active grants.
+Compile-only and static review are source evidence, not a runtime concurrency, authentication, database migration or release result. Actual migration/cutover and runtime validation require separate authorization.

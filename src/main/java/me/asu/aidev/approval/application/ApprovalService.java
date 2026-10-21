@@ -26,9 +26,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 @Service
 public class ApprovalService {
-    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    private me.asu.aidev.authority.AuthorityBoundary delegation;
     @Autowired
-    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation=boundary; }
+    public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary boundary) { this.delegation=boundary; }
     private static final Logger LOG = Logger.getLogger(ApprovalService.class.getName());
     private final ApprovalRequestRepository approvals;
     private final EngineeringGateService engineeringGates;

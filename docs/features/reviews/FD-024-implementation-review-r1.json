@@ -1,0 +1,63 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-024",
+  "source_event": "FD-024-000007-implementation-ready",
+  "human_report": "FD-024-implementation-review-r1.md",
+  "data": {
+    "reviewer_session": "reviewer-fd024-r1-20261021-4c735",
+    "worker_session": "01a15e5f-d79d-73e0-bb3b-480e76aa474c",
+    "review_round": 1,
+    "review_round_limit": 3,
+    "base_commit": "c182720",
+    "reviewed_commit": "5136c40932297ccac01897c9c1ea0656af90dced",
+    "recommendation": "changes-requested",
+    "verdict": "changes-requested",
+    "implementation_status": "CHANGES_REQUIRED",
+    "findings": [
+      {
+        "id": "R1-F1",
+        "severity": "high",
+        "category": "correctness-security",
+        "location": "src/main/resources/db/migration/V10__personal_worker_authority.sql:7",
+        "requirement": "FD 6.2/6.4: permanent legacy_auth_required latch must remain enabled once set",
+        "finding": "新 human_auth_required 被固定初始化为 FALSE，未继承 V9 永久认证锁存；UI 管理写入仍存在关闭认证时的 local ADMIN 回退。",
+        "consequence": "已强制认证的旧库升级后可重新无认证访问 UI 管理写入；封存 Gate 不能保护该路径。",
+        "minimum_correction": "保留旧持久锁存，保证认证关闭时 UI/API 管理写入均失败关闭；无需兼容旧秘书模式。",
+        "blocking": true
+      },
+      {
+        "id": "R1-F2",
+        "severity": "high",
+        "category": "correctness-authority",
+        "location": "src/main/java/me/asu/aidev/authority/AuthorityActions.java:341; AuthorityTaskPolicy.java:80; ActionAdmissionService.java:164",
+        "requirement": "AC5/AC6 and actual-start target pause/generation/restriction enforcement including indirect publication",
+        "finding": "间接 A05/A03 发布许可只保存/核验主 PLAN 目标；附带 PUBLICATION 目标暂停和世代变化未在准入或实际 start 核验。",
+        "consequence": "人工接管 PUBLICATION 目标后仍可通过另一未暂停的 PLAN 能力产生并启动发布固定 attempt。",
+        "minimum_correction": "保存并在首锁下重查附带发布目标 owner、暂停、世代及禁止版本；直接和间接发布共用强制谓词。",
+        "blocking": true
+      },
+      {
+        "id": "R1-F3",
+        "severity": "high",
+        "category": "correctness-unknown-recovery",
+        "location": "src/main/java/me/asu/aidev/authority/ManagedPlanAdmission.java:29; workflow/application/WorkflowPlanService.java:278; AuthorityTaskPolicy.java:50",
+        "requirement": "AC4 and UNKNOWN effects require explicit evidence reconciliation before a separately approved retry; preserve intent history",
+        "finding": "人工接管后的普通 retryFailedTask 通过 humanTask 无条件覆写 UNKNOWN/started 许可为 PREPARED/HUMAN，绕过专用 reconcile 且未先归档旧意图。",
+        "consequence": "未知外部效果可在未记录结论/证据时再次执行，旧意图和回执关联可能被覆盖。",
+        "minimum_correction": "统一在任务及许可变化前阻断未对账意图；先明确证据对账、保留旧 attempt 历史和回执，再另建人工许可。",
+        "blocking": true
+      }
+    ],
+    "evidence": {
+      "mode": "independent-static-implementation-review",
+      "compile_evidence": "Worker report and compile-only script inspected; not rerun by Reviewer",
+      "commands_run": ["Get-Content", "Select-String/Select-Object", "rg", "git status/diff/log", "aiw fd help/show/claim", "apply_patch", "scoped git add/commit", "aiw fd emit changes-requested"],
+      "not_run": ["tests", "compile", "services", "HTTP", "models", "network", "actual SQL migration", "migration or cutover", "formatter", "extra agents", "merge", "archive", "push"],
+      "runtime_verified": false
+    },
+    "human_decisions_respected": {"legacy_compatibility_required": false, "actual_migration_authorized": false, "unknown_ownership": "archive-only", "g1": "future execution gate, not missing tool implementation approval"},
+    "residual_risks": ["SQL/Spring wiring and concurrency remain statically reviewed only.", "Private UI/browser, transport failure and external-effect behavior not runtime verified.", "Review findings are static call-path deductions, not executed reproductions."],
+    "production_code_modified_by_reviewer": false
+  }
+}

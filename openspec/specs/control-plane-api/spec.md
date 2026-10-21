@@ -27,3 +27,6 @@ addresses SHALL NOT be registered as compatibility aliases or redirects.
 #### Scenario: Old API address
 - WHEN a client calls an old API address
 - THEN no old controller mapping or compatibility redirect handles that request
+
+### Requirement: Personal authority route separation
+Platform authority APIs SHALL live under /api/r1/authority. Human routes require configured session authentication, CSRF and the current action role. Machine routes use a dedicated credential, claimed process boot and explicit owner/target scope; they SHALL NOT accept a browser cookie or shared lease token instead. Unknown method/path combinations are rejected. Action bodies are bounded to 32 KiB and strict closed DTOs. The human page is /ui/authority. Old secretary/delegation APIs are removed, not aliased.

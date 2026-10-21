@@ -13,13 +13,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkflowPlanArchiveService {
-    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    private me.asu.aidev.authority.AuthorityBoundary delegation;
     @org.springframework.beans.factory.annotation.Autowired
-    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation=boundary; }
-    private me.asu.aidev.secretary.application.SecretaryPlanGate secretaryGate;
+    public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary boundary) { this.delegation=boundary; }
+    private me.asu.aidev.authority.ManagedPlanAdmission managedPlans;
     @org.springframework.beans.factory.annotation.Autowired
-    public void setSecretaryGate(me.asu.aidev.secretary.application.SecretaryPlanGate gate) { this.secretaryGate=gate; }
-    private void secretarySerialization(String id) { if(secretaryGate!=null) secretaryGate.serializePlan(id); }
+    public void setManagedPlanAdmission(me.asu.aidev.authority.ManagedPlanAdmission gate) { this.managedPlans=gate; }
+    private void managedSerialization(String id) { if(managedPlans!=null) managedPlans.serializePlan(id); }
     private static final Duration DELETE_DELAY = Duration.ofDays(30);
     private final WorkflowPlanService plans;
     private final ExecutionAttemptRepository attempts;
@@ -59,7 +59,7 @@ public class WorkflowPlanArchiveService {
     @Transactional
     public void archive(String id, String actor) {
         if(delegation!=null) delegation.changing("PLAN:"+id);
-        secretarySerialization(id);
+        managedSerialization(id);
         if (!archivable(id)) throw new IllegalStateException("only finished plans can be archived");
         if (!archives.archive(id, actor, Instant.now())) throw new IllegalStateException("plan is already archived");
     }
@@ -67,7 +67,7 @@ public class WorkflowPlanArchiveService {
     @Transactional
     public void scheduleDeletion(String id, String actor) {
         if(delegation!=null) delegation.changing("PLAN:"+id);
-        secretarySerialization(id);
+        managedSerialization(id);
         Instant now = Instant.now();
         if (!archives.scheduleDeletion(id, actor, now, now.plus(DELETE_DELAY))) {
             throw new IllegalStateException("plan must be archived and not already scheduled for deletion");
@@ -77,7 +77,7 @@ public class WorkflowPlanArchiveService {
     @Transactional
     public void undoDeletion(String id) {
         if(delegation!=null) delegation.changing("PLAN:"+id);
-        secretarySerialization(id);
+        managedSerialization(id);
         if (!archives.undoDeletion(id, Instant.now())) {
             throw new IllegalStateException("plan has no pending deletion or the 30-day period expired");
         }

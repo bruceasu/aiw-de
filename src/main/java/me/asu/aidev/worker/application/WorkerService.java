@@ -11,9 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkerService {
-    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    private me.asu.aidev.authority.AuthorityBoundary delegation;
     @Autowired
-    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary delegation) { this.delegation = delegation; }
+    public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary delegation) { this.delegation = delegation; }
     private final WorkerRepository workers;
     private final Clock clock;
 

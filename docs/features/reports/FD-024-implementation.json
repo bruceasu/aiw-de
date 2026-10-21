@@ -1,0 +1,25 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-024",
+  "source_event": "FD-024-000006-design-ready",
+  "human_report": "FD-024-implementation.md",
+  "data": {
+    "worker_session": "01a15e5f-d79d-73e0-bb3b-480e76aa474c",
+    "base_commit": "c182720",
+    "implementation_commits": ["5bff2c1", "b893b92", "233b403"],
+    "implemented_items": ["1.1", "1.2", "1.3", "1.4", "1.5", "2.1", "2.2", "2.3", "3.1", "3.2.1", "3.2.2", "3.2.3", "3.3.1", "3.3.2", "3.3.3", "3.3.4", "3.4.1", "3.4.2", "3.4.3", "3.5.1", "3.5.2", "3.5.3", "3.6.1", "3.6.2", "3.6.3", "3.6.4", "3.7", "4.1", "4.2", "4.3", "4.4", "5.1.1", "5.1.2", "5.1.3", "5.2", "5.3", "5.4"],
+    "compile": {
+      "status": "passed",
+      "completed_at": "2026-10-21T23:03:38+09:00",
+      "command": "NODE_PATH=<primary>/workers/process-typescript/node_modules; ./scripts/compile-personal-secretary.ps1 -Maven C:/green/apache-maven-3.9.9/bin/mvn.cmd -JavaHome C:/green/jdk-25.0.1+8",
+      "coverage": ["offline production Java compile", "Python in-memory compile", "three JavaScript syntax checks", "changed TypeScript profile syntax transpilation"],
+      "initial_failure": "PowerShell split unquoted Maven -D arguments; corrected quoting before successful compile"
+    },
+    "static_validation": {"command": "git diff --check", "status": "passed", "notes": "Only CRLF normalization warnings; no whitespace errors"},
+    "not_run": ["tests", "type checks", "services", "browser", "HTTP", "models", "database SQL execution", "concurrency and fault injection", "network", "final distribution", "actual migration or cutover"],
+    "decisions": {"full_fd": true, "legacy_compatibility": false, "actual_migration_enabled": false, "unattributed_records": "archive-only"},
+    "remaining_risks": ["SQL and Spring wiring only statically reviewed", "concurrency and browser flows not executed", "custom worker physical restart cannot be remotely proven", "future real migration needs separate operational evidence and authorization"],
+    "review_status": "awaiting-independent-review"
+  }
+}

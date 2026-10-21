@@ -99,7 +99,7 @@ public class WebConsoleSecurityService {
         boolean allowed = action.startsWith("A11_") ? current.canApprove()
                 : action.startsWith("A17_") ? current.canAdmin() : current.canOperate();
         if (!allowed) return "";
-        return me.asu.aidev.secretary.jdbc.SecretaryRepository.hash(enabled + "\n" + expected + "\n" + current + "\n" + action);
+        return me.asu.aidev.authority.AuthorityRepository.hash(enabled + "\n" + expected + "\n" + current + "\n" + action);
     }
 
     public String ensureCsrf(HttpSession session) {

@@ -43,3 +43,6 @@ For repository work, the Worker SHALL prepare and operate on its local workspace
 
 - Worker implementations are external processes and may use different languages and AI runtimes.
 - Worker examples and supported runtime configuration are documented with each Worker implementation.
+
+### Requirement: Personal identities are not specialist identities
+An enrolled personal identity SHALL NOT register, claim or start work as a professional lease Worker. The independent personal action protocol uses dedicated authority credentials and process sessions. Existing professional Worker lease operations remain on /api/r1/worker-protocol/v1 and retain their original lease authority.

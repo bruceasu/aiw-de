@@ -1,70 +1,39 @@
+# Personal secretary
+
 ## Purpose
 
-Define single-machine secretary discussion, one-time arrangements and bounded
-independent Plan coordination. Implementation reference: FD-021.
+FD-024 separates the personal secretary from the Control Plane. The user may replace its implementation and storage. The bundled reference is a Python process with an owner-bound SQLite database.
 
 ## Requirements
 
-### Requirement: Saved work and advisory discussion
-The system SHALL attribute new secretary work and messages to the current
-console actor. It SHALL keep each work item's context separate from Goal
-discussion. Model suggestions SHALL NOT save or confirm an arrangement.
+### Requirement: Private ownership and replaceable process
+Conversation, preferences, memory, reminders, personal schedules, original policy text, policy versions, templates, drafts, model reasoning, decisions and personal outbox SHALL stay in the personal process and private store. The platform SHALL NOT read that store or require its schema or implementation language. A user-submitted business Plan is platform data; a private conversation is not implicitly a task payload.
 
-#### Scenario: Discussion has no available Worker
-- WHEN a message is saved without an available secretary Worker
-- THEN its real request ID and queued task remain queryable without claiming a reply or execution
+#### Scenario: Two private identities
+- WHEN different owners or Workers use the reference implementation
+- THEN each SHALL use a distinct identity-bound data directory, and a foreign private database SHALL be rejected
 
-### Requirement: Human-confirmed one-time admission
-The system SHALL support an owned existing draft Plan and a local reminder.
-Confirmation SHALL bind the saved input, Plan specification/version, current
-operator authority, explicit date, offset and IANA zone to one arrangement.
-Arbitrary unsupported professional work SHALL NOT become executable by chat.
+### Requirement: Independent human and machine authority
+Only an authenticated human platform session with CSRF and the current role SHALL bind an owner, enroll/rotate a dedicated personal credential, grant minimal capabilities and explicitly enable execution. Ordinary Worker registration, shared protocol tokens, capability names and actor text SHALL NOT create this authority. Dedicated identities SHALL NOT register or execute as specialist lease Workers.
 
-#### Scenario: Time arrives within its target minute
-- WHEN the confirmed target minute arrives and the frozen input remains valid
-- THEN the Plan's coordinator request is queued at most once, or a local reminder is recorded as due
-- AND queue admission SHALL NOT imply professional execution has started
+Each declared personal process boot SHALL begin a disabled session. A new boot or credential invalidates previous generation-bound candidates and permits. The platform boot also invalidates enablement. A custom implementation cannot expand authority by editing its private database or counters. Physical restarts hidden by a custom implementation are not detectable from a reused credential alone.
 
-#### Scenario: Target minute was missed
-- WHEN admission is attempted after the target minute
-- THEN the arrangement requires a new human confirmation and SHALL NOT catch up automatically
+### Requirement: Bounded private scheduling and Plan coordination
+Scheduling SHALL freeze the approved Plan version and business spec digest. Missed minutes and changed targets SHALL require explicit reconfirmation; they SHALL NOT catch up automatically. The platform SHALL own clean-draft adoption, manager binding, role separation, fixed task attempts and source consumption. Real specialist results SHALL remain recordable while the manager is offline, but new advancement SHALL require fresh authenticated admission.
 
-#### Scenario: Input or authority changes
-- WHEN saved work, the linked Plan or current operator authority differs from confirmation
-- THEN new admission or advancement SHALL be blocked pending human handling
-- AND the system SHALL show current content for a new confirmation
+#### Scenario: Human takeover before continuation
+- WHEN takeover or a target generation change precedes a pending continuation
+- THEN the old continuation SHALL be rejected, and restart or heartbeat SHALL NOT return ownership
 
-### Requirement: Independent bounded coordination
-Secretary-managed Plans SHALL use a separate coordinator identity before initial
-start and after each professional completion. A coordinator SHALL NOT execute
-or review that Plan's professional tasks. Its output SHALL only request the
-platform's fixed continuation or human attention. Development review SHALL
-continue to use the original professional reports and independent review path.
-Old unmanaged Plans SHALL retain their existing lifecycle.
+### Requirement: Private UI boundary
+The personal UI SHALL have its own login, session, CSRF and explicit origin. It SHALL NOT import platform sessions, accept permissive CORS, trust localhost by itself or expose private content through a platform proxy. The reference binds loopback by default, validates Host and Origin, uses a bounded one-time pairing code and requires an explicit HTTPS origin for remote access.
 
-#### Scenario: Duplicate or stale coordination
-- WHEN a coordinator response was consumed, was superseded, or refers to changed input
-- THEN it SHALL NOT start another task or modify the confirmed Plan
+### Requirement: No old secretary execution mode
+The in-platform secretary, private APIs, schedulers and obsolete specialist profiles SHALL be removed, without aliases, a dual-mode flag or a compatibility bridge. V8/V9 migration history and existing data SHALL remain sealed. Existing private data SHALL block new delegation through a durable inventory Gate; no owner or migration permission is inferred. Real already-running outcomes may still be recorded, but retired queued or claimed private tasks SHALL NOT start.
 
-#### Scenario: Direct legacy control attempts to start managed work
-- WHEN an old confirm, retry, jump, repair or generic correction path would admit work for a managed Plan
-- THEN it SHALL be rejected outside the bounded server-side coordination scope
+### Requirement: Offline migration planning only
+The tool SHALL read only explicit offline snapshots and exact owner mappings, emit metadata-only plans, seal unknown ownership and mixed snapshots, validate versioned candidates and reject conflicting import batches. Records SHALL remain ARCHIVE_ONLY. Actual export, import, cutover, cleanup and rollback SHALL stay disabled, without a bypass flag. A snapshot inventory SHALL NOT be represented as proof of live reconciliation or backup readiness.
 
-### Requirement: Cancellation and truthful results
-Cancellation SHALL prevent further admission and advancement. Running tasks
-SHALL still be able to record completion or failure. Cancellation SHALL NOT
-claim that a task stopped or its side effects were reversed. Failed or
-interrupted professional work SHALL require human handling instead of implicit
-re-execution. Feedback and result queries SHALL NOT repeat business actions.
-Automatic analysis and external notification delivery are outside this scope.
+## Evidence limit
 
-#### Scenario: Running work finishes after cancellation
-- WHEN a running Worker reports its true result after a cancellation request
-- THEN the result remains recorded and no later step is admitted
-
-## Limits
-
-With authentication disabled, local-console is shared. This capability does
-not introduce multi-user isolation, historical ownership migration,
-recurring/conditional schedules or long-term memory. Explicit agent permission
-grants are defined separately in `../delegated-decisions/spec.md`.
+The FD workflow requires production compile-only and independent static implementation review by default. No runtime safety, actual migration or release readiness is established by this specification or a compile result.

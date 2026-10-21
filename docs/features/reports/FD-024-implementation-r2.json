@@ -1,0 +1,21 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-024",
+  "source_event": "FD-024-000008-changes-requested",
+  "human_report": "FD-024-implementation-r2.md",
+  "data": {
+    "worker_session": "01a15e5f-d79d-73e0-bb3b-480e76aa474c",
+    "previous_report": "FD-024-implementation.md",
+    "review_outcomes_so_far": 1,
+    "review_limit": 3,
+    "repair_base": "b25b487",
+    "addressed_findings": ["R1-F1", "R1-F2", "R1-F3"],
+    "compile": {"status": "passed", "completed_at": "2026-10-21T23:14:47+09:00", "command": "compile-personal-secretary.ps1 with the same installed Maven/JDK/NODE_PATH as the original worker report", "java_source_files": 251},
+    "static_validation": {"command": "git diff --check", "status": "passed"},
+    "not_run": ["tests", "SQL or Spring runtime", "HTTP or browser", "models", "concurrency or fault injection", "network", "actual migration or cutover", "distribution build"],
+    "review_status": "awaiting-independent-review",
+    "legacy_compatibility": false,
+    "actual_migration_enabled": false
+  }
+}

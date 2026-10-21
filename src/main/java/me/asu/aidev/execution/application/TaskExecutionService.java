@@ -32,9 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskExecutionService {
-    private me.asu.aidev.secretary.application.DelegationTaskPolicy delegationPolicy;
-    @Autowired
-    public void setDelegationPolicy(me.asu.aidev.secretary.application.DelegationTaskPolicy policy) { this.delegationPolicy=policy; }
+    private me.asu.aidev.authority.AuthorityTaskPolicy authorityPolicy;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAuthorityPolicy(me.asu.aidev.authority.AuthorityTaskPolicy policy) { this.authorityPolicy=policy; }
     private me.asu.aidev.goal.application.GoalTaskPolicy goalPolicy;
     @Autowired
     public void setGoalPolicy(me.asu.aidev.goal.application.GoalTaskPolicy policy) { this.goalPolicy = policy; }
@@ -50,14 +50,14 @@ public class TaskExecutionService {
     private final AiProfileCatalog aiProfiles;
     private final Clock clock;
     private final Duration leaseDuration;
-    private me.asu.aidev.secretary.application.SecretaryPlanGate secretaryGate;
+    private me.asu.aidev.authority.ManagedPlanAdmission managedPlans;
     @Autowired
-    public void setSecretaryGate(me.asu.aidev.secretary.application.SecretaryPlanGate gate) { this.secretaryGate=gate; }
-    private void secretaryMutation(TaskId taskId) {
-        if(secretaryGate!=null) tasks.find(taskId).ifPresent(secretaryGate::checkTask);
+    public void setManagedPlanAdmission(me.asu.aidev.authority.ManagedPlanAdmission gate) { this.managedPlans=gate; }
+    private void managedMutation(TaskId taskId) {
+        if(managedPlans!=null) tasks.find(taskId).ifPresent(managedPlans::checkTask);
     }
-    private void secretarySerialization(TaskId taskId) {
-        if(secretaryGate!=null) tasks.find(taskId).ifPresent(secretaryGate::serializeTask);
+    private void managedSerialization(TaskId taskId) {
+        if(managedPlans!=null) tasks.find(taskId).ifPresent(managedPlans::serializeTask);
     }
     private TaskWorkspaceReplacementService workspaceReplacements;
     private WorkflowPlanService workflowPlans;
@@ -125,12 +125,12 @@ public class TaskExecutionService {
     public void start(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                       String profileId, String profileVersion, String selectionReason) {
         var task = tasks.find(taskId).orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
-        if(delegationPolicy!=null) delegationPolicy.beforeStart(task);
+        if(authorityPolicy!=null) authorityPolicy.beforeStart(task);
         assertExecutionAllowed(task);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         task = tasks.find(taskId).orElseThrow();
-        if(delegationPolicy!=null) delegationPolicy.starting(task,workerId.value());
-        if(delegationPolicy!=null) delegationPolicy.selection(task,profileId,profileVersion);
+        if(authorityPolicy!=null) authorityPolicy.starting(task,workerId.value());
+        if(authorityPolicy!=null) authorityPolicy.selection(task,profileId,profileVersion);
         if (task.state() == TaskState.CLAIMED && attempts.stopRequested(leaseToken, workerId)) {
             throw new IllegalStateException("Worker stop requested before task start; acknowledge stop instead");
         }
@@ -161,7 +161,7 @@ public class TaskExecutionService {
         if (!attempts.transition(leaseToken, ExecutionAttemptState.CLAIMED, ExecutionAttemptState.RUNNING, now, null)) {
             throw new IllegalStateException("execution attempt is not CLAIMED");
         }
-        if(delegationPolicy!=null) delegationPolicy.started(task);
+        if(authorityPolicy!=null) authorityPolicy.started(task);
     }
 
     @Transactional
@@ -190,7 +190,7 @@ public class TaskExecutionService {
     @Transactional
     public void reviseInstruction(TaskId taskId, long expectedTaskVersion, int expectedInstructionRevision,
                                   String instruction, String actor, String reason) {
-        secretaryMutation(taskId);
+        managedMutation(taskId);
         requireAudit(actor, reason);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow();
@@ -219,7 +219,7 @@ public class TaskExecutionService {
 
     @Transactional
     public void requestStop(TaskId taskId, String actor, String reason) {
-        secretarySerialization(taskId);
+        managedSerialization(taskId);
         requireAudit(actor, reason);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow();
@@ -234,7 +234,7 @@ public class TaskExecutionService {
 
     @Transactional
     public void acknowledgeStop(TaskId taskId, WorkerId workerId, LeaseToken leaseToken) {
-        secretarySerialization(taskId);
+        managedSerialization(taskId);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow();
         if (attempts.stopAcknowledged(taskId, workerId, leaseToken)) return;
@@ -258,7 +258,7 @@ public class TaskExecutionService {
 
     @Transactional
     public void forceRequeue(TaskId taskId, String actor, String reason, boolean warningConfirmed) {
-        secretaryMutation(taskId);
+        managedMutation(taskId);
         requireAudit(actor, reason);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow();

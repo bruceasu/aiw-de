@@ -27,9 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 /** Human authority fixes the scope; a designated independent Worker may only consume one grant. */
 @Service
 public class WorkflowRepairAuthorizationService {
-    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    private me.asu.aidev.authority.AuthorityBoundary delegation;
     @org.springframework.beans.factory.annotation.Autowired
-    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation = boundary; }
+    public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary boundary) { this.delegation = boundary; }
     private WorkflowQuestionService questionDecisions;
     @org.springframework.beans.factory.annotation.Autowired
     public void setQuestionDecisions(WorkflowQuestionService questionDecisions) { this.questionDecisions = questionDecisions; }
@@ -126,7 +126,7 @@ public class WorkflowRepairAuthorizationService {
         }
         java.util.function.Supplier<java.util.Optional<TaskId>> continuation = () -> plans.continueAuthorizedRepair(
                 grant.planId(), grant.sourceReviewId(), grant.planVersion(), grant.sourceTaskVersion(), actor, grant.reason(), grant.scope());
-        var task = delegation == null ? continuation.get() : delegation.legacyCompletion(continuation);
+        var task = delegation == null ? continuation.get() : delegation.completionScope(continuation);
         if (!authorizations.finish(grant.id(), task.isPresent() ? "CONSUMED" : "STALE",
                 task.map(TaskId::value).orElse(null), Instant.now())) {
             throw new IllegalStateException("Repair authorization was already consumed or revoked.");

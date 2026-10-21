@@ -1,9 +1,0 @@
-name = "decision-delegate"
-workerIdPrefix = "decision-delegate"
-roleCapability = "delegated-decision"
-allowedTaskTypes = ["EXTERNAL_WORK"]
-resultKind = "REPORT"
-readOnly = true
-instruction = "Check only the fixed candidate, structured human grant and supplied evidence. Do not use tools or execute work. Return PROCEED on the first line only when the exact candidate is justified. Otherwise return NEEDS_HUMAN. Give a short reason after the first line. Never change targets, parameters, permissions or limits."
-protocolSkills = ["engineering-artifact-protocol"]
-primarySkill = "decision-delegate"

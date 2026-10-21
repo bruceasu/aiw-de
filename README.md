@@ -109,3 +109,7 @@ AIW_WEB_CONSOLE_ROLE=ADMIN
 | 排查启动与执行问题 | [故障排查与恢复](docs/current-zh/11-TROUBLESHOOTING-AND-RECOVERY.md) |
 
 `docs/current/` 与 `docs/current-zh/` 是当前正式文档入口。其他阶段文档保留设计背景与变更历史；R8、R9、R10 等标记表示演进阶段，不属于项目名称。
+
+## Personal secretary
+
+FD-024 separates private secretary work into a user-owned process and SQLite store. Platform identity, minimal authority and receipts are managed at /ui/authority. See [operations](workers/personal-secretary/README.md) and [offline migration planning](scripts/secretary_migration/README.md). Old secretary APIs/modes are removed; actual data migration and cutover remain disabled.

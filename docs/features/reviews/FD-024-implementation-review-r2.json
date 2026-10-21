@@ -1,0 +1,46 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-024",
+  "source_event": "FD-024-000009-implementation-ready",
+  "human_report": "FD-024-implementation-review-r2.md",
+  "data": {
+    "reviewer_session": "reviewer-fd024-r2-20261021-90c42",
+    "worker_session": "01a15e5f-d79d-73e0-bb3b-480e76aa474c",
+    "review_round": 2,
+    "review_round_limit": 3,
+    "base_commit": "c182720",
+    "repair_base": "b25b487",
+    "reviewed_commit": "d8470cd98461f3559bc82a39c254eb1aff547b23",
+    "previous_review": "docs/features/reviews/FD-024-implementation-review-r1.md",
+    "worker_reports": ["docs/features/reports/FD-024-implementation.md", "docs/features/reports/FD-024-implementation-r2.md"],
+    "recommendation": "verification-passed",
+    "verdict": "verification-passed",
+    "implementation_status": "VERIFIED_STATIC",
+    "findings": [],
+    "resolved_findings": [
+      {"id": "R1-F1", "status": "resolved", "evidence": "V10 inherits V9 legacy_auth_required; existing Console failure-closed latch remains active"},
+      {"id": "R1-F2", "status": "resolved", "evidence": "targetCurrent at admission; independent publication owner/target/generation/restriction stored and rechecked at actual start; schema/parameters match"},
+      {"id": "R1-F3", "status": "resolved", "evidence": "common UNKNOWN/IN_PROGRESS replacement check before task mutation; human replacement saves old attempt snapshot and clears stale request/authority fields"}
+    ],
+    "acceptance": [
+      {"ids": ["AC1", "AC2"], "status": "supported-static", "evidence": "independent private process/store and platform-only authority facts"},
+      {"ids": ["AC3", "AC9"], "status": "supported-static", "evidence": "human and machine identity routing, owner scope, private UI boundary and permanent latch"},
+      {"ids": ["AC4"], "status": "supported-static", "evidence": "durable receipt/deduplication/outbox and unknown-effect replacement guard"},
+      {"ids": ["AC5"], "status": "supported-static", "evidence": "serialized current target/restriction checks, including independent publication target"},
+      {"ids": ["AC6", "AC7"], "status": "supported-static", "evidence": "20 fixed actions, persistent separate budgets, historical independence, models and fixed attempts"},
+      {"ids": ["AC8"], "status": "supported-static", "evidence": "record real completion; fresh managed admission and evidence-based human recovery"},
+      {"ids": ["AC10"], "status": "supported-static", "evidence": "read-only migration planning, unknown ownership sealed, actual execution disabled"}
+    ],
+    "human_decisions_respected": {"legacy_compatibility_required": false, "actual_migration_authorized": false, "unknown_ownership": "archive-only", "g1": "future execution gate"},
+    "evidence": {
+      "mode": "independent-static-implementation-review",
+      "compile_evidence": "Worker r2 reports compile-only passed at 2026-10-21T23:14:47+09:00; Reviewer did not rerun",
+      "commands_run": ["Get-Content", "Select-Object", "rg", "git status/log/diff", "aiw fd show/claim", "apply_patch", "read-only evidence and diff checks", "scoped git add/commit", "aiw fd emit verification-passed"],
+      "not_run": ["tests", "compile", "SQL", "services", "HTTP", "models", "network", "actual migration or cutover", "formatter", "extra agents", "merge", "archive", "push"],
+      "runtime_verified": false
+    },
+    "residual_risks": ["SQL/Spring behavior is statically reviewed only.", "Browser, concurrency and external-effect failure windows not runtime verified.", "Actual migration/cutover requires separate future authorization and operational evidence."],
+    "production_code_modified_by_reviewer": false
+  }
+}

@@ -11,9 +11,9 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
 public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
-    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    private me.asu.aidev.authority.AuthorityBoundary delegation;
     @org.springframework.beans.factory.annotation.Autowired
-    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation=boundary; }
+    public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary boundary) { this.delegation=boundary; }
     private final WebConsoleSecurityService security;
 
     public WebConsoleSecurityInterceptor(WebConsoleSecurityService security) {
@@ -25,7 +25,7 @@ public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         if (path.equals("/ui/login") || path.equals("/ui/console.css") || path.equals("/ui/console.js")) return true;
         if (!path.equals("/ui") && !path.startsWith("/ui/") && !WebConsoleApiRoutes.matches(path)) return true;
-        if(delegation!=null && delegation.legacyAuthRequired() && !security.enabled()) {
+        if(delegation!=null && delegation.humanAuthRequired() && !security.enabled()) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED,"Human console authentication must remain enabled after delegation activation");return false;
         }
 
@@ -48,7 +48,7 @@ public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
         }
 
         WebConsoleRole role = security.role(session);
-        if(delegation!=null && security.enabled()) delegation.authenticatedHuman(security.actor(session));
+        if(delegation!=null && security.enabled()) delegation.human(security.actor(session));
         request.setAttribute("consoleAuthEnabled", security.enabled());
         request.setAttribute("consolePrincipal", security.username(session));
         request.setAttribute("consoleRole", role.name());
@@ -59,6 +59,6 @@ public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
         return true;
     }
     @Override public void afterCompletion(HttpServletRequest request,HttpServletResponse response,Object handler,Exception error) {
-        if(delegation!=null) delegation.clearHuman();
+        if(delegation!=null) delegation.human(null);
     }
 }

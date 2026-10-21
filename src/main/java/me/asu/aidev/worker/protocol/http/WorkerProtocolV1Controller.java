@@ -34,9 +34,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/r1/worker-protocol/v1")
 public class WorkerProtocolV1Controller {
-    private me.asu.aidev.secretary.application.DelegationTaskPolicy delegationPolicy;
+    private me.asu.aidev.authority.AuthorityTaskPolicy delegationPolicy;
     @Autowired
-    public void setDelegationPolicy(me.asu.aidev.secretary.application.DelegationTaskPolicy policy) { this.delegationPolicy=policy; }
+    public void setDelegationPolicy(me.asu.aidev.authority.AuthorityTaskPolicy policy) { this.delegationPolicy=policy; }
     private me.asu.aidev.goal.application.GoalTaskPolicy goalPolicy;
     @Autowired
     public void setGoalPolicy(me.asu.aidev.goal.application.GoalTaskPolicy policy) { this.goalPolicy = policy; }

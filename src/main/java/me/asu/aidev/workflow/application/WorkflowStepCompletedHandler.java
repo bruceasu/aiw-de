@@ -14,9 +14,12 @@ import org.springframework.stereotype.Component;
 /** Advances a selected workflow only after an independent verdict for the current step. */
 @Component
 public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
-    private me.asu.aidev.secretary.application.SecretaryCoordinator secretary;
     @org.springframework.beans.factory.annotation.Autowired
-    public void setSecretary(me.asu.aidev.secretary.application.SecretaryCoordinator secretary) { this.secretary=secretary; }
+    private me.asu.aidev.authority.ManagedPlanAdmission personal;
+    public List<TaskId> advanceManaged(me.asu.aidev.work.domain.WorkTask task,me.asu.aidev.execution.domain.CompletionReport report) {
+        if(!personal.inScope(task.subjectId())) throw new SecurityException("Server-validated managed admission required");
+        return advance(task,report);
+    }
     private final WorkflowPlanService plans;
     private final WorkflowRepairDecisionHandler repairDecisions;
 
@@ -30,13 +33,12 @@ public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
     @Override public boolean supports(TaskCompletionContext context) {
         return TaskCompletionHandler.super.supports(context)
                 && (WorkflowPlanService.SUBJECT.equals(context.completedTask().subjectType())
-                    || repairDecisions.supports(context)
-                    || secretary!=null && secretary.supports(context.completedTask()));
+                    || repairDecisions.supports(context));
     }
 
     @Override public List<TaskId> onCompleted(TaskCompletionContext context) {
+        if(personal.managed(context.completedTask().subjectId())) return List.of(); // Record the real result; wait for private coordinator admission.
         if (repairDecisions.supports(context)) return repairDecisions.onCompleted(context);
-        if(secretary!=null && secretary.supports(context.completedTask())) return secretary.completed(context,this::advance);
         return advance(context.completedTask(),context.completionReport());
     }
 

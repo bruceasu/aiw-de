@@ -33,9 +33,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /** Immutable deliverables at a persistent workspace; never a second owner of task state. */
 @Service
 public class TaskOutputService {
-    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    private me.asu.aidev.authority.AuthorityBoundary delegation;
     @org.springframework.beans.factory.annotation.Autowired
-    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation=boundary; }
+    public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary boundary) { this.delegation=boundary; }
     private static final int MAX_FILE = 4 * 1024 * 1024;
     private static final int MAX_BUNDLE = 8 * 1024 * 1024;
     private final WorkTaskRepository tasks;
@@ -285,7 +285,7 @@ public class TaskOutputService {
             path=target.toString();
         } catch(IOException error) { throw new IllegalStateException("Cannot verify publication target identity",error); }
         if(System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT).contains("win")) path=path.toLowerCase(java.util.Locale.ROOT);
-        return "PUBLICATION:"+me.asu.aidev.secretary.jdbc.SecretaryRepository.hash(path);
+        return "PUBLICATION:"+me.asu.aidev.authority.AuthorityRepository.hash(path);
     }
 
     /** A delegate cannot reuse a publication association after its executable Plan was edited. */

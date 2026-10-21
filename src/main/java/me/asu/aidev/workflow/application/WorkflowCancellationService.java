@@ -23,12 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 /** Cancels a plan only after its local, isolated Git branches can be safely discarded. */
 @Service
 public class WorkflowCancellationService {
-    private me.asu.aidev.secretary.application.DelegationBoundary delegation;
+    private me.asu.aidev.authority.AuthorityBoundary delegation;
     @org.springframework.beans.factory.annotation.Autowired
-    public void setDelegationBoundary(me.asu.aidev.secretary.application.DelegationBoundary boundary) { this.delegation=boundary; }
-    private me.asu.aidev.secretary.application.SecretaryPlanGate secretaryGate;
+    public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary boundary) { this.delegation=boundary; }
+    private me.asu.aidev.authority.ManagedPlanAdmission managedPlans;
     @org.springframework.beans.factory.annotation.Autowired
-    public void setSecretaryGate(me.asu.aidev.secretary.application.SecretaryPlanGate gate) { this.secretaryGate=gate; }
+    public void setManagedPlanAdmission(me.asu.aidev.authority.ManagedPlanAdmission gate) { this.managedPlans=gate; }
     private static final Duration GIT_TIMEOUT = Duration.ofSeconds(15);
     private final WorkflowPlanService service;
     private final WorkflowPlanRepository plans;
@@ -52,7 +52,7 @@ public class WorkflowCancellationService {
     @Transactional
     public WorkflowPlan cancel(String id, long version, String actor, String reason) {
         if(delegation!=null) delegation.changing("PLAN:"+id);
-        if(secretaryGate!=null) secretaryGate.serializePlan(id);
+        if(managedPlans!=null) managedPlans.serializePlan(id);
         if (reason == null || reason.isBlank() || reason.length() > 2000) {
             throw new IllegalArgumentException("cancellation reason must contain 1 to 2000 characters");
         }

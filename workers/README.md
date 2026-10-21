@@ -77,3 +77,7 @@ The `demo-*-with-codex` directories are small language-specific Worker Protocol 
 - [Worker runtime contract](WORKER_RUNTIME_CONTRACT.md) describes role, task, evidence, and runtime behavior.
 - [Worker operations](WORKER_OPERATIONS.md) documents deployment configuration and current verification limits.
 - [SDK capabilities](SDK_CAPABILITIES.md) records the inspected SDK behavior and known unknowns.
+
+## Personal secretary (FD-024)
+
+The personal secretary is an independent user-owned process and database. See [personal-secretary/README.md](personal-secretary/README.md). The old in-platform secretary and obsolete secretary/coordinator/delegate specialist roles are retired; no compatibility mode is provided. Migration tools only produce offline plans; actual migration and cutover are disabled.
