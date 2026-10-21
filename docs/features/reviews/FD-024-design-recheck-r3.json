@@ -1,0 +1,51 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-024",
+  "source_event": "FD-024-000003-design-requested",
+  "human_report": "docs/features/reviews/FD-024-design-recheck-r3.md",
+  "data": {
+    "artifact": "docs/features/FD-024_WORKER.md",
+    "revision": 3,
+    "session_ref": "/root/fd024_design_r3",
+    "planner_session": "01a15e5f-d79d-73e0-bb3b-480e76aa474c",
+    "review_type": "focused-material-fix-recheck",
+    "previous_review": "docs/features/reviews/FD-024-design-review-r3.md",
+    "scope": ["R3-F1 actual start restriction and generation checks", "R3-F2 human and machine authentication routing"],
+    "scope_recommendation": "ready",
+    "recommendation": "changes-needed",
+    "design_status": "INCOMPLETE",
+    "findings": [],
+    "rechecked_findings": [
+      {
+        "id": "R3-F1",
+        "status": "resolved",
+        "resolution_scope": "candidate-design-only",
+        "location": "Solution 6.6 actual start paragraph",
+        "evidence": "同一权限首锁及 start 事务重查 DENY/restrictionRevision、目标暂停/世代、身份世代、当前能力与角色、模型及历史独立性；旧 admission 失效需新候选；覆盖后续评审和固定发布 attempt。"
+      },
+      {
+        "id": "R3-F2",
+        "status": "resolved",
+        "resolution_scope": "candidate-design-only",
+        "location": "Solution 6.4 human/machine method+path routing paragraph",
+        "evidence": "页面采用 /ui/authority；人工 session/CSRF/角色/锁存与机器 bearer/owner/scope 闭集分流，禁止 auth-disabled 回退，未知路由默认拒绝，注册与匹配同时更新。"
+      }
+    ],
+    "remaining_gates": [
+      {
+        "id": "G1",
+        "status": "awaiting-human-decision",
+        "waived": false,
+        "required": "实际源库和备份、可信 owner 映射、在途处置、切换与回退决定"
+      }
+    ],
+    "validation": {
+      "mode": "bounded-independent-static-focused-recheck",
+      "commands_run": ["Get-Content -Encoding UTF8 of FD 6.4/6.6", "apply_patch"],
+      "not_run": ["tests", "compile", "services", "HTTP", "network", "migration", "formatter", "workflow events", "git commit"],
+      "runtime_verified": false
+    },
+    "limitations": ["仅复核两项文档修订，没有新一轮全面评审。", "不是实现 verdict；既有源码未修改或执行验证。", "G1 未解决，不能据此宣称完整 FD readiness。"]
+  }
+}

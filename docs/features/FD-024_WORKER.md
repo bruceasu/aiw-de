@@ -1,7 +1,7 @@
 # FD-024: 个人秘书 Worker 独立实现、私有数据库与平台授权边界拆分
 
 **Status:** Design
-**Revision:** 2
+**Revision:** 4
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -48,7 +48,7 @@
 
 ### 3. 通用平台协议及可信人工授权
 
-所有平台 API 沿用 `/api/r1/...`；具体资源名、动作矩阵和错误契约在 Work 1.2 冻结后才开始实现。现有 Worker 租约协议保持职责独立，不能靠共享 bearer、capability 或普通注册获得代表用户操作的权限。
+所有平台 API 沿用 `/api/r1/...`；本轮资源名、动作矩阵和错误契约见 §6.3–6.5；实现仍等待完整设计准入。现有 Worker 租约协议保持职责独立，不能靠共享 bearer、capability 或普通注册获得代表用户操作的权限。
 
 - 人工通过平台可信登录/session/CSRF 明确绑定 owner、Worker、公钥/专用凭证及能力上限；签发、更新、撤销和首次启用由平台验证当前角色，秘书不能自签平台授权。
 - 个人 Worker 通过机器认证提交固定动作信封，绑定稳定 requestId、owner 的平台映射、Worker、授权 ID/版本、具体目标/step/attempt、预期业务版本、必要动作参数及证据引用。服务端忽略未经认证的 owner/actor 声明，不接受任意 SQL、shell、反射调用或开放表达式。
@@ -78,19 +78,174 @@
 
 迁移后的回退默认停用新路径并保留两侧数据供对账；仅当没有新执行且核验可安全恢复时才允许恢复旧写入，不能一键还原旧 DB 从而重复执行/重置消费。实际源库、owner 映射、在途处置及切换窗口见 G1，未确认前不运行迁移/删除/自动切换。
 
-### 6. 实施前 Gates
+### 6. 本轮工程契约（仅设计产物）
+
+本节是 Planner 基于现有代码提出的工程契约，不是已实现行为，也不是运行验证。与上文的开放建议冲突时，以本节明确限定的设计为准；G2/G3 的两项独立设计发现经修订及定向复核解决，完整设计仍受 G1 阻塞。参考实现选择 Python 标准库进程（`sqlite3`、`http.server`、`urllib`），复用已有 Python Worker 的进程组织方式，不为此增加平台依赖。平台仍为现有 Java/Spring 模块。此语言选择不限制自定义实现。
+
+#### 6.1 模块、替换边界与替代方案
+
+比较两个公开边界：一是平台接受“规则并替秘书求值”，二是秘书仅提交固定业务动作。前者仍把策略及私人上下文带回平台，无法满足独立实现；采用后者。平台负责认证、最小能力、当前状态/历史独立性检查、预算和执行事实；个人进程负责自然语言、模型选择、私人调度及 outbox。平台只接收主动提交的动作参数，不接受个人策略全文。
+
+新增平台包 `authority`，其应用入口 `ActionAdmissionService` 接收可信 Principal 和固定信封；`HumanAuthorityService` 管理 owner 绑定、能力、撤权与接管；`ActionReceiptRepository` 只访问平台新表。20 动作由闭集适配器调用原业务服务。`ManagedPlanAdmission` 替换 SecretaryPlanGate 的“由秘书仓储判断是否托管”机制，持有平台 Plan→owner/manager/世代和 task→attempt 准入信息。它在 Plan/Task 应用服务入口执行，不由个人代码设置 ThreadLocal。旧代码内部过渡 ThreadLocal 不作为新协议的信任来源。
+
+个人进程模块为 `store`、`platform_client`、`outbox`、`scheduler`、`policy`、`ui`。`store` 只暴露个人工作/消息/策略版本、outbox 与回执缓存的原子操作；客户端只知道公开 API。替换 store 或 Worker 不影响平台 schema；平台不得打开私库或执行用户代码。时钟、模型调用和平台 HTTP 为可替换依赖，不额外创建测试框架。模型调用复用显式配置的端点/命令，只在用户运行参考 Worker 时使用；本轮 auto 不启动它。
+
+#### 6.2 V8/V9 逐列归属与保留映射（Work 1.1）
+
+表中列组覆盖原迁移中的每一列；“拆分”不是把旧行整体复制两次。新模型使用新 schema；V8/V9 保持原样。历史只读封存和实际数据移动仍受 G1 限制。
+
+| 旧表 | 个人数据库列及解释 | 平台保留/转换列及解释 |
+| --- | --- | --- |
+| secretary_lock | 私库内部事务自行序列化，不迁移旧锁 | id/version 不作为授权；旧锁只供旧模式 |
+| secretary_work | id、actor（历史标签，不作身份）、revision、generation、state、due_ms、payload、updated_ms；plan_id 仅为外部关联 | 以新 owner/managed_plan 记录 plan_id 和必要关联，独立维护平台世代，不复制私人 payload/state |
+| secretary_request | id、work_id、generation、phase、plan_version、source_attempt、consumed 为私人协调/outbox 历史 | 新动作回执只保留 requestId、已提交的 Plan/step/attempt、业务版本及消费事实；不以旧 consumed 证明新动作已执行 |
+| secretary_participant | 可缓存自己有权读取的角色历史 | work_id 映射为已核验 Plan 关联；worker_id/role 转为平台历史参与记录，不能随私库更改或删除 |
+| secretary_admitted_task | 可缓存 task_id/关联 | task_id、work_id 关联、generation 转为平台单次准入；旧准入不自动变成新授权 |
+| secretary_message | id、work_id、actor、input_hash、user_text、reply、created_ms、source_revision 全部个人所有 | 无新副本；已有平台 EXTERNAL_WORK 聊天/协调载荷与日志列入显式历史清理清单，不在自动流程删除 |
+| delegation_lock | 无 | id/version 仅旧模式；新权限边界独立序列化 |
+| delegation_security | 无 | id/legacy_auth_required 保持永久管理写入认证要求；不能随旧模式停用而清零 |
+| delegation_legacy_request | 无私人正文 | id、server_boot、method、path、state、started_ms、finished_ms 保留管理入口/在途审计；新日志禁止请求正文和凭证 |
+| delegation_identity | 私库只保留公开 Worker 关联和外部凭证引用 | worker_id、key_hash、generation、enabled_boot、changed_by、changed_ms 为平台安全事实；新凭证重新登记，不导出有效凭证 |
+| delegation_target | 无权威副本 | target_key、generation、admitted_ms 转平台目标与接管世代；共享限额不随 Worker/私库重建 |
+| delegation_grant | id/owner/worker_id/revision/state/effective_ms/expires_ms 为私人版本关联；original_text、rule_json、template_id、template_revision 留私库 | 人工另行确认最小有效动作/目标/参数约束、有效期和累计上限；authority 转为平台身份/角色校验依据；不直接执行旧 rule_json |
+| delegation_history | grant_id、revision、snapshot、changed_by、changed_ms 为私人历史；混合 snapshot 按字段拆分 | 已执行动作的授权 ID/版本、可信变更人和时间在平台审计保留，不复制私人原文 |
+| delegation_budget | 只读缓存 | target_key、action、limit_value、used_value、reserved_value 及其历史为平台账本；禁止导入个人计数覆盖 |
+| delegation_request | id、snapshot 中私人策略/模型推理、detail 中私人决策文本及其时间关联留私库 | grant_id/revision、worker_id/generation、target_key/generation、task_id、state、created_ms/updated_ms 和必要执行 detail 转历史平台审计；旧 fingerprint 不作为新去重键；新摘要不含私人策略 |
+| delegation_audit | detail 中个人推理、未提交策略及其 id/关联/actor/event/created_ms 留私库 | 同一历史 id 建立拆分关联；target_key/grant_id/request_id、可信 actor/event/created_ms 及执行事实保留；不丢原时间或责任主体，不将自由文本直接视为平台事实 |
+| delegation_template | id、owner、revision、original_text、rule_json、source_grant、source_revision、created_ms 全部个人所有 | 无新副本；历史引用保持可对账，不产生能力 |
+| delegation_draft | id、owner、original_text、created_ms 全部个人所有 | 无新副本 |
+| delegation_template_history | template_id、revision、owner、snapshot、created_ms 全部个人所有 | 无新副本 |
+| delegation_model_constraint | 可缓存授权摘要 | task_id、grant_id/revision、catalog_version、profiles_json 为实际 task start 的强制约束，转平台模型准入记录 |
+| delegation_task | 可缓存结算回执 | task_id、target_key、allowed_attempt、reserved、started、settled 为平台准入/结算；不能由私人状态重置 |
+| delegation_model_scope | 私人策略可引用模型偏好 | target_key、role、catalog_version、profiles_json、grant_id/revision 的有效白名单为平台已确认约束，非私人推理 |
+| delegation_publication_plan | 可缓存已提交目标 | plan_id、target_key 为固定发布对象权威关联 |
+| delegation_publication_attempt | 可缓存任务回执 | task_id、allowed_attempt、grant_id/revision、worker_generation、enabled_boot 为平台单次许可历史；新启动不得沿用旧 boot 启用状态 |
+
+恢复/替换 Worker 仅复制个人数据和公开关联。相同 owner/Plan/step 的执行轮次、技术重试和仅重评各用独立账本；非 step 动作用服务器核验的稳定目标+子动作。若 V4/V5 历史无法核验、预留未结算或存在旧秘书协调任务，则新路径拒绝准入，保留人工处理。旧任务历史不能因为停用旧模式而丢失执行/评审/代理独立性约束。
+
+#### 6.3 身份与有效能力（Work 1.2 的安全边界）
+
+当前 Web Console 是单配置账号，并非多人账号系统。新 owner 使用持久随机 ID，由**已开启认证**的 Console 登录主体在绑定时创建；未认证的 local-console 不允许登记新个人 Worker。owner 记录绑定现有 configured username 和角色配置指纹；账号/角色配置改变即使旧 session 仍存在也不得扩权，须重新绑定/启用。不同 owner 的隔离由平台记录约束，不能假称已有多账号 UI。
+
+人工在平台同源 session+CSRF 页面确认 owner、Worker、凭证摘要及精确能力。参考方案沿用独立高熵 bearer 凭证，平台只存 SHA-256 哈希，以常量时间比较；禁止共享 Worker token 或 capability 充当此凭证。登记默认 DISABLED，人工 enable 绑定当前 boot；Worker/平台重启和凭证轮换后均需人工明确重新启用，历史读取另有权限。凭证从专用环境变量/受限本地配置读取；不进 URL、模型提示词、导出包或日志。远程必须 HTTPS；明文 HTTP 仅在双方明确配置的回环地址开发模式使用。普通 Worker 租约协议及 X-AIW-Delegate-Key 继续保护旧 reserved identities，不复用为新能力。
+
+能力包含 ownerId、workerId、action、精确 server targetKey、可选 step、参数约束、允许状态、最小轮次、maximumUses、effectiveAt/expiresAt、revision、targetGeneration；缺项或未知字段拒绝。人工批准上限必须展示，不从私人自然语言自动签发。现有角色分类保留：A11 为 APPROVER/ADMIN，A17 为 ADMIN，其余为 OPERATOR/ADMIN；操作时重新核验当前人类角色和 owner 绑定。另有 READ_STATE/READ_RECEIPT 只读范围，不能推导执行权或读取其他 owner 的授权清单。
+
+私人 DENY 原文不进入平台，但其**有效禁止范围**必须在平台强制执行，避免移走 rule_json 后丢失否决语义。采用平台最小“禁止投影”：精确 action/target/step、允许状态/轮次条件、私人版本不可逆摘要、投影版本、生效时间和明确替代的旧禁止版本。它不含理由、对话或推理。适用禁止优先于任何 ALLOW；Worker 只可提交收窄/新增禁止，不能删除、替代或扩大。解除禁止或扩张上限必须由人工在平台确认。
+
+私人 UI 更新有效策略采用先暂停目标→平台确认新收窄投影→私库原子保存策略与确认版本的顺序。任一网络/写入失败保持暂停，旧 outbox 不升级版本；重复发布同一投影只返回原结果。平台要求动作引用当前 restrictionRevision，不匹配则拒绝。恢复旧私库先对账平台当前世代与投影，不得用旧版本扩大权限。UI 在平台确认前只能显示“待同步，执行暂停”，不能宣称 DENY 已生效。用户绕过 UI 任意改私库不能改变平台投影或预算；平台不能感知未提交的文件修改。平台无法安全投影的自由表达禁止规则不得转换为可执行 ALLOW，保持暂停并要求人工澄清。
+
+#### 6.4 请求、回执与错误契约（Work 1.2）
+
+所有新端点在 `/api/r1/authority`，仅承担平台权限/业务事实：人工使用 `POST /owners/bind`、`POST /workers`、`POST /workers/{id}/enable|disable`、`POST /grants`、`POST /grants/{id}/revoke`、`POST /targets/{id}/takeover|return`、`POST /budgets/{id}/supplement`。固定操作由静态路由定义，竖线仅此处表示枚举，不是表达式 API。对应页面位于平台 `/ui/authority`，不载入私库。
+
+认证路由按 method+path 闭集分流：上述人工 POST 及 `/ui/authority` 纳入 WebConsoleApiRoutes/WebConsoleSecurityInterceptor 的显式人工匹配，强制当前已配置认证、有效 session、写入 CSRF（沿用 `_csrf`）、当前角色及不可清零的 legacy_auth_required 锁存；禁止利用拦截器在 auth disabled 时的本地 ADMIN 回退。机器 `GET /state`、`GET /grants`、`POST /actions`、`GET /receipts/{requestId}`、`POST /restrictions` 进入单独 bearer 认证+owner/scope 拦截器，不创建浏览器 session、不接受 cookie 或共享 Worker token 代替身份。机器 `POST /restrictions` 仅可收窄自身 owner/目标；不得触发人工替代或解除禁止。人工查询通过 `/ui/authority` 的服务端受权读取路径渲染，不借用机器 GET 接口的 cookie 兼容。未列入 method+path 的 authority 路由默认拒绝，不能仅用 URL 前缀整根套浏览器认证或整根豁免。两类拦截器在业务进入前完成身份判定；应用首锁内仍重查当前角色、scope 和版本，不依赖 session 中缓存的角色。新增路径必须在路由注册与闭集匹配表中一起更新，否则不得开放。
+
+机器使用 `GET /state?target=...`、`GET /grants`（仅本身份的有效摘要）、`POST /actions`、`GET /receipts/{requestId}`、`POST /restrictions`（仅收窄/暂停）；所有 owner 从认证 principal 映射，不信任 body 的 owner/actor。人工读取回执须为当前 owner 或具审计权限 ADMIN；替换 Worker 须显式获得原 owner 的最小 READ_RECEIPT 范围，失效凭证始终拒绝。不得提供跨 owner 的全表列表。
+
+动作信封 v1：`protocolVersion`、UUID `requestId`、`grantId/grantRevision`、`restrictionRevision`、`targetId/step`、`action`、`expectedTargetGeneration`、`expectedVersion`、`expectedTaskVersion`（适用时）、`taskId/attempt`（适用时）、`parameters`、不可执行的业务证据 ID。服务器按闭集 DTO 校验参数；reason 是用户主动提交的业务理由，限 2000 字符，不得自动附带策略/对话。请求整体限 32 KiB；无 arbitrary method、SQL、shell 或反射调用字段。
+
+去重主键为**持久 platformInstanceId + ownerId + requestId**。摘要为确定性规范 JSON 的业务字段 SHA-256：协议版本、action、服务器归一化 target/step、预期业务版本、task/attempt、parameters、证据 ID；对象键排序、UTF-8、整数、不允许浮点/重复 JSON key。grant/Worker/凭证/boot/restrictionRevision 作为审计及首次准入条件，不进入业务摘要；重发必须使用原信封，不因新授权改写业务参数。第一次 requestId 关联的 Worker/授权版本永久保留。相同键不同业务摘要返回冲突，相同摘要先返回原回执，不再次检查为可执行；查询仍必须通过当前只读身份/范围检查。
+
+平台实例 ID 存平台 metadata，不随启动变化；恢复备份须同时恢复实例 ID、回执、预算、准入与审计至一致点。禁止在承诺不明/丢失去重历史的还原库上重新启用动作；先冻结委托并人工对账。回执及 requestId tombstone 默认无限保留；将来删除/压缩需要单独保留去重及审计约束设计，本 FD 不实现 TTL。新平台实例不是旧动作的自动重试目标，个人客户端发现实例 ID 变化立即暂停。
+
+回执：`requestId`、`actionDigest`、`state`、`targetVersion`、`admissionId`、`taskId/attempt`、`resultRef`、`errorCode`、`createdAt/updatedAt`，无私人推理。状态为 REJECTED、APPLIED、ADMITTED、IN_PROGRESS、SUCCEEDED、FAILED、UNKNOWN；ADMITTED 仅指已持久化准入，不代表专业任务已启动/完成。已终结回执不被授权更新覆盖。请求先通过身份/大小/结构校验，再查同键回执，再在串行化边界内校验并插入最终/准入回执；业务拒绝记录 REJECTED，不消费额度。结构错误和未认证请求不创建可被攻击者占用的回执。
+
+HTTP：401 为无效机器/会话凭证；403 为范围/当前角色不允许（不泄露其他 owner 资源）；404 为本身份不可见或不存在；409 为相同键不同业务摘要、版本/世代变化或旧路径在途冲突；422 为不可表达的动作条件/预算不足/明确业务拒绝；410 为新模式下已退役私人业务接口；202 为新 ADMITTED/IN_PROGRESS/UNKNOWN（UNKNOWN 只查询，不重新执行）；200 为已完成或既有回执。响应统一含稳定 `code`、requestId（存在时）和安全 message；不返回堆栈、凭证或完整请求。
+
+#### 6.5 20 个固定子动作及准入矩阵（Work 1.2）
+
+下表所有行都需要同 owner 的有效能力、当前 restriction/target 世代和现有角色；版本为调用时服务器重读并对照 expectedVersion，不能仅把当前版本偷偷传给旧服务。每行都采用共享去重和独立预算。所谓 DB 准入只对应用方法已核实无文件/Git/外部效果时成立；实际专业执行在后续 task attempt 中，不能混为动作请求事务。
+
+| 动作 | 目标/必要参数与额外约束 | 现有入口/平台结果；副作用边界 |
+| --- | --- | --- |
+| A01 | Plan+step；scope、reason、当前原评审 task/version、可选独立 model grant | continueAuthorizedRepair；一轮执行+独立评审的 task/attempt 准入；预留执行轮次，结算按实际 start/history |
+| A02 | Plan+step；profiles、catalogVersion、EXECUTION/REVIEW/BOTH；仅目录已批准型号，无受影响活跃任务 | configureModels 等效平台白名单；APPLIED，不在此调用模型；实际 start 再校验 |
+| A03 | Plan+step+明确 task/attempt；failureCategory、sideEffectsConfirmed、minimumIntervalSeconds、reason；不允许含糊 CURRENT 作为新信封目标 | retryFailedTask；ADMITTED 的新 attempt，不能把未知效果当已失败或同意自动重放 |
+| A04 | Plan+step；原成果/评审 task/version、warningConfirmed=true、reason | resumeReview；只新评审准入，不重跑执行，不借用执行轮次 |
+| A05 | Plan；reason、当前 DRAFT/业务版本 | confirm；DB 创建/准入专业 task；发布 Plan 还须独立 A12_EXECUTE 固定许可 |
+| A06 | Plan；targetStep、reason；不得越过原跳转 Gate | jump；DB 推进/准入；发布分支仍需单次发布许可 |
+| A07 | Plan；reason | stop；记录停止及租约控制事实，不声称外部执行已撤销 |
+| A08 | Plan；reason | withdraw；原撤回约束，不抹除历史 attempt |
+| A09 | Plan；reason | complete；只完成符合原业务 Gate 的 Plan，不伪造专业结果或回滚文件 |
+| A10 | Plan；reason | cancel；原取消/任务控制，已运行结果照实记录 |
+| A11_APPROVE | approval ID；reason、审批源 task/版本 | decideApproval APPROVE；当前 APPROVER/ADMIN，历史执行/评审/代理 Worker 两两独立 |
+| A11_REJECT | 同上，独立能力/计数 | decideApproval REJECT；不得由 APPROVE 能力推出拒绝权 |
+| A12_CREATE | file ID、reviewTaskId、targetPath、sourceHash、reason | publication；验证已评审源/路径后仅创建固定发布 Plan，返回 Plan ID，无执行权 |
+| A12_EXECUTE | 固定发布 Plan、file/review/path/hash、明确 task+next attempt | requirePublication+固定 attempt 许可；ADMITTED；后续真实文件写入/结果用 §6.6，不自动重试 |
+| A13 | GLOBAL；maxParallelism、minimum、maximum、allowUnlimited、minimumIntervalSeconds、reason | updateMaxParallelism；0 明确表示无限且需单独同意，限制 0..65535；本地 DB 配置 APPLIED，不扩大 owner 全局范围 |
+| A14 | 普通 Worker ID、reason | drain；DB 状态变更，排除个人委托身份；不能借此 enable 委托 |
+| A15 | 普通 Worker ID、reason；activeLeases=0 | offline；DB 状态变更，活跃租约不得强退 |
+| A16 | Plan；reason；原 archivable 条件、真实结果及版本 | archive；只现有平台归档记录，未核实的扩展文件归档必须单列持久意图，不在 DB 事务中执行 |
+| A17_SCHEDULE | 已归档 Plan；reason、原保留窗口 | scheduleDeletion；只排期，不立即删文件；实际清理器独立执行意图/对账 |
+| A17_UNDO | Plan；reason；尚在撤销窗口且删除未生效 | undoDeletion；独立能力/计数；UNKNOWN 或已开始清理不能假装撤销成功 |
+
+读取只返回目标 Plan/Task 状态、版本、必要结果引用、允许动作/剩余额度和本 owner 回执。读取成果正文沿用原成果授权，不能因 READ_STATE 获得任意文件下载。精确 sourceHash/路径/目录版本变化必须新人工核验，不以客户端给出的字符串直接信任文件内容。
+
+#### 6.6 事务、状态与故障恢复（Work 1.3）
+
+全局权限首锁取代旧 delegation_lock；其后按原顺序取受托 Plan 边界、按 ID 排序的 task 锁、Plan/业务锁。人类管理写入、签发/撤权/接管、预算补充和机器准入均从此首锁进入；不能有反向持锁回调。新/旧模式切换的同目标准入也取首锁。SQLite 用已有单写事务，PostgreSQL 用固定权限行 UPDATE 行锁；不新增跨库事务或以 JVM 锁替代持久序列化。
+
+纯 DB 动作：锁内重读身份/当前人类角色/能力、禁止投影、世代、原业务快照/历史参与/预算，按子动作调用原应用服务，同事务写消费、准入及回执；失败整笔回滚，再在独立权限事务记录无效果的 REJECTED。若连接故障导致 commit 是否成功未知，先查询原 requestId，不能先创建拒绝或再次执行。请求并发由主键唯一约束兜底，冲突方只读取胜出回执。
+
+专业 task admission 和真正开始区分两次校验：准入时持久记录 request/target/owner、角色、task+精确 next attempt、身份与目标世代、restrictionRevision、模型白名单及预留。actual start 在平台权限首锁及同一 start 事务内重读当前身份/启用 boot/身份世代、owner 当前角色、能力版本/条件/有效期、restrictionRevision 和全部适用 DENY 投影、目标暂停/接管/世代与业务状态、模型白名单及历史独立性；任一世代/版本变化、适用禁止或暂停均使旧 admission 失效，不消费或自动续发许可。以平台确认从未 start 的记录解除对应预留，不返还已实际消耗或 UNKNOWN 占用；后续必须新候选、新权限校验及新准入，不能以原回执 APPLIED/ADMITTED 证明当前仍可执行。这些检查适用于 A01 完整轮次后续评审、A04 仅重评、A03 技术重试、A05/A06 推进及 A12 的每个固定专业 attempt；评审是整轮组成也不豁免新 DENY 或暂停。通过后才消费预留并记 start。心跳及真实完成可在撤权后记录，但不能产生新推进/新 attempt。自动 lease reclaim、修复轮次、重启均无权复用旧许可；发起者需新的有效动作和剩余额度。交回目标只恢复提交新候选的可能，不重跑任何旧 request。
+
+外部效果只允许由带唯一 effectIntentId 的固定专业 attempt 执行。平台在允许 effect/start 前持久提交 PREPARED 意图、单次准入和预算占用；与撤权的线性化点是该 start 事务提交。撤权先提交则不允许启动；start 先提交则它是已生效动作，撤权只阻止后续动作并保留真实完成，不能承诺撤回外部效果。之后不持平台 DB 事务跨文件/Git/网络 IO。执行者以现有 lease token 和固定 attempt 上报结果，平台验证输出 hash/commit/目标引用后在独立事务结算并写终态。
+
+| 故障窗口 | 唯一允许恢复动作 | 禁止行为 |
+| --- | --- | --- |
+| 私库决定/outbox 未提交 | 无平台动作；重新讨论/提交用户决定 | 把未提交本地操作称作已发送 |
+| outbox 已提交，尚未发出 | 原 requestId 原业务摘要发送 | 自动生成新 requestId 绕过去重 |
+| 平台 DB 准入回滚，确认无回执且无已发放 effect/start | 重发原 request；重新完整校验当前权限 | 沿用旧快照跳过权限 |
+| 平台 commit/响应不明 | 查询原 request；服务端原键去重 | 先退款、生成 REJECTED 或创建新请求 |
+| 平台成功，私库缓存写入失败/响应丢失 | 查询回执并原子更新私库 | 再消费/再执行 |
+| PREPARED 但未到 start | 查询准入和精确 attempt 状态；撤权/接管可阻止 start | 给其他 attempt 补发旧许可 |
+| 已 start，执行者失联或结果事务未提交 | IN_PROGRESS 到 UNKNOWN，保留预算占用和意图；只查询/核验 | timeout 当失败、自动重发或返还额度 |
+| 完成事实已持久化，回执未更新 | 平台用同意图同 attempt 的既有完成事实补记回执；无外部调用 | 再次启动 task |
+| 目标/身份世代变化或还原旧私库 | 本地暂停、先同步当前权威版本；旧请求仍只查原回执 | 自动 enable、交回或升级旧 outbox |
+
+逐类外部核验：发布文件需固定路径、源 hash、完成 attempt 的成果证据；目标已存在同 hash 仅为对账线索，不能单独证明是谁写入。Git 类工作用固定 repository/base/result commit 和 attempt 报告，不执行“重试 Git”探测；删除清理用固定资源清单+清理意图的逐项完成证据，单独“不存在”不能证明本请求成功。停止/取消只核验平台状态和真实租约完成，不对文件回滚作推断。A16 当前是平台元数据归档；后续若实际实现包含外部效果，必须按意图协议处理，不能借名称视为纯 DB。
+
+证据不足保持 UNKNOWN 并转人工对账；本 FD 不提供一键“重放未知结果”。人工如确认需要新的实际执行，必须先记录对旧意图的处理结论和证据、明确接受重复效果风险，再通过新的业务批准/授权和额度决定发起；不是 outbox 自动新 requestId。模型/专业执行故障并不自动解除意图，私库恢复也不能抹除它。
+
+#### 6.7 私人 UI、安全与兼容（Work 1.4）
+
+比较平台反向代理与独立个人 origin：反向代理会令平台访问用户机器并承载私人响应，增加 SSRF、cookie 混用与私人日志风险；采用独立个人 origin。平台只提供外链及身份/有效权限/回执 UI，不 iframe、不在平台页面 fetch localhost。参考服务只监听明确配置的 loopback 地址，严格 Host 校验；用户远程部署时自行配置 HTTPS 反向代理及固定公开 origin，未配置远程认证则拒绝非回环监听。参考 UI 无默认公用账号、无自动接受 localhost Origin。
+
+个人 UI 有独立本地登录：每实例首次启动提供一次性控制台配对码（短期、用后作废、限次；永不打印平台凭证），验证后设该服务自己的 HttpOnly/SameSite=Strict cookie 和 CSRF token；HTTPS 时加 Secure。校验 Host、Origin/Referer 与 CSRF，拒绝跨源写入、凭证放 URL、宽松 CORS 和 WebSocket 绕过；不复制平台 session/数据库。配对码只用于个人本地 UI，不能成为平台 grant；登录不自动启用能力。所有 UI 使用现有 Console 的颜色/字体/间距和交互惯例，实际实现前读取相关样式。
+
+平台 owner/凭证绑定由用户在两个服务分别明确操作；无浏览器身份自动转交。平台页面仅显示“打开个人秘书”，用户地址来自人工登记且仅允许 http/https（HTTP 仅回环）、无 userinfo/脚本/平台内网代理请求；点击是浏览器导航，不是平台服务器取 URL。个人前端不读取平台 cookie；其后端用专用机器凭证请求必要平台数据。私人 DOM/日志不得上传平台。
+
+兼容采用全局显式模式 `legacy|personal`，默认 legacy，不自动切换现有环境。personal 模式开启前须通过 G1 清单与人工切换决定；禁止新旧模式对同一目标双写。新协议/Worker 可在禁用状态部署，但未切换时不执行现有目标，避免双重调度。切换暂停旧调度、使候选失效、核验在途并保留旧管理认证锁存；新 Worker 仍需人工单独 enable。
+
+| 入口 | legacy 模式 | personal 模式 |
+| --- | --- | --- |
+| 平台 `/secretary`、私人对话/规则/模板/草稿 API（`/api/r1/secretary`、`/api/r1/delegation` 的私人部分） | 维持当前契约 | 私人写入返回 410 和安全迁移说明；不透明代理到用户服务；历史仅按人工选择的受保护导出/封存路径 |
+| 原委托身份/授予/管理路由 | 保持当前功能与认证约束 | 不再发新旧能力；只保留必要历史审计/撤权和永久管理写入认证要求；新入口为 authority |
+| `/api/r1/authority` | 可人工配置禁用身份和只读预检；不对旧目标发放执行准入 | 独立身份+能力+单次准入执行；无私人正文 |
+| `/api/r1/worker-protocol/v1` | 不变 | 不变，原专业 Worker 无需重写；新平台代理准入在原 start 边界强制 |
+
+#### 6.8 迁移设计与执行界限（Work 1.5/5.x）
+
+工具设计为显式 `preview`、`export`、`import`、`reconcile`、`switch`，不是 auto 启动迁移。preview 只接受操作者指定源库和 owner 映射文件，不扫描猜库、不写源库；输出 schema 版本、表/列计数、可核验 owner 分组、未映射/混合敏感记录、在途/未结算清单及阻断原因。预览 manifest 包含批次 UUID、源实例/schema、映射摘要、每表行数、规范化内容 hash、关联和时间范围、目标 owner/Worker/store 标识，无活动凭证。无法确定归属的记录只标封存，不导出给当前用户。
+
+正式 export/import 需要用户提供源库、可用备份、owner 证明和目标私库；同 batch+摘要重复导入返回原结果，不同摘要拒绝。使用暂存及单私库事务，核对引用/数量/摘要后标记批次提交；平台回执/预算不从私人导入包重写。source→target 映射保留旧 ID，无自动启用或补发旧动作。switch 只有在旧生产者已暂停、在途清单有逐项处理、备份与回退路径经人工确认后才接受；工具缺证据即拒绝，不因用户运行了命令而推断已确认。
+
+回退先停新路径并保存两侧数据和平台意图/账本；有任何新 start/执行或 UNKNOWN 时禁止直接恢复旧库/旧调度。只允许人工对账后决定继续新路径或单独安全恢复。清理私人历史（包括旧 EXTERNAL_WORK/attempt 正文）须独立清理计划、备份和可验证归属，绝不在本次 auto 执行。尚未确定的实际 G1 不靠补写“无需迁移”消除，也不伪称 Work 1.5 已完成。
+
+### 7. 实施前 Gates
 
 | ID | 状态 | 决定/所需证据 | 影响 |
 | --- | --- | --- | --- |
 | G1 | 待人工迁移决定 | 实际源库和备份、旧 actor 到可信 owner/目标私库映射、未结算/在途处置和允许切换窗口；包括共享 local-console 归属 | 阻止历史导出/切换/清理，不猜测拥有者 |
-| G2 | 待工程契约冻结 | 平台通用最小能力/20动作矩阵、requestId作用域、快照/预算/回执状态、私有DENY与平台有效权限的收窄/同步关系、秘书托管准入映射 | 阻止授权和执行协议实现；由1.1–1.3产出并独立设计评审 |
-| G3 | 待交互/安全设计 | 私人UI的部署入口、浏览器到个人服务的认证和跨源策略、现有 `/api/r1/secretary`/delegation等路由迁移与禁用策略 | 阻止UI接线和旧入口停用；不自动信任localhost或导出session |
+| G2 | 本轮工程设计已形成；发现已定向复核解决 | §6.2–6.6 的全列归属、最小能力/20动作、稳定去重/回执、禁止投影、任务start及UNKNOWN恢复 | 1.1–1.3设计产物完成；不代表实现或运行验证通过，完整FD仍受G1阻塞 |
+| G3 | 本轮交互/安全设计已形成；发现已定向复核解决 | §6.4/6.7 的独立个人origin、独立认证、人工/机器认证闭集分流、旧入口兼容矩阵 | 1.4设计产物完成；实际旧模式切换仍受G1及额外迁移授权限制 |
 
 这些是设计草案的实际未决项，创建 FD 不代表批准新协议或迁移策略。后续可以先推进不依赖实际数据的设计工作；不得将依赖 Gate 的实现标为低风险或已就绪。
 
 %% NEEDS_INPUT: G1 实际迁移源库、可信owner映射、在途处置与切换/回退窗口尚未确认；历史数据迁移不得实施。
 
-%% NEEDS_INPUT: G2/G3 平台能力及动作/回执协议、私有禁止与有效授权的同步、私人UI部署与浏览器认证契约尚待1.x工程设计冻结，当前不交接Worker实现。
+G2/G3 的设计发现已在独立定向复核中解决，见 `reviews/FD-024-design-recheck-r3.md`；整份 FD 的独立结论仍为 changes-needed/INCOMPLETE，原因是 G1 未解决。不能把定向复核解释为全 FD 就绪或实现通过。
 
 ## Scope
 
@@ -100,12 +255,12 @@
 
 ## Work items
 
-下列项逐项一个可审阅结果。规模均以小（预计半天以内）为目标，常规难度中；1.x负责高风险设计的有界产物，其输出需评审，未冻结的后续项保持 gated。若细化后仍过大则继续拆分，不因表格估算豁免 Gate。当前均未实施。
+下列项逐项一个可审阅结果。规模均以小（预计半天以内）为目标，常规难度中；1.x负责高风险设计的有界产物，其输出需评审，后续实现保持 gated。若细化后仍过大则继续拆分，不因表格估算豁免 Gate。本轮仅完成1.1–1.4设计；实现项全部未实施。
 
-- [ ] 1.1 V8/V9逐列数据归属及保留映射，区分私人原文和平台最小权威数据，明确私有DENY同步要求。依赖/准入：本FD，设计工作。规模/难度：小/中，边界高风险需评审。
-- [ ] 1.2 冻结平台能力、20子动作及读取范围的请求/返回/角色/幂等矩阵，包含版本冲突和已准入语义。依赖/准入：1.1，设计工作。规模/难度：小/中，协议高风险需评审。
-- [ ] 1.3 冻结跨库outbox/回执、托管准入及启停/撤权/接管/重启状态；给出每个故障窗口的唯一恢复动作。依赖/准入：1.2；关闭G2。规模/难度：小/中，事务高风险需评审。
-- [ ] 1.4 冻结个人UI的部署/认证与旧API兼容矩阵，不转交平台session存储。依赖/准入：1.1–1.3；关闭G3。规模/难度：小/中，认证高风险需评审。
+- [x] 1.1 V8/V9逐列数据归属及保留映射，区分私人原文和平台最小权威数据，明确私有DENY同步要求。依赖/准入：本FD，设计工作。规模/难度：小/中。产物：§6.2/6.3；独立设计评审及定向复核见Verification，不代表已迁移数据。
+- [x] 1.2 冻结平台能力、20子动作及读取范围的请求/返回/角色/幂等矩阵，包含版本冲突和已准入语义。依赖/准入：1.1，设计工作。规模/难度：小/中。产物：§6.3–6.5及R3-F2修订；不是已实现API。
+- [x] 1.3 冻结跨库outbox/回执、托管准入及启停/撤权/接管/重启状态；给出每个故障窗口的唯一恢复动作。依赖/准入：1.2；G2工程设计产物。规模/难度：小/中。产物：§6.4/6.6及R3-F1修订；无运行验证。
+- [x] 1.4 冻结个人UI的部署/认证与旧API兼容矩阵，不转交平台session存储。依赖/准入：1.1–1.3；G3工程设计产物。规模/难度：小/中。产物：§6.4/6.7及R3-F2修订；未开放新UI或停用旧路由。
 - [ ] 1.5 制定实际owner清单、预览manifest及停写/在途/切换/回退方案，取得G1所需人工决定。依赖/准入：1.1、实际环境信息。规模/难度：小/中，迁移高风险，G1未关闭不执行。
 - [ ] 2.1 独立参考个人Worker进程骨架、单owner绑定、私库定位及生命周期/存储接口，无平台Jdbc依赖。依赖/准入：G2关闭、1.1。规模/难度：小/中。
 - [ ] 2.2 私库迁移版本及个人安排/消息/上下文保存，多个实例/用户数据目录明确隔离。依赖/准入：2.1。规模/难度：小/中。
@@ -143,7 +298,7 @@
 - [ ] 5.3 自定义秘书接入契约与中英文运维/兼容文档，稳定规范按已确认决策更新。依赖/准入：1.x–5.2。规模/难度：小/中。
 - [ ] 5.4 实际实现后的允许范围compile-only/静态证据与独立实现评审交接材料。依赖/准入：全部实现项完成。规模/难度：小/中；当前不运行。
 
-以上稳定ID供后续细化，拆分时保留 lineage。当前设计项/未来实现均保持未完成；设计讨论不勾选实现结果。交付/清理/归档属于将来的PM生命周期，不列为Worker交接前的循环依赖项。
+以上稳定ID供后续细化，拆分时保留 lineage。1.1–1.4只勾选实际形成且经过独立设计审阅的文档产物；1.5及所有实现项未完成。设计讨论不勾选实现结果。交付/清理/归档属于将来的PM生命周期，不列为Worker交接前的循环依赖项。
 
 ## Acceptance
 
@@ -165,23 +320,28 @@
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
 
-本次请求仅创建FD。只进行有界源码/规范阅读、设计文档编写和一次静态检查；不创建实现worktree、不emit implementation-ready、不运行测试/编译/服务/网络/迁移，不合并或部署。
+最初请求仅创建FD。2026-10-21 用户随后请求 `FD-024 auto`，并确认取消原 Planner 交接及重新建立设计交接；当前授权为默认完整本地生命周期，但不包括测试、实际数据迁移、网络、发布或部署。设计未就绪时不创建实现worktree、不emit implementation-ready、不把未执行检查标为通过。
 
 独立设计评审按 fd-workflow 的公开接口、认证和持久化风险条件执行一次有界审查，作为设计证据；有未决Gate时保持Design，不emit design-ready给Worker。完整设计冻结后，后续实现另按实际授权推进；不能以本草案代替既有FD-021/022的已实现规范。
 
-已做一次有界独立设计评审：`reviews/FD-024-design-review.md`及同名JSON，结论 changes-needed/INCOMPLETE。F1外部副作用UNKNOWN底线和F2不依赖可换授权的去重域/历史查询边界已补入本草案，较宽实现组已拆为子项；这仅是Planner纳入发现，不伪称取得独立ready或运行验证。G1–G3仍未决，保持Design，不自动发起重审或实现。
+原独立设计评审为 `reviews/FD-024-design-review.md`及同名JSON，结论 changes-needed/INCOMPLETE。F1外部副作用UNKNOWN底线和F2不依赖可换授权的去重域/历史查询边界已补入本草案，较宽实现组已拆为子项。此次 auto 补充 §6 后执行一次独立静态设计评审，见 `reviews/FD-024-design-review-r3.md`及同名 JSON，结论 changes-needed/INCOMPLETE：R3-F1 为 actual start 必须重查当前 DENY/暂停/世代；R3-F2 为新人工/机器路径需明确加入认证分流。Planner 已分别修订 §6.6、§6.4，修订后仅定向回查这两项；原报告保留为历史，未伪称原评审已通过。G1 及必要独立复核未完成前不 emit design-ready。
 
 未来实现默认仅编译与静态审查，测试/迁移/服务/故障注入须具体授权。迁移的实际owner映射、在途清单、备份、回退及跨库故障窗口必须有可审查证据，未执行的检查如实标为未验证，不能把编译或模型建议当作运行时安全通过。
 
+本轮独立定向复核已完成：`reviews/FD-024-design-recheck-r3.md`及同名JSON确认R3-F1/R3-F2在候选设计中resolved；原报告保持不变。复核明确整份FD仍为changes-needed/INCOMPLETE，G1未豁免。1.1–1.4完成只代表设计文档产物；没有独立实现Reviewer结果、编译或实际迁移证据。
+
 ## TODO
 
-- 保持Design，先关闭G2/G3及工程设计评审发现；G1等待实际数据/owner/切换决定，不阻止记录设计。
-- 当前只创建可追踪设计和工作拆分，没有实现或验证跨库协议。参考Worker语言、协议端点/DTO、UI部署和逐列迁移映射仍由1.x细化；若影响超出当前范围则回到本FD明确决定。
+- 保持Design；G1等待实际数据/owner/切换决定，或明确的仅工具实现范围决定，不阻止记录独立设计产物。
+- G2/G3本轮工程契约及R3-F1/F2修订已形成并定向复核；旧“先关闭G2/G3”是初始TODO，本轮已完成对应设计产物。独立复核 `reviews/FD-024-design-recheck-r3.md` 明确两项 resolved，但完整FD仍INCOMPLETE；当前等待G1的实际环境决定或明确的工具实现范围决定，不发Worker交接。
+- 参考语言、协议、UI和全列映射见§6；实际平台/个人Worker业务代码尚未实现。后续实现前仍按冻结契约细化实现项，规模超出半天或含多个独立结果的项必须继续拆分，不以本轮勾选设计项代替实现证据。
+- 本轮交接归属反馈已resolved；G1反馈 `reports/FD-024-blocker-migration-decision-20261021-b18a6f.md` 仍unresolved。复用建议是区分工具实现/实际迁移准入、提供专门Planner恢复接口并补齐反馈模板；本轮不扩展修改技能或CLI。
 - 稳定规范 `secretary`、`delegated-decisions`、`worker-pull-protocol`、`control-plane-api` 的拟修改位置已列入5.3；本次保留其当前实现契约，后续在规则冻结后同步。
 
 ## Sources
 
 - 用户2026-10-21确认的方向：个人秘书独立实现与DB，代理业务属于秘书；随后明确请求创建FD，未请求实施或执行迁移。
+- 后续授权：2026-10-21 请求 `FD-024 auto`，并回复 `confirm` 允许恢复 Planner 交接。当前源事件为 `FD-024-000003-design-requested`，Planner session 为 `01a15e5f-d79d-73e0-bb3b-480e76aa474c`。旧事件取消及新事件受管 force-emit 均有 PM 审计，见已解决的 `reports/FD-024-blocker-planner-owner-20261021-5e9c2a.md`；未强制标记设计或实现就绪。
 - `docs/features/archive/FD-021/`：现有秘书安排/协调实现历史。
 - `docs/features/archive/FD-022/FD-022_WORKER.md`：当前代理能力及认证/预算/发布保障。
 - `docs/features/archive/FD-023/FD-023_API_API_R1.md`：当前API前缀与会话/机器边界。

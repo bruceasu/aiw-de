@@ -2,7 +2,7 @@
 
 <!-- aiw-data: FD-024-blocker-planner-owner-20261021-5e9c2a.json -->
 
-- 时间：2026-10-21 21:15 +09:00。阶段：preflight；记录角色：PM；状态：unresolved。
+- 时间：2026-10-21 21:15 +09:00。阶段：preflight；记录角色：PM；状态：resolved（仅交接归属阻塞，设计 Gates 仍独立存在）。
 - 源事件：`FD-024-000002-design-requested`；FD 为 Design / Revision 2。
 - 事实：该事件仍为 dispatched，归属会话 `01a15a47-fc32-7362-ac13-f660487b7632`。当前会话为 `01a15e5f-d79d-73e0-bb3b-480e76aa474c`，不是原 Planner。
 - 原会话核对：读取对应本地 rollout 日志末尾，最终答复为已创建设计草案、保持 Design、协议及迁移和私人 UI 认证待细化。没有找到完成交接的结果；当前 receipt 仍未释放。不能仅凭最终答复断言原 Agent 的运行状态。
@@ -14,3 +14,11 @@
 - 风险：直接接管可能产生双写或错误归属；跳过 G2/G3 实现会绕过认证、持久化及副作用恢复设计。
 - 可复用改进：建议以独立受审范围补充“已结束但未释放的 Planner 会话”的受管恢复契约；本次不修改技能或 CLI。指定的两份 BLOCKER_FEEDBACK 模板在仓库中缺失，沿用既有反馈格式并覆盖技能要求字段；建议后续补齐模板。
 - 验证范围：仅本地只读检查与本反馈对的写入；未改业务代码、FD 或交接。未执行测试、编译、构建、网络、迁移、子代理、合并或归档。
+
+## 实际恢复
+
+- 2026-10-21，用户回复 `confirm`，明确授权取消精确旧 Planner 事件并重新建立设计交接。
+- `cancel-event` 成功；审计 `operations/dce82acec5b7423ebf587628360a0327.json`。该操作只取消 receipt，不停止原 Agent，不据此宣称旧进程已停止。
+- 普通 `emit design-requested` 被拒绝：`design-requested is not valid from Design`。未重复相同命令或手改 receipt；在已确认的 PM 恢复范围内使用 `force-emit design-requested` 建立 `FD-024-000003-design-requested`，审计 `operations/a8a29fd5a0684d2b844b7e9019e0d597.json`。只覆盖设计请求的状态转换检查，不豁免 readiness、验收或实现评审。
+- `resume` 确认新事件 pending 后，当前会话成功 claim；CLI 将 FD Revision 更新为 3。归属阻塞已解决，继续 Planner 设计。
+- 可复用改进仍适用：需要专门的 Planner 恢复接口和缺失反馈模板；本次不扩展到技能/CLI 修改。

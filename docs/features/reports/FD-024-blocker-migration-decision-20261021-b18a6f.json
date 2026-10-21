@@ -1,0 +1,28 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-024",
+  "source_event": "FD-024-000003-design-requested",
+  "human_report": "FD-024-blocker-migration-decision-20261021-b18a6f.md",
+  "data": {
+    "stage": "design",
+    "role": "planner",
+    "status": "unresolved",
+    "recorded_date": "2026-10-21",
+    "timezone": "Asia/Tokyo",
+    "session_ref": "01a15e5f-d79d-73e0-bb3b-480e76aa474c",
+    "gate": "G1",
+    "design_recheck": {"artifact": "../reviews/FD-024-design-recheck-r3.md", "R3-F1": "resolved-in-design", "R3-F2": "resolved-in-design", "whole_fd": "INCOMPLETE", "G1_waived": false},
+    "symptoms": ["FD remains Design with G1 and Work Item 1.5 requiring actual migration ownership and rollout evidence"],
+    "confirmed_causes": ["No explicit source DB, backup, verified owner mapping, in-flight disposition or cutover window supplied", "Planner recovery confirmation does not waive G1 or authorize actual migration"],
+    "unknowns": ["Whether the user wants tools-only completion with actual migration and cutover disabled, or actual environment migration preparation"],
+    "attempts": ["Recovered Planner through user-confirmed cancellation and audited replacement", "Added FD sections 6.1-6.8 from static local source and specs", "Obtained independent design review and incorporated R3-F1 and R3-F2", "Asked user asynchronously about migration scope; no response received at report creation"],
+    "human_decision_required": true,
+    "human_decision": "Confirm tools-only implementation with actual migration/cutover disabled, or provide actual migration source, backup, verified owner mapping, in-flight handling and window",
+    "next_step": "Reconcile FD Work Item 1.5 and G1 with the explicit decision; do not claim design-ready or whole-FD implementation completion meanwhile",
+    "risks": ["Incorrect ownership could expose private data or confuse authorization", "Unsafe cutover or restore could replay side effects or reset accounting"],
+    "reusable_improvement": "Separate tool implementation readiness from environment migration execution gates in a separately reviewed template change; retain Planner recovery and missing-template improvements",
+    "template_status": "Required feedback templates absent; used existing dual-report structure and all skill-required fields",
+    "not_run": ["implementation", "tests", "compile", "build", "network", "services", "database connection", "migration", "merge", "archive"]
+  }
+}
