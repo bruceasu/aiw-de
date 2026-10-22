@@ -13,6 +13,9 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class DependencyResolver {
+    private me.asu.aidev.execution.guard.TaskLineage lineage;
+    @Autowired
+    public void setTaskLineage(me.asu.aidev.execution.guard.TaskLineage lineage) { this.lineage=lineage; }
     private final WorkTaskRepository tasks;
     private final TaskDependencyRepository dependencies;
     private final Clock clock;
@@ -49,7 +52,8 @@ public class DependencyResolver {
 
     public List<TaskId> refreshDependents(TaskId completedTaskId) {
         List<TaskId> newlyReady = new ArrayList<>();
-        for (TaskId dependentId : dependencies.findDependents(completedTaskId)) {
+        var sources = lineage==null?List.of(completedTaskId):lineage.ancestors(completedTaskId);
+        for (TaskId dependentId : sources.stream().flatMap(source->dependencies.findDependents(source).stream()).distinct().toList()) {
             if (refresh(dependentId)) newlyReady.add(dependentId);
         }
         return List.copyOf(newlyReady);
@@ -61,6 +65,7 @@ public class DependencyResolver {
         if (task.state() != TaskState.BLOCKED) return false;
 
         boolean allCompleted = dependencies.findDependencies(taskId).stream()
+                .map(id->lineage==null?id:lineage.current(id))
                 .map(id -> tasks.find(id).orElseThrow(() -> new IllegalStateException("dependency not found: " + id.value())))
                 .allMatch(dep -> dep.state() == TaskState.COMPLETED);
         return allCompleted && tasks.transitionState(taskId, TaskState.BLOCKED, TaskState.READY, clock.instant());

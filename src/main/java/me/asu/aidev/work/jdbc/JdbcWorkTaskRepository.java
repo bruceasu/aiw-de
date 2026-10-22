@@ -284,7 +284,7 @@ public class JdbcWorkTaskRepository implements WorkTaskRepository {
                 UPDATE work_task
                    SET lease_heartbeat_at_epoch_ms=?, lease_expires_at_epoch_ms=?,
                        version=version+1, updated_at_epoch_ms=?
-                 WHERE id=? AND state IN ('CLAIMED','RUNNING')
+                 WHERE id=? AND state IN ('CLAIMED','RUNNING','YIELDING')
                    AND current_worker_id=? AND lease_token=? AND lease_expires_at_epoch_ms>?
                    AND EXISTS (SELECT 1 FROM execution_attempt ea
                                 WHERE ea.lease_token=work_task.lease_token

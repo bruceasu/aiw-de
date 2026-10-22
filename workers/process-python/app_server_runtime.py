@@ -34,7 +34,7 @@ def preflight():
 class StdioSession:
     """One bounded RPC channel for one attempt; reader never logs wire bodies."""
 
-    def __init__(self, attempt, cwd):
+    def __init__(self, attempt, cwd, *, argv=None, environment=None, request_handler=None):
         self.attempt = attempt
         self.limit = setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024)
         self.messages = queue.Queue(maxsize=1024)
@@ -44,11 +44,12 @@ class StdioSession:
         self.writer = None
         self.sequence = 0
         self.wire_bytes = 0
+        self.request_handler = request_handler
         self.process = subprocess.Popen(
-            [preflight(), "app-server", "--listen", "stdio://", "--config", "sandbox_workspace_write.network_access=false",
+            argv or [preflight(), "app-server", "--listen", "stdio://", "--config", "sandbox_workspace_write.network_access=false",
              "--config", "sandbox_read_only.network_access=false"],
             cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            start_new_session=True,
+            start_new_session=True, env=environment,
         )
         self.reader = threading.Thread(target=self._read, name="codex-app-server-reader", daemon=True)
         self.reader.start()
@@ -122,6 +123,10 @@ class StdioSession:
                 raise RuntimeError("CODEX_APP_SERVER_DISCONNECTED")
             if "method" in message and "id" in message:
                 method = message["method"]
+                if self.request_handler is not None:
+                    response = self.request_handler(message)
+                    self.send(response, deadline)
+                    continue
                 if method in {"item/commandExecution/requestApproval", "item/fileChange/requestApproval"}:
                     response = {"id": message["id"], "result": {"decision": "decline"}}
                 else:
@@ -130,8 +135,8 @@ class StdioSession:
                 continue
             return message
 
-    def rpc(self, method, params):
-        deadline = min(time.monotonic() + 30, time.monotonic() + self.attempt.remaining())
+    def rpc(self, method, params, timeout=30):
+        deadline = min(time.monotonic() + timeout, time.monotonic() + self.attempt.remaining())
         self.sequence += 1
         request_id = self.sequence
         self.send({"id": request_id, "method": method, "params": params}, deadline)
@@ -194,6 +199,9 @@ class CodexAppServerRuntime:
     type = "codex-app-server"
 
     def run(self, client, request, on_session):
+        if request.broker is not None:
+            from guarded_app_server import run_guarded
+            return run_guarded(request, on_session)
         attempt = request.attempt
         if request.approval_mode not in {"deny-all", "never"}:
             raise RuntimeError("CODEX_APPROVAL_MODE_UNSUPPORTED: use deny-all")

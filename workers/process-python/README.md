@@ -24,7 +24,9 @@ Directory names stay stable when the Skill source version changes. If you set
 
 One Python runtime is started as multiple independent worker processes by selecting `AIW_PROCESS_ROLE`. `AIW_AGENT_RUNTIME` selects `codex-app-server` (default) or `openai-agents`. Role names resolve to Python's TOML profiles in `profiles/`. Go uses the same TOML field format but keeps its own files and role instructions. Python 3.11 or newer is required for `tomllib`.
 
-The OpenAI Agents runtime uses `openai-agents==0.23.1` with `openai==3.26.0`, requires `OPENAI_API_KEY`, and does not require Codex CLI authentication. It provides bounded workspace read/list/search and write/edit tools; shell tools are not available in this Python API runtime. Set `AIW_AGENT_RUNTIME=openai-agents` before starting the role process. Use `AIW_OPENAI_MODEL`, `AIW_OPENAI_REASONING_EFFORT`, and `OPENAI_BASE_URL` to configure the API runtime.
+The OpenAI Agents runtime uses the installed `openai-agents` and `openai` packages without version pins. It checks required APIs and records actual versions; compatibility changes belong in the adapter. It requires `OPENAI_API_KEY` and does not require Codex CLI authentication. Set `AIW_AGENT_RUNTIME=openai-agents` before starting the role process. Use `AIW_OPENAI_MODEL`, `AIW_OPENAI_REASONING_EFFORT`, and `OPENAI_BASE_URL` to configure the API runtime. Installing or updating dependencies is an explicit deployment action.
+
+Guarded execution is opt-in with `AIW_EXECUTION_GUARD=true` and a configured machine token. Both backends use platform-authorized broker tools; the model never receives the platform credential or direct project filesystem access. The optional command broker is separate from the model backend and requires explicit command permission plus Linux/WSL cgroup and toolchain configuration. See [execution guard deployment](../../docs/EXECUTION-GUARD.md). Legacy tasks keep their existing protocol; they do not acquire the new capability automatically.
 
 | Role | R9 task type(s) | R2 primary Skill | Workspace |
 |---|---|---|---|

@@ -205,6 +205,7 @@ public class JdbcExecutionAttemptRepository implements ExecutionAttemptRepositor
 
     @Override
     public Optional<TaskInput> findCompletedInput(TaskId taskId) {
+        var effective = me.asu.aidev.execution.guard.TaskLineage.current(jdbc,taskId);
         List<TaskInput> rows = jdbc.query("""
                 SELECT wt.task_type, wt.repository_ref, ea.base_revision, ea.result_revision,
                        ea.publication_ref, ea.changed_files, ea.completion_verdict, ea.completion_summary, ea.id AS output_attempt_id
@@ -214,7 +215,7 @@ public class JdbcExecutionAttemptRepository implements ExecutionAttemptRepositor
                  ORDER BY ea.attempt_no DESC
                  LIMIT 1
                 """, (rs, rowNum) -> new TaskInput(
-                taskId,
+                effective,
                 TaskType.valueOf(rs.getString("task_type")),
                 rs.getString("repository_ref"),
                 rs.getString("base_revision"),
@@ -222,7 +223,7 @@ public class JdbcExecutionAttemptRepository implements ExecutionAttemptRepositor
                 rs.getString("publication_ref"),
                 decodeChangedFiles(rs.getString("changed_files")),
                 rs.getString("completion_verdict") == null ? null : CompletionVerdict.valueOf(rs.getString("completion_verdict")),
-                rs.getString("completion_summary"), rs.getString("output_attempt_id")), taskId.value());
+                rs.getString("completion_summary"), rs.getString("output_attempt_id")), effective.value());
         return rows.stream().findFirst();
     }
 

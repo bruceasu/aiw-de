@@ -1,0 +1,27 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-029",
+  "source_event": "FD-029-000003-design-ready",
+  "human_report": "FD-029-implementation-20261023-08211700.md",
+  "data": {
+    "worker_session": "fd025-029-host-20261022-234846-08211700",
+    "parent_branch": "develop",
+    "branch": "feature/FD-029",
+    "worktree": ".wt/FD-029",
+    "comparison_base": "31abb1b",
+    "implementation_commit": "a8856f4",
+    "work_items": ["1.1", "1.2", "1.3", "2.1", "2.2", "2.3", "2.4", "2.5.1", "2.5.2", "2.5.3", "3.1", "3.2", "3.3", "4.1", "4.2", "4.3", "5.1", "5.2"],
+    "review_outcomes_so_far": 0,
+    "review_limit": 3,
+    "compile": {"status": "passed", "completed_at": "2026-10-23T01:18:40+09:00", "source_commit": "a8856f4", "java_source_files": 260, "java_command": "JAVA_HOME=C:/green/jdk-25.0.1+8; C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests=true -Dmaven.test.skip=true compile", "python_command": "PowerShell stdin to python - with compile(Path(name).read_text(encoding='utf-8-sig'), name, 'exec') for top-level non-test Python production files", "javascript_command": "node --check src/main/resources/static/ui/authority.js", "python_entrypoint_correction": "Initial -c invocation lost nested quotes; one corrected stdin invocation passed. Current sources compiled again after substantive source revisions."},
+    "static_validation": {"command": "git diff 31abb1b HEAD --check", "status": "passed", "implementation_files": 47},
+    "not_run": ["tests", "Spring, HTTP or browser", "SQL, migrations or actual cutover", "concurrency or fault injection", "models or SDK runtime", "App Server command execution", "actual broker filesystem/Git operations", "Linux/WSL cgroup or sandbox", "installation, downloads, login, push, publishing or deployment"],
+    "runtime_certified": false,
+    "old_data_migration": false,
+    "versions_pinned": false,
+    "blocker_feedback": {"path": "FD-029-blocker-parent-workspace-20261023-08211700.md", "status": "resolved"},
+    "residual_risks": ["Strict capability/configuration checks may reject an unverified installed backend until the adapter is updated from real evidence", "Fresh DB migration and actual isolation/recovery behavior have not been run", "Later owning FDs must consume shared continuation and budget ports in their formal transactions"],
+    "review_status": "awaiting-independent-review"
+  }
+}

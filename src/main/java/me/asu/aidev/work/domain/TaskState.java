@@ -5,6 +5,9 @@ public enum TaskState {
     READY,
     CLAIMED,
     RUNNING,
+    YIELDING,
+    WAITING_INPUT,
+    CONTINUED,
     COMPLETED,
     FAILED,
     CANCELLED

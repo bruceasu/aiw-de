@@ -1,0 +1,38 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-029",
+  "source_event": "FD-029-000005-changes-requested",
+  "human_report": "FD-029-implementation-20261023-08211700-r2.md",
+  "data": {
+    "worker_session": "fd025-029-host-20261022-234846-08211700",
+    "comparison_base": "31abb1b",
+    "previous_reviewed_head": "c104a49",
+    "implementation_commit": "a01f169",
+    "worktree": ".wt/FD-029",
+    "branch": "feature/FD-029",
+    "parent_branch": "develop",
+    "review_outcomes_so_far": 1,
+    "review_limit": 3,
+    "repairs": {
+      "R029-01": "claim atomically reserves exact Attempt; start enables actual timing without pause/budget readmission, retains revocation/Lease/context/UNKNOWN checks; unstarted confirmed stops settle zero",
+      "R029-02": "resolve unique public/v2 protocol types and local refs/allOf, retain field checks and fail closed on unsupported metadata"
+    },
+    "compile": {
+      "status": "passed",
+      "completed_at": "2026-10-23T01:30:56+09:00",
+      "source_commit": "a01f169",
+      "java_command": "JAVA_HOME=C:/green/jdk-25.0.1+8; C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests=true -Dmaven.test.skip=true compile",
+      "java_source_files": 260,
+      "python_command": "stdin compile(Path(name).read_text(encoding='utf-8-sig'), name, 'exec') on guarded_preflight.py",
+      "javascript": "unchanged; previous source compile evidence retained"
+    },
+    "static_validation": {"status": "passed", "command": "git diff --check plus full six-file diff and read-only existing schema type locations", "schema_reexported": false, "project_code_executed": false},
+    "blocker_feedback": {"path": "FD-029-blocker-review-20261023-08211700-r1.md", "status": "awaiting-independent-repair-review"},
+    "not_run": ["tests/concurrency/fault injection", "DB/migrations", "models/SDK/AppServer", "sandbox/cgroup", "HTTP/browser/services/project commands", "install/download/login/push/deploy"],
+    "runtime_certified": false,
+    "versions_pinned": false,
+    "human_decision_required": false,
+    "review_status": "awaiting-independent-review"
+  }
+}

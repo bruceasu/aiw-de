@@ -21,6 +21,7 @@ class AgentRunRequest:
     service_tier: str | None
     sandbox: str
     approval_mode: str
+    broker: Any = None
 
 
 class AgentRuntime(Protocol):

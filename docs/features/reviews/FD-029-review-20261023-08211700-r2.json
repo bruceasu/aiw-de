@@ -1,0 +1,50 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-029",
+  "source_event": "FD-029-000006-implementation-ready",
+  "human_report": "FD-029-review-20261023-08211700-r2.md",
+  "data": {
+    "reviewer_session": "fd029-independent-review-20261023-0141-design-agent",
+    "worker_session": "fd025-029-host-20261022-234846-08211700",
+    "comparison_base": "31abb1b",
+    "repair_comparison_base": "c104a49",
+    "reviewed_head": "5afb199",
+    "implementation_commit": "a01f169",
+    "worktree": "D:/03_projects/AI-tools/aiw-de/.wt/FD-029",
+    "review_round": 2,
+    "review_limit": 3,
+    "previous_changes_requested": 1,
+    "verdict": "verification-passed",
+    "findings": [],
+    "resolved_findings": [
+      {
+        "id": "R029-01",
+        "status": "resolved",
+        "locations": ["src/main/java/me/asu/aidev/execution/application/TaskClaimService.java:172", "src/main/java/me/asu/aidev/execution/guard/ExecutionGuard.java:174", "src/main/java/me/asu/aidev/execution/guard/ExecutionGuard.java:180", "src/main/java/me/asu/aidev/execution/guard/ExecutionLedger.java:49"],
+        "evidence": "claim事务原子持久化精确Attempt预留；start与pause/余额准入分离，仍复验权限/Lease/上下文/UNKNOWN；未开始确认停止零执行，已开始失联保留UNKNOWN，停止竞争会事务回滚"
+      },
+      {
+        "id": "R029-02",
+        "status": "resolved",
+        "locations": ["workers/process-python/guarded_preflight.py:23", "workers/process-python/guarded_preflight.py:72"],
+        "evidence": "公共/v2唯一类型与本地$ref/allOf解析，保留缺失/歧义/循环/外部引用/字段不足拒绝；已有schema七种位置及字段与要求一致，未执行解析函数或重新导出",
+        "schema_path": "D:/03_projects/AI-tools/aiw-de/.ai/issues/drafts/fd025-029-codex-0.163.0-schema/codex_app_server_protocol.schemas.json",
+        "public_pointer": "#/definitions/DynamicToolCallParams"
+      }
+    ],
+    "acceptance": {
+      "AC09": "延续首轮完整静态调用链；修复未放宽真实工具/身份/Lease/撤权边界",
+      "AC10": "原子领取与预留、持久回执/结算/UNKNOWN/安全续行及事实推进分离有静态实现支持",
+      "AC11_CO01_CO02_CO03": "固定输入、上游来源、隔离工作区、正式版本及真实/未运行交付字段未被修复改变"
+    },
+    "commands_run": ["aiw fd show/claim真实回执", "git status/log/diff --stat/--name-only/--unified=8", "Get-Content/rg周边调用链", "PowerShell ConvertFrom-Json只读已有schema类型和字段"],
+    "worker_reported_compile": "a01f169 Java离线及修改Python内存语法编译通过；Reviewer未重跑",
+    "not_run": ["tests/compile", "models/SDK/AppServer/project commands", "DB/migrations/cgroup/sandbox", "HTTP/browser/services/network"],
+    "runtime_certified": false,
+    "implementation_modified": false,
+    "blocker_feedback": {"path": "docs/features/reports/FD-029-blocker-review-20261023-08211700-r1.md", "status": "resolved"},
+    "human_decision_required": false,
+    "remaining_risks": ["真实部署兼容性、并发、故障恢复、迁移和资源隔离未运行验证", "运行必须提供已批准额度/资源/认证/权限Profile/cgroup等前置；本轮不授予运行权限"]
+  }
+}

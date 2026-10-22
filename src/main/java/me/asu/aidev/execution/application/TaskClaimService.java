@@ -29,6 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskClaimService {
+    private me.asu.aidev.execution.guard.ExecutionGuard guard;
+    @Autowired
+    public void setExecutionGuard(me.asu.aidev.execution.guard.ExecutionGuard guard) { this.guard=guard; }
     private static final Duration SPECIALIST_WINDOW = Duration.ofSeconds(30);
     private final WorkTaskRepository tasks;
     private final WorkerRepository workers;
@@ -166,8 +169,11 @@ public class TaskClaimService {
             attempts.insert(new ExecutionAttempt(
                     attemptId, candidate.id(), attemptNo, claimedTask.instructionRevision(), workerId, token,
                     ExecutionAttemptState.CLAIMED, null, now, null, null));
+            if(guard!=null) guard.claimed(claimedTask.id().value(),new me.asu.aidev.execution.guard.GuardContract.Lease(
+                    workerId.value(),attemptId.value(),token.value()));
 
-            var inputs = dependencies.findDependencies(claimedTask.id()).stream()
+            var inputs = guard!=null && guard.managed(claimedTask.id().value()) ? guard.context(claimedTask.id().value()).snapshot().inputs()
+                    : dependencies.findDependencies(claimedTask.id()).stream()
                     .map(dep -> attempts.findCompletedInput(dep)
                             .orElseThrow(() -> new IllegalStateException("completed dependency has no execution result: " + dep.value())))
                     .toList();

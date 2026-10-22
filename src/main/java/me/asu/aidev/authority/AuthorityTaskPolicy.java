@@ -23,6 +23,7 @@ public class AuthorityTaskPolicy implements WorkerTaskClaimPolicy,TaskExecutionP
         this.repo=repo;this.boundary=boundary;this.grants=grants;this.manager=manager;this.plans=plans;this.profiles=profiles;
     }
     public boolean managed(WorkTask task) {
+        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_context WHERE task_id=?",Long.class,task.id().value())>0) return false;
         if(!task.subjectType().equals("flexible-plan")) return false;
         String prefix="PLAN:"+task.subjectId();
         return manager.managed(task.subjectId()) || repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_target WHERE target_key=? OR substr(target_key,1,?)=?",Long.class,prefix,(prefix+":").length(),prefix+":")>0

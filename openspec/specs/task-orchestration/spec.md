@@ -4,6 +4,23 @@ Define how the Control Plane owns work tasks, dependencies, worker leases, and e
 
 ## Requirements
 
+### Requirement: Guarded execution and immutable inputs
+Tasks using `aiw.execution.guard.v1` SHALL freeze the confirmed policy, configuration digest, Skill references and completed upstream Attempt results. Claim SHALL require matching Python adapter capabilities; unsupported Go/TypeScript or backend capabilities SHALL NOT claim these tasks. Fixed instructions SHALL NOT be changed in place.
+
+#### Scenario: An operation loses its response
+- **WHEN** a guarded operation intent has committed and its outcome cannot be confirmed
+- **THEN** the original operation remains UNKNOWN or queryable by its stable ID, reservations and resources remain accounted for, and lease expiry SHALL NOT automatically requeue or replay it
+
+### Requirement: Execution budgets and factual completion
+Required time, task and cost limits and pricing SHALL be explicitly configured before automatic admission. Usage SHALL survive restart, policy replacement and Worker replacement. Initial execution is separate from at most three plan/loop backjumps; stable transition IDs and explicit increments SHALL prevent duplicate consumption or reset. Reaching a threshold or pausing SHALL stop new dispatch and advancement while already authorized work may finish and record real consumption, which may exceed the threshold.
+
+#### Scenario: A task finishes while advancement is paused
+- **WHEN** its actual terminal facts are recorded
+- **THEN** completion and consumption commit separately from advancement, a durable pending fact remains, and later recovery may apply that fact without rerunning the model or tool
+
+### Requirement: Quiescent yield and continuation lineage
+A guarded yield SHALL retain Lease and resources in YIELDING until the trusted adapter confirms all execution and tools are quiescent. Acknowledgment SHALL atomically end the Attempt as YIELDED, move the task to WAITING_INPUT and release resources. Applying a continuation SHALL create one successor and mark the source CONTINUED, a non-success terminal state. Only the real completed result at the end of the lineage SHALL satisfy the logical dependency/output slot.
+
 ### Requirement: Dependency-aware task readiness
 The system SHALL keep a task unavailable for claim until its declared dependencies are complete. A task with no unresolved dependencies MAY become ready when its workflow or operator creates it.
 

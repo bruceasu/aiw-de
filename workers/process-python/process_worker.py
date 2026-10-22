@@ -106,6 +106,11 @@ class WorkerConfig:
         if any(part == "*" or part == "flexible-work-v1" or part.startswith("repo:") or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
+        if _bool_env("AIW_EXECUTION_GUARD", False):
+            from guarded_preflight import capabilities as guarded_capabilities
+            capabilities.update(guarded_capabilities(runtime, profile, str(Path(os.getenv("AIW_PROCESS_SKILLS_ROOT", Path(__file__).with_name("skills"))).resolve())))
+        elif "execution-guard-v1" in capabilities or "guarded-command-linux-v1" in capabilities:
+            raise ValueError("GUARDED_CAPABILITIES_REQUIRE_VERIFIED_ADAPTER")
         if repository_ref:
             capabilities.add(f"repo:{repository_ref}")
         max_concurrency = int(os.getenv("AIW_WORKER_MAX_CONCURRENCY", "1"))
@@ -372,6 +377,7 @@ class ProcessSlot:
 
     def _execute_task(self, runtime_client: Any, task: dict[str, Any]) -> None:
         heartbeat = workspace = attempt = gate = None
+        broker = None
         session_id = None
         started = reporting = finished = cleaned = False
         phase = "TOOL_ERROR"
@@ -390,6 +396,11 @@ class ProcessSlot:
                 attempt.evidence.record("attempt-running", status="running")
                 heartbeat = LeaseHeartbeat(self.client, task, self.config.worker_id, self.config.heartbeat_interval, attempt)
                 heartbeat.start()
+                if "execution-guard-v1" in task.get("requiredCapabilities", []):
+                    from execution_guard import GuardBroker
+                    broker = GuardBroker(self.client, task, self.config.worker_id, attempt)
+                    broker.writable = profile.writable
+                    attempt.guard_broker = broker
                 if task.get("taskType") not in profile.task_types:
                     raise RuntimeError("ROLE_TASK_TYPE_DENIED")
                 if task.get("taskType") != "EXTERNAL_WORK" or task.get("skillRef") != profile.primary_skill:
@@ -404,14 +415,19 @@ class ProcessSlot:
                 instruction = _prompt(task, self.config)
                 if task.get("workspace"):
                     repository_gate = workspace_lock(task["workspace"].get("repositoryPath") or self.config.repository_root, attempt)
-                    try: workspace = GitWorkspace.materialize(self.config, task)
+                    try:
+                        if broker:
+                            from guarded_workspace import GuardedWorkspace
+                            workspace = GuardedWorkspace.materialize(self.config, task, broker)
+                        else: workspace = GitWorkspace.materialize(self.config, task)
                     finally: repository_gate.release()
                 else:
                     workspace = GitWorkspace.materialize(self.config, task)
                 gate = workspace_lock(workspace.cwd, attempt)
-                baseline = snapshot(workspace.cwd, attempt) if not profile.writable else None
+                baseline = snapshot(workspace.cwd, attempt) if not profile.writable and not broker else None
                 selected = effective_selection["profile"] if effective_selection else None
                 for name in ("AGENTS.md", "CODEX.md"):
+                    if broker: continue  # Project instructions can be read only by an authorized broker tool.
                     file = Path(workspace.cwd) / name
                     if not file.exists(): continue
                     if file.is_symlink() or not file.is_file() or file.stat().st_size > setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024):
@@ -430,7 +446,7 @@ class ProcessSlot:
                     reasoning_effort=selected["effort"] if selected else self.config.reasoning_effort,
                     network_access=self.config.network_access,
                     service_tier="default" if selected and task.get("aiGuidance") and self.config.runtime == "codex-app-server" else None,
-                    sandbox=self.config.sandbox, approval_mode=self.config.approval_mode,
+                    sandbox=self.config.sandbox, approval_mode=self.config.approval_mode, broker=broker,
                 )
                 def set_session(runtime_session_id, handle=None):
                     nonlocal session_id
@@ -447,7 +463,7 @@ class ProcessSlot:
                         final_response = self.runtime.run(runtime_client, request, set_session)
                     except RuntimeError as error:
                         fallback = fallback_selection["profile"] if fallback_selection else {}
-                        if (str(error) != "AI_PREFERENCES_REJECTED" or not task.get("aiPreferences")
+                        if (broker or str(error) != "AI_PREFERENCES_REJECTED" or not task.get("aiPreferences")
                                 or (request.model == fallback.get("model", default_model)
                                     and request.reasoning_effort == fallback.get("effort", self.config.reasoning_effort))):
                             raise
@@ -464,11 +480,12 @@ class ProcessSlot:
                 if heartbeat.ownership_lost.is_set(): raise RuntimeError("LEASE_LOST")
                 phase = "OUTPUT_INVALID"
                 report = _completion_report(profile.result_kind, final_response)
-                if not profile.writable and snapshot(workspace.cwd, attempt) != baseline:
+                if not profile.writable and not broker and snapshot(workspace.cwd, attempt) != baseline:
                     raise RuntimeError("READ_ONLY_WORKSPACE_CHANGED")
                 attempt.evidence.record("report-validated", status="valid", digest=hashlib.sha256(final_response.encode("utf-8")).hexdigest())
                 phase = "TOOL_ERROR"
                 workspace_result = workspace.finalize(task, read_only=not profile.writable)
+                if broker: broker.record_delivery(workspace_result, report)
                 if profile.result_kind == "WORKSPACE" and (not workspace_result or not workspace_result.get("resultRevision") or not isinstance(workspace_result.get("changedFiles"), list)):
                     raise RuntimeError("WORKSPACE_RESULT_INVALID")
                 heartbeat.close()
@@ -517,7 +534,14 @@ def _profile(config: WorkerConfig, task_type: str | None = None) -> ProcessProfi
 
 
 def _read_skill_package(skills_root: str, skill_name: str) -> str:
-    return skill_package(skills_root, skill_name)
+    content = skill_package(skills_root, skill_name)
+    active = current_attempt()
+    broker = getattr(active, "guard_broker", None) if active else None
+    if broker:
+        expected = [ref for ref in broker.context["snapshot"]["references"] if ref["kind"] == "skill" and ref["id"] == skill_name]
+        if len(expected) != 1 or expected[0]["sha256"] != hashlib.sha256(content.encode()).hexdigest():
+            raise RuntimeError("FIXED_SKILL_REFERENCE_MISSING_OR_CHANGED")
+    return content
 
 
 def _skill_context(config: WorkerConfig, task_type=None) -> str:

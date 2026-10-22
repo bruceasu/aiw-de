@@ -2,6 +2,13 @@
 
 ## Requirements
 
+### Requirement: Separate guarded machine and human routes
+Guarded machine operations SHALL use `/api/r1/worker-protocol/v1/tasks/{taskId}` for fixed context reads, begin/finish/receipt, yield prepare/ack and formal delivery. Enabling this protocol SHALL require a configured machine token and exact task/Attempt/Lease ownership. Human policy, input binding, dimension increments, effect/consumption reconciliation and stop confirmation SHALL use the closed `/api/r1/authority/execution-*` route set with human session, CSRF, owner and action-role checks. Request bodies SHALL reject unknown fields and exceed neither their structural nor transport size limits.
+
+#### Scenario: Model text proposes an additional tool
+- **WHEN** a Skill, generated configuration or model call requests an unapproved tool or resource
+- **THEN** the platform and actual registered adapter SHALL reject it; declaring a template or capability SHALL NOT expand the effective policy
+
 ### Requirement: One canonical API namespace
 All control-plane JSON and file APIs SHALL use `/api/r1/` as their common
 namespace. This includes console-owned data APIs and Worker protocol APIs.

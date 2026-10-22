@@ -141,6 +141,8 @@ public class WorkerProtocolV1Controller {
         CompletionReport report = request.report() == null ? null : new CompletionReport(
                 CompletionVerdict.valueOf(required(request.report().verdict(), "report.verdict")),
                 required(request.report().summary(), "report.summary"));
+        if(executions.replayedGuardedCompletion(new TaskId(taskId),new WorkerId(required(request.workerId(),"workerId")),new LeaseToken(required(request.leaseToken(),"leaseToken")),workspaceResult,report))
+            return new CompletionResponse(taskId,List.of(),List.of());
         if (outputs != null) outputs.ensureReport(taskId, request.workerId(), request.leaseToken(), report, workspaceResult);
         TaskCompletionResult result = executions.complete(
                 new TaskId(taskId), new WorkerId(required(request.workerId(), "workerId")),

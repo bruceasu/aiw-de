@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkTaskService {
+    private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.execution.guard.ExecutionGuard> executionGuard;
+    @Autowired
+    public void setExecutionGuard(org.springframework.beans.factory.ObjectProvider<me.asu.aidev.execution.guard.ExecutionGuard> guard) { this.executionGuard=guard; }
     private me.asu.aidev.authority.ManagedPlanAdmission managedPlans;
     @Autowired
     public void setManagedPlanAdmission(me.asu.aidev.authority.ManagedPlanAdmission gate) { this.managedPlans=gate; }
@@ -55,6 +58,7 @@ public class WorkTaskService {
     }
 
     private WorkTask createInternal(CreateWorkTaskCommand command, boolean idempotent) {
+        if(executionGuard!=null) executionGuard.getObject().beforeTaskCreation(command);
         if (managedPlans!=null && "flexible-plan".equals(command.subjectType())) managedPlans.admitTask(command.subjectId(),command.id().value());
         var now = clock.instant();
         TaskState initialState = command.dependencies().isEmpty() ? TaskState.READY : TaskState.BLOCKED;
@@ -78,6 +82,7 @@ public class WorkTaskService {
         } else {
             tasks.insert(task);
         }
+        if(inserted && executionGuard!=null) executionGuard.getObject().taskCreated(command);
 
         command.dependencies().stream().sorted((a, b) -> a.value().compareTo(b.value()))
                 .forEach(dependsOn -> {

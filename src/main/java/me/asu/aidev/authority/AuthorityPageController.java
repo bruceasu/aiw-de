@@ -22,6 +22,11 @@ public class AuthorityPageController {
         model.addAttribute("grants",repo.encode(repo.grants().stream().filter(g->owners.contains(g.owner())).toList()));
         model.addAttribute("targets",repo.encode(repo.jdbc().queryForList("SELECT target_key,generation,paused,restriction_revision FROM authority_target WHERE owner_id IN (SELECT id FROM authority_owner WHERE actor=?)",actor)));
         model.addAttribute("receipts",repo.encode(repo.jdbc().queryForList("SELECT request_id,state,result_json,updated_ms FROM authority_receipt WHERE owner_id IN (SELECT id FROM authority_owner WHERE actor=?) ORDER BY updated_ms DESC LIMIT 100",actor)));
+        model.addAttribute("executionPolicies",repo.encode(repo.jdbc().queryForList("SELECT plan_id,revision,generation,revoked,paused,policy_json FROM execution_policy WHERE owner_id IN (SELECT id FROM authority_owner WHERE actor=?)",actor)));
+        model.addAttribute("executionBudgets",repo.encode(repo.jdbc().queryForList("SELECT b.* FROM execution_budget b JOIN execution_policy p ON p.plan_id=b.plan_id JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY b.plan_id,b.dimension,b.loop_id",actor)));
+        model.addAttribute("executionEffects",repo.encode(repo.jdbc().queryForList("SELECT e.operation_id,e.task_id,e.attempt_id,e.tool_id,e.resource,e.state,e.result_digest,e.evidence_ref FROM execution_operation e JOIN execution_policy p ON p.plan_id=e.plan_id JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY e.started_ms DESC LIMIT 100",actor)));
+        model.addAttribute("executionMeters",repo.encode(repo.jdbc().queryForList("SELECT m.attempt_id,m.task_id,m.settled,m.elapsed_ms,m.cost_micros,m.usage_unknown,m.time_unknown,m.price_json FROM execution_meter m JOIN execution_policy p ON p.plan_id=m.plan_id JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY m.started_ms DESC LIMIT 100",actor)));
+        model.addAttribute("executionDeliveries",repo.encode(repo.jdbc().queryForList("SELECT d.task_id,d.attempt_id,d.digest,d.delivery_json,x.input_digest,x.config_digest FROM execution_delivery d JOIN execution_context x ON x.task_id=d.task_id JOIN execution_policy p ON p.plan_id=x.plan_id JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY d.created_ms DESC LIMIT 100",actor)));
         return "ui/authority";
     }
 }

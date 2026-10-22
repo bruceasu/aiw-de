@@ -21,10 +21,6 @@ from agent_runtime import AgentRunRequest
 from agents.models.interface import Model
 
 
-AGENTS_VERSION = "0.23.1"
-OPENAI_VERSION = "3.26.0"
-
-
 @dataclass
 class ApiRuntimeConfig:
     api_key: str
@@ -64,15 +60,14 @@ class OpenAIApiRuntime:
             openai_version = importlib.metadata.version("openai")
         except importlib.metadata.PackageNotFoundError as error:
             raise RuntimeError("OPENAI_AGENTS_SDK_MISSING") from error
-        if agents_version != AGENTS_VERSION or openai_version != OPENAI_VERSION:
-            raise RuntimeError("OPENAI_AGENTS_SDK_VERSION_MISMATCH")
+        # Versions are traceability metadata, never an allowlist. Required APIs are checked when used.
         api_key = os.getenv("OPENAI_API_KEY", "").strip()
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY_REQUIRED")
         reasoning = os.getenv("AIW_OPENAI_REASONING_EFFORT", "").strip()
         if reasoning and reasoning not in {"none", "minimal", "low", "medium", "high"}:
             raise RuntimeError("OPENAI_REASONING_EFFORT_INVALID")
-        return cls(ApiRuntimeConfig(
+        runtime = cls(ApiRuntimeConfig(
             api_key=api_key, base_url=os.getenv("OPENAI_BASE_URL") or None,
             model=os.getenv("AIW_OPENAI_MODEL", "gpt-4.1"), reasoning_effort=reasoning,
             api_timeout_ms=_positive_setting("AIW_OPENAI_TIMEOUT_MS", 120000),
@@ -81,6 +76,8 @@ class OpenAIApiRuntime:
             max_output_bytes=_positive_setting("AIW_AGENT_MAX_OUTPUT_CHARS", 24000),
             tool_timeout_ms=_positive_setting("AIW_AGENT_TOOL_TIMEOUT_MS", 60000),
         ))
+        runtime.versions = {"openai-agents": agents_version, "openai": openai_version}
+        return runtime
 
     def run(self, _client: Any, request: AgentRunRequest, on_session: Any) -> str:
         request.attempt.check()
@@ -105,7 +102,12 @@ class OpenAIApiRuntime:
                              timeout=self.config.api_timeout_ms / 1000, max_retries=0)
         provider = OpenAIProvider(openai_client=client, use_responses=True)
         base_model = provider.get_model(request.model or self.config.model)
-        tools = [] if request.profile.primary_skill == "goal-discussion" else _create_tools(context)
+        if request.broker is not None:
+            from guarded_openai_tools import tools as broker_tools
+            tools = broker_tools(request.broker)
+            request.attempt.evidence.record("backend-versions", runtime=json.dumps(getattr(self, "versions", {}), sort_keys=True))
+        else:
+            tools = [] if request.profile.primary_skill == "goal-discussion" else _create_tools(context)
         guarded_model = _GuardedModel(base_model, request, self.config,
                                       {tool.name: tool.params_json_schema for tool in tools})
         effort = request.reasoning_effort or self.config.reasoning_effort
@@ -194,7 +196,8 @@ class _GuardedModel(Model):
         if not isinstance(output, (tuple, list)):
             raise RuntimeError("RESPONSES_OUTPUT_INVALID")
         usage = _field(response, "usage")
-        known = usage is not None and isinstance(_field(usage, "input_tokens"), int) and isinstance(_field(usage, "output_tokens"), int)
+        known = usage is not None and all(type(value) is int and value >= 0 for value in (
+            _field(usage, "input_tokens"), _field(usage, "output_tokens"), _field(_field(usage, "input_tokens_details"), "cached_tokens")))
         for item in output:
             item_status = _field(item, "status")
             if item_status is not None and item_status != "completed":
@@ -218,20 +221,45 @@ class _GuardedModel(Model):
             **({"inputTokens": _field(usage, "input_tokens"), "outputTokens": _field(usage, "output_tokens"),
                 "cachedTokens": _field(_field(usage, "input_tokens_details"), "cached_tokens")} if known else {}))
 
+    def _begin(self):
+        broker = self._request.broker
+        return broker.model_started({"runtime": "openai-agents", "model": self._request.model}) if broker else None
+
+    def _finish(self, operation, response):
+        broker = self._request.broker
+        if not broker: return
+        raw = _field(response, "usage")
+        input_tokens, output_tokens = _field(raw, "input_tokens"), _field(raw, "output_tokens")
+        cached = _field(_field(raw, "input_tokens_details"), "cached_tokens")
+        known = all(type(v) is int and v >= 0 for v in (input_tokens, cached, output_tokens)) and cached <= input_tokens
+        usage = {"inputTokens": input_tokens, "cachedTokens": cached, "outputTokens": output_tokens} if known else None
+        broker.model_finished(operation, _json_value(_field(response, "output")), usage)
+
+    def _unknown(self, operation):
+        if operation is not None and self._request.broker:
+            self._request.attempt.resource_uncertain = True
+            self._request.broker.finish(operation, "UNKNOWN", {"code": "MODEL_OUTCOME_REQUIRES_RECONCILIATION"})
+
     async def get_response(self, system_instructions: str | None, input: Any, model_settings: Any,
                            tools: list[Any], output_schema: Any, handoffs: list[Any], tracing: Any, *,
                            previous_response_id: str | None, conversation_id: str | None, prompt: Any) -> Any:
+        operation = None
         try:
             self._request_check(system_instructions, input, tools)
+            operation = self._begin()
             response = await self._model.get_response(system_instructions, input, model_settings, tools, output_schema,
                                                       handoffs, tracing, previous_response_id=previous_response_id,
                                                       conversation_id=conversation_id, prompt=prompt)
             self._request.attempt.check()
             self._validate(response)
+            self._finish(operation, response)
+            operation = None
             return response
         except Exception as error:
             self._record_model_error(error)
             raise
+        finally:
+            self._unknown(operation)
 
     def stream_response(self, system_instructions: str | None, input: Any, model_settings: Any,
                         tools: list[Any], output_schema: Any, handoffs: list[Any], tracing: Any, *,
@@ -240,7 +268,9 @@ class _GuardedModel(Model):
 
         async def guarded_stream():
             terminal_seen = False
+            operation = None
             try:
+                operation = self._begin()
                 async for event in self._model.stream_response(
                     system_instructions, input, model_settings, tools, output_schema, handoffs, tracing,
                     previous_response_id=previous_response_id, conversation_id=conversation_id, prompt=prompt,
@@ -254,6 +284,8 @@ class _GuardedModel(Model):
                             raise RuntimeError("RESPONSES_DUPLICATE_TERMINAL")
                         response = _field(event, "response")
                         self._validate(response)
+                        self._finish(operation, response)
+                        operation = None
                         terminal_seen = True
                     yield event
                 if not terminal_seen:
@@ -261,6 +293,8 @@ class _GuardedModel(Model):
             except Exception as error:
                 self._record_model_error(error)
                 raise
+            finally:
+                self._unknown(operation)
 
         return guarded_stream()
 

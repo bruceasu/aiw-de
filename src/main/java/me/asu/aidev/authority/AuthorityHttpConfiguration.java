@@ -15,6 +15,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
     private boolean leaseMachine(String path) {
         return path.equals("/api/r1/worker-protocol/v1/workers/register") || path.equals("/api/r1/worker-protocol/v1/tasks/claim")
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/heartbeat")
+                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/(begin|finish)|operations/[^/]+/receipt|yield/(prepare|ack)|delivery)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
     }
     private boolean personalMachine(String method,String path) {
@@ -22,7 +23,9 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || method.equals("POST") && Set.of("/sessions","/actions","/restrictions","/coordination").contains(path);
     }
     private boolean humanRoute(String method,String path) {
-        return method.equals("POST") && (Set.of("/owners/bind","/workers","/grants","/managed-plans").contains(path)
+        return method.equals("POST") && (Set.of("/owners/bind","/workers","/grants","/managed-plans","/execution-policies","/execution-budgets/increment","/execution-effects/reconcile","/execution-meters/reconcile").contains(path)
+                || path.matches("/execution-policies/[^/]+/(pause|resume|revoke)") || path.matches("/execution-contexts/[^/]+/bind")
+                || path.matches("/execution-tasks/[^/]+/stopped")
                 || path.matches("/workers/[^/]+/(enable|disable)") || path.matches("/grants/[^/]+/revoke")
                 || path.matches("/targets/[^/]+/(takeover|return)") || path.matches("/restrictions/[^/]+/revoke")
                 || path.matches("/budgets/[^/]+/supplement") || path.matches("/effects/[^/]+/reconcile"));
@@ -52,7 +55,8 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                     String csrf=request.getHeader("X-CSRF-Token");if(csrf==null) csrf=request.getParameter("_csrf");
                     if(!security.validCsrf(session,csrf)) { response.sendError(403,"Current human CSRF token required");return false; }
                     try {
-                        if(path.matches("/api/r1/approvals/[^/]+/decision")) security.requireApprover(session);
+                        if(path.matches("/api/r1/approvals/[^/]+/decision") || path.matches("/api/r1/authority/execution-(effects|meters)/reconcile") || path.matches("/api/r1/authority/execution-tasks/[^/]+/stopped") || path.equals("/api/r1/authority/execution-budgets/increment")) security.requireApprover(session);
+                        else if(path.startsWith("/api/r1/authority/execution-")) security.requireOperator(session);
                         else if(path.contains("deletion") || path.contains("delete")) security.requireAdmin(session);
                         else if(!path.startsWith("/api/r1/authority/")) security.requireOperator(session);
                     } catch(SecurityException error) { response.sendError(403,"Current action role required");return false; }

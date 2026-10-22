@@ -96,7 +96,7 @@ public class WebConsoleSecurityService {
         String expected = "web:" + (enabled ? configuredUsername : "local-console");
         if (!expected.equals(actor)) return "";
         WebConsoleRole current = enabled ? configuredRole : WebConsoleRole.ADMIN;
-        boolean allowed = action.startsWith("A11_") ? current.canApprove()
+        boolean allowed = action.startsWith("A11_") || action.equals("A18_BUDGET") ? current.canApprove()
                 : action.startsWith("A17_") ? current.canAdmin() : current.canOperate();
         if (!allowed) return "";
         return me.asu.aidev.authority.AuthorityRepository.hash(enabled + "\n" + expected + "\n" + current + "\n" + action);

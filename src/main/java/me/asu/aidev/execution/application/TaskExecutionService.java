@@ -32,6 +32,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskExecutionService {
+    private me.asu.aidev.execution.guard.ExecutionGuard guard;
+    private me.asu.aidev.execution.guard.ExecutionYieldService guardedYield;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setExecutionGuard(me.asu.aidev.execution.guard.ExecutionGuard guard,me.asu.aidev.execution.guard.ExecutionYieldService yields) { this.guard=guard;this.guardedYield=yields; }
+    private me.asu.aidev.execution.guard.GuardContract.Lease guardLease(WorkerId worker,LeaseToken token) {
+        return new me.asu.aidev.execution.guard.GuardContract.Lease(worker.value(),attempts.findAttemptId(token).orElseThrow().value(),token.value());
+    }
     private me.asu.aidev.authority.AuthorityTaskPolicy authorityPolicy;
     @org.springframework.beans.factory.annotation.Autowired
     public void setAuthorityPolicy(me.asu.aidev.authority.AuthorityTaskPolicy policy) { this.authorityPolicy=policy; }
@@ -126,6 +133,7 @@ public class TaskExecutionService {
                       String profileId, String profileVersion, String selectionReason) {
         var task = tasks.find(taskId).orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
         if(authorityPolicy!=null) authorityPolicy.beforeStart(task);
+        if(guard!=null) { guard.serialize(taskId.value());guard.starting(taskId.value(),guardLease(workerId,leaseToken)); }
         assertExecutionAllowed(task);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         task = tasks.find(taskId).orElseThrow();
@@ -190,6 +198,7 @@ public class TaskExecutionService {
     @Transactional
     public void reviseInstruction(TaskId taskId, long expectedTaskVersion, int expectedInstructionRevision,
                                   String instruction, String actor, String reason) {
+        if(guard!=null && guard.managed(taskId.value())) throw new IllegalStateException("Fixed inputs require a new authorized task, never in-place revision");
         managedMutation(taskId);
         requireAudit(actor, reason);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
@@ -234,6 +243,8 @@ public class TaskExecutionService {
 
     @Transactional
     public void acknowledgeStop(TaskId taskId, WorkerId workerId, LeaseToken leaseToken) {
+        if(guard!=null && guard.managed(taskId.value())) { guardedYield.stopped(taskId.value(),guardLease(workerId,leaseToken));return; }
+        if(guard!=null) { guard.serialize(taskId.value());guard.finishing(taskId.value(),guardLease(workerId,leaseToken),false); }
         managedSerialization(taskId);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow();
@@ -258,6 +269,7 @@ public class TaskExecutionService {
 
     @Transactional
     public void forceRequeue(TaskId taskId, String actor, String reason, boolean warningConfirmed) {
+        if(guard!=null && guard.managed(taskId.value())) throw new IllegalStateException("Guarded attempts require actual quiescence and explicit continuation; no force replay");
         managedMutation(taskId);
         requireAudit(actor, reason);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
@@ -334,6 +346,9 @@ public class TaskExecutionService {
     public TaskCompletionResult complete(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                                          String externalSessionId, WorkspaceResult workspaceResult,
                                          CompletionReport completionReport) {
+        if(replayedGuardedCompletion(taskId,workerId,leaseToken,workspaceResult,completionReport)) return new TaskCompletionResult(taskId,List.of(),List.of());
+        if(guard!=null) { guard.serialize(taskId.value());guard.finishing(taskId.value(),guardLease(workerId,leaseToken),true); }
+        if(guard!=null) guard.validateResult(taskId.value(),guardLease(workerId,leaseToken),workspaceResult);
         var now = clock.instant();
         var taskBeforeCompletion = tasks.find(taskId)
                 .orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
@@ -372,6 +387,11 @@ public class TaskExecutionService {
         var completedTask = tasks.find(taskId)
                 .orElseThrow(() -> new IllegalStateException("completed task not found: " + taskId.value()));
         knowledge.record(completedTask, completionReport, workspaceResult, now);
+        if(guard!=null && guard.managed(taskId.value())) {
+            guard.deferCompletion(taskId.value(),guardLease(workerId,leaseToken).attemptId(),workspaceResult,completionReport);
+            requestGuardedAdvance(guard.context(taskId.value()).planId());
+            return new TaskCompletionResult(taskId,List.of(),List.of());
+        }
         List<TaskId> generated = completionDispatcher.dispatch(
                 new TaskCompletionContext(completedTask, workspaceResult, completionReport));
         List<TaskId> newlyReady = dependencyResolver.refreshDependents(taskId);
@@ -397,6 +417,7 @@ public class TaskExecutionService {
     @Transactional
     public void fail(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                      String externalSessionId, String failureReason, String failureCategory) {
+        if(guard!=null) { guard.serialize(taskId.value());guard.finishing(taskId.value(),guardLease(workerId,leaseToken),false); }
         var task = tasks.find(taskId).orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
         assertExecutionAllowed(task);
         String category = failureCategory == null ? "UNKNOWN" : failureCategory;
@@ -423,6 +444,10 @@ public class TaskExecutionService {
         releaseConcurrency(task, now);
         var failedTask = tasks.find(taskId)
                 .orElseThrow(() -> new IllegalStateException("failed task not found: " + taskId.value()));
+        if(guard!=null && guard.managed(taskId.value())) {
+            guard.deferFailure(taskId.value(),guardLease(workerId,leaseToken).attemptId(),failureReason);
+            requestGuardedAdvance(guard.context(taskId.value()).planId());return;
+        }
         for (TaskFailureListener listener : failureListeners) {
             listener.onFailed(failedTask, failureReason);
         }
@@ -430,6 +455,45 @@ public class TaskExecutionService {
 
     private void assertExecutionAllowed(me.asu.aidev.work.domain.WorkTask task) {
         for (TaskExecutionPolicy policy : executionPolicies) policy.assertExecutionAllowed(task);
+    }
+    @Transactional
+    public boolean replayedGuardedCompletion(TaskId task,WorkerId worker,LeaseToken lease,WorkspaceResult result,CompletionReport report) {
+        boolean recorded=guard!=null && guard.managed(task.value()) && guard.completed(task.value(),guardLease(worker,lease),result,report);
+        if(recorded) requestGuardedAdvance(guard.context(task.value()).planId());
+        return recorded;
+    }
+    public void requestGuardedAdvance(String plan) {
+        Runnable advance=()->{
+            try { guard.advanceAfterCommit(plan); }
+            catch(RuntimeException error) { System.getLogger(TaskExecutionService.class.getName()).log(System.Logger.Level.WARNING,"Guarded execution facts retained; advancement remains pending"); }
+        };
+        if(org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization() {
+                @Override public void afterCommit() { advance.run(); }
+            });
+        } else advance.run();
+    }
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void drainGuardedCompletions(String plan) {
+        if(guard==null) return;
+        guard.serializePlan(plan);
+        for(var pending:guard.completions(plan)) {
+            var id=new TaskId(String.valueOf(pending.get("task_id")));guard.serialize(id.value());
+            if(!guard.mayAdvance(id.value())) return;
+            var task=tasks.find(id).orElseThrow();
+            String attempt=String.valueOf(pending.get("attempt_id"));
+            guard.completionApplied(attempt);
+            if(!guard.latestAttempt(id.value(),attempt)) continue;
+            if("FAILED".equals(pending.get("event_type"))) {
+                if(task.state()!=TaskState.FAILED) throw new IllegalStateException("Deferred failure is not a failed task");
+                for(TaskFailureListener listener:failureListeners) listener.onFailed(task,(String)pending.get("failure_reason"));
+            } else {
+                if(task.state()!=TaskState.COMPLETED) throw new IllegalStateException("Deferred completion is not a completed task");
+                completionDispatcher.dispatch(new TaskCompletionContext(task,
+                    guard.decode((String)pending.get("workspace_json"),WorkspaceResult.class),guard.decode((String)pending.get("report_json"),CompletionReport.class)));
+                dependencyResolver.refreshDependents(id);
+            }
+        }
     }
 
     private void attachWorkspaceResult(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
@@ -472,6 +536,7 @@ public class TaskExecutionService {
         var now = clock.instant();
         int recovered = 0;
         for (var lease : tasks.findExpiredLeases(now, limit)) {
+            if(guard!=null && guard.retainExpired(lease.taskId().value(),attempts.findAttemptId(lease.token()).orElseThrow().value())) continue;
             if (!tasks.requeueExpired(lease.taskId(), lease.workerId(), lease.token(), now)) continue;
             boolean attemptExpired = attempts.transition(
                     lease.token(), ExecutionAttemptState.CLAIMED, ExecutionAttemptState.EXPIRED, null, now)

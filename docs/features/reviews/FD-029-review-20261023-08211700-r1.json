@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-029",
+  "source_event": "FD-029-000004-implementation-ready",
+  "human_report": "FD-029-review-20261023-08211700-r1.md",
+  "data": {
+    "reviewer_session": "fd029-independent-review-20261023-0141-design-agent",
+    "worker_session": "fd025-029-host-20261022-234846-08211700",
+    "comparison_base": "31abb1b",
+    "reviewed_head": "c104a49",
+    "implementation_commit": "a8856f4",
+    "worktree": "D:/03_projects/AI-tools/aiw-de/.wt/FD-029",
+    "review_round": 1,
+    "review_limit": 3,
+    "verdict": "changes-requested",
+    "findings": [
+      {
+        "id": "R029-01",
+        "severity": "P1",
+        "dimension": "Correctness/Spec",
+        "file": "src/main/java/me/asu/aidev/execution/guard/ExecutionGuard.java",
+        "line": 178,
+        "related": ["src/main/java/me/asu/aidev/execution/guard/ExecutionLedger.java:49", "src/main/java/me/asu/aidev/execution/application/TaskClaimService.java:169"],
+        "requirement": "claim先提交属于在途；暂停/阈值停止新领取与推进，已授权在途可开始收尾；并发准入和预留原子化",
+        "observed": "claim只检查可用额度，不预留；start重新调用含paused与余额门禁的canClaim，再做ledger.start预留",
+        "consequence": "claim后暂停会拒绝已有领取；多个claim会争用同一未预留额度，后start的已领取任务被拒，可能滞留CLAIMED和槽位",
+        "minimal_resolution": "claim事务持久化Attempt准入和预留；start仅启用实际计时并复验Lease、撤销/到期、固定输入及UNKNOWN，不因后来的暂停或其他预留否决既有准入；处理未启动结束的预留，保留真实安全阻断",
+        "evidence": "静态完整源码及周边claim/start/Python失败路径，未运行反例"
+      },
+      {
+        "id": "R029-02",
+        "severity": "P1",
+        "dimension": "Correctness/Spec",
+        "file": "workers/process-python/guarded_preflight.py",
+        "line": 32,
+        "related_lines": [38, 41, 60],
+        "requirement": "首期双后端；按实际协议能力适配，不锁版本且不虚假拒绝已存在的必需能力",
+        "observed": "全部必需类型只查definitions.v2，但DynamicToolCallParams是顶层公共定义",
+        "consequence": "对已导出的真实schema，Codex模型预检必定误报必需能力缺失，Worker无法注册受控能力",
+        "minimal_resolution": "按真实$ref/公共及v2命名空间解析并保留字段与安全检查，不删校验、不锁版本、不移除Codex范围",
+        "schema_path": "D:/03_projects/AI-tools/aiw-de/.ai/issues/drafts/fd025-029-codex-0.163.0-schema/codex_app_server_protocol.schemas.json",
+        "actual_json_pointer": "#/definitions/DynamicToolCallParams",
+        "incorrect_lookup_pointer": "#/definitions/v2/DynamicToolCallParams",
+        "evidence": "静态ConvertFrom-Json读取已有导出：DynamicToolCallParams root=True/v2=False；未调用预检、CLI后端或重新导出"
+      }
+    ],
+    "coverage": ["完整49路径差异，含FD/两份Worker报告", "guard/ledger/yield/lineage/claim/start/终态/恢复", "机器/人类身份、权限、CSRF及UI", "V11/V12新库迁移", "Python broker、文件/Git、双模型及command/cgroup", "稳定spec及部署说明"],
+    "worker_reported_compile": "a8856f4的Java/Python/JavaScript检查通过；Reviewer未重跑",
+    "commands_run": ["Get-Content/rg/git status/git log", "git diff --stat/--name-only/--unified=4 31abb1b..c104a49", "PowerShell ConvertFrom-Json只读已有schema", "aiw fd show/help", "aiw fd claim FD-029 FD-029-000004-implementation-ready --session fd029-independent-review-20261023-0141-design-agent"],
+    "not_run": ["tests/compile", "models/AppServer/project commands", "DB/migrations", "sandbox/cgroup", "HTTP/browser/services/network"],
+    "runtime_certified": false,
+    "implementation_modified": false,
+    "blocker_feedback": "docs/features/reports/FD-029-blocker-review-20261023-08211700-r1.md",
+    "human_decision_required": false,
+    "remaining_risks": ["真实隔离/迁移/并发/恢复未运行验证", "两个findings修复前不能整FD通过"]
+  }
+}

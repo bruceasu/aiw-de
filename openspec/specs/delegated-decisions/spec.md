@@ -7,7 +7,14 @@ FD-024 moves private decision business into a user-owned Worker. The platform re
 ## Requirements
 
 ### Requirement: Closed minimal capabilities
-Human-confirmed capabilities SHALL bind one owner, enrolled Worker, exact target/action/step, fixed business parameters, states, conditions, total ceiling, version and expiry. Every execution SHALL recheck current human role and identity generation. A11 requires approval authority, A17 administration authority, and other actions operation authority. Model text and private database edits SHALL NOT issue or expand capabilities.
+Human-confirmed capabilities SHALL bind one owner, enrolled Worker, exact target/action/step, fixed business parameters, states, conditions, total ceiling, version and expiry. Every execution SHALL recheck current human role and identity generation. A11 and A18_BUDGET require approval authority, A17 administration authority, and other actions operation authority. Model text and private database edits SHALL NOT issue or expand capabilities.
+
+### Requirement: Bounded execution-budget increments
+A18_BUDGET SHALL bind the exact plan, dimension, optional loop ID, positive increment and cumulative ceiling. It SHALL use the existing owner, dedicated identity, effective grant, prohibitions, target generation and formal request receipt. A repeated decision SHALL NOT increase a limit twice. Historical consumption and uncertain reservations SHALL remain. Private secretary policy SHALL stay local; ordinary approval authority SHALL NOT imply budget-increment authority.
+
+#### Scenario: Unknown effects require reconciliation
+- **WHEN** tool effects or actual consumption cannot be determined
+- **THEN** a currently authorized human owner may record fixed evidence and a precise conclusion through the console, the secretary may only relay it, and reconciliation SHALL NOT replay the operation or erase known consumption
 
 ### Requirement: Effective prohibition before private activation
 Private prohibitions SHALL be projected only as necessary target/action/condition fields and a salted private revision digest. Machine updates may only narrow their explicit target scope, pause it and advance its restriction generation. Applicable prohibitions SHALL defeat ALLOW regardless of grant replacement. Removing an exact prohibition or expanding a ceiling SHALL require a current authorized human. A private write failure after narrowing SHALL leave the platform paused; a private backup SHALL NOT roll back platform restrictions.

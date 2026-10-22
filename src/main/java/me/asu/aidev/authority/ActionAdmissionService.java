@@ -129,7 +129,7 @@ public class ActionAdmissionService {
                 Set<String> previousTasks=new HashSet<>();
                 if(!repo.jdbc().queryForList("SELECT id FROM flexible_workflow_plan WHERE id=?",String.class,scope.targetId()).isEmpty())
                     plans.steps(scope.targetId()).forEach(t->previousTasks.add(t.id().value()));
-                Object result=actions.execute(scope,"personal:"+principal.worker(),grant.id(),grant.revision());
+                Object result=actions.execute(scope,"personal:"+principal.worker(),grant.id(),grant.revision(),input.requestId());
                 bindPermits(principal,grant,input.requestId(),previousTasks);
                 boolean admitted=repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_task p JOIN authority_target t ON t.target_key=p.target_key WHERE p.request_id=? AND t.owner_id=?",Long.class,input.requestId(),principal.owner())>0;
                 repo.audit(target,grant.id(),input.requestId(),"personal:"+principal.worker(),"ACTION_ADMITTED",scope.action().name()+"; fixed business parameters only");
