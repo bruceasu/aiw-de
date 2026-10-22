@@ -8,13 +8,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class GuardClaimPolicy implements WorkerTaskClaimPolicy {
     private final ExecutionGuard guard;
-    public GuardClaimPolicy(ExecutionGuard guard) { this.guard=guard; }
+    private final me.asu.aidev.execution.config.ExecutionConfigurations configurations;
+    public GuardClaimPolicy(ExecutionGuard guard,me.asu.aidev.execution.config.ExecutionConfigurations configurations) { this.guard=guard;this.configurations=configurations; }
     @Override public boolean canClaim(WorkTask task) {
         guard.serializeCandidate(task);
         return !guard.required(task) || guard.canClaim(task.id().value());
     }
     @Override public boolean canClaim(WorkTask task,Worker worker) {
         guard.serializeCandidate(task);
+        if(task.requiredCapabilities().contains(me.asu.aidev.execution.config.ConfigurationContract.CAPABILITY))
+            return configurations.managed(task.id().value()) && configurations.canClaim(task.id().value(),worker) && guard.canClaim(task.id().value());
         if(guard.required(task))
             return task.type()==me.asu.aidev.work.domain.TaskType.EXTERNAL_WORK && guard.managed(task.id().value()) && worker.capabilities().contains(GuardContract.CAPABILITY)
                     && (worker.runtimeType().startsWith("openai-agents:") || worker.runtimeType().startsWith("codex-app-server:"))

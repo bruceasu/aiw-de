@@ -32,6 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskExecutionService {
+    private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
+    @Autowired public void setExecutionConfigurations(me.asu.aidev.execution.config.ExecutionConfigurations configurations) { this.configurations=configurations; }
     private me.asu.aidev.execution.guard.ExecutionGuard guard;
     private me.asu.aidev.execution.guard.ExecutionYieldService guardedYield;
     @org.springframework.beans.factory.annotation.Autowired
@@ -142,7 +144,10 @@ public class TaskExecutionService {
         if (task.state() == TaskState.CLAIMED && attempts.stopRequested(leaseToken, workerId)) {
             throw new IllegalStateException("Worker stop requested before task start; acknowledge stop instead");
         }
-        if (goalPolicy != null && goalPolicy.managed(task)) {
+        if(configurations!=null && configurations.managed(taskId.value())) {
+            AiSelection selection=configurations.select(taskId.value(),workerId.value(),profileId,profileVersion,selectionReason,attempts.findAttemptId(leaseToken).orElseThrow().value());
+            if(!attempts.attachAiSelection(leaseToken,workerId,selection)) throw new IllegalStateException("Cannot attach prepared AI selection");
+        } else if (goalPolicy != null && goalPolicy.managed(task)) {
             var worker = workers.find(workerId).orElseThrow(() -> new IllegalStateException("worker not found"));
             AiSelection selection = goalPolicy.select(task, worker.runtimeType(), profileId, profileVersion, selectionReason);
             if (selection != null && !attempts.attachAiSelection(leaseToken, workerId, selection))

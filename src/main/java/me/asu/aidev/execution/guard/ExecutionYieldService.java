@@ -15,6 +15,8 @@ import static me.asu.aidev.execution.guard.GuardContract.*;
 /** Quiescence is acknowledged by the trusted adapter, never inferred from a model's text. */
 @Service
 public class ExecutionYieldService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.execution.config.ExecutionConfigurations> configurations;
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final ExecutionGuard guard;
     private final ExecutionLedger ledger;private final WorkTaskRepository tasks;private final WorkerRepository workers;
     private final List<TaskConcurrencyBudget> concurrency;
@@ -102,6 +104,7 @@ public class ExecutionYieldService {
             throw new IllegalStateException("Exact waiting source and fixed successor required");
         if(!guard.canClaim(source)) throw new IllegalStateException("Continuation control or budget blocked");
         tasks.lock(old.id());tasks.insert(successor);
+        configurations.getObject().continueBinding(source,successor.id().value());
         var refs=new ArrayList<>(c.snapshot().references());refs.addAll(additionalRefs);
         // This is a continuation of the original grant. Replacing a policy never expands it.
         ledger.task(c.planId());String json=repo.encode(new ExecutionGuard.Snapshot(successor,c.snapshot().inputs(),List.copyOf(refs)));

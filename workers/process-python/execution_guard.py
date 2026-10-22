@@ -62,6 +62,7 @@ class GuardBroker:
         self.usage = {"inputTokens": 0, "cachedTokens": 0, "outputTokens": 0}
         self.commands_run = []
         self._active = set()
+        self.allowed_tools = None
 
     def attach(self, workspace):
         root = Path(workspace).absolute()
@@ -73,6 +74,7 @@ class GuardBroker:
 
     def begin(self, tool, resource, arguments, call_id=None):
         self.attempt.check()
+        if self.allowed_tools is not None and tool not in self.allowed_tools: raise RuntimeError("CONFIGURATION_TOOL_NOT_DECLARED")
         operation = "OP-" + (digest({"attempt": self.task["attemptId"], "call": call_id}) if call_id else uuid.uuid4().hex)
         payload = {"protocol": PROTOCOL, "platformInstanceId": self.context["instanceId"], "lease": self.lease, "operationId": operation,
                    "tool": tool, "repositoryRef": self.repository, "resource": resource,

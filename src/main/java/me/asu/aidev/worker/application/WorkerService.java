@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkerService {
+    private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
+    @Autowired public void setExecutionConfigurations(me.asu.aidev.execution.config.ExecutionConfigurations configurations) { this.configurations=configurations; }
     private me.asu.aidev.authority.AuthorityBoundary delegation;
     @Autowired
     public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary delegation) { this.delegation = delegation; }
@@ -36,6 +38,7 @@ public class WorkerService {
         Worker worker = new Worker(command.workerId(), command.runtimeType(), command.capabilities(),
                 command.maxConcurrency(), 0, WorkerStatus.ACTIVE, now, now, now);
         workers.register(worker);
+        if(configurations!=null) configurations.invalidateWorker(worker.id().value());
         return workers.find(command.workerId()).orElseThrow();
     }
 

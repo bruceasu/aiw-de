@@ -15,6 +15,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
     private boolean leaseMachine(String path) {
         return path.equals("/api/r1/worker-protocol/v1/workers/register") || path.equals("/api/r1/worker-protocol/v1/tasks/claim")
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/heartbeat")
+                || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/configuration")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/(begin|finish)|operations/[^/]+/receipt|yield/(prepare|ack)|delivery)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
     }
@@ -26,6 +27,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
         return method.equals("POST") && (Set.of("/owners/bind","/workers","/grants","/managed-plans","/execution-policies","/execution-budgets/increment","/execution-effects/reconcile","/execution-meters/reconcile").contains(path)
                 || path.matches("/execution-policies/[^/]+/(pause|resume|revoke)") || path.matches("/execution-contexts/[^/]+/bind")
                 || path.matches("/execution-tasks/[^/]+/stopped")
+                || path.matches("/execution-configurations/(assets|candidates|propose|prepare|state)")
                 || path.matches("/workers/[^/]+/(enable|disable)") || path.matches("/grants/[^/]+/revoke")
                 || path.matches("/targets/[^/]+/(takeover|return)") || path.matches("/restrictions/[^/]+/revoke")
                 || path.matches("/budgets/[^/]+/supplement") || path.matches("/effects/[^/]+/reconcile"));
@@ -47,7 +49,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                     if(!humanRoute(method,operation)) { response.sendError(403,"Authority route not allowed");return false; }
                 } else {
                     if(leaseMachine(path)) return true;
-                    if(!path.equals("/ui/authority") && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
+                    if(!Set.of("/ui/authority","/ui/configurations").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
                 }
                 var session=request.getSession(false);
                 if(!security.enabled() || session==null || !security.authenticated(session)) { response.sendError(401,"Configured human authentication required");return false; }
@@ -64,6 +66,6 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 boundary.human(security.actor(session));return true;
             }
             @Override public void afterCompletion(HttpServletRequest request,HttpServletResponse response,Object handler,Exception error) { boundary.human(null); }
-        }).addPathPatterns("/api/r1/**","/ui/authority").order(10);
+        }).addPathPatterns("/api/r1/**","/ui/authority","/ui/configurations").order(10);
     }
 }

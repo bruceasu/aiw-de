@@ -169,3 +169,8 @@ See `../../docs/R10-R2-PROCESS-WORKER-EXTRACTION.md` for the exact mapping of R2
 ## Flexible work contract
 
 All executable roles accept `EXTERNAL_WORK`. `skillRef` must equal the role’s primary Skill. REPORT and VERDICT roles are read-only; WORKSPACE roles require an assigned Git workspace and a 40/64-digit base revision. Reviews with code inputs must use the supplied resultRevision as their base. Tests need host authorization; Git push is forbidden; task text and reports cannot grant it. Plan proposals need manager confirmation; REPAIR_REQUIRED creates no automatic repair task.
+# 按任务加载专业配置
+
+设置 `AIW_DYNAMIC_CONFIG=true` 与 `AIW_EXECUTION_GUARD=true` 后，Worker 通过受控后端预检并登记 `aiw.execution.config.v1` 能力。新任务按服务器固定的配置正文及 Skill/知识摘要创建本次 Agent，不被启动 role 固定；旧任务继续使用启动 Profile。两种后端均消费相同 broker，不按 Codex/SDK 版本锁定兼容性。
+
+控制台入口 `/ui/configurations`；完整字段、默认目录、原因和部署边界见 [专业配置合同](../../docs/EXECUTION-CONFIGURATION.md)。默认验证方法还要求明确的命令许可及 Linux/WSL 隔离适配器。配置切换不授予权限、不迁移旧数据，也不释放尚未确认停止的执行。

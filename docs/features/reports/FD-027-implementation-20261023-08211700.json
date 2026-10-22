@@ -1,0 +1,39 @@
+{
+  "schema":"aiw.fd.evidence.v1",
+  "kind":"worker-report",
+  "fd_id":"FD-027",
+  "source_event":"FD-027-000003-design-ready",
+  "human_report":"FD-027-implementation-20261023-08211700.md",
+  "data":{
+    "worker_session":"fd025-029-host-20261022-234846-08211700",
+    "comparison_base":"0284988",
+    "implementation_commit":"75bc073",
+    "parent_branch":"develop",
+    "branch":"feature/FD-027",
+    "worktree":".wt/FD-027",
+    "work_items":["1.1","1.2","1.3","2.1","2.2","2.3","3.1","3.2","3.3","4.1","4.2"],
+    "review_outcomes_so_far":0,
+    "review_limit":3,
+    "compile":{
+      "status":"passed",
+      "source_commit":"75bc073",
+      "completed_at":"2026-10-23T01:51:53+09:00",
+      "java_source_files":264,
+      "java_command":"JAVA_HOME=C:/green/jdk-25.0.1+8; C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests=true -Dmaven.test.skip=true compile",
+      "python_command":"stdin compile() for execution_configuration.py, execution_guard.py, process_worker.py; no imports or execution",
+      "javascript_command":"node --check src/main/resources/static/ui/configurations.js"
+    },
+    "static_validation":{"status":"passed-after-whitespace-fix","command":"git diff --cached --check; source diff and read-only catalogue metadata","first_result":"two new EOF blank lines","retry":"one targeted check after removing those lines"},
+    "catalogue_generation":"standard-library static edit from 11 existing TOML methods and 9 Skill packages; no project imports or execution",
+    "contract":"aiw.execution.config.v1",
+    "backends":["openai-agents","codex-app-server"],
+    "versions_pinned":false,
+    "old_data_migration":false,
+    "runtime_certified":false,
+    "not_run":["tests","services/HTTP/browser","DB/migrations","models/SDK/AppServer","commands/sandbox/cgroup","concurrency/fault injection","install/download/login/push/deploy"],
+    "remaining_risks":["actual configuration switching, backend compatibility, migration, cancellation and isolation not run","later owning FDs must update question/graph bindings in their formal consumption transaction"],
+    "blockers":[],
+    "human_decision_required":false,
+    "review_status":"awaiting-independent-review"
+  }
+}

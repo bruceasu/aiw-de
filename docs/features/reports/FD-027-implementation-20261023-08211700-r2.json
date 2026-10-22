@@ -1,0 +1,19 @@
+{
+  "schema":"aiw.fd.evidence.v1","kind":"worker-report","fd_id":"FD-027",
+  "source_event":"FD-027-000005-changes-requested",
+  "human_report":"FD-027-implementation-20261023-08211700-r2.md",
+  "data":{
+    "worker_session":"fd025-029-host-20261022-234846-08211700",
+    "comparison_base":"0284988","previous_reviewed_head":"b304cde","implementation_commit":"86b22fe",
+    "worktree":".wt/FD-027","branch":"feature/FD-027","parent_branch":"develop",
+    "review_outcomes_so_far":1,"review_limit":3,
+    "repairs":{"R027-01":"Shared complete capability set for preparation supports() and task materialization; removed obsolete capability without changing Worker advertisement","R027-02":"Java/Python strictly verify owned configuration/skill/knowledge references and counts, preserve other guard-fixed source-owned task references"},
+    "compile":{"status":"passed","source_commit":"86b22fe","completed_at":"2026-10-23T02:00:59+09:00","java_source_files":264,
+      "java_command":"JAVA_HOME=C:/green/jdk-25.0.1+8; C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests=true -Dmaven.test.skip=true compile",
+      "python_command":"stdin compile() for execution_configuration.py, no imports or execution","javascript":"unchanged; previous evidence retained"},
+    "static_validation":{"status":"passed","command":"git diff --check and full five-file diff"},
+    "blocker_feedback":{"path":"FD-027-blocker-review-20261023-08211700-r1.md","status":"awaiting-independent-repair-review"},
+    "not_run":["tests","SDK/models/AppServer","services/HTTP/browser/DB/migrations","commands/sandbox/cgroup/concurrency/recovery","install/download/login/push/deploy"],
+    "runtime_certified":false,"versions_pinned":false,"human_decision_required":false,"review_status":"awaiting-independent-review"
+  }
+}

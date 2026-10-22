@@ -34,6 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/r1/worker-protocol/v1")
 public class WorkerProtocolV1Controller {
+    private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
+    @Autowired public void setExecutionConfigurations(me.asu.aidev.execution.config.ExecutionConfigurations configurations) { this.configurations=configurations; }
     private me.asu.aidev.authority.AuthorityTaskPolicy delegationPolicy;
     @Autowired
     public void setDelegationPolicy(me.asu.aidev.authority.AuthorityTaskPolicy policy) { this.delegationPolicy=policy; }
@@ -187,11 +189,13 @@ public class WorkerProtocolV1Controller {
                         input.resultRevision(), input.publicationRef(), input.changedFiles(),
                         input.completionVerdict() == null ? null : input.completionVerdict().name(),
                         input.completionSummary(), input.attemptId())).toList(),
-                goalPolicy != null && goalPolicy.managed(task) ? goalPolicy.guidance(task, runtimeType)
+                configurations!=null && configurations.managed(task.id().value()) ? configurations.binding(task.id().value()).guidance()
+                    : goalPolicy != null && goalPolicy.managed(task) ? goalPolicy.guidance(task, runtimeType)
                     : recommendationPolicy != null && recommendationPolicy.managed(task) ? recommendationPolicy.guidance(task, runtimeType)
                         : delegatedGuidance(task,runtimeType,claimed.attemptNo()),
                 outputs == null ? null : outputs.store(task, claimed.attemptId().value(), claimed.inputs()),
-                workflowAiPreferences == null ? null : workflowAiPreferences.forTask(task));
+                configurations!=null && configurations.managed(task.id().value()) ? null : workflowAiPreferences == null ? null : workflowAiPreferences.forTask(task),
+                configurations==null?null:configurations.payload(task.id().value(),claimed.attemptId().value()));
     }
 
     private AiProfileCatalog.Guidance delegatedGuidance(me.asu.aidev.work.domain.WorkTask task,String runtime,int attempt) {
@@ -291,7 +295,13 @@ public class WorkerProtocolV1Controller {
             List<TaskInputResponse> inputs,
             AiProfileCatalog.Guidance aiGuidance,
             me.asu.aidev.output.application.TaskOutputService.Store outputStore,
-            me.asu.aidev.workflow.application.WorkflowAiPreferences.Preferences aiPreferences) {
+            me.asu.aidev.workflow.application.WorkflowAiPreferences.Preferences aiPreferences,
+            me.asu.aidev.execution.config.ConfigurationContract.Payload executionConfiguration) {
+        public ClaimedTaskResponse(String taskId,String taskType,String subjectType,String subjectId,Set<String> requiredCapabilities,String skillRef,String instruction,int instructionRevision,
+                int priority,String attemptId,int attemptNo,String leaseToken,Instant leaseAcquiredAt,Instant leaseExpiresAt,WorkspaceResponse workspace,List<TaskInputResponse> inputs,
+                AiProfileCatalog.Guidance aiGuidance,me.asu.aidev.output.application.TaskOutputService.Store outputStore,me.asu.aidev.workflow.application.WorkflowAiPreferences.Preferences aiPreferences) {
+            this(taskId,taskType,subjectType,subjectId,requiredCapabilities,skillRef,instruction,instructionRevision,priority,attemptId,attemptNo,leaseToken,leaseAcquiredAt,leaseExpiresAt,workspace,inputs,aiGuidance,outputStore,aiPreferences,null);
+        }
         public ClaimedTaskResponse(String taskId, String taskType, String subjectType, String subjectId,
                 Set<String> requiredCapabilities, String skillRef, String instruction, int instructionRevision,
                 int priority, String attemptId, int attemptNo, String leaseToken, Instant leaseAcquiredAt,

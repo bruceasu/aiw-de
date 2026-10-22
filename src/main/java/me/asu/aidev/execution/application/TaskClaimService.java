@@ -29,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskClaimService {
+    private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
+    @Autowired public void setExecutionConfigurations(me.asu.aidev.execution.config.ExecutionConfigurations configurations) { this.configurations=configurations; }
     private me.asu.aidev.execution.guard.ExecutionGuard guard;
     @Autowired
     public void setExecutionGuard(me.asu.aidev.execution.guard.ExecutionGuard guard) { this.guard=guard; }
@@ -171,6 +173,7 @@ public class TaskClaimService {
                     ExecutionAttemptState.CLAIMED, null, now, null, null));
             if(guard!=null) guard.claimed(claimedTask.id().value(),new me.asu.aidev.execution.guard.GuardContract.Lease(
                     workerId.value(),attemptId.value(),token.value()));
+            if(configurations!=null) configurations.claimed(claimedTask.id().value(),attemptId.value(),workerId.value());
 
             var inputs = guard!=null && guard.managed(claimedTask.id().value()) ? guard.context(claimedTask.id().value()).snapshot().inputs()
                     : dependencies.findDependencies(claimedTask.id()).stream()

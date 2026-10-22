@@ -7,6 +7,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class AuthorityPageController {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
+    @GetMapping("/ui/configurations") public String configurations(Model model) {
+        String actor=Objects.requireNonNull(boundary.human(),"Authenticated human required");
+        var owners=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
+        model.addAttribute("ownerId",owners.size()==1?owners.getFirst():"");
+        model.addAttribute("categories",configurations.categories());
+        model.addAttribute("methods",configurations.catalogue().methods());
+        return "ui/configurations";
+    }
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;
     private final me.asu.aidev.workflow.application.WorkflowPlanService plans;
     public AuthorityPageController(AuthorityRepository repo,AuthorityBoundary boundary,me.asu.aidev.workflow.application.WorkflowPlanService plans) { this.repo=repo;this.boundary=boundary;this.plans=plans; }

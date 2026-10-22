@@ -1,7 +1,7 @@
 # FD-027: 同一 Worker 按任务执行不同专业配置
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 7
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -103,17 +103,17 @@ OpenAI Agents 仅注册平台许可目录中的 function tools。Codex App Serve
 | 4.1 | 2.3、3.3 | 控制台展示配置版本、原因、恢复操作及真实支持能力 |
 | 4.2 | 4.1 | 同步 Runtime 合同/spec/文档，编译及独立实现审查、本地交付 |
 
-- [ ] 1.1 配置与能力合同。
-- [ ] 1.2 默认职责目录。
-- [ ] 1.3 配置版本持久化。
-- [ ] 2.1 精确复用配置。
-- [ ] 2.2 组合与声明式候选。
-- [ ] 2.3 准备及阻塞恢复。
-- [ ] 3.1 能力匹配和领取载荷。
-- [ ] 3.2 Python 逐任务配置。
-- [ ] 3.3 配置切换及取消。
-- [ ] 4.1 控制台展示。
-- [ ] 4.2 文档、证据及交付。
+- [x] 1.1 配置与能力合同。
+- [x] 1.2 默认职责目录。
+- [x] 1.3 配置版本持久化。
+- [x] 2.1 精确复用配置。
+- [x] 2.2 组合与声明式候选。
+- [x] 2.3 准备及阻塞恢复。
+- [x] 3.1 能力匹配和领取载荷。
+- [x] 3.2 Python 逐任务配置。
+- [x] 3.3 配置切换及取消。
+- [x] 4.1 控制台展示。
+- [x] 4.2 文档与实现证据已准备；独立审查和本地交付待后续角色完成。
 
 ## Acceptance
 
@@ -125,9 +125,21 @@ AG 边界：配置优先复用（2.1）；声明式内容不能增加工具（2.
 
 默认静态 Java/协议/Python 调用链核对及实现后的适用离线编译；不生成或执行测试，不调用模型、API、Codex、容器、Worker 或网络。Python 编译应在内存完成，不能以语法编译证明进程终止、真实工具拦截或模型集成已运行。权限/协议/持久化设计需独立设计反馈，实现另需独立 Reviewer。
 
-TODO：固定双后端适配器及准备合同 → 独立设计反馈 → 受管交接 → 隔离实现/审查/交付。G1/G2 已由用户解决；当前尚无新动态配置实现或运行验证。
+首轮 Worker 交接时记录（历史）：待独立实现审查后按真实结果修复或本地交付/归档。G1/G2 已由用户解决。源提交 `75bc073` 已通过 Java 离线编译（264 个生产源）、修改 Python 的内存语法编译、新页面 JavaScript 语法检查及差异检查，完成于 2026-10-23 01:51:53 JST；详见 [实现报告](../reports/FD-027-implementation-20261023-08211700.md) 及同名 JSON。没有运行测试、服务、数据库/迁移、模型、App Server 或真实资源隔离，不能将语法编译称作进程/后端验收。
+
+具体实现：`execution/config` 拥有封闭声明合同、默认目录、不可变内容、准备事务和能力快照；`GuardClaimPolicy`、TaskClaim/TaskExecution、Worker 协议及 Python 实际消费。PreparedConfigRef 中 Skills 与知识均为 `{ref,version,digest}`，digest 对应 contentJson 原始 UTF-8；配置不会因集合序列化顺序或重新启动被静默改写。内部准备端口只供平台拥有者在其正式控制事务消费，没有新增机器写政策入口。
+
+首期目录从 11 份已有 Python Profile 和 9 个 Skill 包静态派生。Factory 优先精确复用，再组合已有 Skill；补充方法说明时生成可审阅的声明对象，不在准备事务调用模型或执行生成代码。当前控制台 `/ui/configurations` 支持登记明确选定的版本、提议/保存候选、准备及显式恢复。知识仍归知识管理，分类预留不广告新 Worker；常驻和回收继续延期。详见 [专业配置说明](../../EXECUTION-CONFIGURATION.md)。
+
+工作区 `.wt/FD-027`，分支 `feature/FD-027`，记录父分支 `develop`，比较基线 `0284988`。首轮 Worker 交接时（历史），FD-029 已实际交付并归档，本 FD 当时尚无独立实现审查结论，累计结果 0，上限 3；当前结果见下方第 2 轮独立复查。4.2 的 Worker 完成是准备文档及真实证据，不替代独立审查、合并及归档。
+
+独立实现审查第 1 / 3 轮：**changes-requested**。独立 Session `fd027-independent-review-20261023-r1-design-agent` 领取 `FD-027-000004-implementation-ready`，比较 `0284988..b304cde`（源实现 75bc073）。R027-01：Factory 要求 Python 不广告且禁止手动广告的 flexible-work-v1，准备检查未覆盖完整能力，READY 后无法领取；R027-02：Java/Python 配置消费者把全部任务引用严格等于配置引用，拒绝安全续行追加的正式引用。详见 [独立审查](../reviews/FD-027-review-20261023-08211700-r1.md) 及同名 JSON、[阻断反馈](../reports/FD-027-blocker-review-20261023-08211700-r1.md) 及同名 JSON。前述累计 0/尚无审查是 Worker 交接时记录，本轮结果为当前结论；修复前不得整体通过或本地交付。Reviewer 只作静态检查，未运行测试、编译、模型/后端、项目、服务、数据库/迁移、沙箱或网络，未修改实现。
+
+独立实现复查第 2 / 3 轮：**verification-passed（静态证据范围）**。同一独立 Reviewer Session 领取 `FD-027-000006-implementation-ready`，审查父基线 `0284988`、上一受审 `b304cde` 至 HEAD `95df53c` 的修复（源提交 `86b22fe`）及周边调用链，确认 R027-01/02 全部 resolved，未发现新增阻断。详见 [第 2 轮独立复查](../reviews/FD-027-review-20261023-08211700-r2.md) 及同名 JSON。原 blocker 双文件已保留历史并标为 resolved；首轮 1 次 changes-requested 仍保留，上限 3 不重置。前述“待复查/未通过”属于历史交接记录，以本结论及真实 CLI 回执为当前状态；待 PM 本地交付，不由 Reviewer 合并或归档。Reviewer 未运行测试、编译、项目、SDK/模型/App Server、服务/HTTP/浏览器、数据库/迁移、沙箱/cgroup、并发/恢复/取消或网络，没有修改实现；运行行为仍未验证。
 
 ## 设计就绪记录（2026-10-23）
+
+第 1 轮修复交接记录（历史）：Worker 领取 `FD-027-000005-changes-requested`，在源提交 `86b22fe` 修复 R027-01/02：准备与领取对齐新配置的完整能力集合；Java/Python 严格核对本配置拥有的引用，并允许其他模块追加正式固定来源。2026-10-23 02:00:59 JST Java 离线 compile（264 源）、修改 Python 语法编译及差异检查通过。详见 [修复报告](../reports/FD-027-implementation-20261023-08211700-r2.md) 及同名 JSON。当时待第 2 轮独立复查，未将 Worker 修复视为独立通过；当前结论见 Verification，原第 1 轮结论及 blocker 历史保留。
 
 已取得独立定向复查 [FD-027 design recheck](../reviews/FD-027-design-recheck-20261023-08211700.md) 及同名 JSON；本轮原 findings 全部 resolved，建议 ready。已确认的人类政策及工程合同作为当前设计，本文此前“候选/待复查”的阶段描述以本节为准；尚无实现通过或运行认证。本 FD 当前阶段由 CLI 状态与真实交接记录确定。
 

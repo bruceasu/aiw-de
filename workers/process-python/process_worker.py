@@ -103,7 +103,7 @@ class WorkerConfig:
         profile = get_profile(process_role)
         capabilities = {part.strip() for part in os.getenv("AIW_WORKER_CAPABILITIES", "").split(",") if part.strip()}
         role_capabilities = {"goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
-        if any(part == "*" or part == "flexible-work-v1" or part.startswith("repo:") or part in role_capabilities for part in capabilities):
+        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1"} or part.startswith("repo:") or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
         if _bool_env("AIW_EXECUTION_GUARD", False):
@@ -111,6 +111,9 @@ class WorkerConfig:
             capabilities.update(guarded_capabilities(runtime, profile, str(Path(os.getenv("AIW_PROCESS_SKILLS_ROOT", Path(__file__).with_name("skills"))).resolve())))
         elif "execution-guard-v1" in capabilities or "guarded-command-linux-v1" in capabilities:
             raise ValueError("GUARDED_CAPABILITIES_REQUIRE_VERIFIED_ADAPTER")
+        if _bool_env("AIW_DYNAMIC_CONFIG", False):
+            if not _bool_env("AIW_EXECUTION_GUARD", False): raise ValueError("DYNAMIC_CONFIGURATION_REQUIRES_GUARDED_ADAPTER")
+            capabilities.add("execution-config-v1")
         if repository_ref:
             capabilities.add(f"repo:{repository_ref}")
         max_concurrency = int(os.getenv("AIW_WORKER_MAX_CONCURRENCY", "1"))
@@ -149,12 +152,16 @@ class ControlPlaneClient:
         self.timeout = config.http_timeout
 
     def register(self, config: WorkerConfig) -> dict[str, Any]:
-        return self._post("/workers/register", {
+        result = self._post("/workers/register", {
             "workerId": config.worker_id,
             "runtimeType": f"{config.runtime}:{config.process_role}",
             "capabilities": list(config.capabilities),
             "maxConcurrency": config.max_concurrency,
         }) or {}
+        if "execution-config-v1" in config.capabilities:
+            from execution_configuration import metadata
+            self._post(f"/workers/{_quote(config.worker_id)}/configuration", {"workerId": config.worker_id, "capabilities": metadata(config)})
+        return result
 
     def worker_heartbeat(self, worker_id: str) -> None: self._post(f"/workers/{_quote(worker_id)}/heartbeat", None)
     def drain(self, worker_id: str) -> None: self._post(f"/workers/{_quote(worker_id)}/drain", None)
@@ -384,11 +391,13 @@ class ProcessSlot:
         try:
             attempt = Attempt(self.config, task, self.force_event)
             with attempt_scope(attempt):
-                profile = _profile(self.config, task.get("taskType"))
+                from execution_configuration import load as load_configuration
+                prepared = load_configuration(self.config, task)
+                profile = prepared.profile if prepared else _profile(self.config, task.get("taskType"))
                 selection, reason = choose_ai_profile(task.get("aiGuidance"), self.config.runtime)
                 fallback_selection = selection
                 default_model = self.config.model or (self.runtime.config.model if self.config.runtime == "openai-agents" else None)
-                effective_selection = step_selection(task, self.config.runtime, selection, default_model, self.config.reasoning_effort)
+                effective_selection = selection if prepared else step_selection(task, self.config.runtime, selection, default_model, self.config.reasoning_effort)
                 if task.get("aiGuidance") and effective_selection is not selection:
                     selection, reason = effective_selection, "Step preference matches an approved profile"
                 self.client.start(task, self.config.worker_id, selection, reason)
@@ -400,6 +409,9 @@ class ProcessSlot:
                     from execution_guard import GuardBroker
                     broker = GuardBroker(self.client, task, self.config.worker_id, attempt)
                     broker.writable = profile.writable
+                    if prepared:
+                        prepared.verify_context(broker.context)
+                        broker.allowed_tools = set(prepared.reference["toolRequirements"])
                     attempt.guard_broker = broker
                 if task.get("taskType") not in profile.task_types:
                     raise RuntimeError("ROLE_TASK_TYPE_DENIED")
@@ -412,7 +424,7 @@ class ProcessSlot:
                 if profile.result_kind == "VERDICT" and any(item.get("resultRevision") and item["resultRevision"] != revision for item in task.get("inputs") or []):
                     raise RuntimeError("UPSTREAM_REVISION_MISMATCH")
                 # Read and freeze trusted skills before workspace side effects.
-                instruction = _prompt(task, self.config)
+                instruction = prepared.prompt(task) if prepared else _prompt(task, self.config)
                 if task.get("workspace"):
                     repository_gate = workspace_lock(task["workspace"].get("repositoryPath") or self.config.repository_root, attempt)
                     try:

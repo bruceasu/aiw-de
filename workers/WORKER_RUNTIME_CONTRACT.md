@@ -105,3 +105,10 @@ A Worker may retry once with its own settings after a clear model/effort rejecti
 Do not repeat task side effects, retry ordinary code failures, or loop after the fallback fails.
 Record effective settings and fallback reasons in local attempt evidence. Older Workers may ignore this optional field.
 See [Worker environment variables](ENVIRONMENT.md) for configuration and runtime-specific limits.
+# Versioned per-task configuration
+
+Python Workers may advertise `execution-config-v1` only with the verified execution guard adapter. The optional `executionConfiguration` claim payload contains an immutable reference, its exact UTF-8 JSON content and the selected Worker capability snapshot. New tasks require this version; unsupported Workers cannot claim them. Existing launch-role tasks keep their contracts.
+
+Preparation validates registered Skills/knowledge, output format, exact approved AI profile, backend/resource capability and confirmed permissions/budgets before atomically materializing a claimable task. Each Attempt rechecks the snapshot and constructs a new Agent context. Knowledge remains explicitly scoped; a category, method or Skill never grants permission. Prepared AI parameters do not use legacy Step preference fallback.
+
+OpenAI Agents and Unix/WSL Codex App Server consume the same guarded tools. Versions are recorded as evidence, not allowlisted. Cancellation and UNKNOWN retain the execution guard semantics across configuration switches. See [configuration contract](../docs/EXECUTION-CONFIGURATION.md) and [guard contract](../docs/EXECUTION-GUARD.md). Current FD evidence governs verification; this section is not a runtime certification.

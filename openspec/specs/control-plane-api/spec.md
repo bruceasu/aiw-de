@@ -2,6 +2,13 @@
 
 ## Requirements
 
+### Requirement: Configuration preparation and capability snapshots
+The closed human `/api/r1/authority/execution-configurations/` routes SHALL govern registered declarative assets, candidate proposal/version save, preparation and owned state. Current session, CSRF, owner and operator checks SHALL apply. Worker capability registration SHALL use the machine-token route `/api/r1/worker-protocol/v1/workers/{workerId}/configuration`; ordinary lease claim SHALL atomically persist the selected capability snapshot. The optional `executionConfiguration` payload SHALL preserve the legacy task contract when absent.
+
+#### Scenario: Candidate tries to add an executable tool
+- **WHEN** a generated declaration includes unknown fields, unregistered references or tools outside the fixed catalog
+- **THEN** it is rejected before materialization; saving a candidate SHALL NOT grant tool or resource access
+
 ### Requirement: Separate guarded machine and human routes
 Guarded machine operations SHALL use `/api/r1/worker-protocol/v1/tasks/{taskId}` for fixed context reads, begin/finish/receipt, yield prepare/ack and formal delivery. Enabling this protocol SHALL require a configured machine token and exact task/Attempt/Lease ownership. Human policy, input binding, dimension increments, effect/consumption reconciliation and stop confirmation SHALL use the closed `/api/r1/authority/execution-*` route set with human session, CSRF, owner and action-role checks. Request bodies SHALL reject unknown fields and exceed neither their structural nor transport size limits.
 

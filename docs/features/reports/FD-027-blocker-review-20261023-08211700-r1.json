@@ -1,0 +1,42 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-027",
+  "source_event": "FD-027-000004-implementation-ready",
+  "human_report": "FD-027-blocker-review-20261023-08211700-r1.md",
+  "data": {
+    "stage": "verification",
+    "role": "reviewer",
+    "status": "resolved",
+    "recorded_date": "2026-10-23",
+    "timezone": "Asia/Tokyo",
+    "session_ref": "fd027-independent-review-20261023-r1-design-agent",
+    "review_round": 1,
+    "review_limit": 3,
+    "symptoms": ["R027-01：READY配置任务无法通过Python Worker的完整能力过滤", "R027-02：合法追加正式任务引用的续行无法通过Java/Python配置检查"],
+    "confirmed_causes": ["Factory额外要求flexible-work-v1，广告路径不存在且准备检查未覆盖完整要求", "配置引用和所有任务引用被两端做全量相等比较"],
+    "unknowns": ["真实切换/兼容/迁移/取消/隔离/并发与恢复没有运行证明"],
+    "attempts": ["独立Session领取真实实现交接", "完整差异和周边调用链静态检查", "只读目录元数据和摘要，无运行复现"],
+    "human_decision_required": false,
+    "next_step": "第2轮独立静态复查通过，由PM处理本地交付；保持原发现和运行限制",
+    "review_report": "docs/features/reviews/FD-027-review-20261023-08211700-r1.md",
+    "reusable_improvement": "准备/领取共用所需能力；配置与任务正式引用按所有者分别校验",
+    "template_status": "沿用既有双文件结构；模板缺失已有FD-029历史记录，本轮未修改模板",
+    "not_run": ["tests/compile/models/SDK/AppServer/project commands", "services/HTTP/browser/DB/migrations/sandbox/cgroup/network"],
+    "implementation_modified": false,
+    "resolved_at": "2026-10-23T02:03:49+09:00",
+    "resolution_source_event": "FD-027-000006-implementation-ready",
+    "repair_commit": "86b22fe",
+    "resolved_reviewed_head": "95df53c",
+    "resolution_review_report": "docs/features/reviews/FD-027-review-20261023-08211700-r2.md",
+    "resolution_verdict": "verification-passed",
+    "resolutions": [
+      {"id":"R027-01","status":"resolved","reason":"准备/创建使用同一完整能力集合，与claim支持过滤一致，无多余旧capability"},
+      {"id":"R027-02","status":"resolved","reason":"两端严格核对配置拥有引用，额外正式引用仍在完整guard固定输入和交付来源内"}
+    ],
+    "history": [
+      {"review_round":1,"source_event":"FD-027-000004-implementation-ready","status":"unresolved","reviewed_head":"b304cde"},
+      {"review_round":2,"source_event":"FD-027-000006-implementation-ready","status":"resolved","reviewed_head":"95df53c","recorded_at":"2026-10-23T02:03:49+09:00"}
+    ]
+  }
+}

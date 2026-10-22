@@ -4,6 +4,18 @@ Define how the Control Plane owns work tasks, dependencies, worker leases, and e
 
 ## Requirements
 
+### Requirement: Prepared immutable execution configuration
+Tasks requiring `aiw.execution.config.v1` SHALL become claimable only after registered method, Skill/knowledge versions, exact approved model, required adapter capability, confirmed policy and required budgets have been checked. The unique intent version and preparation generation SHALL protect retries. READY, fixed references and business-task materialization SHALL commit atomically. Known preparation failures SHALL retain a reason and explicit recovery action without creating claimable work.
+
+#### Scenario: Same Python Worker executes different methods
+- **WHEN** it receives successive compatible tasks with different immutable configurations
+- **THEN** each Attempt validates its exact content and capability snapshot, creates its own Agent context and keeps the existing Lease, output and cancellation semantics
+- **AND** neither launch role nor a later configuration changes the earlier task's inputs, permissions, model or unresolved resources
+
+#### Scenario: Unsupported or incomplete preparation
+- **WHEN** a required backend/command adapter, registered source, permission, pricing or budget is unavailable
+- **THEN** preparation identifies the gap, no claimable task is created, and it does not silently change runtime, model or authority
+
 ### Requirement: Guarded execution and immutable inputs
 Tasks using `aiw.execution.guard.v1` SHALL freeze the confirmed policy, configuration digest, Skill references and completed upstream Attempt results. Claim SHALL require matching Python adapter capabilities; unsupported Go/TypeScript or backend capabilities SHALL NOT claim these tasks. Fixed instructions SHALL NOT be changed in place.
 

@@ -1,0 +1,55 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-027",
+  "source_event": "FD-027-000004-implementation-ready",
+  "human_report": "FD-027-review-20261023-08211700-r1.md",
+  "data": {
+    "reviewer_session": "fd027-independent-review-20261023-r1-design-agent",
+    "worker_session": "fd025-029-host-20261022-234846-08211700",
+    "comparison_base": "0284988",
+    "reviewed_head": "b304cde",
+    "implementation_commit": "75bc073",
+    "worktree": "D:/03_projects/AI-tools/aiw-de/.wt/FD-027",
+    "review_round": 1,
+    "review_limit": 3,
+    "verdict": "changes-requested",
+    "findings": [
+      {
+        "id": "R027-01",
+        "severity": "P1",
+        "dimension": "Correctness/Spec",
+        "file": "src/main/java/me/asu/aidev/execution/config/AgentFactory.java",
+        "line": 86,
+        "related": ["AgentFactory.java:72", "workers/process-python/process_worker.py:106", "Worker.supports", "TaskClaimService.claimNext"],
+        "requirement": "AC04及AG：同一兼容Python Worker逐任务配置；已知能力缺口不提交可领取任务",
+        "observed": "Factory要求flexible-work-v1，但Python无自动广告路径且禁止环境手动广告；准备兼容检查漏掉完整任务能力集合",
+        "consequence": "准备可能READY，但所有受支持Python Worker均在containsAll过滤阶段无法领取，阻断两后端多配置执行",
+        "minimal_resolution": "移除新配置任务不需要的旧能力要求，准备与claim对齐完整requiredCapabilities；不能放开伪广告或扩大旧协议能力",
+        "evidence": "完整Factory/WorkerConfig/Profile/guard广告及Worker.supports/claim静态调用链，未执行反例"
+      },
+      {
+        "id": "R027-02",
+        "severity": "P2",
+        "dimension": "Correctness/Compatibility",
+        "file": "src/main/java/me/asu/aidev/execution/config/ExecutionConfigurations.java",
+        "line": 154,
+        "related": ["workers/process-python/execution_configuration.py:65", "ExecutionYieldService.continueTask/additionalRefs/continueBinding"],
+        "requirement": "继承固定配置并消费既有安全续行/固定输入合同；问题引用登记仍属FD-028",
+        "observed": "继续任务可固定additionalRefs，但Java和Python要求全部上下文引用严格等于配置/Skill/知识集合",
+        "consequence": "合法追加正式任务引用的续行可提交lineage，却被Java永久拒领；单改Java仍被Python拒绝",
+        "minimal_resolution": "两端仅对配置拥有的configuration/skill/knowledge严格校验，其他正式引用由guard固定及来源消费者登记验证，保留输入摘要和防冒充约束",
+        "evidence": "实际continueBinding与additionalRefs落库路径和两端全量相等判断，静态推导未运行"
+      }
+    ],
+    "coverage": ["完整30路径差异", "不可变目录/准备CAS/同事务任务及guard绑定", "Worker/Attempt能力快照及claim/start", "Python两后端逐任务Profile/工具声明/取消与续行", "V13/HTTP/UI/稳定spec和部署文档", "11方法/9Skill静态元数据及全部内容摘要"],
+    "commands_run": ["aiw fd show/claim", "git status/log/diff --stat/--name-only/--unified=5", "Get-Content/rg完整差异与周边调用链", "PowerShell ConvertFrom-Json/SHA256只读目录数据"],
+    "worker_reported_compile": "75bc073 Java/Python/JavaScript检查通过；Reviewer未重跑",
+    "not_run": ["tests/compile", "models/SDK/AppServer/project commands", "services/HTTP/browser/DB/migrations/sandbox/cgroup/network", "additional agents"],
+    "runtime_certified": false,
+    "implementation_modified": false,
+    "human_decision_required": false,
+    "blocker_feedback": "docs/features/reports/FD-027-blocker-review-20261023-08211700-r1.md",
+    "remaining_risks": ["真实切换/后端/取消/迁移/隔离/并发恢复未运行验证", "两个已确认实现问题修复前不得整FD通过"]
+  }
+}

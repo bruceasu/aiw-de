@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-027",
+  "source_event": "FD-027-000006-implementation-ready",
+  "human_report": "FD-027-review-20261023-08211700-r2.md",
+  "data": {
+    "reviewer_session": "fd027-independent-review-20261023-r1-design-agent",
+    "worker_session": "fd025-029-host-20261022-234846-08211700",
+    "comparison_base": "0284988",
+    "previous_reviewed_head": "b304cde",
+    "reviewed_head": "95df53c",
+    "implementation_commit": "86b22fe",
+    "worktree": "D:/03_projects/AI-tools/aiw-de/.wt/FD-027",
+    "branch": "feature/FD-027",
+    "review_round": 2,
+    "review_limit": 3,
+    "prior_changes_requested_count": 1,
+    "verdict": "verification-passed",
+    "findings": [],
+    "resolved_findings": [
+      {
+        "id": "R027-01",
+        "severity": "P1",
+        "status": "resolved",
+        "locations": ["ConfigurationContract.requiredCapabilities", "AgentFactory.prepareAuthorized", "TaskClaimService.claimNext", "ExecutionConfigurations.compatible", "process_worker.WorkerConfig.from_env"],
+        "evidence": "准备以同一完整能力集合执行Worker.supports并创建任务，与claim过滤一致；移除多余flexible-work-v1，不放开手动广告；保留Runtime和真实适配器核对",
+        "repair_commit": "86b22fe"
+      },
+      {
+        "id": "R027-02",
+        "severity": "P2",
+        "status": "resolved",
+        "locations": ["ExecutionConfigurations.canClaim", "execution_configuration.Prepared.verify_context", "ExecutionYieldService.continueTask", "ExecutionGuard.context/delivery"],
+        "evidence": "Java/Python对配置拥有的三类引用进行数量及精确集合核对；额外正式引用继续固化于完整input_digest和交付来源，不能替代配置必需引用；来源登记仍归其消费者",
+        "repair_commit": "86b22fe"
+      }
+    ],
+    "coverage": [
+      "完整五文件源修复差异及父基线至当前HEAD的路径范围，无其他实现漂移",
+      "AC04：准备与claim能力一致，逐任务固定配置、模型和broker接合保持",
+      "AG01-06：复用/组合、准备CAS及原子绑定、不可变版本和快照、知识范围、预留分类与UI身份不受修复削弱",
+      "完整guard输入摘要、续行继承及交付全部固定来源保持",
+      "首轮完整差异审查的未变化部分及独立证据保留"
+    ],
+    "previous_review": "docs/features/reviews/FD-027-review-20261023-08211700-r1.md",
+    "commands_run": ["aiw fd show/claim", "git status/rev-parse/diff/show静态读取", "Get-Content/rg修复及附近调用链", "报告写入后单次静态JSON/链接/git diff核对", "aiw fd emit verification-passed"],
+    "worker_reported_compile": "86b22fe Java离线compile及修改Python语法编译通过；Reviewer未重跑",
+    "not_run": ["tests/compile/project commands", "SDK/models/AppServer/services/HTTP/browser", "DB/migrations/command adapter/sandbox/cgroup", "concurrency/recovery/cancellation/network", "additional agents"],
+    "runtime_certified": false,
+    "implementation_modified": false,
+    "human_decision_required": false,
+    "blocker_feedback": "docs/features/reports/FD-027-blocker-review-20261023-08211700-r1.md",
+    "blocker_status": "resolved",
+    "remaining_risks": ["真实双后端切换、进程收尾、迁移、隔离及并发恢复未运行验证", "实际预算、认证和受控执行器仍为运行配置前置"],
+    "recorded_at": "2026-10-23T02:03:49+09:00"
+  }
+}

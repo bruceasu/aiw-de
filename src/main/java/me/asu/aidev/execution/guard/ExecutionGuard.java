@@ -124,6 +124,12 @@ public class ExecutionGuard {
     }
     @Transactional public Context bind(String taskId,Bind input) {
         boundary.lock();var row=policyRow(input.planId());owner(String.valueOf(row.get("owner_id")));
+        return bindPrepared(taskId,input,String.valueOf(row.get("owner_id")));
+    }
+    /** Trusted platform materializer port; no machine or human HTTP mapping. Does not grant policy. */
+    @Transactional public Context bindPrepared(String taskId,Bind input,String expectedOwner) {
+        boundary.lock();var row=policyRow(input.planId());
+        if(!Objects.equals(row.get("owner_id"),expectedOwner)) throw new SecurityException("Prepared target owner mismatch");
         if(managed(taskId)) {
             var c=contextRow(taskId);
             var fixed=repo.decode(String.valueOf(c.get("input_json")),Snapshot.class);
@@ -163,6 +169,15 @@ public class ExecutionGuard {
         return Objects.equals(frozen.budget().price(),policy(row).budget().price())
                 && active(row) && !AuthorityRepository.flag(row.get("paused")) && number(row,"generation")==number(c,"generation")
                 && !unknownTask(task) && ledger.admits(policy(row)) && ledger.admits(frozen) && unchanged(task,c);
+    }
+    public Policy preparationPolicy(String plan,long expectedRevision) {
+        boundary.lock();var row=policyRow(plan);
+        if(number(row,"revision")!=expectedRevision) throw new IllegalStateException("SOURCE_CHANGED");
+        if(!active(row) || AuthorityRepository.flag(row.get("paused"))) throw new SecurityException("AUTHORIZATION_REQUIRED");
+        return policy(row);
+    }
+    public boolean preparationBudget(Policy policy) {
+        return ledger.admits(policy) && ledger.available(policy.planId(),Dimension.TASKS,"",1);
     }
     private boolean unchanged(String id,Map<String,Object> c) {
         var frozen=repo.decode(String.valueOf(c.get("input_json")),Snapshot.class).task();var actual=tasks.find(new TaskId(id)).orElseThrow();

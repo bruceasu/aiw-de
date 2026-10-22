@@ -2,7 +2,7 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" th:content="${csrfToken}"><title>个人 Worker 授权</title><link rel="stylesheet" href="/ui/console.css"><script src="/ui/authority.js" defer></script></head>
 <body><main class="main workspace-page"><header class="topbar"><div><h1>个人 Worker 授权</h1><p>由你确认能力上限。私人对话、策略和安排保存在个人秘书中。</p></div><a href="/ui">返回控制台</a></header>
-<p id="authority-result" role="status" class="help"></p>
+<p id="authority-result" role="status" class="help"></p><p><a href="/ui/configurations">专业配置、能力与任务准备</a></p>
 <section class="card"><h2>身份绑定</h2><button id="bind-owner" type="button">绑定当前登录身份</button><p>Owner：<span th:text="${owners}"></span></p>
 <form id="enroll-worker" class="form-grid"><label class="field">Owner ID<input name="ownerId" required></label><label class="field">Worker ID<input name="workerId" required></label><label class="field">独立随机凭证<input name="credential" type="password" autocomplete="new-password" required minlength="43"></label><label class="field">允许读取的目标（每行一个）<textarea name="readScope" required></textarea></label><button>登记或轮换凭证（保持禁用）</button></form>
 <p>已登记身份：<span th:text="${workers}"></span></p><form id="control-worker"><label>Worker ID<input name="workerId" required></label><label>Current generation<input name="generation" type="number" min="1" required></label><label>Process boot UUID<input name="workerBoot"></label><select name="operation"><option value="enable">明确启用</option><option value="disable">禁用</option></select><button>确认身份操作</button></form></section>
