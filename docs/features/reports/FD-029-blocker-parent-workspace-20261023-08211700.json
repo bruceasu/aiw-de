@@ -1,0 +1,48 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-029",
+  "source_event": "FD-029-000003-design-ready",
+  "human_report": "FD-029-blocker-parent-workspace-20261023-08211700.md",
+  "data": {
+    "stage": "preflight",
+    "role": "pm",
+    "status": "unresolved",
+    "recorded_date": "2026-10-23",
+    "timezone": "Asia/Tokyo",
+    "session_ref": "fd025-029-host-20261022-234846-08211700",
+    "symptoms": [
+      "五个设计已就绪并进入 Open；FD-029 尚未领取 Worker、创建隔离工作区或实现。",
+      "父分支 develop 出现新未跟踪 workers/demo-python-with-openai-agents/，含四份顶层源码/文档及本地 .venv。"
+    ],
+    "confirmed_causes": [
+      "该目录不是本会话创建，出现于初次基线整理完成后。",
+      "默认隔离规则要求创建工作区前父工作区干净，不能擅自把新来源纳入 FD 提交或删除。"
+    ],
+    "unknowns": [
+      "用户希望把新增 demo 源码作为参考基线单独提交、仅本地排除，还是自行整理。"
+    ],
+    "attempts": [
+      "按用户授权单独提交先前授权模块及启动配置（95beefe、d7f5bdf），批准 Issue 来源提交 efb86e4。",
+      "完成五个候选设计、一次独立设计检查及一次针对实际修订的复查；全部就绪并 emit design-ready。",
+      "提交设计和独立反馈 00a9dd5；静态 recheck 元数据和 staged diff 检查通过。",
+      "重新检查父工作区发现新增 demo；已通过异步问题询问具体处理范围，未收到该问题回答。",
+      "目录枚举意外包含本地 .venv，后续范围已收窄到顶层文件；未执行其中程序或依赖安装。"
+    ],
+    "human_decision_required": true,
+    "human_decision": "确认新增 demo 是否检查后单独提交（.venv 不提交），或仅本地排除，或由用户自行整理。",
+    "next_step": "收到范围选择后处理父工作区；以本反馈实际解决记录为准，再 claim 精确 Worker 事件、创建并核验 FD-029 工作区；其余 FD 按 029→027→028→026→025 继续。",
+    "risks": [
+      "未获授权提交同时新增的实验源码可能混入其他工作；提交 .venv 会污染基线。",
+      "绕过父工作区规则可能破坏后续交付与审查边界。"
+    ],
+    "reusable_improvement": "后续独立受审变更可统一忽略 Python 虚拟环境并补回缺失 blocker 模板；不在本 FD 擅自修改技能规则。",
+    "template_status": "docs/templates/BLOCKER_FEEDBACK_TEMPLATE.md 及 DATA 模板缺失；沿用既有 FD-024 双文件结构并覆盖当前技能必需字段。",
+    "not_run": [
+      "新增 demo 程序及其测试",
+      "新 FD 代码实现或编译",
+      "模型、项目命令、服务、沙箱、数据库、迁移、安装、网络扩展",
+      "工作区创建、合并、归档、push、部署"
+    ]
+  }
+}
