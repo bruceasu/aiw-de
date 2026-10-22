@@ -7,7 +7,9 @@
   "data": {
     "stage": "preflight",
     "role": "pm",
-    "status": "unresolved",
+    "status": "resolved",
+    "resolved_at": "2026-10-23T00:35:05+09:00",
+    "resolution": "用户选择独立实验仅本地排除；已在 .git/info/exclude 添加精确 /workers/demo-python-with-openai-agents/，保留源码及 .venv，未提交或执行。",
     "recorded_date": "2026-10-23",
     "timezone": "Asia/Tokyo",
     "session_ref": "fd025-029-host-20261022-234846-08211700",
@@ -29,7 +31,7 @@
       "重新检查父工作区发现新增 demo；已通过异步问题询问具体处理范围，未收到该问题回答。",
       "目录枚举意外包含本地 .venv，后续范围已收窄到顶层文件；未执行其中程序或依赖安装。"
     ],
-    "human_decision_required": true,
+    "human_decision_required": false,
     "human_decision": "确认新增 demo 是否检查后单独提交（.venv 不提交），或仅本地排除，或由用户自行整理。",
     "next_step": "收到范围选择后处理父工作区；以本反馈实际解决记录为准，再 claim 精确 Worker 事件、创建并核验 FD-029 工作区；其余 FD 按 029→027→028→026→025 继续。",
     "risks": [
