@@ -22,6 +22,7 @@ from ai_preferences import step_selection
 from agent_runtime import AgentRunRequest, AgentRuntime
 from app_server_runtime import CodexAppServerRuntime, preflight as app_server_preflight
 from openai_api_runtime import OpenAIApiRuntime
+from formal_questions import YieldRequested
 import hashlib
 from contextlib import nullcontext
 
@@ -109,7 +110,10 @@ class WorkerConfig:
         if _bool_env("AIW_EXECUTION_GUARD", False):
             from guarded_preflight import capabilities as guarded_capabilities
             capabilities.update(guarded_capabilities(runtime, profile, str(Path(os.getenv("AIW_PROCESS_SKILLS_ROOT", Path(__file__).with_name("skills"))).resolve())))
-        elif "execution-guard-v1" in capabilities or "guarded-command-linux-v1" in capabilities:
+            from formal_questions import storage_capability
+            if not repository_root: raise ValueError("QUESTION_PERSISTENT_REPOSITORY_REQUIRED")
+            capabilities.update({"questions-v1", storage_capability(repository_root)})
+        elif "execution-guard-v1" in capabilities or "guarded-command-linux-v1" in capabilities or "questions-v1" in capabilities or any(c.startswith("checkpoint-store:") for c in capabilities):
             raise ValueError("GUARDED_CAPABILITIES_REQUIRE_VERIFIED_ADAPTER")
         if _bool_env("AIW_DYNAMIC_CONFIG", False):
             if not _bool_env("AIW_EXECUTION_GUARD", False): raise ValueError("DYNAMIC_CONFIGURATION_REQUIRES_GUARDED_ADAPTER")
@@ -173,7 +177,7 @@ class ControlPlaneClient:
         if selection is not None:
             payload.update(profileId=selection["id"], profileVersion=task["aiGuidance"]["version"], selectionReason=reason)
         self._post(f"/tasks/{_quote(task['taskId'])}/start", payload)
-    def task_heartbeat(self, task: dict[str, Any], worker_id: str, session_id: str | None) -> None: self._task_action(task, worker_id, "heartbeat", session_id)
+    def task_heartbeat(self, task: dict[str, Any], worker_id: str, session_id: str | None): return self._task_action(task, worker_id, "heartbeat", session_id)
     def fail(self, task: dict[str, Any], worker_id: str, session_id: str | None,
              reason: str | None = None, category: str = "UNKNOWN") -> None:
         self._post(f"/tasks/{_quote(task['taskId'])}/fail", {
@@ -341,16 +345,21 @@ class LeaseHeartbeat:
     def set_session(self, session_id: str, handle=None) -> None:
         self.session_id = session_id
         if handle is not None: self.active_turn.set(handle)
-        try: self.client.task_heartbeat(self.task, self.worker_id, self.session_id)
+        try: self._heartbeat()
         except ProtocolError:
             self.ownership_lost.set(); self.active_turn.interrupt()
             if self.attempt: self.attempt.cancel("lease-lost")
     def close(self) -> None:
         self.stop_event.set(); self.thread.join(timeout=self.client.timeout + 1)
         if self.thread.is_alive(): raise RuntimeError("LEASE_HEARTBEAT_UNSETTLED")
+    def _heartbeat(self):
+        response = self.client.task_heartbeat(self.task, self.worker_id, self.session_id)
+        if response and response.get("stopRequested") is True:
+            self.active_turn.interrupt()
+            if self.attempt: self.attempt.cancel("stop-requested")
     def _run(self) -> None:
         while not self.stop_event.wait(self.interval):
-            try: self.client.task_heartbeat(self.task, self.worker_id, self.session_id)
+            try: self._heartbeat()
             except ProtocolError as error:
                 print(f"lease heartbeat lost for {self.task['taskId']}: {error}", file=sys.stderr, flush=True)
                 self.ownership_lost.set(); self.active_turn.interrupt()
@@ -487,8 +496,14 @@ class ProcessSlot:
                                                 reason="Step model or effort rejected before tool execution; use Worker choice")
                         final_response = self.runtime.run(runtime_client, request, set_session)
                 except RuntimeError as error:
+                    if broker and broker.pending_question:
+                        from formal_questions import YieldRequested
+                        raise YieldRequested("QUESTION_WAITING") from error
                     if str(error) == "UNRESOLVED_TOOL_FAILURE": phase = "OUTPUT_INVALID"
                     raise
+                if broker and broker.pending_question:
+                    from formal_questions import YieldRequested
+                    raise YieldRequested("QUESTION_WAITING")
                 if heartbeat.ownership_lost.is_set(): raise RuntimeError("LEASE_LOST")
                 phase = "OUTPUT_INVALID"
                 report = _completion_report(profile.result_kind, final_response)
@@ -511,6 +526,19 @@ class ProcessSlot:
                 self.client.complete(task, self.config.worker_id, session_id, workspace_result, report)
                 attempt.evidence.record("report-posted", reportStatus="accepted")
                 print(f"completed {task['taskId']} attempt={task['attemptNo']}", flush=True)
+        except YieldRequested:
+            try:
+                with attempt_scope(attempt):
+                    from formal_questions import acknowledge
+                    reporting = True
+                    heartbeat.close()
+                    acknowledge(broker)
+                    workspace.cleanup(); cleaned = True
+                    attempt.evidence.finish("waiting-input"); finished = True
+                print(f"yielded {task['taskId']} question={broker.pending_question['question']['questionId']}", flush=True)
+            except Exception:
+                if attempt: attempt.resource_uncertain = True
+                print("QUESTION_YIELD_OUTCOME_UNCONFIRMED", file=sys.stderr, flush=True)
         except Exception:
             lost = heartbeat is not None and heartbeat.ownership_lost.is_set()
             status = "lease-lost" if lost else "report-unknown" if reporting else "failed"
@@ -522,7 +550,10 @@ class ProcessSlot:
                     try: attempt.evidence.record("attempt-cancelled", reason=attempt.reason)
                     except Exception: pass
             if started and not lost and not reporting:
-                try: self.client.fail(task, self.config.worker_id, session_id, "OPERATION_FAILED", phase)
+                try:
+                    if broker and attempt.reason == "stop-requested" and not attempt.resource_uncertain and not broker._active:
+                        self.client._task_action(task, self.config.worker_id, "stop-acknowledgement", session_id)
+                    else: self.client.fail(task, self.config.worker_id, session_id, "OPERATION_FAILED", phase)
                 except ProtocolError: pass
             print(f"attempt {task.get('attemptId')}: {status}", file=sys.stderr, flush=True)
         finally:

@@ -10,7 +10,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class AuthorityBodyLimitFilter extends OncePerRequestFilter {
     @Override protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain chain) throws ServletException,IOException {
         String path=request.getRequestURI().substring(request.getContextPath().length());
-        boolean machine=path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/.*|yield/.*|delivery)")
+        boolean machine=path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/.*|yield/.*|questions/.*|delivery)")
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/configuration");
         if((!path.startsWith("/api/r1/authority/") && !machine) || !request.getMethod().equals("POST")) { chain.doFilter(request,response);return; }
         int limit=machine?131072:32768;

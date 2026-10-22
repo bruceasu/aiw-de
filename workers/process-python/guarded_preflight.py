@@ -64,6 +64,7 @@ def protocol_capability(model=False):
         required = {"CommandExecParams": {"command", "permissionProfile", "timeoutMs", "outputBytesCap", "processId"}}
         if model:
             required.update({"ThreadStartParams": {"dynamicTools", "permissions", "runtimeWorkspaceRoots", "ephemeral"},
+                             "TurnInterruptParams": {"threadId", "turnId"},
                              "ExperimentalFeatureListParams": {"threadId", "limit", "cursor"},
                              "ExperimentalFeature": {"name", "enabled"},
                              "DynamicToolCallParams": {"threadId", "turnId", "tool", "arguments", "callId"},

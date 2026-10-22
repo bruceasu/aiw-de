@@ -29,6 +29,12 @@ import org.springframework.stereotype.Component;
 @Component
 @ConditionalOnProperty(name = "aidev.approval.telegram.enabled", havingValue = "true")
 public class TelegramApprovalAdapter implements ApprovalNotificationPort, SmartLifecycle {
+    @org.springframework.beans.factory.annotation.Autowired
+    private ObjectProvider<QuestionTelegramTransport> questionTransport;
+    public void handleRecordedCallback(String raw) {
+        try {handleCallback(new com.fasterxml.jackson.databind.ObjectMapper().readTree(raw));}
+        catch(java.io.IOException error) {throw new IllegalArgumentException("Invalid recorded approval callback");}
+    }
     private static final Logger LOG = Logger.getLogger(TelegramApprovalAdapter.class.getName());
     private static final String APPROVE_PREFIX = "aiw:a:";
     private static final String REJECT_PREFIX = "aiw:r:";
@@ -122,8 +128,10 @@ public class TelegramApprovalAdapter implements ApprovalNotificationPort, SmartL
     private void pollLoop() {
         while (running.get()) {
             try {
-                JsonNode response = telegram.getUpdates(offset, pollTimeoutSeconds);
+                var questions=questionTransport.getIfAvailable();
+                JsonNode response = telegram.getUpdates(questions==null?offset:questions.offset(), pollTimeoutSeconds);
                 for (JsonNode update : response.path("result")) {
+                    if(questions!=null) {questions.accept(update);continue;}
                     long updateId = update.path("update_id").asLong(-1);
                     if (updateId >= 0) offset = Math.max(offset, updateId + 1);
                     JsonNode callback = update.path("callback_query");

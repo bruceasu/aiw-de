@@ -126,6 +126,10 @@ class StdioSession:
                 if self.request_handler is not None:
                     response = self.request_handler(message)
                     self.send(response, deadline)
+                    after = getattr(self, "tool_response_event", None)
+                    event = after() if after else None
+                    if event is not None:
+                        return event
                     continue
                 if method in {"item/commandExecution/requestApproval", "item/fileChange/requestApproval"}:
                     response = {"id": message["id"], "result": {"decision": "decline"}}

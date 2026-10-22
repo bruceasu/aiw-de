@@ -15,7 +15,6 @@ public record WorkflowTaskPosition(int step, int round, boolean review, int resu
                     + "(work|review)-([1-9][0-9]{0,8})(?:-resume-([1-9][0-9]{0,8}))?").matcher(id.value());
             if (match.matches()) {
                 boolean review = match.group(1).equals("review");
-                if (!review && match.group(3) != null) return Optional.empty();
                 return Optional.of(new WorkflowTaskPosition(step, Integer.parseInt(match.group(2)), review,
                         match.group(3) == null ? 0 : Integer.parseInt(match.group(3))));
             }

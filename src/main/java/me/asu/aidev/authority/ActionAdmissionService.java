@@ -11,6 +11,8 @@ import org.springframework.dao.DataAccessException;
 /** Deduplication, authority and database effects commit atomically. External work uses fixed permits. */
 @Service
 public class ActionAdmissionService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.PersonalQuestions> personalQuestions;
     private final AuthorityRepository repo;
     private final AuthorityBoundary boundary;
     private final AuthorityGrantService grants;
@@ -90,6 +92,7 @@ public class ActionAdmissionService {
         try {
             return transaction.execute(status->boundary.as(principal,()->{
                 boundary.lock();enabled(principal);
+                personalQuestions.getObject().validateEnvelope(principal,input);
                 var previous=existing(principal.owner(),input.requestId());
                 if(previous.isPresent()) {
                     if(!previous.get().actionDigest().equals(digest)) throw new IllegalStateException("REQUEST_DIGEST_CONFLICT");

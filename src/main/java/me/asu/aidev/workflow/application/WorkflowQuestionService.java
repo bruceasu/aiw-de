@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Source artifacts propose questions; only a separately confirmed manager answer is authority. */
 @Service
 public class WorkflowQuestionService {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.guard.TaskLineage lineage;
     private me.asu.aidev.authority.ManagedPlanAdmission managedPlans;
     @org.springframework.beans.factory.annotation.Autowired
     public void setManagedPlanAdmission(me.asu.aidev.authority.ManagedPlanAdmission gate) { this.managedPlans=gate; }
@@ -181,7 +182,8 @@ public class WorkflowQuestionService {
     private String blocked(WorkflowPlan plan, List<WorkTask> current) {
         if (plan.state() != WorkflowPlan.State.CONFIRMED || archives.archived(plan.id()) || outcomes.find(plan.id()).isPresent()) return "This plan is not open for decisions.";
         if (controls.pending(plan.id()).isPresent()) return "Resolve the pending plan control before answering.";
-        if (current.stream().anyMatch(t -> !Set.of(TaskState.COMPLETED, TaskState.CANCELLED, TaskState.FAILED).contains(t.state()))) return "Wait for pending or running tasks to finish before confirming answers.";
+        var effective=lineage==null?current:lineage.effective(current);
+        if (effective.stream().anyMatch(t -> !Set.of(TaskState.COMPLETED, TaskState.CANCELLED, TaskState.FAILED).contains(t.state()))) return "Wait for pending or running tasks to finish before confirming answers.";
         if (repairs.list(plan.id()).stream().anyMatch(a -> a.status().equals("PENDING") && a.planVersion() == plan.version()
                 && a.expiresAt().isAfter(Instant.now()))) return "Revoke or finish the pending repair authorization before changing answers.";
         return null;

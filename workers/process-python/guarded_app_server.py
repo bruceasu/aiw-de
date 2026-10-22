@@ -96,6 +96,7 @@ def definitions():
         tool("git_commit", "Commit exact local files. No push.", {"message": string, "paths": {"type": "array", "items": string}}),
         tool("git_integrate", "Merge one fixed upstream task result locally. Resolve reported conflicts before committing.", {"sourceTaskId": string}),
         tool("run_command", "Run one explicitly authorized command profile.", {"commandId": string}),
+        tool("ask_question", "Save one question and yield this task. Stop after the receipt. The answer will arrive in a new task.", {"question": string, "context": string, "options": {"type": "array", "items": string}, "answerRequirements": string}),
     ]
 
 
@@ -124,6 +125,7 @@ def run_guarded(request, on_session):
 
     with tempfile.TemporaryDirectory(prefix="aiw-model-empty-") as cwd:
         session = StdioSession(attempt, cwd, argv=[preflight(), "app-server", "--listen", "stdio://"], environment=environment, request_handler=respond)
+        session.tool_response_event = lambda: {"method": "aiw/yield-ready", "params": {"threadId": current["thread"], "turnId": current["turn"]}} if broker.pending_question else None
         operation = None
         terminal = False
         try:
@@ -149,6 +151,9 @@ def run_guarded(request, on_session):
                 event = session.next_event();p = event.get("params", {})
                 if p.get("threadId") != current["thread"] or p.get("turnId") not in {None, current["turn"]}: raise RuntimeError("CODEX_FOREIGN_EVENT_DENIED")
                 method = event["method"]
+                if method == "aiw/yield-ready":
+                    session.rpc("turn/interrupt", {"threadId": current["thread"], "turnId": current["turn"]})
+                    continue
                 if method == "thread/tokenUsage/updated":
                     u = p.get("tokenUsage", {}).get("total", {})
                     candidate = {"inputTokens": u.get("inputTokens"), "cachedTokens": u.get("cachedInputTokens"), "outputTokens": u.get("outputTokens")}
@@ -160,6 +165,10 @@ def run_guarded(request, on_session):
                     if item.get("type") == "agentMessage": messages[item.get("id")] = item.get("text", "")
                     if len(messages) > 512 or sum(len(v.encode()) for v in messages.values()) > 131072: raise RuntimeError("CODEX_OUTPUT_LIMIT")
                 if method == "turn/completed" and p.get("turn", {}).get("id") == current["turn"]:
+                    if broker.pending_question and p["turn"].get("status") in {"completed", "interrupted"}:
+                        broker.model_finished(operation, "Question yield", usage);operation = None;terminal = True
+                        from formal_questions import YieldRequested
+                        raise YieldRequested("QUESTION_WAITING")
                     if p["turn"].get("status") != "completed": raise RuntimeError("CODEX_TURN_FAILED")
                     output = "\n".join(messages.values()).strip()
                     if not output: raise RuntimeError("CODEX_OUTPUT_EMPTY")

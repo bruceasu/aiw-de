@@ -329,9 +329,9 @@ public class JdbcWorkTaskRepository implements WorkTaskRepository {
         return jdbc.query("""
                 SELECT id,current_worker_id,lease_token
                   FROM work_task
-                 WHERE state IN ('CLAIMED','RUNNING')
+                 WHERE state IN ('CLAIMED','RUNNING','YIELDING')
                    AND lease_token IS NOT NULL AND lease_expires_at_epoch_ms<=?
-                   AND (subject_type='workflow-recommendation' OR NOT EXISTS (SELECT 1 FROM execution_attempt ea
+                   AND (EXISTS (SELECT 1 FROM execution_context x WHERE x.task_id=work_task.id) OR subject_type='workflow-recommendation' OR NOT EXISTS (SELECT 1 FROM execution_attempt ea
                                     WHERE ea.lease_token=work_task.lease_token
                                       AND ea.stop_requested_at_epoch_ms IS NOT NULL)
                         OR EXISTS (SELECT 1 FROM work_task_workspace_replacement r

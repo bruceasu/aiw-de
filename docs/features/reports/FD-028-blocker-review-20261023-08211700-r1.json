@@ -1,0 +1,77 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-028",
+  "source_event": "FD-028-000005-implementation-ready",
+  "human_report": "FD-028-blocker-review-20261023-08211700-r1.md",
+  "data": {
+    "stage": "verification",
+    "role": "reviewer",
+    "status": "resolved",
+    "recorded_at": "2026-10-23T08:44:53+09:00",
+    "timezone": "Asia/Tokyo",
+    "session_ref": "fd028-review-20261023-08211700-r1",
+    "comparison_base": "1b7e964",
+    "reviewed_head": "e1f9d14",
+    "implementation_commit": "307e5bc",
+    "review_round": 1,
+    "review_limit": 3,
+    "changes_requested_count_after_this_round": 1,
+    "symptoms": [
+      "R028-01/P1：首次执行窗口可换信封消费已登记投影",
+      "R028-02/P1：续行膨胀minimumRounds，历史CONTINUED又阻塞旧问答/恢复",
+      "R028-03/P2：Console预算审批只剩ADMIN能同时通过两角色门禁"
+    ],
+    "confirmed_causes": [
+      "真正admission缺少已登记Envelope比较",
+      "旧消费者仍用所有历史raw任务作当前槽和轮次",
+      "questions所有POST统一operator检查，授权回答额外approver检查"
+    ],
+    "attempts": [
+      "独立Session领取精确交接",
+      "完整差异和附近调用链静态检查",
+      "具体信封/lineage/角色定向补证"
+    ],
+    "unknowns": [
+      "真实后端/Telegram/DB/持久checkpoint/取消/并发/崩溃恢复未运行"
+    ],
+    "human_decision_required": false,
+    "next_step": "第2轮独立静态复核通过，由PM处理本地交付；保留原失败次数、历史及运行限制",
+    "review_report": "docs/features/reviews/FD-028-review-20261023-08211700-r1.md",
+    "reusable_improvement": "效果事务核对原信封；当前逻辑槽/轮次使用统一lineage；读/答复/审批/控制按职责校验角色",
+    "not_run": [
+      "tests/compile/project/models/SDK/AppServer",
+      "services/HTTP/browser/DB/migrations/private-store/Telegram",
+      "checkpoint/sandbox/cgroup/concurrency/crash/recovery/network"
+    ],
+    "implementation_modified": false,
+    "resolved_at": "2026-10-23T08:51:50+09:00",
+    "resolution_session": "fd028-review-20261023-08211700-r2",
+    "resolution_source_event": "FD-028-000007-implementation-ready",
+    "repair_commit": "f62d392",
+    "resolved_reviewed_head": "8fc159b",
+    "resolution_review_report": "docs/features/reviews/FD-028-review-20261023-08211700-r2.md",
+    "resolution_verdict": "verification-passed",
+    "resolutions": [
+      {"id":"R028-01","status":"resolved","reason":"完整原信封/evidence在admission效果事务核对"},
+      {"id":"R028-02","status":"resolved","reason":"共享有效lineage/真实业务轮次，累计创建与实际重试历史保留"},
+      {"id":"R028-03","status":"resolved","reason":"正式kind及当前角色决定读取/答复/审批/控制，审批者无执行控制扩权"}
+    ],
+    "history": [
+      {"review_round":1,"source_event":"FD-028-000005-implementation-ready","status":"unresolved","reviewed_head":"e1f9d14","recorded_at":"2026-10-23T08:44:53+09:00"},
+      {"review_round":2,"source_event":"FD-028-000007-implementation-ready","status":"resolved","reviewed_head":"8fc159b","recorded_at":"2026-10-23T08:51:50+09:00"}
+    ],
+    "worker_resolution": {
+      "status": "fixed-awaiting-independent-review",
+      "source_commit": "f62d392",
+      "findings": [
+        "R028-01",
+        "R028-02",
+        "R028-03"
+      ],
+      "compile_completed_at": "2026-10-23T08:50:12+09:00",
+      "review_outcomes_so_far": 1,
+      "review_limit": 3
+    }
+  }
+}

@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Cancels a plan only after its local, isolated Git branches can be safely discarded. */
 @Service
 public class WorkflowCancellationService {
+    @org.springframework.beans.factory.annotation.Autowired private org.springframework.jdbc.core.JdbcTemplate guardJdbc;
     private me.asu.aidev.authority.AuthorityBoundary delegation;
     @org.springframework.beans.factory.annotation.Autowired
     public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary boundary) { this.delegation=boundary; }
@@ -51,6 +52,8 @@ public class WorkflowCancellationService {
 
     @Transactional
     public WorkflowPlan cancel(String id, long version, String actor, String reason) {
+        if(guardJdbc!=null&&guardJdbc.queryForObject("SELECT COUNT(*) FROM execution_policy WHERE plan_id=?",Long.class,id)>0)
+            throw new IllegalStateException("Use guarded question controls: request cancellation and retain local Git evidence until actual stop confirmation");
         if(delegation!=null) delegation.changing("PLAN:"+id);
         if(managedPlans!=null) managedPlans.serializePlan(id);
         if (reason == null || reason.isBlank() || reason.length() > 2000) {

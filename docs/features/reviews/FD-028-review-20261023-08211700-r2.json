@@ -1,0 +1,40 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-028",
+  "source_event": "FD-028-000007-implementation-ready",
+  "human_report": "FD-028-review-20261023-08211700-r2.md",
+  "data": {
+    "reviewer_session": "fd028-review-20261023-08211700-r2",
+    "worker_session": "fd025-029-host-20261022-234846-08211700",
+    "comparison_base": "1b7e964",
+    "previous_reviewed_head": "e1f9d14",
+    "reviewed_head": "8fc159b",
+    "implementation_commit": "f62d392",
+    "worktree": "D:/03_projects/AI-tools/aiw-de/.wt/FD-028",
+    "branch": "feature/FD-028",
+    "review_round": 2,
+    "review_limit": 3,
+    "prior_changes_requested_count": 1,
+    "verdict": "verification-passed",
+    "findings": [],
+    "resolved_findings": [
+      {"id":"R028-01","severity":"P1","status":"resolved","locations":["ActionAdmissionService.apply","PersonalQuestions.validateEnvelope/submit/proposal"],"evidence":"真实admission事务内在回执/消耗/效果前核对完整Envelope及原JSON摘要/唯一evidence；A19无投影拒绝，无投影A18保留；原事务及回执边界不变","repair_commit":"f62d392"},
+      {"id":"R028-02","severity":"P1","status":"resolved","locations":["TaskLineage.effective","WorkflowPlanService.effectiveSteps/reviewRecovery","WorkflowQuestionService.blocked","AuthorityActions.snapshot","AuthorityTaskPolicy.live","AuthorityAdmission.baseline"],"evidence":"有效lineage槽统一解析去重，最终后继仍须真实结束；权限round按业务轮次去重；A01累计创建及A03实际技术重试历史保留，A04去除被接续的历史槽；不伪COMPLETED","repair_commit":"f62d392"},
+      {"id":"R028-03","severity":"P2","status":"resolved","locations":["AuthorityHttpConfiguration","FormalQuestions.readHuman/humanReply/budget/control","TelegramQuestions.manage/receive","AuthorityPageController.questions","questions.js/questions.html","WebConsoleSecurityInterceptor/WebConsoleApiRoutes"],"evidence":"认证/owner/CSRF保留，正式Kind选择当前角色；APPROVER可读取及办理授权问题，操作控制仍限操作角色；自身私聊绑定不授予业务权限，UI与服务端一致","repair_commit":"f62d392"}
+    ],
+    "coverage": ["完整本轮修复差异及直接调用链", "原信封/实际效果事务/回执", "有效lineage/真实业务轮次/累计历史", "正式问题kind和当前角色/两层Web鉴权/Telegram/UI", "首轮完整53路径审查的未变化部分保留；AC05/06/07未被修复削弱"],
+    "previous_review": "docs/features/reviews/FD-028-review-20261023-08211700-r1.md",
+    "integration_note": "FD-026后续窄公开/提取同一可信临时续行端口，不复制事务；仍归其实施范围",
+    "commands_run": ["aiw fd show/claim", "git status/rev-parse/diff/show只读", "Get-Content/rg修复及精确相邻读取", "报告写入后单次静态JSON/MD/FD/git diff核对", "aiw fd emit verification-passed"],
+    "worker_reported_compile": "f62d392于2026-10-23T08:50:12+09:00完成Java272生产源码及questions.js离线/语法编译；Reviewer未重跑；Python及其他JS未变保留原证据",
+    "not_run": ["tests/compile/project commands", "SDK/models/AppServer/services/HTTP/browser", "DB/migrations/private-store/Telegram/checkpoint/sandbox/cgroup", "concurrency/crash/cancellation/recovery/network", "additional agents"],
+    "runtime_certified": false,
+    "implementation_modified": false,
+    "human_decision_required": false,
+    "blocker_feedback": "docs/features/reports/FD-028-blocker-review-20261023-08211700-r1.md",
+    "blocker_status": "resolved",
+    "remaining_risks": ["真实后端/渠道/事务/隔离/停止和崩溃恢复未运行", "本机持久对象库、单bot部署、实际预算及凭证仍需运行配置"],
+    "recorded_at": "2026-10-23T08:51:50+09:00"
+  }
+}

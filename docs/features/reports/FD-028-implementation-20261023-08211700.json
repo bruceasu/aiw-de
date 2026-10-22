@@ -1,0 +1,21 @@
+{
+  "schema":"aiw.fd.evidence.v1","kind":"worker-report","fd_id":"FD-028",
+  "source_event":"FD-028-000003-design-ready","human_report":"FD-028-implementation-20261023-08211700.md",
+  "data":{
+    "worker_session":"fd025-029-host-20261022-234846-08211700","comparison_base":"1b7e964","implementation_commit":"307e5bc",
+    "worktree":".wt/FD-028","branch":"feature/FD-028","parent_branch":"develop",
+    "implementation_scope_complete":true,"lifecycle_gates_pending":["independent-review","local-delivery","archive"],
+    "review_outcomes_so_far":0,"review_limit":3,
+    "work_items_implemented":["1.1","1.2","1.3","2.1","2.2","3.1","3.2","3.3","3.4","4.1","4.2","5.1-docs-evidence"],
+    "design_feedback":"../reviews/FD-028-interface-design-20261023-08211700.md",
+    "contracts":["aiw.questions.v1","A19_ANSWER","exact A18 budget question","registered local checkpoint storage capability","closed existing/graph source resolver"],
+    "compile":{"status":"passed","source_commit":"307e5bc","completed_at":"2026-10-23T08:38:41+09:00","java_source_files":272,
+      "java_command":"JAVA_HOME=C:/green/jdk-25.0.1+8; C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests=true -Dmaven.test.skip=true compile",
+      "python_changed_files":13,"python_command":"stdin standard-library compile() only, no imports or execution",
+      "javascript_commands":["node --check src/main/resources/static/ui/questions.js","node --check workers/personal-secretary/ui/app.js"]},
+    "static_validation":{"status":"passed","command":"git diff 1b7e964 HEAD --check"},
+    "not_run":["tests","services/browser/HTTP/DB/migrations/private-store","models/SDK/AppServer/Telegram","actual checkpoint/sandbox/cgroup/concurrency/recovery","install/download/login/push/deploy"],
+    "limits":["same-host persistent Git object store for continuation","one configured bot consumer across deployment","graph consumption FD-026 and combined entry FD-025 pending their FDs"],
+    "runtime_certified":false,"versions_pinned":false,"human_decision_required":false,"review_status":"awaiting-independent-review"
+  }
+}

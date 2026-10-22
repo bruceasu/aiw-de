@@ -118,7 +118,7 @@ public class ExecutionConfigurations {
         var m=catalogue.methods().stream().filter(method->method.role().equals(role)).findFirst().orElseThrow(()->new IllegalArgumentException("Unknown default software method"));
         var ids=new LinkedHashSet<>(m.method().protocolSkills());ids.add(m.method().primarySkill());
         var refs=ids.stream().map(name->catalogue.assets().stream().filter(a->a.ref().equals(name)).findFirst().orElseThrow().reference()).toList();
-        var tools=new HashSet<>(Set.of(GuardContract.Tool.MODEL,GuardContract.Tool.READ,GuardContract.Tool.SEARCH,GuardContract.Tool.GIT));
+        var tools=new HashSet<>(Set.of(GuardContract.Tool.MODEL,GuardContract.Tool.READ,GuardContract.Tool.SEARCH,GuardContract.Tool.GIT,GuardContract.Tool.QUESTION));
         if(!m.method().readOnly()) tools.add(GuardContract.Tool.WRITE);
         if(Set.of("verifier","integration-verifier").contains(role)) tools.add(GuardContract.Tool.COMMAND);
         return new Candidate("default-"+role+"-"+AuthorityRepository.hash(repository).substring(0,12),1,owner,repository,m.category(),m.method(),refs,List.of(),tools,
@@ -143,7 +143,9 @@ public class ExecutionConfigurations {
         if(rows.size()!=1) return false;var row=rows.getFirst();String json=String.valueOf(row.get("capabilities_json"));
         if(!AuthorityRepository.hash(json).equals(row.get("capabilities_digest"))) return false;
         var metadata=repo.decode(json,WorkerCapabilities.class);
-        return metadata.runtime().equals(binding.runtime()) && (!binding.ref().toolRequirements().contains(GuardContract.Tool.COMMAND) || worker.capabilities().contains("guarded-command-linux-v1"));
+        return metadata.runtime().equals(binding.runtime()) && (!binding.ref().toolRequirements().contains(GuardContract.Tool.COMMAND) || worker.capabilities().contains("guarded-command-linux-v1"))
+                && (!binding.ref().toolRequirements().contains(GuardContract.Tool.QUESTION) || worker.capabilities().contains(me.asu.aidev.questions.QuestionContract.CAPABILITY)
+                    && metadata.protocolVersions().contains(me.asu.aidev.questions.QuestionContract.PROTOCOL));
     }
     public boolean canClaim(String task,Worker worker) {
         var binding=binding(task);if(!compatible(worker,binding)) return false;

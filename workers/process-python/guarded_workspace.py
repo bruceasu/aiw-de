@@ -18,6 +18,8 @@ class GuardedWorkspace:
         if not source.is_dir(): raise RuntimeError("GUARDED_REPOSITORY_NOT_REGISTERED")
         safe_directories(source)
         broker.source_root = source.resolve(strict=True)
+        from formal_questions import verify_checkpoints
+        verify_checkpoints(broker)
         safe_directories(config.worktree_root)
         root = Path(config.worktree_root).resolve(strict=True)
         key, branch = assignment.get("workspaceKey", ""), assignment.get("branchName", "")
@@ -34,7 +36,9 @@ class GuardedWorkspace:
 
         broker.operate("GIT", ".", {"action": "prepare-worktree", "workspaceKey": key, "baseRevision": base}, create)
         broker.attach(target)
-        return cls(broker, target, assignment)
+        workspace = cls(broker, target, assignment)
+        broker.checkpoint = lambda: workspace.finalize(task, read_only=not broker.writable)
+        return workspace
 
     def finalize(self, task, read_only=False):
         def finish():

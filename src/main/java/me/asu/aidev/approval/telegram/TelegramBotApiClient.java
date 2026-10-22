@@ -31,7 +31,7 @@ final class TelegramBotApiClient {
         Map<String, String> params = new LinkedHashMap<>();
         if (offset > 0) params.put("offset", Long.toString(offset));
         params.put("timeout", Integer.toString(Math.max(0, timeoutSeconds)));
-        params.put("allowed_updates", "[\"callback_query\"]");
+        params.put("allowed_updates", "[\"callback_query\",\"message\"]");
         URI uri = URI.create(endpointPrefix + "/getUpdates?" + encode(params));
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(Math.max(10, timeoutSeconds + 10L)))
@@ -54,6 +54,17 @@ final class TelegramBotApiClient {
                 "chat_id", chatId,
                 "text", text,
                 "reply_markup", keyboard));
+    }
+
+    String sendQuestion(String chatId,String text,java.util.List<String> options,String nonce) throws IOException,InterruptedException {
+        var keyboard=json.createArrayNode();
+        for(int i=0;i<options.size();i++) {
+            String label=options.get(i);if(label.length()>60) label="Option "+(i+1);
+            keyboard.add(json.createArrayNode().add(json.createObjectNode().put("text",label).put("callback_data","aiw:q:"+nonce+":"+i)));
+        }
+        var response=postForm("sendMessage",Map.of("chat_id",chatId,"text",text,"reply_markup",json.createObjectNode().set("inline_keyboard",keyboard).toString()));
+        if(!response.path("result").path("chat").path("id").asText("").equals(chatId)||!response.path("result").path("message_id").canConvertToLong()) throw new IOException("Telegram question delivery response unconfirmed");
+        return response.path("result").path("message_id").asText();
     }
 
     void answerCallbackQuery(String callbackQueryId, String text, boolean alert)

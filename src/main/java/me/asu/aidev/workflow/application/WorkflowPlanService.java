@@ -28,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkflowPlanService {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.guard.TaskLineage lineage;
+    public List<WorkTask> effectiveSteps(String id) {var history=steps(id);return lineage==null?history:lineage.effective(history);}
     private me.asu.aidev.authority.AuthorityBoundary delegation;
     @org.springframework.beans.factory.annotation.Autowired
     public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary boundary) { this.delegation=boundary; }
@@ -129,7 +131,7 @@ public class WorkflowPlanService {
     @Transactional(readOnly = true)
     public ReviewRecovery reviewRecovery(String id) {
         WorkflowPlan plan = get(id);
-        List<WorkTask> current = steps(id);
+        List<WorkTask> current = effectiveSteps(id);
         WorkTask latest = current.stream().max(Comparator
                 .comparingLong((WorkTask task) -> taskSequence(plan, task.id()))
                 .thenComparingInt(task -> reviewRecoveryNumber(task.id()))).orElse(null);

@@ -7,6 +7,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class AuthorityPageController {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.webconsole.security.WebConsoleSecurityService consoleSecurity;
+    @GetMapping("/ui/questions") public String questions(Model model) {
+        String actor=Objects.requireNonNull(boundary.human(),"Authenticated human required");
+        boolean operate=!consoleSecurity.currentDelegationAuthority(actor,"A19_ANSWER").isEmpty(),approve=!consoleSecurity.currentDelegationAuthority(actor,"A18_BUDGET").isEmpty();
+        if(!operate&&!approve) throw new SecurityException("Current operation or approval role required");
+        model.addAttribute("questionCanOperate",operate);model.addAttribute("questionCanApprove",approve);
+        model.addAttribute("questionPlans",repo.jdbc().queryForList("SELECT p.plan_id FROM execution_policy p JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY p.plan_id",String.class,actor));
+        return "ui/questions";
+    }
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
     @GetMapping("/ui/configurations") public String configurations(Model model) {
         String actor=Objects.requireNonNull(boundary.human(),"Authenticated human required");

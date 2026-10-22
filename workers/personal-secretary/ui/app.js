@@ -17,11 +17,17 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
   event.preventDefault(); const data = Object.fromEntries(new FormData(form)); const route = form.dataset.route;
   try {
     if ("revision" in data) data.revision = Number(data.revision);
+    if ("requestVersion" in data) data.requestVersion = Number(data.requestVersion);
     if ("expiresAt" in data) { if (data.expiresAt) data.expiresAt = new Date(data.expiresAt).getTime(); else delete data.expiresAt; }
     if ("dueMs" in data) { data.dueMs = new Date(data.dueMs).getTime(); data.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; }
     if (route === "policy") { data.confirmed = data.confirmed === "on"; if (data.deny.trim()) data.deny = JSON.parse(data.deny); else delete data.deny; }
     if (route === "record") data.data = JSON.parse(data.data);
-    await post(route, data);
+    const result = await post(route, data);
+    if (route === 'questions') document.getElementById('questions').textContent = JSON.stringify(result,null,2);
+    if (route === 'question-preview') {
+      document.getElementById('question-projection').textContent = result.projectionJson;
+      const reply = document.querySelector('form[data-route="question-reply"]');reply.elements.projectionJson.value=result.projectionJson;reply.elements.digest.value=result.digest;
+    }
   } catch (error) { status.textContent = error.message; }
 }));
 document.getElementById("enable").addEventListener("click", () => post("enable", { enabled: true }).catch(error => status.textContent = error.message));

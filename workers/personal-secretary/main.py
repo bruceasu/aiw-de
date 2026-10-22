@@ -140,6 +140,12 @@ def serve(runtime, host, port, public_origin=None):
                         result = runtime.schedule(data["workId"], data["dueMs"], data["revision"], data.get("timeZone", "UTC"))
                     elif self.path == "/api/queue-action":
                         result = runtime.queue_action(data["grantId"])
+                    elif self.path == "/api/questions":
+                        result = runtime.questions(data["planId"])
+                    elif self.path == "/api/question-preview":
+                        result = runtime.question_projection(data["questionId"], data["requestVersion"], data["rawAnswer"], data.get("selectedGoal", ""), data.get("necessaryContext", ""))
+                    elif self.path == "/api/question-reply":
+                        result = runtime.queue_question_reply(data["grantId"], data["projectionJson"], data["digest"])
                     elif self.path == "/api/policy":
                         result = runtime.save_policy(data["id"], data["revision"], data["originalText"], data["grantId"], data.get("confirmed"), data.get("deny"), data.get("expiresAt"))
                     elif self.path == "/api/cancel" and data.get("kind") in {"work", "policy"}:

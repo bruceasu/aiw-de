@@ -24,7 +24,7 @@ def metadata(config):
     if CAPABILITY not in config.capabilities or "execution-guard-v1" not in config.capabilities:
         raise RuntimeError("CONFIGURATION_ADAPTER_NOT_VERIFIED")
     root = Path(__file__).resolve().parent
-    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_openai_tools.py", "process_worker.py", "openai_api_runtime.py", "app_server_runtime.py")
+    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_openai_tools.py", "process_worker.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py")
     versions = {"broker": _digest({name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names})}
     if config.runtime == "openai-agents":
         versions.update({name: importlib.metadata.version(name) for name in ("openai-agents", "openai")})
@@ -34,7 +34,7 @@ def metadata(config):
         if "codex-protocol" not in versions: raise RuntimeError("CONFIGURATION_PROTOCOL_CAPABILITY_MISSING")
     resource = {key: os.environ.get(key) for key in ("AIW_CODEX_GUARD_HOME", "AIW_CODEX_GUARD_PROFILE", "AIW_GUARD_COMMAND_ENABLED", "AIW_COMMAND_CGROUP_ROOT", "AIW_COMMAND_TOOLCHAIN_ROOTS", "OPENAI_BASE_URL", "OPENAI_ORG_ID", "OPENAI_PROJECT_ID")}
     resource.update(runtime=config.runtime, platform=sys.platform, adapter=versions, guarded=True)
-    return {"protocolVersions": [PROTOCOL, GUARD_PROTOCOL], "runtime": config.runtime, "adapterVersions": versions,
+    return {"protocolVersions": [PROTOCOL, GUARD_PROTOCOL, "aiw.questions.v1"], "runtime": config.runtime, "adapterVersions": versions,
             "platform": sys.platform, "resourcePolicyDigest": _digest(resource)}
 
 
@@ -121,7 +121,7 @@ def load(config, task):
         actual.add(identity)
     if actual != expected or set(a["ref"] for a in ref["skills"]) != set([*method["protocolSkills"], method["primarySkill"]]): raise RuntimeError("CONFIGURATION_SKILL_BINDING_INVALID")
     tools = set(ref["toolRequirements"])
-    if tools - {"READ", "SEARCH", "WRITE", "GIT", "COMMAND", "MODEL"} or not {"GIT", "MODEL"}.issubset(tools) or ("WRITE" in tools) == method["readOnly"]:
+    if tools - {"READ", "SEARCH", "WRITE", "GIT", "COMMAND", "MODEL", "QUESTION"} or not {"GIT", "MODEL"}.issubset(tools) or ("WRITE" in tools) == method["readOnly"]:
         raise RuntimeError("CONFIGURATION_TOOL_REQUIREMENT_INVALID")
     if "COMMAND" in tools and "guarded-command-linux-v1" not in config.capabilities: raise RuntimeError("CONFIGURATION_COMMAND_ADAPTER_REQUIRED")
     if task.get("aiPreferences"): raise RuntimeError("PREPARED_AI_PROFILE_CANNOT_BE_OVERRIDDEN")

@@ -22,6 +22,10 @@ import org.springframework.stereotype.Service;
 /** Each adapter preserves the original application service's business authority. */
 @Service
 public class AuthorityActions implements AuthorityTargets {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.PersonalQuestions> personalQuestions;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.FormalQuestions> formalQuestions;
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.execution.guard.ExecutionGuard> executionGuard;
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.execution.guard.ExecutionLedger> executionLedger;
     @org.springframework.beans.factory.annotation.Autowired
@@ -65,7 +69,7 @@ public class AuthorityActions implements AuthorityTargets {
     }
     private boolean stepAction(ActionScope rule) { return Set.of(ActionScope.Action.A01,ActionScope.Action.A02,ActionScope.Action.A03,ActionScope.Action.A04).contains(rule.action()); }
     private boolean planAction(ActionScope rule) {
-        return switch(rule.action()) { case A11_APPROVE,A11_REJECT,A12_CREATE,A13,A14,A15,A18_BUDGET -> false; default -> true; };
+        return switch(rule.action()) { case A11_APPROVE,A11_REJECT,A12_CREATE,A13,A14,A15,A18_BUDGET,A19_ANSWER -> false; default -> true; };
     }
     @Override public void validate(ActionScope rule) {
         if(stepAction(rule)!=(rule.step()!=null)) throw new IllegalArgumentException("Only A01-A04 require an exact Plan step");
@@ -80,6 +84,7 @@ public class AuthorityActions implements AuthorityTargets {
             case A12_EXECUTE -> allowed.addAll(Set.of("fileId","reviewTaskId","targetPath","sourceHash"));
             case A13 -> allowed.addAll(Set.of("maxParallelism","minimum","maximum","allowUnlimited","minimumIntervalSeconds"));
             case A18_BUDGET -> allowed.addAll(Set.of("dimension","loopId","amount","cumulativeCeiling"));
+            case A19_ANSWER -> allowed.add("kind");
             default -> { }
         }
         if(!allowed.containsAll(rule.parameters().keySet())) throw new IllegalArgumentException("Unknown parameters cannot create action authority");
@@ -95,11 +100,13 @@ public class AuthorityActions implements AuthorityTargets {
                 case A12_EXECUTE -> List.of("fileId","reviewTaskId","targetPath","sourceHash");
                 case A13 -> List.of("maxParallelism","minimum","maximum","minimumIntervalSeconds");
                 case A18_BUDGET -> List.of("dimension","amount","cumulativeCeiling");
+                case A19_ANSWER -> List.of("kind");
                 default -> List.of();
             };
             mandatory.forEach(field->required(rule,field));
         }
         if(rule.action()==ActionScope.Action.A13 && !rule.targetId().equals("GLOBAL")) throw new IllegalArgumentException("Fleet action must explicitly target GLOBAL");
+        if(rule.action()==ActionScope.Action.A19_ANSWER && !"PROFESSIONAL".equals(rule.parameters().get("kind"))) throw new IllegalArgumentException("A19 is limited to professional question facts");
     }
     private String required(ActionScope rule,String field) {
         String value=rule.parameters().get(field);
@@ -115,7 +122,7 @@ public class AuthorityActions implements AuthorityTargets {
                 yield publicationKey(publication.fileId(),publication.targetPath());
             }
             case A13 -> "GLOBAL:FLEET";
-            case A18_BUDGET -> { executionGuard.getObject().requirePolicyActor(rule.targetId());yield "PLAN:"+rule.targetId(); }
+            case A18_BUDGET,A19_ANSWER -> { executionGuard.getObject().requirePolicyActor(rule.targetId());yield "PLAN:"+rule.targetId(); }
             case A14,A15 -> "WORKER:"+workers.get(new WorkerId(rule.targetId())).id().value();
             default -> {
                 var plan=plans.get(rule.targetId());
@@ -166,15 +173,21 @@ public class AuthorityActions implements AuthorityTargets {
             row.put("state",plan.state().name());row.put("version",plan.version());row.put("spec",plan.spec());
             row.put("tasks",plans.steps(plan.id()).stream().map(this::taskView).toList());
             row.put("archived",archives.archived(plan.id()));row.put("deleteAfter",archives.deleteAfter(plan.id()).map(Object::toString).orElse(""));
-            if(rule.step()!=null) row.put("rounds",plans.steps(plan.id()).stream()
+            if(rule.step()!=null) row.put("rounds",plans.effectiveSteps(plan.id()).stream()
                     .filter(t->!t.skillRef().equals("workflow-stage-reviewer"))
                     .map(t->WorkflowTaskPosition.parse(plan,t.id())).filter(Optional::isPresent).map(Optional::get)
-                    .filter(p->p.step()==rule.step()).count());
+                    .filter(p->p.step()==rule.step()).map(WorkflowTaskPosition::round).distinct().count());
             if(outputRepo.publication(plan.id()).isPresent()) {
                 row.put("publication",publicationView(plan.id()));
 
             }
         } else switch(rule.action()) {
+            case A19_ANSWER -> {
+                var policy=executionGuard.getObject().policyRow(rule.targetId());
+                row.put("version",policy.get("revision"));row.put("policyDigest",policy.get("digest"));
+                row.put("state",AuthorityRepository.flag(policy.get("revoked"))?"REVOKED":AuthorityRepository.flag(policy.get("paused"))?"PAUSED":"ACTIVE");
+                row.put("questions",formalQuestions.getObject().list(rule.targetId()));
+            }
             case A18_BUDGET -> {
                 var policy=executionGuard.getObject().policyRow(rule.targetId());
                 row.put("version",policy.get("revision"));row.put("policyDigest",policy.get("digest"));
@@ -241,11 +254,17 @@ public class AuthorityActions implements AuthorityTargets {
     }
     private Object executeAction(ActionScope rule,String actor,String grant,long revision,String requestId) {
         return switch(rule.action()) {
+            case A19_ANSWER -> {
+                if(requestId==null) throw new IllegalArgumentException("Formal selected answer request required");
+                yield personalQuestions.getObject().applyAnswer(requestId,rule.targetId());
+            }
             case A18_BUDGET -> {
                 if(requestId==null) throw new IllegalArgumentException("Formal delegated increment request required");
-                yield executionLedger.getObject().increment(new me.asu.aidev.execution.guard.GuardContract.Increment(requestId,rule.targetId(),
+                var question=personalQuestions.getObject().validateBudget(requestId,rule);
+                var result=executionLedger.getObject().increment(new me.asu.aidev.execution.guard.GuardContract.Increment(requestId,rule.targetId(),
                     me.asu.aidev.execution.guard.GuardContract.Dimension.valueOf(required(rule,"dimension")),rule.parameters().get("loopId"),
                     Long.parseLong(required(rule,"amount")),Long.parseLong(required(rule,"cumulativeCeiling"))),actor);
+                personalQuestions.getObject().budgetApplied(requestId,question);yield result;
             }
             case A17_SCHEDULE -> { archives.scheduleDeletion(rule.targetId(),actor); yield "Deletion scheduled using the original retention window"; }
             case A17_UNDO -> { archives.undoDeletion(rule.targetId()); yield "Pending deletion undone within the original window"; }

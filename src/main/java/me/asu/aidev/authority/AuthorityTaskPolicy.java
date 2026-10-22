@@ -67,10 +67,10 @@ public class AuthorityTaskPolicy implements WorkerTaskClaimPolicy,TaskExecutionP
         if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE worker_id=? AND generation=? AND enabled_boot=?",Long.class,
                 worker,permit.get("worker_generation"),boundary.boot())!=1 || !boundary.boot().equals(permit.get("enabled_boot"))) return false;
         var position=WorkflowTaskPosition.parse(plan,task.id()).orElseThrow();
-        Map<String,Object> snapshot=Map.of("state",plan.state().name(),"rounds",plans.getObject().steps(plan.id()).stream()
+        Map<String,Object> snapshot=Map.of("state",plan.state().name(),"rounds",plans.getObject().effectiveSteps(plan.id()).stream()
                 .filter(t->!t.skillRef().equals("workflow-stage-reviewer"))
                 .map(t->WorkflowTaskPosition.parse(plan,t.id())).filter(Optional::isPresent).map(Optional::get)
-                .filter(p->p.step()==position.step()).count());
+                .filter(p->p.step()==position.step()).map(WorkflowTaskPosition::round).distinct().count());
         if(scope!=null && ((Number)snapshot.get("rounds")).longValue()<scope.minimumRounds()) return false;
         String prefix="PLAN:"+plan.id();
         for(String raw:repo.jdbc().queryForList("SELECT scope_json FROM authority_restriction WHERE active=TRUE AND (target_key=? OR substr(target_key,1,?)=?)",String.class,prefix,(prefix+":").length(),prefix+":")) {

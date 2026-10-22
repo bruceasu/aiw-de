@@ -1,0 +1,15 @@
+{
+  "schema":"aiw.fd.evidence.v1","kind":"worker-report","fd_id":"FD-028",
+  "source_event":"FD-028-000006-changes-requested","human_report":"FD-028-implementation-20261023-08211700-r2.md",
+  "data":{
+    "worker_session":"fd025-029-host-20261022-234846-08211700","comparison_base":"1b7e964","previous_reviewed_head":"e1f9d14","implementation_commit":"f62d392",
+    "worktree":".wt/FD-028","branch":"feature/FD-028","parent_branch":"develop","review_outcomes_so_far":1,"review_limit":3,
+    "repairs":{"R028-01":"Admission transaction validates complete staged Envelope and exact raw projection evidence before effects","R028-02":"Shared effective lineage projection, distinct business rounds, preserved cumulative creation and technical retry history","R028-03":"Owner reads and per-question current action roles; no approver execution-control expansion"},
+    "compile":{"status":"passed","source_commit":"f62d392","completed_at":"2026-10-23T08:50:12+09:00","java_source_files":272,
+      "java_command":"JAVA_HOME=C:/green/jdk-25.0.1+8; C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -DskipTests=true -Dmaven.test.skip=true compile",
+      "javascript_command":"node --check src/main/resources/static/ui/questions.js","python":"unchanged; original compile evidence retained"},
+    "static_validation":{"command":"git diff e1f9d14 HEAD --check and report JSON parsing","status":"passed"},
+    "not_run":["tests","services/HTTP/browser/DB/migrations","live roles/concurrency/stop recovery","models/SDK/AppServer/Telegram/checkpoint/network/install/deploy"],
+    "runtime_certified":false,"human_decision_required":false,"review_status":"awaiting-independent-repair-review"
+  }
+}

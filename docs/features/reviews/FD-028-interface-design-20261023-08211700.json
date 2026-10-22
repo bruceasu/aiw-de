@@ -1,0 +1,57 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-028",
+  "source_event": null,
+  "human_report": "FD-028-interface-design-20261023-08211700.md",
+  "data": {
+    "review_type": "bounded-interface-design-feedback",
+    "reviewer_reference": "fd028-interface-design-20261023-08211700",
+    "source_event_reason": "主机授权的补充实施接口设计咨询，未领取新设计或Reviewer事件，不改生命周期状态",
+    "original_design_source_event": "FD-028-000002-design-requested",
+    "worktree": "D:/03_projects/AI-tools/aiw-de/.wt/FD-028",
+    "head": "1b7e964",
+    "input_state": "FD实施接口细化为当前工作区未提交内容；既有实现只作相邻合同证据",
+    "scope": "仅FD-028实施接口细化及安全checkpoint/来源/秘书admission/Telegram实际相邻接口",
+    "recommendation": "changes-needed",
+    "findings": [
+      {
+        "id": "I028-01",
+        "severity": "P1",
+        "status": "remaining",
+        "location": "docs/features/FD-028/FD-028_FEATURE.md:89; ExecutionYieldService.continueTask; GuardContract.Yield; GuardBroker; GitWorkspace.materialize",
+        "reason": "继续原语只允许原baseRevision，checkpoint仅FrozenRef；本地提交还缺最终冻结顺序、可信登记、持久保留及跨Worker取回合同",
+        "minimal_resolution": "停新调用并排空确定结果后按既有许可生成checkpoint，精确Lease登记后停止/ack；窄扩展继续基线到该源已确认checkpoint，固定源/仓库/原基线/提交/摘要及可取回对象，不造Completed TaskInput；只读无变更复用原基线，缺权保持阻塞"
+      },
+      {
+        "id": "I028-02",
+        "severity": "P1",
+        "status": "remaining",
+        "location": "docs/features/FD-028/FD-028_FEATURE.md:67,90; AgentFactory.prepareAuthorized; WorkflowQuestionService; WorkflowTaskPosition.parse",
+        "reason": "首期configured-plan有execution_policy但不一定有WorkflowPlan；真实plan来源若沿旧服务解释将无法消费已交付配置任务",
+        "minimal_resolution": "LEGACY_PLAN_TASK封闭覆盖现有受控configured-plan/flexible-plan，验证owner/policy/task/context/精确Attempt及配置；仅flexible-plan附加旧Plan/版本/逻辑槽；graph必须注册resolver，未注册拒绝；不伪造旧Plan或自由sourceRef"
+      },
+      {
+        "id": "I028-03",
+        "severity": "P2",
+        "status": "remaining",
+        "location": "docs/features/FD-028/FD-028_FEATURE.md:91,93; ActionAdmissionService.apply/businessDigest; AuthorityActions.key/snapshot/admit",
+        "reason": "A19尚缺问题版本快照与原始投影身份/请求绑定；默认admission查WorkflowPlan且存在paused门禁，需区分工作暂停与委托禁用/接管",
+        "minimal_resolution": "固定A19封闭问题/回答版本及来源快照；投影按实例/owner/Worker/requestId不可变登记并由原admission事务校验evidence后原子保存回答和回执；工作暂停仅允许记录，APPLIED仍受guard；保留身份/撤权/接管拒绝，A18独立具体申请"
+      },
+      {
+        "id": "I028-04",
+        "severity": "P2",
+        "status": "remaining",
+        "location": "docs/features/FD-028/FD-028_FEATURE.md:92; TelegramApprovalAdapter.pollLoop/handleCallback",
+        "reason": "既有poller为进程内单例及内存offset且处理前推进；仅复用不能覆盖持久收件、正确分派及发送后确认丢失窗口",
+        "minimal_resolution": "单bot分派器先持久幂等收件后推进offset；明确单实例前置或独占接管；封闭旧审批/新问题路由；outbox发送前CAS，持久messageId/世代，失去结果或遗留SENDING为UNKNOWN且不重发，未知messageId不能猜文本关联"
+      }
+    ],
+    "already_supported_directions": ["投影登记无业务效果且不包围原admission事务", "问题/回答/APPLIED唯一所有者", "真实yield停止确认与CONTINUED lineage", "取消阻止新准入并保留未知事实，不自动Git回滚"],
+    "human_decisions_reopened": false,
+    "commands_run": ["Get-Content/rg本地静态读取", "git status --short/git rev-parse HEAD只读", "报告写入后单次静态MD/JSON配对及范围检查"],
+    "evidence_limits": ["一次有界接口设计反馈，不重审五FD或原已解决设计findings", "新接口尚未实现，findings是工程合同缺口而非虚构实现缺陷", "未执行测试/编译/项目/模型/服务/Telegram/数据库/网络", "未修改源码/FD/生命周期/Git，未额外委派", "设计证据不是实现verification-passed，真实持久化/并发/停止行为未验证"],
+    "recorded_at": "2026-10-23T08:24:26+09:00"
+  }
+}

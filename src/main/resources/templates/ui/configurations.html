@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" th:content="${csrfToken}"><meta name="configuration-owner" th:content="${ownerId}"><title>专业配置与准备</title><link rel="stylesheet" href="/ui/console.css"><script src="/ui/configurations.js" defer></script></head>
-<body><main class="main workspace-page"><header class="topbar"><div><h1>专业配置与准备</h1><p>同一兼容 Worker 可逐任务使用不同方法。配置声明所需能力，执行权限由你确认的范围决定。</p></div><a href="/ui/authority">执行授权与预算</a></header>
+<body><main class="main workspace-page"><header class="topbar"><div><h1>专业配置与准备</h1><p>同一兼容 Worker 可逐任务使用不同方法。配置声明所需能力，执行权限由你确认的范围决定。</p></div><a href="/ui/authority">执行授权与预算</a><a href="/ui/questions">工作问题与控制</a></header>
 <p id="configuration-result" role="status" class="help"></p><p th:if="${ownerId.isEmpty()}">请先在授权页面绑定当前登录身份。</p>
 <section class="card"><h2>准备一个软件任务</h2><p>先确认执行政策及所需预算。缺少能力、授权或预算时保留意图和原因；修正后使用当前准备世代显式重试，改变内容时创建新意图版本。</p>
 <form id="prepare-configuration" class="form-grid"><label class="field">意图 ID<input name="intentId" required maxlength="96" pattern="[A-Za-z0-9][A-Za-z0-9._-]*"></label><label class="field">意图版本<input name="intentVersion" type="number" value="1" min="1" required></label><label class="field">当前准备世代<input name="expectedGeneration" type="number" value="0" min="0" required></label>

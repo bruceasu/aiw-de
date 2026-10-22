@@ -7,7 +7,7 @@ public final class GuardContract {
     public static final String PROTOCOL = "aiw.execution.guard.v1";
     public static final String CAPABILITY = "execution-guard-v1";
     private GuardContract() {}
-    public enum Tool { READ, SEARCH, WRITE, GIT, COMMAND, MODEL }
+    public enum Tool { READ, SEARCH, WRITE, GIT, COMMAND, MODEL, QUESTION }
     public enum Dimension { TIME_MS, TASKS, COST_MICROS, LOOP_BACKJUMPS }
     public record Rule(Tool tool, String repositoryRef, String pathPrefix) {
         public Rule { Objects.requireNonNull(tool); text(repositoryRef,120); path(pathPrefix); }

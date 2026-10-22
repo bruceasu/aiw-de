@@ -16,18 +16,20 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
         return path.equals("/api/r1/worker-protocol/v1/workers/register") || path.equals("/api/r1/worker-protocol/v1/tasks/claim")
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/heartbeat")
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/configuration")
+                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/questions/(source|open|ack|checkpoints|receipt)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/(begin|finish)|operations/[^/]+/receipt|yield/(prepare|ack)|delivery)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
     }
     private boolean personalMachine(String method,String path) {
-        return method.equals("GET") && (Set.of("/identity","/state","/target-state","/grants","/management-state").contains(path) || path.matches("/receipts/[^/]+"))
-                || method.equals("POST") && Set.of("/sessions","/actions","/restrictions","/coordination").contains(path);
+        return method.equals("GET") && (Set.of("/identity","/state","/target-state","/grants","/management-state","/questions").contains(path) || path.matches("/receipts/[^/]+"))
+                || method.equals("POST") && Set.of("/sessions","/actions","/restrictions","/coordination","/question-replies").contains(path);
     }
     private boolean humanRoute(String method,String path) {
         return method.equals("POST") && (Set.of("/owners/bind","/workers","/grants","/managed-plans","/execution-policies","/execution-budgets/increment","/execution-effects/reconcile","/execution-meters/reconcile").contains(path)
                 || path.matches("/execution-policies/[^/]+/(pause|resume|revoke)") || path.matches("/execution-contexts/[^/]+/bind")
                 || path.matches("/execution-tasks/[^/]+/stopped")
                 || path.matches("/execution-configurations/(assets|candidates|propose|prepare|state)")
+                || path.matches("/questions/(read|reply|budget|control|progress|telegram)")
                 || path.matches("/workers/[^/]+/(enable|disable)") || path.matches("/grants/[^/]+/revoke")
                 || path.matches("/targets/[^/]+/(takeover|return)") || path.matches("/restrictions/[^/]+/revoke")
                 || path.matches("/budgets/[^/]+/supplement") || path.matches("/effects/[^/]+/reconcile"));
@@ -49,7 +51,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                     if(!humanRoute(method,operation)) { response.sendError(403,"Authority route not allowed");return false; }
                 } else {
                     if(leaseMachine(path)) return true;
-                    if(!Set.of("/ui/authority","/ui/configurations").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
+                    if(!Set.of("/ui/authority","/ui/configurations","/ui/questions").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
                 }
                 var session=request.getSession(false);
                 if(!security.enabled() || session==null || !security.authenticated(session)) { response.sendError(401,"Configured human authentication required");return false; }
@@ -58,6 +60,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                     if(!security.validCsrf(session,csrf)) { response.sendError(403,"Current human CSRF token required");return false; }
                     try {
                         if(path.matches("/api/r1/approvals/[^/]+/decision") || path.matches("/api/r1/authority/execution-(effects|meters)/reconcile") || path.matches("/api/r1/authority/execution-tasks/[^/]+/stopped") || path.equals("/api/r1/authority/execution-budgets/increment")) security.requireApprover(session);
+                        else if(path.startsWith("/api/r1/authority/questions/")) { /* The decoded question kind selects the exact current role in its service. */ }
                         else if(path.startsWith("/api/r1/authority/execution-")) security.requireOperator(session);
                         else if(path.contains("deletion") || path.contains("delete")) security.requireAdmin(session);
                         else if(!path.startsWith("/api/r1/authority/")) security.requireOperator(session);
@@ -66,6 +69,6 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 boundary.human(security.actor(session));return true;
             }
             @Override public void afterCompletion(HttpServletRequest request,HttpServletResponse response,Object handler,Exception error) { boundary.human(null); }
-        }).addPathPatterns("/api/r1/**","/ui/authority","/ui/configurations").order(10);
+        }).addPathPatterns("/api/r1/**","/ui/authority","/ui/configurations","/ui/questions").order(10);
     }
 }

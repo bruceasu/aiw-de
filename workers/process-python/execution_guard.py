@@ -52,6 +52,7 @@ class GuardBroker:
         self.lease = {"workerId": worker_id, "attemptId": task["attemptId"], "leaseToken": task["leaseToken"]}
         self.context = client._post(self.base + "/execution-context/read", self.lease)
         if self.context.get("protocol") != PROTOCOL: raise RuntimeError("GUARD_PROTOCOL_UNSUPPORTED")
+        task["inputs"] = [{**item, "taskId": item["taskId"].get("value") if isinstance(item["taskId"], dict) else item["taskId"]} for item in self.context["snapshot"]["inputs"]]
         self.repository = (task.get("workspace") or {}).get("repositoryRef")
         frozen = self.context["snapshot"]["task"]
         if frozen["instruction"] != task.get("instruction") or frozen["instructionRevision"] != task.get("instructionRevision") or frozen.get("repositoryRef") != self.repository:
@@ -63,6 +64,9 @@ class GuardBroker:
         self.commands_run = []
         self._active = set()
         self.allowed_tools = None
+        self.accepting_tools = True
+        self.pending_question = None
+        self.checkpoint = None
 
     def attach(self, workspace):
         root = Path(workspace).absolute()
@@ -117,6 +121,13 @@ class GuardBroker:
                 raise
 
     def invoke(self, name, args, call_id=None):
+        with self.lock:
+            if not self.accepting_tools:
+                from formal_questions import YieldRequested
+                raise YieldRequested("QUESTION_TOOLS_CLOSED")
+            return self._invoke(name, args, call_id)
+
+    def _invoke(self, name, args, call_id=None):
         if self.root is None: raise RuntimeError("GUARD_WORKSPACE_NOT_ATTACHED")
         if not isinstance(args, dict): raise RuntimeError("GUARD_TOOL_ARGUMENTS_INVALID")
         schemas = {
@@ -126,6 +137,7 @@ class GuardBroker:
             "git_status": (set(), "GIT"), "git_diff": (set(), "GIT"),
             "git_commit": ({"message", "paths"}, "GIT"), "run_command": ({"commandId"}, "COMMAND"),
             "git_integrate": ({"sourceTaskId"}, "GIT"),
+            "ask_question": ({"question", "context", "options", "answerRequirements"}, "QUESTION"),
         }
         if name not in schemas or set(args) != schemas[name][0]: raise RuntimeError("GUARD_TOOL_ARGUMENTS_INVALID")
         tool = schemas[name][1]
@@ -134,6 +146,9 @@ class GuardBroker:
         return self.operate(tool, resource, args, lambda: self._execute(name, args), call_id)
 
     def _execute(self, name, args):
+        if name == "ask_question":
+            from formal_questions import ask
+            return ask(self, args)
         if name.startswith("git_"):
             if name == "git_status": return self.git.run("status", "--porcelain=v1", "--untracked-files=normal")
             if name == "git_diff": return self.git.run("diff", "--no-ext-diff", "--no-textconv", "--")
@@ -211,7 +226,11 @@ class GuardBroker:
             if len(raw) > 2 * 1024 * 1024: raise RuntimeError("GUARD_FILE_LIMIT")
             return raw
 
-    def model_started(self, arguments): return self.begin("MODEL", ".", arguments)
+    def model_started(self, arguments):
+        if not self.accepting_tools:
+            from formal_questions import YieldRequested
+            raise YieldRequested("QUESTION_WAITING")
+        return self.begin("MODEL", ".", arguments)
 
     def model_finished(self, operation, output, usage):
         if usage is not None:

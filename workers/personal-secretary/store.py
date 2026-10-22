@@ -115,7 +115,7 @@ class SQLiteStore:
         return self.get(kind, identity)
 
     def queue(self, request, path, body, decision=None):
-        if path not in {"/actions", "/coordination"} or body.get("requestId") != request:
+        if path not in {"/actions", "/coordination", "/question-replies"} or (body.get("envelope", {}) if path == "/question-replies" else body).get("requestId") != request:
             raise ValueError("Closed platform action path and stable request ID required")
         payload = encode(body)
         checksum = hashlib.sha256((path + "\n" + payload).encode()).hexdigest()

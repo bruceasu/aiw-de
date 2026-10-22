@@ -37,3 +37,7 @@ The tool SHALL read only explicit offline snapshots and exact owner mappings, em
 ## Evidence limit
 
 The FD workflow requires production compile-only and independent static implementation review by default. No runtime safety, actual migration or release readiness is established by this specification or a compile result.
+
+### Formal question projection
+
+The personal secretary SHALL use the same aiw.questions.v1 question ID and request version as Web Console and explicitly bound Telegram private chat. It SHALL show the selected goal, necessary context and original answer locally before explicit submission. Private chats, policy text, templates and credentials SHALL remain local. A19_ANSWER SHALL preserve the exact grant parameters, proposal digest, original envelope and receipt. Saving an answer SHALL NOT imply progression or extra authority. See docs/FORMAL-QUESTIONS.md.

@@ -174,3 +174,7 @@ All executable roles accept `EXTERNAL_WORK`. `skillRef` must equal the role’s 
 设置 `AIW_DYNAMIC_CONFIG=true` 与 `AIW_EXECUTION_GUARD=true` 后，Worker 通过受控后端预检并登记 `aiw.execution.config.v1` 能力。新任务按服务器固定的配置正文及 Skill/知识摘要创建本次 Agent，不被启动 role 固定；旧任务继续使用启动 Profile。两种后端均消费相同 broker，不按 Codex/SDK 版本锁定兼容性。
 
 控制台入口 `/ui/configurations`；完整字段、默认目录、原因和部署边界见 [专业配置合同](../../docs/EXECUTION-CONFIGURATION.md)。默认验证方法还要求明确的命令许可及 Linux/WSL 隔离适配器。配置切换不授予权限、不迁移旧数据，也不释放尚未确认停止的执行。
+
+## Formal questions and local checkpoints (FD-028)
+
+Both guarded Python backends expose ask_question through the trusted broker. Configure QUESTION in the immutable method requirements and in the explicitly approved execution policy. A question closes tool admission, retains a final local Git checkpoint and yields only after real runtime quiescence. A continuation requires the registered checkpoint-store capability and the same persistent local Git object store; no network fetch or original model session is required. Preserve the object store, worktree and result branch while a question is pending. See [FORMAL-QUESTIONS.md](../../docs/FORMAL-QUESTIONS.md) for the source, identity, stop and UNKNOWN contracts. No real backend or channel execution was run for this change.

@@ -11,6 +11,7 @@ import tempfile
 import threading
 import time
 import uuid
+import urllib.parse
 
 from platform_client import PlatformError
 from store import encode
@@ -130,6 +131,44 @@ class Runtime:
             body.update(taskId=task["id"], expectedTaskVersion=task["version"], attempt=task["nextAttempt"])
         self.store.queue(identity, "/actions", body, decision or {"kind": "EXPLICIT_FIXED_ACTION", "grantId": grant_id, "snapshotDigest": state["snapshotDigest"]})
         return {"requestId": identity, "state": "PENDING"}
+
+    def questions(self, plan):
+        if not self.enabled:
+            raise ValueError("Explicit local enablement required")
+        return self.platform.request("/questions?" + urllib.parse.urlencode({"planId": plan}))
+
+    def question_projection(self, question_id, request_version, raw_answer, selected_goal="", necessary_context="", message_id=None):
+        if not isinstance(raw_answer, str) or not raw_answer.strip() or len(raw_answer) > 8000:
+            raise ValueError("Select the original answer explicitly")
+        projection = {"reply": {"questionId": question_id, "requestVersion": request_version, "rawAnswer": raw_answer,
+                      "messageId": message_id or str(uuid.uuid4()), "expectedAnswerRevision": None, "overrideReason": None},
+                      "selectedGoal": selected_goal, "necessaryContext": necessary_context}
+        raw = encode(projection)
+        return {"projectionJson": raw, "digest": hashlib.sha256(raw.encode()).hexdigest()}
+
+    def queue_question_reply(self, grant_id, projection_json, confirmed_digest):
+        if not self.enabled or hashlib.sha256(projection_json.encode()).hexdigest() != confirmed_digest:
+            raise ValueError("Confirm the exact visible projection")
+        projection = json.loads(projection_json)
+        grants = self.platform.request("/grants")
+        grant = next((g for g in grants if g["id"] == grant_id and g["state"] == "ENABLED"), None)
+        if grant is None or grant["rule"]["action"] not in {"A19_ANSWER", "A18_BUDGET"}:
+            raise ValueError("Current exact question or budget delegation required")
+        state = self.platform.state(grant_id)
+        self.store.bind_platform(state["platformInstanceId"])
+        q = next((q for q in self.questions(grant["rule"]["targetId"]) if q["questionId"] == projection["reply"]["questionId"]), None)
+        if q is None or q["requestVersion"] != projection["reply"]["requestVersion"]:
+            raise ValueError("Question source or version changed")
+        request = q["authorization"]["requestId"] if q["kind"] == "AUTHORIZATION" else str(uuid.uuid4())
+        scope = grant["rule"]
+        envelope = {"protocolVersion": 1, "requestId": request, "grantId": grant_id, "grantRevision": grant["revision"],
+                    "restrictionRevision": state["restrictionRevision"], "action": scope["action"], "targetId": scope["targetId"],
+                    "step": None, "expectedTargetGeneration": state["generation"], "expectedSnapshot": state["snapshotDigest"],
+                    "expectedVersion": state["snapshot"].get("version"), "expectedTaskVersion": None, "taskId": None, "attempt": None,
+                    "parameters": scope["parameters"], "evidence": ["question-projection:" + confirmed_digest]}
+        self.store.queue(request, "/question-replies", {"envelope": envelope, "projectionJson": projection_json},
+                         {"kind": "EXPLICIT_QUESTION_PROJECTION", "questionId": q["questionId"], "projectionDigest": confirmed_digest})
+        return {"requestId": request, "state": "PENDING"}
 
     def save_policy(self, identity, revision, original_text, grant_id, confirmed, deny=None, expires_at=None):
         if confirmed is not True or not isinstance(original_text, str) or not original_text.strip() or len(original_text) > 16_000:

@@ -41,10 +41,14 @@ public class ExecutionYieldService {
         boundary.lock();var row=repo.jdbc().queryForMap("SELECT * FROM execution_yield WHERE task_id=?",task);
         if(!Objects.equals(row.get("request_digest"),AuthorityRepository.hash(repo.encode(input)))) throw new IllegalStateException("Exact original yield required");
         if("ACKNOWLEDGED".equals(row.get("state"))) return Map.of("state","WAITING_INPUT");
+        if("STOPPED".equals(row.get("state"))) return Map.of("state","CANCELLED");
         guard.verifyLease(task,input.lease(),false,false);
         if(guard.unknownTask(task)) throw new IllegalStateException("Confirm every tool/process outcome before releasing resources");
         var now=Instant.now();var t=tasks.find(new TaskId(task)).orElseThrow();
         if(t.state()!=TaskState.YIELDING) throw new IllegalStateException("Not yielding");
+        if(repo.jdbc().queryForMap("SELECT stop_requested_at_epoch_ms FROM execution_attempt WHERE id=?",input.lease().attemptId()).get("stop_requested_at_epoch_ms")!=null) {
+            stopped(task,input.lease());repo.jdbc().update("UPDATE execution_yield SET state='STOPPED',acknowledged_ms=? WHERE task_id=?",now.toEpochMilli(),task);return Map.of("state","CANCELLED");
+        }
         ledger.settle(input.lease().attemptId(),now.toEpochMilli());
         if(repo.jdbc().update("""
                 UPDATE work_task SET state='WAITING_INPUT',current_worker_id=NULL,lease_token=NULL,lease_acquired_at_epoch_ms=NULL,
@@ -99,8 +103,8 @@ public class ExecutionYieldService {
         if(row.get("successor_task_id")!=null) return new TaskId(String.valueOf(row.get("successor_task_id")));
         if(old.state()!=TaskState.WAITING_INPUT || old.version()!=expectedVersion || successor.id().value().equals(source)
                 || !successor.subjectId().equals(old.subjectId()) || !successor.subjectType().equals(old.subjectType())
-                || successor.type()!=old.type() || !successor.requiredCapabilities().equals(old.requiredCapabilities())
-                || !Objects.equals(successor.repositoryRef(),old.repositoryRef()) || !Objects.equals(successor.baseRevision(),old.baseRevision()))
+                || successor.type()!=old.type() || !validContinuationCapabilities(source,old,successor)
+                || !Objects.equals(successor.repositoryRef(),old.repositoryRef()) || !validContinuationBase(source,old,successor))
             throw new IllegalStateException("Exact waiting source and fixed successor required");
         if(!guard.canClaim(source)) throw new IllegalStateException("Continuation control or budget blocked");
         tasks.lock(old.id());tasks.insert(successor);
@@ -115,5 +119,20 @@ public class ExecutionYieldService {
         if(!tasks.transitionState(old.id(),TaskState.WAITING_INPUT,TaskState.CONTINUED,Instant.now())) throw new IllegalStateException("Continuation lost source race");
         repo.jdbc().update("UPDATE execution_context SET successor_task_id=? WHERE task_id=? AND successor_task_id IS NULL",successor.id().value(),source);
         return successor.id();
+    }
+    private boolean validContinuationBase(String source,WorkTask old,WorkTask next) {
+        if(Objects.equals(next.baseRevision(),old.baseRevision())) return true;
+        var rows=repo.jdbc().queryForList("SELECT s.checkpoint_json,y.state FROM formal_question_slot s JOIN execution_yield y ON y.task_id=s.source_task_id WHERE s.source_task_id=? AND s.successor_task_id IS NULL",source);
+        if(rows.size()!=1||!"ACKNOWLEDGED".equals(rows.getFirst().get("state"))) return false;
+        var checkpoint=repo.decode(String.valueOf(rows.getFirst().get("checkpoint_json")),me.asu.aidev.questions.QuestionContract.Checkpoint.class);
+        return Objects.equals(next.baseRevision(),checkpoint.resultRevision())&&Objects.equals(old.baseRevision(),checkpoint.baseRevision())&&Objects.equals(old.repositoryRef(),checkpoint.repositoryRef())
+                && guard.context(source).configurationDigest().equals(checkpoint.configurationDigest());
+    }
+    private boolean validContinuationCapabilities(String source,WorkTask old,WorkTask next) {
+        if(next.requiredCapabilities().equals(old.requiredCapabilities())) return true;
+        var rows=repo.jdbc().queryForList("SELECT checkpoint_json FROM formal_question_slot WHERE source_task_id=? AND successor_task_id IS NULL",String.class,source);
+        if(rows.size()!=1) return false;
+        var checkpoint=repo.decode(rows.getFirst(),me.asu.aidev.questions.QuestionContract.Checkpoint.class);
+        var allowed=new HashSet<>(old.requiredCapabilities());allowed.add(checkpoint.storageCapability());return next.requiredCapabilities().equals(allowed);
     }
 }

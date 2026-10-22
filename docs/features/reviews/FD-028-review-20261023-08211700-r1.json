@@ -1,0 +1,73 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-028",
+  "source_event": "FD-028-000005-implementation-ready",
+  "human_report": "FD-028-review-20261023-08211700-r1.md",
+  "data": {
+    "reviewer_session": "fd028-review-20261023-08211700-r1",
+    "worker_session": "fd025-029-host-20261022-234846-08211700",
+    "comparison_base": "1b7e964",
+    "reviewed_head": "e1f9d14",
+    "implementation_commit": "307e5bc",
+    "worktree": "D:/03_projects/AI-tools/aiw-de/.wt/FD-028",
+    "branch": "feature/FD-028",
+    "review_round": 1,
+    "review_limit": 3,
+    "prior_changes_requested_count": 0,
+    "verdict": "changes-requested",
+    "findings": [
+      {
+        "id": "R028-01",
+        "severity": "P1",
+        "dimension": "Correctness/Authorization/Spec",
+        "file": "src/main/java/me/asu/aidev/questions/PersonalQuestions.java",
+        "line": 36,
+        "related": ["PersonalQuestions.submit:27-34", "ActionAdmissionService.apply:85-132", "AuthorityActions.executeAction"],
+        "requirement": "最小原投影、原始精确信封、evidence及原回执必须对应同一请求",
+        "observed": "仅submit登记事务核对envelope_json/evidence；真实admission按requestId取proposal，无完整当前Envelope与登记值比较",
+        "consequence": "登记提交而尚无回执的竞争/中断窗口，可直接/actions换expectedSnapshot/evidence等字段却消费原投影；既有receipt digest无法约束首次执行",
+        "minimal_resolution": "admission事务内、消耗/效果前对已登记投影核对完整Envelope语义全等及唯一evidence/原JSON摘要；A19无投影拒绝，A18无投影保留旧功能；保留原失败回执事务",
+        "evidence": "已读取submit/proposal、原admission完整流程及当前定向位置；静态推导，未运行竞争反例"
+      },
+      {
+        "id": "R028-02",
+        "severity": "P1",
+        "dimension": "Correctness/Authorization/Compatibility",
+        "file": "src/main/java/me/asu/aidev/authority/AuthorityActions.java",
+        "line": 176,
+        "related": ["AuthorityGrantService.matches:116-118", "WorkflowQuestionService.blocked:181-184", "WorkflowPlanService.reviewRecovery:130-141", "WorkflowPlanService.steps", "WorkflowTaskPosition.parse"],
+        "requirement": "工作/审查轮次和现行槽沿lineage，CONTINUED只保留历史，旧成果问题和恢复仍可用",
+        "observed": "原始任务集合包含源和全部resume；rounds直接count解析后的work行，终态门禁又把源CONTINUED当未结束",
+        "consequence": "同一业务轮两次提问可满足minimumRounds=3授权条件；最终续行真正完成后仍阻塞旧成果回答和审查恢复",
+        "minimal_resolution": "当前状态使用统一有效lineage槽并去重，权限轮次按真实业务round去重，保留全部历史及最终后继状态；不得伪COMPLETED或盲忽略CONTINUED",
+        "evidence": "解析器改动、raw steps/findBySubject、权限snapshot/matches及两个终态门禁的实际源码，未运行反例"
+      },
+      {
+        "id": "R028-03",
+        "severity": "P2",
+        "dimension": "Correctness/Authorization/Spec",
+        "file": "src/main/java/me/asu/aidev/authority/AuthorityHttpConfiguration.java",
+        "line": 63,
+        "related": ["FormalQuestions.human/humanList/humanReply/progress", "WebConsoleSecurityService.currentDelegationAuthority", "WebConsoleRole.canOperate/canApprove"],
+        "requirement": "保留当前动作角色；AUTHORIZATION由当前审批角色办理",
+        "observed": "所有questions POST先requireOperator，预算回答再canApprove；APPROVER与OPERATOR权限互斥，读取也只允许A19操作角色",
+        "consequence": "有审批权限的APPROVER无法从Console读取/批准具体申请，只有ADMIN同时通过两层",
+        "minimal_resolution": "按只读、专业回答、授权审批、执行控制分别校验；审批者可读授权问题并以正式kind校验回答角色，保留owner/CSRF及当前角色复验，不放宽执行控制",
+        "evidence": "拦截器、正式服务和实际role enum，未运行HTTP反例"
+      }
+    ],
+    "coverage": ["完整53路径差异及附近认证/事务/状态调用链", "所有1.1-5.1工作项和AC05/06/07", "双Python后端broker提问/中断/关闭/yield", "本机checkpoint capability/保留/取回/lineage", "秘书原投影/A19/A18/旧回执事务", "Telegram单poller/持久收件/offset/关联/UNKNOWN", "取消心跳/停止确认/旧流程兼容", "V14/UI/spec/部署与证据限制"],
+    "integration_note": "FD-026接入图临时任务时窄公开或提取同一个可信continueExisting端口，不复制续行事务；未新增设计Gate",
+    "commands_run": ["aiw fd show/claim", "git status/rev-parse/diff静态读取", "Get-Content/rg完整差异及具体问题的定向相邻证据", "报告写入后单次静态MD/JSON/FD/git diff核对", "aiw fd emit changes-requested"],
+    "discovery_limit_note": "三个主要发现批次后仅为具体信封/lineage/角色阻断定向补证；一次空rg文件列表扩大只读输出并截断，停止后改用精确路径，不以截断结果充当完整证据",
+    "worker_reported_compile": "307e5bc于2026-10-23T08:38:41+09:00完成272 Java/13 Python/2 JS离线编译或语法编译；Reviewer未重跑",
+    "not_run": ["tests/compile/project commands", "SDK/models/AppServer/services/HTTP/browser", "DB/migrations/private-store/Telegram/checkpoint/sandbox/cgroup", "concurrency/crash/cancellation/recovery/network", "additional agents"],
+    "runtime_certified": false,
+    "implementation_modified": false,
+    "human_decision_required": false,
+    "blocker_feedback": "docs/features/reports/FD-028-blocker-review-20261023-08211700-r1.md",
+    "remaining_risks": ["三项实现阻断待修复", "双后端/渠道/持久化/隔离/停止/并发恢复未运行验证", "实际预算、凭证、本机持久对象库及部署单bot前置需运行环境配置"],
+    "recorded_at": "2026-10-23T08:44:53+09:00"
+  }
+}

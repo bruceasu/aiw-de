@@ -42,15 +42,18 @@ public class AuthorityAdmission {
         var plan = plans.get(rule.targetId());
         var tasks = plans.steps(plan.id()).stream().filter(t -> WorkflowTaskPosition.parse(plan,t.id())
                 .filter(p -> p.step() == rule.step()).isPresent()).toList();
+        var effective=plans.effectiveSteps(plan.id()).stream().filter(t->WorkflowTaskPosition.parse(plan,t.id()).filter(p->p.step()==rule.step()).isPresent()).toList();
         return switch (rule.action()) {
+            // Cumulative creation history survives a cancelled, unstarted continuation.
             case A01 -> tasks.stream().filter(t -> !t.skillRef().equals("workflow-stage-reviewer"))
-                    .filter(t -> t.state() != TaskState.CANCELLED || jdbc.queryForObject("SELECT attempt_no FROM work_task WHERE id=?",Long.class,t.id().value()) > 0).count();
+                    .filter(t -> t.state() != TaskState.CANCELLED || jdbc.queryForObject("SELECT attempt_no FROM work_task WHERE id=?",Long.class,t.id().value()) > 0)
+                    .map(t->WorkflowTaskPosition.parse(plan,t.id()).orElseThrow().round()).distinct().count();
             case A03 -> tasks.stream().mapToLong(t -> {
                 Number attempts = jdbc.queryForObject("SELECT attempt_no FROM work_task WHERE id=?", Number.class, t.id().value());
                 return attempts == null ? 0 : Math.max(0, attempts.longValue()-1);
             }).sum();
-            case A04 -> Math.max(0, tasks.stream().filter(t -> t.skillRef().equals("workflow-stage-reviewer")).count()
-                    - tasks.stream().filter(t -> !t.skillRef().equals("workflow-stage-reviewer")).count());
+            case A04 -> Math.max(0, effective.stream().filter(t -> t.skillRef().equals("workflow-stage-reviewer")).count()
+                    - effective.stream().filter(t -> !t.skillRef().equals("workflow-stage-reviewer")).count());
             default -> 0;
         };
     }

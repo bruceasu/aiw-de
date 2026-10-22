@@ -8,7 +8,7 @@ public record ActionScope(Action action,String targetId,Integer step,String effe
                           int minimumRounds,long maximumUses,Map<String,String> parameters) {
     public enum Action {
         A01,A02,A03,A04,A05,A06,A07,A08,A09,A10,A11_APPROVE,A11_REJECT,
-        A12_CREATE,A12_EXECUTE,A13,A14,A15,A16,A17_SCHEDULE,A17_UNDO,A18_BUDGET
+        A12_CREATE,A12_EXECUTE,A13,A14,A15,A16,A17_SCHEDULE,A17_UNDO,A18_BUDGET,A19_ANSWER
     }
     public ActionScope {
         if(action==null || targetId==null || targetId.isBlank() || targetId.length()>128 || !targetId.equals(targetId.strip()))

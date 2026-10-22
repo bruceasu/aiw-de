@@ -39,3 +39,7 @@ The current engine SHALL use only platform authority tables and public business 
 ## Validation limit
 
 Compile-only and static review are source evidence, not a runtime concurrency, authentication, database migration or release result. Actual migration/cutover and runtime validation require separate authorization.
+
+### Ordinary question answers
+
+A19_ANSWER SHALL be limited to PROFESSIONAL answers on the exact owner and plan. The selected raw projection SHALL be staged without business effect, bound to the current platform and personal process identity, and consumed inside existing action admission with the exact evidence digest and request receipt. Execution pause SHALL allow answer facts; delegation disablement, revocation, restrictions, takeover and authority-target pause SHALL still reject delegated decisions. Continuation SHALL separately check current control, budget, fixed input and confirmed quiescence. Authorization questions SHALL use the specific A18_BUDGET scope and one ledger decision ID, never A19.
