@@ -1,0 +1,22 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-025",
+  "source_event": "FD-025-000002-design-requested",
+  "human_report": "FD-025-design-review-20261022-08211700.md",
+  "data": {
+    "candidate_revision": 2,
+    "recommendation": "changes-needed",
+    "findings": [
+      {
+        "id": "D025-01",
+        "severity": "P1",
+        "location": "docs/features/FD-025/FD-025_AI_DEV_MANAGER_AI.md: Options and decision; 单一所有者与接合点; 工作项 1.1",
+        "reason": "整 FD 依赖含 026/028 双向接合以及 029 对尚未交付消费者的要求，可能形成交付环。当前是候选设计的就绪阻塞，不是已实现缺陷。",
+        "minimal_resolution": "固定 029→027→028→026→025 的版本化服务依赖：029 基于既有任务/Runtime 独立落实实际安全边界；后续 FD 各自拥有新增消费，028 先以既有 plan/task/attempt 锚定问题，026 再提供图执行扩展，025 最终装配。逐项写明生产者、消费者、版本及接入所有者。"
+      }
+    ],
+    "human_gates": ["预算计量和未配置行为", "后端及工具/资源政策", "最小私人数据投影"],
+    "evidence_limits": ["本轮读取的五份 Revision 2 候选及主机消环提案", "批准 Issue 的目标片段和相关本地静态搜索", "未覆盖读取后主机的具体修订", "未运行测试、编译、服务、模型、网络或数据库", "设计意见不是实现 verification-passed"]
+  }
+}

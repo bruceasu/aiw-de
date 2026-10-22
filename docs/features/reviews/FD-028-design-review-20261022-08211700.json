@@ -1,0 +1,29 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-028",
+  "source_event": "FD-028-000002-design-requested",
+  "human_report": "FD-028-design-review-20261022-08211700.md",
+  "data": {
+    "candidate_revision": 2,
+    "recommendation": "changes-needed",
+    "findings": [
+      {
+        "id": "D028-01",
+        "severity": "P1",
+        "location": "docs/features/FD-028/FD-028_FEATURE.md: 问题与继续执行; 工作项 1.1/2.2",
+        "reason": "安全 yield 已列工程前置，但运行、静止确认、释放 Lease 和继续任务的原子状态迁移尚未固定。",
+        "minimal_resolution": "持久 YieldIntent 固定 task/attempt/Lease/问题/checkpoint；027 提交静止确认后由 execution 所有者 CAS 等待状态并释放 Lease，不能成功完成；早到回答先存，安全 yield 且控制允许后创建唯一继续任务；无确认 UNKNOWN，明确迟到完成/重复 ack/取消竞态。"
+      },
+      {
+        "id": "D028-02",
+        "severity": "P1",
+        "location": "docs/features/FD-028/FD-028_FEATURE.md: 问题与继续执行; 三渠道与身份; 工作项 1.3/3.3/3.4",
+        "reason": "人类优先与冲突拒绝的应用顺序、Telegram 解绑后旧消息失效规则尚未成为封闭合同。",
+        "minimal_resolution": "固定正式收件箱、OPEN→ANSWERED CAS、唯一 APPLIED 消费回执和生效前人类/代理优先规则；token 绑定 question/version、owner、user/chat、绑定 generation 与到期，解绑递增 generation 拒绝旧 token/排队消息；重复和冲突有稳定回执。"
+      }
+    ],
+    "human_gates": ["首期私人数据最小投影"],
+    "evidence_limits": ["本轮读取的 Revision 2 候选与 Issue 目标片段", "问题、Telegram 和运行协议本地静态搜索", "建议状态名称待对齐正式 execution 合同", "未审读取后主机修订", "未访问 Telegram、私库、模型、网络或数据库，未运行测试/编译/服务/进程", "不是实现 verification-passed"]
+  }
+}

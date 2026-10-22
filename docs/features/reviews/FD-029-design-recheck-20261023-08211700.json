@@ -1,0 +1,39 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-029",
+  "source_event": "FD-029-000002-design-requested",
+  "human_report": "FD-029-design-recheck-20261023-08211700.md",
+  "data": {
+    "review_type": "targeted-recheck",
+    "previous_report": "FD-029-design-review-20261022-08211700.md",
+    "recommendation": "ready",
+    "findings": [
+      {
+        "id": "D029-01",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-029/FD-029_FEATURE.md: D029-01; 双模型后端的工具路径与兼容性; 工作项2.5.1～2.5.3",
+        "resolution": "固定beginOperation线性化、真实broker、文件/Git保护、独立command/exec命名Profile、敏感环境分离和完整cgroup静止确认；Codex原生旁路关闭并按有效配置/能力准备，不确认就阻塞，不以版本锁定替代适配。PlanExecutionPolicy/AuthorizedTaskContext固定人工政策和来源授权，普通Worker以Task/Attempt/Lease证明所有权，owner来自正式上下文，权限取交集，人工方法与秘书ActionScope保持独立。"
+      },
+      {
+        "id": "D029-02",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-029/FD-029_FEATURE.md: 已确认的计量与未配置行为; D029-02：账本、挂起及故障窗口",
+        "resolution": "用户政策A与准入阈值已确定；单位、意图/预留事务、唯一结算、UNKNOWN保留暴露、故障窗口及单调用量已固定，实际数值由配置提供；安全挂起和CONTINUED唯一lineage区分停止与成功成果。"
+      },
+      {
+        "id": "D029-03",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-029/FD-029_FEATURE.md: 工作项5.1/5.2",
+        "resolution": "以现有任务/Runtime实际消费独立交付；后续FD拥有新增接入，无下游反向前置，AC09～11保留。"
+      }
+    ],
+    "remaining_findings": [],
+    "human_gates": "预算A/阈值、双后端、工具资源及UNKNOWN政策已由用户解决；具体运行配置仍必需",
+    "runtime_prerequisites": ["可信执行器及有效命名权限Profile", "Linux/WSL预委托cgroup及完整进程收尾能力", "实际授权资源根/工具链/认证home/预算值；无配置先等待"],
+    "evidence_limits": ["只复查D029-01/02/03及必要接合，不是完整重审", "本地已有schema字段是协议证据，不是策略安全或运行通过证据", "未联网或重新导出schema，未执行沙箱/模型/项目命令/测试/编译/服务/数据库", "未改FD、源码或状态；设计ready不是实现verification-passed或部署认证"]
+  }
+}

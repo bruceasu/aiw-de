@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-028",
+  "source_event": "FD-028-000002-design-requested",
+  "human_report": "FD-028-design-recheck-20261023-08211700.md",
+  "data": {
+    "review_type": "targeted-recheck",
+    "previous_report": "FD-028-design-review-20261022-08211700.md",
+    "recommendation": "ready",
+    "findings": [
+      {
+        "id": "D028-01",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-028/FD-028_FEATURE.md: D028-01：安全等待及唯一继续; FD-029共享安全挂起/继续",
+        "resolution": "精确yield意图/真实静止ack/Lease释放/Attempt.YIELDED/早答暂存已固定；本轮补充继续事务原子将源任务CONTINUED并建立唯一successor、步骤与输出槽绑定及APPLIED，统一lineage仅接受最终真实成果，拒绝环、分叉和竞争重复创建。"
+      },
+      {
+        "id": "D028-02",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-028/FD-028_FEATURE.md: D028-02：回答及Telegram世代",
+        "resolution": "回答CAS/answerRevision/生效前显式人类优先与唯一APPLIED已固定；token绑定owner/user/chat/question/version/世代/到期，解绑递增世代、提交复验，普通聊天不授予权限。"
+      }
+    ],
+    "remaining_findings": [],
+    "human_gates": "用户已确认最小私人数据投影，不沿用旧未答Gate",
+    "evidence_limits": ["只定向复查D028-01/02及必要接合，包含本轮实际CONTINUED补丁", "未重做完整审查，未改FD、源码或状态", "未访问Telegram/私库/模型/网络/数据库，未运行测试/编译/进程/服务", "设计ready不证明停止确认/并发/跨渠道行为运行通过，不是verification-passed"]
+  }
+}

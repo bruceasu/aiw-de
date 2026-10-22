@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-026",
+  "source_event": "FD-026-000002-design-requested",
+  "human_report": "FD-026-design-recheck-20261023-08211700.md",
+  "data": {
+    "review_type": "targeted-recheck",
+    "previous_report": "FD-026-design-review-20261022-08211700.md",
+    "recommendation": "ready",
+    "findings": [
+      {
+        "id": "D026-01",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-026/FD-026_AI.md: D026-01：确定的作用域与汇合算法",
+        "resolution": "region/activation/iteration、DAG选择传播、必要输出成员、替代成果、局部循环及合法goto规则已明确，附并行循环示例；消费统一续行lineage与逻辑输出槽。"
+      },
+      {
+        "id": "D026-02",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-026/FD-026_AI.md: D026-02：事务和控制顺序",
+        "resolution": "目标准入锁与版本/世代门禁、来源消费及后继事务、outbox、claim/pause线性化、APPLIED唯一结果、迟到事实及精确Lease取消均已固定。"
+      }
+    ],
+    "remaining_findings": [],
+    "human_gates": "预算政策A和准入阈值语义已由用户解决",
+    "evidence_limits": ["仅定向复查D026-01/02及必要接合", "未重审实现或改FD/源码/状态", "未运行测试、编译、模型、Worker、服务、网络或数据库", "设计ready不证明算法/并发/恢复已运行通过，也不是verification-passed"]
+  }
+}

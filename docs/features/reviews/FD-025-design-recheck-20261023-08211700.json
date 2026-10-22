@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-025",
+  "source_event": "FD-025-000002-design-requested",
+  "human_report": "FD-025-design-recheck-20261023-08211700.md",
+  "data": {
+    "review_type": "targeted-recheck",
+    "previous_report": "FD-025-design-review-20261022-08211700.md",
+    "recommendation": "ready",
+    "findings": [
+      {
+        "id": "D025-01",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-025/FD-025_AI_DEV_MANAGER_AI.md: Options and decision; 单一所有者与接合点",
+        "resolution": "交付顺序固定为029→027→028→026→025；四份v1合同明确生产者、消费者及新增接入所有者，既有任务入口使029/027/028可独立交付，无未实现下游反向前置。"
+      }
+    ],
+    "remaining_findings": [],
+    "human_gates": "本轮用户答复已解决原预算/后端/最小投影政策问题；实际运行配置仍须提供",
+    "evidence_limits": ["只复查D025-01及必要跨FD接合，不是完整重审", "依据当前候选FD和主机转交的真实用户答复", "未改FD、源码或状态；未运行测试、编译、服务、网络或数据库", "ready是设计范围结论，不是实现verification-passed或部署认证"]
+  }
+}

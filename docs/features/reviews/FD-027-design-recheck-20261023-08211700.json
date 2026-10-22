@@ -1,0 +1,31 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-027",
+  "source_event": "FD-027-000002-design-requested",
+  "human_report": "FD-027-design-recheck-20261023-08211700.md",
+  "data": {
+    "review_type": "targeted-recheck",
+    "previous_report": "FD-027-design-review-20261022-08211700.md",
+    "recommendation": "ready",
+    "findings": [
+      {
+        "id": "D027-01",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-027/FD-027_WORKER.md: D027-01：双后端调用链; FD-029后端执行边界",
+        "resolution": "双后端共用受控broker和正式许可/回执，029固定命名Profile、原生旁路限制、独立命令隔离及完整静止确认；按能力而非版本号适配，未配置部署准备阻塞但不移出双后端范围。"
+      },
+      {
+        "id": "D027-02",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-027/FD-027_WORKER.md: D027-02：版本化准备与领取合同",
+        "resolution": "固定配置/能力/准备DTO及错误码，intent/version唯一，READY CAS和建任务同事务，claim固定能力、执行复验摘要，接入安全yield和固定配置继续。"
+      }
+    ],
+    "remaining_findings": [],
+    "human_gates": "双模型后端与工具资源政策已由用户解决；实际认证/资源配置是运行前置",
+    "evidence_limits": ["只定向复查原两项与必要029/028接合", "本地已有schema仅证明字段存在，不证明有效策略或运行通过", "未联网或新导出schema，未运行模型/命令/测试/编译/服务/数据库", "未改FD、源码或状态；不是实现verification-passed"]
+  }
+}
