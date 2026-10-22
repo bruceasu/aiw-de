@@ -80,7 +80,7 @@ execution 原语由 FD-029 拥有：YieldIntent 绑定 opId、task/attempt/Lease
 
 Telegram token 为随机不可猜短期关联，绑定 owner/userId/privateChatId/questionId/requestVersion/bindingGeneration/到期，服务端保存摘要。解绑/重绑原子递增 bindingGeneration，使旧 token、待投递和排队消息失效；提交回答时重查当前绑定及权限。普通文本不携带有效单问题关联时只用于聊天，不能成为授权决定。
 
-独立设计反馈：`../reviews/FD-028-design-review-20261022-08211700.md` 的 D028-01/02 已补精确状态与世代合同，待有界独立复查；原报告的未答人工 Gate 已由当前会话用户实际回答解决。
+独立设计反馈：`reviews/FD-028-design-review-20261022-08211700.md` 的 D028-01/02 已补精确状态与世代合同，待有界独立复查；原报告的未答人工 Gate 已由当前会话用户实际回答解决。
 
 ## Work items
 
@@ -94,7 +94,7 @@ Telegram token 为随机不可猜短期关联，绑定 owner/userId/privateChatI
 
 相比将回答正文加入授权参数、将 checkpoint 冒充完成成果、或各渠道独立维护状态，上述接口保留既有权限等式、真实执行历史及单一业务决定。新增状态、表和路由不迁移旧数据。上述为工程设计，仍需静态独立核对和实现；未运行跨进程或渠道验收。
 
-补充设计反馈 [I028-01～04](../reviews/FD-028-interface-design-20261023-08211700.md) 已采纳为以下实施约束：
+补充设计反馈 [I028-01～04](reviews/FD-028-interface-design-20261023-08211700.md) 已采纳为以下实施约束：
 
 1. broker 首先关闭模型工具准入并排空已接纳调用，随后仅由可信适配器在已有 Git 权限下冻结最终 checkpoint，登记问题及 yield；模型和全部子进程确认静止后 ack。无更改复用原基线。checkpoint 固定源 task/attempt/Lease、仓库、提交、内容摘要及登记操作，保留对象库/工作区。首期取回限定本机受控持久 Git 对象库：登记主机与规范仓库路径摘要对应的 storage capability，续行只可追加该精确能力；另一个 Worker 或重启进程须使用同一对象库，经精确 Lease 取回已登记 checkpoint，再核对真实提交。不同物理对象库不兼容，不自动 fetch、上传或下载。
 2. LEGACY_PLAN_TASK 精确定义为现有受控任务，封闭支持 configured-plan 与 flexible-plan。共同验证实际 execution policy/context/task/Attempt/配置；前者不要求旧 WorkflowPlan，后者额外验证旧计划与逻辑槽。图来源只由注册 resolver 接受。
@@ -150,27 +150,33 @@ Telegram 解绑、消息重放、两个渠道不同答案及重启重投都必�
 
 首轮 Worker 交接记录（历史）：实施工作项全部完成，最终离线编译和实施双份证据已齐备，当时待独立 Reviewer、受管本地交付和归档。未启用真实代理、上传私人数据或运行数据库。当前独立结论见下方第 2 轮复核。
 
-独立实现审查第 1 / 3 轮：**changes-requested**。独立 Session `fd028-review-20261023-08211700-r1` 领取 `FD-028-000005-implementation-ready`，比较 `1b7e964..e1f9d14`（源实现 `307e5bc`），发现 R028-01/P1：实际 admission 未核对已登记原投影的完整信封；R028-02/P1：旧轮次授权/终态消费者未归并 lineage，resume 可膨胀 minimumRounds 且 CONTINUED 阻塞旧成果问答/恢复；R028-03/P2：Console 授权问题叠加操作与审批角色，普通 APPROVER 被拒。详见 [独立审查](../reviews/FD-028-review-20261023-08211700-r1.md) 及同名 JSON、[阻断反馈](../reports/FD-028-blocker-review-20261023-08211700-r1.md) 及同名 JSON。以上“全部完成/待审”是 Worker 交接时记录，不代表当前已通过；本轮后失败累计 1，上限 3 不重置。Reviewer 只作静态检查，未运行测试、编译、模型/后端、项目、服务、数据库/迁移、Telegram、沙箱、并发/恢复或网络，未修改实现、提交、合并或归档。三项修复前不得整体通过或本地交付。
+独立实现审查第 1 / 3 轮：**changes-requested**。独立 Session `fd028-review-20261023-08211700-r1` 领取 `FD-028-000005-implementation-ready`，比较 `1b7e964..e1f9d14`（源实现 `307e5bc`），发现 R028-01/P1：实际 admission 未核对已登记原投影的完整信封；R028-02/P1：旧轮次授权/终态消费者未归并 lineage，resume 可膨胀 minimumRounds 且 CONTINUED 阻塞旧成果问答/恢复；R028-03/P2：Console 授权问题叠加操作与审批角色，普通 APPROVER 被拒。详见 [独立审查](reviews/FD-028-review-20261023-08211700-r1.md) 及同名 JSON、[阻断反馈](reports/FD-028-blocker-review-20261023-08211700-r1.md) 及同名 JSON。以上“全部完成/待审”是 Worker 交接时记录，不代表当前已通过；本轮后失败累计 1，上限 3 不重置。Reviewer 只作静态检查，未运行测试、编译、模型/后端、项目、服务、数据库/迁移、Telegram、沙箱、并发/恢复或网络，未修改实现、提交、合并或归档。三项修复前不得整体通过或本地交付。
 
-独立修复复核第 2 / 3 轮：**verification-passed（静态证据范围）**。新独立 Session `fd028-review-20261023-08211700-r2` 领取 `FD-028-000007-implementation-ready`，复核 `e1f9d14..8fc159b`（父基线 `1b7e964`，修复源 `f62d392`）及直接影响，确认 R028-01/02/03 均 resolved，未发现新增阻断。详见 [第 2 轮独立复核](../reviews/FD-028-review-20261023-08211700-r2.md) 及同名 JSON；原 blocker 双文件已保留历史并标为 resolved。原失败累计 1 次，上限 3 不重置；旧段落的待审/待编译与首轮阻断为阶段历史，以本结论及真实 CLI 回执为当前状态。待 PM 本地交付，Reviewer 不合并或归档。Reviewer 未运行测试、编译、项目、后端/模型、服务/HTTP、数据库/迁移、Telegram、checkpoint、沙箱、并发/崩溃/停止恢复或网络；运行行为及部署前置仍未验证，没有修改实现或提交 Git。
+独立修复复核第 2 / 3 轮：**verification-passed（静态证据范围）**。新独立 Session `fd028-review-20261023-08211700-r2` 领取 `FD-028-000007-implementation-ready`，复核 `e1f9d14..8fc159b`（父基线 `1b7e964`，修复源 `f62d392`）及直接影响，确认 R028-01/02/03 均 resolved，未发现新增阻断。详见 [第 2 轮独立复核](reviews/FD-028-review-20261023-08211700-r2.md) 及同名 JSON；原 blocker 双文件已保留历史并标为 resolved。原失败累计 1 次，上限 3 不重置；旧段落的待审/待编译与首轮阻断为阶段历史，以本结论及真实 CLI 回执为当前状态。待 PM 本地交付，Reviewer 不合并或归档。Reviewer 未运行测试、编译、项目、后端/模型、服务/HTTP、数据库/迁移、Telegram、checkpoint、沙箱、并发/崩溃/停止恢复或网络；运行行为及部署前置仍未验证，没有修改实现或提交 Git。
 
 ## 设计就绪记录（2026-10-23）
 
-已取得独立定向复查 [FD-028 design recheck](../reviews/FD-028-design-recheck-20261023-08211700.md) 及同名 JSON；本轮原 findings 全部 resolved，建议 ready。已确认的人类政策及工程合同作为当前设计，本文此前“候选/待复查”的阶段描述以本节为准；尚无实现通过或运行认证。本 FD 当前阶段由 CLI 状态与真实交接记录确定。
+已取得独立定向复查 [FD-028 design recheck](reviews/FD-028-design-recheck-20261023-08211700.md) 及同名 JSON；本轮原 findings 全部 resolved，建议 ready。已确认的人类政策及工程合同作为当前设计，本文此前“候选/待复查”的阶段描述以本节为准；尚无实现通过或运行认证。本 FD 当前阶段由 CLI 状态与真实交接记录确定。
 
 ## Sources
 
 - Issue: ISSUE-00012
-- [批准的需求](../../issues/ISSUE-00012/issue-plan.md)；[父 FD](../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
+- [批准的需求](../../../issues/ISSUE-00012/issue-plan.md)；[父 FD](../../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
 - `workers/personal-secretary/README.md`、`platform_client.py`；`workflow/application/WorkflowQuestionService.java`、`approval/telegram/TelegramApprovalAdapter.java`；`openspec/specs/secretary/spec.md`、`delegated-decisions/spec.md`。
 - 设计来源事件：`FD-028-000002-design-requested`；Planner 会话：`fd025-029-host-20261022-234846-08211700`。
 
 ## 当前实施记录（2026-10-23）
 
-正式问题、回答历史、唯一续行、原投影授权、三渠道和真实停止显示已落实于 `questions/`、Python broker 及个人秘书。合同与部署前置见 [FORMAL-QUESTIONS](../../FORMAL-QUESTIONS.md)。首轮编译于 08:37 JST 通过（Java 272 源文件、Python 12 文件、两份 JS）；之后补上 QUESTION 能力协商及 App Server 中断 schema 校验，需最终重新编译。新增接口设计反馈 I028-01～04 的修正已写入上文；实现接合另交 Reviewer，不将静态检查等同运行认证。
+正式问题、回答历史、唯一续行、原投影授权、三渠道和真实停止显示已落实于 `questions/`、Python broker 及个人秘书。合同与部署前置见 [FORMAL-QUESTIONS](../../../FORMAL-QUESTIONS.md)。首轮编译于 08:37 JST 通过（Java 272 源文件、Python 12 文件、两份 JS）；之后补上 QUESTION 能力协商及 App Server 中断 schema 校验，需最终重新编译。新增接口设计反馈 I028-01～04 的修正已写入上文；实现接合另交 Reviewer，不将静态检查等同运行认证。
 
 ## 第 1 轮审查修复
 
-修复源 `f62d392` 于 08:50:12 JST 离线 Java 272 源码及变更 JS 语法编译通过；详见 [第 2 份实施报告](../reports/FD-028-implementation-20261023-08211700-r2.md) 及同名 JSON。原失败 1/3 保留，等待独立复核。
+修复源 `f62d392` 于 08:50:12 JST 离线 Java 272 源码及变更 JS 语法编译通过；详见 [第 2 份实施报告](reports/FD-028-implementation-20261023-08211700-r2.md) 及同名 JSON。原失败 1/3 保留，等待独立复核。
 
 已领取 `FD-028-000006-changes-requested`（本周期失败 1/3）。R028-01：在 admission 自身事务读取已登记投影，核对完整原信封及唯一 evidence/hash，再允许用量或业务效果；A19 无投影拒绝，独立 A18 保留。R028-02：共享 TaskLineage.effective 投影供旧成果问答、reviewRecovery 和权限快照使用，业务 round 去重；A01 累计创建历史及 A03 实际技术重试消耗不因续行或取消而清零。R028-03：owned 读取、普通问答/控制和具体额度审批分别按当前动作角色校验；APPROVER 可读/批申请和绑定自身私聊，不取得执行控制。UI 同步隐藏/禁用不属于当前角色的动作。待修复源的离线编译和独立复核，不声称原 findings 已获通过。
+
+**Completed:** 2026-10-22
+
+## 本地交付与完成归档
+
+真实独立通过事件为 `FD-028-000008-verification-passed`，三项 R028 finding 全部 resolved，本周期一次失败历史保留。`aiw git wt local-merge FD-028` 已将源 `a017a9b` squash 到 develop 的 `b27d23a`，并清理受管工作区和分支，保留回执。`aiw fd close FD-028 Complete` 已完成本归档。此前实施/审查待办为历史记录，以本节及真实 CLI 事件为准；未运行的跨渠道、数据库及真实后端检查仍未运行。
