@@ -149,3 +149,5 @@ AG 边界：配置优先复用（2.1）；声明式内容不能增加工具（2.
 - [批准的需求](../../issues/ISSUE-00011/issue-plan.md)；[父 FD](../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
 - `workers/process-python/README.md`、`agent_runtime.py`、`process_worker.py`、`process_profiles.py`；`workers/WORKER_RUNTIME_CONTRACT.md`。
 - 设计来源事件：`FD-027-000002-design-requested`；Planner 会话：`fd025-029-host-20261022-234846-08211700`。
+
+**Completed:** 2026-10-22
