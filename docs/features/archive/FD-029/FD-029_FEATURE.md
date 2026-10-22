@@ -207,3 +207,5 @@ Worker 已领取 `FD-029-000005-changes-requested`，在 `a01f169` 完成两项�
 - [批准的需求](../../issues/ISSUE-00013/issue-plan.md)；[父 FD](../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
 - `execution/domain/TaskInput.java`、`authority/AuthorityBudgets.java`、`authority/ActionAdmissionService.java`、`workers/personal-secretary/README.md`；`openspec/specs/task-orchestration/spec.md`、`delegated-decisions/spec.md`、`control-plane-api/spec.md`。
 - 设计来源事件：`FD-029-000002-design-requested`；Planner 会话：`fd025-029-host-20261022-234846-08211700`。
+
+**Completed:** 2026-10-22

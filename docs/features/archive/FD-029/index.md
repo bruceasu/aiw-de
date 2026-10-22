@@ -3,5 +3,7 @@
 <!-- aiw: feature-folder-index -->
 
 - [Design: FD-029_FEATURE.md](FD-029_FEATURE.md)
+- [Reports](reports/)
+- [Reviews](reviews/)
 
 Run `aiw fd show FD-029` for current status and handoff.
