@@ -25,13 +25,13 @@ public class CoordinationService {
     public record Advance(String requestId,String planId,long expectedVersion,String specDigest,long expectedTargetGeneration,long restrictionRevision,String sourceTask,String sourceAttempt) {}
     @Transactional public void adopt(String owner,String worker,String plan,long version,String specDigest,long expires,String actor) {
         boundary.lock();boundary.requireMigrationSafeInstallation();grants.owns(owner,actor);grants.human(actor,"A05");
-        boolean ownedPublication=repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_publication_plan p JOIN authority_target t ON t.target_key=p.target_key WHERE p.plan_id=? AND t.owner_id=?",Long.class,plan,owner)>0;
+        boolean ownedPublication=repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_publication_plan p JOIN authority_target t ON t.target_key=p.target_key WHERE p.plan_id=? AND t.owner_id=?",Long.class,plan,owner)>0;
         if(expires<=System.currentTimeMillis() || plans.get(plan).version()!=version || !plans.get(plan).createdBy().equals(actor) && !ownedPublication
                 || !AuthorityRepository.hash(repo.encode(plans.get(plan).spec())).equals(specDigest)
-                || repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=?",Long.class,owner,worker)!=1)
+                || repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=?",Long.class,owner,worker)!=1)
             throw new IllegalStateException("Explicit owned clean draft, manager and confirmed spec required");
         grants.bindTarget("PLAN:"+plan,owner);manager.adopt(plan,owner,worker,expires,security.currentOperatorAuthority(actor));
-        repo.jdbc.update("INSERT INTO authority_participant VALUES(?,?,'COORDINATOR')",plan,worker);
+        repo.jdbc().update("INSERT INTO authority_participant VALUES(?,?,'COORDINATOR')",plan,worker);
         repo.audit("PLAN:"+plan,null,null,actor,"MANAGED_PLAN_ADOPTED","Exact business spec approved; no private text retained");
     }
     @Transactional public Map<String,Object> state(AuthorityBoundary.Principal principal,String plan) {
@@ -39,7 +39,7 @@ public class CoordinationService {
         var sources=new ArrayList<Map<String,Object>>();
         for(var task:plans.steps(plan)) if(task.state()==TaskState.COMPLETED) {
             var input=attempts.findCompletedInput(task.id());var report=attempts.findCompletionReport(task.id());
-            if(input.isPresent() && report.isPresent() && repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_coordination_source WHERE plan_id=? AND source_attempt=?",Long.class,plan,input.get().attemptId())==0)
+            if(input.isPresent() && report.isPresent() && repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_coordination_source WHERE plan_id=? AND source_attempt=?",Long.class,plan,input.get().attemptId())==0)
                 sources.add(Map.of("taskId",task.id().value(),"attemptId",input.get().attemptId(),"report",report.get()));
         }
         boolean active=plans.steps(plan).stream().anyMatch(task->!Set.of(TaskState.COMPLETED,TaskState.FAILED,TaskState.CANCELLED).contains(task.state()));
@@ -57,19 +57,19 @@ public class CoordinationService {
             if(!existing.get().actionDigest().equals(digest)) throw new IllegalStateException("REQUEST_DIGEST_CONFLICT");
             return receipts.receipt(principal,input.requestId());
         }
-        var row=repo.jdbc.queryForMap("SELECT * FROM authority_managed_plan WHERE plan_id=?",input.planId());
+        var row=repo.jdbc().queryForMap("SELECT * FROM authority_managed_plan WHERE plan_id=?",input.planId());
         if(!Objects.equals(row.get("owner_id"),principal.owner()) || !Objects.equals(row.get("worker_id"),principal.worker())
                 || AuthorityRepository.flag(row.get("paused")) || !Objects.equals(row.get("authority"),security.currentOperatorAuthority(repo.actor(principal.owner()))))
             throw new SecurityException("Current owner management authority required");
         var plan=plans.get(input.planId());
-        if(repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_task p JOIN work_task t ON t.id=p.task_id WHERE t.subject_id=? AND (p.state='UNKNOWN' OR (p.state='IN_PROGRESS' AND t.state<>'COMPLETED'))",Long.class,plan.id())>0)
+        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_task p JOIN work_task t ON t.id=p.task_id WHERE t.subject_id=? AND (p.state='UNKNOWN' OR (p.state='IN_PROGRESS' AND t.state<>'COMPLETED'))",Long.class,plan.id())>0)
             throw new IllegalStateException("Unconfirmed effects block new coordination until reconciliation");
         if(plan.version()!=input.expectedVersion() || !Objects.equals(row.get("spec_digest"),input.specDigest())
                 || !AuthorityRepository.hash(repo.encode(plan.spec())).equals(input.specDigest())
                 || manager.generation("PLAN:"+plan.id())!=input.expectedTargetGeneration()
                 || manager.restriction("PLAN:"+plan.id())!=input.restrictionRevision()) throw new IllegalStateException("PLAN_SNAPSHOT_CHANGED");
         String source=input.sourceTask()==null?"START":input.sourceAttempt();
-        if(source==null || repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_coordination_source WHERE plan_id=? AND source_attempt=?",Long.class,plan.id(),source)>0)
+        if(source==null || repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_coordination_source WHERE plan_id=? AND source_attempt=?",Long.class,plan.id(),source)>0)
             throw new IllegalStateException("Source coordination was already consumed or is ambiguous");
         if(input.sourceTask()!=null) {
             var eligible=state(principal,plan.id()).get("sources");
@@ -84,21 +84,21 @@ public class CoordinationService {
                 throw new IllegalStateException("Original completed source attempt required");
             return completion.advanceManaged(task,attempts.findCompletionReport(task.id()).orElseThrow());
         }));
-        repo.jdbc.update("INSERT INTO authority_coordination_source VALUES(?,?,?)",plan.id(),source,input.requestId());
+        repo.jdbc().update("INSERT INTO authority_coordination_source VALUES(?,?,?)",plan.id(),source,input.requestId());
         for(var task:generated) {
-            repo.jdbc.update("UPDATE authority_task SET post_version=?,request_id=? WHERE task_id=? AND started=FALSE AND request_id IS NULL",plans.get(plan.id()).version(),input.requestId(),task.value());
+            repo.jdbc().update("UPDATE authority_task SET post_version=?,request_id=? WHERE task_id=? AND started=FALSE AND request_id IS NULL",plans.get(plan.id()).version(),input.requestId(),task.value());
             if(input.sourceTask()!=null) {
-                var parents=repo.jdbc.queryForList("SELECT * FROM authority_task WHERE task_id=? AND grant_id IS NOT NULL AND grant_id<>'HUMAN'",input.sourceTask());
+                var parents=repo.jdbc().queryForList("SELECT * FROM authority_task WHERE task_id=? AND grant_id IS NOT NULL AND grant_id<>'HUMAN'",input.sourceTask());
                 if(!parents.isEmpty()) {
                     var parent=parents.getFirst();var scope=repo.get(String.valueOf(parent.get("grant_id"))).rule();
                     var child=tasks.find(task).orElseThrow();var at=me.asu.aidev.workflow.domain.WorkflowTaskPosition.parse(plan,task).orElseThrow();
                     if(at.review() && Set.of(ActionScope.Action.A01,ActionScope.Action.A12_EXECUTE).contains(scope.action()))
-                        repo.jdbc.update("UPDATE authority_task SET target_key=?,grant_id=?,grant_revision=?,worker_generation=?,enabled_boot=?,target_generation=?,restriction_revision=? WHERE task_id=? AND started=FALSE",
+                        repo.jdbc().update("UPDATE authority_task SET target_key=?,grant_id=?,grant_revision=?,worker_generation=?,enabled_boot=?,target_generation=?,restriction_revision=? WHERE task_id=? AND started=FALSE",
                                 parent.get("target_key"),parent.get("grant_id"),parent.get("grant_revision"),principal.generation(),boundary.boot(),parent.get("target_generation"),parent.get("restriction_revision"),child.id().value());
                 }
             }
         }
-        repo.jdbc.update("UPDATE authority_managed_plan SET version=? WHERE plan_id=?",plans.get(plan.id()).version(),plan.id());
+        repo.jdbc().update("UPDATE authority_managed_plan SET version=? WHERE plan_id=?",plans.get(plan.id()).version(),plan.id());
         boolean finished=false;
         if(input.sourceTask()!=null && generated.isEmpty()) {
             var task=tasks.find(new TaskId(input.sourceTask())).orElseThrow();

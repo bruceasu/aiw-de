@@ -28,7 +28,7 @@ public class AuthorityController {
     @PostMapping("/sessions") public Object session(HttpServletRequest request,@RequestBody String raw) { return grants.session(principal(request),repo.decode(raw,SessionInput.class).workerBoot()); }
     @GetMapping("/identity") public Object identity(HttpServletRequest request) {
         var actor=principal(request);actions.enabled(actor);
-        return Map.of("ownerId",actor.owner(),"workerId",actor.worker(),"generation",actor.generation(),"platformInstanceId",repo.jdbc.queryForObject("SELECT instance_id FROM authority_metadata WHERE id=1",String.class));
+        return Map.of("ownerId",actor.owner(),"workerId",actor.worker(),"generation",actor.generation(),"platformInstanceId",repo.jdbc().queryForObject("SELECT instance_id FROM authority_metadata WHERE id=1",String.class));
     }
     @PostMapping("/effects/{id}/reconcile") public Object reconcile(@PathVariable String id,@RequestBody String raw) {
         var input=repo.decode(raw,ReconcileInput.class);controls.reconcile(id,input.attempt(),input.conclusion(),input.evidenceRef(),human());return Map.of("state","RECONCILED_NO_AUTOMATIC_REPLAY");

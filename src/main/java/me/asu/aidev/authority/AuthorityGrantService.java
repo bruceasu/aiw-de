@@ -28,19 +28,19 @@ public class AuthorityGrantService {
     }
     @Transactional public String bind(String actor) {
         identityHuman(actor);boundary.lock();boundary.instance();
-        var existing=repo.jdbc.queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
+        var existing=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
         if(!existing.isEmpty()) return existing.getFirst();
-        String id="O-"+UUID.randomUUID();repo.jdbc.update("INSERT INTO authority_owner VALUES(?,?)",id,actor);return id;
+        String id="O-"+UUID.randomUUID();repo.jdbc().update("INSERT INTO authority_owner VALUES(?,?)",id,actor);return id;
     }
     @Transactional public void enroll(String owner,String worker,String key,List<String> readScope,String actor) {
         identityHuman(actor);owns(owner,actor);boundary.lock();
         if(worker==null || !worker.matches("[A-Za-z0-9_.-]{1,128}") || key==null || !key.matches("[A-Za-z0-9_-]{43,128}")
                 || readScope==null || readScope.size()>128 || readScope.stream().anyMatch(k->k==null || k.length()>1024))
             throw new IllegalArgumentException("Explicit identity, private random credential and bounded read scope required");
-        if(repo.jdbc.queryForObject("SELECT COUNT(*) FROM worker WHERE id=?",Long.class,worker)>0
-                || repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_identity WHERE worker_id=? AND owner_id<>?",Long.class,worker,owner)>0)
+        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM worker WHERE id=?",Long.class,worker)>0
+                || repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE worker_id=? AND owner_id<>?",Long.class,worker,owner)>0)
             throw new IllegalStateException("Worker identity already belongs to a different runtime or owner");
-        repo.jdbc.update("""
+        repo.jdbc().update("""
                 INSERT INTO authority_identity(worker_id,owner_id,key_hash,generation,enabled_boot,changed_by,changed_ms,read_scope)
                 VALUES(?,?,?,1,NULL,?,?,?) ON CONFLICT(worker_id) DO UPDATE SET
                 key_hash=excluded.key_hash,generation=authority_identity.generation+1,enabled_boot=NULL,
@@ -50,22 +50,22 @@ public class AuthorityGrantService {
     }
     @Transactional public void enabled(String worker,long generation,String workerBoot,boolean enabled,String actor) {
         identityHuman(actor);boundary.lock();
-        String owner=repo.jdbc.queryForObject("SELECT owner_id FROM authority_identity WHERE worker_id=?",String.class,worker);owns(owner,actor);
+        String owner=repo.jdbc().queryForObject("SELECT owner_id FROM authority_identity WHERE worker_id=?",String.class,worker);owns(owner,actor);
         if(enabled) boundary.requireMigrationSafeInstallation();
-        String currentBoot=repo.jdbc.queryForObject("SELECT worker_boot FROM authority_identity WHERE worker_id=?",String.class,worker);
+        String currentBoot=repo.jdbc().queryForObject("SELECT worker_boot FROM authority_identity WHERE worker_id=?",String.class,worker);
         if(enabled && (currentBoot==null || !Objects.equals(currentBoot,workerBoot)))
             throw new IllegalStateException("The personal process must start a disabled session before explicit human enablement");
-        if(repo.jdbc.update("UPDATE authority_identity SET enabled_boot=?,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND generation=?",
+        if(repo.jdbc().update("UPDATE authority_identity SET enabled_boot=?,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND generation=?",
                 enabled?boundary.boot():null,actor,System.currentTimeMillis(),worker,generation)!=1) throw new IllegalStateException("Identity generation changed; confirm the exact current process");
-        if(enabled) repo.jdbc.update("UPDATE authority_metadata SET human_auth_required=TRUE WHERE id=1");
+        if(enabled) repo.jdbc().update("UPDATE authority_metadata SET human_auth_required=TRUE WHERE id=1");
         repo.audit(null,null,null,actor,enabled?"PERSONAL_WORKER_ENABLED":"PERSONAL_WORKER_DISABLED",worker+"; earlier admissions invalidated");
     }
     @Transactional public Map<String,Object> session(AuthorityBoundary.Principal principal,String boot) {
         boundary.lock();
         if(boot==null || !UUID.fromString(boot).toString().equals(boot)) throw new IllegalArgumentException("Fresh canonical process UUID required");
-        String previous=repo.jdbc.queryForObject("SELECT worker_boot FROM authority_identity WHERE worker_id=?",String.class,principal.worker());
+        String previous=repo.jdbc().queryForObject("SELECT worker_boot FROM authority_identity WHERE worker_id=?",String.class,principal.worker());
         if(!boot.equals(previous)) {
-            if(repo.jdbc.update("UPDATE authority_identity SET worker_boot=?,enabled_boot=NULL,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND generation=?",
+            if(repo.jdbc().update("UPDATE authority_identity SET worker_boot=?,enabled_boot=NULL,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND generation=?",
                     boot,"personal:"+principal.worker(),System.currentTimeMillis(),principal.worker(),principal.generation())!=1)
                 throw new IllegalStateException("Personal process generation changed; reload session state");
             repo.audit(null,null,null,"personal:"+principal.worker(),"PERSONAL_SESSION_STARTED","New claimed process boot; explicit human enablement required");
@@ -77,19 +77,19 @@ public class AuthorityGrantService {
         boundary.requireMigrationSafeInstallation();
         if(!scope.effect().equals("ALLOW") || expiry<=System.currentTimeMillis())
             throw new IllegalArgumentException("Explicit minimal ALLOW scope, expiry and separate restriction controls required");
-        if(repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_identity WHERE worker_id=? AND owner_id=?",Long.class,worker,owner)!=1)
+        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE worker_id=? AND owner_id=?",Long.class,worker,owner)!=1)
             throw new SecurityException("Enrolled owner/Worker binding required");
         var adapter=actions.getObject();adapter.validate(scope);String target=adapter.key(scope);
         bindTarget(target,owner);
         String id="AG-"+UUID.randomUUID();long now=System.currentTimeMillis();
-        repo.jdbc.update("INSERT INTO authority_grant VALUES(?,?,?,1,'ENABLED',?,?,?,?,?)",id,owner,worker,repo.encode(scope),
+        repo.jdbc().update("INSERT INTO authority_grant VALUES(?,?,?,1,'ENABLED',?,?,?,?,?)",id,owner,worker,repo.encode(scope),
                 security.currentDelegationAuthority(actor,scope.action().name()),now,expiry,target);
-        repo.jdbc.update("INSERT INTO authority_budget VALUES(?,?,?,0,0) ON CONFLICT(target_key,action) DO NOTHING",target,scope.action().name(),scope.maximumUses());
+        repo.jdbc().update("INSERT INTO authority_budget VALUES(?,?,?,0,0) ON CONFLICT(target_key,action) DO NOTHING",target,scope.action().name(),scope.maximumUses());
         repo.audit(target,id,null,actor,"MINIMAL_CAPABILITY_ISSUED",scope.action().name()+"; explicit total ceiling "+scope.maximumUses());return repo.get(id);
     }
     public void bindTarget(String target,String owner) {
-        repo.jdbc.update("INSERT INTO authority_target VALUES(?,?,0,?,FALSE,0) ON CONFLICT(target_key) DO NOTHING",target,owner,System.currentTimeMillis());
-        if(!Objects.equals(owner,repo.jdbc.queryForObject("SELECT owner_id FROM authority_target WHERE target_key=?",String.class,target)))
+        repo.jdbc().update("INSERT INTO authority_target VALUES(?,?,0,?,FALSE,0) ON CONFLICT(target_key) DO NOTHING",target,owner,System.currentTimeMillis());
+        if(!Objects.equals(owner,repo.jdbc().queryForObject("SELECT owner_id FROM authority_target WHERE target_key=?",String.class,target)))
             throw new SecurityException("Target belongs to another owner");
     }
     public boolean current(AuthorityRepository.Grant grant) {
@@ -99,14 +99,14 @@ public class AuthorityGrantService {
     public boolean permitted(AuthorityRepository.Grant grant,Map<String,Object> snapshot) {
         if(!current(grant) || !targetCurrent(grant,null,null) || !matches(grant.rule(),snapshot)) return false;
         String target=actions.getObject().key(grant.rule());
-        for(String raw:repo.jdbc.queryForList("SELECT scope_json FROM authority_restriction WHERE owner_id=? AND target_key=? AND active=TRUE",String.class,grant.owner(),target)) {
+        for(String raw:repo.jdbc().queryForList("SELECT scope_json FROM authority_restriction WHERE owner_id=? AND target_key=? AND active=TRUE",String.class,grant.owner(),target)) {
             var deny=repo.decode(raw,ActionScope.class);
             if(deny.action()==grant.rule().action() && matches(deny,snapshot)) return false;
         }
         return true;
     }
     public boolean targetCurrent(AuthorityRepository.Grant grant,Long generation,Long restriction) {
-        var rows=repo.jdbc.queryForList("SELECT owner_id,paused,generation,restriction_revision FROM authority_target WHERE target_key=?",grant.targetKey());
+        var rows=repo.jdbc().queryForList("SELECT owner_id,paused,generation,restriction_revision FROM authority_target WHERE target_key=?",grant.targetKey());
         if(rows.size()!=1) return false;
         var target=rows.getFirst();
         return Objects.equals(grant.owner(),target.get("owner_id")) && !AuthorityRepository.flag(target.get("paused"))
@@ -119,7 +119,7 @@ public class AuthorityGrantService {
     }
     @Transactional public void revoke(String id,String actor) {
         boundary.lock();var grant=repo.get(id);owns(grant.owner(),actor);human(actor,grant.rule().action().name());
-        repo.jdbc.update("UPDATE authority_grant SET state='REVOKED',revision=revision+1 WHERE id=?",id);
+        repo.jdbc().update("UPDATE authority_grant SET state='REVOKED',revision=revision+1 WHERE id=?",id);
         repo.audit(grant.targetKey(),id,null,actor,"CAPABILITY_REVOKED","Past receipts and consumption retained");
     }
 }

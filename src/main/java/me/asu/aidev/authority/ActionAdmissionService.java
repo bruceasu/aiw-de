@@ -31,13 +31,13 @@ public class ActionAdmissionService {
     public void enabled(AuthorityBoundary.Principal principal) {
         grants.identityHuman(repo.actor(principal.owner()));
         if(!principal.enabled()) throw new SecurityException("Personal identity needs current human enablement");
-        if(repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=? AND generation=? AND enabled_boot=?",Long.class,
+        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=? AND generation=? AND enabled_boot=?",Long.class,
                 principal.owner(),principal.worker(),principal.generation(),boundary.boot())!=1) throw new SecurityException("Personal identity changed");
     }
     public void readable(AuthorityBoundary.Principal principal,String target) {
         enabled(principal);
-        var scope=Arrays.asList(repo.decode(repo.jdbc.queryForObject("SELECT read_scope FROM authority_identity WHERE worker_id=?",String.class,principal.worker()),String[].class));
-        if(!scope.contains(target) || repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_target WHERE target_key=? AND owner_id=?",Long.class,target,principal.owner())!=1)
+        var scope=Arrays.asList(repo.decode(repo.jdbc().queryForObject("SELECT read_scope FROM authority_identity WHERE worker_id=?",String.class,principal.worker()),String[].class));
+        if(!scope.contains(target) || repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_target WHERE target_key=? AND owner_id=?",Long.class,target,principal.owner())!=1)
             throw new SecurityException("Explicit owner/target read scope required");
     }
     public Map<String,Object> state(AuthorityBoundary.Principal principal,String grantId) {
@@ -65,20 +65,20 @@ public class ActionAdmissionService {
         });
     }
     Optional<Receipt> existing(String owner,String request) {
-        String instance=repo.jdbc.queryForObject("SELECT instance_id FROM authority_metadata WHERE id=1",String.class);
-        return repo.jdbc.query("SELECT * FROM authority_receipt WHERE instance_id=? AND owner_id=? AND request_id=?",(rs,n)->new Receipt(
+        String instance=repo.jdbc().queryForObject("SELECT instance_id FROM authority_metadata WHERE id=1",String.class);
+        return repo.jdbc().query("SELECT * FROM authority_receipt WHERE instance_id=? AND owner_id=? AND request_id=?",(rs,n)->new Receipt(
                 rs.getString("request_id"),rs.getString("digest"),rs.getString("state"),repo.decode(rs.getString("result_json"),Object.class),rs.getLong("created_ms"),rs.getLong("updated_ms")),instance,owner,request).stream().findFirst();
     }
     public Receipt receipt(AuthorityBoundary.Principal principal,String request) {
         enabled(principal);
         var receipt=existing(principal.owner(),request).orElseThrow(()->new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND,"Receipt not visible"));
-        String target=repo.jdbc.queryForObject("SELECT target_key FROM authority_receipt WHERE owner_id=? AND request_id=?",String.class,principal.owner(),request);
+        String target=repo.jdbc().queryForObject("SELECT target_key FROM authority_receipt WHERE owner_id=? AND request_id=?",String.class,principal.owner(),request);
         readable(principal,target);return receipt;
     }
     Receipt save(AuthorityBoundary.Principal principal,String request,String digest,String grant,long revision,String state,Object result) {
         long now=System.currentTimeMillis();
         String target=grant.startsWith("MANAGE:")?"PLAN:"+grant.substring(7):repo.get(grant).targetKey();
-        repo.jdbc.update("INSERT INTO authority_receipt VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",boundary.instance(),principal.owner(),request,digest,
+        repo.jdbc().update("INSERT INTO authority_receipt VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",boundary.instance(),principal.owner(),request,digest,
                 principal.worker(),grant,revision,target,state,repo.encode(result),now,now);
         return new Receipt(request,digest,state,result,now,now);
     }
@@ -102,7 +102,7 @@ public class ActionAdmissionService {
                 if(scope.action()!=input.action() || !scope.targetId().equals(input.targetId()) || !Objects.equals(scope.step(),input.step())
                         || !scope.parameters().equals(input.parameters()) || grant.revision()!=input.grantRevision())
                     throw new IllegalStateException("Action differs from the exact human-confirmed capability");
-                var row=repo.jdbc.queryForMap("SELECT * FROM authority_target WHERE target_key=?",target);
+                var row=repo.jdbc().queryForMap("SELECT * FROM authority_target WHERE target_key=?",target);
                 if(AuthorityRepository.flag(row.get("paused")) || manager.generation(target)!=input.expectedTargetGeneration()
                         || manager.restriction(target)!=input.restrictionRevision()) throw new IllegalStateException("TARGET_OR_RESTRICTION_CHANGED");
                 actions.admit(scope);var snapshot=actions.snapshot(scope);
@@ -111,27 +111,27 @@ public class ActionAdmissionService {
                 if(snapshot.get("version") instanceof Number version && (input.expectedVersion()==null || version.longValue()!=input.expectedVersion()))
                     throw new IllegalStateException("EXPECTED_VERSION_CHANGED");
                 if(Set.of(ActionScope.Action.A01,ActionScope.Action.A03,ActionScope.Action.A04,ActionScope.Action.A05,ActionScope.Action.A06,ActionScope.Action.A12_EXECUTE).contains(scope.action())
-                        && repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_task p JOIN work_task t ON t.id=p.task_id WHERE t.subject_id=? AND (p.state='UNKNOWN' OR (p.state='IN_PROGRESS' AND t.state<>'COMPLETED'))",Long.class,scope.targetId())>0)
+                        && repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_task p JOIN work_task t ON t.id=p.task_id WHERE t.subject_id=? AND (p.state='UNKNOWN' OR (p.state='IN_PROGRESS' AND t.state<>'COMPLETED'))",Long.class,scope.targetId())>0)
                     throw new IllegalStateException("Existing attempt outcome is not reconciled; no new execution admission allowed");
                 if(scope.action()==ActionScope.Action.A03 && ("CURRENT".equals(scope.parameters().get("taskId")) || !Objects.equals(input.taskId(),scope.parameters().get("taskId"))))
                     throw new IllegalArgumentException("Retry requires the exact task identity");
                 if(input.taskId()!=null) {
-                    var task=repo.jdbc.queryForMap("SELECT attempt_no,version FROM work_task WHERE id=?",input.taskId());
+                    var task=repo.jdbc().queryForMap("SELECT attempt_no,version FROM work_task WHERE id=?",input.taskId());
                     if(input.expectedTaskVersion()==null || ((Number)task.get("version")).longValue()!=input.expectedTaskVersion()
                             || input.attempt()==null || ((Number)task.get("attempt_no")).longValue()+1!=input.attempt())
                         throw new IllegalStateException("FIXED_ATTEMPT_CHANGED");
-                    if(repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_task WHERE task_id=? AND state='UNKNOWN'",Long.class,input.taskId())>0)
+                    if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_task WHERE task_id=? AND state='UNKNOWN'",Long.class,input.taskId())>0)
                         throw new IllegalStateException("UNKNOWN effects require human reconciliation, not replay");
-                    for(var permit:repo.jdbc.queryForList("SELECT * FROM authority_task WHERE task_id=? AND started=TRUE",input.taskId()))
-                        repo.jdbc.update("INSERT INTO authority_effect_history VALUES(?,?,?) ON CONFLICT(task_id,attempt) DO NOTHING",input.taskId(),permit.get("allowed_attempt"),repo.encode(permit));
+                    for(var permit:repo.jdbc().queryForList("SELECT * FROM authority_task WHERE task_id=? AND started=TRUE",input.taskId()))
+                        repo.jdbc().update("INSERT INTO authority_effect_history VALUES(?,?,?) ON CONFLICT(task_id,attempt) DO NOTHING",input.taskId(),permit.get("allowed_attempt"),repo.encode(permit));
                 }
                 budgets.consume(grant,input.requestId(),scope.action()==ActionScope.Action.A01);
                 Set<String> previousTasks=new HashSet<>();
-                if(!repo.jdbc.queryForList("SELECT id FROM flexible_workflow_plan WHERE id=?",String.class,scope.targetId()).isEmpty())
+                if(!repo.jdbc().queryForList("SELECT id FROM flexible_workflow_plan WHERE id=?",String.class,scope.targetId()).isEmpty())
                     plans.steps(scope.targetId()).forEach(t->previousTasks.add(t.id().value()));
                 Object result=actions.execute(scope,"personal:"+principal.worker(),grant.id(),grant.revision());
                 bindPermits(principal,grant,input.requestId(),previousTasks);
-                boolean admitted=repo.jdbc.queryForObject("SELECT COUNT(*) FROM authority_task p JOIN authority_target t ON t.target_key=p.target_key WHERE p.request_id=? AND t.owner_id=?",Long.class,input.requestId(),principal.owner())>0;
+                boolean admitted=repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_task p JOIN authority_target t ON t.target_key=p.target_key WHERE p.request_id=? AND t.owner_id=?",Long.class,input.requestId(),principal.owner())>0;
                 repo.audit(target,grant.id(),input.requestId(),"personal:"+principal.worker(),"ACTION_ADMITTED",scope.action().name()+"; fixed business parameters only");
                 return save(principal,input.requestId(),digest,grant.id(),grant.revision(),admitted?"ADMITTED":"APPLIED",Map.of("value",result==null?"Applied":result));
             }));
@@ -154,16 +154,16 @@ public class ActionAdmissionService {
     public void bindPermits(AuthorityBoundary.Principal principal,AuthorityRepository.Grant grant,String request,Set<String> previousTasks) {
         if(!Set.of(ActionScope.Action.A01,ActionScope.Action.A03,ActionScope.Action.A04,ActionScope.Action.A05,ActionScope.Action.A06,ActionScope.Action.A12_EXECUTE).contains(grant.rule().action())) return;
         String plan=grant.rule().targetId();
-        if(!repo.jdbc.queryForList("SELECT id FROM flexible_workflow_plan WHERE id=?",String.class,plan).isEmpty()) {
+        if(!repo.jdbc().queryForList("SELECT id FROM flexible_workflow_plan WHERE id=?",String.class,plan).isEmpty()) {
             for(var task:plans.steps(plan)) if(Set.of(TaskState.READY,TaskState.BLOCKED).contains(task.state())) {
                 if(previousTasks.contains(task.id().value()) && !(grant.rule().action()==ActionScope.Action.A03 && task.id().value().equals(grant.rule().parameters().get("taskId")))
                         && grant.rule().action()!=ActionScope.Action.A12_EXECUTE) continue;
-                long attempt=repo.jdbc.queryForObject("SELECT attempt_no+1 FROM work_task WHERE id=?",Long.class,task.id().value());
+                long attempt=repo.jdbc().queryForObject("SELECT attempt_no+1 FROM work_task WHERE id=?",Long.class,task.id().value());
                 String target=actions.key(grant.rule());
-                repo.jdbc.update("INSERT INTO authority_task(task_id,target_key,allowed_attempt,reserved,started,settled) VALUES(?,?,?,FALSE,FALSE,FALSE) ON CONFLICT(task_id) DO NOTHING",task.id().value(),target,attempt);
-                if(repo.jdbc.update("UPDATE authority_task SET target_key=?,grant_id=?,grant_revision=?,worker_generation=?,enabled_boot=?,target_generation=?,restriction_revision=?,request_id=?,post_version=? WHERE task_id=? AND started=FALSE AND (request_id IS NULL OR allowed_attempt<?)",
+                repo.jdbc().update("INSERT INTO authority_task(task_id,target_key,allowed_attempt,reserved,started,settled) VALUES(?,?,?,FALSE,FALSE,FALSE) ON CONFLICT(task_id) DO NOTHING",task.id().value(),target,attempt);
+                if(repo.jdbc().update("UPDATE authority_task SET target_key=?,grant_id=?,grant_revision=?,worker_generation=?,enabled_boot=?,target_generation=?,restriction_revision=?,request_id=?,post_version=? WHERE task_id=? AND started=FALSE AND (request_id IS NULL OR allowed_attempt<?)",
                         target,grant.id(),grant.revision(),principal.generation(),boundary.boot(),manager.generation(target),manager.restriction(target),request,plans.get(plan).version(),task.id().value(),attempt)>0)
-                    repo.jdbc.update("UPDATE authority_task SET allowed_attempt=?,state='PREPARED' WHERE task_id=?",attempt,task.id().value());
+                    repo.jdbc().update("UPDATE authority_task SET allowed_attempt=?,state='PREPARED' WHERE task_id=?",attempt,task.id().value());
             }
         }
     }

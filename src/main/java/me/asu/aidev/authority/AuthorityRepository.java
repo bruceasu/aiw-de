@@ -14,7 +14,7 @@ import org.springframework.stereotype.Repository;
 /** Contains platform facts only. No private database, text, template or policy repository. */
 @Repository
 public class AuthorityRepository {
-    public final JdbcTemplate jdbc;
+    private final JdbcTemplate jdbc;
     private final ObjectMapper json = new ObjectMapper(JsonFactory.builder()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build())
             .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
@@ -22,6 +22,8 @@ public class AuthorityRepository {
             .enable(DeserializationFeature.FAIL_ON_NUMBERS_FOR_ENUMS)
             .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT);
     public AuthorityRepository(JdbcTemplate jdbc) { this.jdbc=jdbc; }
+    // Use a method so Spring repository proxies delegate access to the initialized target.
+    public JdbcTemplate jdbc() { return jdbc; }
     public record Grant(String id,String owner,String workerId,long revision,String state,
                         ActionScope rule,String authority,long effectiveMs,long expiresMs,String targetKey) {}
     public String encode(Object value) {

@@ -19,18 +19,18 @@ public class AuthorityEffectObserver {
     public void observe() {
         transaction.executeWithoutResult(status->{
             boundary.lock();
-            for(var row:repo.jdbc.queryForList("SELECT p.*,t.state AS task_state FROM authority_task p JOIN work_task t ON t.id=p.task_id WHERE p.state='IN_PROGRESS'")) {
+            for(var row:repo.jdbc().queryForList("SELECT p.*,t.state AS task_state FROM authority_task p JOIN work_task t ON t.id=p.task_id WHERE p.state='IN_PROGRESS'")) {
                 String taskState=String.valueOf(row.get("task_state"));
                 if(taskState.equals("RUNNING") || taskState.equals("CLAIMED")) continue;
                 String result=taskState.equals("COMPLETED")?"SUCCEEDED":"UNKNOWN";
-                repo.jdbc.update("UPDATE authority_task SET state=?,settled=? WHERE task_id=? AND state='IN_PROGRESS'",result,result.equals("SUCCEEDED") && !AuthorityRepository.flag(row.get("reserved")),row.get("task_id"));
+                repo.jdbc().update("UPDATE authority_task SET state=?,settled=? WHERE task_id=? AND state='IN_PROGRESS'",result,result.equals("SUCCEEDED") && !AuthorityRepository.flag(row.get("reserved")),row.get("task_id"));
                 if(row.get("request_id")!=null && !(result.equals("SUCCEEDED") && AuthorityRepository.flag(row.get("reserved")))) {
-                    String owner=repo.jdbc.queryForObject("SELECT owner_id FROM authority_target WHERE target_key=?",String.class,row.get("target_key"));
-                    repo.jdbc.update("UPDATE authority_receipt SET state=?,updated_ms=? WHERE owner_id=? AND request_id=? AND state IN ('ADMITTED','IN_PROGRESS')",
+                    String owner=repo.jdbc().queryForObject("SELECT owner_id FROM authority_target WHERE target_key=?",String.class,row.get("target_key"));
+                    repo.jdbc().update("UPDATE authority_receipt SET state=?,updated_ms=? WHERE owner_id=? AND request_id=? AND state IN ('ADMITTED','IN_PROGRESS')",
                             result,System.currentTimeMillis(),owner,row.get("request_id"));
                 }
             }
-            for(var row:repo.jdbc.queryForList("SELECT p.*,t.subject_id,t.state AS task_state FROM authority_task p JOIN work_task t ON t.id=p.task_id WHERE p.reserved=TRUE AND p.settled=FALSE")) {
+            for(var row:repo.jdbc().queryForList("SELECT p.*,t.subject_id,t.state AS task_state FROM authority_task p JOIN work_task t ON t.id=p.task_id WHERE p.reserved=TRUE AND p.settled=FALSE")) {
                 String task=String.valueOf(row.get("task_id"));
                 if("CANCELLED".equals(row.get("task_state")) && !AuthorityRepository.flag(row.get("started"))) { budgets.settle(task,true);continue; }
                 if(!AuthorityRepository.flag(row.get("started")) || "UNKNOWN".equals(row.get("state"))) continue;
@@ -40,8 +40,8 @@ public class AuthorityEffectObserver {
                         .anyMatch(t->me.asu.aidev.workflow.domain.WorkflowTaskPosition.parse(plan,t.id()).filter(p->p.review() && p.step()==position.step() && p.round()==position.round()).isPresent());
                 if(reviewed) {
                     budgets.settle(task,false);
-                    String owner=repo.jdbc.queryForObject("SELECT owner_id FROM authority_target WHERE target_key=?",String.class,row.get("target_key"));
-                    repo.jdbc.update("UPDATE authority_receipt SET state='SUCCEEDED',updated_ms=? WHERE owner_id=? AND request_id=? AND state IN ('ADMITTED','IN_PROGRESS')",System.currentTimeMillis(),owner,row.get("request_id"));
+                    String owner=repo.jdbc().queryForObject("SELECT owner_id FROM authority_target WHERE target_key=?",String.class,row.get("target_key"));
+                    repo.jdbc().update("UPDATE authority_receipt SET state='SUCCEEDED',updated_ms=? WHERE owner_id=? AND request_id=? AND state IN ('ADMITTED','IN_PROGRESS')",System.currentTimeMillis(),owner,row.get("request_id"));
                 }
             }
         });
