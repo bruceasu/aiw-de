@@ -1,0 +1,32 @@
+id = "ISSUE-00011"
+title = "同一 Worker 按任务执行不同专业配置"
+parent_id = "ISSUE-00009"
+status = "APPROVED"
+created = "2026-10-22"
+updated = "2026-10-22"
+revision = 10
+
+[approval]
+status = "APPROVED"
+by = "user"
+at = "2026-10-22T23:41:53+09:00"
+reason = "2026-10-22 当前用户明确批准 ISSUE-00009 及其四个子 Issue，并要求分别 promote。批准当前需求范围，保留所有未决项供 FD 设计处理，不表示设计就绪或授权实现；父 FD 负责集成，子 FD 各自负责具体成果。"
+source_digest = "bc1830c121b76f6c45c94cd2326544bd4d2a1cfc67163c7ab4f6f7da309ceca5"
+
+[promotion]
+status = "NOT_STARTED"
+task_id = ""
+
+[conversation]
+session_id = ""
+
+[terminal]
+by = ""
+at = ""
+reason = ""
+
+[artifact]
+requirement-plan = "docs/issues/ISSUE-00011/issue-plan.md"
+
+[digest]
+requirement-plan = "4b851be28c57a176f57b0954bd92cf76a06dc02032d66d9f529cdc6fe7534941"

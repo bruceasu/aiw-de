@@ -1,0 +1,32 @@
+id = "ISSUE-00013"
+title = "用户得到可追溯、可恢复且符合授权的交付"
+parent_id = "ISSUE-00009"
+status = "APPROVED"
+created = "2026-10-22"
+updated = "2026-10-22"
+revision = 11
+
+[approval]
+status = "APPROVED"
+by = "user"
+at = "2026-10-22T23:41:53+09:00"
+reason = "2026-10-22 当前用户明确批准 ISSUE-00009 及其四个子 Issue，并要求分别 promote。批准当前需求范围，保留所有未决项供 FD 设计处理，不表示设计就绪或授权实现；父 FD 负责集成，子 FD 各自负责具体成果。"
+source_digest = "d8dff8007945b6d622dc60522acbb8b6c9973a95573dd8056999bc22494c3a51"
+
+[promotion]
+status = "NOT_STARTED"
+task_id = ""
+
+[conversation]
+session_id = ""
+
+[terminal]
+by = ""
+at = ""
+reason = ""
+
+[artifact]
+requirement-plan = "docs/issues/ISSUE-00013/issue-plan.md"
+
+[digest]
+requirement-plan = "c6802e298dc484a07ec98267abd0443cf8cb1de2f21bf36ff5d75594607a03a3"

@@ -1,0 +1,32 @@
+id = "ISSUE-00009"
+title = "AI Dev Manager 改进：AI 计划、动态专业配置与秘书协作"
+parent_id = ""
+status = "APPROVED"
+created = "2026-10-22"
+updated = "2026-10-22"
+revision = 14
+
+[approval]
+status = "APPROVED"
+by = "user"
+at = "2026-10-22T23:41:52+09:00"
+reason = "2026-10-22 当前用户明确批准 ISSUE-00009 及其四个子 Issue，并要求分别 promote。批准当前需求范围，保留所有未决项供 FD 设计处理，不表示设计就绪或授权实现；父 FD 负责集成，子 FD 各自负责具体成果。"
+source_digest = "46b8df95daf626b1c65b9961d43b0e095be07858edbe5bc4f78e3a2238f022f8"
+
+[promotion]
+status = "NOT_STARTED"
+task_id = ""
+
+[conversation]
+session_id = ""
+
+[terminal]
+by = ""
+at = ""
+reason = ""
+
+[artifact]
+requirement-plan = "docs/issues/ISSUE-00009/issue-plan.md"
+
+[digest]
+requirement-plan = "c87f96a7a8a954673a9ac6fbb376f73adba6ee0122d851c210370046b5e30762"
