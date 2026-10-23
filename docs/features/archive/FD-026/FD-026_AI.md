@@ -88,7 +88,7 @@ goto 指向同一计划版本内存在的节点。向后边必须声明业务 lo
 - 工程前置：固定图 DTO、作用域/汇合算法及跨并行 goto 的合法性规则，完成独立设计反馈；这些不是需要用户代做的编码选择。
 - 接合合同待 FD-027 的配置准备、FD-028 的问题恢复及 FD-029 的操作许可候选设计协调。本文是候选，尚未设计就绪。
 
-独立设计反馈：`../reviews/FD-026-design-review-20261022-08211700.md` 的 D026-01/02 已补入上述算法与顺序，待有界独立复查；不改写原 changes-needed 历史结论。
+独立设计反馈：`reviews/FD-026-design-review-20261022-08211700.md` 的 D026-01/02 已补入上述算法与顺序，待有界独立复查；不改写原 changes-needed 历史结论。
 
 ## Work items
 
@@ -119,9 +119,9 @@ goto 指向同一计划版本内存在的节点。向后边必须声明业务 lo
 - **接合细节。** Factory intentId 固定为 graph execution 摘要，intentVersion 固定，准备 generation 独立单增；BLOCKED 的重试只能来自显式恢复决定，扫描不会制造新任务身份。图捕获事实与推进分开，持久消费键包含真实 task/Attempt/摘要，问题消费键包含 questionId/answerRevision/execution。SourceResolver 覆盖原任务及真实 continuation lineage，旧被替代执行拒绝，绝不回落 LEGACY。临时任务续行仅窄公开 FD-028 原 continuation，图逻辑槽与 APPLIED 仍同事务。预算新增内部 request-only 端口只验证真实 owner/policy/ledger 缺口并建立具体申请，审批仍由 A18/ledger；未知计量不申请替代核对。预算阻塞保留原 transitionId，批准后用原 ID 回跳。
 - **端口与恢复。** 人类 HTTP 固定 `/api/r1/authority/workflow-graphs`，共用会话/CSRF、当前 owner 与操作/审批角色。纯数据库恢复扫描不调用外部服务，只捕获任务事实及消费尚未应用的合法转移；控制台显式恢复负责重试 BLOCKED preparation。计划、范围、节点、边决定、事实、出口、carry、来源消费、补丁/控制请求均保留持久记录。技术错误与不可计量状态显示具体原因，不能标成运行通过。
 
-反馈证据：[接口设计反馈](../reviews/FD-026-interface-design-20261023-08211700.md)（历史 changes-needed 保留）；[定向复查](../reviews/FD-026-interface-recheck-20261023-08211700.md) 已确认三项 resolved、scoped ready，随后实施。5.2 的完成条件为文档、静态与编译证据及交接准备；独立审查和交付按生命周期另行记录，不把未来 Reviewer/PM 结果写成已完成。
+反馈证据：[接口设计反馈](reviews/FD-026-interface-design-20261023-08211700.md)（历史 changes-needed 保留）；[定向复查](reviews/FD-026-interface-recheck-20261023-08211700.md) 已确认三项 resolved、scoped ready，随后实施。5.2 的完成条件为文档、静态与编译证据及交接准备；独立审查和交付按生命周期另行记录，不把未来 Reviewer/PM 结果写成已完成。
 
-实现位置为 `workflow/graph`，图版本/激活聚合/事件/请求/任务映射由 V15 保存；Node/Region 是封闭数据，pure-DB Runner/Recovery 复用 Factory/Guard/正式问题。`aiw.workflow.graph.v1` 在平台解释；Python Worker 只消费既有配置/许可/问题版本，不在 Worker 增加另一套图解释器。正常 claim 仍通过既有能力快照校验。控制台 `/ui/workflow-graphs` 展示版本、选路、真实任务/Attempt、候选、预算及恢复；部署约束见 [图计划说明](../../WORKFLOW-GRAPHS.md)。
+实现位置为 `workflow/graph`，图版本/激活聚合/事件/请求/任务映射由 V15 保存；Node/Region 是封闭数据，pure-DB Runner/Recovery 复用 Factory/Guard/正式问题。`aiw.workflow.graph.v1` 在平台解释；Python Worker 只消费既有配置/许可/问题版本，不在 Worker 增加另一套图解释器。正常 claim 仍通过既有能力快照校验。控制台 `/ui/workflow-graphs` 展示版本、选路、真实任务/Attempt、候选、预算及恢复；部署约束见 [图计划说明](../../../WORKFLOW-GRAPHS.md)。
 
 每项 small、中难度、估算不超过半天；发现高难度或外部未知时先解 Gate 并继续拆分。
 
@@ -177,15 +177,15 @@ goto 指向同一计划版本内存在的节点。向后边必须声明业务 lo
 
 未生成或运行测试、模型、Worker、服务、HTTP/浏览器、DB/Flyway、实际并发/重启恢复、Telegram、命令 sandbox/cgroup 或网络。静态与编译不能替代这些运行证据。上述“独立 Reviewer 尚待交接”为首轮 Worker 交接时阶段事实；设计 ready 不等于实现 verification-passed。
 
-2026-10-23 第 1 轮独立实现审查：Reviewer `fd026-independent-review-20261023-08211700-r1-graph` 精确领取 `FD-026-000004-implementation-ready`，比较 `f7cd526..0110820`（实现 `cd194ad`），结论 **changes-requested**。R026-01～04 分别为显式失败边未决定、祖先回跳误等未选中父 join、整图终态漏规划任务、ASK 可选字段与正式入口不一致。见 [双份审查报告](../reviews/FD-026-review-20261023-08211700.md) 及 [阻断反馈](../reports/FD-026-review-blocker-20261023-08211700.md)。累计失败 **1/3**；仅静态检查，未重跑 Worker 编译或任何运行验证，未修改实现。真实回执由 CLI 记录。
+2026-10-23 第 1 轮独立实现审查：Reviewer `fd026-independent-review-20261023-08211700-r1-graph` 精确领取 `FD-026-000004-implementation-ready`，比较 `f7cd526..0110820`（实现 `cd194ad`），结论 **changes-requested**。R026-01～04 分别为显式失败边未决定、祖先回跳误等未选中父 join、整图终态漏规划任务、ASK 可选字段与正式入口不一致。见 [双份审查报告](reviews/FD-026-review-20261023-08211700.md) 及 [阻断反馈](reports/FD-026-review-blocker-20261023-08211700.md)。累计失败 **1/3**；仅静态检查，未重跑 Worker 编译或任何运行验证，未修改实现。真实回执由 CLI 记录。
 
-2026-10-23 第 2 轮独立实现复核：Reviewer `fd026-independent-review-20261023-08211700-r2-graph` 领取 `FD-026-000006-implementation-ready`，静态核对 `0110820..4b23f25`（修复源码 `88a8161`），R026-01～04 全部 **resolved**，结论 **verification-passed**。见 [第 2 轮双报告](../reviews/FD-026-review-20261023-08211700-r2.md)；原 blocker 双文件保留发现和修复历史并记为 resolved。累计失败仍为 **1/3**。本 Reviewer 未重跑 Worker 的 21:51:01 JST 编译或其他运行检查；上述未运行风险全部保留。真实通过回执由 CLI 记录。
+2026-10-23 第 2 轮独立实现复核：Reviewer `fd026-independent-review-20261023-08211700-r2-graph` 领取 `FD-026-000006-implementation-ready`，静态核对 `0110820..4b23f25`（修复源码 `88a8161`），R026-01～04 全部 **resolved**，结论 **verification-passed**。见 [第 2 轮双报告](reviews/FD-026-review-20261023-08211700-r2.md)；原 blocker 双文件保留发现和修复历史并记为 resolved。累计失败仍为 **1/3**。本 Reviewer 未重跑 Worker 的 21:51:01 JST 编译或其他运行检查；上述未运行风险全部保留。真实通过回执由 CLI 记录。
 
 TODO：PM 按真实通过回执检查本地交付/归档条件。G1 及接口设计 Gate 已解决；运行验证保持未授权、未执行，不记作通过。
 
 ## 设计就绪记录（2026-10-23）
 
-已取得独立定向复查 [FD-026 design recheck](../reviews/FD-026-design-recheck-20261023-08211700.md) 及同名 JSON；该轮原 findings 全部 resolved，建议 ready。已确认的人类政策及工程合同作为当前设计，本文此前“候选/待复查”的阶段描述以本节为准。“尚无实现通过”属于设计阶段历史，当前独立实现结论见 Verification；仍无运行认证。本 FD 当前阶段由 CLI 状态与真实交接记录确定。
+已取得独立定向复查 [FD-026 design recheck](reviews/FD-026-design-recheck-20261023-08211700.md) 及同名 JSON；该轮原 findings 全部 resolved，建议 ready。已确认的人类政策及工程合同作为当前设计，本文此前“候选/待复查”的阶段描述以本节为准。“尚无实现通过”属于设计阶段历史，当前独立实现结论见 Verification；仍无运行认证。本 FD 当前阶段由 CLI 状态与真实交接记录确定。
 
 ## Sources
 
@@ -194,6 +194,12 @@ TODO：PM 按真实通过回执检查本地交付/归档条件。G1 及接口设
 已领取真实 `FD-026-000005-changes-requested`，失败累计 1/3。显式失败分流同时固定成功 SKIPPED/失败 TAKEN，原必要失败槽不变未选；替代不重写已决边。回跳静止只检查实际启动 Task 和已打开 ASK，旧轮未启动后继不再自锁。整图取消和 ROOT 正常出口改为检查同 plan 所有受控物理任务（规划及续行）、真实 Attempt/Lease/效果及未知计量；循环继续按局部范围检查。公开 ASK 与 formal openGraph 的可选字段正规化对齐，通用授权 text 校验不变。原失败审查保留；Worker 修复交接时“独立复核待交接”为历史，随后真实第 2 轮结论见 Verification。
 
 - Issue: ISSUE-00010
-- [批准的需求](../../issues/ISSUE-00010/issue-plan.md)；[父 FD](../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
+- [批准的需求](../../../issues/ISSUE-00010/issue-plan.md)；[父 FD](../../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
 - `src/main/java/me/asu/aidev/workflow/domain/WorkflowPlanSpec.java`、`workflow/application/WorkflowPlanService.java`、`WorkflowRecommendationService.java`；`openspec/specs/task-orchestration/spec.md`。
 - 设计来源事件：`FD-026-000002-design-requested`；Planner 会话：`fd025-029-host-20261022-234846-08211700`。
+
+**Completed:** 2026-10-23
+
+## 本地交付与归档
+
+真实复核事件 `FD-026-000007-verification-passed`，来源 `FD-026-000006-implementation-ready`，修复源码 `88a8161`，受审 HEAD `4b23f25`，最终工作树提交 `c901490`。PM 已按默认生命周期 squash 到 develop `bd22b48`，通过 aiw CLI 清理工作树/分支并 close Complete。原 blocker 已由独立复核据实 resolved；保留初次失败及四项修复历史，失败累计 1/3。没有运行测试、服务、DB 或外部后端认证。归档仅调整本 FD 的相对链接，不改 Reviewer 历史证据或其摘要。
