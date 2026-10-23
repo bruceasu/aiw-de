@@ -34,6 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/r1/worker-protocol/v1")
 public class WorkerProtocolV1Controller {
+    private me.asu.aidev.execution.skills.SkillFiles skillFiles;
+    @Autowired public void setSkillFiles(me.asu.aidev.execution.skills.SkillFiles value) { skillFiles=value; }
     private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
     @Autowired public void setExecutionConfigurations(me.asu.aidev.execution.config.ExecutionConfigurations configurations) { this.configurations=configurations; }
     private me.asu.aidev.authority.AuthorityTaskPolicy delegationPolicy;
@@ -195,7 +197,8 @@ public class WorkerProtocolV1Controller {
                         : delegatedGuidance(task,runtimeType,claimed.attemptNo()),
                 outputs == null ? null : outputs.store(task, claimed.attemptId().value(), claimed.inputs()),
                 configurations!=null && configurations.managed(task.id().value()) ? null : workflowAiPreferences == null ? null : workflowAiPreferences.forTask(task),
-                configurations==null?null:configurations.payload(task.id().value(),claimed.attemptId().value()));
+                configurations==null?null:configurations.payload(task.id().value(),claimed.attemptId().value()),
+                skillFiles==null?null:skillFiles.payload(task.id().value(),claimed.attemptId().value()));
     }
 
     private AiProfileCatalog.Guidance delegatedGuidance(me.asu.aidev.work.domain.WorkTask task,String runtime,int attempt) {
@@ -296,11 +299,12 @@ public class WorkerProtocolV1Controller {
             AiProfileCatalog.Guidance aiGuidance,
             me.asu.aidev.output.application.TaskOutputService.Store outputStore,
             me.asu.aidev.workflow.application.WorkflowAiPreferences.Preferences aiPreferences,
-            me.asu.aidev.execution.config.ConfigurationContract.Payload executionConfiguration) {
+            me.asu.aidev.execution.config.ConfigurationContract.Payload executionConfiguration,
+            me.asu.aidev.execution.skills.SkillFileContract.Payload skillFiles) {
         public ClaimedTaskResponse(String taskId,String taskType,String subjectType,String subjectId,Set<String> requiredCapabilities,String skillRef,String instruction,int instructionRevision,
                 int priority,String attemptId,int attemptNo,String leaseToken,Instant leaseAcquiredAt,Instant leaseExpiresAt,WorkspaceResponse workspace,List<TaskInputResponse> inputs,
                 AiProfileCatalog.Guidance aiGuidance,me.asu.aidev.output.application.TaskOutputService.Store outputStore,me.asu.aidev.workflow.application.WorkflowAiPreferences.Preferences aiPreferences) {
-            this(taskId,taskType,subjectType,subjectId,requiredCapabilities,skillRef,instruction,instructionRevision,priority,attemptId,attemptNo,leaseToken,leaseAcquiredAt,leaseExpiresAt,workspace,inputs,aiGuidance,outputStore,aiPreferences,null);
+            this(taskId,taskType,subjectType,subjectId,requiredCapabilities,skillRef,instruction,instructionRevision,priority,attemptId,attemptNo,leaseToken,leaseAcquiredAt,leaseExpiresAt,workspace,inputs,aiGuidance,outputStore,aiPreferences,null,null);
         }
         public ClaimedTaskResponse(String taskId, String taskType, String subjectType, String subjectId,
                 Set<String> requiredCapabilities, String skillRef, String instruction, int instructionRevision,

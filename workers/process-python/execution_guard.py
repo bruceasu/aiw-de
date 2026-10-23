@@ -125,6 +125,11 @@ class GuardBroker:
             if not self.accepting_tools:
                 from formal_questions import YieldRequested
                 raise YieldRequested("QUESTION_TOOLS_CLOSED")
+            if name == "read_skill_file":
+                self.attempt.check()
+                if not isinstance(args, dict) or set(args) != {"ref", "path", "offset", "limit"} or not getattr(self.attempt, "skill_files", None):
+                    raise RuntimeError("SKILL_FILES_UNAVAILABLE")
+                return self.attempt.skill_files.read(**args)
             return self._invoke(name, args, call_id)
 
     def _invoke(self, name, args, call_id=None):

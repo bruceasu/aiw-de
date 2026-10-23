@@ -68,6 +68,10 @@ func (r *OpenAIAgentRuntime) Run(ctx context.Context, request AgentRunRequest) (
 	for turn := 0; turn < cfg.AgentMaxTurns; turn++ {
 		tools := openAITools(cfg.AgentAllowShell, request.ReadOnly)
 		if goalDiscussion { tools = []any{} }
+        if request.Task.skillResources!=nil {
+            definition:=skillToolDefinition()
+            tools=append(tools,map[string]any{"type":"function","name":definition["name"],"description":definition["description"],"parameters":definition["inputSchema"],"strict":true})
+        }
 		body := map[string]any{"model":model, "input":input, "tools":tools, "tool_choice":"auto",
 			"parallel_tool_calls":false, "store":false, "max_output_tokens":4096}
 		if supportsReasoning(model) && effort != "" && effort != "none" { body["reasoning"] = map[string]any{"effort":effort} }
@@ -97,9 +101,9 @@ func (r *OpenAIAgentRuntime) Run(ctx context.Context, request AgentRunRequest) (
 			if result.Output == "" { return result, errors.New("OPENAI_OUTPUT_EMPTY") }
 			return result, nil
 		}
-		if goalDiscussion { return result, errors.New("GOAL_TOOL_CALL_DENIED") }
 		for _, raw := range response.Output { input = append(input, json.RawMessage(raw)) }
 		for _, call := range calls {
+			if goalDiscussion && call.Name!="read_skill_file" { return result,errors.New("GOAL_TOOL_CALL_DENIED") }
 			if call.CallID == "" || call.Name == "" { return result, errors.New("OPENAI_FUNCTION_CALL_INVALID") }
 			var args map[string]any
 			if json.Unmarshal([]byte(call.Arguments), &args) != nil { return result, errors.New("OPENAI_FUNCTION_ARGUMENTS_INVALID") }
@@ -161,6 +165,8 @@ func openAIFunction(name, description string, properties map[string]any, require
 }
 
 func runWorkspaceTool(ctx context.Context, cfg Config, request AgentRunRequest, name string, args map[string]any) (string, error) {
+    if err:=ctx.Err(); err!=nil { return "",err }
+    if name=="read_skill_file" { return request.Task.skillResources.read(args) }
 	getString := func(key string) (string, error) { value, ok := args[key].(string); if !ok { return "", errors.New("TOOL_ARGUMENT_INVALID") }; return value, nil }
 	switch name {
 	case "read_file":

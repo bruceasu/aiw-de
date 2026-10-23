@@ -1,0 +1,86 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-030",
+  "source_event": "FD-030-000004-implementation-ready",
+  "human_report": "FD-030-implementation-review-20261023-a91e47-r1.md",
+  "data": {
+    "reviewer_reference": "fd030-review-20261023-a91e47-r1",
+    "worker_reference": "fd030-host-20261023-a91e47",
+    "comparison_base": "b84cd77",
+    "reviewed_revision": "91322bd9461493c4be1ddec0c7e925b8fa4b9e37",
+    "implementation_revision": "2c0ae9c",
+    "verdict": "changes-requested",
+    "findings": [
+      {
+        "id": "R030-01",
+        "severity": "medium",
+        "dimension": "spec",
+        "location": "workers/process-typescript/src/api-adapter.ts:76",
+        "requirement": "用户明确不限定 Codex / OpenAI Agents SDK 版本；PM 确认适用于本 FD 接入的 TS SDK 后端",
+        "observed": "createApiBackend 对 Agents/core/provider、OpenAI、Zod 版本硬相等，否则登记前抛 API_SDK_BASELINE_MISMATCH",
+        "impact": "兼容接口仍会因版本不同被拒绝，违背持续有效的用户决定",
+        "requested_change": "移除运行时版本硬相等门禁，保留实际版本元数据与必要接口能力及明确失败检查；无需安装或升级依赖"
+      }
+    ],
+    "acceptance_results": [
+      {
+        "area": "platform-source-and-manifest",
+        "result": "supported-by-static-evidence"
+      },
+      {
+        "area": "task-pinning-retry-continuation-replacement",
+        "result": "supported-by-static-evidence"
+      },
+      {
+        "area": "claim-capability-and-source-scope",
+        "result": "supported-by-static-evidence"
+      },
+      {
+        "area": "python-typescript-go-consumers",
+        "result": "supported-by-static-evidence"
+      },
+      {
+        "area": "sdk-appserver-resource-reader",
+        "result": "supported-by-static-evidence"
+      },
+      {
+        "area": "standalone-and-local-source-precedence",
+        "result": "supported-by-static-evidence"
+      },
+      {
+        "area": "documentation-and-honest-evidence",
+        "result": "supported-by-static-evidence"
+      },
+      {
+        "area": "user-sdk-version-policy",
+        "result": "changes-required",
+        "finding": "R030-01"
+      }
+    ],
+    "commands_run": [
+      "Get-Content/rg/Get-ChildItem targeted instructions, contracts, lifecycle call paths and Worker evidence",
+      "git diff --stat/--name-only and focused actual diffs from b84cd77",
+      "git status --short; git rev-parse HEAD",
+      "aiw fd show FD-030; aiw fd resume FD-030",
+      "aiw fd claim FD-030 FD-030-000004-implementation-ready --session fd030-review-20261023-a91e47-r1",
+      "one post-edit static report metadata validation",
+      "aiw fd emit FD-030 changes-requested --producer reviewer --artifact docs/features/reviews/FD-030-implementation-review-20261023-a91e47-r1.md --source-event FD-030-000004-implementation-ready"
+    ],
+    "not_run": [
+      "tests",
+      "compile",
+      "type checks",
+      "services/DB/Flyway/HTTP",
+      "Worker/SDK/model/AppServer",
+      "network/install/package/push/deploy"
+    ],
+    "residual_risks": [
+      "Dynamic tool and database/concurrency/restart/cancel behavior has no runtime evidence",
+      "Full Claim bytes incur bandwidth/storage; no cache or GC in first phase"
+    ],
+    "runtime_certified": false,
+    "review_failures": 1,
+    "review_limit": 3
+  }
+}

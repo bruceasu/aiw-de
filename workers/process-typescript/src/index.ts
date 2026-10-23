@@ -5,6 +5,7 @@ import { assertExecutableRole, getProfile, assertRoleCapabilities } from "./prof
 import { ControlPlaneClient, runWorkerSlot, runtimeSettings, positiveSetting, prepareToolCache } from "./runtime-core.js";
 import type { AttemptAdapter, RuntimeSettings } from "../runtime-core/index.mjs";
 import { connectionFailureCode, workerDebugEnabled } from "./failure-diagnostics.js";
+import { SKILL_FILES_CAPABILITY } from "./skill-files.js";
 
 type RuntimeType = "codex-cli" | "codex-app-server" | "openai-agents";
 
@@ -53,6 +54,8 @@ function loadConfig(runtime: RuntimeType): WorkerConfig {
   if ((repositoryRef === "") !== (repositoryRoot === "")) throw new Error("AIW_REPOSITORY_REF and AIW_REPOSITORY_ROOT must be configured together");
   const capabilities = new Set(env("AIW_WORKER_CAPABILITIES", "").split(",").map(s => s.trim()).filter(Boolean));
   assertRoleCapabilities(capabilities, profile);
+  if (capabilities.has(SKILL_FILES_CAPABILITY)) throw new Error("ROLE_CAPABILITY_DENIED");
+  if (runtime !== "codex-cli") capabilities.add(SKILL_FILES_CAPABILITY);
   capabilities.add(profile.roleCapability);
   capabilities.add("task-outputs-v1");
   if (repositoryRef) capabilities.add(`repo:${repositoryRef}`);

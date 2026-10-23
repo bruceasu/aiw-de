@@ -1,7 +1,7 @@
 # FD-030: Worker Skills 由平台统一管理，按任务引用固定版本
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 7
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -35,12 +35,13 @@
 
 ## Work items
 
-- [ ] 1.1 文件集合同与平台规范源：小/中，<=半日；无依赖；完成为清单验证、内置索引和文本摘要分离。
-- [ ] 1.2 平台固定引用与Claim：小/中，<=半日；依赖1.1；完成为持久绑定、配置/续行继承、能力准入及精确Claim载荷。
-- [ ] 1.3 Python消费与资源reader：小/中，<=半日；依赖1.2；完成为完整校验、入口/索引提示及两现有后端只读读取。
-- [ ] 1.4 TypeScript消费与资源reader：小/中，<=半日；依赖1.2；完成为独立能力、包校验、SDK读取与AppServer内存动态reader（CLI不宣告能力）。
-- [ ] 1.5 Go消费与资源reader：小/中，<=半日；依赖1.2；完成同1.4，不宣称完整config/guard能力。
-- [ ] 1.6 部署/稳定规范与交付证据：小/低，<=半日；依赖1.3–1.5；完成为共同切换说明、局部编译及独立实现审查。
+- [x] 1.1 文件集合同与平台规范源：小/中，<=半日；无依赖；已定义文件/清单校验和独立文件集摘要；9个内置Skill共62文件迁为平台规范源。编译在全量源码完成后统一记录。
+- [x] 1.2 平台固定引用与Claim：小/中，<=半日；依赖1.1；已接入创建、配置绑定、续行、Workspace替换、能力准入及Claim文件集。V17新增绑定表，平台资源版本以files-加manifest摘要命名；配置原资产版本/文本digest另存溯源字段。
+- [x] 1.3 Python消费与资源reader：小/中，<=半日；依赖1.2；已接入文件集校验、配置来源匹配、入口/索引提示、SDK/AppServer及受控broker只读内存读取。动态配置不再要求启动时预装本地Skill库。
+- [x] 1.4 TypeScript消费与资源reader：小/中，<=半日；依赖1.2；已接入静态Profile文件集校验、SDK及AppServer内存reader、入口/清单提示与来源证据，CLI不宣告能力。不扩展config/guard协议。
+- [x] 1.4.1 SDK兼容门禁修复：小/低，<=半日；依赖1.4；按R030-01及用户既定“不限定Codex/OpenAI Agents SDK版本”决策，移除TS运行时精确版本相等检查，保留实际版本元数据。依赖清单和既有适配器接口仍是安装/运行输入，不把语法编译称兼容性认证。
+- [x] 1.5 Go消费与资源reader：小/中，<=半日；依赖1.2；已接入严格JSON/文件集校验、SDK/AppServer内存reader、只注入入口与清单，并记录固定摘要；CLI无新能力，不宣称完整config/guard能力。
+- [x] 1.6 部署/稳定规范与交付证据：小/低，<=半日；依赖1.3–1.5；已写共同切换说明、稳定规范和编译证据；独立实现审查作为后续生命周期Gate，不将其预报通过。
 
 ## Acceptance
 
@@ -48,16 +49,24 @@ ISSUE-00014验收逐项映射：同版本跨Worker/三语言一致、更新保�
 
 ## Verification
 
+- 独立修复复核r2静态通过：`../reviews/FD-030-implementation-review-20261023-a91e47-r2.md`及同名JSON，Reviewer `fd030-review-20261023-a91e47-r2`，来源`FD-030-000006-implementation-ready`；审查HEAD `e51d662`、源码`e5ba004`，R030-01已解决，沿用r1未改完整范围静态覆盖。累计失败1/3保留；未运行测试/SDK/模型/服务。真实verification-passed由Reviewer发出，PM继续本地交付与归档。
+- 独立实现审查changes-requested：`../reviews/FD-030-implementation-review-20261023-a91e47-r1.md`及同名JSON；Reviewer `fd030-review-20261023-a91e47-r1`，来源`FD-030-000004-implementation-ready`，审查HEAD `91322bd`、源码`2c0ae9c`、比较基线`b84cd77`。R030-01要求移除TS SDK后端精确版本运行门禁并保留实际元数据，满足用户不限定SDK版本的持续指示。其余静态路径未发现阻断缺陷；未重复编译或运行测试/服务/模型，真实运行仍未验证；实现审查失败1/3。真实回执`FD-030-000005-changes-requested`交回Worker。
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
 - 当前授权不含测试、服务、DB/Flyway、HTTP、模型、网络、安装、打包、push或部署。Java离线compile；Python内存语法编译；TS采用已有compile脚本；Go仅编译包并将中间产物置临时目录，不保留发行包、不下载依赖。具体命令与结果由Worker报告记录。
 - 涉及协议、持久化及执行边界，design-ready前须一次独立静态设计审查；实现后独立fd-review，最多3次失败。未运行行为保持未验证。
+- 独立设计r1发现原生磁盘快照/继任绑定/来源范围问题；已改内存reader并收敛冻结来源，r2实际ready，见`../reviews/FD-030-design-review-20261023-a91e47-r2.md`（保留r1）。
+- 2026-10-23 23:13:47 JST离线Java compile成功，288生产源。Worker编译脚本首轮因Go VCS stamp exit128失败；关闭编译专用VCS stamping后一次重试通过，覆盖TS/JS/Python语法和Go编译，无发行物保留、无依赖下载。
+- 详细合同及兼容限制见`../../WORKER-SKILL-FILES.md`。文件集version=`files-<manifestDigest>`，`assetVersion/assetDigest`保留原Asset版本/文本摘要；引用与包另逐项匹配。首期私有配置资产仍由Python config路径消费，TS/Go静态Profile仅接收公共内置包，不伪装其他协议。
 
 ## TODO
 
-- 完成独立设计审查并收敛发现，再发design-ready。
-- 按工作项逐项实现与提交；编译/静态证据；独立审查后本地交付及归档。
+- 已完成设计及实现工作项，等待独立实现Reviewer；通过后按原授权本地交付及归档，不含发布/部署。
 
 ## Sources
 
 - Issue: ISSUE-00014
+
+## 修复验证
+
+R030-01来源`FD-030-000005-changes-requested`（累计失败1/3）：`e5ba004`移除TS精确SDK版本运行门禁，保留版本元数据及现有接口调用的失败路径。已执行一次`node workers/process-typescript/scripts/compile.mjs`，使用本机既有TypeScript编译器，语法编译成功；未执行类型检查、依赖安装或SDK/模型。Java/Python/Go源码未变化，沿用原实际编译证据。修复报告`../reports/FD-030-implementation-20261023-a91e47-r2.md`，等待独立复核。

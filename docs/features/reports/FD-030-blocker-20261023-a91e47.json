@@ -1,0 +1,13 @@
+{
+  "schema":"aiw.fd.evidence.v1","kind":"blocker-feedback","fd_id":"FD-030","source_event":"FD-030-000003-design-ready","human_report":"FD-030-blocker-20261023-a91e47.md",
+  "data":{
+    "session_ref":"fd030-host-20261023-a91e47","status":"resolved","stage":"design-and-compile",
+    "facts":["design r1 changes-needed; r2 ready after actual FD repairs","Worker compile first failed at Go VCS stamp exit128","direct Git status/log readable","one retry passed after compile script source fix -buildvcs=false"],
+    "attempts":2,"unresolved":[],"human_decision_needed":false,
+    "implementation_review":{"source_event":"FD-030-000005-changes-requested","finding":"R030-01","repair_revision":"e5ba004","source_status":"resolved-by-independent-review","review_failures":1,"typescript_compile":"passed","review_source_event":"FD-030-000006-implementation-ready","reviewed_head":"e51d662","reviewer_reference":"fd030-review-20261023-a91e47-r2","review_report":"../reviews/FD-030-implementation-review-20261023-a91e47-r2.md","verdict":"verification-passed"},
+    "unknowns":["actual SDK/AppServer/DB/Lease/cancellation runtime behavior"],
+    "reusable_improvements":["Use validated in-memory resource readers instead of mutable disk snapshots","Disable release VCS stamping for compile-only temporary artifacts"],
+    "template_limitation":"BLOCKER_FEEDBACK template files absent; shared-contract fields used",
+    "runtime_certified":false
+  }
+}

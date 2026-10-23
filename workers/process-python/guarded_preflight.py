@@ -81,8 +81,9 @@ def capabilities(runtime, profile, skills_root):
     from execution_guard import digest
     from worker_runtime import skill_package
     result.add("fixed-profile:" + digest(asdict(profile)))
-    for name in set((*profile.protocol_skills, profile.primary_skill)):
-        result.add("fixed-skill:" + name + ":" + hashlib.sha256(skill_package(skills_root, name).encode()).hexdigest())
+    if os.environ.get("AIW_DYNAMIC_CONFIG", "").lower() != "true":
+        for name in set((*profile.protocol_skills, profile.primary_skill)):
+            result.add("fixed-skill:" + name + ":" + hashlib.sha256(skill_package(skills_root, name).encode()).hexdigest())
     if runtime == "openai-agents":
         from agents import FunctionTool, Runner
         if not callable(getattr(Runner, "run_streamed", None)) or not callable(FunctionTool): raise RuntimeError("OPENAI_AGENTS_REQUIRED_APIS_UNAVAILABLE")

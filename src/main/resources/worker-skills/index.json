@@ -1,0 +1,118 @@
+{
+  "files": {
+    "engineering-artifact-protocol": [
+      "SKILL.md",
+      "agents/openai.yaml",
+      "assets/schemas/engineering-artifact.schema.json",
+      "assets/schemas/handoff-batch.schema.json",
+      "assets/schemas/orchestration-command.schema.json",
+      "references/agent-contracts.md",
+      "references/change-protocol.md",
+      "references/examples.md",
+      "references/handoff-and-commands.md",
+      "references/ids-and-versioning.md",
+      "references/java-go-integration.md",
+      "references/object-model.md",
+      "references/persistence-model.md",
+      "references/protocol-envelope.md",
+      "references/task-methods.md",
+      "references/traceability.md"
+    ],
+    "goal-discussion": [
+      "SKILL.md"
+    ],
+    "software-requirements-analyst": [
+      "SKILL.md",
+      "agents/openai.yaml",
+      "references/change-management.md",
+      "references/examples.md",
+      "references/output-format.md",
+      "references/srs-structure.md",
+      "references/system-boundary-modeling.md",
+      "references/task-methods.md"
+    ],
+    "solution-architect": [
+      "SKILL.md",
+      "agents/openai.yaml",
+      "references/architecture-decisions.md",
+      "references/architecture-document.md",
+      "references/decomposition.md",
+      "references/quality-attributes.md",
+      "references/task-methods.md"
+    ],
+    "implementation-planner": [
+      "SKILL.md",
+      "agents/openai.yaml",
+      "references/change-planning.md",
+      "references/implementation-plan.md",
+      "references/planning-workflow.md",
+      "references/task-methods.md",
+      "references/testing-strategy.md",
+      "references/work-package.md"
+    ],
+    "coding-work-package-executor": [
+      "SKILL.md",
+      "agents/openai.yaml",
+      "references/execution-report.md",
+      "references/repository-change-guidelines.md",
+      "references/scope-control.md",
+      "references/task-methods.md",
+      "references/testing-and-evidence.md"
+    ],
+    "software-code-reviewer": [
+      "SKILL.md",
+      "agents/openai.yaml",
+      "references/finding-severity.md",
+      "references/review-checklist.md",
+      "references/review-report.md",
+      "references/task-methods.md",
+      "references/test-review.md"
+    ],
+    "workflow-stage-reviewer": [
+      "SKILL.md",
+      "references/task-methods.md"
+    ],
+    "software-test-verifier": [
+      "SKILL.md",
+      "agents/openai.yaml",
+      "references/failure-routing.md",
+      "references/task-methods.md",
+      "references/verification-report.md",
+      "references/verification-strategy.md"
+    ]
+  },
+  "profiles": {
+    "software-code-reviewer": [
+      "engineering-artifact-protocol",
+      "software-code-reviewer"
+    ],
+    "coding-work-package-executor": [
+      "engineering-artifact-protocol",
+      "coding-work-package-executor"
+    ],
+    "goal-discussion": [
+      "engineering-artifact-protocol",
+      "goal-discussion"
+    ],
+    "implementation-planner": [
+      "engineering-artifact-protocol",
+      "implementation-planner"
+    ],
+    "software-test-verifier": [
+      "engineering-artifact-protocol",
+      "software-test-verifier"
+    ],
+    "software-requirements-analyst": [
+      "engineering-artifact-protocol",
+      "software-requirements-analyst"
+    ],
+    "solution-architect": [
+      "engineering-artifact-protocol",
+      "solution-architect"
+    ],
+    "workflow-stage-reviewer": [
+      "engineering-artifact-protocol",
+      "workflow-stage-reviewer"
+    ]
+  }
+}

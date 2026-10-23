@@ -1,5 +1,9 @@
 # Worker 公共执行契约
 
+## FD-030 平台Skill资源
+
+新增`aiw.skill.files.v1`/`skill-files-v1`：三语言SDK/API和AppServer按Claim固定文件集校验完整字节，入口/清单进入提示词，辅助文件通过`read_skill_file`按需读取。来源、版本、摘要、Task/Attempt不匹配须失败，不回退目录或新版本；资源不增加工具权限。独立目录保留，CLI不支持新平台资源任务。完整合同见[说明](../docs/WORKER-SKILL-FILES.md)。
+
 ## FD-016 统一执行契约
 
 三语言九字段 Profile：name、workerIdPrefix、roleCapability、allowedTaskTypes、readOnly、instruction、protocolSkills、primarySkill、resultKind。allowedTaskTypes 只能为 [EXTERNAL_WORK]；WORKSPACE 要求 readOnly=false，REPORT/VERDICT 要求 readOnly=true。不兼容旧任务或八字段配置。

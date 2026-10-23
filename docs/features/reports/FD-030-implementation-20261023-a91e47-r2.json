@@ -1,0 +1,14 @@
+{
+  "schema":"aiw.fd.evidence.v1","kind":"worker-report","fd_id":"FD-030","source_event":"FD-030-000005-changes-requested","human_report":"FD-030-implementation-20261023-a91e47-r2.md",
+  "data":{
+    "session_ref":"fd030-host-20261023-a91e47","previous_reviewed_head":"91322bd","implementation_revision":"e5ba004",
+    "review_failures":1,"review_limit":3,"repaired_findings":["R030-01"],
+    "changes":["Removed exact runtime SDK version equality rejection; retained installed version metadata and existing API/tool schema failure behavior"],
+    "commands_run":["node workers/process-typescript/scripts/compile.mjs","one final static repair-diff and evidence JSON inspection"],
+    "compile":{"result":"passed","scope":"TypeScript syntax only","compiler":"existing VS Code TypeScript library via AIW_TYPESCRIPT_COMPILER","artifacts_retained":false,"runtime_or_typecheck":false},
+    "unchanged_evidence":"Original offline Java288 and Python/JS/Go compile evidence retained; sources unchanged",
+    "static_validation":"passed: repair diff whitespace and evidence JSON/paired Markdown inspection",
+    "not_run":["tests/typecheck","services/DB/HTTP","SDK/model/AppServer","network/download/install/package/push/deploy"],
+    "runtime_certified":false,"remaining_gate":"independent repair review"
+  }
+}

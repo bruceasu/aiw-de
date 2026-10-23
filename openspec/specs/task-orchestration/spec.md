@@ -106,3 +106,22 @@ An explicitly confirmed minimal goal projection MAY be stored as an inert person
 - Task state, dependencies, and lease ownership are authoritative in the Control Plane and its persistence layer.
 - Scheduling also applies capability matching, priority aging, run fairness, and run, fleet, and worker capacity limits.
 - This spec describes current capability; production management API authentication and general skill/tool permission governance are outside its scope.
+
+### Requirement: Platform-owned immutable Skill files
+New platform EXTERNAL_WORK tasks SHALL pin a complete declared Skill file set at creation or configuration preparation. Claim SHALL require skill-files-v1 and return only that task's fixed references and bytes with its Task/Attempt identity. Python, TypeScript and Go supported adapters SHALL verify source scope, reference identity, manifest and every file before model execution. Text asset digests SHALL retain text semantics; file-set versions SHALL identify the separate manifest digest.
+
+#### Scenario: A Skill version changes while a task is waiting
+- **WHEN** the platform introduces new Skill content
+- **THEN** existing tasks, retries, continuations and workspace replacements retain their original file sets; already claimed bindings cannot be replaced
+
+#### Scenario: A local directory has different same-name content
+- **WHEN** a platform task carries fixed Skill files
+- **THEN** the adapter uses the validated task bytes and rejects corrupt/incomplete content without local/latest fallback; explicitly configured local directories remain available for the separate standalone Profile contract
+
+#### Scenario: A model needs an auxiliary Skill file
+- **WHEN** the file is in the task's fixed manifest
+- **THEN** a read-only resource tool can return its bounded bytes; undeclared files are denied, scripts remain data, and no additional workspace, shell, network or private knowledge authority is granted
+
+#### Scenario: An adapter lacks the resource reader
+- **WHEN** a Worker uses Codex CLI or lacks skill-files-v1
+- **THEN** it cannot claim new platform Skill tasks; unsupported dynamic tool contracts fail explicitly rather than falling back to another executor

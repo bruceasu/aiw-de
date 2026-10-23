@@ -137,7 +137,7 @@ func (runtime *CodexAppServerRuntime) Start(ctx context.Context) error {
 		"clientInfo": map[string]string{
 			"name": "aiw_process_go", "title": "AIW Go Process Worker", "version": "1.0.0",
 		},
-		"capabilities": map[string]any{"experimentalApi": false},
+		"capabilities": map[string]any{"experimentalApi": true},
 	}
 	if _, err := runtime.request(ctx, "initialize", initialize); err != nil {
 		closeCtx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
@@ -241,6 +241,7 @@ func (runtime *CodexAppServerRuntime) Run(ctx context.Context, request AgentRunR
 		"cwd": request.Workspace, "ephemeral": true,
 		"approvalPolicy": runtime.cfg.ApprovalPolicy, "sandbox": runtime.cfg.Sandbox,
 	}
+    if request.Task.skillResources!=nil { threadParams["dynamicTools"]=[]any{skillToolDefinition()} }
 	if runtime.cfg.Model != "" {
 		threadParams["model"] = runtime.cfg.Model
 	}
@@ -312,6 +313,15 @@ func (runtime *CodexAppServerRuntime) Run(ctx context.Context, request AgentRunR
 		case <-runtime.fatalDone:
 			return AgentRunResult{SessionID: threadID}, fmt.Errorf("Codex App Server connection failed: %w", runtime.failure())
 		case event := <-events:
+            if event.Method=="item/tool/call" {
+                var params struct { ThreadID string `json:"threadId"`; TurnID string `json:"turnId"`; Tool string `json:"tool"`; Namespace *string `json:"namespace"`; CallID string `json:"callId"`; Arguments map[string]any `json:"arguments"` }
+                if json.Unmarshal(event.Params,&params)!=nil || params.ThreadID!=threadID || params.TurnID!=turnID || params.Tool!="read_skill_file" || params.CallID=="" || params.Namespace!=nil && *params.Namespace!="" || ctx.Err()!=nil { return result,errors.New("SKILL_RESOURCE_SCOPE_DENIED") }
+                output,readErr:=request.Task.skillResources.read(params.Arguments)
+                success:=readErr==nil; if readErr!=nil { output="Skill resource read denied" }
+                raw,marshalErr:=json.Marshal(map[string]any{"id":json.RawMessage(event.ID),"result":map[string]any{"success":success,"contentItems":[]any{map[string]any{"type":"inputText","text":output}}}})
+                if marshalErr!=nil { return result,marshalErr }; if writeErr:=runtime.writeLine(raw); writeErr!=nil { return result,writeErr }
+                if readErr!=nil { return result,readErr }; continue
+            }
             if event.Method == "item/started" || event.Method == "item/completed" || event.Method == "item/agentMessage/delta" { workStarted = true }
 			if eventErr := runtime.consumeTurnEvent(event, threadID, turnID, &deltas); eventErr != nil {
 				if errors.Is(eventErr, errTurnCompleted) || errors.Is(eventErr, errTurnFailed) || errors.Is(eventErr, errTurnInterrupted) {
@@ -525,6 +535,13 @@ func (runtime *CodexAppServerRuntime) readLoop(stdout io.Reader) {
 			continue
 		}
 		if len(message.ID) > 0 && string(message.ID) != "null" && message.Method != "" {
+            if message.Method=="item/tool/call" {
+                var route struct { ThreadID string `json:"threadId"` }
+                if json.Unmarshal(message.Params,&route)==nil {
+                    runtime.mu.Lock(); inbox:=runtime.threads[route.ThreadID]; runtime.mu.Unlock()
+                    if inbox!=nil { runtime.handleNotification(message); continue }
+                }
+            }
 			_ = runtime.writeLine([]byte(fmt.Sprintf(`{"jsonrpc":"2.0","id":%s,"error":{"code":-32601,"message":"client-initiated server requests are unsupported"}}`, message.ID)))
 			continue
 		}

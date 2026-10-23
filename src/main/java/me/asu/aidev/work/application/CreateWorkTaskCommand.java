@@ -26,6 +26,7 @@ public record CreateWorkTaskCommand(
         Objects.requireNonNull(priority, "priority");
         var capabilities = new LinkedHashSet<String>();
         if (requiredCapabilities != null) capabilities.addAll(requiredCapabilities);
+        if(type==TaskType.EXTERNAL_WORK) capabilities.add(me.asu.aidev.execution.skills.SkillFileContract.CAPABILITY);
         repositoryRef = normalize(repositoryRef);
         baseRevision = normalize(baseRevision);
         if (repositoryRef == null && baseRevision != null) {

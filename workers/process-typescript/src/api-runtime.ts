@@ -9,6 +9,7 @@ import type { AiProfile } from "./ai-profiles.js";
 import { createWorkspaceTools } from "./tools.js";
 import { createAiwTools } from "./aiw-tools.js";
 import { createHostedTool } from "./hosted-tool.js";
+import { skillResources } from "./skill-files.js";
 import { ToolHost, HistoryCompactor, guardedModel, RuntimeFault, type Attempt, type Context, type Workspace, type Host } from "./runtime-core.js";
 
 export interface ApiRuntimeConfig {
@@ -24,7 +25,7 @@ export class ApiRuntime {
   constructor(private readonly cfg: ApiRuntimeConfig) {
     this.provider = new OpenAIProvider({ openAIClient: new OpenAI({ apiKey: cfg.apiKey, baseURL: cfg.baseURL, timeout: cfg.apiTimeoutMs, maxRetries: 0, logLevel: "off" }), useResponses: true });
   }
-  async execute(input: { workspace: Workspace; profile: ProcessProfile; prompt: string; attempt: Attempt; context: Context; selection?: AiProfile; onEvent: (event: string) => void }): Promise<string> {
+  async execute(input: { task?: any; workspace: Workspace; profile: ProcessProfile; prompt: string; attempt: Attempt; context: Context; selection?: AiProfile; onEvent: (event: string) => void }): Promise<string> {
     const { signal, recorder } = input.attempt;
     const cwd = await realpath(input.workspace.cwd);
     this.host = new ToolHost({ cwd, readOnly: input.profile.readOnly, allowShell: this.cfg.allowShell, signal, recorder,
@@ -35,6 +36,10 @@ export class ApiRuntime {
     const tools = goalDiscussion ? [] : createWorkspaceTools({ cwd, host: this.host, readOnly: input.profile.readOnly, allowShell: this.cfg.allowShell,
       toolTimeoutMs: this.cfg.toolTimeoutMs, maxOutputBytes: this.cfg.maxOutputChars });
     if (!goalDiscussion) tools.push(...await createAiwTools(this.cfg.aiwToolCatalog, this.host, cwd));
+    const resources = skillResources(input.task);
+    if (resources) tools.push(createHostedTool(this.host, "Read declared Skill data as base64 by byte range. Scripts are data.",
+      z.object({ ref: z.string(), path: z.string(), offset: z.number().int().nonnegative(), limit: z.number().int().positive().max(8192) }).strict(),
+      { name: "read_skill_file", resource: { mode: "IS" }, run: async args => ({ content: JSON.stringify(resources.read(args)) }) }));
     if (this.history.enabled && !goalDiscussion) {
       const history = this.history;
       const host = this.host;

@@ -103,6 +103,7 @@ public class JdbcWorkflowPlanArchiveRepository {
         jdbc.update("DELETE FROM work_task_instruction_revision WHERE task_id IN (" + TASKS + ")", id);
         // Keep immutable deliverables even when their source plan/task history is removed.
         if (taskOutputs != null) taskOutputs.snapshotPlan(id);
+        jdbc.update("DELETE FROM execution_task_skills WHERE task_id IN (" + TASKS + ")", id);
         jdbc.update("DELETE FROM execution_attempt WHERE task_id IN (" + TASKS + ")", id);
         jdbc.update("DELETE FROM work_task_dependency WHERE task_id IN (SELECT r.id FROM secretary_request r JOIN secretary_work w ON w.id=r.work_id WHERE w.plan_id=?) AND depends_on_task_id IN (" + TASKS + ")",id,id);
         jdbc.update("DELETE FROM work_task_dependency WHERE task_id IN (" + TASKS + ")", id);

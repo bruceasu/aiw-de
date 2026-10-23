@@ -213,10 +213,10 @@ public class TaskWorkspaceReplacementService {
         TaskId replacementId = new TaskId("replacement-" + UUID.randomUUID());
         Set<String> capabilities = new LinkedHashSet<>();
         source.requiredCapabilities().stream().filter(value -> !value.startsWith("repo:")).forEach(capabilities::add);
-        WorkTask replacement = taskService.create(new CreateWorkTaskCommand(replacementId, source.type(),
+        WorkTask replacement = taskService.createReplacing(new CreateWorkTaskCommand(replacementId, source.type(),
                 source.subjectType(), source.subjectId(), capabilities, source.skillRef(), source.instruction(),
                 pending.newRepositoryRef(), pending.newBaseRevision(), source.priority(),
-                Set.copyOf(dependencies.findDependencies(source.id()))));
+                Set.copyOf(dependencies.findDependencies(source.id()))),source.id());
         for (TaskId dependentId : dependents) {
             if (jdbc.update("""
                     UPDATE work_task_dependency SET depends_on_task_id=?

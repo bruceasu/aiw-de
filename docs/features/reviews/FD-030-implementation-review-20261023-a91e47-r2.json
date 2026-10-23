@@ -1,0 +1,42 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-030",
+  "source_event": "FD-030-000006-implementation-ready",
+  "human_report": "FD-030-implementation-review-20261023-a91e47-r2.md",
+  "data": {
+    "reviewer_reference": "fd030-review-20261023-a91e47-r2",
+    "worker_reference": "fd030-host-20261023-a91e47",
+    "verdict": "verification-passed",
+    "review_type": "focused-repair-recheck",
+    "reviewed_revision": "e51d66284105d53db960ec90660cf3619fcb4a8a",
+    "implementation_revision": "e5ba004",
+    "previous_reviewed_revision": "91322bd",
+    "original_comparison_base": "b84cd77",
+    "prior_report": "FD-030-implementation-review-20261023-a91e47-r1.md",
+    "findings": [
+      {
+        "id": "R030-01",
+        "status": "resolved",
+        "location": "workers/process-typescript/src/api-adapter.ts:createApiBackend",
+        "resolution": "移除精确SDK版本运行门禁，保留实际安装版本metadata及原接口调用失败路径，符合用户持续有效的不限定版本决定"
+      }
+    ],
+    "remaining_findings": [],
+    "scope": "限定修复复核，未改完整实现沿用r1静态覆盖",
+    "commands_run": [
+      "aiw fd resume FD-030",
+      "aiw fd claim FD-030 FD-030-000006-implementation-ready --session fd030-review-20261023-a91e47-r2",
+      "git rev-parse HEAD; git diff 91322bd HEAD with focused paths and --name-only",
+      "Get-Content actual adapter, compile script, Worker r2 report and blocker",
+      "one post-edit report metadata static check",
+      "aiw fd emit FD-030 verification-passed --producer reviewer --artifact docs/features/reviews/FD-030-implementation-review-20261023-a91e47-r2.md --source-event FD-030-000006-implementation-ready"
+    ],
+    "worker_compile": "一次TS语法编译通过；Reviewer未重跑，未当作SDK兼容性认证",
+    "not_run": ["tests", "compile/typecheck", "services/DB/Flyway/HTTP", "SDK/model/AppServer", "network/install/package/push/deploy"],
+    "residual_risks": ["动态工具与数据库/并发/重启/取消未运行验证", "全文包传输成本，首期无缓存或GC"],
+    "review_failures": 1,
+    "review_limit": 3,
+    "runtime_certified": false
+  }
+}

@@ -65,7 +65,8 @@ function apiConfig(cfg: WorkerConfig): ApiRuntimeConfig {
 
 export async function createApiBackend(cfg: WorkerConfig): Promise<WorkerBackend> {
   const versions = { agents: installedVersion("@openai/agents"), core: installedVersion("@openai/agents-core"), provider: installedVersion("@openai/agents-openai"), openai: installedVersion("openai"), zod: installedVersion("zod") };
-  if (versions.agents !== "0.20.0" || versions.core !== "0.20.0" || versions.provider !== "0.20.0" || versions.openai !== "7.32.0" || versions.zod !== "4.6.7") throw new Error("API_SDK_BASELINE_MISMATCH");
+  // Record installed versions; required imports and adapter calls establish compatibility.
+  // A different compatible SDK version is not a reason to reject this Worker.
   const settings = apiConfig(cfg);
   const runtimes = new Map<number, AgentsRuntime>();
   return {

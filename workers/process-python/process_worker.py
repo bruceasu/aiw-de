@@ -104,9 +104,11 @@ class WorkerConfig:
         profile = get_profile(process_role)
         capabilities = {part.strip() for part in os.getenv("AIW_WORKER_CAPABILITIES", "").split(",") if part.strip()}
         role_capabilities = {"goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
-        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1"} or part.startswith("repo:") or part in role_capabilities for part in capabilities):
+        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1"} or part.startswith("repo:") or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
+        from skill_files import CAPABILITY as skill_files_capability
+        capabilities.add(skill_files_capability)
         if _bool_env("AIW_EXECUTION_GUARD", False):
             from guarded_preflight import capabilities as guarded_capabilities
             capabilities.update(guarded_capabilities(runtime, profile, str(Path(os.getenv("AIW_PROCESS_SKILLS_ROOT", Path(__file__).with_name("skills"))).resolve())))
@@ -403,6 +405,12 @@ class ProcessSlot:
                 from execution_configuration import load as load_configuration
                 prepared = load_configuration(self.config, task)
                 profile = prepared.profile if prepared else _profile(self.config, task.get("taskType"))
+                from skill_files import load as load_skill_files
+                skill_reader = load_skill_files(task, profile, prepared)
+                attempt.skill_files = skill_reader
+                if skill_reader:
+                    for name, digest, size, _asset_digest in skill_reader.evidence:
+                        attempt.evidence.record("context-source", path="skill:" + name, digest=digest, bytes=size)
                 selection, reason = choose_ai_profile(task.get("aiGuidance"), self.config.runtime)
                 fallback_selection = selection
                 default_model = self.config.model or (self.runtime.config.model if self.config.runtime == "openai-agents" else None)
@@ -418,6 +426,7 @@ class ProcessSlot:
                     from execution_guard import GuardBroker
                     broker = GuardBroker(self.client, task, self.config.worker_id, attempt)
                     broker.writable = profile.writable
+                    if skill_reader: skill_reader.verify_guard(broker.context)
                     if prepared:
                         prepared.verify_context(broker.context)
                         broker.allowed_tools = set(prepared.reference["toolRequirements"])
@@ -433,7 +442,7 @@ class ProcessSlot:
                 if profile.result_kind == "VERDICT" and any(item.get("resultRevision") and item["resultRevision"] != revision for item in task.get("inputs") or []):
                     raise RuntimeError("UPSTREAM_REVISION_MISMATCH")
                 # Read and freeze trusted skills before workspace side effects.
-                instruction = prepared.prompt(task) if prepared else _prompt(task, self.config)
+                instruction = prepared.prompt(task, skill_reader) if prepared else _prompt(task, self.config, skill_reader)
                 if task.get("workspace"):
                     repository_gate = workspace_lock(task["workspace"].get("repositoryPath") or self.config.repository_root, attempt)
                     try:
@@ -604,7 +613,7 @@ def _skill_context(config: WorkerConfig, task_type=None) -> str:
     return "\n\n".join(parts)
 
 
-def _prompt(task: dict[str, Any], config: WorkerConfig) -> str:
+def _prompt(task: dict[str, Any], config: WorkerConfig, skill_reader=None) -> str:
     task_type = task.get("taskType")
     profile = _profile(config, task_type)
     if profile.task_types and task_type not in profile.task_types:
@@ -626,7 +635,7 @@ def _prompt(task: dict[str, Any], config: WorkerConfig) -> str:
         f"Profile instruction: {profile.instruction}\n"
         f"Permission boundary: {permission}\n"
         f"Task ID: {task['taskId']}\nTask type: {task_type}\nAttempt: {task.get('attemptNo')}{skill_line}\n\n"
-        f"=== Frozen R2 process context ===\n{_skill_context(config, task_type)}\n\n"
+        f"=== Frozen R2 process context ===\n{skill_reader.prompt() if skill_reader else _skill_context(config, task_type)}\n\n"
         f"=== Current authoritative work instruction ===\n{instruction}\n\n"
         "Execute only this bounded task. Preserve the Control Plane authority boundary. "
         "For read-only roles, do not change repository files. For writable roles, work only inside the assigned workspace."

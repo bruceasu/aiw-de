@@ -1,5 +1,6 @@
 import { RuntimeFault, readSkillPackage, type Context } from "./runtime-core.js";
 import { getProfile, type ProcessProfile } from "./profiles.js";
+import { loadSkillFiles, skillResources } from "./skill-files.js";
 
 export interface PromptTask {
   taskId: string;
@@ -27,6 +28,7 @@ export function resolveTaskProfile(task: PromptTask, role: string): ProcessProfi
   if (typeof task.skillRef !== "string" || task.skillRef !== profile.primarySkill || !/^[a-z0-9][a-z0-9-]*$/.test(task.skillRef)) {
     throw new RuntimeFault("ROLE_SKILL_DENIED", "CONFIGURATION");
   }
+  loadSkillFiles(task, [...profile.protocolSkills, profile.primarySkill]);
   return Object.freeze({ ...profile, allowedTaskTypes: Object.freeze([...profile.allowedTaskTypes]),
     protocolSkills: Object.freeze([...profile.protocolSkills]) }) as unknown as ProcessProfile;
 }
@@ -77,9 +79,10 @@ export function buildPrompt(task: PromptTask, role: string, skillsRoot: string, 
     "- An empty folder is not a task failure. Use the task instruction and upstream inputs for requirements or planning work.",
     "- For rg or grep probes, handle exit code 1 (no matches) inside the same shell command and return success for that case. Keep all other error codes. Do not hide errors with an unconditional || true.",
   ].join("\n");
-  const skills = [...profile.protocolSkills, ...(profile.primarySkill === "engineering-artifact-protocol" ? [] : [profile.primarySkill])]
+  const skills = skillResources(task)?.prompt() ?? [...profile.protocolSkills, ...(profile.primarySkill === "engineering-artifact-protocol" ? [] : [profile.primarySkill])]
     .map(skill => readSkillPackage(skillsRoot, skill, context)).join("\n\n");
   const permission = profile.readOnly ? "READ-ONLY semantic/review task; do not modify repository files" : "WRITABLE repository task";
+  if (skillResources(task)) context?.source(`skills:${task.taskId}`, skills, "platform-skill-entry-manifest");
   return `AI Dev Manager R10 Process Worker\nProcess role: ${profile.name}\nPrimary R2 Skill: ${profile.primarySkill}\nProfile instruction: ${profile.instruction}\nPermission boundary: ${permission}\nTask ID: ${task.taskId}\nTask type: ${task.taskType}\nAttempt: ${task.attemptNo}${skillRef}\n\n=== Frozen R2 process context ===\n${boundary}\n\n${workspaceRules}\n\n${skills}\n\n${outputs}\n\n=== Current authoritative work instruction ===\n${instruction}${inputs}\n\nExecute only this bounded task. Preserve the Control Plane authority boundary. For read-only roles, do not change repository files. For writable roles, keep repository edits inside the assigned workspace; tool caches and temporary files use the Worker-provided directories.`;
 }
 

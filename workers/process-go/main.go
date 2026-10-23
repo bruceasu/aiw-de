@@ -109,6 +109,9 @@ type CompletionReport struct {
 }
 
 type ClaimedTask struct {
+    SkillFiles json.RawMessage `json:"skillFiles"`
+    RequiredCapabilities []string `json:"requiredCapabilities"`
+    skillResources *SkillResources
     AIPreferences *AIPreferences `json:"aiPreferences"`
 	TaskID      string               `json:"taskId"`
 	TaskType    string               `json:"taskType"`
@@ -353,7 +356,12 @@ func executeTask(parent context.Context, slot int, client *Client, task ClaimedT
             if input.ResultRevision != "" && (task.Workspace == nil || input.ResultRevision != task.Workspace.BaseRevision) { return errors.New("UPSTREAM_REVISION_MISMATCH") }
         } }
         // Freeze trusted skill input before preparing a workspace.
-        frozenSkills, e := freezeGoSkills(runCtx, cfg, evidence); if e != nil { return e }
+        reader, e := loadGoSkillFiles(task,cfg.Profile); if e!=nil { return e }; task.skillResources=reader
+        var frozenSkills []string
+        if reader!=nil {
+            frozenSkills=[]string{reader.prompt()}
+            for _,ref:=range reader.refs { if e=evidence.record("context-source",map[string]any{"path":"skill:"+ref.Ref,"digest":ref.ManifestDigest}); e!=nil { return e } }
+        } else { frozenSkills,e=freezeGoSkills(runCtx,cfg,evidence); if e!=nil { return e } }
 
         var e2 error
         workspace, e2 = materializeWorkspace(runCtx, cfg, task, evidence); if e2 != nil { return e2 }
@@ -913,9 +921,10 @@ func loadConfig() Config {
 	must(err)
 	capabilities := splitSet(env("AIW_WORKER_CAPABILITIES", ""))
     for _, capability := range capabilities {
-        if capability == "*" || capability == "flexible-work-v1" || strings.HasPrefix(capability, "repo:") || roleCapability(capability) { panic("ROLE_CAPABILITY_DENIED") }
+        if capability == "*" || capability == "flexible-work-v1" || capability == skillFilesCapability || strings.HasPrefix(capability, "repo:") || roleCapability(capability) { panic("ROLE_CAPABILITY_DENIED") }
     }
 	capabilities = appendUnique(capabilities, profile.RoleCapability)
+    if runtime!="codex-cli" { capabilities=appendUnique(capabilities,skillFilesCapability) }
 	if repositoryRef != "" {
 		capabilities = appendUnique(capabilities, "repo:"+repositoryRef)
 	}

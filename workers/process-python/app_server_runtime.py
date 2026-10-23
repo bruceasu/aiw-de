@@ -216,14 +216,25 @@ class CodexAppServerRuntime:
             if request.sandbox not in {"read-only", "workspace-write"}:
                 raise RuntimeError("CODEX_SANDBOX_UNSUPPORTED")
             sandbox = request.sandbox
-        session = StdioSession(attempt, request.workspace)
+        def resource_request(message):
+            params = message.get("params", {})
+            if message["method"] in {"item/commandExecution/requestApproval", "item/fileChange/requestApproval"}:
+                return {"id": message["id"], "result": {"decision": "decline"}}
+            if message["method"] != "item/tool/call" or params.get("threadId") != thread_id or not turn_id or params.get("turnId") != turn_id or params.get("tool") != "read_skill_file" or params.get("namespace") not in {None, ""}:
+                raise RuntimeError("CODEX_RESOURCE_TOOL_SCOPE_DENIED")
+            attempt.check()
+            args = params.get("arguments")
+            if not isinstance(args, dict) or set(args) != {"ref", "path", "offset", "limit"} or not getattr(attempt, "skill_files", None): raise RuntimeError("SKILL_FILES_UNAVAILABLE")
+            output = json.dumps(attempt.skill_files.read(**args))
+            return {"id": message["id"], "result": {"success": True, "contentItems": [{"type": "inputText", "text": output}]}}
+        session = StdioSession(attempt, request.workspace, request_handler=resource_request)
         cancel_callback = session.interrupt
         attempt.add_cancel_callback(cancel_callback)
         thread_id = turn_id = None
         terminal = False
         try:
             initialized = session.rpc("initialize", {"clientInfo": {"name": "aiw_process_python", "title": "AIW Python Worker", "version": "1.0.0"},
-                                                      "capabilities": {"experimentalApi": False}})
+                                                      "capabilities": {"experimentalApi": True}})
             if not isinstance(initialized.get("userAgent"), str):
                 raise RuntimeError("CODEX_HANDSHAKE_INVALID")
             session.send({"method": "initialized", "params": {}}, time.monotonic() + min(30, attempt.remaining()))
@@ -233,6 +244,9 @@ class CodexAppServerRuntime:
             params = {"cwd": request.workspace, "ephemeral": True, "approvalPolicy": "never", "sandbox": sandbox,
                       "config": {"sandbox_workspace_write.network_access": False, "sandbox_read_only.network_access": False,
                                  "allow_login_shell": False, "features.shell_snapshot": False}}
+            if getattr(attempt, "skill_files", None):
+                from skill_files import TOOL
+                params["dynamicTools"] = [TOOL]
             if request.model:
                 params["model"] = request.model
             started = session.rpc("thread/start", params)

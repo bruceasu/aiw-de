@@ -9,7 +9,7 @@ import static me.asu.aidev.execution.guard.GuardContract.*;
 public final class ConfigurationContract {
     public static final String PROTOCOL="aiw.execution.config.v1", CAPABILITY="execution-config-v1";
     public static final Set<String> OWNED_REFERENCE_KINDS=Set.of("configuration","skill","knowledge");
-    public static Set<String> requiredCapabilities(String repository) { return Set.of(CAPABILITY,GuardContract.CAPABILITY,"repo:"+repository); }
+    public static Set<String> requiredCapabilities(String repository) { return Set.of(CAPABILITY,GuardContract.CAPABILITY,me.asu.aidev.execution.skills.SkillFileContract.CAPABILITY,"repo:"+repository); }
     private ConfigurationContract() {}
     public enum State { NEEDS_CONFIGURATION, PREPARING, READY, BLOCKED }
     public enum Error { INVALID_CONFIGURATION, UNSUPPORTED_RUNTIME, PREPARATION_FAILED, NO_COMPATIBLE_WORKER, AUTHORIZATION_REQUIRED, BUDGET_CONFIGURATION_REQUIRED, SOURCE_CHANGED }

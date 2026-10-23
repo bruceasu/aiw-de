@@ -8,6 +8,7 @@ import { isAiPreferenceRejection } from "./ai-profiles.js";
 import { getProfile } from "./profiles.js";
 import { RuntimeFault, toolCacheEnvironment } from "./runtime-core.js";
 import { ToolFailureTracker } from "./failure-diagnostics.js";
+import { skillResources, skillTool } from "./skill-files.js";
 
 export function matchesCodexSandbox(actual: any, settings: Pick<CodexSettings, "sandbox" | "network">): boolean {
   const expectedType = settings.sandbox === "danger-full-access" ? "dangerFullAccess"
@@ -32,8 +33,9 @@ class AppServerRuntime implements AgentRuntime {
     assertCredentialBoundary(this.settings, workspace.cwd);
     await this.transport.account(signal);
     const sandbox = this.settings.sandbox;
+    const resources = skillResources(execution.task);
     const started = await this.transport.request("thread/start", { cwd: workspace.cwd, ephemeral: true,
-      approvalPolicy: "never", sandbox, config: { ...CODEX_EXECUTION_CONFIG,
+      approvalPolicy: "never", sandbox, ...(resources ? { dynamicTools: [skillTool] } : {}), config: { ...CODEX_EXECUTION_CONFIG,
         "shell_environment_policy.set": toolCacheEnvironment(this.settings.env), "sandbox_workspace_write.network_access": this.settings.network,
         "sandbox_read_only.network_access": this.settings.network, "sandbox_workspace_write.exclude_slash_tmp": true, "sandbox_workspace_write.exclude_tmpdir_env_var": true }, ...(selection?.model || this.settings.model ? { model: selection?.model || this.settings.model } : {}) }, signal);
     const threadId = started?.thread?.id;
@@ -49,6 +51,11 @@ class AppServerRuntime implements AgentRuntime {
     if (metadata?.thread?.id !== threadId || metadata.thread.ephemeral !== true) throw new RuntimeFault("CODEX_EPHEMERAL_THREAD_UNCONFIRMED", "CONFIGURATION");
     const events = this.transport.subscribe(threadId);
     let turnId: string | undefined;
+    if (resources) this.transport.setToolHandler(threadId, params => {
+      signal.throwIfAborted();
+      if (!turnId || params.turnId !== turnId || params.tool !== "read_skill_file" || ![undefined, null, ""].includes(params.namespace)) throw new RuntimeFault("SKILL_RESOURCE_SCOPE_DENIED");
+      return { success: true, contentItems: [{ type: "inputText", text: JSON.stringify(resources.read(params.arguments)) }] };
+    });
     const messages = new Map<string, { text: string; phase: string | null }>();
     let completedBytes = 0, streamedBytes = 0, workStarted = false, preferenceRejected = false;
     const message = (item: any) => {

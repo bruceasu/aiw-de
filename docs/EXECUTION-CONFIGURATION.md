@@ -1,5 +1,7 @@
 # 专业配置与 Worker Factory
 
+FD-030补充：平台Skill改为固定文件集，Claim新增`skillFiles`，并要求`skill-files-v1`；原Asset/config文本摘要保持不变。入口与辅助文件分别加载，动态配置不要求预装本地Skill库。详情见[平台Worker Skill文件集](WORKER-SKILL-FILES.md)。
+
 本合同为 `aiw.execution.config.v1`，首期消费实现是 Python 的 OpenAI Agents 和 Unix/WSL Codex App Server。配置是职责、方法、内容引用和工具需求，权限仍由 [执行授权合同](EXECUTION-GUARD.md) 决定。Go/TypeScript 保留既有任务能力，不广告或领取新配置任务。
 
 ## 使用路径

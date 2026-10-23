@@ -107,7 +107,8 @@ class OpenAIApiRuntime:
             tools = broker_tools(request.broker)
             request.attempt.evidence.record("backend-versions", runtime=json.dumps(getattr(self, "versions", {}), sort_keys=True))
         else:
-            tools = [] if request.profile.primary_skill == "goal-discussion" else _create_tools(context)
+            from skill_files import openai_tools as resource_tools
+            tools = resource_tools(request) if request.profile.primary_skill == "goal-discussion" else _create_tools(context)
         guarded_model = _GuardedModel(base_model, request, self.config,
                                       {tool.name: tool.params_json_schema for tool in tools})
         effort = request.reasoning_effort or self.config.reasoning_effort
@@ -357,7 +358,8 @@ def _create_tools(context: ToolContext) -> list[Any]:
         return await _invoke_tool(ctx.context, "edit_many", path, {"path": path, "edits": edits}, _call_id(ctx),
                                   lambda: _edit_many(ctx.context, path, edits))
 
-    tools = [read_tool, list_tool, grep_tool]
+    from skill_files import openai_tools as resource_tools
+    tools = [read_tool, list_tool, grep_tool, *resource_tools(context.request)]
     if not context.request.profile.writable:
         return tools
     return [*tools, write_tool, edit_tool, edit_many_tool]

@@ -40,7 +40,8 @@ try {
   for (const worker of ["process-go"]) {
     const artifact = path.resolve(temporary, worker + (process.platform === "win32" ? ".exe" : ""));
     artifacts.push(artifact);
-    compile("go", ["build", "-o", artifact, "."], path.join(root, "workers", worker), { ...process.env, GOPROXY: "off", GOSUMDB: "off", GOTOOLCHAIN: "local" });
+    // Compile-only has no release provenance claim; avoid Git stamping in isolated worktrees.
+    compile("go", ["build", "-buildvcs=false", "-o", artifact, "."], path.join(root, "workers", worker), { ...process.env, GOPROXY: "off", GOSUMDB: "off", GOTOOLCHAIN: "local" });
   }
 } finally {
   for (const artifact of artifacts) {

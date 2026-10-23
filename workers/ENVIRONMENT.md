@@ -1,5 +1,7 @@
 # Worker 环境变量
 
+平台Skill文件集合同见[说明](../docs/WORKER-SKILL-FILES.md)。`AIW_PROCESS_SKILLS_ROOT`保留为独立部署本地资源入口；平台固定引用优先且不回退本地同名文件。新能力`skill-files-v1`由适配器自动声明，禁止通过环境变量伪装。Codex CLI不宣告此能力。
+
 本文按实际读取配置的代码整理，集中说明 Worker 的设置入口、默认值和运行时差异。
 主要运行入口是 [TypeScript Worker](process-typescript/README.md)；Go/Python 的差异列在后面。
 变量在 **Worker 进程启动时**读取。修改后需停止并重新启动对应 Worker，不能只刷新页面。

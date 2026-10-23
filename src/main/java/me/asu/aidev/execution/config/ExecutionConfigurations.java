@@ -12,6 +12,8 @@ import static me.asu.aidev.execution.config.ConfigurationContract.*;
 /** Immutable method/assets, separate from task facts and effective permissions. */
 @Service
 public class ExecutionConfigurations {
+    private me.asu.aidev.execution.skills.SkillFiles skillFiles;
+    @org.springframework.beans.factory.annotation.Autowired public void setSkillFiles(me.asu.aidev.execution.skills.SkillFiles value) { skillFiles=value; }
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final ExecutionGuard guard;
     private final WorkerRepository workers;private final Catalogue catalogue;
     public ExecutionConfigurations(AuthorityRepository repo,AuthorityBoundary boundary,ExecutionGuard guard,WorkerRepository workers) {
@@ -126,8 +128,12 @@ public class ExecutionConfigurations {
     }
     public boolean managed(String task) { return repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_task_configuration WHERE task_id=?",Long.class,task)>0; }
     public Binding binding(String task) { return repo.decode(repo.jdbc().queryForObject("SELECT binding_json FROM execution_task_configuration WHERE task_id=?",String.class,task),Binding.class); }
-    public void bindTask(String task,Binding binding) { repo.jdbc().update("INSERT INTO execution_task_configuration VALUES(?,?)",task,repo.encode(binding)); }
+    public void bindTask(String task,Binding binding) {
+        repo.jdbc().update("INSERT INTO execution_task_configuration VALUES(?,?)",task,repo.encode(binding));
+        skillFiles.configured(task,repo.decode(get(binding.configOwner(),binding.ref()).contentJson(),Content.class));
+    }
     public void continueBinding(String source,String successor) {
+        skillFiles.inherit(source,successor);
         if(managed(source)) repo.jdbc().update("INSERT INTO execution_task_configuration VALUES(?,?)",successor,repo.encode(binding(source)));
     }
     @Transactional public void registerWorker(WorkerRegistration input) {
@@ -138,7 +144,7 @@ public class ExecutionConfigurations {
     }
     public void invalidateWorker(String worker) { repo.jdbc().update("DELETE FROM execution_worker_configuration WHERE worker_id=?",worker); }
     public boolean compatible(Worker worker,Binding binding) {
-        if(!worker.capabilities().containsAll(Set.of(CAPABILITY,GuardContract.CAPABILITY)) || !worker.runtimeType().startsWith(binding.runtime()+":")) return false;
+        if(!worker.capabilities().containsAll(Set.of(CAPABILITY,GuardContract.CAPABILITY,me.asu.aidev.execution.skills.SkillFileContract.CAPABILITY)) || !worker.runtimeType().startsWith(binding.runtime()+":")) return false;
         var rows=repo.jdbc().queryForList("SELECT capabilities_json,capabilities_digest FROM execution_worker_configuration WHERE worker_id=?",worker.id().value());
         if(rows.size()!=1) return false;var row=rows.getFirst();String json=String.valueOf(row.get("capabilities_json"));
         if(!AuthorityRepository.hash(json).equals(row.get("capabilities_digest"))) return false;

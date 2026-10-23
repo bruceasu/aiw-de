@@ -4,6 +4,8 @@ This directory contains the R9 process workers, small Codex examples, and a sepa
 
 ## Process workers
 
+平台部署的任务 Skill 已统一由 Control Plane 管理。三语言的 SDK/API 与 App Server 使用固定文件集和按需只读资源工具；Codex CLI 不支持新平台文件集任务。独立部署仍可配置 `AIW_PROCESS_SKILLS_ROOT`。部署切换、版本及能力边界见 [平台 Worker Skill 文件集](../docs/WORKER-SKILL-FILES.md)。下述包内 Skill 仅保留为独立部署兼容资源。
+
 The bundled role Skills include adapted AIW task methods. See
 [Worker Skill methods](SKILL_METHODS.md) for the source-to-role map, loading
 behavior, version, boundaries, and unrun evaluation scenarios.

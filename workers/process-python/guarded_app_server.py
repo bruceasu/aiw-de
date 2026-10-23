@@ -86,6 +86,7 @@ def definitions():
                 "inputSchema": {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}}
     string = {"type": "string"}
     return [
+        tool("read_skill_file", "Read declared task Skill data as base64; offsets and limits are bytes. No script execution.", {"ref": string, "path": string, "offset": {"type": "integer"}, "limit": {"type": "integer"}}),
         tool("read", "Read one bounded UTF-8 file. Keep sourceDigest for writes.", {"path": string, "offset": {"type": "integer"}, "limit": {"type": "integer"}}),
         tool("ls", "List one visible folder.", {"path": string}),
         tool("grep", "Find literal text in one file.", {"path": string, "text": string}),
