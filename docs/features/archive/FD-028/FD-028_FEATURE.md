@@ -161,7 +161,7 @@ Telegram 解绑、消息重放、两个渠道不同答案及重启重投都必�
 ## Sources
 
 - Issue: ISSUE-00012
-- [批准的需求](../../../issues/ISSUE-00012/issue-plan.md)；[父 FD](../../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
+- [批准的需求](../../../issues/ISSUE-00012/issue-plan.md)；[父 FD](../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
 - `workers/personal-secretary/README.md`、`platform_client.py`；`workflow/application/WorkflowQuestionService.java`、`approval/telegram/TelegramApprovalAdapter.java`；`openspec/specs/secretary/spec.md`、`delegated-decisions/spec.md`。
 - 设计来源事件：`FD-028-000002-design-requested`；Planner 会话：`fd025-029-host-20261022-234846-08211700`。
 

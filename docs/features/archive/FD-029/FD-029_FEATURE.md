@@ -185,26 +185,26 @@ Worker 新接口归入既有 `/api/r1/worker-protocol/v1/tasks/{taskId}` 下的 
 
 默认静态认证/实际调用边界/路径/事务/恢复核对及实现后的最窄离线编译；没有请求测试支持，不生成或执行测试，不启动模型/服务/沙箱，不连接 DB/外部系统或下载依赖。设计需独立权限/持久化/并发反馈，实现另需独立 Reviewer。语法/生产编译不能证明真实操作隔离、并发或恢复窗口通过。
 
-TODO：由 PM 按第 2 轮真实通过结论继续本地交付/归档。G1～G3 已解决，当前已有实现；没有签发真实执行权限或运行模型、服务、数据库/迁移、沙箱及项目命令。源提交 a8856f4 的离线 Java 编译（260 个生产源）、Python/JavaScript 语法编译以及差异空白检查通过，完成于 2026-10-23 01:18:40 JST；详见 [实现报告](../reports/FD-029-implementation-20261023-08211700.md) 及同名 JSON。第 1 轮要求修改为历史结论，当前以以下第 2 轮结论为准。
+TODO：由 PM 按第 2 轮真实通过结论继续本地交付/归档。G1～G3 已解决，当前已有实现；没有签发真实执行权限或运行模型、服务、数据库/迁移、沙箱及项目命令。源提交 a8856f4 的离线 Java 编译（260 个生产源）、Python/JavaScript 语法编译以及差异空白检查通过，完成于 2026-10-23 01:18:40 JST；详见 [实现报告](reports/FD-029-implementation-20261023-08211700.md) 及同名 JSON。第 1 轮要求修改为历史结论，当前以以下第 2 轮结论为准。
 
 实现说明：`execution/guard` 拥有合同、固定依据、账本、回执、挂起及续行端口；TaskClaim/TaskExecution/WorkTaskService 实际消费它们。终态事实和消耗先提交，推进从持久待办在提交后另开事务执行；预算或业务推进失败不会回滚已确认事实。后台恢复只处理已确认终态事实，不重试工具或模型。后续 FD 在正式问题 APPLIED 的同一事务调用续行端口，并更新自己的计划/图有效绑定；本 FD 不复制其状态。
 
-已准备 [部署与核对说明](../../EXECUTION-GUARD.md)。V11/V12 是新增、仅新运行库适用的迁移；未执行真实迁移。两种后端按所需协议和实际有效功能判定兼容，未固定版本；不满足严格 Profile/cgroup 前提的部署拒绝广告和领取相应能力。实际运行兼容性仍未验证，不以编译替代隔离证据。
+已准备 [部署与核对说明](../../../EXECUTION-GUARD.md)。V11/V12 是新增、仅新运行库适用的迁移；未执行真实迁移。两种后端按所需协议和实际有效功能判定兼容，未固定版本；不满足严格 Profile/cgroup 前提的部署拒绝广告和领取相应能力。实际运行兼容性仍未验证，不以编译替代隔离证据。
 
-独立实现审查第 1 / 3 轮：**changes-requested**。Reviewer Session `fd029-independent-review-20261023-0141-design-agent` 已领取源事件 `FD-029-000004-implementation-ready`，实际比较 `31abb1b..c104a49`（源实现 a8856f4），发现 R029-01：claim 未预留且 start 重复检查暂停/额度，破坏已领取在途与并发准入；R029-02：Codex schema 预检将顶层公共类型错查到 v2，错误阻断必需后端。详见 [独立审查报告](../reviews/FD-029-review-20261023-08211700-r1.md) 及同名 JSON、[阻断反馈](../reports/FD-029-blocker-review-20261023-08211700-r1.md) 及同名 JSON。已按真实结论交还 Worker，修复前不得本地交付或标记 Complete。Reviewer 只作静态检查，未运行测试、编译、模型、App Server、数据库/迁移、沙箱/cgroup、项目命令或网络；Worker 编译证据不变成 Reviewer 运行通过。
+独立实现审查第 1 / 3 轮：**changes-requested**。Reviewer Session `fd029-independent-review-20261023-0141-design-agent` 已领取源事件 `FD-029-000004-implementation-ready`，实际比较 `31abb1b..c104a49`（源实现 a8856f4），发现 R029-01：claim 未预留且 start 重复检查暂停/额度，破坏已领取在途与并发准入；R029-02：Codex schema 预检将顶层公共类型错查到 v2，错误阻断必需后端。详见 [独立审查报告](reviews/FD-029-review-20261023-08211700-r1.md) 及同名 JSON、[阻断反馈](reports/FD-029-blocker-review-20261023-08211700-r1.md) 及同名 JSON。已按真实结论交还 Worker，修复前不得本地交付或标记 Complete。Reviewer 只作静态检查，未运行测试、编译、模型、App Server、数据库/迁移、沙箱/cgroup、项目命令或网络；Worker 编译证据不变成 Reviewer 运行通过。
 
-Worker 已领取 `FD-029-000005-changes-requested`，在 `a01f169` 完成两项针对修复：claim 原子预留、start 仅启用实际计时并保留真实安全复验；未启动取消确认结算零执行，已启动失联仍保留 UNKNOWN；Codex 按公共/v2 类型及本地引用解析，拒绝缺失、歧义和外部引用，不按版本放行。2026-10-23 01:30:56 JST Java 离线编译与修改 Python 的内存语法编译通过，差异检查通过。详见 [修复报告](../reports/FD-029-implementation-20261023-08211700-r2.md) 及同名 JSON；修复仍待独立 Reviewer 确认，没有重置审查轮数或运行预算。
+Worker 已领取 `FD-029-000005-changes-requested`，在 `a01f169` 完成两项针对修复：claim 原子预留、start 仅启用实际计时并保留真实安全复验；未启动取消确认结算零执行，已启动失联仍保留 UNKNOWN；Codex 按公共/v2 类型及本地引用解析，拒绝缺失、歧义和外部引用，不按版本放行。2026-10-23 01:30:56 JST Java 离线编译与修改 Python 的内存语法编译通过，差异检查通过。详见 [修复报告](reports/FD-029-implementation-20261023-08211700-r2.md) 及同名 JSON；修复仍待独立 Reviewer 确认，没有重置审查轮数或运行预算。
 
-独立实现审查第 2 / 3 轮：**verification-passed**。独立 Session `fd029-independent-review-20261023-0141-design-agent` 实际领取 `FD-029-000006-implementation-ready`，受审 `5afb199`（源修复 a01f169），完整基线 31abb1b、修复基线 c104a49。已确认 R029-01/02 resolved：claim 与精确 Attempt 预留同事务，start 不再因后来的暂停/余额变化重新准入，保留权限/Lease/停止/UNKNOWN 复验；协议公共/v2 类型与本地引用正确定位且保留安全能力校验。检查修复及周边调用链后未发现新的阻断；详见 [第 2 轮独立审查](../reviews/FD-029-review-20261023-08211700-r2.md) 及同名 JSON。[首轮 blocker](../reports/FD-029-blocker-review-20261023-08211700-r1.md) 及同名 JSON 按真实修复事实更新 resolved，保留原发现/历史/轮数。Reviewer 未执行测试、编译、模型/App Server、DB/迁移、沙箱/cgroup、项目命令或网络；本结论不是运行认证，后续本地交付由 PM 办理。
+独立实现审查第 2 / 3 轮：**verification-passed**。独立 Session `fd029-independent-review-20261023-0141-design-agent` 实际领取 `FD-029-000006-implementation-ready`，受审 `5afb199`（源修复 a01f169），完整基线 31abb1b、修复基线 c104a49。已确认 R029-01/02 resolved：claim 与精确 Attempt 预留同事务，start 不再因后来的暂停/余额变化重新准入，保留权限/Lease/停止/UNKNOWN 复验；协议公共/v2 类型与本地引用正确定位且保留安全能力校验。检查修复及周边调用链后未发现新的阻断；详见 [第 2 轮独立审查](reviews/FD-029-review-20261023-08211700-r2.md) 及同名 JSON。[首轮 blocker](reports/FD-029-blocker-review-20261023-08211700-r1.md) 及同名 JSON 按真实修复事实更新 resolved，保留原发现/历史/轮数。Reviewer 未执行测试、编译、模型/App Server、DB/迁移、沙箱/cgroup、项目命令或网络；本结论不是运行认证，后续本地交付由 PM 办理。
 
 ## 设计就绪记录（2026-10-23）
 
-已取得独立定向复查 [FD-029 design recheck](../reviews/FD-029-design-recheck-20261023-08211700.md) 及同名 JSON；本轮原 findings 全部 resolved，建议 ready。已确认的人类政策及工程合同作为当前设计，本文此前“候选/待复查”的阶段描述以本节为准；尚无实现通过或运行认证。本 FD 当前阶段由 CLI 状态与真实交接记录确定。
+已取得独立定向复查 [FD-029 design recheck](reviews/FD-029-design-recheck-20261023-08211700.md) 及同名 JSON；本轮原 findings 全部 resolved，建议 ready。已确认的人类政策及工程合同作为当前设计，本文此前“候选/待复查”的阶段描述以本节为准；尚无实现通过或运行认证。本 FD 当前阶段由 CLI 状态与真实交接记录确定。
 
 ## Sources
 
 - Issue: ISSUE-00013
-- [批准的需求](../../issues/ISSUE-00013/issue-plan.md)；[父 FD](../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
+- [批准的需求](../../../issues/ISSUE-00013/issue-plan.md)；[父 FD](../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
 - `execution/domain/TaskInput.java`、`authority/AuthorityBudgets.java`、`authority/ActionAdmissionService.java`、`workers/personal-secretary/README.md`；`openspec/specs/task-orchestration/spec.md`、`delegated-decisions/spec.md`、`control-plane-api/spec.md`。
 - 设计来源事件：`FD-029-000002-design-requested`；Planner 会话：`fd025-029-host-20261022-234846-08211700`。
 

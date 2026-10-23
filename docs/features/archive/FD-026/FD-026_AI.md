@@ -194,7 +194,7 @@ TODO：PM 按真实通过回执检查本地交付/归档条件。G1 及接口设
 已领取真实 `FD-026-000005-changes-requested`，失败累计 1/3。显式失败分流同时固定成功 SKIPPED/失败 TAKEN，原必要失败槽不变未选；替代不重写已决边。回跳静止只检查实际启动 Task 和已打开 ASK，旧轮未启动后继不再自锁。整图取消和 ROOT 正常出口改为检查同 plan 所有受控物理任务（规划及续行）、真实 Attempt/Lease/效果及未知计量；循环继续按局部范围检查。公开 ASK 与 formal openGraph 的可选字段正规化对齐，通用授权 text 校验不变。原失败审查保留；Worker 修复交接时“独立复核待交接”为历史，随后真实第 2 轮结论见 Verification。
 
 - Issue: ISSUE-00010
-- [批准的需求](../../../issues/ISSUE-00010/issue-plan.md)；[父 FD](../../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
+- [批准的需求](../../../issues/ISSUE-00010/issue-plan.md)；[父 FD](../FD-025/FD-025_AI_DEV_MANAGER_AI.md)。
 - `src/main/java/me/asu/aidev/workflow/domain/WorkflowPlanSpec.java`、`workflow/application/WorkflowPlanService.java`、`WorkflowRecommendationService.java`；`openspec/specs/task-orchestration/spec.md`。
 - 设计来源事件：`FD-026-000002-design-requested`；Planner 会话：`fd025-029-host-20261022-234846-08211700`。
 

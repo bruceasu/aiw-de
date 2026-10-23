@@ -85,7 +85,7 @@ FD-029/027/028 已归档交付；FD-026 已实现、正按真实 Reviewer 事件
 
 定向接口约束：提案事务调用 `admission.enabled(principal)` 并复验当前 owner/worker/generation/平台 boot/worker boot；不存在计划时不要求 read_scope/A01。记录的旧 boot 只是来源历史，重启后以当前启用的同 owner+worker 查询旧回执；SENDING/UNKNOWN 或查询 404 均不自动转为可重发。人类采纳同一 authority 锁/事务中先查不可变 adoption receipt，再调用 GraphPlans.change 和 CAS 登记；幂等重放返回原 plan/version，不重新构造 change 或覆盖后来的 head。交付只核对 ROOT 当前正式出口：重算出口/Fact/TaskInput、context.input_json、delivery 原文摘要，对照物理 COMPLETED Task/Attempt、完整 baseline/result、配置及 sources；命令是 Worker 原声明，不从其文本推断平台验证通过。
 
-[集成接口设计反馈](../reviews/FD-025-integration-design-20261023-08211700.md) 已单次定向确认 I025-01～03 resolved、scoped ready，source_event=null（咨询），不替代实施审查。四个子成果均已按真实事件合入并归档：FD-029 `5d684e5`、FD-027 `e13cbc8`、FD-028 `b27d23a`、FD-026 `bd22b48`。当前工程任务是本 FD 隔离实施上述接合，运行预算仍为零。
+[集成接口设计反馈](reviews/FD-025-integration-design-20261023-08211700.md) 已单次定向确认 I025-01～03 resolved、scoped ready，source_event=null（咨询），不替代实施审查。四个子成果均已按真实事件合入并归档：FD-029 `5d684e5`、FD-027 `e13cbc8`、FD-028 `b27d23a`、FD-026 `bd22b48`。当前工程任务是本 FD 隔离实施上述接合，运行预算仍为零。
 
 实施接合发现并补足同 plan ID 的所有权闭合：GraphPlans 创建/修改及读取聚合前核对已有 execution_policy/authority target owner；Guard.confirm 反向核对已有 graph owner。修改原拥有者模块的窄入口，不建立第二套权限判断引擎或给予新权限。本 FD 独立实现审查覆盖该集成差异，保留 FD-026/029 原审查历史，不声称原归档报告已覆盖此后新增差异。
 
@@ -126,19 +126,19 @@ FD-029/027/028 已归档交付；FD-026 已实现、正按真实 Reviewer 事件
 
 TODO：收敛独立设计反馈 → 就绪交接 → 各子成果实现/审查/交付 → 集成/审查/交付/归档。G1～G3 已获当前会话用户回答，不再重复询问；依赖未满足时保留 Design，不把候选方案记为已实现。
 
-当前实施记录覆盖上述历史阶段文字：四个子 FD 已真实交付归档，本 FD 使用 `feature/FD-025` 隔离实施，基线 `c877040`，正式 Worker 来源 `FD-025-000004-work-requested`，会话仍为 `fd025-029-host-20261022-234846-08211700`。`software/GoalProposals`、`SoftwareDelivery` 及控制台/私人 selected_goals 接合完成，V16 只新增惰性提案表。静态场景及延期/使用边界见 [操作说明](../../SOFTWARE-DEVELOPMENT.md)，用户实验及 .env 未改变。
+当前实施记录覆盖上述历史阶段文字：四个子 FD 已真实交付归档，本 FD 使用 `feature/FD-025` 隔离实施，基线 `c877040`，正式 Worker 来源 `FD-025-000004-work-requested`，会话仍为 `fd025-029-host-20261022-234846-08211700`。`software/GoalProposals`、`SoftwareDelivery` 及控制台/私人 selected_goals 接合完成，V16 只新增惰性提案表。静态场景及延期/使用边界见 [操作说明](../../../SOFTWARE-DEVELOPMENT.md)，用户实验及 .env 未改变。
 
 实际离线 Java compile 于 2026-10-23 22:07:56 JST 成功编译 285 个生产文件；JDK25/Maven3.9.9，命令 `mvn -o -DskipTests=true -Dmaven.test.skip=true compile`。4 个变更 Python 文件仅标准库内存 compile，2 个变更 JS 仅 node --check，git diff --check 均通过。没有项目 import、测试、服务、数据库/迁移、HTTP/浏览器、模型/Worker、Telegram、真实并发/恢复/停止、网络、安装、push 或部署运行证据，不能把上述未执行项写成通过。原 GraphPlans 泛型解码提示及工具警告保留。“尚待独立实现审查、失败 0/3”为首轮 Worker 交接时阶段记录。
 
-2026-10-23 第 1 轮独立实现审查：Reviewer `fd025-independent-review-20261023-08211700-r1-integration` 核对并领取真实 `FD-025-000005-implementation-ready`，完整静态审查 `c877040..06de05a`（实现 `47fb205`），结论 **changes-requested**。R025-01 为已有 Legacy Plan ID 的跨 owner 占用与反向确认阻断；R025-02 为交付视图文件顺序与原成果集合合同不一致。见 [双份审查报告](../reviews/FD-025-review-20261023-08211700.md) 及 [双份阻断反馈](../reports/FD-025-review-blocker-20261023-08211700.md)。累计失败 **1/3**，Reviewer 未编译、测试或执行运行检查，未改实现。真实交接回执由 CLI 记录。
+2026-10-23 第 1 轮独立实现审查：Reviewer `fd025-independent-review-20261023-08211700-r1-integration` 核对并领取真实 `FD-025-000005-implementation-ready`，完整静态审查 `c877040..06de05a`（实现 `47fb205`），结论 **changes-requested**。R025-01 为已有 Legacy Plan ID 的跨 owner 占用与反向确认阻断；R025-02 为交付视图文件顺序与原成果集合合同不一致。见 [双份审查报告](reviews/FD-025-review-20261023-08211700.md) 及 [双份阻断反馈](reports/FD-025-review-blocker-20261023-08211700.md)。累计失败 **1/3**，Reviewer 未编译、测试或执行运行检查，未改实现。真实交接回执由 CLI 记录。
 
-2026-10-23 第 2 轮独立实现复核：Reviewer `fd025-independent-review-20261023-08211700-r2-integration` 精确领取 `FD-025-000007-implementation-ready`，静态核对 `06de05a..6f72124`（修复源码 `5007ed3`）及直接接合，R025-01/02 均 **resolved**，结论 **verification-passed**。见 [第 2 轮双报告](../reviews/FD-025-review-20261023-08211700-r2.md)，原 blocker 双文件保留首轮事实和修复历史并记为 resolved。累计失败仍为 **1/3**。本 Reviewer 未重跑 Worker 的 22:15:05 JST 编译或其他运行检查，未改实现；真实回执由 CLI 记录。
+2026-10-23 第 2 轮独立实现复核：Reviewer `fd025-independent-review-20261023-08211700-r2-integration` 精确领取 `FD-025-000007-implementation-ready`，静态核对 `06de05a..6f72124`（修复源码 `5007ed3`）及直接接合，R025-01/02 均 **resolved**，结论 **verification-passed**。见 [第 2 轮双报告](reviews/FD-025-review-20261023-08211700-r2.md)，原 blocker 双文件保留首轮事实和修复历史并记为 resolved。累计失败仍为 **1/3**。本 Reviewer 未重跑 Worker 的 22:15:05 JST 编译或其他运行检查，未改实现；真实回执由 CLI 记录。
 
 当前 TODO：PM 依据真实通过回执检查本地交付/归档条件。已确认人类政策不变，运行风险继续保留，不把未运行行为写为通过。
 
 ## 设计就绪记录（2026-10-23）
 
-已取得独立定向复查 [FD-025 design recheck](../reviews/FD-025-design-recheck-20261023-08211700.md) 及同名 JSON；该轮原 findings 全部 resolved，建议 ready。已确认的人类政策及工程合同作为当前设计，本文此前“候选/待复查”的阶段描述以本节为准。“尚无实现通过”为设计阶段历史，当前实现结论见 Verification；仍无运行认证。本 FD 当前阶段由 CLI 状态与真实交接记录确定。
+已取得独立定向复查 [FD-025 design recheck](reviews/FD-025-design-recheck-20261023-08211700.md) 及同名 JSON；该轮原 findings 全部 resolved，建议 ready。已确认的人类政策及工程合同作为当前设计，本文此前“候选/待复查”的阶段描述以本节为准。“尚无实现通过”为设计阶段历史，当前实现结论见 Verification；仍无运行认证。本 FD 当前阶段由 CLI 状态与真实交接记录确定。
 
 ## Sources
 
@@ -147,6 +147,14 @@ TODO：收敛独立设计反馈 → 就绪交接 → 各子成果实现/审查/�
 实际领取 `FD-025-000006-changes-requested`，失败累计 1/3。R025-01 在原 GraphPlans.change 同一 authority 锁内补查既有 flexible_workflow_plan.created_by，与当前 owner 的真实 actor 一致才允许接合，不能用缺 policy/target 的旧初稿 ID 抢占；同 owner 原合法行为保留。R025-02 按原 Guard/WorkspaceResult 的文件集合合同比较 Delivery.changes，允许顺序差异，仍拒绝多/少文件，原文 digest/Task/Attempt/版本/来源严格不变，不改历史 Delivery。修复 Java 于 2026-10-23 22:15:05 JST 离线编译 285 个生产文件通过；Python/JS 未改变，沿用首轮编译证据，不重复运行。此段“复核待交接”为 Worker 修复交接时历史；后续真实第 2 轮结论见 Verification。
 
 - Issue: ISSUE-00009
-- [批准的父需求](../../issues/ISSUE-00009/issue-plan.md)。
-- [FD-026](../archive/FD-026/FD-026_AI.md)、[FD-027](../archive/FD-027/FD-027_WORKER.md)、[FD-028](../archive/FD-028/FD-028_FEATURE.md)、[FD-029](../archive/FD-029/FD-029_FEATURE.md)。
+- [批准的父需求](../../../issues/ISSUE-00009/issue-plan.md)。
+- [FD-026](../FD-026/FD-026_AI.md)、[FD-027](../FD-027/FD-027_WORKER.md)、[FD-028](../FD-028/FD-028_FEATURE.md)、[FD-029](../FD-029/FD-029_FEATURE.md)。
 - 设计来源事件：`FD-025-000002-design-requested`；Planner 会话：`fd025-029-host-20261022-234846-08211700`。
+
+**Completed:** 2026-10-23
+
+## 本地交付与归档
+
+已核对真实独立通过事件 `FD-025-000008-verification-passed`，精确来源 `FD-025-000007-implementation-ready`；受审 HEAD `6f72124`，修复源码 `5007ed3`，最终工作树提交 `7eb3d83`。PM 通过既定 CLI squash 合入 develop `90ef6c7`，清理 `.wt/FD-025` 与 feature 分支，并 close Complete。FD-025～029 均已完成真实独立审查、本地交付和归档。初始预检及首轮实现 blocker 已 resolved，保留失败与修复历史；所有模板缺失问题仅作为既有反馈记录，没有擅改技能规则。
+
+最终验证范围为离线 Java compile、变更 Python 内存 compile、JS语法及静态调用链/差异检查；未运行测试、服务、DB/迁移、模型/Worker、渠道或外部操作。没有将编译或静态复核写作运行通过。入口 `/ui/software-development`；操作说明见 [软件开发闭环](../../../SOFTWARE-DEVELOPMENT.md)。用户实验目录和 .env 原样保留，独立实验仅本地 Git 排除，未提交 .venv。归档阶段仅修整 FD 文档相对链接，未重写 Reviewer 原始报告/摘要。
