@@ -1,0 +1,32 @@
+id = "ISSUE-00014"
+title = "Worker Skills 由平台统一管理，按任务引用固定版本"
+parent_id = ""
+status = "DECIDED"
+created = "2026-10-23"
+updated = "2026-10-23"
+revision = 2
+
+[approval]
+status = "PENDING"
+by = ""
+at = ""
+reason = ""
+source_digest = ""
+
+[promotion]
+status = "NOT_STARTED"
+task_id = ""
+
+[conversation]
+session_id = ""
+
+[terminal]
+by = ""
+at = ""
+reason = ""
+
+[artifact]
+requirement-plan = "docs/issues/ISSUE-00014/issue-plan.md"
+
+[digest]
+requirement-plan = "4cd57319aaed385a336f91eb9c593a935b16f7486740dd4e4fb672852893d8f3"
