@@ -1,17 +1,17 @@
-id = "ISSUE-00010"
-title = "从目标获得可审阅、可按结果推进的 AI 计划"
-parent_id = "ISSUE-00009"
-status = "APPROVED"
+id = "ISSUE-00009"
+title = "AI Dev Manager 改进：AI 计划、动态专业配置与秘书协作"
+parent_id = ""
+status = "ARCHIVED"
 created = "2026-10-22"
-updated = "2026-10-22"
-revision = 8
+updated = "2026-10-23"
+revision = 15
 
 [approval]
 status = "APPROVED"
 by = "user"
 at = "2026-10-22T23:41:52+09:00"
 reason = "2026-10-22 当前用户明确批准 ISSUE-00009 及其四个子 Issue，并要求分别 promote。批准当前需求范围，保留所有未决项供 FD 设计处理，不表示设计就绪或授权实现；父 FD 负责集成，子 FD 各自负责具体成果。"
-source_digest = "c8260ce393d41fc59c52b1eb3a2798a5c060aa56c4fcee2a6707135d390c7530"
+source_digest = "46b8df95daf626b1c65b9961d43b0e095be07858edbe5bc4f78e3a2238f022f8"
 
 [promotion]
 status = "NOT_STARTED"
@@ -21,12 +21,12 @@ task_id = ""
 session_id = ""
 
 [terminal]
-by = ""
-at = ""
-reason = ""
+by = "LAPTOP-P8VM6T16\\suk"
+at = "2026-10-23T22:53:06+09:00"
+reason = "done"
 
 [artifact]
-requirement-plan = "docs/issues/ISSUE-00010/issue-plan.md"
+requirement-plan = "docs/issues/ISSUE-00009/issue-plan.md"
 
 [digest]
-requirement-plan = "b96bc5e29754a71079897c16bdc5c09c207cd440ab55f367473d7f4a2f1257ef"
+requirement-plan = "c87f96a7a8a954673a9ac6fbb376f73adba6ee0122d851c210370046b5e30762"
