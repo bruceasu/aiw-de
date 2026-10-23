@@ -83,7 +83,9 @@ public class FormalQuestions {
     /** Trusted graph ask port. FD-026 owns source validation and advancement, never the question store. */
     @Transactional public Question openGraph(Source source,String sourceKey,String question,String context,List<String> options,String requirements,String expectedOwner) {
         boundary.lock();if(source.kind()!=SourceKind.WORKFLOW_GRAPH_EXECUTION||source.taskId()!=null) throw new IllegalArgumentException("Exact graph ask execution required");
-        text(sourceKey,128);text(question,8000);text(context,8000);text(requirements,2000);options=List.copyOf(options);if(options.size()>12) throw new IllegalArgumentException("Option limit");options.forEach(s->text(s,1000));
+        text(sourceKey,128);text(question,8000);context=context==null?"":context;requirements=requirements==null?"":requirements;
+        if(context.length()>8000||requirements.length()>2000||context.indexOf('\0')>=0||requirements.indexOf('\0')>=0)throw new IllegalArgumentException("Question projection limit");
+        options=options==null?List.of():List.copyOf(options);if(options.size()>12) throw new IllegalArgumentException("Option limit");options.forEach(s->text(s,1000));
         String sourceDigest=validate(source,expectedOwner,true),digest=AuthorityRepository.hash(repo.encode(Arrays.asList(source,sourceKey,question,context,options,requirements)));
         var old=repo.jdbc().queryForList("SELECT id,request_digest FROM formal_question WHERE owner_id=? AND plan_id=? AND source_key=?",expectedOwner,source.planId(),sourceKey);
         if(!old.isEmpty()) {if(!digest.equals(old.getFirst().get("request_digest"))) throw new IllegalStateException("QUESTION_SOURCE_CONFLICT");return get(String.valueOf(old.getFirst().get("id")));}
@@ -122,7 +124,22 @@ public class FormalQuestions {
     }
     @Transactional public Object acknowledge(String task,GuardContract.Yield input) { boundary.lock();var result=yields.acknowledge(task,input);var q=get(input.operationId());if(!Objects.equals(q.source().taskId(),task)) throw new IllegalArgumentException("Question yield mismatch");return result; }
     @Transactional public Question budget(BudgetQuestion input) {
-        boundary.lock();String owner=owner(input.planId());human(owner,"A18_BUDGET");var policy=guard.policyRow(input.planId());
+        boundary.lock();String owner=owner(input.planId());human(owner,"A18_BUDGET");return insertBudget(input,owner);
+    }
+    /** Trusted platform request only. Never authorizes an increment or impersonates a human. */
+    @Transactional public Question requestBudget(BudgetQuestion input,String expectedOwner) {
+        boundary.lock();if(!owner(input.planId()).equals(expectedOwner)) throw new SecurityException("Budget request owner mismatch");
+        var a=input.authorization();var rows=ledger.snapshot(input.planId()).stream().filter(r->r.get("dimension").equals(a.dimension().name())&&Objects.equals(r.get("loop_id"),a.loopId()==null?"":a.loopId())).toList();
+        if(rows.size()!=1) throw new IllegalStateException("Configure the required limit first");var row=rows.getFirst();
+        if(row.get("limit_value")==null||((Number)row.get("unknown_count")).longValue()!=0)throw new IllegalStateException("Configure or reconcile this dimension first");
+        var policy=repo.decode((String)guard.policyRow(input.planId()).get("policy_json"),GuardContract.Policy.class);
+        long needed=switch(a.dimension()){case LOOP_BACKJUMPS,TASKS->1;case TIME_MS->policy.budget().attemptTimeMs();case COST_MICROS->policy.budget().attemptCostMicros();};
+        if(java.math.BigInteger.valueOf(((Number)row.get("used_value")).longValue()).add(java.math.BigInteger.valueOf(((Number)row.get("reserved_value")).longValue())).add(java.math.BigInteger.valueOf(needed)).compareTo(java.math.BigInteger.valueOf(((Number)row.get("limit_value")).longValue()))<=0)throw new IllegalStateException("No measured admission gap for this request");
+        if(Math.addExact(((Number)row.get("limit_value")).longValue(),a.amount())!=a.cumulativeCeiling())throw new IllegalArgumentException("Exact cumulative request required");
+        return insertBudget(input,expectedOwner);
+    }
+    private Question insertBudget(BudgetQuestion input,String owner) {
+        var policy=guard.policyRow(input.planId());
         if(((Number)policy.get("revision")).longValue()!=input.policyRevision()) throw new IllegalStateException("Policy changed");
         var source=new Source(SourceKind.LEGACY_PLAN_TASK,input.planId(),input.policyRevision(),null,null);String key="budget:"+input.authorization().requestId();
         var previous=repo.jdbc().queryForList("SELECT id,request_digest FROM formal_question WHERE owner_id=? AND plan_id=? AND source_key=?",owner,input.planId(),key);
@@ -136,6 +153,7 @@ public class FormalQuestions {
         String digest=AuthorityRepository.hash(repo.encode(input));var prior=repo.jdbc().queryForList("SELECT * FROM formal_question_inbox WHERE owner_id=? AND channel=? AND message_id=?",owner,channel,input.messageId());
         if(!prior.isEmpty()) {if(!digest.equals(prior.getFirst().get("request_digest"))) throw new IllegalStateException("ANSWER_MESSAGE_CONFLICT");return repo.decode(String.valueOf(prior.getFirst().get("receipt_json")),Question.class);}
         if(q.state()==State.SUPERSEDED) throw new IllegalStateException("Question superseded");
+        if(q.state()==State.APPLIED&&q.answer()!=null&&q.answer().rawAnswer().equals(input.rawAnswer())){receipt(owner,channel,input,digest,q);return q;}
         if(q.kind()==Kind.PROFESSIONAL) {
             String expected=repo.jdbc().queryForObject("SELECT source_digest FROM formal_question WHERE id=?",String.class,q.questionId());
             if(!expected.equals(validate(q.source(),owner,false))) throw new IllegalStateException("Question source changed");
@@ -183,6 +201,11 @@ public class FormalQuestions {
         String result=yields.continueTask(old.id().value(),old.version(),task,q.questionId(),refs).value();
         repo.jdbc().update("UPDATE formal_question_slot SET successor_task_id=? WHERE source_task_id=? AND successor_task_id IS NULL",result,old.id().value());return result;
     }
+    /** Graph resolver uses the same continuation, within the formal-question APPLIED transaction. */
+    public String continueRegisteredGraph(Question q) {
+        boundary.lock();if(q.source().kind()!=SourceKind.WORKFLOW_GRAPH_EXECUTION||q.state()!=State.ANSWERED||!q.equals(get(q.questionId())))throw new IllegalStateException("Exact answered graph question required");
+        validate(q.source(),q.ownerId(),false);return continueExisting(q);
+    }
     @Transactional public Object checkpoints(String task,Lease lease) {
         boundary.lock();guard.verifyLease(task,lease,false,true);var refs=guard.context(task).snapshot().references();var result=new ArrayList<Map<String,Object>>();
         for(var ref:refs) if(ref.kind().equals("checkpoint")) {
@@ -199,7 +222,7 @@ public class FormalQuestions {
             repo.jdbc().update("UPDATE execution_attempt SET stop_requested_at_epoch_ms=COALESCE(stop_requested_at_epoch_ms,?) WHERE state IN ('CLAIMED','RUNNING') AND task_id IN (SELECT task_id FROM execution_context WHERE plan_id=?)",now,plan);
             repo.jdbc().update("UPDATE work_task SET state='CANCELLED',version=version+1,updated_at_epoch_ms=? WHERE state IN ('READY','BLOCKED','WAITING_INPUT') AND id IN (SELECT task_id FROM execution_context WHERE plan_id=?)",now,plan);
             repo.jdbc().update("UPDATE formal_question SET state='SUPERSEDED',blocked_reason='CANCEL_REQUESTED',updated_ms=? WHERE plan_id=? AND state IN ('OPEN','ANSWERED')",now,plan);
-        }return result;
+        }resolvers.orderedStream().forEach(r->r.planControlled(plan,action));return result;
     }
     @Transactional public Object progress(String plan) {
         boundary.lock();readHuman(owner(plan));var active=repo.jdbc().queryForList("SELECT t.id,t.state,a.stop_requested_at_epoch_ms,a.stop_acknowledged_at_epoch_ms FROM work_task t JOIN execution_context c ON c.task_id=t.id LEFT JOIN execution_attempt a ON a.task_id=t.id AND a.attempt_no=t.attempt_no WHERE c.plan_id=? ORDER BY t.id",plan);

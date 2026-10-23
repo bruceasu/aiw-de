@@ -61,6 +61,8 @@ public final class QuestionContract {
         String validate(Source source,String owner,boolean opening);
         /** Called in the question APPLIED transaction. Return null when controls or prerequisites block. */
         Application apply(Question question);
+        /** Pure DB consumers may mirror a formal whole-plan control in the same transaction. */
+        default void planControlled(String planId,String action) {}
     }
     private static void protocol(String value) { if(!PROTOCOL.equals(value)) throw new IllegalArgumentException("Unsupported question protocol"); }
     private static void commit(String value) { if(value==null||!value.matches("(?i)[0-9a-f]{40}|[0-9a-f]{64}")) throw new IllegalArgumentException("Immutable Git checkpoint required"); }

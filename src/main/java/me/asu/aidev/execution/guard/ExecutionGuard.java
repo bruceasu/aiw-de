@@ -210,6 +210,11 @@ public class ExecutionGuard {
         var row=policyRow(String.valueOf(contextRow(task).get("plan_id")));
         return active(row) && !AuthorityRepository.flag(row.get("paused")) && ledger.admits(policy(row));
     }
+    /** Same admission rule for graph control nodes that have no physical Task yet. */
+    public boolean mayAdvancePlan(String plan) {
+        boundary.lock();var row=policyRow(plan);
+        return active(row) && !AuthorityRepository.flag(row.get("paused")) && ledger.admits(policy(row));
+    }
     public void deferCompletion(String task,String attempt,me.asu.aidev.execution.domain.WorkspaceResult workspace,me.asu.aidev.execution.domain.CompletionReport report) {
         repo.jdbc().update("INSERT INTO execution_completion(attempt_id,task_id,workspace_json,report_json) VALUES(?,?,?,?) ON CONFLICT(attempt_id) DO NOTHING",attempt,task,workspace==null?null:repo.encode(workspace),report==null?null:repo.encode(report));
     }

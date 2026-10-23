@@ -1,0 +1,20 @@
+{
+  "schema":"aiw.fd.evidence.v1",
+  "kind":"worker-report",
+  "fd_id":"FD-026",
+  "source_event":"FD-026-000003-design-ready",
+  "human_report":"FD-026-implementation-20261023-08211700.md",
+  "data":{
+    "session_ref":"fd025-029-host-20261022-234846-08211700",
+    "base_revision":"f7cd526",
+    "implementation_revision":"cd194ad",
+    "branch":"feature/FD-026",
+    "work_items":"all implementation items complete; independent review and delivery pending",
+    "design_recheck":"FD-026-interface-recheck-20261023-08211700.md",
+    "review_failures":0,
+    "checks":[{"command":"git diff --check","result":"passed"},{"command":"node --check src/main/resources/static/ui/workflow-graphs.js","result":"passed"},{"command":"mvn -o -DskipTests=true -Dmaven.test.skip=true compile","result":"passed","production_sources":282,"finished_at":"2026-10-23T21:40:55+09:00"}],
+    "not_run":["tests","services","workers","models","database/Flyway","HTTP/browser","Telegram","runtime concurrency/restart/cancel/UNKNOWN","sandbox/cgroup","network","installation","push","deployment","packaging"],
+    "remaining_gates":["independent implementation review","local delivery/archive","FD-025 integration"],
+    "risks":["persistent state and transaction recovery are statically reviewed only","actual Python backend and question transport behavior remains unexecuted"]
+  }
+}

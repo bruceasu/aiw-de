@@ -1,0 +1,35 @@
+{
+  "schema":"aiw.fd.evidence.v1",
+  "kind":"reviewer-report",
+  "fd_id":"FD-026",
+  "source_event":"FD-026-000006-implementation-ready",
+  "human_report":"FD-026-review-20261023-08211700-r2.md",
+  "data":{
+    "reviewer_session":"fd026-independent-review-20261023-08211700-r2-graph",
+    "recorded_at":"2026-10-23T21:52:54+09:00",
+    "comparison_base":"f7cd526",
+    "previous_reviewed_head":"0110820",
+    "reviewed_head":"4b23f25c0f98b98387c7f921bfcaa212b7e58614",
+    "implementation_commit":"88a8161",
+    "review_round":2,
+    "review_failures_before":1,
+    "review_failures_after":1,
+    "review_limit":3,
+    "verdict":"verification-passed",
+    "findings":[],
+    "resolved_findings":[
+      {"id":"R026-01","status":"resolved","location":"src/main/java/me/asu/aidev/workflow/graph/GraphRunner.java:97","evidence":"Explicit failureNext alone settles FAILURE=TAKEN and SUCCESS=SKIPPED. Original failure remains. Unconsumed failure keeps retry semantics. Replacement emission preserves every already-decided edge at line 194."},
+      {"id":"R026-02","status":"resolved","location":"src/main/java/me/asu/aidev/workflow/graph/GraphRunner.java:211","evidence":"Local physical quiescence remains; only TASK with taskId and ASK with questionId require a terminal selected-work state. An unstarted parent join no longer self-blocks. Old-round REPEATED/TRANSFERRED, stable activation, carry and ledger transition remain unchanged."},
+      {"id":"R026-03","status":"resolved","location":"src/main/java/me/asu/aidev/workflow/graph/GraphRunner.java:252","evidence":"Cancellation and ROOT finalization use same-plan execution_context aggregation including planners and continuations, Task state, Lease, active Attempt, STARTED/UNKNOWN effects and unknown metering. GraphPlans progress displays these physical tasks. Loop-local quiescence stays local."},
+      {"id":"R026-04","status":"resolved","location":"src/main/java/me/asu/aidev/questions/FormalQuestions.java:86","evidence":"Graph Ask and openGraph normalize optional context/requirements/options consistently and retain projection limits/NUL checks. Required question text and common authority validation remain strict; original source/receipt/APPLIED transaction remains."}
+    ],
+    "coverage":["Actual repair diff 0110820..4b23f25", "R026-01 through R026-04 original counterexamples and direct adjacent effects", "Prior complete-FD static review retained for unchanged scope", "Question source and continuation; whole-plan/local-loop scope; UI progress and documentation"],
+    "commands_run":["aiw fd show FD-026", "aiw fd claim FD-026 FD-026-000006-implementation-ready --session fd026-independent-review-20261023-08211700-r2-graph", "Targeted git diff/status/rev-parse, Get-Content and rg", "One static evidence-pair/metadata/Verification/diff-whitespace/HEAD check after writing"],
+    "worker_evidence":{"compile_finished_at":"2026-10-23T21:51:01+09:00","production_java_sources":282,"source_commit":"88a8161","reviewer_reran":false,"runtime_pass":false},
+    "not_run":["tests", "compilation", "project validation scripts", "services", "models/workers", "database/Flyway", "HTTP/browser/Telegram", "actual concurrency/restart/cancellation", "sandbox/cgroup", "network/installations"],
+    "evidence_limits":["Bounded static repair review, no runtime reproduction", "Runtime persistence, backend/channel and stop behavior remain unverified", "No source, protected user experiment or .env changes", "No extra agents, Git commit, merge or archive"],
+    "runtime_certified":false,
+    "implementation_modified":false,
+    "blocker_feedback":"../reports/FD-026-review-blocker-20261023-08211700.md"
+  }
+}

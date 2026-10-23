@@ -30,6 +30,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/execution-tasks/[^/]+/stopped")
                 || path.matches("/execution-configurations/(assets|candidates|propose|prepare|state)")
                 || path.matches("/questions/(read|reply|budget|control|progress|telegram)")
+                || path.matches("/workflow-graphs/(read|change|decide|recommend)")
                 || path.matches("/workers/[^/]+/(enable|disable)") || path.matches("/grants/[^/]+/revoke")
                 || path.matches("/targets/[^/]+/(takeover|return)") || path.matches("/restrictions/[^/]+/revoke")
                 || path.matches("/budgets/[^/]+/supplement") || path.matches("/effects/[^/]+/reconcile"));
@@ -51,7 +52,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                     if(!humanRoute(method,operation)) { response.sendError(403,"Authority route not allowed");return false; }
                 } else {
                     if(leaseMachine(path)) return true;
-                    if(!Set.of("/ui/authority","/ui/configurations","/ui/questions").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
+                    if(!Set.of("/ui/authority","/ui/configurations","/ui/questions","/ui/workflow-graphs").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
                 }
                 var session=request.getSession(false);
                 if(!security.enabled() || session==null || !security.authenticated(session)) { response.sendError(401,"Configured human authentication required");return false; }
@@ -69,6 +70,6 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 boundary.human(security.actor(session));return true;
             }
             @Override public void afterCompletion(HttpServletRequest request,HttpServletResponse response,Object handler,Exception error) { boundary.human(null); }
-        }).addPathPatterns("/api/r1/**","/ui/authority","/ui/configurations","/ui/questions").order(10);
+        }).addPathPatterns("/api/r1/**","/ui/authority","/ui/configurations","/ui/questions","/ui/workflow-graphs").order(10);
     }
 }

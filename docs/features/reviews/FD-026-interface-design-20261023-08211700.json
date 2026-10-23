@@ -1,0 +1,54 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-026",
+  "source_event": null,
+  "human_report": "FD-026-interface-design-20261023-08211700.md",
+  "data": {
+    "review_type": "bounded-interface-design-feedback",
+    "reviewer_reference": "fd026-interface-design-20261023-08211700",
+    "source_event_reason": "主机授权的一次补充设计咨询；不领取/更改既有Worker事件或产生实现审查事件",
+    "original_handoff_provenance": "FD-026-000003-design-ready",
+    "worktree": "D:/03_projects/AI-tools/aiw-de/.wt/FD-026",
+    "head": "f7cd526",
+    "input_state": "仅FD实施接口细化尚未提交；图源码尚未开始",
+    "scope": "实施接口细化：实际接合与范围快照及必要Factory/Yield/Questions/Guard/Ledger接口",
+    "methods": ["fd-workflow planning bounded independent feedback", "codebase-design interface/state boundaries"],
+    "recommendation": "changes-needed",
+    "findings": [
+      {
+        "id": "I026-01",
+        "severity": "P1",
+        "status": "remaining",
+        "location": "docs/features/FD-026/FD-026_AI.md:101-102; representative ROOT/code-loop/document scenario; ExecutionLedger.backjump",
+        "reason": "父join绑定具体iteration成员，但祖先loop回跳后没有确定的稳定出口槽接续和旧轮非成功关闭合同；不能既固定旧成员又隐式读取最新轮",
+        "minimal_resolution": "编译归一潜在选择来源/合成入口并分开成功数据依赖；循环activationID和父join子范围出口槽稳定、每轮成员不可变；回跳事务原子扣账/非成功关闭旧轮/绑定新待定轮，父join保持WAITING，不把失败变未选或发布成功，不自等触发控制节点；end不自动成功，显式carry才可导入精确旧事实"
+      },
+      {
+        "id": "I026-02",
+        "severity": "P1",
+        "status": "remaining",
+        "location": "docs/features/FD-026/FD-026_AI.md:99,104-105; D026-02 version check; QuestionContract.Source/SourceResolver",
+        "reason": "冻结父activation和运行期未激活子范围patch之间缺少明确版本绑定；全局head变化可能使旧来源失效或让补丁永不被执行",
+        "minimal_resolution": "分离编辑head与执行快照，父activation有未绑定子范围版本槽/向量，进入时记录选定子版本和接口摘要；patch与激活同锁CAS，保留完整跨边界控制/数据端口及旧NOT_SELECTED历史，明确后续iteration版本；完成/回答验证来源快照而非全局head，替代有显式槽接管"
+      },
+      {
+        "id": "I026-03",
+        "severity": "P1",
+        "status": "remaining",
+        "location": "docs/features/FD-026/FD-026_AI.md:101,103,105-106; AgentFactory.prepareAuthorized/ConfigurationContract.Intent/ExecutionGuard",
+        "reason": "业务verdict、真实FAILED、取消和UNKNOWN的边选择/固定依据未区分到可执行状态；失败依赖不能作为现Factory的成功TaskInput，重试与已消费失败路径可能冲突",
+        "minimal_resolution": "固定已完成业务结果/已知失败事实/取消/未知的类型及选路；失败事实由正式图输入+冻结instruction或窄来源端口登记验证；FAILED_BLOCKED未发布槽才可显式CAS技术重试并沿原Attempt预算，已消费失败路径或改输入使用replacementFor新槽，历史选择和失败保留，UNKNOWN不得重放"
+      }
+    ],
+    "integration_suggestions": [
+      "Factory稳定execution→intent版本/原摘要/preparation generation→唯一READY task映射；BLOCKED不靠扫描造新身份",
+      "SourceResolver在FD-028 consume事务内推进；纯ask Application(null)，临时任务复用可信continuation，唯一APPLIED仍归问题服务，固定question/answerRevision/execution消费键",
+      "ledger到限保留原转移ID及唯一申请，后台提出申请需可信缺口端口，不伪人类身份，不签发额度"
+    ],
+    "human_decisions_reopened": false,
+    "commands_run": ["Get-Content精确本地读取", "限定目录rg", "git status --short/git rev-parse HEAD只读", "报告写入后单次静态MD/JSON配对检查"],
+    "evidence_limits": ["一次有界接口设计咨询，不重审五FD或运行期实现", "图尚未实现，findings为设计合同缺口，不虚构实现缺陷", "未测试/编译/服务/模型/DB/网络，未修改源码/FD/Git/事件，未委派", "批量读取截断后按精确相邻接口补足，不以截断输出充当完整证据", "不是verification-passed，事务/并发/恢复没有运行证明"],
+    "recorded_at": "2026-10-23T21:19:38+09:00"
+  }
+}

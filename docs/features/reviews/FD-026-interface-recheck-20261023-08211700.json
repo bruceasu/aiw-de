@@ -1,0 +1,46 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-026",
+  "source_event": null,
+  "human_report": "FD-026-interface-recheck-20261023-08211700.md",
+  "data": {
+    "review_type": "targeted-interface-design-recheck",
+    "reviewer_reference": "fd026-interface-recheck-20261023-08211700",
+    "source_event_reason": "主机明确授权的本轮material-fix定向设计咨询，不领取或修改现有事件",
+    "original_handoff_provenance": "FD-026-000003-design-ready",
+    "worktree": "D:/03_projects/AI-tools/aiw-de/.wt/FD-026",
+    "previous_report": "FD-026-interface-design-20261023-08211700.md",
+    "scope": "仅接口反馈定案I026-01至03及对应原反馈，不扩展其他FD或设计",
+    "recommendation": "ready",
+    "findings": [
+      {
+        "id": "I026-01",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-026/FD-026_AI.md:116",
+        "resolution": "稳定循环activation/父出口及WAITING；旧轮REPEATED、控制TRANSFERRED为非成功，出口等待当前轮真实必要成果和收尾；显式carry冻结精确旧完成事实，不冒充新轮依赖/汇合，不自等控制节点，不改变外围分支"
+      },
+      {
+        "id": "I026-02",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-026/FD-026_AI.md:117",
+        "resolution": "编辑head与activation定义分离；父子版本槽在进入时固定版本/接口摘要，patch与激活同锁CAS，边界数据/控制合同不变，NOT_SELECTED历史不可改写；后续轮次不查最新，旧来源不比全局head"
+      },
+      {
+        "id": "I026-03",
+        "severity": "P1",
+        "status": "resolved",
+        "location": "docs/features/FD-026/FD-026_AI.md:118",
+        "resolution": "业务完成verdict与FAILED/UNKNOWN/CANCELLED区分；平台FailureFact及failureNext固定来源，不造成功TaskInput；未消费失败槽经精确版本/Attempt/UUID重试同Task且不清历史；替代需真实静止/无未知及消费冲突、replacementFor/CAS，旧失败和边决定保留，禁止forceRequeue"
+      }
+    ],
+    "remaining_findings": [],
+    "integration_confirmation": "第119-120行固定Factory意图身份/generation、唯一事实和问题消费键、同一可信continuation及APPLIED事务、request-only预算申请与原transitionId，符合上一轮已读取邻接接口边界",
+    "human_decisions_reopened": false,
+    "commands_run": ["Get-Content精确读取新增定案与原反馈JSON", "clock时间读取", "仅写本轮MD/JSON", "写后一次静态配对/结果检查"],
+    "evidence_limits": ["一次有界material-fix定向设计复查，不重做全范围设计", "本轮无邻接代码变更审查或图实现证据，具体机制留待独立实现审查", "未Git/生命周期命令/编译/测试/模型/服务/DB/网络，未修改FD/源码，未委派", "设计ready不表示实现或运行通过，不是verification-passed"],
+    "recorded_at": "2026-10-23T21:25:54+09:00"
+  }
+}

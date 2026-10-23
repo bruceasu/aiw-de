@@ -1,0 +1,56 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-026",
+  "source_event": "FD-026-000004-implementation-ready",
+  "human_report": "FD-026-review-blocker-20261023-08211700.md",
+  "data": {
+    "status": "resolved",
+    "recorded_at": "2026-10-23T21:47:34+09:00",
+    "session_ref": "fd026-independent-review-20261023-08211700-r1-graph",
+    "review_failures": 1,
+    "review_limit": 3,
+    "review_report": "../reviews/FD-026-review-20261023-08211700.md",
+    "observed_facts": [
+      "R026-01: explicit failure routing leaves success choices pending",
+      "R026-02: ancestor loop waits on unselected parent join work",
+      "R026-03: global terminal aggregate omits same-plan planner tasks",
+      "R026-04: accepted ASK defaults fail the formal question validator"
+    ],
+    "unknowns": [
+      "Actual concurrent persistence and restart recovery",
+      "Backend/channel/cancellation behavior and V15 migration execution"
+    ],
+    "attempts": [
+      "Independent static complete-diff and adjacent-contract review",
+      "Exact Reviewer claim",
+      "No implementation repair or runtime execution"
+    ],
+    "human_decision_needs": [],
+    "next_step": "PM continues normal local delivery/archive after the actual verification-passed handoff; runtime evidence remains unperformed",
+    "resolution": {
+      "resolved_at": "2026-10-23T21:52:54+09:00",
+      "source_event": "FD-026-000006-implementation-ready",
+      "reviewer_session": "fd026-independent-review-20261023-08211700-r2-graph",
+      "reviewed_head": "4b23f25c0f98b98387c7f921bfcaa212b7e58614",
+      "review_report": "../reviews/FD-026-review-20261023-08211700-r2.md",
+      "finding_ids": ["R026-01", "R026-02", "R026-03", "R026-04"],
+      "verdict": "verification-passed",
+      "evidence": "Independent bounded static repair review; original finding and Worker repair history retained; no runtime certification"
+    },
+    "reusable_improvements": [
+      "Distinguish potential, selected and started graph members",
+      "Separate whole-plan and loop-local quiescence",
+      "Align public DTO defaults and persistence-port validation",
+      "Preserve failure decisions with consumption history"
+    ],
+    "template_limit": "Declared generic blocker template pair absent in this worktree; shared-contract fields used",
+    "runtime_checks_run": false,
+    "repair": {
+      "status": "implemented-awaiting-independent-review",
+      "commit": "88a8161",
+      "compile": "passed; 282 production sources; 2026-10-23T21:51:01+09:00",
+      "human_decision_required": false
+    }
+  }
+}

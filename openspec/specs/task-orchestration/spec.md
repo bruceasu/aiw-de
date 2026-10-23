@@ -70,6 +70,28 @@ The system SHALL support pausing, resuming, recovering, and cancelling an autono
 
 ## Notes
 
+### Requirement: Versioned graph activation and selected joins
+The `aiw.workflow.graph.v1` consumer SHALL freeze each region activation definition, inputs and selected output slots. All potential incoming choices SHALL resolve before selecting a node; only genuinely unselected paths become NOT_SELECTED. A failed or cancelled necessary member SHALL block its dependent path while independent branches may continue. END closes a local path; successful publication requires all necessary selected results and actual quiescence of started work.
+
+#### Scenario: A selected child loops while an independent branch completes
+- **WHEN** a declared ancestor loop backjump commits after old work is quiescent
+- **THEN** its activation keeps a stable parent output slot, closes the old iteration without success, atomically charges the shared plan/loop ledger and starts a distinct iteration; the parent waits and the independent branch retains its original result
+- **AND** only explicit carry imports freeze old completed Task/Attempt/commit evidence into the new iteration; old results do not satisfy new ordinary dependencies
+
+### Requirement: Editable head and immutable execution provenance
+The graph edit head SHALL be separate from activation definition versions. A validated patch MAY expand an unactivated subtree while preserving its external control/data/authority interface. Entry and patch SHALL serialize version binding. Completed facts and formal answers SHALL validate their frozen execution provenance rather than equal the latest edit head. Model candidates SHALL pass the same versioned human change boundary before execution.
+
+#### Scenario: A draft recommendation is invalid
+- **WHEN** the controlled read-only planning task returns malformed graph data
+- **THEN** the candidate and diagnostics remain available for manual editing, and no candidate node executes
+
+### Requirement: Formal graph questions and bounded recovery
+Graph ASK and temporary task questions SHALL use the formal-question store and its sole APPLIED consumer. A temporary question SHALL reuse the guarded continuation and atomically transfer the graph slot. Paused facts remain durable without advancement. Known unconsumed technical failures MAY be explicitly retried with exact execution/task/Attempt versions; replacements SHALL preserve prior failures and consumed choices. UNKNOWN SHALL require human reconciliation rather than automatic replay.
+
+#### Scenario: A budget prevents another loop iteration
+- **WHEN** the initial iteration and three backjumps have consumed the shared loop allowance
+- **THEN** the original transition remains blocked, one scoped increment request is retained without granting authority, and a formal approval resumes that same transition without double charging
+
 - Task state, dependencies, and lease ownership are authoritative in the Control Plane and its persistence layer.
 - Scheduling also applies capability matching, priority aging, run fairness, and run, fleet, and worker capacity limits.
 - This spec describes current capability; production management API authentication and general skill/tool permission governance are outside its scope.
