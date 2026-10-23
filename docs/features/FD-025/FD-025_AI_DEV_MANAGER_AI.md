@@ -83,6 +83,10 @@ FD-029/027/028 已归档交付；FD-026 已实现、正按真实 Reviewer 事件
 
 工程取舍：惰性提案加人类采纳，多一步明确审阅，但可复用已交付 GraphPlans 与现有身份，不把私人聊天或新授权机制塞进图执行。V16 是新库附加表，不迁移或删除用户 DB。自定义候选/实际角色模板不自动授权；所有运行权限仍由原 Guard/Factory/问题模块决定。
 
+定向接口约束：提案事务调用 `admission.enabled(principal)` 并复验当前 owner/worker/generation/平台 boot/worker boot；不存在计划时不要求 read_scope/A01。记录的旧 boot 只是来源历史，重启后以当前启用的同 owner+worker 查询旧回执；SENDING/UNKNOWN 或查询 404 均不自动转为可重发。人类采纳同一 authority 锁/事务中先查不可变 adoption receipt，再调用 GraphPlans.change 和 CAS 登记；幂等重放返回原 plan/version，不重新构造 change 或覆盖后来的 head。交付只核对 ROOT 当前正式出口：重算出口/Fact/TaskInput、context.input_json、delivery 原文摘要，对照物理 COMPLETED Task/Attempt、完整 baseline/result、配置及 sources；命令是 Worker 原声明，不从其文本推断平台验证通过。
+
+[集成接口设计反馈](../reviews/FD-025-integration-design-20261023-08211700.md) 已单次定向确认 I025-01～03 resolved、scoped ready，source_event=null（咨询），不替代实施审查。四个子成果均已按真实事件合入并归档：FD-029 `5d684e5`、FD-027 `e13cbc8`、FD-028 `b27d23a`、FD-026 `bd22b48`。当前工程任务是本 FD 隔离实施上述接合，运行预算仍为零。
+
 所有工作项为 small；估算不超过半天/项。难度均为中；遇到未解决的外部合同须先处理 Gate，不能靠拆小降级风险。
 
 | ID | 依赖 | 独立结果与完成条件 |
@@ -128,5 +132,5 @@ TODO：收敛独立设计反馈 → 就绪交接 → 各子成果实现/审查/�
 
 - Issue: ISSUE-00009
 - [批准的父需求](../../issues/ISSUE-00009/issue-plan.md)。
-- [FD-026](../FD-026/FD-026_AI.md)、[FD-027](../FD-027/FD-027_WORKER.md)、[FD-028](../FD-028/FD-028_FEATURE.md)、[FD-029](../FD-029/FD-029_FEATURE.md)。
+- [FD-026](../archive/FD-026/FD-026_AI.md)、[FD-027](../archive/FD-027/FD-027_WORKER.md)、[FD-028](../archive/FD-028/FD-028_FEATURE.md)、[FD-029](../archive/FD-029/FD-029_FEATURE.md)。
 - 设计来源事件：`FD-025-000002-design-requested`；Planner 会话：`fd025-029-host-20261022-234846-08211700`。

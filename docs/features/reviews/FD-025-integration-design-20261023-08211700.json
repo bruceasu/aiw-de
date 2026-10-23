@@ -1,0 +1,32 @@
+{
+  "schema":"aiw.fd.evidence.v1",
+  "kind":"design-review",
+  "fd_id":"FD-025",
+  "source_event":null,
+  "human_report":"FD-025-integration-design-20261023-08211700.md",
+  "data":{
+    "review_type":"bounded-specific-integration-interface-consultation",
+    "reviewer_reference":"fd025-integration-design-20261023-08211700",
+    "recorded_at":"2026-10-23T21:58:32+09:00",
+    "source_event_reason":"独立静态接口咨询，无当前角色handoff；不领取或改变原design-ready，仅作阶段溯源",
+    "working_directory":"D:/03_projects/AI-tools/aiw-de",
+    "parent_provided_design_revision":"47f60fe",
+    "observed_adjacent_source_head":"bd22b48db8005039f30a18f5e10fca9472a1f3e8",
+    "scope":"仅FD第74至84行集成接口细化及必要实际身份/图/问题/交付/私人存储接口",
+    "recommendation":"ready",
+    "recommendation_scope":"具体集成接口；本轮主机已接受最低合同，已静态核对当前FD的定向接口约束纳入三项定案；不是实现或运行通过",
+    "findings":[
+      {"id":"I025-01","severity":"P1","status":"resolved-by-explicit-consultation-decision","location":"docs/features/FD-025/FD-025_AI_DEV_MANAGER_AI.md:78","reason":"原来源boot与当前认证、未知发送恢复、现有action outbox的重发语义需要区分。候选尚未实现，不作为源码缺陷。","minimal_resolution":"当前enabled/boot在authority事务内复验，owner/worker由认证派生；无PLAN不要求read_scope或A01。原boot只留历史，当前同owner+worker可query旧receipt。raw UTF-8 digest、唯一owner/request及worker固定；私人decision CAS在发送前写SENDING，遗留SENDING/UNKNOWN及404仅query，不进原action outbox。","decision_status":"主机已明确接受；无剩余人类决定"},
+      {"id":"I025-02","severity":"P1","status":"resolved-by-explicit-consultation-decision","location":"docs/features/FD-025/FD-025_AI_DEV_MANAGER_AI.md:79","reason":"重复采纳须与图后续head无关，当前角色校验和原子receipt不可依赖仅首次调用GraphPlans.change。","minimal_resolution":"当前人类owner操作门禁先于receipt replay；同authority锁事务先查immutable adoption，再以稳定Change UUID调用expectedVersion=0的GraphPlans.change并CAS登记采纳。丢响应重放只返原plan/version，不覆盖编辑，不换plan；空Spec无执行能力。聚合读取先过原owner/角色边界。","decision_status":"主机已明确接受；无剩余人类决定"},
+      {"id":"I025-03","severity":"P1","status":"resolved-by-explicit-consultation-decision","location":"docs/features/FD-025/FD-025_AI_DEV_MANAGER_AI.md:81","reason":"真实Delivery字段与ROOT出口需有同一可落实的核对链，完整图状态或命令文本不能替代证据。","minimal_resolution":"在一致事实快照只取最终ROOT exports，复算exit/Fact/TaskInput/context/delivery原文摘要；精确Task+Attempt对照实际COMPLETED、base/result/changes、owner/plan/config与全部固定sources，不查latest补结果。ANSWER/空成果/缺版本/冲突/UNKNOWN如实标识。命令仅Worker原声明，不推断pass；不造Delivery。","decision_status":"主机已明确接受；无剩余人类决定"}
+    ],
+    "remaining_findings":[],
+    "implementation_constraints":["Exact closed machine routes and explicit new UI authentication interception", "Strict three-field projection and raw UTF-8 digest confirmation", "Local decision CAS separate from existing action outbox", "Current authorization before adoption replay and one atomic graph/receipt transaction", "Same owner/role boundary before read-only aggregation", "Final ROOT evidence and real task/attempt/context/config/source/delivery checks", "No empty-set or command-text inference of delivery/pass"],
+    "actual_interfaces_read":["AuthorityHttpConfiguration/AuthorityBoundary", "ActionAdmissionService.enabled/readable", "questions.PersonalQuestions", "GraphPlans/GraphState and previously reviewed ROOT export algorithm", "ExecutionGuard.delivery/context and GuardContract.Delivery", "TaskInput and V12 execution context/delivery tables", "personal-secretary store/runtime/platform_client/main"],
+    "alternatives_and_tradeoffs":"Reuse inert proposal plus human GraphPlans adoption rather than granting secretary graph actions; retain exact read-only evidence checks rather than creating another delivery ledger. One explicit adoption and possible missing-evidence result are accepted costs.",
+    "commands_run":["Three targeted static Get-Content/rg discovery batches", "git status --short and git rev-parse HEAD only", "One post-write static JSON/paired-artifact metadata check"],
+    "human_decisions_reopened":false,
+    "human_decision_needs":[],
+    "evidence_limits":["Design guidance only; GoalProposal/V16/adoption/aggregate not implemented", "No independent implementation verdict or verification-passed event", "No tests/compilation/scripts/services/database/model/worker/network/browser", "No FD/source/state/Git changes or recursive delegation", "FD026 archive path moved while reading; actual source is in main workspace", "Protected experiment and .env untouched"]
+  }
+}
