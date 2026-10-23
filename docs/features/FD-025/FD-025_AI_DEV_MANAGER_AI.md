@@ -71,6 +71,18 @@ FD-029 必须在现有任务/Runtime 的真实工具路径上独立验收，不�
 
 ## Work items
 
+### 已交付子合同上的集成接口细化（2026-10-23）
+
+FD-029/027/028 已归档交付；FD-026 已实现、正按真实 Reviewer 事件修复复核。以下细化只装配子模块，不拥有第二套图推进、授权、问题或交付账本。新端口/持久化/私人数据边界在实施前取得一次有界独立设计反馈。
+
+1. **秘书的最小目标投影。** `GoalProjection(selectedGoal,necessaryContext,acceptance)` 为封闭数据；私聊全文、私人 policy、模板与凭证不进入该对象。私人秘书先只生成可见 JSON 及 SHA-256；用户确认精确 digest 后，才把 `GoalProposal(requestId,projectionJson,digest)` 提交到平台。该操作只保存惰性候选，既不创建正式计划，也不消耗执行授权、调用 Factory 或模型。读取/提交使用既有独立个人凭证、当前 worker boot、明确启用及 owner 身份；新机器路由 `/api/r1/authority/goal-proposals`（POST）、`/goal-proposals/{requestId}`（GET），严格路由和大小限制。V16 仅新增候选表，固定 owner/worker/原请求/raw digest/平台 instance 与 boot 世代；同 owner+UUID 原文不一致拒绝，重放只返回原收据。私人端发送前保存 SENDING，失去响应保留 UNKNOWN，只能查询原 ID，不自动重发；重启后的 SENDING 同样先核对。预览不发送网络或执行模型。
+2. **人类采纳与同一草稿入口。** `/ui/software-development` 的当前 owner 操作角色读取自己的候选，并按精确 proposal/digest/目标 plan ID 采纳；服务构造原 `GraphPlans.change` 的 UUID+expectedVersion=0+source/reason+空不可执行 Spec，原子写采纳收据。新计划目标/范围/验收仅来自选定字段；缺范围/验收明确标为待澄清，图仍空 DRAFT，用户之后可用原图入口请求只读规划/审阅。重复采纳返回原 plan/version，不回写后续编辑；同 proposal 不允许换 plan。候选状态不成为委托批准，也不新增 A01 的语义。秘书无权通过本入口激活、修改或执行图。
+3. **闭环只读投影。** `/api/r1/authority/software-development/read` 先复用 GraphPlans 的当前 owner 操作/审批读取边界，再组合版本/范围/选路/轮次/真实 Task/Attempt、Factory preparation 缺口、正式问题、policy/共享账本和角色分类。正文仅显示现有事实及对应控制台链接；执行控制/回答/审批仍去各原服务。职责分类是模板元数据，预留能力和 Go/TypeScript 旧 Runtime 明示未纳入新图首期，不改变私有数据归属。
+4. **交付证据视图。** 只从最终有效 ROOT 出口的冻结成果槽收集真实 TaskInput（task/Attempt/commit/摘要），并读取相应 `execution_delivery` 与 `execution_context`。核对来源 owner/plan、实际 COMPLETED Task/Attempt、交付原文摘要、baseline/result commit 及固定输入/配置/来源摘要；不从旧轮、失败、CONTINUED 或“最新任务”猜结果。缺交付、缺明确版本、摘要/来源不一致分别标为缺失/冲突；Graph COMPLETED 也不伪造一份完整交付。实际命令与未执行检查显示原记录，没有记录则写未记录，不写通过。该视图不创建第二份正式 Delivery，也不发布、push 或部署。
+5. **界面及证据。** 复用 Web Console 样式，为目标/候选、图编辑、配置、问答/控制、授权/UNKNOWN 核对和正式交付提供同一入口；私人秘书沿用既有本地 UI 的预览确认形式。最窄离线 Java compile、变更 JS 的语法检查和变更 Python 的内存 compile 仅为编译证据，不启动服务、DB、模型、Worker、渠道或网络。跨成果场景记录静态调用链及源码位置，未执行场景明确保留风险。
+
+工程取舍：惰性提案加人类采纳，多一步明确审阅，但可复用已交付 GraphPlans 与现有身份，不把私人聊天或新授权机制塞进图执行。V16 是新库附加表，不迁移或删除用户 DB。自定义候选/实际角色模板不自动授权；所有运行权限仍由原 Guard/Factory/问题模块决定。
+
 所有工作项为 small；估算不超过半天/项。难度均为中；遇到未解决的外部合同须先处理 Gate，不能靠拆小降级风险。
 
 | ID | 依赖 | 独立结果与完成条件 |
@@ -80,7 +92,7 @@ FD-029 必须在现有任务/Runtime 的真实工具路径上独立验收，不�
 | 1.3 | 1.2 | 连通 ask/临时问题/取消及恢复；身份、版本和来源关联完整 |
 | 1.4 | 1.2、FD-029 交付包 | 展示统一进展及正式交付；缺失证据如实标注 |
 | 1.5 | 1.3、1.4 | 完成正常及边界场景的静态调用链核对，记录实际证据和未运行项 |
-| 1.6 | 1.5 | 更新首期操作、配置和延期说明，取得独立实现审查及本地交付 |
+| 1.6 | 1.5 | 更新首期操作、配置和延期说明及实现交接证据；独立审查/本地交付另记真实生命周期结果 |
 
 - [ ] 1.1 固定接合合同与验收覆盖。
 - [ ] 1.2 目标至执行入口接合。
