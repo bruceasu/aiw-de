@@ -1,10 +1,10 @@
 id = "ISSUE-00014"
 title = "Worker Skills 由平台统一管理，按任务引用固定版本"
 parent_id = ""
-status = "APPROVED"
+status = "ARCHIVED"
 created = "2026-10-23"
 updated = "2026-10-23"
-revision = 3
+revision = 4
 
 [approval]
 status = "APPROVED"
@@ -21,9 +21,9 @@ task_id = ""
 session_id = ""
 
 [terminal]
-by = ""
-at = ""
-reason = ""
+by = "LAPTOP-P8VM6T16\\suk"
+at = "2026-10-23T23:28:24+09:00"
+reason = "done"
 
 [artifact]
 requirement-plan = "docs/issues/ISSUE-00014/issue-plan.md"
