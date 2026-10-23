@@ -1,1 +1,22 @@
-{"schema":"aiw.fd.evidence.v1","kind":"blocker-feedback","fd_id":"FD-025","source_event":"FD-025-000004-work-requested","human_report":"FD-025-blocker-plan-refresh-20261023-08211700.md","data":{"role":"PM","stage":"workspace-preflight","session_ref":"fd025-029-host-20261022-234846-08211700","status":"recovering","symptom":"wt: commit the FD plan before creating its worktree","cause":"refresh-worker modified FD after design commit","attempts":["one rejected wt add; no worktree created"],"human_decision_required":false,"next_step":"commit refreshed FD and feedback, then create verified isolated workspace","reusable_improvement":"commit refreshed FD before wt add"}}
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-025",
+  "source_event": "FD-025-000004-work-requested",
+  "human_report": "FD-025-blocker-plan-refresh-20261023-08211700.md",
+  "data": {
+    "role": "PM",
+    "stage": "workspace-preflight",
+    "session_ref": "fd025-029-host-20261022-234846-08211700",
+    "status": "resolved",
+    "symptom": "wt: commit the FD plan before creating its worktree",
+    "cause": "refresh-worker modified FD after design commit",
+    "attempts": [
+      "one rejected wt add; no worktree created"
+    ],
+    "human_decision_required": false,
+    "next_step": "commit refreshed FD and feedback, then create verified isolated workspace",
+    "reusable_improvement": "commit refreshed FD before wt add",
+    "resolution": "Refreshed FD committed as c877040, verified .wt/FD-025 on feature/FD-025 with parent develop, exact Worker event claimed; no source takeover or runtime action"
+  }
+}

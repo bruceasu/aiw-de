@@ -142,6 +142,12 @@ def serve(runtime, host, port, public_origin=None):
                         result = runtime.queue_action(data["grantId"])
                     elif self.path == "/api/questions":
                         result = runtime.questions(data["planId"])
+                    elif self.path == "/api/goal-preview":
+                        result = runtime.selected_goals.preview(data["selectedGoal"], data.get("necessaryContext", ""), data.get("acceptance", ""))
+                    elif self.path == "/api/goal-submit":
+                        result = runtime.selected_goals.submit(data["requestId"], data["projectionJson"], data["digest"])
+                    elif self.path == "/api/goal-receipt":
+                        result = runtime.selected_goals.query(data["requestId"])
                     elif self.path == "/api/question-preview":
                         result = runtime.question_projection(data["questionId"], data["requestVersion"], data["rawAnswer"], data.get("selectedGoal", ""), data.get("necessaryContext", ""))
                     elif self.path == "/api/question-reply":

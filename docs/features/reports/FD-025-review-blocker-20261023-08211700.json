@@ -1,0 +1,57 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-025",
+  "source_event": "FD-025-000005-implementation-ready",
+  "human_report": "FD-025-review-blocker-20261023-08211700.md",
+  "data": {
+    "stage": "implementation-review",
+    "role": "reviewer",
+    "status": "resolved",
+    "recorded_at": "2026-10-23T22:12:44+09:00",
+    "session_ref": "fd025-independent-review-20261023-08211700-r1-integration",
+    "review_failures": 1,
+    "review_limit": 3,
+    "review_report": "../reviews/FD-025-review-20261023-08211700.md",
+    "observed_facts": [
+      "R025-01: foreign graph can reserve an existing Legacy Plan ID without policy/target and block its creator's Guard.confirm",
+      "R025-02: list-order comparison falsely conflicts with valid file-set-equivalent Delivery"
+    ],
+    "confirmed_causes": [
+      "Existing Legacy created_by omitted from graph ownership admission",
+      "New view uses List.equals while the source contract uses file-set equality"
+    ],
+    "unknowns": [
+      "Runtime transaction concurrency and recovery",
+      "Real backend/channel/stop behavior"
+    ],
+    "attempts": [
+      "One independent complete static review",
+      "Narrow static confirmation of actual creator and file comparison contracts",
+      "No implementation repair or runtime checks"
+    ],
+    "human_decision_needs": [],
+    "next_step": "PM continues local delivery/archive after the actual verification-passed event; unrun risks remain explicit",
+    "resolution": {
+      "resolved_at": "2026-10-23T22:16:39+09:00",
+      "source_event": "FD-025-000007-implementation-ready",
+      "reviewer_session": "fd025-independent-review-20261023-08211700-r2-integration",
+      "reviewed_head": "6f721249d20da20445a300213db308c1c3793a81",
+      "review_report": "../reviews/FD-025-review-20261023-08211700-r2.md",
+      "finding_ids": ["R025-01", "R025-02"],
+      "verdict": "verification-passed",
+      "evidence": "Independent bounded static repair review; original failure and Worker repair history retained; no runtime certification"
+    },
+    "reusable_improvements": [
+      "Check ownership across every existing formal source sharing an ID",
+      "Reuse the owning contract's equality semantics in composed views"
+    ],
+    "runtime_checks_run": false,
+    "repair": {
+      "status": "implemented-awaiting-independent-review",
+      "commit": "5007ed3",
+      "compile": "passed; 285 production files; 2026-10-23T22:15:05+09:00",
+      "human_decision_required": false
+    }
+  }
+}

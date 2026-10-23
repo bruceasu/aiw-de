@@ -1,0 +1,33 @@
+{
+  "schema":"aiw.fd.evidence.v1",
+  "kind":"reviewer-report",
+  "fd_id":"FD-025",
+  "source_event":"FD-025-000007-implementation-ready",
+  "human_report":"FD-025-review-20261023-08211700-r2.md",
+  "data":{
+    "reviewer_session":"fd025-independent-review-20261023-08211700-r2-integration",
+    "recorded_at":"2026-10-23T22:16:39+09:00",
+    "comparison_base":"c877040",
+    "previous_reviewed_head":"06de05a",
+    "reviewed_head":"6f721249d20da20445a300213db308c1c3793a81",
+    "implementation_commit":"5007ed3",
+    "review_round":2,
+    "review_failures_before":1,
+    "review_failures_after":1,
+    "review_limit":3,
+    "verdict":"verification-passed",
+    "findings":[],
+    "resolved_findings":[
+      {"id":"R025-01","status":"resolved","location":"src/main/java/me/asu/aidev/workflow/graph/GraphPlans.java:35","evidence":"Under the existing authority lock/current human owner role, Legacy created_by is checked against the actual owner actor before graph insertion, even without policy/target. Same-owner use remains valid and matches Guard.confirm. Adoption shares this transaction and cannot retain a graph/receipt after rejection."},
+      {"id":"R025-02","status":"resolved","location":"src/main/java/me/asu/aidev/software/SoftwareDelivery.java:59","evidence":"HashSet equality now matches the authoritative Guard completion contract. Order-only differences are accepted; added/missing files still conflict. Raw Delivery hash, exact Task/Attempt/version/context/config/source checks remain unchanged; history is not rewritten."}
+    ],
+    "coverage":["Actual repair diff 06de05a..6f72124", "Original ownership and file-order counterexamples", "Direct owner actor/Guard.confirm/GoalProposals.adopt transaction integration", "Raw Delivery and provenance checks around the changed comparison", "Prior complete-FD static coverage retained for unchanged scope"],
+    "commands_run":["aiw fd show FD-025", "aiw fd claim FD-025 FD-025-000007-implementation-ready --session fd025-independent-review-20261023-08211700-r2-integration", "Git status/rev-parse/diff and narrow Get-Content/Select-String reads", "One post-write static JSON/paired-artifact/source/session/FD/diff-whitespace/HEAD check"],
+    "worker_evidence":{"source_commit":"5007ed3","compile_finished_at":"2026-10-23T22:15:05+09:00","production_java_sources":285,"python_javascript":"Unchanged; original compile evidence retained","reviewer_reran":false,"runtime_pass":false},
+    "not_run":["tests", "compilation", "project validation scripts", "services", "database/Flyway", "HTTP/browser", "models/workers", "Telegram", "actual concurrency/restart/stop/UNKNOWN", "cgroup", "network/installations"],
+    "evidence_limits":["Bounded static repair review only", "Runtime transaction/backend/channel/stop behavior remains unverified", "No source/protected-experiment/.env edits or Git commits/merge/archive", "No recursive delegation or additional FD review"],
+    "blocker_feedback":"../reports/FD-025-review-blocker-20261023-08211700.md",
+    "runtime_certified":false,
+    "implementation_modified":false
+  }
+}

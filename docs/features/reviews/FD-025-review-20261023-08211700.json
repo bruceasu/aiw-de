@@ -1,0 +1,31 @@
+{
+  "schema":"aiw.fd.evidence.v1",
+  "kind":"reviewer-report",
+  "fd_id":"FD-025",
+  "source_event":"FD-025-000005-implementation-ready",
+  "human_report":"FD-025-review-20261023-08211700.md",
+  "data":{
+    "reviewer_session":"fd025-independent-review-20261023-08211700-r1-integration",
+    "recorded_at":"2026-10-23T22:12:44+09:00",
+    "comparison_base":"c877040",
+    "reviewed_head":"06de05a4a60b953951cfae514f0cdc73b9931a92",
+    "implementation_commit":"47fb205",
+    "review_round":1,
+    "review_failures_before":0,
+    "review_failures_after":1,
+    "review_limit":3,
+    "verdict":"changes-requested",
+    "findings":[
+      {"id":"R025-01","severity":"P1","status":"unresolved","location":"src/main/java/me/asu/aidev/workflow/graph/GraphPlans.java:33","requirement":"Current owner consistency at graph/policy/Legacy integration; work items 1.2/1.5 and AC09-11","observed":"A real Legacy DRAFT has flexible_workflow_plan.created_by but no execution_policy/authority_target. Another owner can create a graph with that ID because change checks only those two ownership sources. The original creator's later Guard.confirm is rejected by the newly added foreign graph owner check.","consequence":"Unauthorized cross-owner reservation of an existing plan ID blocks legitimate guarded execution, with no normal graph deletion recovery for that creator.","minimal_resolution":"Before graph insertion/adoption, under the same authority lock transaction also validate the existing flexible_workflow_plan.created_by against the current owner's actual actor, preserving the established Guard.confirm creator semantics. Reject foreign Legacy ownership even without policy/target.","evidence":"Actual GraphPlans.change, Guard.confirm, WorkflowPlanService.draft and JDBC insert trace; no runtime reproduction."},
+      {"id":"R025-02","severity":"P2","status":"unresolved","location":"src/main/java/me/asu/aidev/software/SoftwareDelivery.java:59","requirement":"Preserve authoritative Delivery/WorkspaceResult contract; work items 1.4/1.5 and AC11","observed":"SoftwareDelivery uses List.equals for changed files. Existing Guard.validateResult uses HashSet equality and WorkspaceResult normalizes to TreeSet order. Delivery [b.py,a.py] and actual [a.py,b.py] are legitimately accepted and hashed but then shown as CONFLICT.","consequence":"A valid completed final result can be falsely reported as conflicting delivery evidence.","minimal_resolution":"Use the same file-set equivalence or shared normalization as the authoritative completion contract, retaining raw digest and all task/version/source checks without rewriting Delivery history.","evidence":"Static comparison of the new view with actual validateResult and WorkspaceResult constructors."}
+    ],
+    "coverage":["Complete 24-path FD implementation diff", "Inert selected projection and current owner/worker/enable/boot", "Private CAS and UNKNOWN/404 query-only recovery", "Human adoption role, transaction, immutable receipt and later-head preservation", "Final ROOT/Fact/Task/Attempt/context/config/sources/Delivery and evidence statuses", "Closed HTTP/UI routes and current read/write roles", "New bidirectional owner checks and existing Legacy creator semantics", "Documentation/spec/Worker compile evidence and preserved runtime limits"],
+    "commands_run":["aiw fd show FD-025", "aiw fd claim FD-025 FD-025-000005-implementation-ready --session fd025-independent-review-20261023-08211700-r1-integration", "git status --short; git rev-parse HEAD; git diff c877040..HEAD (stat/name-only/targeted full diff)", "Three static discovery batches plus one narrow confirmation for concrete ownership/comparison blockers", "One post-write static evidence/metadata/diff-whitespace/FD/HEAD check"],
+    "worker_evidence":{"source_commit":"47fb205","java_compile_finished_at":"2026-10-23T22:07:56+09:00","production_sources":285,"python":"in-memory compile of 4 changed files; no project imports","javascript":"node --check of 2 changed files","reviewer_reran":false,"runtime_pass":false},
+    "not_run":["tests", "compilation", "project verification scripts", "services", "database/Flyway", "HTTP/browser", "models/workers", "network/installations", "Telegram", "actual concurrency/restart/stop/UNKNOWN", "cgroup"],
+    "evidence_limits":["Static implementation review, not runtime certification", "Design-ready evidence does not replace implementation review", "No extra agents or implementation/experiment/.env/Git writes", "Only reviewer evidence and FD Verification authored"],
+    "runtime_certified":false,
+    "implementation_modified":false,
+    "blocker_feedback":"../reports/FD-025-review-blocker-20261023-08211700.md"
+  }
+}

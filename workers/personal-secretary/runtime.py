@@ -15,6 +15,7 @@ import urllib.parse
 
 from platform_client import PlatformError
 from store import encode
+from selected_goals import SelectedGoals
 
 
 def content(row):
@@ -26,6 +27,7 @@ class Runtime:
         self.store, self.platform = store, platform
         self.model_command = model_command
         self.enabled = False  # Every restart needs an explicit local enable as well as platform enable.
+        self.selected_goals = SelectedGoals(store, platform, lambda: self.enabled)
         self.cancelled = threading.Event()
         self.process = None
 

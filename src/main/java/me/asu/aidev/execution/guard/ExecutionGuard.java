@@ -81,6 +81,8 @@ public class ExecutionGuard {
         if(machineToken==null || machineToken.isBlank()) throw new IllegalStateException("Configure the shared machine token before enabling guarded execution");
         var owners=repo.jdbc().queryForList("SELECT owner_id FROM authority_target WHERE target_key=?",String.class,"PLAN:"+input.planId());
         if(!owners.isEmpty() && !owners.getFirst().equals(input.ownerId())) throw new SecurityException("Existing target belongs to another owner");
+        var graphOwners=repo.jdbc().queryForList("SELECT owner_id FROM workflow_graph WHERE id=?",String.class,input.planId());
+        if(graphOwners.stream().anyMatch(o->!o.equals(input.ownerId())))throw new SecurityException("Existing graph belongs to another owner");
         var creators=repo.jdbc().queryForList("SELECT created_by FROM flexible_workflow_plan WHERE id=?",String.class,input.planId());
         if(!creators.isEmpty() && !Objects.equals(creators.getFirst(),boundary.human())) throw new SecurityException("Existing Plan belongs to another creator");
         if(input.expiresAt()<=System.currentTimeMillis()) throw new IllegalArgumentException("Future policy expiry required");

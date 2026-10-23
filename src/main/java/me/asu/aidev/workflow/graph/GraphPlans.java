@@ -30,6 +30,10 @@ public class GraphPlans {
     private Map<String,Object> receipt(String owner,String request,String plan,Object input,Map<String,Object> output){repo.jdbc().update("INSERT INTO workflow_graph_request VALUES(?,?,?,?,?)",owner,request,plan,AuthorityRepository.hash(repo.encode(input)),repo.encode(output));return output;}
     @Transactional public Map<String,Object> change(Change input){
         boundary.lock();human(input.ownerId(),true);var previous=replay(input.ownerId(),input.requestId(),input);if(previous!=null)return previous;
+        policyOwner(input.planId(),input.ownerId());
+        var targetOwners=repo.jdbc().queryForList("SELECT owner_id FROM authority_target WHERE target_key=?",String.class,"PLAN:"+input.planId());if(targetOwners.stream().anyMatch(owner->!owner.equals(input.ownerId())))throw new SecurityException("Plan target belongs to another owner");
+        var legacyCreators=repo.jdbc().queryForList("SELECT created_by FROM flexible_workflow_plan WHERE id=?",String.class,input.planId());
+        if(legacyCreators.stream().anyMatch(actor->!Objects.equals(actor,repo.actor(input.ownerId()))))throw new SecurityException("Existing Plan belongs to another creator");
         var rows=repo.jdbc().queryForList("SELECT id FROM workflow_graph WHERE id=?",input.planId());
         if(rows.isEmpty()){
             if(input.expectedVersion()!=0||input.region()!=null)throw new IllegalStateException("New draft version is zero");
@@ -53,6 +57,7 @@ public class GraphPlans {
     }
     private Object outside(Spec s,String region){var rs=validator.regions(s);return List.of(s.goal(),s.scope(),s.acceptance(),s.regions().stream().filter(r->!GraphValidator.ancestor(rs,region,r.key())).toList(),s.nodes().stream().filter(n->!GraphValidator.ancestor(rs,region,n.region())).toList());}
     @Transactional public Map<String,Object> state(String owner,String plan){boundary.lock();human(owner,false);var p=store.get(plan);if(!p.owner().equals(owner))throw new SecurityException("Graph owner mismatch");
+        policyOwner(plan,owner);
         return Map.of("plan",p,"spec",store.spec(plan,p.version()),"diagnostics",validator.diagnostics(store.spec(plan,p.version())),"budgets",ledger.snapshot(plan),"events",repo.jdbc().queryForList("SELECT * FROM workflow_graph_event WHERE plan_id=? ORDER BY created_ms,event_id",plan),"recommendations",repo.jdbc().queryForList("SELECT * FROM workflow_graph_recommendation WHERE plan_id=?",plan),
             "policy",repo.jdbc().queryForList("SELECT plan_id,revision,generation,revoked,paused FROM execution_policy WHERE plan_id=?",plan),
             "physicalTasks",repo.jdbc().queryForList("SELECT t.id,t.version,t.state,g.execution_id,a.id AS attempt_id,a.stop_requested_at_epoch_ms,a.stop_acknowledged_at_epoch_ms FROM work_task t JOIN execution_context x ON x.task_id=t.id LEFT JOIN workflow_graph_task g ON g.task_id=t.id LEFT JOIN execution_attempt a ON a.task_id=t.id AND a.attempt_no=t.attempt_no WHERE x.plan_id=? ORDER BY t.id",plan));}
@@ -97,6 +102,7 @@ public class GraphPlans {
         var ids=repo.jdbc().queryForList("SELECT id FROM execution_attempt WHERE task_id=? ORDER BY attempt_no DESC LIMIT 1",String.class,e.taskId);
         if(ids.size()!=1||!Objects.equals(ids.getFirst(),input.expectedAttemptId()))throw new IllegalStateException("ATTEMPT_CHANGED");return task;
     }
+    private void policyOwner(String plan,String owner){if(repo.jdbc().queryForList("SELECT owner_id FROM execution_policy WHERE plan_id=?",String.class,plan).stream().anyMatch(o->!o.equals(owner)))throw new SecurityException("Graph and execution policy owners differ");}
     private void supersede(Execution e){if(e.questionId!=null)repo.jdbc().update("UPDATE formal_question SET state='SUPERSEDED',blocked_reason='GRAPH_CANCEL_REQUESTED' WHERE id=? AND state IN ('OPEN','ANSWERED')",e.questionId);
         if(e.taskId!=null)repo.jdbc().update("UPDATE formal_question SET state='SUPERSEDED',blocked_reason='GRAPH_CANCEL_REQUESTED' WHERE id IN (SELECT question_id FROM formal_question_slot WHERE source_task_id=?) AND state IN ('OPEN','ANSWERED')",e.taskId);}
 }

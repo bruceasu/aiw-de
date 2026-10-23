@@ -1,7 +1,7 @@
 # FD-025: AIW DE 软件开发闭环集成
 
-**Status:** Open
-**Revision:** 4
+**Status:** Complete
+**Revision:** 8
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -87,6 +87,8 @@ FD-029/027/028 已归档交付；FD-026 已实现、正按真实 Reviewer 事件
 
 [集成接口设计反馈](../reviews/FD-025-integration-design-20261023-08211700.md) 已单次定向确认 I025-01～03 resolved、scoped ready，source_event=null（咨询），不替代实施审查。四个子成果均已按真实事件合入并归档：FD-029 `5d684e5`、FD-027 `e13cbc8`、FD-028 `b27d23a`、FD-026 `bd22b48`。当前工程任务是本 FD 隔离实施上述接合，运行预算仍为零。
 
+实施接合发现并补足同 plan ID 的所有权闭合：GraphPlans 创建/修改及读取聚合前核对已有 execution_policy/authority target owner；Guard.confirm 反向核对已有 graph owner。修改原拥有者模块的窄入口，不建立第二套权限判断引擎或给予新权限。本 FD 独立实现审查覆盖该集成差异，保留 FD-026/029 原审查历史，不声称原归档报告已覆盖此后新增差异。
+
 所有工作项为 small；估算不超过半天/项。难度均为中；遇到未解决的外部合同须先处理 Gate，不能靠拆小降级风险。
 
 | ID | 依赖 | 独立结果与完成条件 |
@@ -98,12 +100,12 @@ FD-029/027/028 已归档交付；FD-026 已实现、正按真实 Reviewer 事件
 | 1.5 | 1.3、1.4 | 完成正常及边界场景的静态调用链核对，记录实际证据和未运行项 |
 | 1.6 | 1.5 | 更新首期操作、配置和延期说明及实现交接证据；独立审查/本地交付另记真实生命周期结果 |
 
-- [ ] 1.1 固定接合合同与验收覆盖。
-- [ ] 1.2 目标至执行入口接合。
-- [ ] 1.3 问答、控制与恢复接合。
-- [ ] 1.4 进展与交付展示。
-- [ ] 1.5 集成边界核对。
-- [ ] 1.6 文档、独立审查及交付。
+- [x] 1.1 固定接合合同与验收覆盖。
+- [x] 1.2 目标至执行入口接合。
+- [x] 1.3 问答、控制与恢复接合。
+- [x] 1.4 进展与交付展示。
+- [x] 1.5 集成边界静态核对。
+- [x] 1.6 文档、编译及实现交接证据；独立审查及交付另记真实结果。
 
 ## Acceptance
 
@@ -124,11 +126,25 @@ FD-029/027/028 已归档交付；FD-026 已实现、正按真实 Reviewer 事件
 
 TODO：收敛独立设计反馈 → 就绪交接 → 各子成果实现/审查/交付 → 集成/审查/交付/归档。G1～G3 已获当前会话用户回答，不再重复询问；依赖未满足时保留 Design，不把候选方案记为已实现。
 
+当前实施记录覆盖上述历史阶段文字：四个子 FD 已真实交付归档，本 FD 使用 `feature/FD-025` 隔离实施，基线 `c877040`，正式 Worker 来源 `FD-025-000004-work-requested`，会话仍为 `fd025-029-host-20261022-234846-08211700`。`software/GoalProposals`、`SoftwareDelivery` 及控制台/私人 selected_goals 接合完成，V16 只新增惰性提案表。静态场景及延期/使用边界见 [操作说明](../../SOFTWARE-DEVELOPMENT.md)，用户实验及 .env 未改变。
+
+实际离线 Java compile 于 2026-10-23 22:07:56 JST 成功编译 285 个生产文件；JDK25/Maven3.9.9，命令 `mvn -o -DskipTests=true -Dmaven.test.skip=true compile`。4 个变更 Python 文件仅标准库内存 compile，2 个变更 JS 仅 node --check，git diff --check 均通过。没有项目 import、测试、服务、数据库/迁移、HTTP/浏览器、模型/Worker、Telegram、真实并发/恢复/停止、网络、安装、push 或部署运行证据，不能把上述未执行项写成通过。原 GraphPlans 泛型解码提示及工具警告保留。“尚待独立实现审查、失败 0/3”为首轮 Worker 交接时阶段记录。
+
+2026-10-23 第 1 轮独立实现审查：Reviewer `fd025-independent-review-20261023-08211700-r1-integration` 核对并领取真实 `FD-025-000005-implementation-ready`，完整静态审查 `c877040..06de05a`（实现 `47fb205`），结论 **changes-requested**。R025-01 为已有 Legacy Plan ID 的跨 owner 占用与反向确认阻断；R025-02 为交付视图文件顺序与原成果集合合同不一致。见 [双份审查报告](../reviews/FD-025-review-20261023-08211700.md) 及 [双份阻断反馈](../reports/FD-025-review-blocker-20261023-08211700.md)。累计失败 **1/3**，Reviewer 未编译、测试或执行运行检查，未改实现。真实交接回执由 CLI 记录。
+
+2026-10-23 第 2 轮独立实现复核：Reviewer `fd025-independent-review-20261023-08211700-r2-integration` 精确领取 `FD-025-000007-implementation-ready`，静态核对 `06de05a..6f72124`（修复源码 `5007ed3`）及直接接合，R025-01/02 均 **resolved**，结论 **verification-passed**。见 [第 2 轮双报告](../reviews/FD-025-review-20261023-08211700-r2.md)，原 blocker 双文件保留首轮事实和修复历史并记为 resolved。累计失败仍为 **1/3**。本 Reviewer 未重跑 Worker 的 22:15:05 JST 编译或其他运行检查，未改实现；真实回执由 CLI 记录。
+
+当前 TODO：PM 依据真实通过回执检查本地交付/归档条件。已确认人类政策不变，运行风险继续保留，不把未运行行为写为通过。
+
 ## 设计就绪记录（2026-10-23）
 
-已取得独立定向复查 [FD-025 design recheck](../reviews/FD-025-design-recheck-20261023-08211700.md) 及同名 JSON；本轮原 findings 全部 resolved，建议 ready。已确认的人类政策及工程合同作为当前设计，本文此前“候选/待复查”的阶段描述以本节为准；尚无实现通过或运行认证。本 FD 当前阶段由 CLI 状态与真实交接记录确定。
+已取得独立定向复查 [FD-025 design recheck](../reviews/FD-025-design-recheck-20261023-08211700.md) 及同名 JSON；该轮原 findings 全部 resolved，建议 ready。已确认的人类政策及工程合同作为当前设计，本文此前“候选/待复查”的阶段描述以本节为准。“尚无实现通过”为设计阶段历史，当前实现结论见 Verification；仍无运行认证。本 FD 当前阶段由 CLI 状态与真实交接记录确定。
 
 ## Sources
+
+### 第一轮实现审查修复
+
+实际领取 `FD-025-000006-changes-requested`，失败累计 1/3。R025-01 在原 GraphPlans.change 同一 authority 锁内补查既有 flexible_workflow_plan.created_by，与当前 owner 的真实 actor 一致才允许接合，不能用缺 policy/target 的旧初稿 ID 抢占；同 owner 原合法行为保留。R025-02 按原 Guard/WorkspaceResult 的文件集合合同比较 Delivery.changes，允许顺序差异，仍拒绝多/少文件，原文 digest/Task/Attempt/版本/来源严格不变，不改历史 Delivery。修复 Java 于 2026-10-23 22:15:05 JST 离线编译 285 个生产文件通过；Python/JS 未改变，沿用首轮编译证据，不重复运行。此段“复核待交接”为 Worker 修复交接时历史；后续真实第 2 轮结论见 Verification。
 
 - Issue: ISSUE-00009
 - [批准的父需求](../../issues/ISSUE-00009/issue-plan.md)。

@@ -28,6 +28,13 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
       document.getElementById('question-projection').textContent = result.projectionJson;
       const reply = document.querySelector('form[data-route="question-reply"]');reply.elements.projectionJson.value=result.projectionJson;reply.elements.digest.value=result.digest;
     }
+    if (route === 'goal-preview') {
+      document.getElementById('goal-projection').textContent = result.projectionJson;
+      const submit = document.querySelector('form[data-route="goal-submit"]');
+      for (const key of ['requestId', 'projectionJson', 'digest']) submit.elements[key].value = result[key];
+      document.querySelector('form[data-route="goal-receipt"]').elements.requestId.value = result.requestId;
+    }
+    if (route === 'goal-submit' || route === 'goal-receipt') status.textContent = '目标提案：' + result.state + '。' + (result.note || '平台采纳前不会创建任务。');
   } catch (error) { status.textContent = error.message; }
 }));
 document.getElementById("enable").addEventListener("click", () => post("enable", { enabled: true }).catch(error => status.textContent = error.message));

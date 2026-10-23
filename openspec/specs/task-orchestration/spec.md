@@ -92,6 +92,17 @@ Graph ASK and temporary task questions SHALL use the formal-question store and i
 - **WHEN** the initial iteration and three backjumps have consumed the shared loop allowance
 - **THEN** the original transition remains blocked, one scoped increment request is retained without granting authority, and a formal approval resumes that same transition without double charging
 
+### Requirement: Selected goals and factual integrated delivery
+An explicitly confirmed minimal goal projection MAY be stored as an inert personal proposal. It SHALL NOT create an execution grant, task or active plan. A current human operator SHALL adopt the exact proposal through the existing versioned draft entry atomically with an immutable adoption receipt. A lost proposal response SHALL be queried by its original identity without automatic replay, including after restart or a 404.
+
+#### Scenario: A previously adopted draft has been edited
+- **WHEN** the same proposal and destination are adopted again by a currently authorized human
+- **THEN** the original plan/version receipt is returned without overwriting the later edit head
+
+#### Scenario: A final graph result has no formal Delivery
+- **WHEN** the integrated view reads its frozen ROOT result and exact completed Task/Attempt
+- **THEN** it reports missing evidence rather than synthesizing a Delivery or test pass; only actual context/configuration/source and Delivery records may support a recorded-evidence status
+
 - Task state, dependencies, and lease ownership are authoritative in the Control Plane and its persistence layer.
 - Scheduling also applies capability matching, priority aging, run fairness, and run, fleet, and worker capacity limits.
 - This spec describes current capability; production management API authentication and general skill/tool permission governance are outside its scope.
