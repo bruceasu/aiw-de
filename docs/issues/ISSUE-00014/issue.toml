@@ -1,17 +1,17 @@
 id = "ISSUE-00014"
 title = "Worker Skills 由平台统一管理，按任务引用固定版本"
 parent_id = ""
-status = "DECIDED"
+status = "APPROVED"
 created = "2026-10-23"
 updated = "2026-10-23"
-revision = 2
+revision = 3
 
 [approval]
-status = "PENDING"
-by = ""
-at = ""
-reason = ""
-source_digest = ""
+status = "APPROVED"
+by = "user"
+at = "2026-10-23T22:55:20+09:00"
+reason = "User explicitly approved ISSUE-00014 and requested promotion and automatic FD implementation on 2026-10-23; retain the recorded scope and acceptance boundaries."
+source_digest = "5bc6c545d09c0e9370e32908c81534716089530ccd92e80f9856ee733d0a1a39"
 
 [promotion]
 status = "NOT_STARTED"

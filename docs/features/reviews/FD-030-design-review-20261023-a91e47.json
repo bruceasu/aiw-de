@@ -1,0 +1,79 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-030",
+  "source_event": "FD-030-000002-design-requested",
+  "human_report": "FD-030-design-review-20261023-a91e47.md",
+  "data": {
+    "reviewer_reference": "fd030-independent-design-20261023-a91e47",
+    "design_revision": 2,
+    "recommendation": "changes-needed",
+    "scope": "批准Issue与FD实际设计；文件集身份、任务冻结/Claim/续行、三语言读取、Codex原生快照",
+    "findings": [
+      {
+        "id": "D030-01",
+        "severity": "P1",
+        "status": "open",
+        "location": "Solution: Codex原生Attempt只读快照",
+        "problem": "同用户文件只读标志不能阻止当前可选danger-full-access原生工具修改快照。仅提示词精确路径且保持现有策略不足以保证执行期间固定输入。",
+        "requested_change": "明确原生后端实际只读挂载或沙箱保证、所允许读取的精确资源目录和能力预检；无法证明时拒绝skill-files-v1并明确失败，或采用受控资源读取。不可用提示词/文件mode作为完整安全保证。",
+        "evidence": [
+          "workers/process-typescript/src/instructions.ts:sandboxForProfile",
+          "workers/process-typescript/src/codex-adapter-common.ts",
+          "workers/process-go/app_server_runtime.go"
+        ]
+      },
+      {
+        "id": "D030-02",
+        "severity": "P1",
+        "status": "open",
+        "location": "Solution: 固定引用、配置覆盖与续行",
+        "problem": "创建时默认绑定与bindTask覆盖的允许阶段尚未限定；FormalQuestions直接构造继任Task而WorkspaceReplacement经WorkTaskService新建，两种路径若未显式复制原绑定会失去冻结语义或升级为新内置版本。",
+        "requested_change": "明确只在首次任务准备未被Claim前允许一次匹配配置替换；Question续行/技术重试/WorkspaceReplacement逐一从原Task复制原包身份及字节绑定，禁止重新解析catalog最新。Claim/Attempt之后绑定不可修改。",
+        "evidence": [
+          "src/main/java/me/asu/aidev/questions/FormalQuestions.java",
+          "src/main/java/me/asu/aidev/work/application/TaskWorkspaceReplacementService.java",
+          "src/main/java/me/asu/aidev/execution/config/ExecutionConfigurations.java:continueBinding"
+        ]
+      },
+      {
+        "id": "D030-03",
+        "severity": "P1",
+        "status": "open",
+        "location": "Solution: 包scope与消费者验证",
+        "problem": "包自报source/ownerId/repositoryRef尚未给出与Task/配置冻结事实的交叉核对规则；manifest只覆盖文件路径/字节数/hash，不覆盖身份和scope。仅验证包自身摘要不足以界定任务授权内容。",
+        "requested_change": "定义受认证Claim中明确固定包引用与包逐项一致，owner/repo来自任务/配置权威，内置共享source使用明确例外语义，注册仍归属当前owner/repo；重复或额外包拒绝，不以自报scope或文件hash推断授权。",
+        "evidence": [
+          "src/main/java/me/asu/aidev/execution/config/ConfigurationContract.java:Asset",
+          "src/main/java/me/asu/aidev/execution/config/ExecutionConfigurations.java:asset/canClaim",
+          "workers/process-python/execution_configuration.py:load"
+        ]
+      }
+    ],
+    "accepted_decisions": [
+      "随现有受认证Claim内联完整文件集属于Issue交给FD的工程选择，不额外要求下载端点",
+      "独立skill-files-v1能力避免冒充完整config/guard支持",
+      "显式manifest与原Asset文本digest分离",
+      "按需资源reader且脚本仅数据",
+      "首期无自动GC且不删除在途资源"
+    ],
+    "commands_run": [
+      "针对性Get-Content/rg静态读取设计、Issue、现有三语言Skill消费与平台Claim/配置/租约接口",
+      "未成功的路径与PowerShell语法查询已更正，不作为证据",
+      "写入后一次双格式报告静态读取"
+    ],
+    "checks_not_run": [
+      "测试",
+      "编译",
+      "平台/Worker/模型执行",
+      "数据库/HTTP/网络",
+      "原生沙箱运行验证"
+    ],
+    "limits": [
+      "只作设计审查，不是实现验证或verification-passed",
+      "未更改FD状态、源码、Git或角色回执",
+      "未派生agent",
+      "未读取实验目录或.env"
+    ]
+  }
+}

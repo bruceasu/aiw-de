@@ -1,0 +1,45 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-030",
+  "source_event": "FD-030-000002-design-requested",
+  "human_report": "FD-030-design-review-20261023-a91e47-r2.md",
+  "data": {
+    "reviewer_reference": "fd030-independent-design-20261023-a91e47",
+    "recommendation": "ready",
+    "review_type": "focused-recheck",
+    "supersedes_recommendation": "FD-030-design-review-20261023-a91e47.json",
+    "findings": [
+      {
+        "id": "D030-01",
+        "status": "resolved-in-design",
+        "resolution": "三语言SDK/AppServer使用Attempt内存只读字节及动态read_skill_file；首期不写磁盘快照。CLI不宣告能力，不领取平台受管任务；AppServer工具合同不支持明确失败。",
+        "location": "docs/features/FD-030/FD-030_WORKER_SKILLS.md:24"
+      },
+      {
+        "id": "D030-02",
+        "status": "resolved-in-design",
+        "resolution": "Question续行/任务替换显式复制原绑定；普通重试复用同Task；默认绑定仅首次未Claim准备可匹配配置替换，首次Claim后不可变；已有不同继任绑定拒绝覆盖。",
+        "location": "docs/features/FD-030/FD-030_WORKER_SKILLS.md:28"
+      },
+      {
+        "id": "D030-03",
+        "status": "resolved-in-design",
+        "resolution": "内置公共source使用空owner/repo；asset source匹配冻结candidate，身份/版本/manifest与Claim独立references一致，配置同时匹配原Asset文本digest。",
+        "location": "docs/features/FD-030/FD-030_WORKER_SKILLS.md:26"
+      }
+    ],
+    "remaining_findings": [],
+    "commands_run": [
+      "Get-Content读取实际修订FD全文",
+      "rg聚焦核对首次Claim不变、继任绑定及Work Item 1.4文字",
+      "一次报告元数据与aiw-data静态检查"
+    ],
+    "evidence_limits": [
+      "设计ready不表示三语言实现、动态工具或Claim行为已经通过运行",
+      "未运行测试、编译、服务、模型、网络或数据库",
+      "未修改源码、FD状态、Git或生命周期回执",
+      "原始changes-needed报告保留，不抹除历史"
+    ]
+  }
+}
