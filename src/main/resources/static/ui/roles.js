@@ -5,6 +5,7 @@
   const outputs={REPORT:'分析报告',VERDICT:'审查结论',WORKSPACE:'代码与工作区成果'};
   const reasons={INCOMPATIBLE_OUTPUT:'所选专业技能与最终产出不兼容。请保持模板原产出，或更换为适合的技能。',SKILL_VERSION_CONFLICT:'同一个技能的步骤引用了不同版本，请统一版本。',ROLE_LIMIT_EXCEEDED:'角色最多八步、六种技能和八份知识；也请缩短过长的说明。',STEP_SKILLS_INVALID:'每步请选择一至六种技能；工程协议和已生成角色不能用作步骤技能。',ROLE_TOOLS_INVALID:'工具需求与产出不一致，请重新选择产出并预览。',ROLE_ASSET_MISMATCH:'角色定义与保存配置不一致，请核对原版本。',NOT_COMPOSED_ROLE:'这份配置不是可复制的组合角色。'};
   let state=null,draft=null,epoch=0,refreshEpoch=0,preview=null,previewBusy=false,saveBusy=false,copyBusy=false,uncertain=null;
+  let packs=[],packBusy=false,packPending=null;
   const key=a=>a.ref+':'+a.version+':'+a.digest;
   const uid=prefix=>prefix+'-'+crypto.randomUUID();
   function node(tag,text,className){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;}
@@ -26,6 +27,9 @@
     $('role-save').textContent=saveBusy?'正在保存…':uncertain?'重试保存原角色':'保存角色';
     $('role-use').hidden=!preview?.reference||Boolean(uncertain);if(preview?.reference)$('role-use').href=useUrl(preview.reference);
     for(const b of document.querySelectorAll('[data-role-copy]'))b.disabled=locked||previewBusy;
+    for(const b of document.querySelectorAll('[data-capability-save]'))b.disabled=locked||packBusy||Boolean(packPending);
+    $('role-pack-import').disabled=locked||packBusy||draft?.steps.length>=8;
+    $('role-pack-reconcile').hidden=!packPending;$('role-pack-reconcile').disabled=packBusy;
   }
   function invalidate(){epoch++;if(!uncertain){preview=null;$('role-preview-result').replaceChildren(node('p','内容已变化，请重新预览。','muted'));}sync();}
   function repositories(){return [...new Set(state.uiOptions.plans.flatMap(p=>p.repositories.map(r=>r.ref)))].sort();}
@@ -38,7 +42,7 @@
   function reference(a){return {ref:a.ref,version:a.version,digest:a.digest};}
   function newStep(){return {key:uid('step'),title:'',skills:[],instruction:'',whenCondition:'',completion:''};}
   function assetLabel(a){const m=state.methods.find(m=>m.method.primarySkill===a.ref);return names[a.ref]||(m?names[m.role]+' · 专业技能':a.title||a.ref);}
-  function available(kind){return state.uiOptions.assets.filter(a=>a.kind===kind&&(!a.repositoryRef||a.repositoryRef===draft.repositoryRef)&&a.ref!=='engineering-artifact-protocol'&&!/^role-[0-9a-f]{64}$/.test(a.ref));}
+  function available(kind){return state.uiOptions.assets.filter(a=>a.kind===kind&&(!a.repositoryRef||a.repositoryRef===draft.repositoryRef)&&a.ref!=='engineering-artifact-protocol'&&!/^role-[0-9a-f]{64}$/.test(a.ref)&&!(kind==='knowledge'&&a.ref.startsWith('cap-pack-')));}
   function checks(host,kind,chosen,change){
     const assets=available(kind);host.replaceChildren();
     for(const a of assets){const row=node('label'),input=document.createElement('input');input.type='checkbox';input.checked=chosen.some(r=>key(r)===key(a));input.addEventListener('change',()=>{change(input.checked?[...chosen,reference(a)]:chosen.filter(r=>key(r)!==key(a)));invalidate();renderStepsAndKnowledge();});row.append(input,node('span',assetLabel(a)+' · '+a.version));host.append(row);}
@@ -52,10 +56,60 @@
       const card=node('section',undefined,'role-step'),head=node('div',undefined,'role-heading'),actions=node('div',undefined,'role-step-actions');head.append(node('h3','步骤 '+(index+1)));
       for(const [label,disabled,act] of [['上移',index===0,()=>{[draft.steps[index-1],draft.steps[index]]=[draft.steps[index],draft.steps[index-1]];}],['下移',index===draft.steps.length-1,()=>{[draft.steps[index+1],draft.steps[index]]=[draft.steps[index],draft.steps[index+1]];}],['删除',draft.steps.length===1,()=>draft.steps.splice(index,1)]]){const b=node('button',label,'btn ghost');b.type='button';b.disabled=disabled;b.addEventListener('click',()=>{act();invalidate();renderStepsAndKnowledge();});actions.append(b);}
       head.append(actions);const fields=node('div',undefined,'form-grid');fields.append(stepField(step,'title','步骤名称',0,120));
-      const skillField=node('div',undefined,'configuration-full'),skillList=node('div',undefined,'configuration-checks');skillField.append(node('strong','本步使用的技能'),skillList);checks(skillList,'skill',step.skills,value=>step.skills=value);fields.append(skillField,stepField(step,'instruction','本步做什么',2,2000),stepField(step,'whenCondition','什么情况下执行（留空表示始终执行）',2,500),stepField(step,'completion','怎样算完成',2,1000));card.append(head,fields);host.append(card);
+      const skillField=node('div',undefined,'configuration-full'),skillList=node('div',undefined,'configuration-checks');skillField.append(node('strong','本步使用的技能'),skillList);checks(skillList,'skill',step.skills,value=>step.skills=value);fields.append(skillField,stepField(step,'instruction','本步做什么',2,2000),stepField(step,'whenCondition','什么情况下执行（留空表示始终执行）',2,500),stepField(step,'completion','怎样算完成',2,1000));card.append(head,fields,packEditor(step));host.append(card);
     });
-    checks($('role-knowledge'),'knowledge',draft.knowledge,value=>draft.knowledge=value);$('role-add-step').disabled=draft.steps.length>=8;
+    checks($('role-knowledge'),'knowledge',draft.knowledge,value=>draft.knowledge=value);$('role-add-step').disabled=draft.steps.length>=8;renderPacks();sync();
   }
+  function renderPacks(){
+    const select=$('role-pack-select'),current=select.value;
+    options(select,packs.filter(p=>p.definition.repositoryRef===draft.repositoryRef).map(p=>({value:key(p.reference),label:p.definition.name+' · '+p.definition.skills.length+' 项技能'})),current,draft.repositoryRef?'选择当前仓库的能力包':'先选择仓库');
+  }
+  function packEditor(step){
+    const box=node('details',undefined,'configuration-disclosure section');box.append(node('summary','将本步技能与做法保存为能力包'));
+    const field=node('label','能力包名称','field'),name=node('input');name.maxLength=120;name.value=step.title;field.append(name);
+    const write=node('input'),command=node('input');write.type=command.type='checkbox';
+    const writeLabel=node('label',undefined,'configuration-command section'),commandLabel=node('label',undefined,'configuration-command');
+    writeLabel.append(write,node('span','这个能力包需要写入工作区'));commandLabel.append(command,node('span','这个能力包需要运行命令'));
+    const save=node('button','保存能力包','btn ghost');save.type='button';save.dataset.capabilitySave='true';
+    save.addEventListener('click',()=>savePack(step,name.value,write.checked,command.checked));
+    box.append(field,writeLabel,commandLabel,node('p','复用固定技能与“本步做什么”；当前步骤的执行条件、完成要求分别保留在角色中。','help'),save);return box;
+  }
+  async function refreshPacks(){
+    const snapshot=await request('state?kind=capability-packs',{});
+    if(snapshot.protocol!=='aiw.capability.pack.v1'||snapshot.ownerId!==document.querySelector('meta[name="configuration-owner"]').content)throw new Error('能力包身份已变化，请重新打开页面。');
+    packs=snapshot.packs;renderPacks();
+  }
+  async function savePack(step,name,write,command){
+    if(packBusy||packPending||saveBusy||uncertain)return;
+    try{
+      if(!draft.repositoryRef||!name.trim()||!step.instruction.trim()||!step.skills.length)throw new Error('先选择仓库，填写能力包名称、技能和本步做法。');
+      const toolRequirements=['MODEL','READ','SEARCH','GIT','QUESTION'];if(write)toolRequirements.push('WRITE');if(command)toolRequirements.push('COMMAND');
+      const body={requestId:uid('pack'),definition:{protocol:'aiw.capability.pack.v1',name:name.trim(),repositoryRef:draft.repositoryRef,description:name.trim(),skills:clone(step.skills),work:step.instruction,toolRequirements}};
+      packBusy=true;sync();
+      try{const saved=await request('candidates?kind=capability-pack',body);packs.push(saved);renderPacks();$('role-pack-status').textContent='能力包已保存，可在当前仓库的其他角色中复用。';}
+      catch(e){if(e.uncertain)packPending={body,checked:false};throw e;}
+    }catch(e){$('role-pack-status').textContent=e.message;}finally{packBusy=false;sync();}
+  }
+  $('role-pack-reconcile').addEventListener('click',async()=>{
+    if(!packPending||packBusy)return;packBusy=true;sync();const pending=packPending;
+    try{
+      const actual=await request('state?kind=capability-pack',{requestId:pending.body.requestId,repositoryRef:pending.body.definition.repositoryRef});
+      if(actual.found){if(signature(actual.pack.definition)!==signature(pending.body.definition))throw new Error('原能力包内容不一致，不能覆盖。');packs.push(actual.pack);packPending=null;renderPacks();$('role-pack-status').textContent='已核对原能力包保存成功。';}
+      else if(!pending.checked){pending.checked=true;$('role-pack-status').textContent='尚未找到原记录，再次点击此按钮将重试同一个原请求。';}
+      else{const saved=await request('candidates?kind=capability-pack',pending.body);packs.push(saved);packPending=null;renderPacks();$('role-pack-status').textContent='原请求已保存，没有另建标识。';}
+    }catch(e){$('role-pack-status').textContent=e.message;}finally{packBusy=false;sync();}
+  });
+  $('role-pack-import').addEventListener('click',()=>{
+    try{
+      const pack=packs.find(p=>key(p.reference)===$('role-pack-select').value&&p.definition.repositoryRef===draft.repositoryRef);
+      if(!pack)throw new Error('请选择当前仓库的能力包。');if(draft.steps.length>=8)throw new Error(reasons.ROLE_LIMIT_EXCEEDED);
+      if(pack.definition.toolRequirements.includes('WRITE')&&draft.resultKind!=='WORKSPACE')throw new Error('这个能力包需要写入。请先将最终产出设为代码与工作区成果，或选其他包。');
+      if(pack.definition.skills.some(r=>!available('skill').some(a=>key(a)===key(r))))throw new Error('能力包中的原技能引用当前不可用，请核对仓库与版本。');
+      draft.steps.push({...newStep(),title:pack.definition.name,skills:clone(pack.definition.skills),instruction:pack.definition.work,completion:'满足所选技能的输入、产出约束，并交付本步骤的实际结果与证据。'});
+      if(pack.definition.toolRequirements.includes('COMMAND'))$('role-command').checked=true;
+      invalidate();renderStepsAndKnowledge();feedback('已添加固定技能组合。请设置当前步骤的条件、完成要求并重新预览；尚未执行任务。');
+    }catch(e){feedback(e.message,'error');}
+  });
   function renderDraft(){
     for(const [id,field] of [['role-name','name'],['role-goal','goal'],['role-delivery','delivery'],['role-output','resultKind']])$(id).value=draft[field];
     options($('role-repository'),repositories().map(r=>({value:r,label:r})),draft.repositoryRef,'请选择仓库');
@@ -85,6 +139,7 @@
     const generation=++refreshEpoch,next=await request('state',{});if(generation!==refreshEpoch)return;
     if(!next.uiOptions||next.uiOptions.ownerId!==document.querySelector('meta[name="configuration-owner"]').content)throw new Error('当前身份或页面数据已经变化，请重新打开页面，避免混用原草稿。');
     state=next;if(!draft)draft=fresh();options($('role-template'),state.methods.map(m=>({value:m.role,label:names[m.role]||m.role})),$('role-template').value,'选择一个模板');renderDraft();renderSaved();
+    try{await refreshPacks();}catch(e){$('role-pack-status').textContent=e.message;}
     if(uncertain){const pending=uncertain,found=(state.roles||[]).find(r=>r.reference.id===pending.proposal.definition.id&&r.reference.revision===pending.proposal.definition.revision);if(found){const actual=await request('state?kind=role',found.reference);if(uncertain!==pending)return;if(signature(actual)!==signature(pending.proposal.definition))throw new Error('原标识已有不同内容，不能重试覆盖。请核对已保存版本。');preview={...pending.proposal,reference:found.reference};uncertain=null;summary(preview);feedback('已核对原角色保存成功，未重复创建。');}else{pending.checked=true;feedback('当前未找到原版本。可显式重试保存同一个原角色。','warn');}}sync();
   }
   for(const [id,field] of [['role-name','name'],['role-goal','goal'],['role-delivery','delivery'],['role-output','resultKind'],['role-category','category']])$(id).addEventListener('input',()=>{draft[field]=$(id).value;invalidate();});

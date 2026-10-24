@@ -24,6 +24,7 @@
 <label class="field configuration-full">整体交付要求<textarea id="role-delivery" maxlength="2000" rows="3" required placeholder="例如：交付有来源的方案比较、原型文件和建议，列出已完成检查与未验证事项。"></textarea><small>这是整个角色的交付要求，与每个步骤的完成条件分别设置。</small></label>
 </div>
 <div class="role-heading section"><div><h2>2. 安排技能流程</h2><p class="help">最多八步、六种技能。同一技能可以用于多个步骤；上移、下移可调整顺序。</p></div><button id="role-add-step" type="button" class="btn ghost">添加步骤</button></div>
+<details class="configuration-disclosure"><summary>从共享能力包添加步骤</summary><p class="help">复用一组固定版本的技能与工作做法。执行条件和完成要求仍由当前角色设置，工具需求需要原任务授权。</p><div class="role-template"><label class="field">能力包<select id="role-pack-select"><option value="">先选择仓库</option></select></label><button id="role-pack-import" type="button" class="btn ghost">添加为新步骤</button></div><p id="role-pack-status" class="help" role="status"></p><button id="role-pack-reconcile" type="button" class="btn ghost" hidden>核对原能力包保存结果</button></details>
 <div id="role-steps" class="role-steps"></div>
 <details class="configuration-disclosure section"><summary>参考资料与工具需求（可选）</summary><h3>参考知识</h3><div id="role-knowledge" class="configuration-checks"></div><label class="configuration-command section"><input id="role-command" type="checkbox"><span>需要运行命令<small>模型、读取、搜索、Git、问答按角色声明；工作区产出另需写入。命令和全部工具仍需原执行授权。</small></span></label></details>
 </fieldset><div class="configuration-form-actions"><button id="role-preview" class="btn primary" disabled>预览组合角色</button></div></form>

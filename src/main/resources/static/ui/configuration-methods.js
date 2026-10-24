@@ -22,7 +22,7 @@
   function listAssets(hostId,kind,selectedKeys) {
     const host=$(hostId),repository=$('method-repository').value;
     const required=new Set(base()?[...base().method.protocolSkills,base().method.primarySkill]:[]);
-    const assets=UI.options.assets.filter(asset=>asset.kind===kind&&(!asset.repositoryRef||asset.repositoryRef===repository)&&!(kind==='skill'&&(required.has(asset.ref)||/^role-[0-9a-f]{64}$/.test(asset.ref))));
+    const assets=UI.options.assets.filter(asset=>asset.kind===kind&&(!asset.repositoryRef||asset.repositoryRef===repository)&&!(kind==='skill'&&(required.has(asset.ref)||/^role-[0-9a-f]{64}$/.test(asset.ref)))&&!(kind==='knowledge'&&asset.ref.startsWith('cap-pack-')));
     host.replaceChildren();
     for(const asset of assets) {
       const row=UI.node('label'),input=document.createElement('input'); input.type='checkbox'; input.value=refKey(asset); input.checked=selectedKeys.includes(input.value);
