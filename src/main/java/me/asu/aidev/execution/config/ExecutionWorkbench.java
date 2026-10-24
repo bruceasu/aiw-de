@@ -22,7 +22,8 @@ public class ExecutionWorkbench {
     private Map<String,Object> ownedAttempt(String owner,String task,String attempt) {
         text(task,128);text(attempt,128);
         var rows=repo.jdbc().queryForList("""
-                SELECT t.instruction_revision,t.state AS task_state,a.state AS attempt_state,a.ai_runtime,
+                SELECT t.instruction_revision,a.instruction_revision AS attempt_revision,t.state AS task_state,a.state AS attempt_state,a.ai_runtime,
+                       t.lease_token AS current_lease,a.lease_token AS attempt_lease,t.lease_expires_at_epoch_ms,
                        a.result_revision,a.stop_requested_at_epoch_ms
                   FROM execution_context x JOIN execution_policy p ON p.plan_id=x.plan_id
                   JOIN work_task t ON t.id=x.task_id JOIN execution_attempt a ON a.task_id=t.id
@@ -31,7 +32,8 @@ public class ExecutionWorkbench {
         if(rows.size()!=1)throw new SecurityException("Owned guarded task and Attempt required");return rows.getFirst();
     }
     private void revision(Map<String,Object> task,int expected) {
-        if(number(task,"instruction_revision")!=expected)throw new IllegalStateException("Task instruction revision changed");
+        if(number(task,"instruction_revision")!=expected||task.containsKey("attempt_revision")&&number(task,"attempt_revision")!=expected)
+            throw new IllegalStateException("Task instruction revision changed");
     }
     private Map<String,Object> session(String owner,String task,String attempt) {
         var rows=repo.jdbc().queryForList("SELECT * FROM execution_workbench_session WHERE owner_id=? AND task_id=? AND attempt_id=?",owner,task,attempt);
@@ -64,7 +66,8 @@ public class ExecutionWorkbench {
     }
     private Object enqueue(String owner,HumanCommand input,Map<String,Object> task) {
         var session=session(owner,input.taskId(),input.attemptId());
-        if(!"RUNNING".equals(session.get("phase"))||!"RUNNING".equals(task.get("task_state"))||!"RUNNING".equals(task.get("attempt_state"))||task.get("stop_requested_at_epoch_ms")!=null)
+        if(!"RUNNING".equals(session.get("phase"))||!"RUNNING".equals(task.get("task_state"))||!"RUNNING".equals(task.get("attempt_state"))||task.get("stop_requested_at_epoch_ms")!=null
+                ||!Objects.equals(task.get("current_lease"),task.get("attempt_lease"))||number(task,"lease_expires_at_epoch_ms")<=System.currentTimeMillis())
             throw new IllegalStateException("Attempt is stopping, finalizing or no longer running");
         revision(session,input.instructionRevision());text(input.text(),4000);
         if(!Set.of("STEER","FOLLOW_UP").contains(input.mode()))throw new IllegalArgumentException("Choose current input or follow-up");
@@ -92,7 +95,7 @@ public class ExecutionWorkbench {
         if(input.resultRevision()!=null&&!input.resultRevision().equals(task.get("result_revision")))
             throw new IllegalArgumentException("Only this Attempt's existing result revision can be attached");
         String id="branch-"+AuthorityRepository.hash(owner+":"+input.requestId()).substring(0,20);
-        repo.jdbc().update("INSERT INTO execution_exploration VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",id,owner,input.taskId(),input.attemptId(),input.instructionRevision(),input.parentId(),input.title(),input.text(),input.resultRevision(),boundary.human(),System.currentTimeMillis());
+        repo.jdbc().update("INSERT INTO execution_exploration VALUES(?,?,?,?,?,?,?,?,?,?,?)",id,owner,input.taskId(),input.attemptId(),input.instructionRevision(),input.parentId(),input.title(),input.text(),input.resultRevision(),boundary.human(),System.currentTimeMillis());
         return Map.of("id",id,"state","RECORDED");
     }
     private void node(String owner,String task,String id) {
@@ -154,7 +157,7 @@ public class ExecutionWorkbench {
             if(repo.jdbc().update("UPDATE execution_workbench_message SET state='RESERVED',batch_id=?,updated_ms=? WHERE attempt_id=? AND id=? AND state='QUEUED'",input.batchId(),now,attempt,message.id())!=1)
                 throw new IllegalStateException("Input reservation changed");
         }
-        return new Batch(PROTOCOL,"RUNNING",input.batchId(),digest,messages);
+        return new Batch(PROTOCOL,"RUNNING",input.batchId(),digest,"RESERVED",messages);
     }
     private Batch linked(String attempt,MachineCommand input) {
         text(input.batchId(),96);text(input.operationId(),128);text(input.batchDigest(),64);
@@ -177,9 +180,10 @@ public class ExecutionWorkbench {
         return batch(row);
     }
     private Batch batch(Map<String,Object> row) {
-        return new Batch(PROTOCOL,"RUNNING",(String)row.get("batch_id"),(String)row.get("digest"),List.of(repo.decode((String)row.get("contents_json"),Input[].class)));
+        String json=(String)row.get("contents_json");if(!AuthorityRepository.hash(json).equals(row.get("digest")))throw new IllegalStateException("Reserved input content changed");
+        return new Batch(PROTOCOL,"RUNNING",(String)row.get("batch_id"),(String)row.get("digest"),(String)row.get("state"),List.of(repo.decode(json,Input[].class)));
     }
-    private Batch empty(String phase) { return new Batch(PROTOCOL,phase,null,null,List.of()); }
+    private Batch empty(String phase) { return new Batch(PROTOCOL,phase,null,null,"NONE",List.of()); }
     private static long number(Map<String,Object> row,String key) { return ((Number)row.get(key)).longValue(); }
 
     @Transactional public Object snapshot(ExecutionObservations.Snapshot observations,Query input) {

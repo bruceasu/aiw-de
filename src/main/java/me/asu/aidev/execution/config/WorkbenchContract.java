@@ -13,5 +13,5 @@ public final class WorkbenchContract {
                                String mode,String text,String messageId,String parentId,String title,String resultRevision) {}
     public record MachineCommand(Lease lease,String action,String batchId,String mode,String operationId,String batchDigest) {}
     public record Input(String id,String mode,String text,String digest,long sequence) {}
-    public record Batch(String protocol,String phase,String batchId,String digest,List<Input> messages) {}
+    public record Batch(String protocol,String phase,String batchId,String digest,String state,List<Input> messages) {}
 }
