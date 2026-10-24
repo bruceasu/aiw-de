@@ -1,0 +1,172 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-042",
+  "source_event": "FD-042-000004-implementation-ready",
+  "human_report": "FD-042-implementation-r1.md",
+  "data": {
+    "reviewer_session": "fd042-review-20261024-b92afa6d",
+    "worker_session": "platform-login-20261024-37ba34c3",
+    "independent_from_worker": true,
+    "comparison_base": "a654adf",
+    "implementation_commit": "1f5eb6a1c78939c87da91d8db6bed57de2ade9ae",
+    "worker_evidence_commit": "832531b",
+    "round": 1,
+    "implementation_review_failure_count": 1,
+    "verdict": "changes-requested",
+    "scope_file_count": 20,
+    "hard_violations": [
+      {
+        "id": "R042-01",
+        "severity": "P1",
+        "type": "hard-violation",
+        "file": "src/main/java/me/asu/aidev/webconsole/security/WebConsoleSecurityInterceptor.java",
+        "line": 25,
+        "requirement": "FD acceptance 1 and Mandatory browser console sessions",
+        "issue": "Raw getRequestURI range check returns true before authentication for matrix/encoded aliases that Spring MVC resolves to registered console pages",
+        "example": "/ui;v=1/workers and /%75i/workers",
+        "evidence": [
+          "WebConsoleSecurityInterceptor:25-28",
+          "WebConsoleWebMvcConfiguration mapped console patterns",
+          "WebConsoleController.workers:75-82 reads fleet without a second auth check",
+          "Local Spring7.0.9 bytecode: DefaultPathContainer strips parameters and decodes; LiteralPathElement matches PathSegment.valueToMatch"
+        ],
+        "correction": "Remove raw-URI range early pass inside mapped boundary; classify public exceptions/page using MVC-consistent parsed segments; test matrix/encoding aliases and actual MappedInterceptor exclusion for machine routes",
+        "runtime_reproduced": false
+      },
+      {
+        "id": "R042-02",
+        "severity": "P2",
+        "type": "hard-violation",
+        "files": [
+          "src/test/java/me/asu/aidev/webconsole/R9S1WebConsoleIT.java:63",
+          "src/test/java/me/asu/aidev/webconsole/R9WebConsoleOperationsIT.java:72",
+          "src/test/java/me/asu/aidev/webconsole/R9WebConsoleApprovalIT.java:86"
+        ],
+        "requirement": "WI1.4 and FD acceptance5 source fixtures match real login",
+        "issue": "New signIn setup asserts final /ui despite followRedirects NORMAL and existing /ui -> /ui/plans redirect",
+        "evidence": [
+          "WebConsoleController.dashboard:54-56",
+          "Three newly added BeforeEach signIn methods and their HttpClient redirect policy"
+        ],
+        "correction": "Assert the actual protected landing page/login state in the new setups; preserve original role/CSRF/actor assertions",
+        "runtime_reproduced": false
+      }
+    ],
+    "smell_findings": [],
+    "findings": [
+      {
+        "id": "R042-01",
+        "severity": "P1",
+        "type": "hard-violation",
+        "file": "src/main/java/me/asu/aidev/webconsole/security/WebConsoleSecurityInterceptor.java",
+        "line": 25,
+        "requirement": "FD acceptance 1 and Mandatory browser console sessions",
+        "issue": "Raw getRequestURI range check returns true before authentication for matrix/encoded aliases that Spring MVC resolves to registered console pages",
+        "example": "/ui;v=1/workers and /%75i/workers",
+        "evidence": [
+          "WebConsoleSecurityInterceptor:25-28",
+          "WebConsoleWebMvcConfiguration mapped console patterns",
+          "WebConsoleController.workers:75-82 reads fleet without a second auth check",
+          "Local Spring7.0.9 bytecode: DefaultPathContainer strips parameters and decodes; LiteralPathElement matches PathSegment.valueToMatch"
+        ],
+        "correction": "Remove raw-URI range early pass inside mapped boundary; classify public exceptions/page using MVC-consistent parsed segments; test matrix/encoding aliases and actual MappedInterceptor exclusion for machine routes",
+        "runtime_reproduced": false
+      },
+      {
+        "id": "R042-02",
+        "severity": "P2",
+        "type": "hard-violation",
+        "files": [
+          "src/test/java/me/asu/aidev/webconsole/R9S1WebConsoleIT.java:63",
+          "src/test/java/me/asu/aidev/webconsole/R9WebConsoleOperationsIT.java:72",
+          "src/test/java/me/asu/aidev/webconsole/R9WebConsoleApprovalIT.java:86"
+        ],
+        "requirement": "WI1.4 and FD acceptance5 source fixtures match real login",
+        "issue": "New signIn setup asserts final /ui despite followRedirects NORMAL and existing /ui -> /ui/plans redirect",
+        "evidence": [
+          "WebConsoleController.dashboard:54-56",
+          "Three newly added BeforeEach signIn methods and their HttpClient redirect policy"
+        ],
+        "correction": "Assert the actual protected landing page/login state in the new setups; preserve original role/CSRF/actor assertions",
+        "runtime_reproduced": false
+      }
+    ],
+    "acceptance": [
+      {
+        "id": 1,
+        "result": "not-supported",
+        "finding": "R042-01"
+      },
+      {
+        "id": 2,
+        "result": "partial-static-support",
+        "limits": "Canonical paths and query/context/401 covered; aliases bypass until R042-01 fixed"
+      },
+      {
+        "id": 3,
+        "result": "supported-by-static-evidence-with-source-test-defect",
+        "finding": "R042-02",
+        "limits": "Credential, logout, role and CSRF code retained; no runtime or test execution"
+      },
+      {
+        "id": 4,
+        "result": "supported-by-static-evidence",
+        "evidence": "Original machine/console route registration and credentials unchanged; real authority digest expression preserved; no data migration"
+      },
+      {
+        "id": 5,
+        "result": "not-supported",
+        "finding": "R042-02",
+        "evidence": "Current docs/specs and command reporting honest, but new fixture setup is inconsistent with current redirects"
+      }
+    ],
+    "commands_run": [
+      "Three targeted UTF-8/local source discovery batches with FD/report/receipt and fixed git diff/show/rg",
+      "Generated independent session and exact aiw fd claim FD-042 FD-042-000004-implementation-ready --session fd042-review-20261024-b92afa6d",
+      "Read local Boot4.0.8 BOM; javap -c -p cached Spring7.0.9 DefaultPathContainer, PathContainer.Options and LiteralPathElement (class-file inspection only)",
+      "One git diff --check a654adf 1f5eb6a plus read-only fixed/worktree/original route/login comparisons and targeted policy/matcher inspection",
+      "One explicit parent-requested javap -public MappedInterceptor signature lookup; three-argument constructor and matches(HttpServletRequest) exist"
+    ],
+    "static_results": {
+      "whitespace_and_fixed_scope": "passed",
+      "source_matches_fixed_commit_ignoring_checkout_line_endings": true,
+      "unchanged_route_and_login_sources": true,
+      "control_flow_verdict": "two material findings remain",
+      "production_or_framework_methods_executed": false
+    },
+    "worker_compile_evidence": {
+      "command": "mvn -o '-Dmaven.test.skip=true' compile",
+      "reported_revision": "1f5eb6a1c78939c87da91d8db6bed57de2ade9ae",
+      "reported_result": "passed; 2+143 resources and 300 production sources",
+      "reported_finished_at": "2026-10-24T15:05:55+09:00",
+      "test_sources_compiled": false,
+      "reviewer_reran": false,
+      "proves_login_behavior": false
+    },
+    "skipped": [
+      "tests/test compilation",
+      "HTTP/browser/real session/Thymeleaf",
+      "machine lease/database/services",
+      "network/downloads/models/Worker",
+      "build/package/install/deploy/restart/rollback",
+      "implementation edits/commit/archive"
+    ],
+    "risks": [
+      "URI-classification bypass violates the mandatory page gate until corrected",
+      "New login fixture setups fail before their test bodies until landing assertions are corrected",
+      "Some unchanged historical dashboard/run assertions predate this FD and remain unrun; review does not require unrelated wholesale test rewrite",
+      "No runtime authentication, CSRF, logout, context or machine-path evidence",
+      "Unrelated dirty workspace files excluded"
+    ],
+    "excluded": [
+      "dirty AuthorityHttpConfiguration/ConfigurationUiOptions/old templates",
+      "personal secretary code/desktop compile script"
+    ],
+    "blockers": [
+      "R042-01",
+      "R042-02"
+    ],
+    "next_step": "Worker claims the real changes-requested handoff, repairs only findings and source regressions, updates evidence, then emits implementation-ready again"
+  }
+}

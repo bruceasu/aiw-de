@@ -1,0 +1,104 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-042",
+  "source_event": "FD-042-000005-changes-requested",
+  "human_report": "FD-042-implementation-r2.md",
+  "data": {
+    "worker_session": "platform-login-20261024-37ba34c3",
+    "comparison_base": "a654adf",
+    "implementation_commit": "d7bf98d53747c59970796b6db9605facff78218a",
+    "implementation_commits": [
+      "6b808c8",
+      "4995513",
+      "23edc67",
+      "238a33e",
+      "1f5eb6a",
+      "d7bf98d"
+    ],
+    "implementation_review_failure_count": 1,
+    "scope_file_count": 20,
+    "design_review": "FD-042-design-r1",
+    "work_items_completed": [
+      "1.1",
+      "1.2",
+      "1.3",
+      "1.4",
+      "1.5"
+    ],
+    "changes": [
+      "mandatory signedIn with no false-flag/local-admin/operator fallback",
+      "all existing console pages gate; API/write 401; page GET/HEAD context and query redirect",
+      "context-aware login form and CSS",
+      "four source-only console security/operation/approval/rendering test updates",
+      "current bilingual policy and stable spec updates"
+    ],
+    "unchanged": [
+      "route registries and login controller",
+      "machine credentials and leases",
+      "CSRF/action roles/ownership for signed-in sessions",
+      "real operator authority digest",
+      "legacy anonymous data ownership",
+      "database schema and dependencies"
+    ],
+    "static": {
+      "command": "One focused git diff --check 1f5eb6a -- 7 changed paths plus read-only parsed-path/no-early-pass/encoded-target/setup/source-regression checks",
+      "result": "passed",
+      "prior_full_scope_static": "See r1 historical report",
+      "test_sources_reviewed_only": true,
+      "production_or_tests_executed": false
+    },
+    "compile": {
+      "environment_script": "C:/green/bin/setup-jdk25.ps1",
+      "command": "mvn -o '-Dmaven.test.skip=true' compile",
+      "revision": "d7bf98d53747c59970796b6db9605facff78218a",
+      "java": "25.0.1",
+      "maven": "3.9.4",
+      "result": "passed",
+      "finished_at": "2026-10-24T15:13:33+09:00",
+      "resources": "2+143",
+      "production_sources": 300,
+      "test_sources_compiled": false,
+      "environment_restored": true,
+      "printed_package_examples_executed": false,
+      "reason_for_repeat": "Relevant Java security correction after first independent review; not unchanged repetition"
+    },
+    "skipped": [
+      "tests/test compilation",
+      "HTTP/browser/real session/Thymeleaf",
+      "machine lease/database/services",
+      "network/downloads/models/Worker",
+      "final build/package/install/deploy/restart/rollback"
+    ],
+    "risks": [
+      "Static/compile and source assertions do not prove actual authentication/session/CSRF/logout/context behavior",
+      "Updated running instance requires normal deployment/restart; none performed",
+      "Rollback to older optional-auth version requires explicit old enabled=true and nonblank credentials before exposure",
+      "Legacy anonymous records are retained, not automatically assigned to the configured account",
+      "Shared-workspace unrelated changes are excluded from independent approval",
+      "Pre-existing S1/Operations body assertions still target legacy Dashboard/Runs flow; no whole-suite pass is claimed"
+    ],
+    "excluded": [
+      "dirty AuthorityHttpConfiguration/ConfigurationUiOptions/old templates",
+      "personal secretary Python/UI/models/launchers/desktop compile script",
+      "real .env/password/token values"
+    ],
+    "blockers": [],
+    "next_step": "Independent r2 review using the new actual implementation-ready receipt; no self-verification",
+    "previous_worker_report": "FD-042-implementation-r1.md",
+    "review_findings": [
+      {
+        "id": "R042-01",
+        "worker_correction": "Spring parsed-segment classification, no raw URI scope early pass, per-segment encoded canonical next and actual MappedInterceptor source regressions",
+        "independent_resolution": "pending-r2"
+      },
+      {
+        "id": "R042-02",
+        "worker_correction": "Three new signIn setup destinations now actual /ui/plans; security flow reads protected landing page",
+        "independent_resolution": "pending-r2"
+      }
+    ],
+    "repair_comparison_base": "1f5eb6a",
+    "repair_scope_file_count": 7
+  }
+}

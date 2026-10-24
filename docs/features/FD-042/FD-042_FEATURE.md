@@ -1,7 +1,7 @@
 # FD-042: 平台页面统一强制登录
 
-**Status:** Open
-**Revision:** 3
+**Status:** In Progress
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -13,7 +13,7 @@
 
 仅将开关默认值改true仍能通过false绕过，不满足要求。选择取消匿名模式：登录判断永远基于signedIn，enabled兼容方法永远true，旧boolean构造参数保留但忽略，不再从启用配置获得匿名授权。application.yaml移除启用变量。保持真实用户名/非空密码、会话、CSRF和角色机制，无新账号或凭证生成。
 
-控制台拦截器统一要求真实会话，免登录仅保留/ui/login及现有console.css/console.js公共资源。未登录页面GET/HEAD返回登录跳转，保留contextPath、原path/query（含组合角色view参数）；现有控制台JSON/文件API或其他方法未登录返回401。登录模板的form action和CSS href同时改为Thymeleaf上下文感知URL，避免非空contextPath的登录提交中断；其他已登录CSRF/角色/Owner校验保持。登录页始终开放；空密码拒绝全部登录尝试。
+控制台拦截器依照Spring MVC解析后的PathSegment.valueToMatch统一要求真实会话，不用原始URI重判范围并提前放行（实际范围由原MappedInterceptor注册控制），免登录仅保留/ui/login及现有console.css/console.js公共资源。未登录页面GET/HEAD返回登录跳转，保留contextPath及原query（含组合角色view参数）；路径别名返回按段编码的规范页面，保留路径字符的编码语义；现有控制台JSON/文件API或其他方法未登录返回401。登录模板的form action和CSS href同时改为Thymeleaf上下文感知URL，避免非空contextPath的登录提交中断；其他已登录CSRF/角色/Owner校验保持。登录页始终开放；空密码拒绝全部登录尝试。
 
 ## Solution
 
@@ -39,12 +39,12 @@ WebConsoleSecurityInterceptor合并重复的持久锁存/普通登录判断，�
 
 ## TODO
 
-WI1.1–1.5已完成。等待独立实现审阅，真实通过后由宿主核对回执与范围并归档；未部署或重启。
+R042-01/02源码修正、定向静态和生产编译已完成，等待独立实现r2复核；当前失败次数1，不能用历史r1证据归档。
 
 ## Acceptance
 
 1. 所有/ui和/ui/**业务页面（含goals/roles等查询页）都需要真实登录；只有登录页及指定静态资源可匿名，false旧开关不能恢复匿名ADMIN（1.2–1.3）。
-2. 未登录页面GET/HEAD进入登录页并保留原path/query及contextPath；控制台JSON/文件API及写请求返回401而非业务数据/登录HTML（1.3）。
+2. 未登录页面GET/HEAD进入登录页并保留规范路径、原query及contextPath；控制台JSON/文件API及写请求返回401而非业务数据/登录HTML（1.3）。
 3. 登录页无需开关，凭据未配显示提示且拒绝登录；真实登录后仍按原角色/CSRF/Owner执行，退出后恢复未登录（1.2–1.4）。
 4. 机器路由/凭据/lease不新增浏览器会话要求；不自动迁移旧local-console数据或续用匿名operator授权，真实账号原权限摘要保持（1.2–1.3）。
 5. 当前文档/稳定规格及源码测试反映新策略，静态/离线编译和真实未运行限制可审阅；独立实现通过后归档（1.4–1.5）。
@@ -57,7 +57,10 @@ C:/green/bin/setup-jdk25.ps1后mvn -o '-Dmaven.test.skip=true' compile一次成�
 
 未运行真实HTTP/浏览器/会话/Thymeleaf、机器lease、数据库、服务/网络、模型/Worker、打包/部署/重启/回退；静态/生产编译/回归源码不当作运行通过。没有读取.env或实际密码/token；其他任务脏改动排除。
 
-独立设计[r1](../reviews/FD-042-design-r1.md)及同名JSON为ready，contextPath模板与旧版本回退两个问题已解决。没有其他未决设计Gate。独立实现审阅待补。
+独立设计[r1](../reviews/FD-042-design-r1.md)及同名JSON为ready，contextPath模板与旧版本回退两个问题已解决。没有其他未决设计Gate。
+
+独立Reviewer Session fd042-review-20261024-b92afa6d 已领取FD-042-000004-implementation-ready，审阅a654adf..1f5eb6a的20文件及相邻路由/处理器/本地Spring7.0.9解析与匹配class实现。结论要求修改：R042-01（P1门禁绕过）与R042-02（P2新增测试setup错误）。一次范围静态一致性检查通过，但不消除控制流缺陷；没有运行框架请求、测试或编译。双报告：[Markdown](../reviews/FD-042-implementation-r1.md) / [JSON](../reviews/FD-042-implementation-r1.json)。这是本轮第1次实现审阅失败，等待Worker修复。
+
 
 ## Sources
 
