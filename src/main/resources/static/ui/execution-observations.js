@@ -45,7 +45,7 @@
     head.append(heading);table.append(head);const body=node('tbody');
     for(const entry of snapshot.entries) {
       const row=node('tr'),task=node('td'),state=node('td'),model=node('td'),tokens=node('td'),usage=node('td');
-      const link=node('a',entry.title);link.href='/ui/tasks/'+encodeURIComponent(entry.taskId);task.append(link);
+      task.append(node('strong',entry.title));
       task.append(node('small',entry.methodName?'工作方法：'+entry.methodName:'主技能：'+label(entry.primarySkill)+'（无固定方法名称）'));
       task.append(detail(entry));
       state.append(node('strong','尝试：'+label(entry.attemptState)),node('small','任务：'+label(entry.taskState)),node('small','上报结论：'+label(entry.reportedVerdict)));
