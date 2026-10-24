@@ -12,7 +12,7 @@
   <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Fleet</a>
   <a th:classappend="${active == 'system' ? 'active' : ''}" href="/ui/system">System</a>
   <div class="sidebar-footer">
-    <div class="sidebar-note"><strong th:text="${consolePrincipal}">local-console</strong><br/><span th:text="${consoleRole}">ADMIN</span><br/>Authority remains in the Control Plane.</div>
+    <div class="sidebar-note"><strong th:text="${consolePrincipal}">local-console</strong><br/><span th:text="${consoleAuthEnabled ? consoleRole : '未登录'}">未登录</span><br/>Authority remains in the Control Plane.</div>
     <button class="sidebar-preferences" type="button" data-preferences-open aria-haspopup="dialog" aria-controls="console-preferences"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Personalization</span></button>
     <div class="sidebar-clock" data-clock-container data-i18n-skip><time data-sidebar-clock>--:--:--</time><span data-sidebar-date></span></div>
   </div>
@@ -33,7 +33,7 @@
 <header class="topbar" th:fragment="topbar(title, subtitle)">
   <div><h1 th:text="${title}">Title</h1><p th:text="${subtitle}">Subtitle</p></div>
   <div class="topbar-actions">
-    <span class="pill neutral" th:text="${consoleRole}">ADMIN</span>
+    <span class="pill neutral" th:text="${consoleAuthEnabled ? consoleRole : '未登录'}">未登录</span>
     <a th:unless="${consoleAuthEnabled}" class="btn primary small-btn" href="/ui/login">Sign in</a>
     <form th:if="${consoleAuthEnabled}" action="/ui/logout" method="post" class="inline-form">
       <input type="hidden" name="_csrf" th:value="${csrfToken}"/>
