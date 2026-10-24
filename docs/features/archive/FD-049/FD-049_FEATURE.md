@@ -50,3 +50,5 @@ desktop_pet.py、desktop.py 中精确动画接线修改、desktop-assets/README.
 - Issue: none
 - 用户当前授权；desktop.py 的 Canvas/update_state/run/drain/poll_state/operate/show_pet/hide_pet/close；desktop-assets/README.md 与秘书状态投影。
 - Session: desktop-expression-20261024-a19d05；设计来源 FD-049-000002-design-requested。
+
+**Completed:** 2026-10-24
