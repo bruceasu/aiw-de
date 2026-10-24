@@ -1,0 +1,19 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-048",
+  "source_event": "FD-048-000004-implementation-ready",
+  "human_report": "FD-048-review-r1.md",
+  "data": {
+    "session": "fd048-review-20261024-c7294b",
+    "base_commit": "7ca7770",
+    "implementation_commit": "051c178",
+    "result": "passed",
+    "findings": [],
+    "failed_review_count": 0,
+    "acceptance_supported": [1, 2, 3, 4, 5, 6],
+    "commands": ["Get-Content", "Select-String", "rg", "git diff", "aiw fd show", "aiw fd claim"],
+    "not_run": ["tests", "compile", "browser", "GUI", "HTTP", "model", "database", "service", "restart", "network"],
+    "remaining_risks": ["Actual recovery, clock boundaries, thread interleavings and UI interactions unverified"]
+  }
+}
