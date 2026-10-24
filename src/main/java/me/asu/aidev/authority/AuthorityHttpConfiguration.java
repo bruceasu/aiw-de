@@ -24,7 +24,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
     }
     private boolean personalMachine(String method,String path) {
-        return method.equals("GET") && (Set.of("/identity","/state","/target-state","/grants","/management-state","/questions","/action-permissions").contains(path) || path.matches("/permission-actions/[0-9a-f-]{36}") || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))
+        return method.equals("GET") && (Set.of("/identity","/state","/target-state","/grants","/management-state","/questions","/permission-questions","/action-permissions").contains(path) || path.matches("/permission-actions/[0-9a-f-]{36}") || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))
                 || method.equals("POST") && Set.of("/sessions","/actions","/restrictions","/coordination","/question-replies","/goal-proposals","/personal-plans","/permission-actions/prepare").contains(path);
     }
     private boolean humanRoute(String method,String path) {

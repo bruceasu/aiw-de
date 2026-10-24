@@ -14,6 +14,8 @@ import static me.asu.aidev.authority.ActionPermissionContract.*;
 /** Fixes an inert original request. Full business snapshots never leave this service. */
 @Service
 public class PermissionActionPreparer {
+    @org.springframework.beans.factory.annotation.Autowired
+    private ObjectProvider<me.asu.aidev.ai.application.AiProfileCatalog> catalogs;
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;
     private final BusinessActionPermissions permissions;private final PermissionTargetResolver targets;
     private final ObjectProvider<AuthorityActions> actions;private final AuthorityGrantService grants;
@@ -56,12 +58,28 @@ public class PermissionActionPreparer {
             if(p.usedUses()>=p.maximumUses())throw new IllegalStateException("Action permission exhausted");
             var parameters=new LinkedHashMap<>(selection.parameters());parameters.putIfAbsent("reason","Selected operation under explicit action permission");
             Integer step=selection.step();String source=selection.sourceTaskId(),questionId=null;
+            if(p.action()==ActionScope.Action.A01||p.action()==ActionScope.Action.A04) {
+                String current=plans.getObject().reviewRecovery(selection.targetId()).taskId();
+                if(current==null||source!=null&&!source.equals(current))throw new IllegalStateException("Current review recovery source required");
+                source=current;
+                int actual=WorkflowTaskPosition.parse(plans.getObject().get(selection.targetId()),new TaskId(source)).orElseThrow().step();
+                if(step!=null&&step!=actual)throw new SecurityException("Recovery step differs from its source");step=actual;
+            }
+            if(p.action()==ActionScope.Action.A02)exact(parameters,"catalogVersion",catalogs.getObject().version());
             if(p.action()==ActionScope.Action.A03) {
                 if(source==null)source=parameters.get("taskId");
                 if(source==null||!selection.targetId().equals(targets.task(p.ownerId(),source)))throw new SecurityException("Exact retry source required");
                 exact(parameters,"taskId",source);
                 int actual=WorkflowTaskPosition.parse(plans.getObject().get(selection.targetId()),new TaskId(source)).orElseThrow().step();
                 if(step!=null&&step!=actual)throw new SecurityException("Retry step differs from its source");step=actual;
+                var failures=repo.jdbc().queryForList("SELECT failure_category FROM execution_attempt WHERE task_id=? ORDER BY attempt_no DESC LIMIT 1",String.class,source);
+                if(failures.isEmpty()||failures.getFirst()==null)throw new IllegalStateException("Known retry failure category required");
+                exact(parameters,"failureCategory",failures.getFirst());
+            }
+            if(p.action()==ActionScope.Action.A12_CREATE||p.action()==ActionScope.Action.A12_EXECUTE) {
+                String file=p.action()==ActionScope.Action.A12_CREATE?selection.targetId():parameters.get("fileId");
+                if(file==null)throw new IllegalArgumentException("Publication source selection required");
+                exact(parameters,"sourceHash",repo.jdbc().queryForObject("SELECT content_hash FROM task_output_file WHERE id=?",String.class,file));
             }
             QuestionContract.Question question=null;
             if(p.action()==ActionScope.Action.A18_BUDGET||p.action()==ActionScope.Action.A19_ANSWER) {

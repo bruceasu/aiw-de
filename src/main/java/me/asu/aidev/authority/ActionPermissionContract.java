@@ -5,7 +5,7 @@ import java.util.*;
 /** Human intent and concrete selection; never a wildcard ActionScope. */
 public final class ActionPermissionContract {
     private ActionPermissionContract() {}
-    public enum Scope { ALL, PLAN, TASK }
+    public enum Scope { ALL, PLAN, TASK, WORKER }
     public record Issue(String requestId,String ownerId,String workerId,ActionScope.Action action,Scope scopeKind,
                         String scopeId,long maximumUses,long expiresAt,String expectedPriorId) {
         public Issue {
@@ -35,7 +35,8 @@ public final class ActionPermissionContract {
     }
     public static Set<Scope> scopes(ActionScope.Action action) {
         return switch(action) {
-            case A13,A14,A15 -> Set.of(Scope.ALL);
+            case A13 -> Set.of(Scope.ALL);
+            case A14,A15 -> Set.of(Scope.ALL,Scope.WORKER);
             case A03,A11_APPROVE,A11_REJECT,A12_CREATE,A12_EXECUTE,A19_ANSWER -> Set.of(Scope.ALL,Scope.PLAN,Scope.TASK);
             default -> Set.of(Scope.ALL,Scope.PLAN);
         };

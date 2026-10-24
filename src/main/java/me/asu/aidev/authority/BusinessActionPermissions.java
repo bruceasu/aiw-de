@@ -77,6 +77,9 @@ public class BusinessActionPermissions {
         targets.getObject().validateScope(input.ownerId(),input.action(),input.scopeKind(),input.scopeId());
         var current=list(input.ownerId()).stream().filter(p->p.workerId().equals(input.workerId())&&p.action()==input.action()&&p.state().equals("ENABLED")).findFirst();
         if(!Objects.equals(current.map(Permission::id).orElse(null),input.expectedPriorId()))throw new IllegalStateException("Previous permission changed");
+        // Only this explicit human confirmation may first establish a global/ordinary-Worker binding.
+        if(input.action()==ActionScope.Action.A13)grants.bindTarget("GLOBAL:FLEET",input.ownerId());
+        if(input.scopeKind()==Scope.WORKER)grants.bindTarget("WORKER:"+input.scopeId(),input.ownerId());
         repo.jdbc().update("UPDATE authority_action_permission SET state='REPLACED' WHERE owner_id=? AND worker_id=? AND action=? AND state='ENABLED'",input.ownerId(),input.workerId(),input.action().name());
         for(var old:repo.grants())if(old.owner().equals(input.ownerId())&&old.workerId().equals(input.workerId())&&old.rule().action()==input.action()&&old.state().equals("ENABLED"))
             repo.jdbc().update("UPDATE authority_grant SET state='REVOKED',revision=revision+1 WHERE id=?",old.id());

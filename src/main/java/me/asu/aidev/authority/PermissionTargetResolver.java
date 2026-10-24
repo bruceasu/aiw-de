@@ -54,16 +54,20 @@ public class PermissionTargetResolver {
     public String task(String owner,String id) {return task(owner,id,new HashSet<>());}
     private String task(String owner,String id,Set<String> visiting) {
         var row=repo.jdbc().queryForMap("SELECT subject_type,subject_id FROM work_task WHERE id=?",id);
-        var contexts=repo.jdbc().queryForList("SELECT c.plan_id,p.owner_id,c.owner_id AS context_owner FROM execution_context c JOIN execution_policy p ON p.plan_id=c.plan_id WHERE c.task_id=?",id);
+        var contexts=repo.jdbc().queryForList("SELECT c.plan_id,p.owner_id,c.policy_json AS frozen_policy FROM execution_context c JOIN execution_policy p ON p.plan_id=c.plan_id WHERE c.task_id=?",id);
         String plan;
         if("flexible-plan".equals(row.get("subject_type"))) {
             plan=String.valueOf(row.get("subject_id"));
-            if(contexts.stream().anyMatch(c->!owner.equals(c.get("owner_id"))||!owner.equals(c.get("context_owner"))||!plan.equals(c.get("plan_id"))))throw new SecurityException("Conflicting task owner");
+            if(contexts.stream().anyMatch(c->!contextOwner(c,owner,plan)))throw new SecurityException("Conflicting task owner");
         } else {
-            if(contexts.size()!=1||!owner.equals(contexts.getFirst().get("owner_id"))||!owner.equals(contexts.getFirst().get("context_owner")))throw new SecurityException("Formal task context required");
+            if(contexts.size()!=1||!contextOwner(contexts.getFirst(),owner,String.valueOf(contexts.getFirst().get("plan_id"))))throw new SecurityException("Formal task context required");
             plan=String.valueOf(contexts.getFirst().get("plan_id"));
         }
         plan(owner,plan,visiting);return plan;
+    }
+    private boolean contextOwner(Map<String,Object> context,String owner,String plan) {
+        var frozen=repo.decode(String.valueOf(context.get("frozen_policy")),me.asu.aidev.execution.guard.GuardContract.Policy.class);
+        return owner.equals(context.get("owner_id"))&&owner.equals(frozen.ownerId())&&plan.equals(context.get("plan_id"))&&plan.equals(frozen.planId());
     }
     private String file(String owner,String id,Set<String> visiting) {
         var ids=repo.jdbc().queryForList("SELECT a.task_id FROM task_output_file f JOIN execution_attempt a ON a.id=f.attempt_id WHERE f.id=?",String.class,id);
@@ -106,12 +110,17 @@ public class PermissionTargetResolver {
     public void validateScope(String owner,ActionScope.Action action,Scope kind,String id) {
         if(!scopes(action).contains(kind))throw new IllegalArgumentException("Action/scope mismatch");
         if(kind==Scope.PLAN)plan(owner,id);else if(kind==Scope.TASK)task(owner,id);
+        else if(kind==Scope.WORKER) {
+            if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM worker WHERE id=? AND id NOT IN (SELECT worker_id FROM authority_identity)",Long.class,id)!=1)throw new SecurityException("Existing ordinary Worker required");
+            bound("WORKER:"+id,owner,false);
+        }
     }
     public Resolved check(BusinessActionPermissions.Permission permission,ActionScope rule,String selectedTask,String questionId) {
         if(rule.action()!=permission.action())throw new SecurityException("Permission action changed");
         var resolved=resolve(permission.ownerId(),rule,selectedTask,questionId);
         if(permission.scopeKind()==Scope.PLAN&&!Objects.equals(permission.scopeId(),resolved.planId())
-                ||permission.scopeKind()==Scope.TASK&&!Objects.equals(permission.scopeId(),resolved.sourceTask()))throw new SecurityException("Concrete action is outside the human-selected scope");
+                ||permission.scopeKind()==Scope.TASK&&!Objects.equals(permission.scopeId(),resolved.sourceTask())
+                ||permission.scopeKind()==Scope.WORKER&&!Objects.equals(permission.scopeId(),rule.targetId()))throw new SecurityException("Concrete action is outside the human-selected scope");
         return resolved;
     }
 }

@@ -162,7 +162,7 @@ const stateLabels = {
   ADMITTED: "已准入", IN_PROGRESS: "进行中", UNKNOWN: "结果未知", REJECTED: "已拒绝",
   SUCCEEDED: "已成功", FAILED: "已失败", NOT_STARTED: "未开始"
 };
-const actionLabels = Object.fromEntries([...document.querySelector('#issue-grant select[name="action"]').options].map(option => [option.value, option.textContent]));
+const actionLabels = {"A01": "追加修复轮次", "A02": "设置执行或评审模型", "A03": "重试指定失败任务", "A04": "恢复独立评审", "A05": "确认计划", "A06": "跳转计划步骤", "A07": "停止计划", "A08": "撤回计划", "A09": "人工完成计划", "A10": "取消计划", "A11_APPROVE": "批准审批", "A11_REJECT": "拒绝审批", "A12_CREATE": "创建发布计划", "A12_EXECUTE": "执行一次发布", "A13": "调整运行并发", "A14": "排空普通 Worker", "A15": "离线普通 Worker", "A16": "归档计划", "A17_SCHEDULE": "排期删除", "A17_UNDO": "撤销排期删除", "A18_BUDGET": "批准具体额度追加", "A19_ANSWER": "回答工作问题"};
 actionLabels.A18_BUDGET = "限定预算追加";
 actionLabels.A19_ANSWER = "回答工作问题";
 const dimensionLabels = { TIME_MS: "时间（毫秒）", TASKS: "任务数量", COST_MICROS: "费用（微单位）", LOOP_BACKJUMPS: "循环回跳次数" };
@@ -341,7 +341,6 @@ copyCredential.addEventListener("click", async () => {
 });
 renderIdentities();
 updateEnrollmentMode();
-const budgetAction = document.createElement("option");budgetAction.value = "A18_BUDGET";budgetAction.textContent = "限定预算追加（维度、增量、累计上限）";document.querySelector('#issue-grant select[name="action"]').append(budgetAction);
 document.getElementById("generate-credential").addEventListener("click", async event => {
   const button = event.currentTarget;
   const input = document.getElementById("personal-credential");
@@ -395,7 +394,6 @@ form("control-worker", value => {
   if (value.operation === "enable" && !identity.workerBoot) throw new Error("请先复制命令启动这位秘书建立进程会话，再刷新状态并明确启用。");
   return post("/workers/" + encodeURIComponent(value.workerId) + "/" + value.operation, { generation: Number(value.generation), workerBoot: value.workerBoot || null });
 });
-form("issue-grant", value => post("/grants", { ownerId: value.ownerId, workerId: value.workerId, expiresAt: new Date(value.expiresAt).getTime(), scope: { action: value.action, targetId: value.targetId, step: value.step === "" ? null : Number(value.step), effect: "ALLOW", states: value.states.split(",").map(row => row.trim()), minimumRounds: Number(value.minimumRounds), maximumUses: Number(value.maximumUses), parameters: JSON.parse(value.parameters) } }));
 form("revoke-grant", value => post("/grants/" + encodeURIComponent(value.id) + "/revoke"));
 form("target-control", async value => post("/targets/" + await hash(value.target) + "/" + value.operation, { target: value.target, generation: Number(value.generation) }));
 form("revoke-restriction", value => post("/restrictions/" + encodeURIComponent(value.id) + "/revoke"));

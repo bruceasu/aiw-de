@@ -41,3 +41,18 @@ The FD workflow requires production compile-only and independent static implemen
 ### Formal question projection
 
 The personal secretary SHALL use the same aiw.questions.v1 question ID and request version as Web Console and explicitly bound Telegram private chat. It SHALL show the selected goal, necessary context and original answer locally before explicit submission. Private chats, policy text, templates and credentials SHALL remain local. A19_ANSWER SHALL preserve the exact grant parameters, proposal digest, original envelope and receipt. Saving an answer SHALL NOT imply progression or extra authority. See docs/FORMAL-QUESTIONS.md.
+
+### Requirement: Human action permission periods
+The human authorization UI SHALL group actions by function and request only a secretary, one action, expiry and cumulative count, with optional applicable scope. ALL SHALL cover the current Owner's existing and future applicable targets and share one hard count. PLAN and exact source TASK scopes SHALL only narrow authority; step-wide or global actions SHALL NOT claim TASK scope. Ordinary Worker scope MAY be explicitly human-bound when unclaimed; machines SHALL NOT first-claim unowned global or Worker targets. Conflicting formal ownership SHALL deny access.
+
+Each Owner/secretary/action SHALL have at most one current period. Explicit new periods SHALL replace prior same-action authority while preserving history. Once migrated, legacy issue paths SHALL NOT provide parallel authority, including after expiry or revocation. Creation retries SHALL retain the original request and detect concurrent replacement.
+
+#### Scenario: Shared last use
+- WHEN different applicable targets use the same period
+- THEN each accepted original operation SHALL consume once in the business transaction, including required indirect publication authority; rejected/rolled-back operations and receipt replay SHALL NOT consume again
+- AND exhaustion SHALL reject new operations while preserving the last already-admitted task's valid permit; later failure, cancellation or legacy budget settlement SHALL NOT refund the parent count
+
+### Requirement: Inert fixed selections and durable recovery
+The platform SHALL fix concrete target, business selections, actual state/version and immutable original Envelope under current identity and formal ownership. Preparation SHALL NOT execute actions or consume permission uses. Submission SHALL preserve existing role, restrictions, takeover, generation, unknown-effect and exact request checks. A child capability SHALL NOT admit a different request or outlive its parent.
+
+The reference secretary SHALL persist the original selection/request before preparation, then persist the original Envelope before using the existing durable action/question outbox. Unknown results SHALL retain and reconcile the same request; stale process-bound preparations SHALL NOT be silently rebuilt. Full snapshots and private data SHALL NOT be exposed through preparation. Scoped formal-question reads SHALL NOT expand legacy read_scope; original question projection and source associations SHALL remain exact. Historical receipt reads SHALL require the same Owner and Worker. See docs/ACTION-PERMISSIONS.md.

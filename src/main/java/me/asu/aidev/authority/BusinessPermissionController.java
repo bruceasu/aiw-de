@@ -12,6 +12,8 @@ import static me.asu.aidev.authority.ActionPermissionContract.*;
 @RestController
 @RequestMapping("/api/r1/authority")
 public class BusinessPermissionController {
+    @org.springframework.beans.factory.annotation.Autowired
+    private ObjectProvider<me.asu.aidev.questions.FormalQuestions> questions;
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final AuthorityGrantService grants;
     private final BusinessActionPermissions permissions;private final PermissionActionPreparer preparer;private final PermissionTargetResolver targets;
     private final ObjectProvider<WorkflowPlanService> plans;private final ObjectProvider<ActionAdmissionService> admission;
@@ -29,11 +31,23 @@ public class BusinessPermissionController {
     }
     @PostMapping("/permission-actions/prepare") public Object prepare(HttpServletRequest request,@RequestBody String raw) {return preparer.prepare(principal(request),read(raw,Selection.class));}
     @GetMapping("/permission-actions/{requestId}") public Object preparation(HttpServletRequest request,@PathVariable String requestId) {return preparer.read(principal(request),requestId);}
+    @GetMapping("/permission-questions") public Object questionChoices(HttpServletRequest request,@RequestParam String permissionId,@RequestParam String planId) {
+        var actor=principal(request);admission.getObject().enabled(actor);var p=permissions.get(permissionId);
+        if(!p.ownerId().equals(actor.owner())||!p.workerId().equals(actor.worker())||!permissions.active(p)
+                ||!Set.of(ActionScope.Action.A18_BUDGET,ActionScope.Action.A19_ANSWER).contains(p.action()))throw new SecurityException("Current question permission required");
+        targets.plan(p.ownerId(),planId);
+        if(p.scopeKind()==Scope.PLAN&&!p.scopeId().equals(planId))throw new SecurityException("Plan outside question permission");
+        var choices=p.usedUses()>=p.maximumUses()?List.of():questions.getObject().list(planId).stream()
+                .filter(q->q.ownerId().equals(p.ownerId())&&q.state()==me.asu.aidev.questions.QuestionContract.State.OPEN)
+                .filter(q->(p.action()==ActionScope.Action.A19_ANSWER)==(q.kind()==me.asu.aidev.questions.QuestionContract.Kind.PROFESSIONAL))
+                .filter(q->p.scopeKind()!=Scope.TASK||Objects.equals(p.scopeId(),q.source().taskId())).toList();
+        return Map.of("permission",permissions.view(p),"questions",choices);
+    }
     public record Empty() {}
     @PostMapping("/action-permissions/state") public Object state(@RequestBody String raw) {
         read(raw,Empty.class);String actor=boundary.human();grants.identityHuman(actor);
         var owners=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
-        if(owners.isEmpty())return Map.of("ownerId","","permissions",List.of(),"plans",List.of(),"tasks",List.of(),"catalogue",catalogue(actor));
+        if(owners.isEmpty())return Map.of("ownerId","","permissions",List.of(),"plans",List.of(),"tasks",List.of(),"workers",List.of(),"catalogue",catalogue(actor));
         if(owners.size()!=1)throw new SecurityException("Unique current owner required");String owner=owners.getFirst();
         var choices=new LinkedHashMap<String,String>();
         for(var plan:plans.getObject().list())try {targets.plan(owner,plan.id());choices.put(plan.id(),title(plan.spec().goal()));}catch(SecurityException ignored) { /* Not this actor's plan. */ }
@@ -44,8 +58,9 @@ public class BusinessPermissionController {
             try {String id=String.valueOf(row.get("id")),plan=targets.task(owner,id);taskChoices.add(Map.of("id",id,"planId",plan,"title",title((String)row.get("instruction"))));}
             catch(SecurityException ignored) { /* Never export another owner's task title. */ }
         }
+        var workers=repo.jdbc().queryForList("SELECT w.id,w.runtime_type,w.status,t.owner_id FROM worker w LEFT JOIN authority_target t ON t.target_key='WORKER:'||w.id WHERE w.id NOT IN (SELECT worker_id FROM authority_identity) AND (t.owner_id IS NULL OR t.owner_id=?) ORDER BY w.id",owner);
         return Map.of("ownerId",owner,"permissions",permissions.list(owner).stream().map(permissions::view).toList(),
-                "plans",choices.entrySet().stream().map(e->Map.of("id",e.getKey(),"title",e.getValue())).toList(),"tasks",taskChoices,"catalogue",catalogue(actor));
+                "plans",choices.entrySet().stream().map(e->Map.of("id",e.getKey(),"title",e.getValue())).toList(),"tasks",taskChoices,"workers",workers,"catalogue",catalogue(actor));
     }
     private List<Map<String,Object>> catalogue(String actor) {
         List<Map<String,Object>> result=new ArrayList<>();
