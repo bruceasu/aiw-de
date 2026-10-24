@@ -54,6 +54,10 @@
 .configuration-readout{display:grid;grid-template-columns:85px 1fr;gap:8px 12px;font-size:12px;margin:18px 0;overflow-wrap:anywhere}
 .configuration-readout dt{color:var(--muted)}
 .configuration-readout dd{margin:0;white-space:pre-wrap}
+.configuration-command{display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.7}
+.configuration-command input{margin-top:4px}
+.configuration-page #method-preview-result{border-top:0;margin-top:0;padding-top:0}
+.configuration-page #saved-methods{margin-top:20px}
 .configuration-page button:disabled{cursor:wait;opacity:.55}
 .configuration-page :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @media(max-width:1050px){.configuration-columns{grid-template-columns:1fr}.configuration-guide ul{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}}

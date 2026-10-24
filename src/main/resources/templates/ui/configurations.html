@@ -3,7 +3,7 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" th:content="${csrfToken}"><meta name="configuration-owner" th:content="${ownerId}">
 <title>任务准备与工作方法 · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/configurations.css?v=human-forms-1">
-<script src="/ui/configurations.js?v=human-forms-1" defer></script></head>
+<script src="/ui/configurations.js?v=human-forms-1" defer></script><script src="/ui/configuration-methods.js?v=human-forms-1" defer></script></head>
 <body><div class="app configuration-page"><nav th:replace="~{ui/fragments :: nav('configurations')}"></nav><main class="main">
 <header th:replace="~{ui/fragments :: topbar('任务准备与工作方法','描述要做的工作，选择方法与模型，再检查是否可以交给 Worker。')}"></header>
 <div class="content configuration-content">
@@ -28,6 +28,20 @@
 <aside class="card configuration-guide"><h2>这里会发生什么</h2><ul><li><strong>准备就绪</strong>：创建一个任务，不代表任务已执行或验证通过。</li><li><strong>尚未就绪</strong>：显示缺少的配置、权限或兼容 Worker，补齐后可继续。</li><li><strong>只需默认方法</strong>：直接提交左侧表单，不用配置 Skill 或知识。</li></ul><p>执行范围由你在授权页确认。预算默认仅记录；方法与模型选择不会授予新权限。</p><div id="preparation-outcome" class="configuration-outcome" aria-live="polite"><p class="muted">提交后，这里显示准备结果和下一步。</p></div></aside></div>
 </section>
 <section id="panel-records" role="tabpanel" aria-labelledby="tab-records" data-configuration-panel="records" hidden><div class="configuration-section-heading"><div><h2>准备记录</h2><p>载入原记录继续处理；相同请求不会重复创建任务。修改内容后，系统会建立下一版本。</p></div></div><div id="configuration-records" class="configuration-records"><p class="empty">正在读取准备记录…</p></div></section>
-<section id="panel-methods" role="tabpanel" aria-labelledby="tab-methods" data-configuration-panel="methods" hidden><section class="card" id="configuration-method-workbench"><h2>自定义工作方法（可选）</h2><p>普通任务直接选用默认方法或已保存方法即可。</p></section></section>
+<section id="panel-methods" role="tabpanel" aria-labelledby="tab-methods" data-configuration-panel="methods" hidden>
+<div class="configuration-section-heading"><h2>自定义工作方法（可选）</h2><p>默认方法不够用时，再为它添加已登记的 Skill、参考知识或工作说明。预览和保存不会调用模型，也不会自动创建任务。</p></div>
+<div class="configuration-columns"><section class="card"><h2>1. 组合一个工作方法</h2><form id="propose-configuration"><fieldset id="method-fields" disabled><div class="form-grid">
+<label class="field">基础方法<select id="method-role" required><option value="">请选择基础方法</option></select></label><label class="field">使用仓库<select id="method-repository" required><option value="">请选择已确认范围的仓库</option></select></label>
+<div class="configuration-full"><h3>补充 Skill（可选）</h3><p class="help">基础方法已自带必要 Skill。这里只选择额外内容，最多六项。</p><div id="method-skills" class="configuration-checks"></div></div>
+<div class="configuration-full"><h3>参考知识（可选）</h3><p class="help">只引用你已登记到当前仓库的材料，最多八项。</p><div id="method-knowledge" class="configuration-checks"></div></div>
+<label class="field configuration-full">补充工作说明（可选）<textarea id="method-instruction" rows="4" maxlength="4096" placeholder="例如：先检查现有实现，再做最小修改；报告中区分已验证的事实与未运行的检查。"></textarea></label>
+<label class="configuration-full configuration-command"><input id="method-command" type="checkbox">该方法还需要运行命令（仍须单独的执行许可与兼容 Worker）</label>
+</div></fieldset><div class="configuration-form-actions"><button id="method-preview" class="btn primary" disabled>2. 预览工作方法</button></div></form></section>
+<aside class="card"><h2>3. 确认后保存并选用</h2><div id="method-preview-result" class="configuration-outcome"><p class="muted">先在左侧选择基础方法和需要的内容，再查看易读摘要。</p></div><div class="configuration-form-actions"><button id="method-save" type="button" class="btn primary" disabled>保存此方法</button><button id="method-use" type="button" class="btn ghost" disabled>用于准备任务</button></div><p class="help">修改输入后需要重新预览。这里只声明需要哪些工具，不授予工具或执行权限。</p></aside></div>
+<section class="card section"><h2>已保存的工作方法</h2><p class="muted">选用精确保存版本，不会修改已有任务的方法。</p><div id="saved-methods" class="configuration-records"><p class="empty">正在读取…</p></div></section>
+<section class="card section"><details class="configuration-disclosure"><summary>添加参考资料或 Skill 说明（可选）</summary><p class="help">只有还没有可引用的材料时才需要登记。填写的名称会作为正文标题一起保存；引用标识、版本和内容摘要由系统生成。登记资料不会安装工具。</p>
+<form id="register-configuration-asset"><fieldset id="asset-fields" disabled><div class="form-grid"><label class="field">资料名称<input id="asset-name" required maxlength="100" placeholder="例如：接口兼容规范"></label><label class="field">资料类型<select id="asset-kind"><option value="knowledge">参考知识</option><option value="skill">Skill 工作说明</option></select></label><label class="field configuration-full">使用仓库<select id="asset-repository" required><option value="">请选择仓库</option></select></label><label class="field configuration-full">你选定的正文<textarea id="asset-content" required rows="6" maxlength="16000" placeholder="只放本次明确选择、允许在这个仓库使用的内容。不要填写凭证或完整私人聊天。"></textarea></label></div></fieldset><div class="configuration-form-actions"><button id="asset-submit" class="btn primary" disabled>登记资料</button></div><p id="asset-status" class="help" role="status"></p></form>
+</details></section>
+</section>
 <p class="footer-note">本页只显示当前账号的准备记录与可选内容。刷新记录会保留正在填写的草稿；执行状态以正式任务记录为准。</p>
 </div></main></div><script src="/ui/console.js"></script></body></html>

@@ -175,6 +175,10 @@
     const sequence=++refreshSequence,data=await request('state',{}); if(sequence!==refreshSequence) return false;
     if(data.uiOptions.ownerId!==owner) throw new Error('当前登录身份已改变，请重新打开页面，避免混用原草稿。');
     snapshot=data; options=data.uiOptions;
+    if(origin) {
+      const current=data.preparations.find(item=>item.intentId===origin.intent.intentId&&item.intentVersion===origin.intent.intentVersion);
+      if(current) origin.preparation=clone(current);
+    }
     $('configuration-plan-count').textContent=options.plans.length; $('configuration-model-count').textContent=options.models.length; $('configuration-worker-count').textContent=data.workers.length;
     if(!initialized) { populateChoices(); initialized=true; }
     if(uncertain) {
