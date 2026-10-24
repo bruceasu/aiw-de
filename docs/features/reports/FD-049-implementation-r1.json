@@ -1,0 +1,22 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-049",
+  "source_event": "FD-049-000003-design-ready",
+  "human_report": "FD-049-implementation-r1.md",
+  "data": {
+    "session": "desktop-expression-20261024-a19d05",
+    "base_commit": "b40af38",
+    "work_items": ["1.1", "1.2", "1.3"],
+    "checks": [
+      {"command": "git diff --cached --check", "result": "passed"},
+      {"command": "Python compile() on current desktop.py, desktop_pet.py and staged desktop.py", "result": "passed", "exit_code": 0}
+    ],
+    "animation": "Canvas portrait bob and vector expression bubble",
+    "timer_interval_ms": 120,
+    "completion_feedback_seconds": 6,
+    "unrelated_changes": "preserved unstaged; desktop index assembled from HEAD and exact scoped replacements",
+    "not_run": ["tests", "GUI", "models", "service", "network", "restart", "deployment", "packaging"],
+    "remaining_risks": ["Visual appearance, frame performance and Windows tray lifecycle unverified"]
+  }
+}

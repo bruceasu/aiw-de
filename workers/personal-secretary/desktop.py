@@ -15,6 +15,7 @@ import time
 import webbrowser
 
 from desktop_client import PersonalClient, PersonalError, personal_origin
+from desktop_pet import PetAnimator
 
 BG, PANEL, TEXT, MUTED, LINE, ACCENT = "#080e17", "#111c2b", "#e2edf8", "#9aadbf", "#2b4055", "#64e4dc"
 TRANSPARENT = "#010203"
@@ -71,9 +72,11 @@ def main():
             self.width, self.height = max(260, self.image.width() + 24), self.image.height() + 70
             self.canvas = tk.Canvas(self.root, width=self.width, height=self.height, bg=TRANSPARENT, highlightthickness=0)
             self.canvas.pack()
-            self.canvas.create_image(self.width // 2, 8, image=self.image, anchor="n")
+            self.pet_image = self.canvas.create_image(self.width // 2, 8, image=self.image, anchor="n")
             self.canvas.create_rectangle(8, self.height - 46, self.width - 8, self.height - 8, fill=PANEL, outline=LINE)
             self.pet_label = self.canvas.create_text(self.width // 2, self.height - 27, text="尚未配对 · 点击连接", fill=ACCENT, font=("Microsoft YaHei UI", 9))
+            self.pet = PetAnimator(self.root, self.canvas, self.pet_image, self.pet_label, self.width)
+            self.animate_pet = tk.BooleanVar(value=True)
             self.canvas.bind("<ButtonPress-1>", self.drag_start)
             self.canvas.bind("<B1-Motion>", self.drag_move)
             self.canvas.bind("<ButtonRelease-1>", self.drag_end)
@@ -99,6 +102,7 @@ def main():
             self.menu.add_command(label="打开 Web", command=lambda: self.open_web())
             self.menu.add_command(label="连接与设置", command=self.show_connection)
             self.menu.add_checkbutton(label="人物置顶", variable=self.topmost, command=lambda: self.root.attributes("-topmost", self.topmost.get()))
+            self.menu.add_checkbutton(label="人物动画", variable=self.animate_pet, command=lambda: self.pet.set_enabled(self.animate_pet.get()))
             self.menu.add_command(label="显示人物", command=self.show_pet)
             self.menu.add_command(label="隐藏人物", command=self.hide_pet, state="normal" if self.tray else "disabled")
             self.menu.add_separator()
@@ -237,10 +241,7 @@ def main():
         def update_state(self, state):
             self.snapshot = state
             self.update_choices()
-            runtime_label = "先连接模型" if state.get("modelConfigured") is False else ("秘书可用" if state.get("enabled") else "秘书已暂停")
-            waiting = sum(1 for row in state.get("decisions", []) if row.get("kind") == "DAILY_CONFIRMATION" and row.get("state") == "WAITING")
-            if waiting: runtime_label += f" · {waiting} 项待你确认"
-            self.canvas.itemconfigure(self.pet_label, text=runtime_label + " · 点击对话")
+            self.pet.update_snapshot(state)
             if self.chat_window:
                 self.render_chat()
             if self.workbench:
@@ -250,13 +251,13 @@ def main():
                 self.policy_choices.configure(values=[row["id"] for row in policies])
                 self.set_text(self.state_text, json.dumps(state, ensure_ascii=False, indent=2), True)
 
-        def run(self, label, action, complete):
+        def run(self, label, action, complete, *, background=False):
             if self.busy:
                 self.status.set("请等待当前操作返回；窗口仍可移动、隐藏或关闭。")
                 return
             self.busy = True
             self.status.set(label + "…")
-            self.canvas.itemconfigure(self.pet_label, text=label + "…")
+            self.pet.request_started(background=background)
             for control in self.controls:
                 control.configure(state="disabled")
 
@@ -285,13 +286,14 @@ def main():
                         continue
                     _, complete, result, error = item
                     self.busy = False
+                    self.pet.request_finished()
                     for control in self.controls:
                         control.configure(state="normal")
                     self.sync_goal_button()
                     self.sync_schedule_button()
                     if error:
                         self.status.set(str(error))
-                        self.canvas.itemconfigure(self.pet_label, text="操作未确认 · 点击查看")
+                        self.pet.result_uncertain()
                         if error.status == 401:
                             self.show_connection()
                     else:
@@ -299,6 +301,7 @@ def main():
                             complete(result)
                         except Exception:
                             self.status.set("服务已返回，但界面没有完成更新。请点击“刷新状态”；不要重复提交刚才的操作。")
+                            self.pet.result_uncertain()
             except queue.Empty:
                 pass
             self.root.after(100, self.drain)
@@ -312,7 +315,7 @@ def main():
                     finished = any(row["id"] in pending and row.get("state") != "PENDING" for row in state.get("messages", []))
                     self.update_state(state)
                     self.status.set("秘书已有回复，请查看对话。" if finished else previous)
-                self.run("读取最新进度", self.client.state, complete)
+                self.run("读取最新进度", self.client.state, complete, background=True)
             self.root.after(3000, self.poll_state)
 
         def require_session(self):
@@ -336,7 +339,7 @@ def main():
                     callback(result)
                 self.status.set(warning or ("已收到，秘书正在处理，回复会自动显示。" if route == "chat" else result.get("note") or result.get("report", {}).get("message") or label + "已完成。"))
                 if warning:
-                    self.canvas.itemconfigure(self.pet_label, text="状态读取失败 · 请刷新")
+                    self.pet.result_uncertain()
             self.run(label, lambda: self.client.operate(route, data), complete)
 
         def refresh(self):
@@ -887,15 +890,18 @@ def main():
         def show_pet(self):
             self.root.deiconify()
             self.root.lift()
+            self.pet.set_visible(True)
 
         def hide_pet(self):
             if self.tray and self.tray.active:
+                self.pet.set_visible(False)
                 self.root.withdraw()
 
         def close(self):
             if self.busy and not messagebox.askyesno("退出桌面界面", "当前操作仍在等待结果。退出只关闭界面，已发送操作可能继续执行。下次请核对原请求回执。是否退出？", parent=self.root):
                 return
             self.closing = True
+            self.pet.close()
             if self.tray: self.tray.close()
             self.client = None
             self.root.destroy()
