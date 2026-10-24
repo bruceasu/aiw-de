@@ -9,7 +9,8 @@ import static me.asu.aidev.execution.config.ConfigurationContract.*;
 @RestController
 public class ConfigurationController {
     private final AuthorityRepository repo;private final ExecutionConfigurations configs;private final AgentFactory factory;
-    public ConfigurationController(AuthorityRepository repo,ExecutionConfigurations configs,AgentFactory factory) { this.repo=repo;this.configs=configs;this.factory=factory; }
+    private final ConfigurationUiOptions uiOptions;
+    public ConfigurationController(AuthorityRepository repo,ExecutionConfigurations configs,AgentFactory factory,ConfigurationUiOptions uiOptions) { this.repo=repo;this.configs=configs;this.factory=factory;this.uiOptions=uiOptions; }
     private <T> T read(String raw,Class<T> type) { if(raw.length()>32768) throw new IllegalArgumentException("Bounded declarative request required");return repo.decode(raw,type); }
     public record Empty() {}
     @PostMapping("/api/r1/authority/execution-configurations/assets") public Object asset(@RequestBody String raw) { return configs.registerAsset(read(raw,Asset.class)); }
@@ -19,7 +20,7 @@ public class ConfigurationController {
     @PostMapping("/api/r1/authority/execution-configurations/state") public Object state(@RequestBody String raw) {
         read(raw,Empty.class);String owner=configs.currentOwner();
         return Map.of("protocol",PROTOCOL,"categories",configs.categories(),"methods",configs.catalogue().methods(),
-                "assets",configs.catalogue().assets().stream().map(Asset::reference).toList(),"preparations",factory.preparations(owner),
+                "assets",configs.catalogue().assets().stream().map(Asset::reference).toList(),"preparations",factory.preparations(owner),"uiOptions",uiOptions.snapshot(),
                 "configurations",repo.jdbc().queryForList("SELECT id,revision,digest,repository_ref FROM execution_configuration WHERE owner_id=? ORDER BY id,revision",owner),
                 "workers",repo.jdbc().queryForList("SELECT c.worker_id,w.runtime_type,w.status,c.capabilities_json FROM execution_worker_configuration c JOIN worker w ON w.id=c.worker_id ORDER BY c.worker_id"));
     }

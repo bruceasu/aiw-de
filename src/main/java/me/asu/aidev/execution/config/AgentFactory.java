@@ -24,6 +24,11 @@ public class AgentFactory {
         this.repo=repo;this.boundary=boundary;this.guard=guard;this.configurations=configurations;this.tasks=tasks;this.workers=workers;this.ai=ai;this.attempts=attempts;
     }
     public record Details(List<String> missing,List<String> recoveryActions) {}
+    public List<AiProfileCatalog.NamedProfile> supportedProfiles() {
+        return ai.approved(TaskType.EXTERNAL_WORK).stream().filter(p->p.profile().provider().equals("openai") && !p.profile().fast()
+                && Set.of("openai-agents","codex-app-server").contains(p.profile().runtime())
+                && (p.profile().runtime().equals("codex-app-server")?Set.of("none","minimal","low","medium","high","xhigh"):Set.of("none","minimal","low","medium","high")).contains(p.profile().effort())).toList();
+    }
     @Transactional public Preparation prepare(Intent intent) {
         boundary.lock();String owner=configurations.currentOwner();return prepareAuthorized(intent,owner);
     }
@@ -62,8 +67,7 @@ public class AgentFactory {
         repo.jdbc().update("UPDATE execution_preparation SET config_json=? WHERE intent_id=? AND intent_version=? AND generation=?",repo.encode(ref),intent.intentId(),intent.intentVersion(),next);
         var content=repo.decode(configurations.get(owner,ref).contentJson(),Content.class);
         if(!content.candidate().repositoryRef().equals(intent.repositoryRef())) return blocked(intent,Error.INVALID_CONFIGURATION,"Use the registered repository scope",next);
-        var approved=ai.approved(TaskType.EXTERNAL_WORK).stream().filter(p->p.id().equals(intent.aiProfileId()) && p.profile().runtime().equals(intent.runtime()) && p.profile().provider().equals("openai") && !p.profile().fast()
-                && (intent.runtime().equals("codex-app-server")?Set.of("none","minimal","low","medium","high","xhigh"):Set.of("none","minimal","low","medium","high")).contains(p.profile().effort())).findFirst();
+        var approved=supportedProfiles().stream().filter(p->p.id().equals(intent.aiProfileId()) && p.profile().runtime().equals(intent.runtime())).findFirst();
         if(approved.isEmpty()) return blocked(intent,Error.UNSUPPORTED_RUNTIME,"Configure an approved, supported AI profile for the exact requested runtime",next);
         var guidance=new AiProfileCatalog.Guidance(ai.version(),List.of(approved.get()),null,approved.get().id());
         var binding=new Binding(owner,ref,intent.runtime(),guidance);
