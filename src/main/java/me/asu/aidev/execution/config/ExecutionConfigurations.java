@@ -52,7 +52,7 @@ public class ExecutionConfigurations {
         repo.audit("CONFIG:"+input.ownerId(),null,null,boundary.human(),"DECLARATIVE_ASSET_REGISTERED",input.kind()+":"+input.ref()+":"+input.version()+":"+input.digest());
         return input;
     }
-    private Asset asset(String kind,AssetRef ref,String owner,String repository) {
+    Asset asset(String kind,AssetRef ref,String owner,String repository) {
         if(kind.equals("skill")) {
             var bundled=catalogue.assets().stream().filter(a->a.kind().equals(kind) && a.reference().equals(ref)).findFirst();
             if(bundled.isPresent()) return bundled.get();

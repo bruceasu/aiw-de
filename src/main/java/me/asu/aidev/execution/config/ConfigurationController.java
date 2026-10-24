@@ -11,6 +11,7 @@ public class ConfigurationController {
     private final AuthorityRepository repo;private final ExecutionConfigurations configs;private final AgentFactory factory;
     private final ConfigurationUiOptions uiOptions;
     @org.springframework.beans.factory.annotation.Autowired private ExecutionWorkbench workbench;
+    @org.springframework.beans.factory.annotation.Autowired private CapabilityPacks capabilityPacks;
     public ConfigurationController(AuthorityRepository repo,ExecutionConfigurations configs,AgentFactory factory,ConfigurationUiOptions uiOptions) { this.repo=repo;this.configs=configs;this.factory=factory;this.uiOptions=uiOptions; }
     private <T> T read(String raw,Class<T> type) { if(raw.length()>32768) throw new IllegalArgumentException("Bounded declarative request required");return repo.decode(raw,type); }
     public record Empty() {}
@@ -23,6 +24,7 @@ public class ConfigurationController {
     public Object propose(String raw) { return propose(raw,"method"); }
     public Object state(String raw) { return state(raw,"method"); }
     @PostMapping("/api/r1/authority/execution-configurations/candidates") public Object save(@RequestBody String raw,@RequestParam(defaultValue="method") String kind) {
+        if("capability-pack".equals(kind)) return capabilityPacks.save(read(raw,CapabilityPacks.Save.class));
         if("workbench".equals(kind)) return workbench.command(read(raw,WorkbenchContract.HumanCommand.class));
         return role(kind)?configs.saveRole(read(raw,ComposedRoles.Definition.class)):configs.save(read(raw,Candidate.class));
     }
@@ -31,6 +33,8 @@ public class ConfigurationController {
     }
     @PostMapping("/api/r1/authority/execution-configurations/prepare") public Object prepare(@RequestBody String raw) { return factory.prepare(read(raw,Intent.class)); }
     @PostMapping("/api/r1/authority/execution-configurations/state") public Object state(@RequestBody String raw,@RequestParam(defaultValue="method") String kind) {
+        if("capability-packs".equals(kind)) {read(raw,Empty.class);return capabilityPacks.list();}
+        if("capability-pack".equals(kind)) return capabilityPacks.lookup(read(raw,CapabilityPacks.Lookup.class));
         if("workbench".equals(kind)) return workbench.snapshot(configs.observations(),read(raw,WorkbenchContract.Query.class));
         if("workbench-receipt".equals(kind)) return workbench.receipt(read(raw,WorkbenchContract.ReceiptQuery.class));
         if("observations".equals(kind)) { read(raw,Empty.class);return configs.observations(); }
