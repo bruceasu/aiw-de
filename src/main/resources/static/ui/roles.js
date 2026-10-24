@@ -42,7 +42,7 @@
   function reference(a){return {ref:a.ref,version:a.version,digest:a.digest};}
   function newStep(){return {key:uid('step'),title:'',skills:[],instruction:'',whenCondition:'',completion:''};}
   function assetLabel(a){const m=state.methods.find(m=>m.method.primarySkill===a.ref);return names[a.ref]||(m?names[m.role]+' · 专业技能':a.title||a.ref);}
-  function available(kind){return state.uiOptions.assets.filter(a=>a.kind===kind&&(!a.repositoryRef||a.repositoryRef===draft.repositoryRef)&&a.ref!=='engineering-artifact-protocol'&&!/^role-[0-9a-f]{64}$/.test(a.ref)&&!(kind==='knowledge'&&a.ref.startsWith('cap-pack-')));}
+  function available(kind){return state.uiOptions.assets.filter(a=>a.kind===kind&&(!a.repositoryRef||a.repositoryRef===draft.repositoryRef)&&a.ref!=='engineering-artifact-protocol'&&!/^role-[0-9a-f]{64}$/.test(a.ref)&&!(kind==='knowledge'&&packs.some(p=>key(p.reference)===key(a))));}
   function checks(host,kind,chosen,change){
     const assets=available(kind);host.replaceChildren();
     for(const a of assets){const row=node('label'),input=document.createElement('input');input.type='checkbox';input.checked=chosen.some(r=>key(r)===key(a));input.addEventListener('change',()=>{change(input.checked?[...chosen,reference(a)]:chosen.filter(r=>key(r)!==key(a)));invalidate();renderStepsAndKnowledge();});row.append(input,node('span',assetLabel(a)+' · '+a.version));host.append(row);}
@@ -75,7 +75,7 @@
     box.append(field,writeLabel,commandLabel,node('p','复用固定技能与“本步做什么”；当前步骤的执行条件、完成要求分别保留在角色中。','help'),save);return box;
   }
   async function refreshPacks(){
-    const snapshot=await request('state?kind=capability-packs',{});
+    const snapshot=state.capabilityPacks;
     if(snapshot.protocol!=='aiw.capability.pack.v1'||snapshot.ownerId!==document.querySelector('meta[name="configuration-owner"]').content)throw new Error('能力包身份已变化，请重新打开页面。');
     packs=snapshot.packs;renderPacks();
   }
@@ -138,8 +138,8 @@
   async function refresh(){
     const generation=++refreshEpoch,next=await request('state',{});if(generation!==refreshEpoch)return;
     if(!next.uiOptions||next.uiOptions.ownerId!==document.querySelector('meta[name="configuration-owner"]').content)throw new Error('当前身份或页面数据已经变化，请重新打开页面，避免混用原草稿。');
-    state=next;if(!draft)draft=fresh();options($('role-template'),state.methods.map(m=>({value:m.role,label:names[m.role]||m.role})),$('role-template').value,'选择一个模板');renderDraft();renderSaved();
-    try{await refreshPacks();}catch(e){$('role-pack-status').textContent=e.message;}
+    state=next;if(!draft)draft=fresh();options($('role-template'),state.methods.map(m=>({value:m.role,label:names[m.role]||m.role})),$('role-template').value,'选择一个模板');
+    try{await refreshPacks();}catch(e){packs=[];$('role-pack-status').textContent=e.message;}renderDraft();renderSaved();
     if(uncertain){const pending=uncertain,found=(state.roles||[]).find(r=>r.reference.id===pending.proposal.definition.id&&r.reference.revision===pending.proposal.definition.revision);if(found){const actual=await request('state?kind=role',found.reference);if(uncertain!==pending)return;if(signature(actual)!==signature(pending.proposal.definition))throw new Error('原标识已有不同内容，不能重试覆盖。请核对已保存版本。');preview={...pending.proposal,reference:found.reference};uncertain=null;summary(preview);feedback('已核对原角色保存成功，未重复创建。');}else{pending.checked=true;feedback('当前未找到原版本。可显式重试保存同一个原角色。','warn');}}sync();
   }
   for(const [id,field] of [['role-name','name'],['role-goal','goal'],['role-delivery','delivery'],['role-output','resultKind'],['role-category','category']])$(id).addEventListener('input',()=>{draft[field]=$(id).value;invalidate();});

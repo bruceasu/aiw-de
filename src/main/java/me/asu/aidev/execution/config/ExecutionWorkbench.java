@@ -53,7 +53,8 @@ public class ExecutionWorkbench {
     @Transactional public Object command(HumanCommand input) {
         boundary.lock();String owner=owner();text(input.requestId(),80);text(input.action(),24);
         String digest=AuthorityRepository.hash(repo.encode(input));Object previous=oldReceipt(owner,input.requestId(),digest);if(previous!=null)return previous;
-        var task=ownedAttempt(owner,input.taskId(),input.attemptId());revision(task,input.instructionRevision());
+        var task=ownedAttempt(owner,input.taskId(),input.attemptId());
+        if(number(task,"attempt_revision")!=input.instructionRevision())throw new IllegalStateException("Original Attempt revision changed");
         Object result=switch(input.action()) {
             case "SEND" -> enqueue(owner,input,task);
             case "CANCEL" -> cancel(owner,input);
@@ -197,6 +198,13 @@ public class ExecutionWorkbench {
         if(attempt!=null&&visible.stream().noneMatch(e->e.attemptId().equals(attempt)))throw new SecurityException("Attempt belongs to another task or view");
         var result=new LinkedHashMap<String,Object>();result.put("protocol",PROTOCOL);result.put("ownerId",owner);result.put("observedAt",observations.observedAt());
         result.put("attempts",entries);result.put("taskId",task);result.put("attemptId",attempt);
+        if(attempt==null)result.put("basis",null);
+        else {
+            var basis=ownedAttempt(owner,task,attempt);
+            result.put("basis",Map.of("instructionRevision",number(basis,"attempt_revision"),"currentInstructionRevision",number(basis,"instruction_revision"),
+                    "live",Objects.equals(basis.get("current_lease"),basis.get("attempt_lease"))&&basis.get("lease_expires_at_epoch_ms")!=null&&number(basis,"lease_expires_at_epoch_ms")>System.currentTimeMillis(),
+                    "stopRequested",basis.get("stop_requested_at_epoch_ms")!=null));
+        }
         result.put("sessions",repo.jdbc().queryForList("SELECT task_id,attempt_id,instruction_revision,runtime,phase,updated_ms FROM execution_workbench_session WHERE owner_id=? ORDER BY CASE WHEN attempt_id=? THEN 0 ELSE 1 END,updated_ms DESC LIMIT 100",owner,attempt));
         result.put("messages",attempt==null?List.of():repo.jdbc().queryForList("""
                 SELECT id,request_id,instruction_revision,mode,state,body,digest,sequence_no,batch_id,created_ms,updated_ms
@@ -210,8 +218,8 @@ public class ExecutionWorkbench {
                 """,owner,attempt));
         result.put("operations",attempt==null?List.of():repo.jdbc().queryForList("""
                 SELECT o.operation_id,o.tool_id,o.resource,o.state,o.started_ms,o.finished_ms,o.result_digest,o.evidence_ref
-                  FROM execution_operation o JOIN execution_workbench_session s ON s.attempt_id=o.attempt_id
-                 WHERE s.owner_id=? AND o.attempt_id=? ORDER BY o.started_ms DESC LIMIT 50
+                  FROM execution_operation o JOIN execution_policy p ON p.plan_id=o.plan_id
+                 WHERE p.owner_id=? AND o.attempt_id=? ORDER BY o.started_ms DESC LIMIT 50
                 """,owner,attempt));
         result.put("branches",task==null?List.of():repo.jdbc().queryForList("SELECT id,attempt_id,instruction_revision,parent_id,title,body,result_revision,actor,created_ms FROM execution_exploration WHERE owner_id=? AND task_id=? ORDER BY created_ms,id LIMIT 100",owner,task));
         result.put("choices",task==null?List.of():repo.jdbc().queryForList("""

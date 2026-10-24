@@ -140,7 +140,7 @@ class OpenAIApiRuntime:
                 try:
                     stream_box[0].cancel(mode="immediate")
                 except Exception:
-                    cancelled_before_stream.set()
+                    request.attempt.cancelled.set()
             loop.call_soon_threadsafe(cancel_on_loop)
 
         request.attempt.add_cancel_callback(cancel_run)
