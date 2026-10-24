@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-032",
+  "source_event": "FD-032-000004-design-ready",
+  "human_report": "FD-032-blocker-compiler-path-20261024-a8f47e19.md",
+  "data": {
+    "stage": "compile",
+    "role": "worker",
+    "status": "resolved",
+    "resolved_date": "2026-10-24",
+    "symptom": "mvn absent from PATH; current JAVA_HOME selected JDK 8",
+    "confirmed_cause": "Host toolchain environment did not match repository JDK 25 requirement",
+    "attempts": ["Initial mvn command did not launch", "Read existing local compiler evidence and verified installed paths", "Scoped JAVA_HOME to installed JDK 25 and compiled offline with Maven 3.9.9 successfully", "Read user-provided setup-jdk25.ps1 without executing or repeating compilation"],
+    "human_decision_required": false,
+    "next_step": "Independent implementation review",
+    "reusable_improvement": "Resolve known local environment script before compile; record actual tool versions; possible later platform-only compile script parameter",
+    "template_status": "Required templates absent; skill fields and existing Dual structure used"
+  }
+}

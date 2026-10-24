@@ -37,11 +37,11 @@ ExecutionGuard 的创建/固定输入/领取/推进和 AgentFactory 准备共用
 - [x] 1.2 动作累计额度仅计数，保留授权及重复请求保护。规模小、难度中，依赖 1.1；证据为 ExecutionAccounting、application.yaml 与 AuthorityBudgets 的统一模式及原子计数，授权/幂等路径未跳过。
 - [x] 1.3 执行准备、任务计数、Attempt 预留/结算及回跳支持缺省预算并持续记录。规模小、难度中，依赖 1.1；证据为 ExecutionLedger、GuardContract、ExecutionGuard、AgentFactory、GraphRunner 的模式感知路径，费用未知不虚构、冻结定价不追溯改写。
 - [x] 1.4 待核对历史只记录，保留同一原任务/Attempt 的防重复与真实在途保护。规模小、难度中，依赖 1.2、1.3；证据为动作/协调共用 blocksNewExecution，Task/Lease/Attempt 仍判断真实在途；同任务 UNKNOWN、静止核验和原请求幂等路径保留。
-- [ ] 1.5 更新授权页、稳定规格与部署说明，完成窄范围编译、独立实现审阅及范围内本地交付归档。规模小、难度中，依赖前述条目；未运行的检查保持未运行。
+- [x] 1.5 更新授权页、稳定规格与部署说明，完成窄范围编译并提交独立实现审阅所需证据。规模小、难度中，依赖前述条目；页面/规格/说明与实际实现见 7f5f211，离线 Java compile 与 authority.js 语法编译通过，未运行的检查保持未运行。独立审阅和交付归档属于下述生命周期 TODO，不作为源码完成前的循环依赖。
 
 ## TODO
 
-- 已采纳独立设计审阅的图预算旁路、实际在途区分、预算缺省/价格兼容三项意见，开始落实平台与页面变更；不得把其它工作区改动纳入本次证据。
+- 全部源码及文档条目已完成，等待独立实现审阅；通过后仅提交本 FD 的审阅证据并自动归档。其它个人秘书/模型配置改动不在本 FD 范围内。
 
 ## Acceptance
 
@@ -58,6 +58,11 @@ ExecutionGuard 的创建/固定输入/领取/推进和 AgentFactory 准备共用
   when requested and do not gate FD acceptance.
 - 仅执行一次平台 Maven 离线 compile；不下载依赖、不打包，不运行测试、数据库、服务、浏览器或模型。独立设计审阅和独立实现审阅仅静态读取。
 - 独立设计审阅：../reviews/FD-032-design-review-20261024-b4c92a1f.md 与同名 JSON。Planner 已将三项收敛要求写入 Solution 和验收；尚未声称实现或运行通过。
+- 实现提交：1689485（统一模式与动作计数）、8d1eb6c（执行/图账本）、e784f67（历史 UNKNOWN 与实际在途区分）、7f5f211（页面与稳定契约、缺价计量）。
+- 2026-10-24：以 JAVA_HOME=C:/green/jdk-25.0.1+8 调用 `C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -Dmaven.test.skip=true compile` 通过，291 个生产源，实际源码提交为 7f5f211efdae4fb632e9cb32270b7b79a24a9bdc；未运行测试、未下载依赖、未打包。
+- `node --check src/main/resources/static/ui/authority.js` 通过；静态范围内 `git diff --check` 通过。模板、SQL、真实身份/数据和模式切换未运行验收。
+- 原 PATH 中找不到 mvn，已用既有 JDK/Maven 路径更正并通过；反馈见 ../reports/FD-032-blocker-compiler-path-20261024-a8f47e19.md 与同名 JSON（resolved）。用户提供的 C:/green/bin/setup-jdk25.ps1 已只读核对，未重复编译或执行环境脚本。
+- Worker 双证据：../reports/FD-032-implementation-r1.md 与同名 JSON。独立实现审阅尚待进行。
 
 ## Sources
 

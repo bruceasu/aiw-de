@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-032",
+  "source_event": "FD-032-000004-design-ready",
+  "human_report": "FD-032-implementation-r1.md",
+  "data": {
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "implementation_commit": "7f5f211efdae4fb632e9cb32270b7b79a24a9bdc",
+    "comparison_base": "16193b5",
+    "implementation_commits": ["1689485", "8d1eb6c", "e784f67", "7f5f211"],
+    "workspace": "primary; scoped commits only; unrelated private secretary changes preserved",
+    "mode": "record-only default; enforce explicit; invalid configuration rejected",
+    "resolved_design_findings": ["D032-01", "D032-02", "D032-03"],
+    "compile": {"command": "C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -Dmaven.test.skip=true compile", "java_home": "C:/green/jdk-25.0.1+8", "result": "passed", "production_sources": 291, "revision": "7f5f211efdae4fb632e9cb32270b7b79a24a9bdc"},
+    "javascript_compile": {"command": "node --check src/main/resources/static/ui/authority.js", "result": "passed"},
+    "static_check": {"command": "git diff --check 16193b5 -- scoped paths", "result": "passed"},
+    "failed_entrypoint": "mvn absent from PATH; did not launch compiler; corrected using existing JDK 25 and Maven 3.9.9",
+    "user_environment_script": {"path": "C:/green/bin/setup-jdk25.ps1", "read": true, "executed": false, "declared_maven": "3.9.4"},
+    "skipped": ["tests", "service/database/template rendering", "browser", "live pairing or authorization", "model calls", "runtime accounting and enforce switching", "downloads", "packages", "publication", "restart"],
+    "risks": ["No cumulative cost ceiling in requested record-only mode", "Runtime SQL/template/mode-switch behavior unverified", "Enforce restores historical budget and unknown-data constraints without clearing history"],
+    "next_step": "Independent static implementation review"
+  }
+}
