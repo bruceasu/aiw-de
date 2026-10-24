@@ -1,7 +1,7 @@
 # FD-035: 工作问题与人工控制改为清晰的问题收件箱与分区操作
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -53,7 +53,7 @@ questions.html、questions.js、新 question-controls.js / questions.css、Autho
 
 ## TODO
 
-所有实现条目已完成，等待独立实现审阅，通过后仅提交本 FD 审阅证据并自动归档。FD-033 的未决范围和其它秘书任务保留。
+所有实现条目已完成，独立实现静态审阅 r1 通过；由主 PM 仅提交本 FD 审阅证据并自动归档。FD-033 的未决范围和其它秘书任务保留。
 
 ## Acceptance
 
@@ -75,6 +75,7 @@ questions.html、questions.js、新 question-controls.js / questions.css、Autho
 - 比较基线 7f8c427；最终源码 313568a，分片 b7946ac、bb5e5b4、6c22d14。Worker 双证据 ../reports/FD-035-implementation-r1.md 与同名 JSON。
 - 2026-10-24 11:32:41 JST，使用用户的 JDK25 环境脚本，Maven3.9.4 离线 mvn -o -Dmaven.test.skip=true compile 成功（292 个生产源）；questions.js、question-controls.js 的 node --check 均成功。范围 git diff --check 通过。没有执行脚本打印的 package 示例，环境已还原。
 - 未运行边界保持：真实浏览器/模板/会话/数据库/问题回答/控制/通知/中断场景均未验证；没有测试、网络/下载、打包、重启或发布。等待独立实现 Reviewer 的实际结论。
+- 独立实现审阅 r1：Reviewer Session fd035-reviewer-20261024-4a91c7e2 实际认领 FD-035-000004-implementation-ready，比较 7f8c427 至 313568a1cf4cb29331da00f86ea50902f962e1e4 的源码、DOM/样式、后端契约及文档，未发现阻塞缺陷，静态验收通过。见 ../reviews/FD-035-implementation-review-r1-20261024-4a91c7e2.md 与同名 JSON。未重复执行编译，也未运行浏览器、数据库、测试、服务或 Telegram；真实运行限制保持。
 
 ## Sources
 

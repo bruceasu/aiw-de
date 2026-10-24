@@ -1,0 +1,42 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-035",
+  "source_event": "FD-035-000004-implementation-ready",
+  "human_report": "FD-035-implementation-review-r1-20261024-4a91c7e2.md",
+  "data": {
+  "reviewer_session": "fd035-reviewer-20261024-4a91c7e2",
+  "worker_session": "secretary-desktop-20261024-a6529740",
+  "comparison_base": "7f8c427",
+  "reviewed_commit": "313568a1cf4cb29331da00f86ea50902f962e1e4",
+  "worker_evidence_commit": "f44be3d",
+  "recommendation": "verification-passed",
+  "findings": [],
+  "implementation_review_failure_count": 0,
+  "results": {
+    "correctness": "静态调用链未发现阻塞缺陷：原版本草稿、精确 body、跨计划旧读取、未知写核对与重试、成功后刷新失败、停止事实与通知防重符合设计",
+    "standards": "沿用 Console 外壳、主题、组件及角色/Owner/CSRF/事务边界；未修改无关实现",
+    "spec": "六项验收均有实际源码及契约支持；文档/稳定规格和实现一致",
+    "evidence": "审阅实际 diff、源码、周边契约和 Worker 双报告；所审提交后源码与行为文档没有漂移",
+    "acceptance": {
+      "1": "收件箱、详情、中文状态及专业/授权回答表单",
+      "2": "空态、读取失败、角色、实际任务、停止请求/确认及送达事实",
+      "3": "三个键盘分区、sticky 导航、Console 主题、可选通知及严格模式额度入口",
+      "4": "原 Question/Answer 版本、page-local 草稿、显式版本采纳及有原因的 delegated 覆盖",
+      "5": "读序号和计划校验、写入冻结、原身份核对、精确重试及 UNKNOWN 防重",
+      "6": "原接口/权限/事务/计量/停止语义保持，运行验证和重启限制明确"
+    }
+  },
+  "validation": {
+    "mode": "independent-static-implementation-review",
+    "commands_run": ["Get-Content", "rg / rg --files", "git status --short", "git diff / git diff --stat / git diff --name-only", "git log", "git rev-parse 313568a", "Get-FileHash SHA256", "git diff --quiet 313568a -- scoped source and behavior docs (exit 0)", "aiw fd show FD-035", "aiw fd claim FD-035 FD-035-000004-implementation-ready --session fd035-reviewer-20261024-4a91c7e2", "aiw fd claim/emit --help"],
+    "worker_compile_evidence": {"revision": "313568a", "environment_script": "C:/green/bin/setup-jdk25.ps1", "java": "25.0.1", "maven": "3.9.4", "command": "mvn -o -Dmaven.test.skip=true compile", "result_reported": "passed", "production_sources": 292, "script_checks_reported": ["node --check src/main/resources/static/ui/questions.js", "node --check src/main/resources/static/ui/question-controls.js"], "repeated_by_reviewer": false},
+    "not_run": ["tests", "compile/build", "browser/Thymeleaf", "database/migrations", "service", "live login/reply/control/notification/recovery", "models", "network/downloads", "packages", "installation", "restart", "publication", "sub-agents"],
+    "discovery_correction": "review.md 不存在，已改读实际 code-review.md；定位证据格式错误时检索 python/tools 路径不存在，未运行程序；未据此声称任何检查通过",
+    "evidence_format_correction": "首次 emit 因缺少顶层 data 被 CLI 拒绝；现已修正报告 envelope 后重试原来源事件，不计实现审阅失败"
+  },
+  "residual_risks": ["实际模板、布局、会话、SQL、异步故障和 Telegram 运行行为未验证", "运行平台需更新重启", "FD-033 授权范围仍独立待定"],
+  "excluded": ["Unrelated personal-secretary/Python/model/launcher changes", "FD-033 draft and feedback"],
+  "next_step": "Parent PM scoped evidence commit and Complete archive after real verification-passed event"
+  }
+}
