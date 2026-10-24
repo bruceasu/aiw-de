@@ -1,0 +1,51 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-034",
+  "source_event": "FD-034-000007-implementation-ready",
+  "human_report": "FD-034-implementation-review-r2-20261024-c6b9087d.md",
+  "data": {
+    "reviewer_session": "fd034-reviewer-20261024-c6b9087d",
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "comparison_base": "8e7342c852ed42dbcad94ba6ca90b435ec5cdc8a",
+    "reviewed_commit": "3b251cdf269a84f3621b382e43d238043caad2da",
+    "prior_reviewed_commit": "ebeacaa1872178d69411eb59cfcebe906d3e40b1",
+    "worker_evidence_commit": "6f956a0",
+    "recommendation": "verification-passed",
+    "implementation_review_round": 2,
+    "implementation_review_failure_count": 1,
+    "findings": [],
+    "resolved_findings": [{
+      "id": "R034-01",
+      "status": "resolved",
+      "evidence": [
+        "ConfigurationUiOptions currentOwner and execution_context/execution_policy Owner JOIN yields exact taskId/state",
+        "READY outcome details matches exact preparation.taskId to taskProgress, with all TaskState labels and explicit unknown fallback",
+        "Read-only refresh updates task status components without replacing original Intent or draft",
+        "Plan-definition links no longer claim configured-task execution progress"
+      ]
+    }],
+    "acceptance": [
+      {"id": 1, "result": "supported", "evidence": "Unchanged guided form choices and explicit fixed baseline requirement"},
+      {"id": 2, "result": "supported", "evidence": "Readable outcome/blockers/recovery plus repaired owner-validated refreshable exact-task status"},
+      {"id": 3, "result": "supported", "evidence": "Unchanged original Intent/generation/next-version and explicit unknown-write recovery; READY means creation"},
+      {"id": 4, "result": "supported", "evidence": "Unchanged default/composition forms, fingerprint/sequence and exact original candidate save/recovery"},
+      {"id": 5, "result": "supported", "evidence": "Owner/context/policy filtering and immutable references/model admission preserved"},
+      {"id": 6, "result": "supported", "evidence": "Console controls and record recovery retained; actual task progress path documented"}
+    ],
+    "commands_run": [
+      "aiw fd show FD-034",
+      "aiw fd claim FD-034 FD-034-000007-implementation-ready --session fd034-reviewer-20261024-c6b9087d",
+      "git rev-parse 3b251cd",
+      "git diff ebeacaa 3b251cd --stat/scoped source and documentation",
+      "git diff --name-only 3b251cd -- scoped implementation files",
+      "git status --short",
+      "Get-Content -Encoding UTF8 and Select-Object"
+    ],
+    "compile_evidence": {"source": "Worker r2 report", "revision": "3b251cd", "java": "Offline JDK25/Maven3.9.4 compile of 292 production sources passed", "javascript": "Changed configurations.js node --check passed; unchanged method script r1 evidence retained", "reviewer_reran": false},
+    "skipped": ["tests", "browser/Thymeleaf", "database", "service", "live login/preparation/save/recovery", "compiler rerun", "models", "network/downloads", "packages", "installation", "restart", "publication", "sub-agents"],
+    "risks": ["Actual SQL/template/session/layout/asynchronous execution remains unverified; static review does not imply runtime pass"],
+    "excluded": ["Unrelated personal-secretary/Python/model/launcher changes", "FD-033 default action authorization scope decision"],
+    "next_step": "Parent PM continues scoped evidence commit and normal Complete archive"
+  }
+}

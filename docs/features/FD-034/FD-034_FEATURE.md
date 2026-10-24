@@ -1,7 +1,7 @@
 # FD-034: 专业配置页面改为可理解的任务准备与方法表单
 
-**Status:** In Progress
-**Revision:** 6
+**Status:** Complete
+**Revision:** 8
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -58,7 +58,7 @@
 
 ## TODO
 
-- R034-01 已修正并完成范围内编译，等待 r2 独立实现审阅，通过后仅提交本 FD 审阅证据并自动归档；动作授权 FD-033 的缺省范围选择仍单独待确认。
+- r2 独立实现审阅通过，R034-01 已解决；由 PM 继续仅提交本 FD 审阅证据并自动归档。运行验证边界保持；动作授权 FD-033 的缺省范围选择仍单独待确认。
 
 ## Acceptance
 
@@ -83,6 +83,7 @@
 - r1 独立实现审阅：../reviews/FD-034-implementation-review-r1-20261024-c6b9087d.md 与同名 JSON，实际 FD-034-000006-changes-requested，唯一 R034-01/P2；本周期失败累计 1 次。
 - Worker 已认领该来源事件并在 3b251cd 修正 R034-01；2026-10-24 11:21:52 JST 同一 JDK25/Maven3.9.4 离线 compile 再次通过（292 个生产源），已修改 configurations.js 的 node --check 通过。未改 configuration-methods.js，沿用 r1 证据。详见 ../reports/FD-034-implementation-r2.md 与同名 JSON；原未运行边界保持，等待 r2 独立实现审阅。
 - 独立实现审阅第 1 轮：../reviews/FD-034-implementation-review-r1-20261024-c6b9087d.md 与同名 JSON，changes-requested；来源 FD-034-000005-implementation-ready，独立 Session fd034-reviewer-20261024-c6b9087d，审阅 ebeacaa1872178d69411eb59cfcebe906d3e40b1。R034-01 为静态确认的实际任务入口/进度语义缺陷；未重复编译、运行测试或服务。
+- 独立实现复审 r2：../reviews/FD-034-implementation-review-r2-20261024-c6b9087d.md 与同名 JSON，verification-passed；来源 FD-034-000007-implementation-ready，同一独立 Reviewer Session，审阅 3b251cdf269a84f3621b382e43d238043caad2da。R034-01 的 Owner 验证、精确 taskId 状态/刷新、未知状态和计划定义文案已核对；未发现新的阻塞问题。累计实现审阅失败仍为 1 次；未重复编译、运行测试或服务，静态通过不代表运行通过。
 
 ## Sources
 
