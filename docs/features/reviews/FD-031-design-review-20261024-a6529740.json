@@ -1,0 +1,84 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-031",
+  "source_event": "FD-031-000002-design-requested",
+  "human_report": "FD-031-design-review-20261024-a6529740.md",
+  "artifact": "docs/features/FD-031/FD-031_WINDOWS_DESKTOP_SECRETARY_UI.md",
+  "revision": 2,
+  "planner_session": "secretary-desktop-20261024-a6529740",
+  "recommendation": "changes-needed",
+  "findings": [
+    {
+      "id": "D031-01",
+      "severity": "P1",
+      "blocking": true,
+      "status": "remaining",
+      "location": "FD 操作与失败恢复、Acceptance 5; desktop.py:231,488,512,517",
+      "finding": "安排编辑器在普通状态刷新时自动替换工作版本，但没有冻结并展示用户确认的正文、Plan 和状态快照；更新后的版本检查不能代表对新内容的再次确认。",
+      "action": "明确载入的 ID/版本/内容快照作为安排依据；刷新发现新版本时标记冲突并要求显式重载、展示和确认，不能仅替换 revision。",
+      "acceptance": "桌面载入 N 后 Web 修改为 N+1，任何普通刷新都不能令原安排静默携带 N+1；显式重载后显示新内容并再次确认。",
+      "decision_owner": "planner"
+    },
+    {
+      "id": "D031-02",
+      "severity": "P2",
+      "blocking": true,
+      "status": "remaining",
+      "location": "FD 操作与失败恢复、Acceptance 6/7; desktop.py:617,627,638,704; selected_goals.py:14,24,72",
+      "finding": "目标只有当前只读请求槽，重新预览覆盖原 ID，退出丢失编辑器；后端持久 SELECTED_GOAL 已存在，但设计未给出重新配对后选回并查询原请求的入口。",
+      "action": "从现有 state.decisions 提供历史目标提案选择及原 ID 查询，与新预览槽分离；或定义可执行的 Web 原请求恢复入口，不新增数据库、不重放提交。",
+      "acceptance": "提交丢响应并退出重开后可选回原 UNKNOWN/SENDING ID，只查询原请求；新预览不能让原请求不可找回，查询失败不提交。",
+      "decision_owner": "planner"
+    }
+  ],
+  "human_decisions_required": [],
+  "supported_boundaries": [
+    "Host、Origin、独立私人会话、CSRF 之后生成一次性再配对码",
+    "五分钟/五次/一次性，替换未使用码但不撤销或续期旧会话",
+    "本机客户端独立内存 CookieJar、无代理、无重定向、不访问平台凭证或 SQLite",
+    "Tk 主线程、单次后台请求、队列返回、Win32 只拥有位置和托盘",
+    "关闭 UI 不启动或停止 Worker，不自动启用动作申请",
+    "精确预览响应及编辑版本校验，服务端 SENDING CAS 与 UNKNOWN 原 ID 查询",
+    "策略显式确认及既有版本检查"
+  ],
+  "proposed_pairing_adapter": {
+    "status": "design-only; implementation not inspected",
+    "scope": "独立 pairing.js，不依赖其他 Web 改版全局函数或状态",
+    "constraints": [
+      "显式生成时以同源 Cookie 读取 state.csrf，然后 POST pairing",
+      "不自动登录、重配或重试 POST",
+      "卡片内反馈；配对码不进 URL/日志/配置，显示到期清空",
+      "注册独立静态资源，不改变平台鉴权或 Worker 生命周期"
+    ],
+    "additional_blocking_findings": []
+  },
+  "work_item_advice": "保留已完成准备历史；为两个修正及独立配对适配器增加稳定子项和验收/证据映射。",
+  "validation": {
+    "mode": "local-static-design-review",
+    "commands_run": [
+      "Get-Content / Get-Content -Encoding UTF8",
+      "rg / rg --files",
+      "Get-ChildItem / Select-Object",
+      "apply_patch: only this Markdown report and JSON sidecar"
+    ],
+    "not_run": [
+      "tests",
+      "compile or build",
+      "Tk/Win32/browser/GUI",
+      "service/model/platform/runtime",
+      "network or dependency downloads",
+      "Git or workflow mutations",
+      "sub-agents"
+    ]
+  },
+  "evidence_limits": [
+    "一次有界独立设计审阅，代码仅作为现有合同证据",
+    "只写本报告与同名 JSON，没有修改 FD、源码或工作流状态",
+    "未认领或更改父会话 Planner session",
+    "独立 pairing.js 是父会话提出的设计补充，尚未作实现审阅",
+    "多显示器、透明边缘、托盘恢复、会话并发及原请求恢复均未运行验证",
+    "设计建议不是实现验证通过或 verification-passed"
+  ],
+  "recorded_date": "2026-10-24"
+}
