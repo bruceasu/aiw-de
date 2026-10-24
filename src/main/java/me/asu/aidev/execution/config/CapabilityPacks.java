@@ -17,6 +17,7 @@ public class CapabilityPacks {
         public Definition {
             if(!PROTOCOL.equals(protocol))throw new IllegalArgumentException("Unknown capability pack protocol");
             text(name,120);text(repositoryRef,120);text(description,500);text(work,2000);
+            if(skills==null||toolRequirements==null)throw new IllegalArgumentException("Explicit Skill and tool lists required");
             skills=List.copyOf(skills);toolRequirements=toolRequirements.stream().sorted().toList();
             if(skills.isEmpty()||skills.size()>6||skills.stream().map(AssetRef::ref).distinct().count()!=skills.size()
                     ||skills.stream().anyMatch(s->s.ref().equals("engineering-artifact-protocol")||s.ref().matches("role-[0-9a-f]{64}"))

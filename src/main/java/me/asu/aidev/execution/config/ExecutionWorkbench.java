@@ -111,6 +111,11 @@ public class ExecutionWorkbench {
         repo.jdbc().update("INSERT INTO execution_exploration_choice VALUES(?,?,?,?,?,?,?)",owner,input.requestId(),input.messageId(),input.action(),input.text(),boundary.human(),System.currentTimeMillis());
         return Map.of("id",input.messageId(),"decision",input.action());
     }
+    public Object branchHistory(BranchQuery input) {
+        String owner=owner();node(owner,input.taskId(),input.nodeId());
+        return Map.of("protocol",PROTOCOL,"ownerId",owner,"nodeId",input.nodeId(),"history",repo.jdbc().queryForList(
+                "SELECT decision,reason,actor,created_ms FROM execution_exploration_choice WHERE owner_id=? AND node_id=? ORDER BY created_ms DESC LIMIT 128",owner,input.nodeId()));
+    }
 
     @Transactional public Batch machine(String task,MachineCommand input) {
         boundary.lock();Objects.requireNonNull(input.lease());guard.verifyLease(task,input.lease(),true,true);
@@ -191,13 +196,14 @@ public class ExecutionWorkbench {
     @Transactional public Object snapshot(ExecutionObservations.Snapshot observations,Query input) {
         String owner=owner();if(!owner.equals(observations.ownerId()))throw new SecurityException("Snapshot identity changed");
         var entries=observations.entries();
-        String task=input.taskId()==null||input.taskId().isBlank()?(entries.isEmpty()?null:entries.getFirst().taskId()):input.taskId();
-        var visible=entries.stream().filter(e->e.taskId().equals(task)).toList();
-        if(task!=null&&visible.isEmpty())throw new IllegalArgumentException("Task is outside the recent metered Attempt view");
+        String requested=input.taskId()==null||input.taskId().isBlank()?(entries.isEmpty()?null:entries.getFirst().taskId()):input.taskId();
+        var visible=entries.stream().filter(e->e.taskId().equals(requested)).toList();
+        String task=visible.isEmpty()?null:requested;
         String attempt=input.attemptId()==null||input.attemptId().isBlank()?(visible.isEmpty()?null:visible.getFirst().attemptId()):input.attemptId();
         if(attempt!=null&&visible.stream().noneMatch(e->e.attemptId().equals(attempt)))throw new SecurityException("Attempt belongs to another task or view");
         var result=new LinkedHashMap<String,Object>();result.put("protocol",PROTOCOL);result.put("ownerId",owner);result.put("observedAt",observations.observedAt());
         result.put("attempts",entries);result.put("taskId",task);result.put("attemptId",attempt);
+        result.put("notice",requested!=null&&task==null?"所选任务未出现在最近的计量记录中。可稍后刷新，或选择其他已有记录的任务。":null);
         if(attempt==null)result.put("basis",null);
         else {
             var basis=ownedAttempt(owner,task,attempt);

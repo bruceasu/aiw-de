@@ -9,6 +9,7 @@ public final class WorkbenchContract {
     private WorkbenchContract() {}
     public record Query(String taskId,String attemptId) {}
     public record ReceiptQuery(String requestId) {}
+    public record BranchQuery(String taskId,String nodeId) {}
     public record HumanCommand(String requestId,String action,String taskId,String attemptId,int instructionRevision,
                                String mode,String text,String messageId,String parentId,String title,String resultRevision) {}
     public record MachineCommand(Lease lease,String action,String batchId,String mode,String operationId,String batchDigest) {}

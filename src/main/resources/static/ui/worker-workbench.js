@@ -12,7 +12,7 @@
   function session(){return state?.sessions.find(s=>s.attempt_id===state.attemptId);}
   function canInput(){const e=entry(),s=session(),b=state?.basis;return e&&s&&s.phase==='RUNNING'&&e.taskState==='RUNNING'&&e.attemptState==='RUNNING'&&b.live&&!b.stopRequested&&b.instructionRevision===b.currentInstructionRevision;}
   function sync(){
-    const locked=loading||busy||Boolean(pending);$('wb-task').disabled=locked||!state;$('wb-attempt').disabled=locked||!entry();
+    const locked=loading||busy||Boolean(pending);$('wb-task').disabled=locked||!state?.attempts.length;$('wb-attempt').disabled=locked||!entry();
     $('wb-refresh').disabled=loading||busy;$('wb-input-fields').disabled=locked||!canInput();$('wb-branch-fields').disabled=locked||!entry();
     $('wb-branch-result').disabled=!entry()?.resultRevision;if(!entry()?.resultRevision)$('wb-branch-result').checked=false;
     $('wb-retry').disabled=loading||busy||!pending?.checked;$('wb-pending').hidden=!pending;
@@ -45,10 +45,10 @@
   function options(select,items,value){select.replaceChildren();for(const [id,text] of items)select.add(new Option(text,id));select.value=value||'';}
   function render(){
     const tasks=new Map();for(const e of state.attempts)if(!tasks.has(e.taskId))tasks.set(e.taskId,e.title);
-    options($('wb-task'),[...tasks],state.taskId);
+    options($('wb-task'),state.taskId?[...tasks]:[['','请选择已有记录的任务'],...tasks],state.taskId);
     options($('wb-attempt'),state.attempts.filter(e=>e.taskId===state.taskId).map(e=>[e.attemptId,'第 '+e.attemptNo+' 次 · '+label(e.attemptState)]),state.attemptId);
     const summary=$('wb-summary');summary.replaceChildren();const e=entry(),s=session();
-    if(!e){summary.append(node('p','当前账号没有可展示的计量记录。无记录不代表没有执行。','muted'));}
+    if(!e){summary.append(node('p',state.notice||'当前账号没有可展示的计量记录。无记录不代表没有执行。','muted'));}
     else{
       const active=state.operations.filter(o=>o.state==='STARTED');let phase=label(e.attemptState);
       if(e.attemptState==='RUNNING')phase=state.basis.stopRequested?'已请求停止，等待确认':s?.phase==='FINALIZING'?'正在收尾':active.some(o=>o.tool_id==='MODEL')?'模型处理中':active.length?'工具处理中':'执行中，等待下一步记录';
@@ -84,6 +84,9 @@
       if(branch.parent_id)card.append(node('p','继续自：'+(byId.get(branch.parent_id)?.title||'原方案'),'muted'));
       card.append(node('pre',branch.body),node('p','结果版本：'+(branch.result_revision||'未关联代码结果'),'help'));
       const choice=state.choices.find(c=>c.node_id===branch.id);if(choice)card.append(node('p',(choice.decision==='SELECT'?'已记录采用：':'已记录放弃：')+choice.reason,'help'));
+      const provenance=node('details');provenance.append(node('summary','来源与选择记录'),node('p','原尝试：'+branch.attempt_id+' · 指令版本 '+branch.instruction_revision),node('p','记录人：'+branch.actor+' · '+new Date(branch.created_ms).toLocaleString('zh-CN')));
+      const history=node('div');provenance.append(history);let loaded=false;
+      provenance.addEventListener('toggle',async()=>{if(!provenance.open||loaded)return;const generation=epoch,sourceTask=state.taskId;history.replaceChildren(node('p','正在读取选择记录…'));try{const result=await request('state?kind=branch-history',{taskId:sourceTask,nodeId:branch.id});if(generation!==epoch||state?.taskId!==sourceTask)return;if(result.ownerId!==owner||result.protocol!=='aiw.worker.workbench.v1'||result.nodeId!==branch.id)throw new Error('记录身份已变化，请重新打开页面。');history.replaceChildren();for(const item of result.history)history.append(node('p',(item.decision==='SELECT'?'采用：':'放弃：')+item.reason+' · '+item.actor+' · '+new Date(item.created_ms).toLocaleString('zh-CN')));if(!result.history.length)history.append(node('p','尚无选择记录。'));loaded=true;}catch(e){history.replaceChildren(node('p',e.message));}});card.append(provenance);
       const reason=node('input');reason.maxLength=2000;reason.placeholder='采用或放弃的原因';reason.value=reasons.get(branch.id)||'';reason.addEventListener('input',()=>reasons.set(branch.id,reason.value));
       const field=node('label','选择原因','field');field.append(reason);card.append(field);const actions=node('div',null,'configuration-form-actions');
       for(const [action,text] of [['SELECT','记录采用'],['DISCARD','记录放弃']]){const button=node('button',text,'btn ghost');button.type='button';button.dataset.wbAction='true';button.addEventListener('click',()=>{if(!reason.value.trim()){feedback('请填写选择原因。','warn');return;}submit(command(action,{messageId:branch.id,text:reason.value}));});actions.append(button);}
@@ -97,7 +100,7 @@
       if(!owner)throw new Error('请先到个人授权页绑定当前身份。');await reconcile();
       const snapshot=await request('state?kind=workbench',{taskId:task,attemptId:attempt});if(generation!==epoch)return;
       if(snapshot.protocol!=='aiw.worker.workbench.v1'||snapshot.ownerId!==owner||document.querySelector('meta[name="configuration-owner"]').content!==owner)throw new Error('当前身份或数据版本已变化，请重新打开页面。');
-      state=snapshot;task=state.taskId;attempt=state.attemptId;render();
+      state=snapshot;task=state.taskId||task;attempt=state.attemptId;render();
     }catch(e){if(generation===epoch){state=null;feedback(e.message,'error');}}
     finally{if(generation===epoch){loading=false;sync();}}
   }
@@ -113,6 +116,6 @@
   $('wb-branch-form').addEventListener('submit',event=>{event.preventDefault();submit(command('BRANCH',{title:$('wb-branch-title').value,text:$('wb-branch-text').value,parentId:$('wb-parent').value||null,resultRevision:$('wb-branch-result').checked?entry().resultRevision:null}));});
   $('wb-retry').addEventListener('click',async()=>{if(!pending?.checked||busy||loading)return;const captured=pending;busy=true;sync();try{await request('candidates?kind=workbench',captured.body,true);if(pending===captured)pending=null;feedback('原请求已确认。');await refresh(true);}catch(e){feedback(e.message,'error');}finally{busy=false;sync();}});
   $('wb-compare').addEventListener('click',()=>{const chosen=state?.branches.filter(b=>compare.has(b.id))||[];if(chosen.length<2||chosen.length>3){feedback('请选择两至三个方案比较。','warn');return;}const host=$('wb-comparison');host.replaceChildren(node('h2','方案比较'));const grid=node('div',null,'workbench-comparison');for(const branch of chosen){const card=node('article',null,'workbench-record');card.append(node('h3',branch.title),node('pre',branch.body),node('p','结果版本：'+(branch.result_revision||'未关联'),'help'));grid.append(card);}host.append(grid);host.hidden=false;});
-  window.addEventListener('pagehide',()=>{epoch++;state=null;for(const id of ['wb-summary','wb-operations','wb-messages','wb-branches','wb-comparison'])$(id).replaceChildren();});
+  window.addEventListener('pagehide',()=>{epoch++;state=null;for(const id of ['wb-summary','wb-operations','wb-messages','wb-branches','wb-comparison','wb-task','wb-attempt'])$(id).replaceChildren();for(const id of ['wb-input-text','wb-branch-title','wb-branch-text'])$(id).value='';compare.clear();reasons.clear();});
   window.addEventListener('pageshow',event=>{if(event.persisted){loading=false;busy=false;refresh();}});refresh();
 })();

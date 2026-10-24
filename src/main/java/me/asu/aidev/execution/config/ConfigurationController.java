@@ -37,6 +37,7 @@ public class ConfigurationController {
         if("capability-pack".equals(kind)) return capabilityPacks.lookup(read(raw,CapabilityPacks.Lookup.class));
         if("workbench".equals(kind)) return workbench.snapshot(configs.observations(),read(raw,WorkbenchContract.Query.class));
         if("workbench-receipt".equals(kind)) return workbench.receipt(read(raw,WorkbenchContract.ReceiptQuery.class));
+        if("branch-history".equals(kind)) return workbench.branchHistory(read(raw,WorkbenchContract.BranchQuery.class));
         if("observations".equals(kind)) { read(raw,Empty.class);return configs.observations(); }
         if(role(kind)) return configs.role(read(raw,PreparedConfigRef.class));
         read(raw,Empty.class);String owner=configs.currentOwner();
