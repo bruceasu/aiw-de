@@ -1,7 +1,7 @@
 # FD-033: 个人秘书动作授权按功能分组并简化范围设置
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -100,7 +100,7 @@
 
 ## TODO
 
-- 全部实现项及 1.5 文档/Worker 证据已完成；待下一阶段独立实现审阅结论，通过后方可归档。最初 1.5 将“准备审阅证据”与下阶段结论混写，现澄清阶段归属，未省略独立审阅。
+- 全部实现项及 1.5 文档/Worker 证据已完成；独立实现审阅 r1 对 8ce1590..8628bda 静态审阅通过，由 host 核对真实结论事件后继续范围交付与归档。最初 1.5 将“准备审阅证据”与下阶段结论混写，现澄清阶段归属，未省略独立审阅。
 
 ## Acceptance
 
@@ -115,9 +115,10 @@
 
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
-- 原草案阶段仅静态读取；本次范围决定已写入，独立设计审阅及约束纳入已完成，平台、私人适配与分组表单源码已实施，8628bda 离线编译已通过，独立实现审阅尚待完成。使用 C:/green/bin/setup-jdk25.ps1 进行离线 Maven compile，并针对受影响 JS/Python 做语法编译；不下载依赖、不跑测试、数据库、服务、浏览器、模型或发布。
+- 原草案阶段仅静态读取；本次范围决定已写入，独立设计审阅及约束纳入已完成，平台、私人适配与分组表单源码已实施，8628bda 离线编译已通过，独立实现静态审阅 r1 通过。使用 C:/green/bin/setup-jdk25.ps1 进行离线 Maven compile，并针对受影响 JS/Python 做语法编译；不下载依赖、不跑测试、数据库、服务、浏览器、模型或发布。
 - 增量迁移计划新建 authority_action_permission、authority_permission_child、authority_permission_preparation、authority_permission_use：人类创建以 owner+creation_request 幂等，当前期按 owner+worker+action 唯一；根候选以 owner+worker+request 唯一，子 Grant ID 唯一，消费以 permission+request 唯一。原表/历史迁移/已受理回执不修改，本次不运行迁移。
 - 独立设计双证据：../reviews/FD-033-design-review-20261024-5d1a7275.md 与同名 JSON，原结论 changes-needed，D1–D5 均已纳入本设计，未执行运行验证。原范围反馈 pair 状态 resolved。
+- 独立实现双证据：../reviews/FD-033-implementation-review-r1-20261024-7f8ca4.md 与同名 JSON；Reviewer Session fd033-implementation-review-20261024-r1-7f8ca4，真实领取 FD-033-000004-implementation-ready。审阅 8ce1590..8628bda 实际源码、原调用链与证据，未发现阻塞项，结论 verification-passed；Reviewer 未重跑编译或任何运行验证。其它私人秘书/模型/启动脚本及 configurations/fragments/questions 模板差异排除。
 
 ## Sources
 
