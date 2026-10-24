@@ -1,0 +1,19 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-047",
+  "source_event": "FD-047-000004-implementation-ready",
+  "human_report": "FD-047-review-r1.md",
+  "data": {
+    "session": "fd047-review-20261024-b913ac",
+    "base_commit": "08f70d0",
+    "implementation_commit": "0e9ea23",
+    "verdict": "passed",
+    "findings": [],
+    "acceptance_supported": [1, 2, 3, 4],
+    "failed_review_count": 0,
+    "commands": ["Get-Content", "Select-String", "rg", "git diff", "aiw fd claim", "aiw fd show"],
+    "not_run": ["tests", "compile", "browser", "HTTP", "model", "services", "database", "network"],
+    "remaining_risks": ["Actual form interactions and task execution unverified"]
+  }
+}

@@ -1,7 +1,7 @@
 # FD-047: 秘书任务支持马上执行与可选定时
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -29,7 +29,7 @@
 
 ## TODO
 
-1.1–1.3 已实现，git diff --check 与 node --check 通过；等待独立实现审阅。
+1.1–1.3 已实现；独立实现审阅 r1 通过，无阻塞发现，待 host 核对实际 receipt 后完成范围交付与归档。
 
 ## Acceptance
 
@@ -42,6 +42,7 @@
 
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
+- Worker 实际 git diff --check 与 node --check workers/personal-secretary/ui/app.js 通过；独立 Reviewer fd047-review-20261024-b913ac 静态审阅 08f70d0..0e9ea23 六文件与原后端路径，四项验收获静态支持，无阻塞发现。见 docs/features/reviews/FD-047-review-r1.md 及 JSON；未重跑编译或运行测试/浏览器/HTTP/模型/服务/数据库/网络，实际交互与执行未验证。失败审阅轮数 0，通过事件以实际 receipt 为准。
 
 ## Sources
 
