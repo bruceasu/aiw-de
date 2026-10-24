@@ -1,0 +1,114 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-042",
+  "source_event": "FD-042-000006-implementation-ready",
+  "human_report": "FD-042-implementation-r2.md",
+  "data": {
+    "reviewer_session": "fd042-review-20261024-b92afa6d",
+    "worker_session": "platform-login-20261024-37ba34c3",
+    "independent_from_worker": true,
+    "comparison_base": "a654adf",
+    "implementation_commit": "d7bf98d53747c59970796b6db9605facff78218a",
+    "worker_evidence_commit": "e6c6f38",
+    "repair_comparison_base": "1f5eb6a",
+    "scope_file_count": 20,
+    "repair_scope_file_count": 7,
+    "round": 2,
+    "implementation_review_failure_count": 1,
+    "verdict": "passed",
+    "hard_violations": [],
+    "smell_findings": [],
+    "findings": [],
+    "resolved_findings": [
+      {
+        "id": "R042-01",
+        "status": "resolved-by-static-review",
+        "evidence": [
+          "Spring RequestPath/PathSegment.valueToMatch classification",
+          "No raw URI scope early pass",
+          "Per-segment encoded canonical next preserves query and context",
+          "MappedInterceptor alias inclusion and machine exclusion source regressions"
+        ],
+        "runtime_verified": false
+      },
+      {
+        "id": "R042-02",
+        "status": "resolved-by-static-review",
+        "evidence": [
+          "Three new signIn setups expect /ui/plans",
+          "Security flow reads /ui/plans",
+          "Original identity/CSRF/VIEWER/actor assertions retained"
+        ],
+        "runtime_verified": false
+      }
+    ],
+    "acceptance": [
+      {
+        "id": 1,
+        "result": "supported-by-static-evidence",
+        "evidence": "Mandatory-session service retained; parsed mapped-path classification closes alias early pass"
+      },
+      {
+        "id": 2,
+        "result": "supported-by-static-evidence",
+        "evidence": "GET/HEAD page redirect and API/write401, per-segment encoded canonical next with query/context and context-aware login template"
+      },
+      {
+        "id": 3,
+        "result": "supported-by-static-evidence",
+        "evidence": "Public login, empty-password denial, real role/CSRF/logout source retained; new setups now match actual landing"
+      },
+      {
+        "id": 4,
+        "result": "supported-by-static-evidence",
+        "evidence": "Unchanged route registries and machine credential/lease boundary; MappedInterceptor test excludes machine path; data/authority policies unchanged"
+      },
+      {
+        "id": 5,
+        "result": "supported-by-static-evidence",
+        "evidence": "Current docs/spec/source assertions and actual bounded compile evidence with historical test/runtime limits stated"
+      }
+    ],
+    "commands_run": [
+      "UTF-8 read r2 dual report and exact latest receipt; FD hash check and aiw fd claim FD-042 FD-042-000006-implementation-ready --session fd042-review-20261024-b92afa6d",
+      "Fixed git diff 1f5eb6a d7bf98d; initial unscoped diff included historical metadata, followed by original-20-path scoping",
+      "One focused git diff --check 1f5eb6a d7bf98d -- repair paths plus read-only source-drift, unchanged registry/login, parsed gate and three setup checks"
+    ],
+    "static_results": {
+      "result": "passed",
+      "original_implementation_paths": 20,
+      "focused_repair_paths": 7,
+      "current_scope_matches_fixed_commit_ignoring_checkout_line_endings": true,
+      "unchanged_registries_and_login_controller": true,
+      "production_framework_or_tests_executed": false,
+      "prior_local_framework_evidence_reused": true
+    },
+    "worker_compile_evidence": {
+      "command": "mvn -o '-Dmaven.test.skip=true' compile",
+      "reported_revision": "d7bf98d53747c59970796b6db9605facff78218a",
+      "reported_finished_at": "2026-10-24T15:13:33+09:00",
+      "reported_result": "passed;2+143 resources;300 production sources",
+      "test_sources_compiled": false,
+      "reviewer_reran": false,
+      "proves_login_behavior": false
+    },
+    "skipped": [
+      "tests/test compilation",
+      "framework/HTTP/browser/real sessions/Thymeleaf",
+      "machine lease/database/services/network",
+      "models/Worker",
+      "build/package/install/deploy/restart/rollback",
+      "new javap or full unchanged-scope re-review"
+    ],
+    "risks": [
+      "Static review does not prove real login/CSRF/logout/context or machine behavior",
+      "Existing S1/Operations body assertions retain historical Dashboard/Runs assumptions; no suite pass claimed",
+      "Legacy rollback still needs old enabled=true and nonblank credentials before exposure",
+      "Unrelated dirty workspace files excluded from approval"
+    ],
+    "previous_review": "FD-042-implementation-r1.md",
+    "blockers": [],
+    "next_step": "Host verifies real passed receipt/current FD digest and unchanged reviewed implementation before scoped local archive"
+  }
+}

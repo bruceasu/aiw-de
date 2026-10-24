@@ -1,7 +1,7 @@
 # FD-042: 平台页面统一强制登录
 
-**Status:** In Progress
-**Revision:** 5
+**Status:** Complete
+**Revision:** 7
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -39,7 +39,7 @@ WebConsoleSecurityInterceptor合并重复的持久锁存/普通登录判断，�
 
 ## TODO
 
-R042-01/02源码修正、定向静态和生产编译已完成，等待独立实现r2复核；当前失败次数1，不能用历史r1证据归档。
+WI1.1–1.5已完成。R042-01/02修正经独立r2静态复核通过，无剩余阻断；宿主待核对真实通过回执、FD摘要和实现范围后本地归档。测试/真实登录/浏览器/机器运行仍未验证，未部署或重启。
 
 ## Acceptance
 
@@ -59,8 +59,12 @@ C:/green/bin/setup-jdk25.ps1后mvn -o '-Dmaven.test.skip=true' compile一次成�
 
 独立设计[r1](../reviews/FD-042-design-r1.md)及同名JSON为ready，contextPath模板与旧版本回退两个问题已解决。没有其他未决设计Gate。
 
-独立Reviewer Session fd042-review-20261024-b92afa6d 已领取FD-042-000004-implementation-ready，审阅a654adf..1f5eb6a的20文件及相邻路由/处理器/本地Spring7.0.9解析与匹配class实现。结论要求修改：R042-01（P1门禁绕过）与R042-02（P2新增测试setup错误）。一次范围静态一致性检查通过，但不消除控制流缺陷；没有运行框架请求、测试或编译。双报告：[Markdown](../reviews/FD-042-implementation-r1.md) / [JSON](../reviews/FD-042-implementation-r1.json)。这是本轮第1次实现审阅失败，等待Worker修复。
+独立Reviewer Session fd042-review-20261024-b92afa6d 已领取FD-042-000004-implementation-ready，审阅a654adf..1f5eb6a的20文件及相邻路由/处理器/本地Spring7.0.9解析与匹配class实现。结论要求修改：R042-01（P1门禁绕过）与R042-02（P2新增测试setup错误）。一次范围静态一致性检查通过，但不消除控制流缺陷；没有运行框架请求、测试或编译。双报告：[Markdown](../reviews/FD-042-implementation-r1.md) / [JSON](../reviews/FD-042-implementation-r1.json)。这是本轮第1次实现审阅失败；该段保留r1历史，后续修复及复核见下。
 
+
+独立r2：同一Reviewer Session fd042-review-20261024-b92afa6d 领取新来源FD-042-000006-implementation-ready，定向复核1f5eb6a..d7bf98d的7个修正路径，结合原a654adf基线20个实现路径。R042-01已用解析路径段分类、删除raw URI提前放行、按段编码next并补MappedInterceptor回归；R042-02已修正三个新setup终点及安全场景落地页。结论静态通过，两发现已解决，无新增阻断。失败次数保持1，不重置。
+
+一次定向diff --check/20路径漂移与旧注册表/登录Controller保持检查通过。采纳Worker在d7bf98d上的新生产compile成功记录：2026-10-24T15:13:33+09:00，资源2+143、300生产源；Reviewer未重跑。测试未编译/执行；旧S1/Operations正文业务流程期待仍是已记录的历史限制，不宣称整套测试通过。r2双报告：[Markdown](../reviews/FD-042-implementation-r2.md) / [JSON](../reviews/FD-042-implementation-r2.json)。宿主需核对真实事件和范围后归档。
 
 ## Sources
 
