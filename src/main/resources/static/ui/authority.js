@@ -170,8 +170,8 @@ const recordTables = {
   grants: { title: "授权记录", empty: "尚无授权记录。先确认动作、精确目标和有效期，再授予最小能力。", columns: [["id", "授权 ID"], ["workerId", "秘书", "worker"], ["rule.action", "动作", "action"], ["rule.targetId", "精确目标"], ["state", "记录状态", "state"], ["expiresMs", "到期时间", "date"]] },
   targets: { title: "目标控制", empty: "尚无已登记的控制目标。", columns: [["target_key", "目标键"], ["generation", "当前世代"], ["paused", "已暂停", "boolean"], ["restriction_revision", "禁止规则版本"]] },
   drafts: { title: "当前登录人的草稿", empty: "当前登录人暂无可供确认的 Plan 草稿。", columns: [["planId", "Plan ID"], ["version", "当前版本"], ["specDigest", "内容摘要"]] },
-  policies: { title: "执行政策", empty: "尚无执行政策。确认执行范围和全部预算后，才可申请受控执行。", columns: [["plan_id", "Plan ID"], ["revision", "政策版本"], ["generation", "当前世代"], ["paused", "已暂停", "boolean"], ["revoked", "已撤销", "boolean"]] },
-  budgets: { title: "执行预算", empty: "尚无预算记录。", columns: [["plan_id", "Plan ID"], ["dimension", "预算维度", "dimension"], ["loop_id", "循环 ID"], ["limit_value", "已确认上限", "limit"], ["used_value", "已使用"], ["reserved_value", "已预留"], ["unknown_count", "未知项数"]] },
+  policies: { title: "执行政策", empty: "尚无执行政策。确认执行范围后可申请受控执行；预算按当前模式处理。", columns: [["plan_id", "Plan ID"], ["revision", "政策版本"], ["generation", "当前世代"], ["paused", "已暂停", "boolean"], ["revoked", "已撤销", "boolean"]] },
+  budgets: { title: "执行用量与配置记录", empty: "尚无执行用量记录。", columns: [["plan_id", "Plan ID"], ["dimension", "预算维度", "dimension"], ["loop_id", "循环 ID"], ["limit_value", "配置参考值", "limit"], ["used_value", "已使用"], ["reserved_value", "已预留"], ["unknown_count", "未知项数"]] },
   receipts: { title: "执行回执", empty: "尚无执行回执。发起操作并不代表已执行成功。", columns: [["request_id", "请求 ID"], ["state", "回执状态", "state"], ["updated_ms", "更新时间", "date"]] },
   effects: { title: "受控操作记录", empty: "尚无受控操作记录。", columns: [["operation_id", "操作 ID"], ["task_id", "任务"], ["attempt_id", "原尝试"], ["tool_id", "工具"], ["state", "记录状态", "state"]] },
   meters: { title: "执行消耗计量", empty: "尚无消耗计量记录。", columns: [["task_id", "任务"], ["attempt_id", "原尝试"], ["elapsed_ms", "执行毫秒数"], ["cost_micros", "费用微单位"], ["settled", "已结清", "boolean"], ["usage_unknown", "消耗未知", "boolean"], ["time_unknown", "时间未知", "boolean"]] },
@@ -277,7 +277,9 @@ async function post(path, body = {}) {
   return payload;
 }
 function form(id, submit) {
-  document.getElementById(id).addEventListener("submit", async event => {
+  const node = document.getElementById(id);
+  if (!node) return;
+  node.addEventListener("submit", async event => {
     event.preventDefault();
     const current = event.currentTarget;
     if (current.dataset.submitting === "true") return;

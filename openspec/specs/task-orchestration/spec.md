@@ -5,7 +5,7 @@ Define how the Control Plane owns work tasks, dependencies, worker leases, and e
 ## Requirements
 
 ### Requirement: Prepared immutable execution configuration
-Tasks requiring `aiw.execution.config.v1` SHALL become claimable only after registered method, Skill/knowledge versions, exact approved model, required adapter capability, confirmed policy and required budgets have been checked. The unique intent version and preparation generation SHALL protect retries. READY, fixed references and business-task materialization SHALL commit atomically. Known preparation failures SHALL retain a reason and explicit recovery action without creating claimable work.
+Tasks requiring `aiw.execution.config.v1` SHALL become claimable only after registered method, Skill/knowledge versions, exact approved model, required adapter capability, confirmed policy and the deployment accounting mode have been checked. Budget completeness, pricing and balances SHALL block preparation only in enforce mode; record-only is the default. The unique intent version and preparation generation SHALL protect retries. READY, fixed references and business-task materialization SHALL commit atomically. Known preparation failures SHALL retain a reason and explicit recovery action without creating claimable work.
 
 #### Scenario: Same Python Worker executes different methods
 - **WHEN** it receives successive compatible tasks with different immutable configurations
@@ -13,7 +13,7 @@ Tasks requiring `aiw.execution.config.v1` SHALL become claimable only after regi
 - **AND** neither launch role nor a later configuration changes the earlier task's inputs, permissions, model or unresolved resources
 
 #### Scenario: Unsupported or incomplete preparation
-- **WHEN** a required backend/command adapter, registered source, permission, pricing or budget is unavailable
+- **WHEN** a required backend/command adapter, registered source, permission, or an enforce-mode pricing or budget requirement is unavailable
 - **THEN** preparation identifies the gap, no claimable task is created, and it does not silently change runtime, model or authority
 
 ### Requirement: Guarded execution and immutable inputs
@@ -24,7 +24,14 @@ Tasks using `aiw.execution.guard.v1` SHALL freeze the confirmed policy, configur
 - **THEN** the original operation remains UNKNOWN or queryable by its stable ID, reservations and resources remain accounted for, and lease expiry SHALL NOT automatically requeue or replay it
 
 ### Requirement: Execution budgets and factual completion
-Required time, task and cost limits and pricing SHALL be explicitly configured before automatic admission. Usage SHALL survive restart, policy replacement and Worker replacement. Initial execution is separate from at most three plan/loop backjumps; stable transition IDs and explicit increments SHALL prevent duplicate consumption or reset. Reaching a threshold or pausing SHALL stop new dispatch and advancement while already authorized work may finish and record real consumption, which may exceed the threshold.
+The deployment SHALL default to record-only accounting. Missing, zero or exhausted budgets, unknown consumption and changed current pricing SHALL NOT block preparation, claim, task creation, backjumps or normal advancement in this mode. Actual usage, elapsed time, action/task/backjump counts, reservations and unknown data SHALL remain durable; absent pricing for a started Attempt SHALL produce unknown cost, not invented zero. Each Attempt SHALL use its original frozen price. Stable task, Attempt and transition IDs SHALL prevent double accounting.
+
+An explicit enforce configuration SHALL restore complete time/task/cost budgets, pricing, positive per-Attempt reservations, price compatibility, balances and unknown-consumption checks. Its initial execution is separate from at most three plan/loop backjumps unless explicitly incremented. Thresholds SHALL stop new dispatch and advancement only in enforce mode. Manual pause SHALL stop new dispatch and advancement in both modes; already authorized work may finish and record real consumption, which may exceed the threshold. Mode changes SHALL NOT erase history or recompute old fees.
+
+#### Scenario: Unknown historical consumption in record-only mode
+- **WHEN** an old settled Attempt has unknown cost and no live task, Lease, Attempt or unknown external operation remains
+- **THEN** normal new work and graph completion may proceed, the unknown data remains recorded, and no mandatory budget-increment question is created
+- **AND** same-task unknown external effects and actual in-flight resources remain protected against replay or concurrent replacement
 
 #### Scenario: A task finishes while advancement is paused
 - **WHEN** its actual terminal facts are recorded
@@ -89,7 +96,7 @@ The graph edit head SHALL be separate from activation definition versions. A val
 Graph ASK and temporary task questions SHALL use the formal-question store and its sole APPLIED consumer. A temporary question SHALL reuse the guarded continuation and atomically transfer the graph slot. Paused facts remain durable without advancement. Known unconsumed technical failures MAY be explicitly retried with exact execution/task/Attempt versions; replacements SHALL preserve prior failures and consumed choices. UNKNOWN SHALL require human reconciliation rather than automatic replay.
 
 #### Scenario: A budget prevents another loop iteration
-- **WHEN** the initial iteration and three backjumps have consumed the shared loop allowance
+- **WHEN** enforce mode is active and the initial iteration and three backjumps have consumed the shared loop allowance
 - **THEN** the original transition remains blocked, one scoped increment request is retained without granting authority, and a formal approval resumes that same transition without double charging
 
 ### Requirement: Selected goals and factual integrated delivery

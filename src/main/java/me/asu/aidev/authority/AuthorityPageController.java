@@ -1,6 +1,7 @@
 package me.asu.aidev.authority;
 
 import java.util.*;
+import me.asu.aidev.execution.guard.ExecutionAccounting;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,11 +28,14 @@ public class AuthorityPageController {
     }
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;
     private final me.asu.aidev.workflow.application.WorkflowPlanService plans;
-    public AuthorityPageController(AuthorityRepository repo,AuthorityBoundary boundary,me.asu.aidev.workflow.application.WorkflowPlanService plans) { this.repo=repo;this.boundary=boundary;this.plans=plans; }
+    private final ExecutionAccounting accounting;
+    public AuthorityPageController(AuthorityRepository repo,AuthorityBoundary boundary,me.asu.aidev.workflow.application.WorkflowPlanService plans,ExecutionAccounting accounting) { this.repo=repo;this.boundary=boundary;this.plans=plans;this.accounting=accounting; }
     @GetMapping("/ui/authority") public String page(Model model) {
         String actor=Objects.requireNonNull(boundary.human(),"Authenticated human required");
         var owners=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
         model.addAttribute("owners",owners);
+        model.addAttribute("accountingMode",accounting.mode());
+        model.addAttribute("accountingEnforced",accounting.enforced());
         model.addAttribute("drafts",repo.encode(plans.list().stream().filter(p->p.state()==me.asu.aidev.workflow.domain.WorkflowPlan.State.DRAFT && p.createdBy().equals(actor))
                 .map(p->Map.of("planId",p.id(),"version",p.version(),"specDigest",AuthorityRepository.hash(repo.encode(p.spec())),"businessSpec",p.spec())).toList()));
         model.addAttribute("workers",repo.jdbc().queryForList("SELECT worker_id,owner_id,generation,worker_boot,enabled_boot,read_scope FROM authority_identity WHERE owner_id IN (SELECT id FROM authority_owner WHERE actor=?)",actor).stream().map(row->{

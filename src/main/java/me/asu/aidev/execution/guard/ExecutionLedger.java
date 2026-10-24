@@ -81,7 +81,9 @@ public class ExecutionLedger {
         Long elapsed=AuthorityRepository.flag(meter.get("time_unknown"))?null:meter.get("started_ms")==null?0L:Math.max(0,finishedMs-number(meter,"started_ms"));
         var price=repo.decode(String.valueOf(meter.get("price_json")),Price.class);
         boolean unknown=AuthorityRepository.flag(meter.get("usage_unknown"));
-        Long cost=meter.get("started_ms")==null?Long.valueOf(0):unknown || price==null?null:Long.valueOf(cost(price,new Usage(number(meter,"input_tokens"),number(meter,"cached_tokens"),number(meter,"output_tokens"))));
+        Long cost=null;
+        if(meter.get("started_ms")==null) cost=0L;
+        else if(!unknown && price!=null) cost=cost(price,new Usage(number(meter,"input_tokens"),number(meter,"cached_tokens"),number(meter,"output_tokens")));
         String plan=String.valueOf(meter.get("plan_id"));
         settleDimension(plan,Dimension.TIME_MS,elapsed,number(meter,"reserved_time"));
         // Unknown cost retains its approved exposure. It is never silently refunded or represented as zero.

@@ -6,10 +6,10 @@ FD-030补充：平台Skill改为固定文件集，Claim新增`skillFiles`，并�
 
 ## 使用路径
 
-1. 在授权页面绑定当前身份，确认目标、工具范围、所需预算及定价；使用新运行库，不导入或删除旧数据。
+1. 在授权页面绑定当前身份，确认目标与工具范围；默认仅记录预算和费用，预算及定价可选，显式 enforce 模式才要求完整配置；使用新运行库，不导入或删除旧数据。
 2. 部署兼容 Worker：设置 `AIW_EXECUTION_GUARD=true`、`AIW_DYNAMIC_CONFIG=true`，以及原有机器凭证、仓库、Runtime 和后端配置。机器凭证不进入模型上下文。默认 launch role 仍用于旧任务，新任务逐次使用固定配置，不以 launch role 固定其职责。
 3. 打开 `/ui/configurations`，选择默认软件方法，填写稳定意图 ID、版本、当前准备世代、目标/政策版本、固定仓库基线、任务说明、真实上游任务和精确 AI Profile。必需上游尚无正式成果时，不创建任务。
-4. 准备只做目录匹配、内容/引用/能力/政策/预算校验；无模型、命令、进程或网络调用。成功时，PREPARING→READY、配置绑定、业务任务创建和固定上下文在同库事务提交。未就绪不创建可领取任务，也不增加业务任务消耗。
+4. 准备只做目录匹配、内容/引用/能力/政策校验，预算按部署计量模式处理；无模型、命令、进程或网络调用。成功时，PREPARING→READY、配置绑定、业务任务创建和固定上下文在同库事务提交。未就绪不创建可领取任务，也不增加业务任务消耗。
 5. BLOCKED 保留版本、缺项及明确恢复动作。缺口解决后以返回的 generation 显式重试同一内容；内容或依据改变时使用新 intentVersion。READY 重放返回原任务，技术 Attempt 不重复创建业务任务或重置消耗。
 
 默认目录静态派生自现有 11 份 Python TOML Profile 及 9 个 Skill 包，保持九字段方法和现有工程输出协议。`src/main/resources/execution/software-catalog.json` 是受审内容快照，不在启动时抓取外部材料。原 Profile/Skill 更新不会静默改写已有配置；更换快照需新版本和摘要。默认 verifier/integration-verifier 声明 COMMAND 需求，没有独立命令许可和兼容 Linux/WSL 隔离适配器时保持阻塞。
@@ -50,6 +50,6 @@ claim 在与 Lease/Attempt/额度预留相同事务固定所选能力元数据�
 
 Preparation 字段为 intentId、intentVersion、generation、state、configRef、errorCode、taskId、missing、recoveryActions。Intent 包含 intentId、intentVersion、expectedGeneration、planId、policyRevision、repositoryRef、baseRevision、instruction、dependencies、runtime、aiProfileId，并且 defaultRole/configRef/candidate 三选一，其余显式为 null。
 
-封闭原因码：INVALID_CONFIGURATION、UNSUPPORTED_RUNTIME、PREPARATION_FAILED、NO_COMPATIBLE_WORKER、AUTHORIZATION_REQUIRED、BUDGET_CONFIGURATION_REQUIRED、SOURCE_CHANGED。已知缺口给出修正、重新准备、接入兼容 Worker 或处理明确授权/预算申请的动作；不自动安装、登录、下载、扩大资源或改用其他后端。
+封闭原因码：INVALID_CONFIGURATION、UNSUPPORTED_RUNTIME、PREPARATION_FAILED、NO_COMPATIBLE_WORKER、AUTHORIZATION_REQUIRED、BUDGET_CONFIGURATION_REQUIRED、SOURCE_CHANGED。已知缺口给出修正、重新准备、接入兼容 Worker 或处理明确授权申请的动作；预算缺口仅在显式 enforce 模式阻止准备，默认 record-only 不要求预算申请；不自动安装、登录、下载、扩大资源或改用其他后端。
 
 V13 仅新增版本、准备、Worker/Attempt 快照及绑定表，不改写历史迁移。本期编译和独立静态审查以 FD-027 双报告为准；本文不证明真实 SDK/协议、数据库迁移、进程终止或工具隔离已运行通过。
