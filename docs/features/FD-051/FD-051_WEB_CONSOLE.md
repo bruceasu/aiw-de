@@ -1,7 +1,7 @@
 # FD-051: Web Console 增加日文界面语言
 
-**Status:** Design
-**Revision:** 2
+**Status:** Open
+**Revision:** 3
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -15,7 +15,7 @@
 
 ## Solution
 
-preferences 归一化接受 ja，默认仍 en，旧偏好及 aiw-locale 迁移保留。i18n 共用原始文本 WeakMap，切换可恢复 EN/ZH/JA；document.lang 日文设 ja。日文动态规则保持全部数字和标识。语言选项显示本族文字日本語，保留 data-i18n-skip。通过原 preferences 事件、localStorage 和 storage 同步。更新用户说明并明确词条外原文保留。
+preferences 归一化接受 ja，默认仍 en，旧偏好及 aiw-locale 迁移保留。i18n 共用原始文本 WeakMap，切换可恢复 EN/ZH/JA，标题原文在首次 DOM 翻译前缓存，避免切换后锁定已翻译标题；document.lang 日文设 ja。日文动态规则保持全部数字和标识。语言选项显示本族文字日本語，保留 data-i18n-skip。通过原 preferences 事件、localStorage 和 storage 同步。更新用户说明并明确词条外原文保留。
 
 ## Scope
 
@@ -23,13 +23,13 @@ static/ui/i18n.js、preferences.js、templates/ui/fragments.html、docs/current-
 
 ## Work items
 
-- [ ] 1.1 补齐 JA 词典及动态规则，保持未知词条与原始文本。小/中，无依赖，证据为目录键覆盖及规则对照。
-- [ ] 1.2 接入偏好、语言选项、lang、存储和事件同步。小/低，依赖 1.1，证据为调用链与白名单。
-- [ ] 1.3 更新文档、一次静态覆盖/差异检查和两份 JS 语法编译，提交证据并独立审阅。小/低，依赖 1.2。
+- [x] 1.1 补齐 JA 词典及动态规则，保持未知词条与原始文本。小/中，无依赖，证据为目录键覆盖及规则对照。
+- [x] 1.2 接入偏好、语言选项、lang、存储和事件同步。小/低，依赖 1.1，证据为调用链与白名单。
+- [x] 1.3 更新文档、一次静态覆盖/差异检查和两份 JS 语法编译，提交证据并独立审阅。小/低，依赖 1.2。
 
 ## TODO
 
-实施 1.1–1.3。
+1.1–1.3 已实施，428 个原目录唯一源键日文覆盖完整（含共享导航共 434 键），七类动态规则齐全；静态覆盖及两份 JS 语法编译通过，待独立实现审阅。
 
 ## Acceptance
 

@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-051",
+  "source_event": "FD-051-000003-design-ready",
+  "human_report": "FD-051-implementation-r1.md",
+  "data": {
+    "session": "japanese-ui-20261024-583a41",
+    "base_commit": "0392cd9",
+    "work_items": ["1.1", "1.2", "1.3"],
+    "original_unique_keys": 428,
+    "japanese_keys": 434,
+    "missing_keys": 0,
+    "dynamic_patterns": 7,
+    "checks": [
+      {"command": "git diff --check", "result": "passed"},
+      {"command": "Static Python parsing of original and Japanese catalogs", "result": "complete coverage and no empty values"},
+      {"command": "node --check src/main/resources/static/ui/i18n.js", "result": "passed"},
+      {"command": "node --check src/main/resources/static/ui/preferences.js", "result": "passed"}
+    ],
+    "not_run": ["tests", "browser", "HTTP", "network", "service", "restart", "deployment"],
+    "remaining_risks": ["Browser switching, cross-tab sync and Japanese layout unverified", "Uncatalogued text and private secretary UI remain in original language"]
+  }
+}

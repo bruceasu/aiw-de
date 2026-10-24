@@ -4,7 +4,7 @@
   const normalize = value => ({
     windowOpacity: typeof value?.windowOpacity === 'number' && Number.isFinite(value.windowOpacity)
       && value.windowOpacity >= 55 && value.windowOpacity <= 100 ? Math.round(value.windowOpacity * 10) / 10 : defaults.windowOpacity,
-    language: value?.language === 'zh' ? 'zh' : 'en',
+    language: ['en', 'zh', 'ja'].includes(value?.language) ? value.language : defaults.language,
     showTime: typeof value?.showTime === 'boolean' ? value.showTime : defaults.showTime,
     showDate: typeof value?.showDate === 'boolean' ? value.showDate : defaults.showDate,
     animations: typeof value?.animations === 'boolean' ? value.animations : defaults.animations,
