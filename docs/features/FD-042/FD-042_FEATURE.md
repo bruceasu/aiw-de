@@ -13,7 +13,7 @@
 
 仅将开关默认值改true仍能通过false绕过，不满足要求。选择取消匿名模式：登录判断永远基于signedIn，enabled兼容方法永远true，旧boolean构造参数保留但忽略，不再从启用配置获得匿名授权。application.yaml移除启用变量。保持真实用户名/非空密码、会话、CSRF和角色机制，无新账号或凭证生成。
 
-控制台拦截器统一要求真实会话，免登录仅保留/ui/login及现有console.css/console.js公共资源。未登录页面GET/HEAD返回登录跳转，保留contextPath、原path/query（含组合角色view参数）；现有控制台JSON/文件API或其他方法未登录返回401。其他已登录CSRF/角色/Owner校验保持。登录页始终开放；空密码拒绝全部登录尝试。
+控制台拦截器统一要求真实会话，免登录仅保留/ui/login及现有console.css/console.js公共资源。未登录页面GET/HEAD返回登录跳转，保留contextPath、原path/query（含组合角色view参数）；现有控制台JSON/文件API或其他方法未登录返回401。登录模板的form action和CSS href同时改为Thymeleaf上下文感知URL，避免非空contextPath的登录提交中断；其他已登录CSRF/角色/Owner校验保持。登录页始终开放；空密码拒绝全部登录尝试。
 
 ## Solution
 
@@ -21,7 +21,7 @@ WebConsoleSecurityService移除匿名ADMIN/local-console判定：authenticated=s
 
 WebConsoleSecurityInterceptor合并重复的持久锁存/普通登录判断，所有已注册控制台路径采用统一会话策略。原路径注册表保持，不把/api/r1整根套入浏览器认证，Worker租约和个人秘书机器接口仍用原token/专用凭证，未新增匿名豁免或机器登录要求。
 
-兼容与上线：旧auth.enabled及AIW_WEB_CONSOLE_AUTH_ENABLED不再控制访问，即使外部旧配置为false也需登录。原四参数Java构造接口保留用于兼容，但首boolean明确忽略。旧免登录actor数据仍保留原Owner/actor，不迁移、不删除、不自动认领；旧匿名来源operator授权不能继续被解释为有效真实授权。未配置密码时只展示登录提示，不创建默认密码或绕过认证。正常部署/重启另行处理，本FD不操作环境或读取.env秘密。
+兼容与上线：旧auth.enabled及AIW_WEB_CONSOLE_AUTH_ENABLED不再控制访问，即使外部旧配置为false也需登录。原四参数Java构造接口保留用于兼容，但首boolean明确忽略。旧免登录actor数据仍保留原Owner/actor，不迁移、不删除、不自动认领；旧匿名来源operator授权不能继续被解释为有效真实授权。未配置密码时只展示登录提示，不创建默认密码或绕过认证。回退旧版本会恢复其可选认证语义：回退前必须对旧版本显式设置AIW_WEB_CONSOLE_AUTH_ENABLED=true，保留用户名/非空密码，并由部署方确认匿名请求仍被拒绝，不能直接沿用false或缺省。正常部署/重启或回退另行处理，本FD不操作环境或读取.env秘密。
 
 修改现有安全回归断言及Operations/Approval夹具，使其用测试凭据真实登录；仅源编辑，不运行测试。更新当前中英文配置/快速启动/安全指南及相关稳定规范，历史FD证据不改。
 
@@ -31,15 +31,15 @@ WebConsoleSecurityInterceptor合并重复的持久锁存/普通登录判断，�
 
 ## Work items
 
-- [ ] 1.1 完成登录统一策略、机器边界/旧数据/回退与配置兼容并取得独立设计审阅。规模小、难度中，无依赖；明确用户新政策优先，不需重复确认。
+- [x] 1.1 完成登录统一策略、机器边界/旧数据/回退与配置兼容并取得独立设计审阅。规模小、难度中，无依赖；明确用户新政策优先，不需重复确认。
 - [ ] 1.2 移除Service匿名认证/ADMIN/actor授权和配置开关，保持构造/真实账号摘要兼容。规模小、难度低，依赖1.1；false/空会话也不能获得已认证状态或高权限。
-- [ ] 1.3 统一拦截器页面/API未登录分流与原query返回，保留登录资源/CSRF/角色和机器分离。规模小、难度中，依赖1.2；无开放的新业务页面。
-- [ ] 1.4 更新安全回归与受影响的Operations/Approval测试夹具，使用真实测试登录；不执行或编译测试。规模小、难度中，依赖1.2–1.3；旧开关false不能绕过、登录资源/返回目标和未登录API拒绝都有断言。
+- [ ] 1.3 统一拦截器页面/API未登录分流与原query返回，保留登录资源/上下文感知模板URL/CSRF/角色和机器分离。规模小、难度中，依赖1.2；无开放的新业务页面。
+- [ ] 1.4 更新安全回归与受影响的Operations/Approval测试夹具，使用真实测试登录；不执行或编译测试。规模小、难度中，依赖1.2–1.3；旧开关false不能绕过、登录资源/返回目标（含contextPath/query）和未登录API拒绝都有断言。
 - [ ] 1.5 更新当前说明与稳定规格，完成一次范围静态检查及离线生产compile-only，提交双报告后独立fd-review。规模小、难度低，依赖全部实现；未运行项明确。
 
 ## TODO
 
-完成有界独立设计审阅后发design-ready；实现、源码回归更新、静态/编译与独立实现审阅通过后范围归档。
+独立设计审阅ready；contextPath登录模板和旧版本回退两处已补齐。继续实现、源码回归更新、静态/编译及独立实现审阅后范围归档。
 
 ## Acceptance
 
@@ -51,7 +51,7 @@ WebConsoleSecurityInterceptor合并重复的持久锁存/普通登录判断，�
 
 ## Verification
 
-默认一次范围diff --check及只读配置/匿名分支/路由/调用者/文档/测试源码检查，随后C:/green/bin/setup-jdk25.ps1和mvn -o '-Dmaven.test.skip=true' compile，只编译生产源码，不执行/编译测试或下载。独立设计和实现静态审阅各按有界Skill授权进行，不派额外代理。未运行测试、服务/数据库、浏览器/HTTP、模型/Worker、打包/部署/重启；静态和compile不作运行通过证据。没有读取或打印.env、密码或机器凭证。
+默认一次范围diff --check及只读配置/匿名分支/路由/调用者/文档/测试源码检查，随后C:/green/bin/setup-jdk25.ps1和mvn -o '-Dmaven.test.skip=true' compile，只编译生产源码，不执行/编译测试或下载。独立设计和实现静态审阅各按有界Skill授权进行，不派额外代理。未运行测试、服务/数据库、浏览器/HTTP、模型/Worker、打包/部署/重启；静态和compile不作运行通过证据。没有读取或打印.env、密码或机器凭证。独立设计报告：[Markdown](../reviews/FD-042-design-r1.md)及同名JSON，结论ready，原两处发现已解决。
 
 ## Sources
 

@@ -1,0 +1,69 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-042",
+  "source_event": "FD-042-000002-design-requested",
+  "human_report": "FD-042-design-r1.md",
+  "data": {
+    "reviewer_session": "fd042-design-20261024-c6f0ba07",
+    "planner_session": "platform-login-20261024-37ba34c3",
+    "reviewed_commit": "110bee2",
+    "recommendation": "ready",
+    "supported_boundaries": [
+      "real-session-only auth regardless of old false flag",
+      "public login resources and empty-password denial",
+      "existing console route coverage and API/page split",
+      "unchanged dedicated machine paths",
+      "preserved data ownership and real operator digest",
+      "updated scoped login test fixtures without execution"
+    ],
+    "commands_run": [
+      "Three targeted PowerShell inline Python UTF-8 read batches",
+      "rg/rg --files scoped security routes, callers and instructions",
+      "git show 110bee2:src/main/java/me/asu/aidev/authority/AuthorityHttpConfiguration.java",
+      "One bounded follow-up UTF-8 read of the two amended FD policy points; no behavior verification"
+    ],
+    "checks_skipped": [
+      "post-report command validation",
+      "tests/compile/browser/HTTP/services/database/models/network",
+      "agents",
+      "FD edits/claim/emit",
+      "commit/archive"
+    ],
+    "risks": [
+      "Runtime session/CSRF/logout and non-root context interaction unverified",
+      "Machine lease runtime unverified",
+      "Security policy must remain mandatory during a legacy rollback"
+    ],
+    "workflow_mutations": false,
+    "next_step": "Planner may emit design-ready; implementation still needs independent fd-review",
+    "initial_findings": [
+      {
+        "id": "DR-1",
+        "severity": "design-gap",
+        "location": "FD-042_FEATURE.md:16,47; templates/ui/login.html",
+        "issue": "Context-path guarantee lacks context-aware login form and CSS links",
+        "recommendation": "Include Thymeleaf context-aware action/href and scoped source regression assertions"
+      },
+      {
+        "id": "DR-2",
+        "severity": "design-gap",
+        "location": "FD-042_FEATURE.md:24,34; WebConsoleSecurityService constructor/application.yaml",
+        "issue": "Rollback to legacy defaults can restore anonymous console access",
+        "recommendation": "Document mandatory old enabled=true and nonblank credentials on rollback, or forbid an insecure rollback configuration"
+      }
+    ],
+    "findings": [],
+    "resolved_findings": [
+      {
+        "id": "DR-1",
+        "resolution": "FD now requires context-aware Thymeleaf login action/href and source assertions for contextPath/query"
+      },
+      {
+        "id": "DR-2",
+        "resolution": "FD now requires old enabled=true and nonblank credentials before legacy rollback; deployment verifies rejection separately"
+      }
+    ],
+    "reviewed_working_fd_sha256": "8e7b5833caf6ed75b020ea1d4b1ce1b32dd449c35c6a294e86fd7a6d7b8c8de3"
+  }
+}
