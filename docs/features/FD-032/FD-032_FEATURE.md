@@ -1,7 +1,7 @@
 # FD-032: 执行预算与审计对账改为仅记录
 
-**Status:** Open
-**Revision:** 4
+**Status:** Complete
+**Revision:** 6
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -41,7 +41,7 @@ ExecutionGuard 的创建/固定输入/领取/推进和 AgentFactory 准备共用
 
 ## TODO
 
-- 全部源码及文档条目已完成，等待独立实现审阅；通过后仅提交本 FD 的审阅证据并自动归档。其它个人秘书/模型配置改动不在本 FD 范围内。
+- 全部源码及文档条目已完成，独立静态实现审阅 r1 通过；由 PM 仅提交本 FD 的审阅证据并继续正常本地归档。其它个人秘书/模型配置改动不在本 FD 范围内；数据库、模板及真实模式切换仍未运行验收。
 
 ## Acceptance
 
@@ -62,7 +62,8 @@ ExecutionGuard 的创建/固定输入/领取/推进和 AgentFactory 准备共用
 - 2026-10-24：以 JAVA_HOME=C:/green/jdk-25.0.1+8 调用 `C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -Dmaven.test.skip=true compile` 通过，291 个生产源，实际源码提交为 7f5f211efdae4fb632e9cb32270b7b79a24a9bdc；未运行测试、未下载依赖、未打包。
 - `node --check src/main/resources/static/ui/authority.js` 通过；静态范围内 `git diff --check` 通过。模板、SQL、真实身份/数据和模式切换未运行验收。
 - 原 PATH 中找不到 mvn，已用既有 JDK/Maven 路径更正并通过；反馈见 ../reports/FD-032-blocker-compiler-path-20261024-a8f47e19.md 与同名 JSON（resolved）。用户提供的 C:/green/bin/setup-jdk25.ps1 已只读核对，未重复编译或执行环境脚本。
-- Worker 双证据：../reports/FD-032-implementation-r1.md 与同名 JSON。独立实现审阅尚待进行。
+- Worker 双证据：../reports/FD-032-implementation-r1.md 与同名 JSON。
+- 2026-10-24 独立实现 Reviewer：fd032-reviewer-20261024-3cf9158a，认领 FD-032-000005-implementation-ready；审阅源码 7f5f211efdae4fb632e9cb32270b7b79a24a9bdc 相对 16193b5 的完整范围和实际调用链，结论 verification-passed，无阻断发现。报告：../reviews/FD-032-implementation-review-r1-20261024-3cf9158a.md 与同名 JSON。D032-01/02/03 已在源码逐项落实；本轮仅静态读取，没有重复编译或运行测试/应用/数据库/模板。尚未运行项和严格恢复风险保留在报告；未修改其它任务或实现源码。
 
 ## Sources
 

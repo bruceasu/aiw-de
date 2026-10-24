@@ -1,0 +1,41 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-032",
+  "source_event": "FD-032-000005-implementation-ready",
+  "human_report": "FD-032-implementation-review-r1-20261024-3cf9158a.md",
+  "data": {
+    "reviewer_session": "fd032-reviewer-20261024-3cf9158a",
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "fd_revision": 5,
+    "reviewed_commit": "7f5f211efdae4fb632e9cb32270b7b79a24a9bdc",
+    "comparison_base": "16193b5",
+    "worker_evidence_commit": "a1eb81360b76bb62389fbd234046fb402b843157",
+    "recommendation": "verification-passed",
+    "review_mode": "independent-static-implementation-review",
+    "implementation_review_round": 1,
+    "prior_failed_implementation_outcomes": 0,
+    "scope": ["Complete changed Java and src/main resource implementations", "docs/EXECUTION-GUARD.md", "docs/EXECUTION-CONFIGURATION.md", "openspec/specs/task-orchestration/spec.md", "openspec/specs/delegated-decisions/spec.md", "Relevant preparation/task/claim/settlement/continuation/graph/authority call paths and existing SQL constraints"],
+    "excluded": ["Uncommitted workers/personal-secretary Python, models, Web UI and launch scripts", "Uncommitted desktop compilation script"],
+    "findings": [],
+    "resolved_design_findings": [
+      {"id": "D032-01", "result": "implemented", "location": "GraphRunner.java:219,258,261,269,271", "evidence": "Direct loop precheck, final unknown_count gate and budget questions share the deployment mode; real quiescence checks remain."},
+      {"id": "D032-02", "result": "implemented", "location": "ActionAdmissionService.java:88,126,136; CoordinationService.java:66; ManagedPlanAdmission.java:24; ExecutionGuard.java:269,302", "evidence": "Historical UNKNOWN no longer freezes unrelated new work in record-only; live Task/Lease/Attempt and original-task non-replay stay protected."},
+      {"id": "D032-03", "result": "implemented", "location": "GuardContract.java:30,43; ExecutionLedger.java:20,21,37,54,81; ExecutionGuard.java:171; AgentFactory.java:79", "evidence": "Omitted budget and zero reservation supported; original frozen prices used, started unpriced cost remains null; enforce restores configuration, pricing, balances and unknown checks without resets."}
+    ],
+    "results": [
+      {"acceptance": 1, "result": "supported-by-static-evidence", "detail": "Default record-only bypasses budget and unknown-accounting admission at preparation, creation, claim, advancement and backjump."},
+      {"acceptance": 2, "result": "supported-by-static-evidence", "detail": "Action increments and audit remain atomic; maximumUses and cumulative quota predicates apply only in enforce; authorization and receipt deduplication remain."},
+      {"acceptance": 3, "result": "supported-by-static-evidence", "detail": "Frozen original price per Attempt, unpriced started cost null, confirmed unstarted zero, durable unique task/Attempt/transition accounting."},
+      {"acceptance": 4, "result": "supported-by-static-evidence", "detail": "Historical accounting separated from actual in-flight execution and same-task unknown-effect non-replay; read-only unknown reports retained."},
+      {"acceptance": 5, "result": "supported-by-static-evidence", "detail": "Enforce restores original accounting gates; login, exact scopes, DENY, pause, revocation, expiry, fixed inputs, real resource occupancy remain independent."},
+      {"acceptance": 6, "result": "supported-by-static-evidence", "detail": "Actual mode in template; absent form nodes handled, compatible hidden maximumUses, deployment/spec documents match behavior and unrun limits."}
+    ],
+    "commands_run": ["Get-Content -Encoding UTF8 / Select-Object / Select-String / rg / rg --files: targeted static reads", "git status --short; git diff; git rev-parse HEAD", "aiw fd --help; aiw fd show FD-032; aiw fd emit --help", "aiw fd claim FD-032 FD-032-000005-implementation-ready --session fd032-reviewer-20261024-3cf9158a", "apply_patch: reviewer report pair and FD TODO/Verification only", "aiw fd emit FD-032 verification-passed --producer reviewer --artifact docs/features/reviews/FD-032-implementation-review-r1-20261024-3cf9158a.md --source-event FD-032-000005-implementation-ready"],
+    "read_command_failures": ["Incorrect role/report filenames; corrected from actual file listing", "Unsupported PowerShell brace directory list; corrected to explicit paths", "Literal path wildcard not expanded; corrected using directory with -g filter"],
+    "worker_compile_evidence": {"revision": "7f5f211efdae4fb632e9cb32270b7b79a24a9bdc", "java_home": "C:/green/jdk-25.0.1+8", "command": "C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -Dmaven.test.skip=true compile", "reported_result": "passed", "production_sources": 291, "javascript_command": "node --check src/main/resources/static/ui/authority.js", "javascript_reported_result": "passed", "evidence_inspected": true, "rerun_by_reviewer": false},
+    "skipped": ["tests", "compilation", "Spring/database runtime", "Thymeleaf rendering", "browser", "live identity/accounting/enforce-switch flows", "model calls", "network and downloads", "package/install/restart/publication", "sub-agents", "implementation edits", "commits/merge/archive"],
+    "residual_risks": ["Actual SQLite/PostgreSQL data and template rendering remain unverified at runtime", "Record-only intentionally imposes no cumulative cost ceiling", "Enforce may block new work on omitted configuration, historical unknown consumption and used quota without resetting history", "Current service is not automatically upgraded or restarted"],
+    "recorded_date": "2026-10-24"
+  }
+}
