@@ -21,6 +21,7 @@ from pathlib import Path
 from platform_client import PlatformClient
 from runtime import Runtime
 from store import SQLiteStore, encode
+from business_actions import BusinessActions
 
 
 def desktop_session_available():
@@ -159,6 +160,14 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
                         result = runtime.enable(data["enabled"])
                     elif self.path == "/api/schedule":
                         result = runtime.schedule(data["workId"], data["dueMs"], data["revision"], data.get("timeZone", "UTC"))
+                    elif self.path == "/api/business-permissions":
+                        result = BusinessActions(runtime).permissions()
+                    elif self.path == "/api/business-questions":
+                        result = BusinessActions(runtime).questions(data["permissionId"], data["planId"])
+                    elif self.path == "/api/business-action":
+                        result = BusinessActions(runtime).queue(data)
+                    elif self.path == "/api/business-action-status":
+                        result = BusinessActions(runtime).status(data["requestId"])
                     elif self.path == "/api/queue-action":
                         result = runtime.queue_action(data["grantId"])
                     elif self.path == "/api/questions":
