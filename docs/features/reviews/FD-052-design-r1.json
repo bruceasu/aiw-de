@@ -1,0 +1,15 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-052",
+  "source_event": "FD-052-000002-design-requested",
+  "human_report": "FD-052-design-r1.md",
+  "data": {
+    "recommendation": "ready",
+    "blocking_findings": [],
+    "scope": ["GUI environment gating", "service/GUI recursion prevention", "shared OS singleton", "Qt/Tk default tray", "visible fallback", "authorized Qt prerequisite delivery"],
+    "implementation_checkpoints": ["Claim singleton before GUI side effects", "Distinguish duplicate instance from initialization error", "Suppress activation on automatic connection", "Require usable tray before hiding", "Keep service independent of GUI exit"],
+    "not_run": ["tests", "compile", "GUI", "service", "network", "dependency installation", "models"],
+    "remaining_risks": ["OS lock contention, tray restoration, child startup and window visibility unverified"]
+  }
+}
