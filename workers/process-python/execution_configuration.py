@@ -24,7 +24,7 @@ def metadata(config):
     if CAPABILITY not in config.capabilities or "execution-guard-v1" not in config.capabilities:
         raise RuntimeError("CONFIGURATION_ADAPTER_NOT_VERIFIED")
     root = Path(__file__).resolve().parent
-    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_openai_tools.py", "process_worker.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py")
+    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_openai_tools.py", "process_worker.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py")
     versions = {"broker": _digest({name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names})}
     if config.runtime == "openai-agents":
         versions.update({name: importlib.metadata.version(name) for name in ("openai-agents", "openai")})

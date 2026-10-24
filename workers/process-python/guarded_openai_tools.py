@@ -12,7 +12,8 @@ def tools(broker):
             if not isinstance(arguments, str): raise RuntimeError("SDK_TOOL_ARGUMENTS_UNSUPPORTED")
             call_id = getattr(context, "tool_call_id", None)
             value = await asyncio.to_thread(broker.invoke, name, json.loads(arguments), call_id)
-            output = json.dumps(value, ensure_ascii=False)
+            sources = getattr(broker, "context_sources", None)
+            output = sources.model_result(value) if sources else json.dumps(value, ensure_ascii=False)
             if len(output.encode()) > 131072: raise RuntimeError("SDK_TOOL_OUTPUT_LIMIT")
             return output
         result.append(FunctionTool(name=definition["name"], description=definition["description"],
