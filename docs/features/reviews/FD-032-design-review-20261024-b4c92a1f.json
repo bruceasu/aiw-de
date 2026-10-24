@@ -1,0 +1,69 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-032",
+  "source_event": "FD-032-000002-design-requested",
+  "human_report": "FD-032-design-review-20261024-b4c92a1f.md",
+  "artifact": "docs/features/FD-032/FD-032_FEATURE.md",
+  "revision": 2,
+  "reviewer_session": "fd032-design-review-20261024-b4c92a1f",
+  "recommendation": "changes-needed",
+  "findings": [
+    {
+      "id": "D032-01",
+      "severity": "P1",
+      "blocking": true,
+      "status": "remaining",
+      "location": "workflow/graph/GraphRunner.java:218,258,260-275; FD 1.3/1.4",
+      "finding": "图回跳、整计划完成和预算授权问题生成仍存在绕过 Ledger 的直接预算/unknown_count 判断。",
+      "action": "明确 GraphRunner 接统一模式，record-only 跳过额度预检、计量未知完成条件和自动预算问题；保留 Task/Attempt/Lease/未知工具操作的真实静止检查。",
+      "decision_owner": "planner"
+    },
+    {
+      "id": "D032-02",
+      "severity": "P1",
+      "blocking": true,
+      "status": "remaining",
+      "location": "authority/ActionAdmissionService.java:117; CoordinationService.java:66; ManagedPlanAdmission.java:24; execution/application/TaskExecutionService.java:544",
+      "finding": "全 Plan 纯历史 UNKNOWN 与同原任务防重复、实际在途占用需要不同处理；UNKNOWN 不能作为静止证明。",
+      "action": "record-only 只取消跨任务纯历史 UNKNOWN 阻塞，以 Task CLAIMED/RUNNING、现存 Lease、Attempt CLAIMED/RUNNING 保留实际在途保护；保留同原任务 UNKNOWN/IN_PROGRESS、未知工具操作和静止保护。",
+      "decision_owner": "planner"
+    },
+    {
+      "id": "D032-03",
+      "severity": "P2",
+      "blocking": true,
+      "status": "remaining",
+      "location": "execution/guard/GuardContract.java:Budget/Policy; ExecutionGuard.java:55,143,171; execution/config/AgentFactory.java:79; ExecutionLedger.java:49,71,114; FD 1.1/1.3",
+      "finding": "需要明确缺省预算、零预留、原始价格快照与当前价格不同、无价格费用未知及恢复 enforce 的统一兼容规则。",
+      "action": "采纳单一部署模式 Bean、空预算规范化、非负预留和模式感知 configured/price-compatible；按原 Attempt 价格快照结算，缺价格 null/UNKNOWN，enforce 恢复正预留与完整配置等旧约束，历史计数不重置。",
+      "decision_owner": "planner"
+    }
+  ],
+  "human_decisions_required": [],
+  "supported_design": {
+    "mode": "aidev.execution.accounting-mode: record-only default; enforce explicit; invalid value rejected",
+    "implementation_shape": "One small shared mode bean; existing ledgers, transactions and tables; optional shared scoped-in-flight predicate in ManagedPlanAdmission",
+    "preserved_boundaries": [
+      "Login, owner/worker binding, CSRF, exact tool/action authorization and DENY",
+      "Manual pause/revocation, original request receipts and fixed versions",
+      "Same original Task/Attempt UNKNOWN effect non-replay and real active Lease/capacity",
+      "Command sandbox/resource limits and Fleet/Worker concurrency",
+      "Original frozen prices, real usage, null unknown cost, durable counters and history"
+    ]
+  },
+  "validation": {
+    "mode": "local-static-design-review",
+    "commands_run": ["Get-Content -Encoding UTF8", "rg / rg --files", "Select-Object", "apply_patch: report pair only"],
+    "not_run": ["compile", "tests", "build", "database", "service/browser/model runtime", "network/downloads", "workflow state mutations", "Git commit", "sub-agents"]
+  },
+  "evidence_limits": [
+    "Design review of Revision 2 with local source as contract evidence; not an implementation verdict",
+    "Only this Chinese report and JSON sidecar were written",
+    "No FD/source/workflow/session ownership changed",
+    "Legacy non-guard expiry already releases leases; UNKNOWN alone cannot prove external process quiescence",
+    "No new runtime acceptance gate or human approval requirement",
+    "Planner can incorporate these scoped rules before design-ready without a repeated automatic design-review loop"
+  ],
+  "recorded_date": "2026-10-24"
+}
