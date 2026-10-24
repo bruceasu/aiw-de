@@ -183,4 +183,3 @@ Both guarded Python backends expose ask_question through the trusted broker. Con
 Python API 在原 Task/Attempt 内接收有收据的当前补充和后续排队，保留原权限、期限和实际模型总调用上限。控制平面先提供 V19/工作台协议，再更新并登记 Worker；原 Codex 路径本次不提供实时输入，不自动切换到 API。使用方式与真实支持矩阵见 [工作台指南](../../docs/WORKER-WORKBENCH.md)。
 
 API 历史压缩保留可见来源、完整调用/结果配对和补充指令原文；摘要同模型、同计量。大工具结果提供有界预览与本次运行内的原文分页，不归档隐藏推理或声称持久云端日志。原任务和完整技能字节继续冻结，附加技能入口按需读取。来源及许可见 [参考许可](THIRD-PARTY-NOTICES.md)。
-
