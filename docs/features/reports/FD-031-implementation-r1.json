@@ -1,0 +1,23 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-031",
+  "source_event": "FD-031-000004-design-ready",
+  "human_report": "FD-031-implementation-r1.md",
+  "data": {
+    "summary": "Windows desktop UI and independent pairing adapter implemented; schedule confirmation and original goal request recovery fixed after independent design review.",
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "workspace": "primary",
+    "branch": "develop",
+    "implementation_commit": "da3d738",
+    "pairing_commit": "ece0ae5",
+    "design_commit": "d782b4c",
+    "concurrent_baseline_commit": "8126bca",
+    "scope_note": "Review complete desktop and pairing sources, including initial FD-031 files already included in the concurrent commit; do not attribute unrelated changes in that commit to this FD.",
+    "changed_paths": ["workers/personal-secretary/desktop.py", "workers/personal-secretary/desktop_client.py", "workers/personal-secretary/desktop_win32.py", "workers/personal-secretary/start-desktop.ps1", "workers/personal-secretary/desktop-assets", "workers/personal-secretary/main.py", "workers/personal-secretary/ui/pairing.js", "workers/personal-secretary/ui/pairing.css", "workers/personal-secretary/ui/index.html", "workers/personal-secretary/ui/app.js", "workers/personal-secretary/ui/console.css", "workers/personal-secretary/README.md", "scripts/compile-secretary-desktop.ps1"],
+    "commands": [{"command": "powershell -NoProfile -File scripts/compile-secretary-desktop.ps1 -Revision HEAD", "revision": "da3d738", "result": "passed", "scope": "four Python sources, app.js, pairing.js, and identical PowerShell launcher; syntax only"}],
+    "results": ["D031-01 implemented with frozen visible private work and explicit reload", "D031-02 implemented with persistent decision history and separate query ID", "Pairing adapter does not depend on Web layout globals", "Only FD-031 corrections were committed by this Auto run"],
+    "skipped": ["tests", "GUI", "tray and monitor runtime checks", "live multi-UI pairing", "model and platform calls", "downloads", "packages", "publication"],
+    "residual_risk": "Windows desktop behavior and live integration remain unverified; static implementation review is pending."
+  }
+}
