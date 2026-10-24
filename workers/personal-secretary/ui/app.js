@@ -86,7 +86,7 @@ const viewInfo = {
   setup: ["设置", "首次连接模型，之后直接使用"],
   confirmations: ["待你确认", "核对超范围或不可恢复的具体操作"],
   overview: ["工作总览", "查看你的工作、安排与待处理请求"],
-  work: ["工作与安排", "记录私人工作，确认安排时间"],
+  work: ["工作与安排", "记录私人工作，马上执行或按需定时"],
   chat: ["私人对话", "围绕具体工作，与个人模型讨论"],
   policies: ["代理策略", "管理已确认的私人策略及关联授权"],
   platform: ["平台协作", "预览并确认需要提交给平台的内容"],
@@ -211,7 +211,7 @@ function workCard(work, compact = false) {
   const meta = node("div", "record-meta");
   meta.append(node("span", "", `版本 ${work.revision}`), node("span", "", dateLabel(work.dueMs)));
   const actions = node("div", "record-actions");
-  actions.append(button("继续对话", () => selectWork(work.id, "chat")), button("安排时间", () => selectWork(work.id, "work")));
+  actions.append(button("继续对话", () => selectWork(work.id, "chat")), button("安排执行", () => selectWork(work.id, "work")));
   if (!["DAILY_RUNNING", "CANCELLED"].includes(work.state)) actions.append(button("现在处理", () => assistantOperation("run-work", { id: work.id, revision: work.revision }, "已交给秘书处理，结果会自动更新。")));
   actions.append(button("移除工作", () => assistantOperation("work-trash", { id: work.id, revision: work.revision }, "已移到设置中的“已删除工作”，可以恢复。")));
   const planId = work.professionalPlanId || work.professionalDraftPlanId || work.planId;
@@ -230,12 +230,20 @@ function updateSchedule() {
   const work = rows("work").find(item => item.id === form.elements.workId.value);
   form.elements.revision.value = work?.revision ?? "";
 }
+function updateExecutionMode() {
+  const form = formFor("schedule");
+  const timed = form.elements.executionMode.value === "scheduled";
+  byId("schedule-time-field").hidden = !timed;
+  form.elements.dueMs.disabled = !timed;
+  form.elements.dueMs.required = timed;
+  form.querySelector('[type="submit"]').textContent = timed ? "安排定时执行" : "马上执行";
+}
 function renderWorks() {
   const work = [...rows("work")].sort((a, b) => (a.title || "").localeCompare(b.title || "", "zh-CN"));
   for (const id of ["work-list", "overview-work"]) {
     const target = byId(id);
     target.replaceChildren();
-    if (!work.length) empty(target, "还没有私人工作", "先记下工作标题和想法，再开始讨论或安排时间。", ["新建私人工作", () => switchView("work", true)]);
+    if (!work.length) empty(target, "还没有私人工作", "先记下工作标题和想法，再开始讨论、马上执行或安排定时。", ["新建私人工作", () => switchView("work", true)]);
     for (const item of id === "overview-work" ? work.slice(0, 5) : work) target.append(workCard(item, id === "overview-work"));
   }
   document.querySelectorAll("[data-work-select]").forEach(select => {
@@ -530,6 +538,8 @@ navMedia.addEventListener("change", updateNavOrientation);
 updateNavOrientation();
 document.querySelectorAll("[data-go-view]").forEach(control => control.addEventListener("click", () => switchView(control.dataset.goView, true)));
 formFor("schedule").elements.workId.addEventListener("change", updateSchedule);
+formFor("schedule").elements.executionMode.addEventListener("change", updateExecutionMode);
+updateExecutionMode();
 formFor("chat").elements.workId.addEventListener("change", renderChat);
 formFor("cancel").elements.kind.addEventListener("change", updateCancelRecords);
 formFor("cancel").elements.id.addEventListener("change", updateCancelRevision);
@@ -547,11 +557,22 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
   if (form.getAttribute("aria-busy") === "true") return;
   const route = form.dataset.route;
   const data = Object.fromEntries(new FormData(form));
+  const immediate = route === "schedule" && data.executionMode === "now";
   const submit = form.querySelector('[type="submit"]');
   if (submit.disabled) return;
   form.setAttribute("aria-busy", "true"); submit.disabled = true;
   const version = previewVersions[route];
   try {
+    let requestRoute = route;
+    if (route === "schedule") {
+      if (immediate) {
+        requestRoute = "run-work";
+        data.id = data.workId;
+        delete data.workId;
+        delete data.dueMs;
+      }
+      delete data.executionMode;
+    }
     if ("revision" in data) data.revision = Number(data.revision);
     if ("requestVersion" in data) data.requestVersion = Number(data.requestVersion);
     if ("expiresAt" in data) { if (data.expiresAt) data.expiresAt = new Date(data.expiresAt).getTime(); else delete data.expiresAt; }
@@ -562,7 +583,7 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
       data.roots = data.roots.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
       if (data.command.trim()) data.command = parseInput(data.command, "模型程序参数"); else delete data.command;
     }
-    const { result, refreshed } = await post(route, data);
+    const { result, refreshed } = await post(requestRoute, data);
     if (route === "settings") {
       settingsLoaded = false;
       form.elements.key.value = "";
@@ -575,6 +596,7 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
     if (route === "chat" && result.workId) { form.elements.workId.value = result.workId; renderChat(); }
     let message = route === "login" ? "个人服务已接受配对。" : (refreshed ? "操作已记录，状态已更新。" : "操作已返回结果。");
     if (route === "schedule" && result.report) message = result.report.message;
+    if (immediate && result.state === "SCHEDULED") message = "已提交马上执行，进度和结果会自动更新；秘书暂停时需先点击“继续工作”。";
     if (route === "chat") message = "已收到，秘书正在处理，回复会自动显示。";
     if (route === "settings") message = "设置已保存，可以直接聊天或安排工作。";
     if (route === "question-preview" || route === "goal-preview") message = current ? "本地预览已生成，请核对精确内容后确认提交。" : "内容已变化，请重新生成本地预览。";
