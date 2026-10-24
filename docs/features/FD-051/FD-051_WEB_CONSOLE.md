@@ -1,7 +1,7 @@
 # FD-051: Web Console 增加日文界面语言
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -29,7 +29,7 @@ static/ui/i18n.js、preferences.js、templates/ui/fragments.html、docs/current-
 
 ## TODO
 
-1.1–1.3 已实施，428 个原目录唯一源键日文覆盖完整（含共享导航共 434 键），七类动态规则齐全；静态覆盖及两份 JS 语法编译通过，待独立实现审阅。
+1.1–1.3 已实施，428 个原目录唯一源键日文覆盖完整（含共享导航共 434 键），七类动态规则齐全；静态覆盖及两份 JS 语法编译通过。独立实现审阅 r1 通过，无阻塞发现；待 host 核对真实 receipt 后归档。
 
 ## Acceptance
 
@@ -42,6 +42,7 @@ static/ui/i18n.js、preferences.js、templates/ui/fragments.html、docs/current-
 
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
+- 独立实现审阅：docs/features/reviews/FD-051-review-r1.md 及同名 JSON；Reviewer Session fd051-review-20261024-d7318f，来源 FD-051-000004-implementation-ready，覆盖 0392cd9..bc1c8e9。四项验收获静态支持，无阻塞发现，失败审阅数 0。未运行浏览器、测试或网络，实际语言切换和日文布局未实测；通过以 CLI receipt 为准。
 
 ## Sources
 

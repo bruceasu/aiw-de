@@ -1,0 +1,19 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-051",
+  "source_event": "FD-051-000004-implementation-ready",
+  "human_report": "FD-051-review-r1.md",
+  "data": {
+    "session": "fd051-review-20261024-d7318f",
+    "base_commit": "0392cd9",
+    "implementation_commit": "bc1c8e9",
+    "verdict": "passed",
+    "findings": [],
+    "failed_review_count": 0,
+    "acceptance": {"1": "supported statically", "2": "supported statically", "3": "supported statically", "4": "supported statically"},
+    "not_run": ["tests", "compile", "browser", "HTTP", "service", "network", "restart", "deployment"],
+    "remaining_risks": ["Browser switching, cross-tab synchronization, Japanese layout and title behavior unverified"],
+    "unrelated_working_changes_reviewed": false
+  }
+}
