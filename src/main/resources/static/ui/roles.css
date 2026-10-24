@@ -1,0 +1,18 @@
+.role-heading{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+.role-heading h2{margin-top:0}
+.role-heading .btn{flex-shrink:0}
+.role-template{display:flex;gap:12px;align-items:flex-end;margin-top:18px}
+.role-template .field{flex:1}
+.role-steps{display:grid;gap:16px}
+.role-step{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:18px}
+.role-step .form-grid{margin-top:14px}
+.role-step h3{font-size:14px;margin:0}
+.role-step-actions{display:flex;gap:6px;flex-wrap:wrap}
+.role-step-actions button{font-size:11px;padding:5px 9px}
+.role-step .configuration-checks{max-height:190px}
+.role-page .configuration-command small{display:block;color:var(--muted);font-size:11px;line-height:1.8}
+.role-preview .configuration-outcome{margin-top:0}
+.role-preview ol{padding-left:20px}
+.role-preview li{margin-bottom:12px}
+.role-page #role-saved{margin-top:20px}
+@media(max-width:720px){.role-heading{flex-wrap:wrap}.role-template{align-items:stretch;flex-direction:column}}

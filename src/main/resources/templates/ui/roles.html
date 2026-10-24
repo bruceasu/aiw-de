@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="csrf-token" th:content="${csrfToken}"><meta name="configuration-owner" th:content="${ownerId}">
+<title>组合角色 · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/configurations.css"><link rel="stylesheet" href="/ui/roles.css">
+<script src="/ui/roles.js?v=composition-1" defer></script></head>
+<body><div class="app configuration-page role-page"><nav th:replace="~{ui/fragments :: nav('configurations')}"></nav><main class="main">
+<header th:replace="~{ui/fragments :: topbar('组合角色','把共同技能和工作流程组合成适合任务的角色。')}"></header>
+<div class="content configuration-content">
+<section class="configuration-intro"><div><span class="configuration-eyebrow">角色 · 技能 · 流程</span><h2>角色由你组合</h2><p>从空白开始，或复制默认模板。选择共享技能、安排使用顺序，写清整体交付要求，再保存为可复用的角色。同一 Worker 完成角色内的工作；跨 Worker 继续使用平台流程。</p></div><a class="btn ghost" href="/ui/configurations">返回任务准备</a></section>
+<p th:if="${ownerId.isEmpty()}" class="callout warn-callout">请先到<a href="/ui/authority">个人授权</a>页绑定当前身份。</p>
+<p id="role-feedback" class="configuration-feedback" role="status" aria-live="polite" hidden></p>
+<div class="configuration-columns"><section class="card">
+<div class="role-heading"><h2>1. 定义角色</h2><button id="role-new" class="btn ghost" type="button" disabled>新建空白角色</button></div>
+<form id="role-form"><fieldset id="role-fields" disabled>
+<div class="role-template"><label class="field">从默认模板开始（可选）<select id="role-template"><option value="">选择一个模板</option></select></label><button id="role-import" type="button" class="btn ghost">导入模板</button></div>
+<p class="help">模板提供专业技能与原工作说明，可继续调整流程。专业技能自带的输入与产出约束仍需遵守；共享方法可以跨角色复用。</p>
+<div class="form-grid">
+<label class="field">角色名称<input id="role-name" maxlength="120" required placeholder="例如：方案研究与原型设计"></label>
+<label class="field">使用仓库<select id="role-repository" required><option value="">请选择仓库</option></select></label>
+<label class="field">工作分类<select id="role-category" required></select></label>
+<label class="field">最终产出<select id="role-output"><option value="REPORT">分析报告</option><option value="VERDICT">审查结论</option><option value="WORKSPACE">代码与工作区成果</option></select></label>
+<label class="field configuration-full">角色负责什么<textarea id="role-goal" maxlength="4000" rows="3" required placeholder="说明角色的职责与工作方式；具体任务内容在准备任务时填写。"></textarea></label>
+<label class="field configuration-full">整体交付要求<textarea id="role-delivery" maxlength="2000" rows="3" required placeholder="例如：交付有来源的方案比较、原型文件和建议，列出已完成检查与未验证事项。"></textarea><small>这是整个角色的交付要求，与每个步骤的完成条件分别设置。</small></label>
+</div>
+<div class="role-heading section"><div><h2>2. 安排技能流程</h2><p class="help">最多八步、六种技能。同一技能可以用于多个步骤；上移、下移可调整顺序。</p></div><button id="role-add-step" type="button" class="btn ghost">添加步骤</button></div>
+<div id="role-steps" class="role-steps"></div>
+<details class="configuration-disclosure section"><summary>参考资料与工具需求（可选）</summary><h3>参考知识</h3><div id="role-knowledge" class="configuration-checks"></div><label class="configuration-command section"><input id="role-command" type="checkbox"><span>需要运行命令<small>模型、读取、搜索、Git、问答按角色声明；工作区产出另需写入。命令和全部工具仍需原执行授权。</small></span></label></details>
+</fieldset><div class="configuration-form-actions"><button id="role-preview" class="btn primary" disabled>预览组合角色</button></div></form>
+</section><aside class="card role-preview"><h2>3. 核对并保存</h2><div id="role-preview-result" class="configuration-outcome"><p class="muted">填写角色与步骤后，这里会显示易读摘要。</p></div><div class="configuration-form-actions"><button id="role-save" class="btn primary" type="button" disabled>保存角色</button><a id="role-use" class="btn ghost" hidden>用于准备任务</a></div><p class="help">保存不会执行模型或创建任务。角色内步骤由 Worker 按方法遵循，实际完成情况在原任务报告中记录；平台不将这些说明当作独立步骤状态。</p></aside></div>
+<section class="card section"><div class="role-heading"><div><h2>已保存的组合角色</h2><p class="muted">选用固定版本，或复制为新角色继续编辑；已有任务保持原配置。</p></div><button id="role-refresh" class="btn ghost" type="button">刷新并核对记录</button></div><div id="role-saved" class="configuration-records"><p class="empty">正在读取…</p></div></section>
+<noscript><p class="callout warn-callout">此页面需要 JavaScript 来编辑和保存角色。</p></noscript>
+</div></main></div><script src="/ui/console.js"></script></body></html>
