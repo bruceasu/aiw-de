@@ -1,0 +1,71 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-038",
+  "source_event": "FD-038-000004-implementation-ready",
+  "human_report": "FD-038-implementation-review-r1.md",
+  "data": {
+    "reviewer_session": "fd038-review-20261024-b037241a",
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "comparison_base": "d4e9efd",
+    "implementation_commit": "e34651f",
+    "evidence_only_commit": "7eddf61",
+    "review_round": 1,
+    "result": "PASS",
+    "findings": [],
+    "hard_violations": [],
+    "acceptance": [
+      {"criterion": 1, "result": "supported", "evidence": "27-entry source matrix states incremental, existing and excluded methods"},
+      {"criterion": 2, "result": "supported", "evidence": "coding local steps and shared continuation remain notes in existing report fields"},
+      {"criterion": 3, "result": "supported", "evidence": "role-specific methods preserve tool and Control Plane authority; no default execution or delegation"},
+      {"criterion": 4, "result": "supported", "evidence": "conditional entry references explicitly declared; Artifact/REPORT/VERDICT preserved"},
+      {"criterion": 5, "result": "supported", "evidence": "12 canonical resources and 36 identical copies; existing SkillFiles binding and inheritance freeze bytes"},
+      {"criterion": 6, "result": "supported", "evidence": "Worker distinguishes structural checks and resource compilation from unrun behavioral evaluation"}
+    ],
+    "static_review": {
+      "actual_method_content_reviewed": true,
+      "resource_reader_and_freezing_call_paths_reviewed": true,
+      "historical_catalogue_asset_identity_preserved": true,
+      "mapped_source_entries": 27,
+      "changed_platform_resources": 12,
+      "declared_packages": 9,
+      "identical_standalone_copies": 36,
+      "implementation_scope_drift": false,
+      "handoff_fd_digest_matches": true,
+      "inline_read_only_check": "passed",
+      "production_modules_executed": false,
+      "skill_scripts_executed": false
+    },
+    "commands": [
+      "Get-Content and rg for instructions, FD evidence, actual prompt resources and relevant freezing/reader call paths",
+      "git diff --stat d4e9efd..e34651f and scoped git diff d4e9efd..e34651f",
+      "aiw fd claim --help",
+      "aiw fd claim FD-038 FD-038-000004-implementation-ready --session fd038-review-20261024-b037241a",
+      "aiw fd emit --help",
+      "inline read-only Python for source matrix, declarations, byte comparisons, scope drift and claimed event digest"
+    ],
+    "navigation_failures": [
+      "aiw fd state is not a supported subcommand; used actual event JSON",
+      "guessed review.md/service/runtime.py paths absent; used existing code-review.md/SkillFiles.java/skill_files.py"
+    ],
+    "worker_compile": {
+      "reported_command": "mvn -o -Dmaven.test.skip=true compile",
+      "reported_revision": "e34651f",
+      "reported_result": "passed",
+      "independently_reexecuted": false,
+      "limit": "resource copying and unchanged Java compilation do not prove model behavior"
+    },
+    "skipped": [
+      "reviewer compilation",
+      "tests and model/comparative evaluations",
+      "live Worker/SDK/tool/recovery",
+      "browser/database/services/network",
+      "build/package/install/restart/release"
+    ],
+    "risks": [
+      "Static contracts do not prove model activation accuracy, task quality, cost or continuation improvements",
+      "Existing frozen tasks intentionally retain old bytes; normal platform update is required for new-task resources"
+    ],
+    "next_action": "Host verifies actual passed event and unchanged implementation, then performs scoped normal delivery/archive"
+  }
+}
