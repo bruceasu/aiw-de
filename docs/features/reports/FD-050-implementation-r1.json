@@ -1,0 +1,16 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-050",
+  "source_event": "FD-050-000003-design-ready",
+  "human_report": "FD-050-implementation-r1.md",
+  "data": {
+    "session": "pet-caption-20261024-7e18c2",
+    "base_commit": "4f1dac8",
+    "work_items": ["1.1", "1.2"],
+    "checks": ["git diff --cached --check: passed", "scoped rg: no removed label references", "Python in-memory compile current and staged sources: exit 0"],
+    "not_run": ["tests", "GUI", "service", "restart", "packaging"],
+    "unrelated_changes": "preserved unstaged",
+    "remaining_risks": ["Windows layout and interactions unverified"]
+  }
+}

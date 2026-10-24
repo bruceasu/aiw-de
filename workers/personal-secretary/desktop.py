@@ -69,13 +69,11 @@ def main():
             image = tk.PhotoImage(file=str(Path(__file__).parent / "desktop-assets" / "secretary.png"))
             factor = max(1, math.ceil(max(image.width() / 280, image.height() / 400)))
             self.image = image.subsample(factor, factor)
-            self.width, self.height = max(260, self.image.width() + 24), self.image.height() + 70
+            self.width, self.height = max(260, self.image.width() + 24), self.image.height() + 24
             self.canvas = tk.Canvas(self.root, width=self.width, height=self.height, bg=TRANSPARENT, highlightthickness=0)
             self.canvas.pack()
             self.pet_image = self.canvas.create_image(self.width // 2, 8, image=self.image, anchor="n")
-            self.canvas.create_rectangle(8, self.height - 46, self.width - 8, self.height - 8, fill=PANEL, outline=LINE)
-            self.pet_label = self.canvas.create_text(self.width // 2, self.height - 27, text="尚未配对 · 点击连接", fill=ACCENT, font=("Microsoft YaHei UI", 9))
-            self.pet = PetAnimator(self.root, self.canvas, self.pet_image, self.pet_label, self.width)
+            self.pet = PetAnimator(self.root, self.canvas, self.pet_image, self.width)
             self.animate_pet = tk.BooleanVar(value=True)
             self.canvas.bind("<ButtonPress-1>", self.drag_start)
             self.canvas.bind("<B1-Motion>", self.drag_move)

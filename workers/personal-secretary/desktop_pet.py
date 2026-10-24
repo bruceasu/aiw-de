@@ -48,9 +48,9 @@ def pet_state(snapshot, connected, pending=False, uncertain=False, celebration="
 class PetAnimator:
     """One Tk after callback; no threads, image manipulation or service actions."""
 
-    def __init__(self, root, canvas, image_item, label_item, width):
+    def __init__(self, root, canvas, image_item, width):
         self.root, self.canvas = root, canvas
-        self.image_item, self.label_item, self.width = image_item, label_item, width
+        self.image_item, self.width = image_item, width
         self.origin = tuple(canvas.coords(image_item))
         self.snapshot = {}
         self.connected = self.pending = self.uncertain = False
@@ -133,8 +133,6 @@ class PetAnimator:
         amplitude = 2 if state.code == "completed" else 1
         offset = amplitude * (1 + math.sin(self.frame / 5)) if animated and state.code != "paused" else 0
         self.canvas.coords(self.image_item, self.origin[0], self.origin[1] + offset)
-        dots = "." * (1 + self.frame // 5 % 3) if animated and state.face == "thinking" else ""
-        self.canvas.itemconfigure(self.label_item, text=state.label + dots + " · 点击对话", width=self.width - 28)
         self.canvas.delete("pet-expression")
         color = "#f1bf73" if state.face in {"question", "concerned"} else "#64e4dc"
         x, y = self.width - 35, 33
