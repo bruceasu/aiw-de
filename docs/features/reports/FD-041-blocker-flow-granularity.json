@@ -1,0 +1,30 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "blocker-feedback",
+  "fd_id": "FD-041",
+  "source_event": "FD-041-000002-design-requested",
+  "human_report": "FD-041-blocker-flow-granularity.md",
+  "data": {
+    "stage": "Design",
+    "role": "Planner",
+    "session": "composable-role-20261024-cf71803a",
+    "status": "resolved",
+    "symptom": "Execution granularity needed a user decision before implementation",
+    "cause": "Same-Worker role steps and one-Task-per-skill have materially different state and context contracts",
+    "attempts": [
+      "Authored scoped FD draft",
+      "Asked asynchronous execution-granularity question",
+      "Received explicit same-Worker selection and reconciled FD"
+    ],
+    "resolution": "User confirmed same Worker uses multiple Skills; cross-Worker flows reuse platform orchestration",
+    "resolved_at": "2026-10-24T05:17:07.172635+00:00",
+    "human_decision_needed": false,
+    "next_step": "Independent bounded design review, then implementation of compatible role composition",
+    "reusable_improvement": "Distinguish role-local working method from platform task orchestration early",
+    "template_unavailable": "docs/templates/BLOCKER_FEEDBACK_TEMPLATE.md",
+    "unperformed": [
+      "implementation before decision",
+      "runtime/tests/network"
+    ]
+  }
+}

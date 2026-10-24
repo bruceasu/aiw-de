@@ -35,9 +35,11 @@
 
 ### 声明和编译
 
-新增 `RoleComposition`（protocol=aiw.role.composition.v1）：id/revision、repositoryRef/category、人类可读name、goal、resultKind、steps、knowledge、toolRequirements。每步包含key/title、固定Skill引用、instruction、whenCondition和completion；角色内顺序由列表确定，条件是模型遵循的说明，不执行脚本或表达式。最多8步、6种非协议Skill、8知识，字段有长度/非空/重复/版本一致校验，协议资产自动加入。允许同一技能在不同步骤复用，同ref不能引用不同版本/摘要。
+新增 `RoleComposition`（protocol=aiw.role.composition.v1）：id/revision、repositoryRef/category、人类可读name、goal、delivery（角色级交付要求）、resultKind、steps、knowledge、toolRequirements。每步包含key/title、固定Skill引用、instruction、whenCondition和completion；角色内顺序由列表确定，条件是模型遵循的说明，不执行脚本或表达式。最多8步、6种非协议Skill、8知识，字段有长度/非空/重复/版本一致校验，协议资产自动加入。允许同一技能在不同步骤复用，同ref不能引用不同版本/摘要。
 
-`ComposedRoles` 纯声明编译器生成：私有Skill资产（SKILL.md + role.json，标准aiw.skill.files.v1 Document）；原v1 Method/Candidate。primarySkill是该固定角色包，protocolSkills为工程成果协议及去重的步骤技能；roleCapability使用通用技术执行标记composed-role-v1，业务角色不再按内置枚举限制。Method.name改为有界可读文本（原字符串仍合法），机器引用仍使用原id规则，Worker前缀独立。按resultKind导出readOnly；保持原结果/工具一致校验。
+`ComposedRoles` 纯声明编译器生成：私有Skill资产（SKILL.md + role.json，标准aiw.skill.files.v1 Document）；原v1 Method/Candidate。primarySkill是该固定角色包，protocolSkills为工程成果协议及去重的步骤技能；roleCapability使用通用技术执行标记composed-role-v1，业务角色不再按内置枚举限制。Method.name继续使用原机器id规则，角色的可读名称只存在role.json；state新增当前Owner的roles摘要（name/methodName/repositoryRef/reference），供界面显示及复制，不输出角色正文。Worker前缀独立。按resultKind导出readOnly；保持原结果/工具一致校验。delivery编译进原outputContract，和每步completion分别保存，原REPORT/VERDICT/WORKSPACE外层格式不变。
+
+旧专业主Skill与共享方法分开处理：从默认模板导入真实primary Skill和原instruction，不声称这些包是无约束的通用方法。若步骤引用内置方法的primary Skill，编译/预览/保存按目录核对其resultKind/readOnly，冲突则拒绝；保留Skill原任务类型、输入材料、冻结来源和职责边界，声明不能豁免。自然语言的职责/输入冲突无法仅凭类型校验消除时，Worker通过原问题/缺口机制报告，不假装成功。界面导入模板时说明这些约束；从空白只选共享方法则不继承某个业务角色。共享方法之间仍不复制正文或换版本。
 
 入口逐步说明执行目标、使用哪些Skill、条件、产出和完成要求，最终报告在现有描述字段记录各步完成/不适用/阻塞及真实证据。它是同一正式Task/Attempt内的模型工作方法，不是平台逐步状态机；不宣称独立恢复、强制技能调用或自审独立通过。跨Worker仍用现有GraphContract。
 
@@ -53,9 +55,9 @@
 
 角色编辑入口为 `/ui/configurations?view=roles`，由原已受保护路径渲染新模板，复用Console外壳和configurations.css。页面支持从空白或默认方法导入目标/产出/技能步骤、编辑步骤（增删/上移下移/条件/完成要求）、预览、保存、复制既有组合角色与选用于任务准备。配置/保存不运行模型或创建任务。
 
-通过已有干净的configuration-methods.js加入角色入口链接；不改工作区已有脏模板或脏权限文件。保存后跳转 `/ui/configurations?method=<id>&revision=<revision>`，从当前Owner服务器返回的已保存引用中选中对应版本，不信任URL自带内容，不自动准备。更新选项/在途响应不能覆盖草稿。保存响应未知时保留原定义，先刷新核对同ID/修订/定义；确认不存在后才显式重试原对象。JSON只在协议内传递，界面显示表单和摘要。
+通过已有干净的configuration-methods.js加入角色入口链接；不改工作区已有脏模板或脏权限文件。保存后跳转 `/ui/configurations?method=<id>&revision=<revision>`，从当前Owner服务器返回的已保存引用中选中对应版本，不信任URL自带内容，不自动准备。更新选项/在途响应不能覆盖草稿。保存响应未知时保留原定义，先刷新核对同ID/修订/定义；确认不存在后才显式重试原对象。JSON只在协议内传递，界面显示表单和摘要。整体交付要求为独立必填字段。state.roles提供的友好名称优先显示，方法机器标识无需用户记忆。
 
-兼容及发布策略：只增加新DTO/页面及现有操作的显式分支，不新增依赖、迁移或授权。11份默认方法、19个公共Skill资产及旧配置不变；对新组合配置由原配置/SkillFiles版本固定，后续编辑不追写旧任务。升级仅Control Plane新界面/服务，现有支持config-v1和skill-files-v1的Python Worker继续消费同形v1任务。正常部署另行处理，本FD不部署或启动服务。服务回退不能再创建/编辑组合角色，新配置应暂停使用，但不迁移或删除旧配置；正式续行保持其原冻结配置。
+兼容及发布策略：只增加新DTO/页面及现有操作的显式分支，不新增依赖、迁移或授权。11份默认方法、19个公共Skill资产及旧配置不变；对新组合配置由原配置/SkillFiles版本固定，后续编辑不追写旧任务。升级仅Control Plane新界面/服务，现有支持config-v1和skill-files-v1的Python Worker继续消费同形v1任务。正常部署另行处理，本FD不部署或启动服务。服务回退不再提供创建/编辑组合角色入口；机器Method.name和v1封闭字段保持，使旧读取路径仍可解码已固定配置/文件集。已有任务及正式续行仍使用原固定内容，不改成默认角色；回退后的具体领取/执行行为未经运行验证，需要部署方按实际证据决定是否暂停这些任务，不能自动重建或删除它们。
 
 需要独立设计审阅具体闭合DTO兼容、私有角色包与候选匹配、无写入预览、原子保存/未知结果、原保护路径及主工作区隔离；修复所有重大设计问题后才design-ready。
 
@@ -68,7 +70,7 @@
 ## Work items
 
 - [ ] 1.1 完成执行粒度、责任及兼容方案和独立设计审阅。规模小、难度中，无依赖；完成标准是确认方案及全部重大设计发现解决。
-- [ ] 1.2 实现闭合RoleComposition/Step与确定性私有角色包编译/验证。规模小、难度中，依赖1.1；同技能复用/冲突、范围/上限、产出及role.json再编译匹配有明确路径。
+- [ ] 1.2 实现闭合RoleComposition/Step与确定性私有角色包编译/验证。规模小、难度中，依赖1.1；同技能复用/版本冲突、范围/上限、角色级delivery、旧模板输入/产出约束及role.json再编译匹配有明确路径。
 - [ ] 1.3 实现预览/原子保存/按固定引用读取的kind=role接口分支及通用技术标记准入。规模小、难度中，依赖1.2；旧DTO/授权保持、预览无写入、原事务覆盖、重复/不可变冲突和隔离明确。
 - [ ] 1.4 实现角色表单、技能步骤顺序/条件/完成、预览保存及复制编辑。规模小、难度中，依赖1.3；复用Console样式，未知保存结果与过期响应不覆盖草稿。
 - [ ] 1.5 接入原受保护页面view=roles、原工作方法入口与任务准备的固定引用选择。规模小、难度低，依赖1.4；从模板导入、从空白创建、保存后显式选用均不自动创建任务。
@@ -91,7 +93,7 @@
 
 目前仅定向静态读取配置/工厂/图流程/Worker/Profile与相邻页面。未运行生产模块、测试或实际任务。完整设计后按根预算执行一次范围静态检查和适用最小compile-only检查；Maven离线且使用C:/green/bin/setup-jdk25.ps1，不下载依赖或生成发行包。无默认测试、模型或运行环境验证；静态及编译不作为行为通过证据。
 
-公开合同/兼容及必要持久化设计采用独立设计审阅；完成实现后使用独立fd-review，两者不互相替代。设计待独立审阅；未编译或实现。
+公开合同/兼容设计采用独立设计审阅；完成实现后使用独立fd-review，两者不互相替代。设计待独立审阅；未编译或实现。
 
 ## Sources
 

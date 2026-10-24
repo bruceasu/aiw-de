@@ -1,0 +1,73 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd": "FD-041",
+  "source_event": "FD-041-000002-design-requested",
+  "session": "fd041-design-review-20261024-9f24b8d1",
+  "planner_session": "composable-role-20261024-cf71803a",
+  "reviewed_commit": "30c4e6e",
+  "recommendation": "changes-needed",
+  "scope": "组合角色声明、v1 Candidate兼容、Skill文件包、保存/预览/读取、模板导入、回退策略；只读设计审阅",
+  "findings": [
+    {
+      "id": "DR-1",
+      "severity": "high",
+      "title": "默认角色Skill的固定职责与任意组合缺少兼容规则",
+      "location": "FD-041_FEATURE.md:38; software-catalog.json default primary Skills; execution_configuration.py:70",
+      "impact": "导入默认模板后修改技能、工具或结果可能生成相互矛盾的模型指令；重编译匹配不能证明语义兼容。",
+      "requested_change": "声明可组合方法与带约束旧角色入口的分类、模板真实导入映射、受限修改及拒绝例子；不要用提示覆盖固定约束或只导入名称空壳。"
+    },
+    {
+      "id": "DR-2",
+      "severity": "medium",
+      "title": "RoleComposition缺少角色级交付要求",
+      "location": "FD-041_FEATURE.md:38; ConfigurationContract.Candidate.outputContract",
+      "impact": "resultKind与单步completion不能完整表达用户可配置的整体交付要求。",
+      "requested_change": "增加有界delivery/outputInstructions，覆盖序列化、预览、保存、复制与表单，编译进原outputContract并保留固定输出协议。"
+    },
+    {
+      "id": "DR-3",
+      "severity": "medium",
+      "title": "旧服务回退后组合配置续行可读性没有保证",
+      "location": "FD-041_FEATURE.md:40,58; ConfigurationContract.java:31; ExecutionConfigurations.java:111,135",
+      "impact": "中文Method.name在旧Control Plane中不能按id解码，冻结绑定不等于兼容续行。",
+      "requested_change": "明确回退时组合配置的新建、准备、重试与续行均暂停，保留冻结数据并在恢复新版后继续；旧内置配置按原合同。"
+    }
+  ],
+  "facts": [
+    "SkillFiles.configured支持Owner/仓库限定的aiw.skill.files.v1 Document。",
+    "Python动态配置精确校验原v1字段后由Method构建ProcessProfile，无业务角色枚举白名单。",
+    "原资产注册与配置保存使用同一AuthorityRepository；设计要求外层原子事务和boundary.lock。",
+    "用户已选同一Worker内部多技能流程，跨Worker继续平台编排。"
+  ],
+  "assumptions": [
+    "实现通过Spring代理事务入口注册资产并保存配置。",
+    "组合私有资产名称不会与内置资产引用碰撞，且保存前完成文件包校验。"
+  ],
+  "commands_run": [
+    "PowerShell Get-Content scoped instructions/planning/FD and git status --short",
+    "Inline python -X utf8 -: numbered FD/ConfigurationContract/ExecutionConfigurations excerpts",
+    "Inline Python rg --files: first command failed on nonexistent execution/skills path, one corrected retry succeeded; read SkillFiles/SkillFileContract/ConfigurationController/execution_configuration and selected catalogue assets",
+    "One bounded follow-up for concrete default-Skill compatibility gap: catalogue method-primary mapping and related entry excerpts; AuthorityBoundary; design-review JSON example lookup returned none",
+    "One post-edit read-only inline Python check: evidence JSON parses; exactly one aiw-data comment; key metadata and three finding IDs match"
+  ],
+  "checks_skipped": [
+    "tests",
+    "compile",
+    "production code execution",
+    "services/browser/model calls",
+    "network/dependency downloads",
+    "workflow claim/emit",
+    "other agents",
+    "git commit/archive"
+  ],
+  "risks": [
+    "尚无实现或运行证据，静态合同兼容不代表模型步骤遵循或事务行为通过。",
+    "闭合DTO、等价编译、模板语义和界面未知结果处理仍需独立实现审阅。"
+  ],
+  "files_written": [
+    "docs/features/reviews/FD-041-design-r1.md",
+    "docs/features/reviews/FD-041-design-r1.json"
+  ],
+  "workflow_mutations": false
+}
