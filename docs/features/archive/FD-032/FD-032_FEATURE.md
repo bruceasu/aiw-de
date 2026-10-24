@@ -71,3 +71,5 @@ ExecutionGuard 的创建/固定输入/领取/推进和 AgentFactory 准备共用
 - 用户指令（2026-10-24）：当前系统还没有正常运作，暂时不做预算、审计和对账等限制，只需要记录相关数据。
 - Source event: FD-032-000002-design-requested；Planner/Worker Session: secretary-desktop-20261024-a6529740。
 - src/main/java/me/asu/aidev/authority/AuthorityBudgets.java、ActionAdmissionService.java；execution/guard/；execution/config/AgentFactory.java；templates/ui/authority.html；docs/EXECUTION-GUARD.md。
+
+**Completed:** 2026-10-24
