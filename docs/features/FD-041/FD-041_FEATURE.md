@@ -1,7 +1,7 @@
 # FD-041: 可组合角色与共用技能流程
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -78,7 +78,7 @@
 
 ## TODO
 
-WI1.1–1.6已完成。等待独立实现审阅，宿主核对真实回执后范围归档；未运行真实Worker/页面或技能流程。
+WI1.1–1.6已完成。独立实现静态审阅通过，无阻断发现；宿主待核对真实回执及范围并归档。真实Worker/页面或技能流程仍未运行验证。
 
 ## Acceptance
 
@@ -97,7 +97,7 @@ C:/green/bin/setup-jdk25.ps1 后 mvn -o '-Dmaven.test.skip=true' compile 一次�
 
 未运行测试、JS检查器/浏览器、模型/Worker/工厂实例、真实角色步骤、数据库事务/迁移、问答恢复/回退、网络/服务、安装/发布/重启。角色步骤是同Task/Attempt方法与报告说明，不是平台逐步强制或独立审阅。工作区其他脏改动排除。
 
-独立设计r1三问题已修正，r2为ready；见对应reviews双报告。执行粒度Gate已解决，见[反馈](../reports/FD-041-blocker-flow-granularity.md)。仓库缺所指反馈模板，按共享合同字段记录，没有以此更改规则。独立实现审阅结论待补。
+独立设计r1三问题已修正，r2为ready；见对应reviews双报告。执行粒度Gate已解决，见[反馈](../reports/FD-041-blocker-flow-granularity.md)。仓库缺所指反馈模板，按共享合同字段记录，没有以此更改规则。独立实现Reviewer Session `fd041-review-20261024-ea7763dd` 已领取 `FD-041-000004-implementation-ready`，核对13文件固定差异 `94adbbb..c8080a9`、角色包/候选/原锁事务/授权和Python读取链及前端异常路径；静态审阅通过，无硬性违约或需修改的结构异味。一次只读diff/资源/合同/DOM/漂移检查通过，未重跑编译、测试或运行验证。独立双报告：[Markdown](../reviews/FD-041-implementation-r1.md) / [JSON](../reviews/FD-041-implementation-r1.json)。
 
 ## Sources
 

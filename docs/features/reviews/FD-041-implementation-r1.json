@@ -1,0 +1,100 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-041",
+  "source_event": "FD-041-000004-implementation-ready",
+  "human_report": "FD-041-implementation-r1.md",
+  "data": {
+    "reviewer_session": "fd041-review-20261024-ea7763dd",
+    "worker_session": "composable-role-20261024-cf71803a",
+    "independent_from_worker": true,
+    "comparison_base": "94adbbb",
+    "implementation_commit": "c8080a9c9fae5e2a8e93321f425544dddcc42485",
+    "worker_evidence_commit": "6a26e6c",
+    "round": 1,
+    "verdict": "passed",
+    "scope_file_count": 13,
+    "hard_violations": [],
+    "smell_findings": [],
+    "findings": [],
+    "acceptance": [
+      {
+        "id": 1,
+        "result": "supported-by-static-evidence",
+        "evidence": "Blank/template form, ordered steps and independent overall delivery compile to a generic technical role and fixed private package"
+      },
+      {
+        "id": 2,
+        "result": "supported-by-static-evidence",
+        "evidence": "Immutable shared refs deduplicate without Skill-body copying; version conflicts reject"
+      },
+      {
+        "id": 3,
+        "result": "supported-by-static-evidence",
+        "evidence": "One Task/Attempt; generated entry/UI/docs/spec distinguish model guidance and report notes from platform states or independent review"
+      },
+      {
+        "id": 4,
+        "result": "supported-by-static-evidence",
+        "evidence": "11 methods/19 public assets/index/v1 DTO unchanged; protected routes and private owner/repository scope, fixed SkillFiles and Python readers retained"
+      },
+      {
+        "id": 5,
+        "result": "supported-by-static-evidence",
+        "evidence": "Exact role package recompile, real reference checks, legacy output constraints, existing Factory gaps, epoch/signature guard and original-object save reconciliation"
+      },
+      {
+        "id": 6,
+        "result": "supported-by-static-evidence",
+        "evidence": "Chinese guides and actual bounded Worker evidence; independent static review complete, unrun behavior remains explicit"
+      }
+    ],
+    "commands_run": [
+      "Targeted Get-Content-equivalent UTF-8 reads of instructions, FD, reports, receipts, and git status --short",
+      "Inline read-only FD digest check, generated own session, and aiw fd claim FD-041 FD-041-000004-implementation-ready --session fd041-review-20261024-ea7763dd",
+      "git diff --stat 94adbbb c8080a9; fixed-source Java/UI/docs/spec diff and git show with focused path tracing",
+      "Focused follow-up reads for truncated key UI/auth/Worker loader content",
+      "One git diff --check 94adbbb c8080a9 plus inline read-only JSON/resource/index/contract/DOM/source-drift checks and targeted auth/loader source read"
+    ],
+    "static_results": {
+      "result": "passed",
+      "changed_implementation_files": 13,
+      "unchanged_default_methods": 11,
+      "unchanged_public_assets": 19,
+      "index_and_v1_contract_unchanged": true,
+      "role_dom_ids_match": true,
+      "current_source_matches_reviewed_commit_ignoring_checkout_line_endings": true,
+      "production_modules_or_skills_executed": false
+    },
+    "worker_compile_evidence": {
+      "command": "mvn -o '-Dmaven.test.skip=true' compile",
+      "reported_revision": "c8080a9c9fae5e2a8e93321f425544dddcc42485",
+      "reported_result": "passed; 2+143 resources and 300 Java sources",
+      "reported_finished_at": "2026-10-24T14:44:30+09:00",
+      "reviewer_reran": false,
+      "proves_runtime_behavior": false
+    },
+    "skipped": [
+      "tests and compile rerun",
+      "JS parser/checker/browser",
+      "models/Worker/factory/actual role flows",
+      "database transactions/migrations",
+      "question/resume/rollback runtime",
+      "services/network/downloads",
+      "build/package/install/publish/restart"
+    ],
+    "risks": [
+      "Static implementation and reported compile do not prove browser or real Worker/model behavior",
+      "Role-local flow remains instructions and descriptive results rather than platform-enforced per-step state or independent review",
+      "Legacy semantic/input conflicts beyond typed output constraints remain the existing gap responsibility",
+      "Normal deployment and rollback require separate runtime evidence; frozen tasks retain original data",
+      "Unrelated shared-workspace edits were excluded and are not independently approved"
+    ],
+    "excluded": [
+      "dirty AuthorityHttpConfiguration/ConfigurationUiOptions/old templates",
+      "personal secretary Python/UI/models/launchers and desktop compile script"
+    ],
+    "blockers": [],
+    "next_step": "Host PM checks real verification receipt and unchanged reviewed scope before scoped local archive"
+  }
+}
