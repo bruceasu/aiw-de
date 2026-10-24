@@ -1,0 +1,55 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-036",
+  "source_event": "FD-036-000004-implementation-ready",
+  "human_report": "FD-036-review-r1.md",
+  "data": {
+    "reviewer_session": "fd036-review-20261024-78c4e1",
+    "independent_from_worker": true,
+    "comparison_base": "3d8f026",
+    "implementation_commit": "70cc7bd",
+    "worker_evidence_commit": "5d21fd6",
+    "reviewed_fd_revision": 4,
+    "verdict": "passed",
+    "implementation_review_failure_count": 0,
+    "findings": [],
+    "dimensions": {
+      "correctness": "Static action/state/error paths support acceptance",
+      "standards": "Existing Console styles and actor/CSRF/revision contracts retained; no hard violation found",
+      "spec": "All five FD acceptance areas supported by static source; goal-discussion recoverable deletion unchanged",
+      "evidence": "Exact implementation diff and Worker dual report reviewed; compile reported by Worker, not rerun by Reviewer"
+    },
+    "acceptance": {
+      "1": "supported statically: direct row action and named confirmation before POST",
+      "2": "supported statically: active/deleted filters and restore; unchanged recoverable backend",
+      "3": "supported statically: shared clean guard and identity-specific selection clearing",
+      "4": "supported statically: original actor/CSRF/revision, no automatic write retry, local update before separate refresh",
+      "5": "supported statically: returned-set counts, empty/refresh/selection, scoped hidden and textContent"
+    },
+    "commands_run": [
+      "Targeted Get-Content/Select-String/rg reads for instructions, FD, evidence, source, backend and stable spec",
+      "git diff --stat and git diff 3d8f026..70cc7bd scoped to four implementation files",
+      "git log -3 --oneline and scoped source drift inspection",
+      "aiw fd show FD-036",
+      "aiw fd claim FD-036 FD-036-000004-implementation-ready --session fd036-review-20261024-78c4e1",
+      "Scoped post-report read-only evidence check"
+    ],
+    "failed_discovery": [
+      "aiw fd state is unsupported; corrected to show",
+      "Guessed com/aiw Java package path absent; located actual me/asu/aidev goal paths"
+    ],
+    "worker_compile": {
+      "command": "node --check src/main/resources/static/ui/goals.js",
+      "reported_result": "passed",
+      "revision": "70cc7bd",
+      "rerun_by_reviewer": false
+    },
+    "not_run": ["tests", "browser/Thymeleaf", "HTTP/real delete/restore", "services", "database/migrations", "compilation/Maven", "network/downloads/models", "build/package/install", "restart/release"],
+    "residual_risks": [
+      "Browser layout, interactions and real failure recovery not exercised",
+      "Existing recent100 API limit retained and disclosed"
+    ],
+    "next_step": "Host verifies current passed receipt/digest and no source drift, then scoped archive"
+  }
+}

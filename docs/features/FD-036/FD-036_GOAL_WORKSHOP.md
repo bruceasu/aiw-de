@@ -1,7 +1,7 @@
 # FD-036: Goal Workshop 列表删除与已删除目标恢复入口
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 6
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -34,7 +34,7 @@
 
 ## TODO
 
-1.1–1.3 已完成，源码 70cc7bd；待独立实现审阅，通过后范围归档。
+1.1–1.3 已完成，源码 70cc7bd；独立实现审阅 r1 通过，待 host 核对真实通过事件、摘要及无源码漂移后范围归档。
 
 ## Acceptance
 
@@ -57,3 +57,4 @@
 - docs/current-zh/GOAL-WORKSHOP.md。
 
 - Worker 证据：../reports/FD-036-implementation-r1.md 与同名 JSON。3d8f026..70cc7bd 完成页面与说明；git diff --check 通过，node --check src/main/resources/static/ui/goals.js 通过。无 Java 修改，未运行 Maven、测试、浏览器、数据库、服务或重启。无持久化或 API 变化，复用原删除/恢复协议，不额外改变稳定能力规格。
+- 独立 Reviewer：fd036-review-20261024-78c4e1，已认领 FD-036-000004-implementation-ready；../reviews/FD-036-review-r1.md 与同名 JSON。实际核对 3d8f026..70cc7bd 全部四个源码/说明文件及原 actor/revision/epoch 调用链，本轮无阻塞发现，r1 结论通过。Reviewer 未重跑编译或运行测试/浏览器/数据库；页面实际布局、交互和真实故障恢复未验证。失败审阅轮数 0；通过事件以 CLI 真实 receipt 为准。
