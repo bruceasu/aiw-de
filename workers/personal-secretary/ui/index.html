@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>我的秘书 · AIW:DE</title><link rel="stylesheet" href="/console.css"><script src="/app.js" defer></script></head>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>我的秘书 · AIW:DE</title><link rel="stylesheet" href="/console.css"><script src="/app.js" defer></script><link rel="stylesheet" href="/pairing.css"><script src="/pairing.js" defer></script></head>
 <body>
 <section id="pairing-view" class="pairing-screen" aria-labelledby="pairing-title">
 <div class="pairing-layout"><div class="pairing-intro"><div class="brand"><span class="brand-mark">AIW</span><div><strong>我的秘书</strong><small>PERSONAL WORKSPACE</small></div></div><span class="eyebrow">属于你的工作空间</span><h1>把想法、工作与安排<br>放在一起。</h1><p>私人对话、资料和策略保存在当前个人服务中。与平台协作时，由你选择并确认提交的内容。</p><div class="pairing-features"><span>私人对话</span><span>工作安排</span><span>明确授权</span></div></div>
@@ -60,7 +60,7 @@
 <section class="card"><div class="section-heading"><div><h2>待处理请求与回执</h2><p>UNKNOWN 保留原请求供核对，不代表操作成功，也不会自动重放。</p></div></div><div id="receipt-list"></div></section>
 <section class="card"><div class="section-heading"><div><h2>私人备份</h2><p>包含私人记录、待发送请求与回执副本；不包含平台凭证或登录会话。</p></div><a class="btn ghost" href="/api/backup" download="personal-backup.json">下载私人备份</a></div></section>
 <section class="card"><h2>取消安排或撤销私人策略</h2><p class="muted">停止本地新请求，保留已发送请求的对账。已在平台生效或运行的动作不回滚；停止平台工作需在平台接管或停止 Plan。</p><form class="form-grid" data-route="cancel"><label class="field">类型<select name="kind"><option value="work">私人工作</option><option value="policy">私人策略</option></select></label><label class="field">选择记录<select name="id" id="cancel-record" required><option value="">请选择记录</option></select></label><label class="field">当前版本<input name="revision" readonly type="number" min="1" required></label><button class="btn danger" type="submit">确认本地取消或撤销</button></form></section>
-<section class="card">
+<section class="card" id="desktop-pairing-card">
 <div class="section-heading"><div><h2>连接桌面秘书</h2><p>在秘书目录运行 start-desktop.ps1，在桌面窗口中填写本服务地址和新配对码。两种界面共用私人记录。</p></div></div>
 <p class="help">本服务地址：<code id="desktop-service-origin"></code>。新码五分钟有效、只能使用一次；生成新码会替换上一枚尚未使用的配对码。</p>
 <div class="inline-controls"><button class="btn ghost" type="button" id="create-desktop-pairing">生成桌面配对码</button></div>
@@ -68,6 +68,7 @@
 <label class="field full">一次性配对码<input id="desktop-pairing-code" type="password" readonly autocomplete="off"></label>
 <div class="inline-controls full"><button class="btn ghost" type="button" id="copy-desktop-pairing">复制配对码</button><button class="btn ghost" type="button" id="show-desktop-pairing">显示配对码</button><span class="help">此处填写个人服务配对码，桌面端不需要平台凭证。</span></div>
 </div>
+<p id="desktop-pairing-status" class="form-feedback" role="status" aria-live="polite" hidden></p>
 </section>
 <section class="card"><details class="raw-details"><summary>查看完整私人状态与身份标识</summary><pre id="state">尚未读取状态。</pre></details></section>
 </section>

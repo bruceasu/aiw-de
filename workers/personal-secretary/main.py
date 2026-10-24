@@ -83,7 +83,9 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
             if not self.valid_host():
                 self.respond(403, {"error": "Invalid UI host"})
                 return
-            files = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "application/javascript"), "/console.css": ("console.css", "text/css")}
+            files = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "application/javascript"),
+                     "/console.css": ("console.css", "text/css"), "/pairing.js": ("pairing.js", "application/javascript"),
+                     "/pairing.css": ("pairing.css", "text/css")}
             if self.path in files:
                 name, mime = files[self.path]
                 self.respond(200, (Path(__file__).parent / "ui" / name).read_text(encoding="utf-8"), mime)

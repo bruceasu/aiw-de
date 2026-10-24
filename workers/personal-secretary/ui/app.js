@@ -2,8 +2,6 @@
 
 let csrf = "";
 let snapshot = null;
-let pairingExpires = 0;
-let pairingTimer;
 const byId = id => document.getElementById(id);
 const formFor = route => document.querySelector(`form[data-route="${route}"]`);
 const rows = key => Array.isArray(snapshot?.[key]) ? snapshot[key] : [];
@@ -56,7 +54,6 @@ function apiError(response, result, route = "") {
   return new Error(result.error || `操作未确认（${response.status}），请刷新状态并核对原请求回执。`);
 }
 function showSession(authenticated) {
-  if (!authenticated) clearPairing();
   byId("pairing-view").hidden = authenticated;
   byId("personal-app").hidden = !authenticated;
 }
@@ -448,39 +445,6 @@ byId("refresh").addEventListener("click", async () => {
   try { await refresh(); feedback("已读取最新私人状态。"); }
   catch (error) { feedback(errorMessage(error), "error", byId("personal-app").hidden); }
   finally { byId("refresh").disabled = false; }
-});
-function clearPairing() {
-  clearTimeout(pairingTimer);
-  pairingExpires = 0;
-  byId("desktop-pairing-code").value = "";
-  byId("desktop-pairing-code").type = "password";
-  byId("show-desktop-pairing").textContent = "显示配对码";
-  byId("desktop-pairing-result").hidden = true;
-}
-byId("desktop-service-origin").textContent = location.origin;
-byId("create-desktop-pairing").addEventListener("click", async () => {
-  byId("create-desktop-pairing").disabled = true;
-  clearPairing();
-  try {
-    const { result, refreshed } = await post("pairing", {});
-    pairingExpires = Date.now() + result.expiresIn * 1000;
-    byId("desktop-pairing-code").value = result.code;
-    byId("desktop-pairing-result").hidden = false;
-    pairingTimer = setTimeout(clearPairing, result.expiresIn * 1000);
-    feedback(refreshed ? "临时配对码已生成，请在桌面秘书中使用。现有会话继续有效。" : "临时配对码已生成，但状态读取失败。请先核对当前会话。", refreshed ? "ok" : "warn", byId("personal-app").hidden);
-  } catch (error) { feedback(errorMessage(error), "error", byId("personal-app").hidden); }
-  finally { byId("create-desktop-pairing").disabled = false; }
-});
-byId("show-desktop-pairing").addEventListener("click", () => {
-  if (Date.now() >= pairingExpires) { clearPairing(); return; }
-  const input = byId("desktop-pairing-code");
-  input.type = input.type === "password" ? "text" : "password";
-  byId("show-desktop-pairing").textContent = input.type === "password" ? "显示配对码" : "隐藏配对码";
-});
-byId("copy-desktop-pairing").addEventListener("click", async () => {
-  if (Date.now() >= pairingExpires) { clearPairing(); feedback("配对码已过期，请生成新码。", "warn"); return; }
-  try { await navigator.clipboard.writeText(byId("desktop-pairing-code").value); feedback("配对码已复制，请在桌面秘书中粘贴。"); }
-  catch (_) { feedback("浏览器无法复制，请点击“显示配对码”后手动复制。", "warn"); }
 });
 window.addEventListener("hashchange", () => switchView(location.hash.slice(1)));
 let pollingState = false;

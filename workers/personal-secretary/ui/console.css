@@ -67,8 +67,6 @@ small, .muted, .help { color: var(--muted); }
 .card { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 24px; }
 .card > h2 + p { margin: 8px 0 20px; font-size: 13px; }
 .card > h2 + form { margin-top: 20px; }
-#desktop-pairing-result { margin-top: 20px; }
-.card > .help + .inline-controls { margin-top: 18px; }
 .section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
 .section-heading p { margin-top: 6px; font-size: 12px; color: var(--muted); }
 .two-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
