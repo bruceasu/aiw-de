@@ -76,7 +76,7 @@ public class AgentFactory {
         try { policy=guard.preparationPolicy(intent.planId(),intent.policyRevision()); }
         catch(SecurityException failure) { return blocked(intent,Error.AUTHORIZATION_REQUIRED,"Confirm or resume the exact active execution policy",next); }
         catch(IllegalStateException failure) { return blocked(intent,Error.SOURCE_CHANGED,"Use a new intent version with the current confirmed policy",next); }
-        if(!policy.budget().configured() || !guard.preparationBudget(policy)) return blocked(intent,Error.BUDGET_CONFIGURATION_REQUIRED,"Configure required limits/pricing or obtain an explicit budget increment",next);
+        if(!guard.preparationBudget(policy)) return blocked(intent,Error.BUDGET_CONFIGURATION_REQUIRED,"Configure required limits/pricing or obtain an explicit budget increment",next);
         for(var tool:ref.toolRequirements()) {
             boolean permitted=policy.rules().stream().anyMatch(rule->rule.tool()==tool && rule.repositoryRef().equals(intent.repositoryRef())
                     && (!Set.of(GuardContract.Tool.GIT,GuardContract.Tool.MODEL).contains(tool) || Set.of("", ".").contains(rule.pathPrefix())));

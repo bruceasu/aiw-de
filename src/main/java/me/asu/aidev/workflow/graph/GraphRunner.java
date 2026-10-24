@@ -255,9 +255,10 @@ public class GraphRunner {
             if(!Set.of(TaskState.COMPLETED,TaskState.FAILED,TaskState.CANCELLED,TaskState.CONTINUED).contains(task.state())||tasks.findLease(task.id()).isPresent()||guard.unknownTask(id))return false;
             if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_attempt WHERE task_id=? AND state IN ('CLAIMED','RUNNING')",Long.class,id)>0)return false;
         }
-        return ledger.snapshot(p.id()).stream().noneMatch(b->number(b,"unknown_count")>0);
+        return !ledger.budgetsEnforced() || ledger.snapshot(p.id()).stream().noneMatch(b->number(b,"unknown_count")>0);
     }
     private void requestGaps(GraphStore.Plan p){
+        if(!ledger.budgetsEnforced())return;
         var policies=repo.jdbc().queryForList("SELECT * FROM execution_policy WHERE plan_id=?",p.id());if(policies.size()!=1||!policies.getFirst().get("owner_id").equals(p.owner()))return;var row=policies.getFirst();
         if(AuthorityRepository.flag(row.get("paused"))||AuthorityRepository.flag(row.get("revoked")))return;
         var policy=repo.decode((String)row.get("policy_json"),GuardContract.Policy.class);if(!policy.budget().configured())return;
@@ -265,8 +266,9 @@ public class GraphRunner {
             long needed=switch(String.valueOf(b.get("dimension"))){case "TIME_MS"->policy.budget().attemptTimeMs();case "COST_MICROS"->policy.budget().attemptCostMicros();case "TASKS"->1L;default->0L;};
             if(needed>0&&!available(b,needed))requestIncrement(p,b,needed,key("gap",p.id()+":"+b.get("dimension")+":"+b.get("limit_value")));}
     }
-    private boolean available(Map<String,Object> b,long needed){return b.get("limit_value")!=null&&number(b,"unknown_count")==0&&BigInteger.valueOf(number(b,"limit_value")).subtract(BigInteger.valueOf(number(b,"used_value"))).subtract(BigInteger.valueOf(number(b,"reserved_value"))).compareTo(BigInteger.valueOf(needed))>=0;}
+    private boolean available(Map<String,Object> b,long needed){return !ledger.budgetsEnforced() || b.get("limit_value")!=null&&number(b,"unknown_count")==0&&BigInteger.valueOf(number(b,"limit_value")).subtract(BigInteger.valueOf(number(b,"used_value"))).subtract(BigInteger.valueOf(number(b,"reserved_value"))).compareTo(BigInteger.valueOf(needed))>=0;}
     private void requestIncrement(GraphStore.Plan p,Map<String,Object> b,long needed,String transition){
+        if(!ledger.budgetsEnforced())return;
         if(b.get("limit_value")==null||number(b,"unknown_count")!=0)return;
         long limit=number(b,"limit_value");long amount=BigInteger.valueOf(number(b,"used_value")).add(BigInteger.valueOf(number(b,"reserved_value"))).add(BigInteger.valueOf(needed)).subtract(BigInteger.valueOf(limit)).max(BigInteger.ONE).longValueExact();
         String request=UUID.nameUUIDFromBytes((p.id()+":"+transition+":"+b.get("dimension")+":"+b.get("loop_id")+":"+limit).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();

@@ -52,7 +52,7 @@ public class ExecutionGuard {
         if(!requiresCreationGuard(command)) return;boundary.lock();
         if(tasks.find(command.id()).isPresent()) return;
         var row=policyRow(command.subjectId());
-        if(!active(row) || AuthorityRepository.flag(row.get("paused")) || !policy(row).budget().configured()) throw new IllegalStateException("Configure and activate the execution policy before creating guarded business tasks");
+        if(!active(row) || AuthorityRepository.flag(row.get("paused")) || !ledger.configurationAllowed(policy(row))) throw new IllegalStateException("Configure and activate the execution policy before creating guarded business tasks");
         if(!ledger.available(command.subjectId(),Dimension.TASKS,"",1)) throw new IllegalStateException("TASK_BUDGET_INCREMENT_REQUIRED");
     }
     public void taskCreated(me.asu.aidev.work.application.CreateWorkTaskCommand command) {
@@ -140,7 +140,7 @@ public class ExecutionGuard {
                 throw new IllegalStateException("FIXED_CONTEXT_CONFLICT");
             return context(taskId);
         }
-        if(number(row,"revision")!=input.policyRevision() || !active(row) || !policy(row).budget().configured()) throw new IllegalStateException("Policy changed, inactive or missing required budget configuration");
+        if(number(row,"revision")!=input.policyRevision() || !active(row) || !ledger.configurationAllowed(policy(row))) throw new IllegalStateException("Policy changed, inactive or missing required budget configuration");
         tasks.lock(new TaskId(taskId));var task=tasks.find(new TaskId(taskId)).orElseThrow();
         if(tasks.attemptNo(task.id())!=0 || !Set.of(TaskState.BLOCKED,TaskState.READY).contains(task.state())
                 || !task.requiredCapabilities().contains(CAPABILITY) || task.repositoryRef()==null || task.baseRevision()==null)
@@ -168,7 +168,7 @@ public class ExecutionGuard {
         if(!managed(task)) return false;
         boundary.lock();var c=contextRow(task);var row=policyRow(String.valueOf(c.get("plan_id")));
         var frozen=repo.decode(String.valueOf(c.get("policy_json")),Policy.class);
-        return Objects.equals(frozen.budget().price(),policy(row).budget().price())
+        return ledger.pricingCompatible(frozen,policy(row))
                 && active(row) && !AuthorityRepository.flag(row.get("paused")) && number(row,"generation")==number(c,"generation")
                 && !unknownTask(task) && ledger.admits(policy(row)) && ledger.admits(frozen) && unchanged(task,c);
     }

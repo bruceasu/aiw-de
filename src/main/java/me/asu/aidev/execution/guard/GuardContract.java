@@ -30,16 +30,17 @@ public final class GuardContract {
     public record Budget(Long timeMs, Long tasks, Long costMicros, long attemptTimeMs, long attemptCostMicros, Price price) {
         public Budget {
             if(timeMs!=null) nonnegative(timeMs); if(tasks!=null) nonnegative(tasks); if(costMicros!=null) nonnegative(costMicros);
-            if(attemptTimeMs<1 || attemptCostMicros<1) throw new IllegalArgumentException("Approved per-attempt reservations required");
+            nonnegative(attemptTimeMs); nonnegative(attemptCostMicros);
         }
-        public boolean configured() { return timeMs!=null && tasks!=null && costMicros!=null && price!=null; }
+        public boolean configured() { return timeMs!=null && tasks!=null && costMicros!=null && price!=null && attemptTimeMs>0 && attemptCostMicros>0; }
     }
     public record Policy(String protocol, String ownerId, String planId, long revision, long expiresAt,
                          List<Rule> rules, List<Command> commands, Budget budget) {
         public Policy {
             GuardContract.protocol(protocol);text(ownerId,128);text(planId,128);
             if(revision<1 || expiresAt<1) throw new IllegalArgumentException("Policy revision/expiry required");
-            rules=List.copyOf(rules);commands=List.copyOf(commands); Objects.requireNonNull(budget);
+            rules=List.copyOf(rules);commands=List.copyOf(commands);
+            if(budget==null) budget=new Budget(null,null,null,0,0,null);
             if(rules.size()>32 || commands.size()>16 || commands.stream().map(Command::id).distinct().count()!=commands.size())
                 throw new IllegalArgumentException("Bounded unique policy rules required");
         }

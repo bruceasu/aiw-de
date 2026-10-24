@@ -14,7 +14,11 @@ public class ExecutionLedger {
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.execution.application.TaskExecutionService> executionService;
     private final AuthorityRepository repo; private final AuthorityBoundary boundary;
-    public ExecutionLedger(AuthorityRepository repo,AuthorityBoundary boundary) { this.repo=repo;this.boundary=boundary; }
+    private final ExecutionAccounting accounting;
+    public ExecutionLedger(AuthorityRepository repo,AuthorityBoundary boundary,ExecutionAccounting accounting) { this.repo=repo;this.boundary=boundary;this.accounting=accounting; }
+    public boolean budgetsEnforced() { return accounting.enforced(); }
+    boolean configurationAllowed(Policy p) { return !budgetsEnforced() || p.budget().configured(); }
+    boolean pricingCompatible(Policy original,Policy current) { return !budgetsEnforced() || Objects.equals(original.budget().price(),current.budget().price()); }
     void configure(Policy policy) {
         var budget=policy.budget();
         limit(policy.planId(),Dimension.TIME_MS,"",budget.timeMs());
@@ -31,6 +35,7 @@ public class ExecutionLedger {
         return repo.jdbc().queryForList("SELECT * FROM execution_budget WHERE plan_id=? ORDER BY dimension,loop_id",plan);
     }
     boolean available(String plan,Dimension d,String loop,long needed) {
+        if(!budgetsEnforced()) return true;
         var rows=repo.jdbc().queryForList("SELECT * FROM execution_budget WHERE plan_id=? AND dimension=? AND loop_id=?",plan,d.name(),loop);
         if(rows.size()!=1) return false;
         var b=rows.getFirst(); if(b.get("limit_value")==null || number(b,"unknown_count")>0) return false;
@@ -38,7 +43,7 @@ public class ExecutionLedger {
                 .subtract(BigInteger.valueOf(number(b,"reserved_value"))).compareTo(BigInteger.valueOf(needed))>=0;
     }
     boolean admits(Policy p) {
-        return p.budget().configured() && available(p.planId(),Dimension.TASKS,"",0)
+        return configurationAllowed(p) && available(p.planId(),Dimension.TASKS,"",0)
                 && available(p.planId(),Dimension.TIME_MS,"",p.budget().attemptTimeMs())
                 && available(p.planId(),Dimension.COST_MICROS,"",p.budget().attemptCostMicros());
     }
@@ -76,7 +81,7 @@ public class ExecutionLedger {
         Long elapsed=AuthorityRepository.flag(meter.get("time_unknown"))?null:meter.get("started_ms")==null?0L:Math.max(0,finishedMs-number(meter,"started_ms"));
         var price=repo.decode(String.valueOf(meter.get("price_json")),Price.class);
         boolean unknown=AuthorityRepository.flag(meter.get("usage_unknown"));
-        Long cost=unknown?null:cost(price,new Usage(number(meter,"input_tokens"),number(meter,"cached_tokens"),number(meter,"output_tokens")));
+        Long cost=meter.get("started_ms")==null?Long.valueOf(0):unknown || price==null?null:Long.valueOf(cost(price,new Usage(number(meter,"input_tokens"),number(meter,"cached_tokens"),number(meter,"output_tokens"))));
         String plan=String.valueOf(meter.get("plan_id"));
         settleDimension(plan,Dimension.TIME_MS,elapsed,number(meter,"reserved_time"));
         // Unknown cost retains its approved exposure. It is never silently refunded or represented as zero.
