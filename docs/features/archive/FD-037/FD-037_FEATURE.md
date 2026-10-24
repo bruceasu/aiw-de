@@ -51,3 +51,5 @@ fragments.html 目前存在其它任务的导航改动，本 FD 只暂存两处�
 - Planner/Worker Session secretary-desktop-20261024-a6529740；来源 FD-037-000002-design-requested；无关联 Issue。
 
 - Worker 双证据：../reports/FD-037-implementation-r1.md/.json；范围静态 diff --check 通过，mvn -o -Dmaven.test.skip=true compile 通过（JDK25，2026-10-24T12:52:44+09:00，无需重编 Java，生产资源复制完成）。实际源码 d1a5cf7；模板其它导航差异未提交，服务/浏览器/真实登录和测试未运行。
+
+**Completed:** 2026-10-24
