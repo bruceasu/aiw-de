@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-049",
+  "source_event": "FD-049-000004-implementation-ready",
+  "human_report": "FD-049-review-r1.md",
+  "data": {
+    "session": "fd049-review-20261024-c652b4",
+    "base_commit": "b40af38",
+    "implementation_commit": "551eb05",
+    "verdict": "passed",
+    "findings": [],
+    "acceptance_supported": [1, 2, 3, 4, 5],
+    "failed_review_count": 0,
+    "checks_reused": ["Worker staged diff check", "Worker current and staged Python in-memory compile"],
+    "not_run": ["tests", "compile", "GUI", "models", "service", "network", "restart", "packaging"],
+    "remaining_risks": ["Actual Windows appearance, performance and tray/close interactions unverified"],
+    "uncommitted_other_work": "not included in passed revision"
+  }
+}

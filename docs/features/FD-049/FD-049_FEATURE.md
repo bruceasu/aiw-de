@@ -1,7 +1,7 @@
 # FD-049: 桌面秘书轻量动画与真实状态表情
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -29,7 +29,7 @@ desktop_pet.py、desktop.py 中精确动画接线修改、desktop-assets/README.
 
 ## TODO
 
-1.1–1.3 已实现；已暂存差异检查及当前/提交区 Python 内存编译通过；等待独立实现审阅。其他任务改动保留在工作区。
+1.1–1.3 已实现；已暂存差异检查及当前/提交区 Python 内存编译通过；独立实现审阅 r1 通过，无阻塞发现。其他任务改动保留在工作区，待 host 核对真实通过 receipt 后完成范围归档。
 
 ## Acceptance
 
@@ -43,6 +43,7 @@ desktop_pet.py、desktop.py 中精确动画接线修改、desktop-assets/README.
 
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
+- 独立 Reviewer：fd049-review-20261024-c652b4；来源 FD-049-000004-implementation-ready。b40af38..551eb05 六文件及相关调用链静态审阅通过，报告 docs/features/reviews/FD-049-review-r1.md 及同名 JSON。未运行测试、编译、GUI 或服务；外观、性能及 Windows 生命周期仍未实测。真实通过以 CLI receipt 为准。
 
 ## Sources
 
