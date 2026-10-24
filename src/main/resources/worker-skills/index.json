@@ -81,6 +81,11 @@
       "references/task-methods.md",
       "references/verification-report.md",
       "references/verification-strategy.md"
+    ],
+    "prototype": [
+      "SKILL.md",
+      "references/logic.md",
+      "references/ui.md"
     ]
   },
   "profiles": {
