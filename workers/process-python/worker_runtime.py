@@ -109,9 +109,10 @@ class Evidence:
                 continue
 
 class Attempt:
-    def __init__(self, config, task, force_event):
-        self.deadline = time.monotonic() + setting("AIW_WORKER_ATTEMPT_TIMEOUT_MS", setting("AIW_AGENT_TASK_TIMEOUT_MS", 900000)) / 1000
-        self.evidence = Evidence(config, task)
+    def __init__(self, config, task, force_event, *, evidence=None, timeout_ms=None):
+        duration = timeout_ms if timeout_ms is not None else setting("AIW_WORKER_ATTEMPT_TIMEOUT_MS", setting("AIW_AGENT_TASK_TIMEOUT_MS", 900000))
+        self.deadline = time.monotonic() + duration / 1000
+        self.evidence = evidence if evidence is not None else Evidence(config, task)
         self.cancelled = threading.Event()
         self.closed = threading.Event()
         self.force_event = force_event

@@ -17,6 +17,7 @@ import webbrowser
 from desktop_client import PersonalClient, PersonalError, personal_origin
 from desktop_pet import PetAnimator
 from desktop_startup import DesktopLease
+from markdown_text import insert_markdown
 
 BG, PANEL, TEXT, MUTED, LINE, ACCENT = "#080e17", "#111c2b", "#e2edf8", "#9aadbf", "#2b4055", "#64e4dc"
 TRANSPARENT = "#010203"
@@ -463,6 +464,11 @@ def main():
         def render_chat(self):
             work_id = self.selected_work(self.chat_work)
             messages = sorted((row for row in self.snapshot.get("messages", []) if row.get("workId") == work_id), key=lambda row: row.get("createdAt", 0))
+            signature = json.dumps([work_id, messages, self.snapshot.get("modelConfigured")], ensure_ascii=False, sort_keys=True)
+            if getattr(self, "chat_render_signature", None) == signature: return
+            follow = getattr(self, "rendered_chat_work", None) != work_id or self.chat_history.yview()[1] >= 0.98
+            previous_scroll = self.chat_history.yview()[0]
+            self.chat_render_signature, self.rendered_chat_work = signature, work_id
             self.chat_history.configure(state="normal")
             self.chat_history.delete("1.0", "end")
             if not work_id:
@@ -474,9 +480,11 @@ def main():
                 for label, key in [("你", "text"), ("个人模型", "reply")]:
                     if row.get(key):
                         self.chat_history.insert("end", f"{label}  {stamp}\n", "speaker")
-                        self.chat_history.insert("end", row[key] + "\n", "body")
+                        if key == "reply": insert_markdown(self.chat_history, row[key])
+                        else: self.chat_history.insert("end", row[key] + "\n", "body")
             self.chat_history.configure(state="disabled")
-            self.chat_history.see("end")
+            if follow: self.chat_history.see("end")
+            else: self.chat_history.yview_moveto(previous_scroll)
 
         def start_conversation(self):
             if self.busy:
@@ -810,11 +818,18 @@ def main():
         def show_settings(self):
             if not self.require_session(): return
             if not getattr(self, "settings_window", None):
-                self.settings_window = self.window("设置模型", "680x660")
+                self.settings_window = self.window("设置模型", "680x820")
                 body = ttk.Frame(self.settings_window, padding=24); body.pack(fill="both", expand=True)
                 ttk.Label(body, text="连接一次，之后直接使用", style="Title.TLabel").pack(anchor="w")
-                ttk.Label(body, text="使用兼容 Chat Completions 的模型服务。日常查询、整理和保存到指定位置无需逐次确认。", wraplength=610, style="Muted.TLabel").pack(anchor="w", pady=12)
+                ttk.Label(body, text="选择与专业 Agent 共用的 Runtime。Codex 使用本机登录；Agents SDK 使用 Responses API 服务与密钥。", wraplength=610, style="Muted.TLabel").pack(anchor="w", pady=12)
                 value = self.snapshot.get("assistant", {})
+                ttk.Label(body, text="Codex 默认从 PATH 启动，沿用本机配置和已有登录，无需填写路径或密钥。", wraplength=610, style="Muted.TLabel").pack(anchor="w", pady=(0, 10))
+                ttk.Label(body, text="Agent Runtime", style="Muted.TLabel").pack(anchor="w")
+                self.settings_provider = tk.StringVar(value=value.get("provider", "codex-app-server"))
+                ttk.Combobox(body, textvariable=self.settings_provider, state="readonly",
+                    values=("codex-app-server", "openai-agents", "chat", "command")).pack(fill="x", pady=(3, 10))
+                self.settings_executable = self.field(body, "Codex 程序路径 · 可留空，Windows 可指定 codex.exe", value.get("executable", ""))
+                self.settings_effort = self.field(body, "推理强度 · 可留空，或 low / medium / high / xhigh", value.get("effort", ""))
                 self.settings_endpoint = self.field(body, "模型服务地址，例如 https://你的服务/v1", value.get("endpoint", ""))
                 self.settings_model = self.field(body, "模型名称", value.get("model", ""))
                 self.settings_key = self.field(body, "模型密钥 · 已保存时留空保持原值", secret=True)
@@ -827,7 +842,8 @@ def main():
             self.activate(self.settings_window)
 
         def save_settings(self):
-            data = {"provider": "chat", "endpoint": self.settings_endpoint.get(), "model": self.settings_model.get(),
+            data = {"provider": self.settings_provider.get(), "endpoint": self.settings_endpoint.get(), "model": self.settings_model.get(),
+                "executable": self.settings_executable.get(), "effort": self.settings_effort.get().strip(),
                 "key": self.settings_key.get(), "roots": [value.strip() for value in self.settings_roots.get().split(";") if value.strip()]}
             def saved(_result):
                 self.settings_key.set("")

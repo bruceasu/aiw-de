@@ -1,0 +1,2 @@
+# Optional: needed only when selecting openai-agents. Codex uses the installed CLI.
+-r ../process-python/requirements.txt

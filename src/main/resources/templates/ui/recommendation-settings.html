@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Recommendation · AI Worker</title><link rel="stylesheet" href="/ui/console.css"></head>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Recommendation · AI Worker</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script></head>
 <body><div class="app"><nav th:replace="~{ui/fragments :: nav('system')}"></nav><main class="main"><header th:replace="~{ui/fragments :: topbar('AI Recommendation','System settings for all Plans')}"></header><div class="content">
 <div th:replace="~{ui/fragments :: flash}"></div><a href="/ui/system">Back to System</a>
 <div class="card section"><h2>Recommendation settings</h2><p class="callout" th:text="${availability.reason}"></p>

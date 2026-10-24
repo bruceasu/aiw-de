@@ -6,7 +6,7 @@
 主要运行入口是 [TypeScript Worker](process-typescript/README.md)；Go/Python 的差异列在后面。
 变量在 **Worker 进程启动时**读取。修改后需停止并重新启动对应 Worker，不能只刷新页面。
 
-FD-020 更新：Python 仅支持 `codex-app-server`（新默认）与 `openai-agents`，删除 SDK 路径；显式 `codex-sdk`、SDK `auto-review` 审批和 `full-access` 沙箱配置会拒绝启动。App Server 使用 `AIW_CODEX_PATH` 指定已安装 CLI、`AIW_CODEX_APPROVAL_MODE=deny-all`（或 `never`）、只读/workspace-write 沙箱；仅 Unix/WSL 准入，native Windows 使用 Agents 路径。旧环境/AI Profiles/冻结请求不会自动迁移。详见 [Python 迁移](process-python/README.md#codex-app-server-migration) 和 [支持矩阵](README.md)。本节优先于下文历史 SDK 差异记录。
+FD-020 更新：Python 仅支持 `codex-app-server`（新默认）与 `openai-agents`，删除 SDK 路径；显式 `codex-sdk`、SDK `auto-review` 审批和 `full-access` 沙箱配置会拒绝启动。App Server 使用 `AIW_CODEX_PATH` 指定已安装 CLI、`AIW_CODEX_APPROVAL_MODE=deny-all`（或 `never`）、只读/workspace-write 沙箱。后续秘书 Runtime 接入已为共享 Python App Server transport 增加原生 Windows Job Object 实现，Unix/WSL 保留进程组；Windows 的真实终止、CLI 协议和生产准入尚未运行验证。旧环境/AI Profiles/冻结请求不会自动迁移。详见 [Python 迁移](process-python/README.md#codex-app-server-migration) 和 [支持矩阵](README.md)。本节优先于下文历史 SDK 差异记录。
 
 ## 设置方法
 

@@ -1,0 +1,27 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-052",
+  "source_event": "FD-052-000004-implementation-ready",
+  "human_report": "FD-052-review-r1.md",
+  "data": {
+    "session": "fd052-reviewer-20261024-b92f43",
+    "worker_session": "gui-pet-tray-20261024-c81e62",
+    "verdict": "verification-passed",
+    "fd_revision": 4,
+    "base_commit": "400426b",
+    "reviewed_commit": "115ee4dcddd20f7030eaabb283fcc74d5887214d",
+    "findings": [],
+    "acceptance": [
+      {"id": 1, "result": "supported by static startup/environment/error paths"},
+      {"id": 2, "result": "supported by dual suppression flags and shared OS lease"},
+      {"id": 3, "result": "supported by initial visibility and automatic-connection branches"},
+      {"id": 4, "result": "supported by fallback, tray recovery and GUI exit paths"},
+      {"id": 5, "result": "supported by independent flags and updated docs"},
+      {"id": 6, "result": "scoped commit inspected; unrelated worktree changes excluded"}
+    ],
+    "checks": [{"command": "git diff 400426b 115ee4d --check", "result": "passed", "exit_code": 0}],
+    "not_run": ["tests", "compile", "GUI", "service", "models", "network", "dependency installation", "packaging", "deployment"],
+    "remaining_risks": ["Real tray recovery and lease competition untested", "Qt dynamic dependencies and subprocess startup untested", "Unrelated uncommitted changes are outside this verdict"]
+  }
+}

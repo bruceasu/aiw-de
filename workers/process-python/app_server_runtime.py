@@ -1,8 +1,8 @@
 """Attempt-scoped Codex App Server stdio adapter. No SDK, login or download.
 
 Protocol reference: the maintained Go and TypeScript App Server adapters in
-this repository. Native Windows is denied until process-tree termination has
-independent evidence. A temporary cwd is not an operating-system sandbox.
+this repository. Windows uses a kill-on-close Job Object. A temporary cwd is
+not an operating-system sandbox.
 """
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import queue
+import re
 import shutil
 import signal
 import subprocess
@@ -19,13 +20,51 @@ import threading
 import time
 
 from ai_preferences import preference_rejected
+from agent_runtime import HOST_ACTION_INSTRUCTIONS
 from worker_runtime import setting
 
 
-def preflight():
+class CodexRpcError(RuntimeError):
+    """Keep the failed method/code, never the raw RPC body or private text."""
+    def __init__(self, code, method, rpc_code=None):
+        super().__init__(code)
+        self.method = method
+        self.rpc_code = rpc_code if type(rpc_code) is int else None
+
+
+def response_text(messages, model_only=False):
+    """Keep Worker final-answer rules; allow a completed host action as commentary."""
+    nonempty = [(text, phase) for text, phase in messages.values() if text.strip()]
+    final = [text for text, phase in nonempty if phase == "final_answer"]
+    if final:
+        return "\n".join(final).strip()
+    unphased = [text for text, phase in nonempty if phase is None]
+    if unphased:
+        return "\n".join(unphased).strip()
+    if model_only:
+        actions = {}
+        for text, phase in nonempty:
+            if phase != "commentary":
+                continue
+            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
+            try:
+                value = json.loads(cleaned)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(value, dict) and isinstance(value.get("action"), str) and value["action"]:
+                actions[json.dumps(value, ensure_ascii=False, sort_keys=True)] = cleaned
+        if len(actions) > 1:
+            raise RuntimeError("CODEX_HOST_ACTION_AMBIGUOUS")
+        if actions:
+            return next(iter(actions.values()))
+    return ""
+
+
+def preflight(path=None):
     if sys.platform == "win32":
-        raise ValueError("CODEX_WINDOWS_PROCESS_TREE_UNVERIFIED: use WSL/Unix or openai-agents")
-    executable = shutil.which(os.getenv("AIW_CODEX_PATH", "codex"))
+        from windows_process import executable
+        return executable(path or os.getenv("AIW_CODEX_PATH", "codex"))
+    executable = shutil.which(path or os.getenv("AIW_CODEX_PATH", "codex"))
     if not executable:
         raise ValueError("CODEX_EXECUTABLE_UNAVAILABLE: configure the installed AIW_CODEX_PATH")
     return executable
@@ -45,12 +84,20 @@ class StdioSession:
         self.sequence = 0
         self.wire_bytes = 0
         self.request_handler = request_handler
-        self.process = subprocess.Popen(
-            argv or [preflight(), "app-server", "--listen", "stdio://", "--config", "sandbox_workspace_write.network_access=false",
-             "--config", "sandbox_read_only.network_access=false"],
-            cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            start_new_session=True, env=environment,
-        )
+        command = argv or [preflight(), "app-server", "--listen", "stdio://", "--config", "sandbox_workspace_write.network_access=false",
+                          "--config", "sandbox_read_only.network_access=false"]
+        self.job = None
+        if sys.platform == "win32":
+            from windows_process import WindowsJob
+            self.job = WindowsJob()
+            try:
+                self.process = self.job.start(command, cwd, environment)
+            except BaseException:
+                self.job.close()
+                raise
+        else:
+            self.process = subprocess.Popen(command, cwd=cwd, stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True, env=environment)
         self.reader = threading.Thread(target=self._read, name="codex-app-server-reader", daemon=True)
         self.reader.start()
 
@@ -140,6 +187,14 @@ class StdioSession:
             return message
 
     def rpc(self, method, params, timeout=30):
+        try:
+            return self._rpc(method, params, timeout)
+        except CodexRpcError:
+            raise
+        except RuntimeError as error:
+            raise CodexRpcError(str(error), method) from None
+
+    def _rpc(self, method, params, timeout=30):
         deadline = min(time.monotonic() + timeout, time.monotonic() + self.attempt.remaining())
         self.sequence += 1
         request_id = self.sequence
@@ -156,7 +211,9 @@ class StdioSession:
             if message.get("error") is not None:
                 if preference_rejected(message["error"]):
                     raise RuntimeError("AI_PREFERENCES_REJECTED")
-                raise RuntimeError("CODEX_RPC_REJECTED")
+                error = message["error"]
+                raise CodexRpcError("CODEX_RPC_REJECTED", method,
+                    error.get("code") if isinstance(error, dict) else None)
             result = message.get("result")
             if not isinstance(result, dict):
                 raise RuntimeError("CODEX_RPC_RESPONSE_INVALID")
@@ -175,17 +232,20 @@ class StdioSession:
         """Confirm local process-group and I/O termination before releasing work."""
         deadline = time.monotonic() + setting("AIW_WORKER_CLEANUP_TIMEOUT_MS", 10000) / 1000
         try:
-            if self.process.pid <= 1 or self.process.pid == os.getpgrp():
-                raise RuntimeError("PROCESS_GROUP_INVALID")
-            try: os.killpg(self.process.pid, signal.SIGKILL)
-            except ProcessLookupError: pass
+            if self.job:
+                self.job.terminate(deadline)
+            else:
+                if self.process.pid <= 1 or self.process.pid == os.getpgrp():
+                    raise RuntimeError("PROCESS_GROUP_INVALID")
+                try: os.killpg(self.process.pid, signal.SIGKILL)
+                except ProcessLookupError: pass
             self.process.wait(timeout=max(0.001, deadline - time.monotonic()))
             self.reader.join(timeout=max(0.001, deadline - time.monotonic()))
             if self.writer:
                 self.writer.join(timeout=max(0.001, deadline - time.monotonic()))
             if self.reader.is_alive() or self.writer and self.writer.is_alive():
                 raise RuntimeError("CODEX_IO_UNSETTLED")
-            while True:
+            while not self.job:
                 try: os.killpg(self.process.pid, 0)
                 except ProcessLookupError: break
                 if time.monotonic() >= deadline:
@@ -197,6 +257,9 @@ class StdioSession:
         except Exception:
             self.attempt.resource_uncertain = True
             raise RuntimeError("PROCESS_TREE_UNCERTAIN") from None
+        finally:
+            if self.job:
+                self.job.close()
 
 
 class CodexAppServerRuntime:
@@ -227,7 +290,14 @@ class CodexAppServerRuntime:
             if not isinstance(args, dict) or set(args) != {"ref", "path", "offset", "limit"} or not getattr(attempt, "skill_files", None): raise RuntimeError("SKILL_FILES_UNAVAILABLE")
             output = json.dumps(attempt.skill_files.read(**args))
             return {"id": message["id"], "result": {"success": True, "contentItems": [{"type": "inputText", "text": output}]}}
-        session = StdioSession(attempt, request.workspace, request_handler=resource_request)
+        model_only = getattr(request, "model_only", False)
+        environment = None
+        argv = None
+        if model_only:
+            environment = {key: value for key, value in os.environ.items() if not key.startswith("AIW_PERSONAL_")}
+            argv = [preflight(request.executable), "app-server", "--listen", "stdio://",
+                    "--config", "sandbox_read_only.network_access=false"]
+        session = StdioSession(attempt, request.workspace, argv=argv, environment=environment, request_handler=resource_request)
         cancel_callback = session.interrupt
         attempt.add_cancel_callback(cancel_callback)
         thread_id = turn_id = None
@@ -244,6 +314,9 @@ class CodexAppServerRuntime:
             params = {"cwd": request.workspace, "ephemeral": True, "approvalPolicy": "never", "sandbox": sandbox,
                       "config": {"sandbox_workspace_write.network_access": False, "sandbox_read_only.network_access": False,
                                  "allow_login_shell": False, "features.shell_snapshot": False}}
+            if model_only:
+                params.update(baseInstructions=HOST_ACTION_INSTRUCTIONS, dynamicTools=[])
+                params["config"].update({"features.shell_tool": False, "features.multi_agent": False, "web_search": "disabled"})
             if getattr(attempt, "skill_files", None):
                 from skill_files import TOOL
                 params["dynamicTools"] = [TOOL]
@@ -265,9 +338,12 @@ class CodexAppServerRuntime:
             turn_policy = {"type": expected_type, "networkAccess": False}
             if sandbox == "workspace-write":
                 turn_policy.update(writableRoots=[request.workspace], excludeSlashTmp=True, excludeTmpdirEnvVar=True)
-            started_turn = session.rpc("turn/start", {"threadId": thread_id, "input": [{"type": "text", "text": request.instruction}],
-                "effort": request.reasoning_effort, "serviceTierForTurn": "default", "cwd": request.workspace,
-                "approvalPolicy": "never", "sandboxPolicy": turn_policy})
+            turn_params = {"threadId": thread_id, "input": [{"type": "text", "text": request.instruction}],
+                "serviceTierForTurn": "default", "cwd": request.workspace,
+                "approvalPolicy": "never", "sandboxPolicy": turn_policy}
+            if request.reasoning_effort:
+                turn_params["effort"] = request.reasoning_effort
+            started_turn = session.rpc("turn/start", turn_params)
             turn_id = started_turn.get("turn", {}).get("id")
             if not isinstance(turn_id, str) or not turn_id:
                 raise RuntimeError("CODEX_TURN_ID_MISSING")
@@ -306,8 +382,21 @@ class CodexAppServerRuntime:
                         if not work_started and preference_rejected(turn.get("error")):
                             raise RuntimeError("AI_PREFERENCES_REJECTED")
                         raise RuntimeError("CODEX_TURN_NOT_COMPLETED")
-                    final = [m[0] for m in messages.values() if m[1] == "final_answer"]
-                    output = "\n".join(final or [m[0] for m in messages.values() if m[1] is None]).strip()
+                    # Some transports include completed items in the terminal
+                    # Turn instead of sending every item/completed notification.
+                    for item in turn.get("items", []) or []:
+                        if not isinstance(item, dict) or item.get("type") != "agentMessage":
+                            continue
+                        key, text = item.get("id"), item.get("text")
+                        if not isinstance(key, str) or not isinstance(text, str) or len(messages) >= 512:
+                            raise RuntimeError("CODEX_MESSAGE_INVALID")
+                        value = (text, item.get("phase"))
+                        if key in messages and messages[key] != value:
+                            raise RuntimeError("CODEX_MESSAGE_CONFLICT")
+                        messages[key] = value
+                        if sum(len(message[0].encode("utf-8")) for message in messages.values()) > limit:
+                            raise RuntimeError("CODEX_OUTPUT_TOO_LARGE")
+                    output = response_text(messages, model_only)
                     if not output:
                         raise RuntimeError("CODEX_OUTPUT_EMPTY")
                     attempt.evidence.record("model-terminal", status="completed", runtime=self.type, usageKnown=False, unknown="token-usage-and-inner-tool-policy")

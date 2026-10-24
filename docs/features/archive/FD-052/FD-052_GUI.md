@@ -1,7 +1,7 @@
 # FD-052: GUI 启动秘书时自动载入托盘桌面宠物
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -53,3 +53,5 @@
 - Session: gui-pet-tray-20261024-c81e62；设计来源 FD-052-000002-design-requested。
 
 - 独立设计证据：docs/features/reviews/FD-052-design-r1.md 及 JSON，ready，无阻塞。
+
+**Completed:** 2026-10-24

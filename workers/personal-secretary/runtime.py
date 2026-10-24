@@ -44,6 +44,7 @@ class Runtime:
         self.cancelled = threading.Event()
         self.process = None
         self.model_lock = threading.Lock()
+        self.last_model_usage = None
         self.settings = AssistantSettings(store.path.parent, model_command)
         self.professional = ProfessionalTasks(self)
         self.daily = DailyAssistant(self, self.settings)
@@ -59,7 +60,17 @@ class Runtime:
 
     def model(self, instruction):
         with self.model_lock:
-            return complete(self.settings, instruction, self.legacy_model)
+            if self.cancelled.is_set():
+                raise PersonalChatError("CHAT_STOPPING", "个人服务正在停止或模型资源待核对，请重新连接运行中的个人服务。")
+            self.last_model_usage = None
+            def evidence(value):
+                self.last_model_usage = value
+            try:
+                return complete(self.settings, instruction, self.legacy_model,
+                    cancelled=self.cancelled, on_evidence=evidence)
+            finally:
+                if self.cancelled.is_set():
+                    self.enabled = False
 
     def legacy_model(self, instruction, command=None):
         command = command or self.model_command

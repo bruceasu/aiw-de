@@ -137,6 +137,7 @@ function apiError(response, result, route = "") {
   return new Error(result.error || `操作未确认（${response.status}），请刷新状态并核对原请求回执。`);
 }
 function showSession(authenticated) {
+  if (!authenticated && byId("work-detail").open) byId("work-detail").close();
   byId("pairing-view").hidden = authenticated;
   byId("personal-app").hidden = !authenticated;
 }
@@ -175,6 +176,93 @@ function detail(value, label = "查看记录详情") {
   element.append(node("summary", "", label), node("pre", "", JSON.stringify(value, null, 2)));
   return element;
 }
+let displayedWork = null;
+const detailLabels = {
+  action: "操作", text: "内容", message: "说明", error: "失败原因", code: "原因代码", completed: "是否完成",
+  path: "文件位置", outputPath: "结果位置", title: "标题", url: "来源地址", query: "查询内容",
+  content: "内容", result: "处理结果", state: "状态", status: "状态", name: "名称", description: "说明",
+  source: "来源", sources: "参考来源", written: "已写入文件", steps: "处理步骤", workId: "工作标识",
+  planId: "平台计划", taskId: "平台任务", requestId: "原请求标识", revision: "版本", kind: "类型",
+  createdAt: "创建时间", updatedAt: "更新时间", dueMs: "安排时间", timeZone: "时区",
+  reason: "原因", summary: "摘要", output: "输出", files: "文件", size: "大小", bytes: "字节数",
+  tool: "工具", arguments: "参数", success: "是否成功", excerpt: "摘录", exists: "是否存在"
+};
+const actionLabels = {
+  finish: "生成回复", search: "搜索资料", web_search: "搜索公开资料", fetch: "读取网页", read_url: "读取网页",
+  read_file: "读取文件", write_file: "写入文件", list_files: "列出文件", delete_file: "删除文件",
+  delegate_task: "提交专业任务", read: "读取资料", write: "保存资料", mkdir: "创建目录"
+};
+function readableValue(value, key = "") {
+  if (value === null || value === undefined || value === "") return node("span", "muted", "未记录");
+  if (Array.isArray(value)) {
+    if (!value.length) return node("span", "muted", "无");
+    const list = node("ol", "detail-list");
+    for (const entry of value) { const item = node("li"); item.append(readableValue(entry)); list.append(item); }
+    return list;
+  }
+  if (typeof value === "object") {
+    const list = node("dl", "detail-fields");
+    for (const [field, entry] of Object.entries(value)) {
+      const content = node("dd"); content.append(readableValue(entry, field));
+      list.append(node("dt", "", detailLabels[field] || field), content);
+    }
+    return list;
+  }
+  if (["state", "status"].includes(key)) return badge(String(value));
+  const text = typeof value === "boolean" ? (value ? "是" : "否") :
+    ["createdAt", "updatedAt", "dueMs"].includes(key) ? dateLabel(value) :
+    key === "action" ? actionLabels[value] || String(value) : String(value);
+  return node("p", "detail-text", text);
+}
+function workDetailSection(title, value, className = "") {
+  const section = node("section", "work-detail-section " + className);
+  section.append(node("h3", "", title), readableValue(value));
+  return section;
+}
+function showWorkDetails(id) {
+  const work = rows("work").find(item => item.id === id);
+  if (!work) { feedback("这项工作已不在当前列表，请刷新后核对。", "warn"); return; }
+  const jobs = rows("decisions").filter(item => item.kind === "DAILY_PLAN" && item.workId === id);
+  const failures = rows("messages").filter(item => item.workId === id && item.state === "FAILED");
+  displayedWork = { id, signature: JSON.stringify({ work, jobs, failures }) };
+  const content = byId("work-detail-content");
+  content.replaceChildren();
+  byId("work-detail-title").textContent = work.title || "工作记录详情";
+  const summary = node("div", "record-meta");
+  summary.append(badge(work.state), node("span", "", "版本 " + work.revision));
+  content.append(summary);
+  if (work.report) content.append(workDetailSection(work.state === "FAILED" ? "失败原因" : "最新处理结果",
+    work.report, work.state === "FAILED" ? "detail-failure" : ""));
+  content.append(workDetailSection("工作说明", work.body || "未填写说明"));
+  content.append(workDetailSection("安排与结果位置", { dueMs: work.dueMs, timeZone: work.timeZone, outputPath: work.outputPath }));
+  if (failures.length) content.append(workDetailSection("失败的对话", failures.map(item => ({
+    createdAt: item.createdAt, text: item.text, error: item.reply || "未记录具体原因"
+  })), "detail-failure"));
+  if (!jobs.length) content.append(workDetailSection("执行记录", "尚无本地日常处理步骤；平台工作请通过卡片中的平台入口查看。"));
+  for (const [index, job] of [...jobs].reverse().entries()) {
+    const section = workDetailSection("执行记录 " + (jobs.length - index), { state: job.state,
+      ...(job.message ? { message: job.message } : {}) }, job.state === "FAILED" ? "detail-failure" : "");
+    if (job.steps?.length) section.append(workDetailSection("处理步骤", job.steps));
+    if (job.written?.length) section.append(workDetailSection("已保存文件", job.written));
+    if (job.sources?.length) section.append(workDetailSection("参考来源", job.sources));
+    content.append(section);
+  }
+  const raw = detail(work, "原始数据（排查时使用）");
+  content.append(raw);
+  byId("work-detail-note").textContent = "显示当前记录，阅读期间保持不变；可随时更新详情。";
+  content.scrollTop = 0;
+  if (!byId("work-detail").open) byId("work-detail").showModal();
+}
+function updateWorkDetailNotice() {
+  if (!displayedWork || !byId("work-detail").open) return;
+  const work = rows("work").find(item => item.id === displayedWork.id);
+  const jobs = rows("decisions").filter(item => item.kind === "DAILY_PLAN" && item.workId === displayedWork.id);
+  const failures = rows("messages").filter(item => item.workId === displayedWork.id && item.state === "FAILED");
+  const text = !work ? "工作已移除，当前显示的是打开时的记录。" :
+    displayedWork.signature !== JSON.stringify({ work, jobs, failures }) ? "有新记录，点击“更新详情”查看；当前内容保持不变。" :
+    "显示当前记录，阅读期间保持不变；可随时更新详情。";
+  if (byId("work-detail-note").textContent !== text) byId("work-detail-note").textContent = text;
+}
 function dateLabel(value) {
   if (!value) return "尚未安排";
   const date = new Date(value);
@@ -206,7 +294,10 @@ function workCard(work, compact = false) {
   item.append(heading);
   if (work.body) item.append(node("p", "record-excerpt", work.body.slice(0, compact ? 90 : 220)));
   if (work.report) {
-    item.append(node("p", "record-excerpt", work.report.message), node("p", "help", "报告更新于 " + dateLabel(work.report.updatedAt)));
+    const report = node("div", work.state === "FAILED" ? "work-report detail-failure" : "work-report");
+    if (work.state === "FAILED") report.append(node("strong", "", "失败原因"));
+    report.append(node("p", "record-excerpt", work.report.message), node("p", "help", "报告更新于 " + dateLabel(work.report.updatedAt)));
+    item.append(report);
   }
   const meta = node("div", "record-meta");
   meta.append(node("span", "", `版本 ${work.revision}`), node("span", "", dateLabel(work.dueMs)));
@@ -222,7 +313,7 @@ function workCard(work, compact = false) {
     actions.append(link);
   }
   item.append(meta, actions);
-  if (!compact) item.append(detail(work));
+  item.append(button("查看工作详情", () => showWorkDetails(work.id)));
   return item;
 }
 function updateSchedule() {
@@ -254,10 +345,96 @@ function renderWorks() {
   updateSchedule();
   byId("personal-plan-options").replaceChildren(...[...new Set(work.map(item => item.planId).filter(Boolean))].map(id => new Option(id, id)));
 }
+function markdownInline(target, text, depth = 0) {
+  if (depth > 4) { target.append(document.createTextNode(text)); return; }
+  const pattern = /`([^`\n]+)`|\*\*([^*\n]+)\*\*|__([^_\n]+)__|\*([^*\n]+)\*|\[([^\]\n]+)\]\(([^\s)]+)\)/g;
+  let offset = 0;
+  for (const match of text.matchAll(pattern)) {
+    target.append(document.createTextNode(text.slice(offset, match.index)));
+    if (match[1] !== undefined) target.append(node("code", "", match[1]));
+    else if (match[5] !== undefined) {
+      let url;
+      try { url = new URL(match[6]); } catch (_) { /* Keep unsupported links as text. */ }
+      if (url && ["https:", "http:"].includes(url.protocol) && !url.username && !url.password) {
+        const link = node("a", "", match[5]);
+        link.href = url.href; link.target = "_blank"; link.rel = "noopener noreferrer";
+        target.append(link);
+      } else target.append(document.createTextNode(match[0]));
+    } else {
+      const formatted = node(match[4] !== undefined ? "em" : "strong");
+      markdownInline(formatted, match[2] ?? match[3] ?? match[4], depth + 1);
+      target.append(formatted);
+    }
+    offset = match.index + match[0].length;
+  }
+  target.append(document.createTextNode(text.slice(offset)));
+}
+function markdownContent(text) {
+  // Build DOM with text nodes only: raw HTML is never interpreted, images never fetched.
+  const root = node("div", "markdown-content");
+  const lines = String(text).replace(/\r\n?/g, "\n").split("\n");
+  const cells = line => line.trim().replace(/^\||\|$/g, "").split("|").map(cell => cell.trim());
+  const separator = line => line?.includes("|") && cells(line).every(cell => /^:?-{3,}:?$/.test(cell));
+  const block = line => /^(?:\s*$|\s*`{3,}|\s*~{3,}|#{1,6}\s|\s*[-+*]\s|\s*\d+[.)]\s|>\s?)/.test(line);
+  for (let i = 0; i < lines.length;) {
+    const line = lines[i];
+    if (!line.trim()) { i++; continue; }
+    const fence = /^\s*(`{3,}|~{3,})([^\s]*)\s*$/.exec(line);
+    if (fence) {
+      const code = []; i++;
+      const closing = new RegExp("^\\s*" + fence[1][0] + "{" + fence[1].length + ",}\\s*$");
+      while (i < lines.length && !closing.test(lines[i])) code.push(lines[i++]);
+      if (i < lines.length) i++;
+      const pre = node("pre"); pre.append(node("code", "", code.join("\n"))); root.append(pre); continue;
+    }
+    const heading = /^(#{1,6})\s+(.+?)(?:\s+#+)?$/.exec(line);
+    if (heading) { const title = node("h" + Math.min(heading[1].length + 1, 6)); markdownInline(title, heading[2]); root.append(title); i++; continue; }
+    if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { root.append(node("hr")); i++; continue; }
+    if (line.includes("|") && separator(lines[i + 1])) {
+      const table = node("table"), head = node("thead"), header = node("tr"), body = node("tbody");
+      const columns = cells(line);
+      for (const value of columns) { const cell = node("th"); cell.scope = "col"; markdownInline(cell, value); header.append(cell); }
+      head.append(header); i += 2;
+      while (i < lines.length && lines[i].trim() && lines[i].includes("|")) {
+        const row = node("tr"), values = cells(lines[i++]);
+        for (let index = 0; index < columns.length; index++) { const cell = node("td"); markdownInline(cell, values[index] || ""); row.append(cell); }
+        body.append(row);
+      }
+      table.append(head, body); const wrapper = node("div", "table-wrap"); wrapper.append(table); root.append(wrapper); continue;
+    }
+    const listItem = /^\s*([-+*]|\d+[.)])\s+(.+)$/.exec(line);
+    if (listItem) {
+      const ordered = /^\d/.test(listItem[1]), list = node(ordered ? "ol" : "ul");
+      if (ordered) list.start = Number.parseInt(listItem[1], 10);
+      while (i < lines.length) {
+        const entry = /^\s*([-+*]|\d+[.)])\s+(.+)$/.exec(lines[i]);
+        if (!entry || /^\d/.test(entry[1]) !== ordered) break;
+        const item = node("li"); markdownInline(item, entry[2]); list.append(item); i++;
+      }
+      root.append(list); continue;
+    }
+    if (/^>\s?/.test(line)) {
+      const quote = node("blockquote"), values = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) values.push(lines[i++].replace(/^>\s?/, ""));
+      markdownInline(quote, values.join("\n")); root.append(quote); continue;
+    }
+    const paragraph = node("p"), values = [line]; i++;
+    while (i < lines.length && !block(lines[i]) && !separator(lines[i + 1])) values.push(lines[i++]);
+    markdownInline(paragraph, values.join("\n")); root.append(paragraph);
+  }
+  return root;
+}
+let chatRenderKey = "";
+let renderedChatWork = null;
 function renderChat() {
   const target = byId("chat-messages");
   const workId = formFor("chat").elements.workId.value;
   const messages = rows("messages").filter(item => item.workId === workId).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  const key = JSON.stringify({ workId, messages });
+  if (key === chatRenderKey) return;
+  const follow = renderedChatWork !== workId || target.scrollHeight - target.scrollTop - target.clientHeight < 48;
+  const previousScroll = target.scrollTop;
+  chatRenderKey = key; renderedChatWork = workId;
   target.replaceChildren();
   if (!workId) empty(target, "直接开始对话", "输入需要帮助的事，无需先创建工作。");
   else if (!messages.length) empty(target, "从一个问题开始", "写下问题或想法，秘书会在日常范围内直接处理。");
@@ -265,11 +442,13 @@ function renderChat() {
     for (const [kind, label, text] of [["user", "你", message.text], ["assistant", "个人模型", message.reply]]) {
       if (text === undefined || text === null || text === "") continue;
       const item = node("article", "chat-message " + kind);
-      item.append(node("small", "", label + (message.createdAt ? " · " + dateLabel(message.createdAt) : "")), node("div", "chat-bubble", text));
+      const bubble = node("div", "chat-bubble");
+      if (kind === "assistant") bubble.append(markdownContent(text)); else bubble.textContent = text;
+      item.append(node("small", "", label + (message.createdAt ? " · " + dateLabel(message.createdAt) : "")), bubble);
       target.append(item);
     }
   }
-  target.scrollTop = target.scrollHeight;
+  target.scrollTop = follow ? target.scrollHeight : previousScroll;
 }
 function renderPolicies() {
   const target = byId("policy-list");
@@ -408,7 +587,7 @@ async function refresh() {
   csrf = state.csrf;
   delete state.csrf;
   snapshot = state;
-  render();
+  if (byId("work-detail").open) updateWorkDetailNotice(); else render();
   showSession(true);
   byId("pairing-status").hidden = true;
 }
@@ -442,6 +621,8 @@ function renderAssistant() {
     form.elements.provider.value = settings.provider;
     form.elements.endpoint.value = settings.endpoint;
     form.elements.model.value = settings.model;
+    form.elements.executable.value = settings.executable || "";
+    form.elements.effort.value = settings.effort || "";
     form.elements.roots.value = settings.roots.join("\n");
     form.elements.key.placeholder = settings.hasKey ? "密钥已保存；留空保持原值" : "本机无认证模型可留空";
     settingsLoaded = true;
@@ -652,6 +833,20 @@ byId("refresh").addEventListener("click", async () => {
   try { await refresh(); feedback("已读取最新私人状态。"); }
   catch (error) { feedback(errorMessage(error), "error", byId("personal-app").hidden); }
   finally { byId("refresh").disabled = false; }
+});
+byId("close-work-detail").addEventListener("click", () => byId("work-detail").close());
+byId("work-detail").addEventListener("close", () => {
+  displayedWork = null;
+  byId("work-detail-content").replaceChildren();
+  if (snapshot) render();
+});
+byId("update-work-detail").addEventListener("click", async () => {
+  const id = displayedWork?.id;
+  if (!id) return;
+  byId("update-work-detail").disabled = true;
+  try { await refresh(); if (byId("work-detail").open && displayedWork?.id === id) showWorkDetails(id); }
+  catch (error) { byId("work-detail-note").textContent = "更新失败，保留当前详情。" + errorMessage(error); }
+  finally { byId("update-work-detail").disabled = false; }
 });
 window.addEventListener("hashchange", () => switchView(location.hash.slice(1)));
 let pollingState = false;

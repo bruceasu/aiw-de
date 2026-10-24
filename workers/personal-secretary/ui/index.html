@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>我的秘书 · AIW:DE</title><link rel="stylesheet" href="/console.css"><script src="/app.js" defer></script></head>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>我的秘书 · AIW:DE</title><link rel="stylesheet" href="/console.css"><link rel="stylesheet" href="/appearance.css"><script src="/appearance.js"></script><script src="/app.js" defer></script></head>
 <body>
 <section id="pairing-view" class="pairing-screen" aria-labelledby="pairing-title">
 <div class="pairing-layout"><div class="pairing-intro"><div class="brand"><span class="brand-mark">AIW</span><div><strong>我的秘书</strong><small>PERSONAL WORKSPACE</small></div></div><span class="eyebrow">属于你的工作空间</span><h1>把想法、工作与安排<br>放在一起。</h1><p>私人对话、资料和策略保存在当前个人服务中。与平台协作时，由你选择并确认提交的内容。</p><div class="pairing-features"><span>私人对话</span><span>工作安排</span><span>明确授权</span></div></div>
@@ -63,10 +63,13 @@
 <section id="view-setup" class="view" role="tabpanel" aria-labelledby="tab-setup" data-view="setup" hidden>
 <div class="panel-heading"><h2>首次设置</h2><p>连接一次模型，之后自动恢复。平台身份、Plan 和 Worker 不属于日常必填项。</p></div>
 <section class="card"><h2>模型连接</h2><form class="form-grid" data-route="settings">
-<label class="field">连接方式<select name="provider"><option value="chat">兼容 Chat Completions 的模型服务</option><option value="command">自定义模型程序（高级）</option></select></label>
+<label class="field">Agent Runtime<select name="provider"><option value="codex-app-server">Codex app-server（本机，支持 Windows）</option><option value="openai-agents">OpenAI Agents SDK（Responses API）</option><option value="chat">兼容 Chat Completions 的模型服务（原有方式）</option><option value="command">自定义模型程序（高级）</option></select></label>
+<details class="full"><summary>Codex 程序路径（高级，可选）</summary><label class="field">程序路径<input name="executable" placeholder="默认从 PATH 查找 codex，无需填写"></label></details>
+<label class="field">推理强度<select name="effort"><option value="">使用默认值</option><option value="none">none</option><option value="minimal">minimal</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option><option value="xhigh">xhigh</option></select></label>
 <label class="field">服务地址<input name="endpoint" placeholder="https://你的模型服务/v1" autocomplete="url"></label>
 <label class="field">模型名称<input name="model" placeholder="填写服务提供的模型名称"></label>
 <label class="field">模型密钥<input name="key" type="password" autocomplete="new-password" placeholder="本机模型可留空；已保存时留空表示保持原值"></label>
+<p class="help full">默认从 PATH 启动 Codex，沿用本机配置和已有登录，无需填写路径、模型、服务地址或密钥。Agents SDK 使用 Responses API，需先安装对应 Python 依赖并填写模型与密钥；服务地址留空使用 OpenAI。</p>
 <label class="field full">常用资料目录（可选，每行一个）<textarea name="roots" placeholder="留空也可以；工作中明确指定的文件位置已在该次授权内。"></textarea></label>
 <details class="full"><summary>自定义程序参数（高级）</summary><label class="field">程序 argv JSON<textarea name="command" placeholder='["模型程序路径", "参数"]'></textarea></label></details>
 <p class="help full">默认允许聊天、公开信息查询、资料整理和定时处理。文件写入限于你指定的位置或资料目录；覆盖前留存备份。代码、命令、付款和发布不在默认工具范围内。密钥留在本机，不进入私人备份包。模型可能按用量计费，每项工作最多 12 次模型请求，不会自动购买或充值。</p>
@@ -91,4 +94,8 @@
 <section class="card"><details class="raw-details"><summary>查看完整私人状态与身份标识</summary><pre id="state">尚未读取状态。</pre></details></section>
 </section>
 </div></main></div><datalist id="personal-plan-options"></datalist><noscript><p class="noscript-note">此私人工作空间需要启用 JavaScript 后才能配对、查看状态和提交操作。</p></noscript>
+<dialog id="work-detail" class="work-detail" aria-labelledby="work-detail-title">
+<header class="section-heading"><div><h2 id="work-detail-title">工作记录详情</h2><p id="work-detail-note" class="help" role="status">阅读期间内容保持不变。</p></div><div class="record-actions"><button type="button" class="btn ghost" id="update-work-detail">更新详情</button><button type="button" class="btn ghost" id="close-work-detail" autofocus>关闭</button></div></header>
+<div id="work-detail-content"></div>
+</dialog>
 </body></html>

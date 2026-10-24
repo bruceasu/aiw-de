@@ -43,6 +43,7 @@ def main():
     app.setOrganizationName("AIW")
     app.setQuitOnLastWindowClosed(False)
     image_path = Path(__file__).parent / "desktop-assets/secretary.png"
+    portrait_root = Path(__file__).resolve().parents[2] / "src/main/resources/static/ui"
     icon = QIcon(str(image_path))
     app.setWindowIcon(icon)
     trusted = QUrl(origin)
@@ -147,10 +148,16 @@ def main():
         def __init__(self):
             super().__init__(None, Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnTopHint)
             self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, not args.opaque)
+            self.setAutoFillBackground(False)
             self.setFixedSize(310, 454)
             self.setWindowTitle("秘书伙伴")
             self.theme = "hud"; self.summary = "正在连接个人服务"; self.counts = (0, 0, 0)
-            self.image = QPixmap(str(image_path)).scaled(258, 386, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            self.portraits = {}
+            for theme in ("hud", "rpg"):
+                portrait = QPixmap(str(portrait_root / f"appearance-{theme}.png"))
+                if portrait.isNull(): portrait = QPixmap(str(image_path))
+                self.portraits[theme] = portrait.scaled(282, 352, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            self.image = self.portraits[self.theme]
             self.press = None; self.dragged = False
             self.buttons = []
             screen = app.primaryScreen().availableGeometry()
@@ -158,6 +165,7 @@ def main():
             self.update_theme()
 
         def update_theme(self):
+            self.image = self.portraits[self.theme]
             accent = "#e8c88f" if self.theme == "rpg" else "#64e4dc"
             radius = "9px" if self.theme == "rpg" else "2px"
             for button in self.buttons:
@@ -166,6 +174,11 @@ def main():
 
         def paintEvent(self, _event):
             painter = QPainter(self); painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            # Clear the alpha buffer on every repaint. No panel behind the PET:
+            # the PNG alpha and the desktop remain visible around the character.
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+            painter.fillRect(self.rect(), QColor(0, 0, 0, 0))
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
             if args.opaque: painter.fillRect(self.rect(), QColor("#080e17"))
             accent = QColor("#e8c88f" if self.theme == "rpg" else "#64e4dc")
             panel = QColor("#191f2e" if self.theme == "rpg" else "#101e2c")
@@ -173,13 +186,14 @@ def main():
             radius = 16 if self.theme == "rpg" else 3
             painter.drawRoundedRect(QRectF(8, 10, 294, 42), radius, radius)
             painter.setFont(QFont("Microsoft YaHei UI", 11, QFont.Weight.Bold)); painter.drawText(QRectF(20, 10, 270, 42), Qt.AlignmentFlag.AlignCenter, "◇ 秘书伙伴" if self.theme == "rpg" else "SECRETARY / HUD")
-            painter.setPen(QPen(QColor("#66573d" if self.theme == "rpg" else "#295361"), 1))
-            painter.setBrush(QColor("#0b1420")); painter.drawRoundedRect(QRectF(28, 72, 254, 338), radius, radius)
-            if self.theme == "hud":
-                for y in range(90, 410, 24): painter.drawLine(30, y, 280, y)
-            else:
-                painter.setPen(QPen(accent, 1)); painter.drawEllipse(QRectF(60, 102, 190, 244))
             painter.drawPixmap((self.width() - self.image.width()) // 2, 54, self.image)
+            painter.setPen(QPen(accent, 1)); painter.setBrush(panel)
+            painter.drawRoundedRect(QRectF(12, 406, 286, 40), radius, radius)
+            painter.setFont(QFont("Microsoft YaHei UI", 9))
+            painter.drawText(QRectF(20, 408, 270, 18), Qt.AlignmentFlag.AlignCenter, self.summary)
+            running, waiting, done = self.counts
+            painter.setFont(QFont("Microsoft YaHei UI", 8))
+            painter.drawText(QRectF(20, 426, 270, 16), Qt.AlignmentFlag.AlignCenter, f"进行中 {running}   待确认 {waiting}   已完成 {done}")
 
         def mousePressEvent(self, event):
             if event.button() == Qt.MouseButton.LeftButton:

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Task details · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Task details · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script></head>
 <body><div class="app" th:attr="data-auto-refresh=${taskActive ? 8 : 0}">
 <nav th:replace="~{ui/fragments :: nav('plans')}"></nav><main class="main">
 <header th:replace="~{ui/fragments :: topbar('Task details','Execution history, failures and recovery')}"></header>

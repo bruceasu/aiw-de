@@ -75,7 +75,7 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
             pass  # No URL, credential, private request or reply logging.
 
         def respond(self, status, body, mime="application/json"):
-            payload = body.encode() if isinstance(body, str) else encode(body).encode()
+            payload = body if isinstance(body, bytes) else body.encode() if isinstance(body, str) else encode(body).encode()
             self.send_response(status)
             self.send_header("Content-Type", mime + "; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
@@ -142,6 +142,15 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
             files = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "application/javascript"),
                      "/console.css": ("console.css", "text/css"), "/pairing.js": ("pairing.js", "application/javascript"),
                      "/pairing.css": ("pairing.css", "text/css")}
+            appearance = {"/appearance.js": "application/javascript", "/appearance.css": "text/css", "/appearance-secretary.png": "image/png",
+                          "/appearance-hud.png": "image/png", "/appearance-rpg.png": "image/png"}
+            if self.path in appearance:
+                asset = Path(__file__).resolve().parents[2] / "src/main/resources/static/ui" / self.path[1:]
+                if not asset.is_file():
+                    self.respond(404, {"error": "Shared appearance asset is missing"})
+                    return
+                self.respond(200, asset.read_bytes(), appearance[self.path])
+                return
             if self.path in files:
                 name, mime = files[self.path]
                 self.respond(200, (Path(__file__).parent / "ui" / name).read_text(encoding="utf-8"), mime)

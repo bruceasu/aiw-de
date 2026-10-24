@@ -6,9 +6,50 @@
 
 ## 日常使用（默认）
 
-需要 Python 3.11+，无需安装第三方 Python 包。Windows 用户在秘书目录运行 `./start-desktop.ps1`，GUI 会自动连接本机个人服务；尚未运行时会尝试在后台启动。Web 用户运行 `./start.ps1`，Linux/macOS 使用 `bash ./start.sh`。无参数即可使用日常模式，不需要 Owner ID、Worker ID、平台凭证或手工创建 Plan。现有用户首次升级可先使用原来的启动命令启动一次，记住原私库身份，以后直接无参数启动；旧数据库不会被搬移、合并或删除。
+### 是否需要安装 Qt？
 
-首次打开“设置模型”（Web 中为“设置”），填写兼容 Chat Completions 的服务地址、模型名称和密钥。服务地址填写 API 基址，程序会追加 `/chat/completions`；本机无认证模型可不填密钥。可选择常用资料目录，也可留空、在具体工作中指定文件位置。保存一次后自动恢复，无需设置环境变量或重启 GUI。模型服务可能按用量计费；每项工作最多 12 次模型请求，不自动购买、充值或增加额度。高级用户仍可使用原来的模型程序 argv 适配器。
+**不需要单独安装 Qt Desktop、Qt Creator 或 Qt SDK。** 通过 pip 安装的 PySide6 预编译包已包含 Qt 运行库，详见 [Qt 官方安装说明](https://doc.qt.io/qtforpython-6/gettingstarted.html)。
+
+| 使用方式 | Qt 依赖 | HUD / RPG 双主题 |
+| --- | --- | --- |
+| 浏览器中的 Web 控制台与秘书 | 不需要 Qt | 支持 |
+| 新版桌面秘书 | 安装 `requirements-desktop.txt` | 支持 |
+| 原 Windows Tk 桌面秘书 | 不需要 Qt；Python 需包含 Tkinter | 使用原界面，不支持新版双主题 |
+
+在本目录执行以下命令安装新版桌面依赖并启动，安装和启动应使用同一 Python 环境：
+
+```powershell
+python -m pip install -r requirements-desktop.txt
+.\start-desktop.ps1
+```
+
+暂时不安装 PySide6 时，可以运行 `.\start.ps1` 使用浏览器界面，或运行 `.\start-desktop.ps1 -LegacyTk` 使用原 Windows 桌面。缺少 PySide6 只影响新版桌面启动，不影响浏览器使用。Linux 的图形运行库要求与当前验证范围见 [双主题说明](../../docs/APPEARANCE.md)。
+
+### 界面与工作方式
+
+Web 与新的 Qt 桌面工作台提供 **HUD / RPG / 自动** 双主题，页面顶部可随时切换。自动默认白天 08:00 使用 HUD、夜间 19:00 使用 RPG，“时间设置”可以调整。Windows 先在当前 Python 环境安装 `requirements-desktop.txt` 再运行 `start-desktop.ps1`；Linux 使用 `sh start-desktop.sh`。Qt 人物悬浮窗与工作台复用 Web 功能、提供托盘和真实工作计数。透明效果异常可使用 `-Opaque` / `--opaque`。原 Windows Tk 入口为 `start-desktop.ps1 -LegacyTk`。安装和平台限制见 [双主题说明](../../docs/APPEARANCE.md)。
+
+Web 与桌面聊天会将模型回复中的常用 Markdown 显示为格式化文本：标题、加粗、斜体、列表、引用与代码块；Web 还提供表格和 HTTP/HTTPS 链接，桌面表格以等宽文本展示，链接显示来源地址。用户输入仍按原文展示。不会解释原始 HTML、执行代码或自动加载图片。支持常用语法子集，不保证完整 CommonMark 或复杂嵌套。内容不变时自动刷新不会重建聊天；阅读旧消息时新回复不会强制滚到底部。
+
+工具请求使用 JSON 动作；最终回答可以是普通文字，在搜索或读取工具执行后也同样接受。普通回答仍需通过原有结果校验：要求保存文件时须有实际写入记录，天气、汇率和换汇等当前信息须有查询来源，未完成的专业任务不能仅凭文字标为完成。格式损坏的 JSON 工具指令不会执行；这类接入错误不再要求用户换模型或简化问题。换汇回答应给出查询日期、汇率来源、计算过程及手续费或点差的影响。
+
+Codex 负责决定下一步，秘书执行宿主搜索与文件工具，并把结果交回模型。模型回合确认完成后，Runtime 优先读取最终回复，也接受仅包含单个 JSON 动作的 `commentary`，并兼容终态 `turn.items` 携带的文本；普通进度说明不会被当作完成结果，多个不同动作不会执行。当前每个模型步骤仍启动独立 app-server 并握手，因此多步工作有额外启动开销；未测量实际耗时。
+
+联网与文件操作由秘书的宿主工具执行：模型返回 `search`、`read_url`、`read_file`、`write_file` 或 `delete_file` JSON 动作，秘书按既有范围与确认规则执行，再把结果放入下一轮 `steps`。这不要求安装额外插件，也不依赖 Codex 原生工具。Codex 与 Agents SDK 共用该宿主动作说明；不会因原生工具列表为空而禁用宿主工具。连接失败会显示对应步骤、固定错误码及可用的 JSON-RPC 数字错误码，不显示原始协议正文、私人上下文或凭证。
+
+需要 Python 3.11+；个人服务与浏览器界面不需要第三方 Python 包，Qt 桌面另需 `requirements-desktop.txt`。Windows 用户在秘书目录运行 `./start-desktop.ps1`，GUI 会自动连接本机个人服务；尚未运行时会尝试在后台启动。Linux Qt 桌面使用 `sh ./start-desktop.sh`。Web 用户运行 `./start.ps1`，Linux/macOS 使用 `bash ./start.sh`。无参数即可使用日常模式，不需要 Owner ID、Worker ID、平台凭证或手工创建 Plan。现有用户首次升级可先使用原来的启动命令启动一次，记住原私库身份，以后直接无参数启动；旧数据库不会被搬移、合并或删除。
+
+默认从 PATH 启动 Codex，沿用本机配置和已有登录，无需先填写模型设置。切换后端或覆盖模型时，打开“设置模型”（Web 中为“设置”）：
+
+- `codex-app-server`：默认后端，复用 `../process-python` 的 Codex Runtime。通过 PATH（或已有的 `AIW_CODEX_PATH`）找到已安装的 Codex，沿用本机 `CODEX_HOME`、配置和登录，无需专用目录或重复登录。模型、服务地址和密钥可以留空；程序路径仅为高级可选覆盖项。Windows npm 的 `codex.cmd` / `codex.ps1` 会解析到已安装的原生程序，不通过 cmd/PowerShell 执行 shim。
+- `openai-agents`：复用同一 Python Worker 的 OpenAI Agents SDK Runtime，使用 Responses API。先在运行个人服务的 Python 环境中安装本目录 `requirements.txt`；填写模型、服务地址和密钥。地址留空使用 `https://api.openai.com/v1`，密钥也可由 `OPENAI_API_KEY` 提供。不会自动安装依赖。
+- 原有 Chat Completions 和自定义 argv 程序仍可显式选择，旧设置不会自动切换后端。Chat 服务地址仍会追加 `/chat/completions`。
+
+运行和分发时保留相邻的 `process-python` 目录。秘书与专业 Agent 共用 Runtime、RPC、期限和取消实现；私人上下文、业务工具、文件授权和平台身份留在秘书。每次模型调用使用独立生命周期和临时工作目录，已有私库负责对话连续性。SDK 不提供原生文件/命令工具；Codex 沿用本机配置，当前请求使用只读沙箱、不接受审批，并关闭 shell、网页搜索及多 Agent。秘书不再生成或检查专用 permission profile，不修改用户配置文件。旧设置中的 `codexHome` 不再参与调用，原专用目录不会被自动删除。如果之前按旧说明在启动终端设置了临时 `CODEX_HOME`，请从平时能直接运行并已登录 Codex 的正常终端重启秘书。
+
+原生 Windows 使用不可 breakaway、kill-on-close 的 Job Object：bootstrap 纳入 Job 后才启动 Codex；正常完成、超时或取消均终止整个 Job 并检查活动进程归零，终止结果不明则暂停秘书。不能把父进程退出或 taskkill 的返回码当作进程树终止证据。此为源码实现说明，真实 Windows 取消竞争、CLI 协议、登录刷新与模型调用尚未运行验证。
+
+可选择常用资料目录，也可留空、在具体工作中指定文件位置。保存一次后自动恢复，无需重启 GUI。模型服务可能按用量计费；每项工作最多 12 次模型请求，不自动购买、充值或增加额度。一次共享 Runtime 调用最多 120 秒，不自动重试或切换提供方。可使用 `../../scripts/compile-secretary-runtime.ps1` 仅编译本次涉及的 Python 与浏览器 JS，不导入 SDK、不启动服务或访问网络。
 
 直接在 GUI 或 Web 对话框说出需要帮助的事，不必先创建工作。保存工作时填写“做什么”和可选的结果文件位置，然后点击“现在处理”或安排时间。Web 的“安排这项工作”默认选择“马上执行”，无需填写时间；只有选择“定时执行”才要求填写未来时间，并按浏览器当前时区处理。两种方式都保留工作版本校验与原有重复任务保护；秘书暂停时需先继续工作，提交成功不等于已执行完成。秘书在本机自动建立日常计划并执行公开信息查询、资料整理、授权文件读取和文本保存；Web 每五秒、GUI 每三秒刷新状态，界面不必等待整个模型调用完成。无后台服务运行期间不能到点执行；定时任务仅在约定的执行分钟内启动，超过一分钟窗口即标记已错过，不自动补跑。马上执行任务在同一次服务运行中正常排队无需反复确认；若停机前尚未开始，服务恢复后需选择现在执行、改期或取消。运行中断的工作先核对已有结果，不自动重放。旧安排没有执行方式记录时也先等待确认，不推测原意。Web 的“待你确认”列出这些工作，桌面“安排执行与恢复确认”显示工作报告，并提供现在处理、取消或重新定时入口。
 
@@ -147,6 +188,8 @@ Web 再次配对使用原有的 `ui/app.js` 和 `ui/console.css`，避免旧进�
 决定与 outbox 同一私库事务提交。请求 ID 和原信封保持不变；响应丢失先查原回执，仅在确认不存在时重发原信封。UNKNOWN 只查询，不重放、不退款、不换 ID。平台人工对账需固定 attempt 和明确证据；不会自动启动重试。私人数据库/平台实例标识不匹配时停止处理。备份包含私人记录、outbox 与回执副本，包含业务参数但不包含平台凭证或登录会话；恢复后仍须人工重新启用。
 
 ## English operations
+
+Web 的“查看工作详情”以独立窗口展示工作说明、最新结果或失败原因、安排、已保存文件及本地处理步骤；原始 JSON 收在“原始数据（排查时使用）”中。打开详情后后台仍读取最新状态，但不会替换正在阅读的内容；有变化时提示“有新记录”，点击“更新详情”后才切换。关闭详情后列表显示当前状态。失败原因在工作卡片中也会单独突出显示。
 
 Run this Worker in the user's own environment. Use Python 3.11 or newer. No extra package is needed. Sign in to the platform and select **Register a new secretary** on `/ui/authority`. The platform creates short, unique IDs and links them to your signed-in account. Select the secretary and copy the start command. You do not need to remember or type the IDs. Existing IDs stay valid. Select an existing secretary to rotate its credential. Set the credential in `AIW_PERSONAL_CREDENTIAL` or enter it at the start script's hidden prompt; never put it in commands, URLs or model prompts.
 

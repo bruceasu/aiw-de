@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" th:content="${csrfToken}"><meta name="question-can-operate" th:content="${questionCanOperate}"><meta name="question-can-approve" th:content="${questionCanApprove}"><meta name="question-accounting-enforced" th:content="${questionAccountingEnforced}">
-<title>工作问题与人工控制 · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/questions.css?v=inbox-1"><script src="/ui/questions.js?v=inbox-1" defer></script><script src="/ui/question-controls.js?v=inbox-1" defer></script></head>
+<title>工作问题与人工控制 · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/questions.css?v=inbox-1"><script src="/ui/questions.js?v=inbox-1" defer></script><script src="/ui/question-controls.js?v=inbox-1" defer></script></head>
 <body><div class="app question-page"><nav th:replace="~{ui/fragments :: nav('questions')}"></nav><main class="main">
 <header th:replace="~{ui/fragments :: topbar('工作问题与人工控制','集中回答 Worker 的问题，查看工作状态，必要时人工介入。')}"></header>
 <div class="content question-content">

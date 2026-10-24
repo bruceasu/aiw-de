@@ -17,7 +17,7 @@ os.environ.setdefault("OPENAI_AGENTS_DONT_LOG_MODEL_DATA", "1")
 os.environ.setdefault("OPENAI_AGENTS_DONT_LOG_TOOL_DATA", "1")
 from agents import RunContextWrapper, function_tool
 from ai_preferences import preference_rejected
-from agent_runtime import AgentRunRequest
+from agent_runtime import AgentRunRequest, HOST_ACTION_INSTRUCTIONS
 from agents.models.interface import Model
 
 
@@ -105,7 +105,9 @@ class OpenAIApiRuntime:
         from context_window import Sources
         sources = Sources()
         request.attempt.context_sources = sources
-        if request.broker is not None:
+        if getattr(request, "model_only", False):
+            tools = []
+        elif request.broker is not None:
             request.broker.context_sources = sources
             from guarded_openai_tools import tools as broker_tools
             tools = broker_tools(request.broker)
@@ -113,11 +115,14 @@ class OpenAIApiRuntime:
         else:
             from skill_files import openai_tools as resource_tools
             tools = resource_tools(request) if request.profile.primary_skill == "goal-discussion" else _create_tools(context)
-        tools.extend(_context_tools(request, sources))
+        if not getattr(request, "model_only", False):
+            tools.extend(_context_tools(request, sources))
         guarded_model = _GuardedModel(base_model, request, self.config,
                                       {tool.name: tool.params_json_schema for tool in tools}, sources)
         settings = _model_preferences(request, self.config)
-        agent = Agent(name=request.profile.name, instructions=request.instruction,
+        instructions = (HOST_ACTION_INSTRUCTIONS + "\n" + request.instruction
+                        if getattr(request, "model_only", False) else request.instruction)
+        agent = Agent(name=request.profile.name, instructions=instructions,
                       model=guarded_model, tools=tools, model_settings=ModelSettings(**settings))
         run_config = RunConfig(tracing_disabled=True, model_provider=provider)
         on_session(f"api:{request.attempt.evidence.identity['attemptId']}", None)
