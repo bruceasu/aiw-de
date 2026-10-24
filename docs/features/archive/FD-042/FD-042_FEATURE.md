@@ -73,3 +73,5 @@ C:/green/bin/setup-jdk25.ps1后mvn -o '-Dmaven.test.skip=true' compile一次成�
 - WebConsoleSecurityService/Interceptor/WebMvcConfiguration/ApiRoutes，WebConsoleAuthController、login模板、相邻测试与application.yaml、当前安全/配置指南。
 - Worker与个人授权机器路径保持现有分离；仅静态核对，脏AuthorityHttpConfiguration不作为本FD提交。
 - Planner/Worker Session：platform-login-20261024-37ba34c3；真实来源FD-042-000002-design-requested。
+
+**Completed:** 2026-10-24
