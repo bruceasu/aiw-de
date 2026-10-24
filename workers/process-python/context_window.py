@@ -50,15 +50,19 @@ class Sources:
 
     def model_result(self, value, max_bytes=24576):
         """Keep successful small tool shapes; large results have a valid envelope, never broken JSON."""
-        text = encoded(value); size = len(text.encode("utf-8"))
+        text = value if isinstance(value, str) else encoded(value); size = len(text.encode("utf-8"))
         if size <= max_bytes: return text
         source = self.add(text, "tool", required=False)
         facts = {key: item for key, item in value.items() if isinstance(item, (bool, int, float)) or item is None
                  or key in {"sha256", "sourceDigest", "resultDigest", "encoding", "path"}} if isinstance(value, dict) else {}
-        return encoded({"content": "The operation returned a large result. Read the original with read_context_source before relying on omitted content."
+        preview = {"content": "The operation returned a large result. Read the original with read_context_source before relying on omitted content."
                         if source else "The operation returned a large result. Full output could not be retained; do not repeat an effect to recover output.",
                         "sourceId": source, "sha256": sha(text), "bytes": size, "fullOutputAvailable": source is not None,
-                        "modelPreviewComplete": False, "facts": facts})
+                        "modelPreviewComplete": False, "facts": facts}
+        if len(encoded(preview).encode("utf-8")) > max_bytes:
+            preview.pop("facts");preview["content"] = "Tool completed; inspect its source. Do not repeat an effect for missing output."
+        if len(encoded(preview).encode("utf-8")) > max_bytes: raise RuntimeError("TOOL_PREVIEW_ENVELOPE_TOO_SMALL")
+        return encoded(preview)
 
     def clear(self):
         with self.lock:

@@ -18,9 +18,13 @@ class OperatorInputs:
 
     def _post(self, action, batch_id=None, mode=None, operation_id=None, batch_digest=None):
         self.broker.attempt.check()
-        value = self.broker.client._post(self.broker.base + "/execution-context/read?kind=workbench", {
-            "lease": self.broker.lease, "action": action, "batchId": batch_id, "mode": mode,
-            "operationId": operation_id, "batchDigest": batch_digest})
+        try:
+            value = self.broker.client._post(self.broker.base + "/execution-context/read?kind=workbench", {
+                "lease": self.broker.lease, "action": action, "batchId": batch_id, "mode": mode,
+                "operationId": operation_id, "batchDigest": batch_digest})
+        except Exception:
+            self.broker.attempt.resource_uncertain = True
+            raise
         if value.get("protocol") != PROTOCOL: raise RuntimeError("WORKBENCH_PROTOCOL_UNSUPPORTED")
         return value
 

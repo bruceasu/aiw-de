@@ -457,10 +457,11 @@ async def _invoke_tool(context: ToolContext, name: str, path: str, args: dict[st
         with context.lock:
             result = operation()
         attempt.check()
-        rendered = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False)
-        result = _bounded_text(rendered, context.max_output_bytes)
+        rendered = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False, separators=(",", ":"))
+        sources = getattr(attempt, "context_sources", None)
+        result = sources.model_result(result, min(24576, context.max_output_bytes)) if sources else _bounded_text(rendered, context.max_output_bytes)
         context.failures.pop(key, None)
-        attempt.evidence.record("tool-terminal", callId=call_id, tool=name, status="ok", complete=True, truncated=False,
+        attempt.evidence.record("tool-terminal", callId=call_id, tool=name, status="ok", complete=result == rendered, truncated=result != rendered,
                                 outputBytes=len(result.encode()), durationMs=int((time.monotonic() - started) * 1000), sideEffect="completed" if name in {"write", "edit", "edit_many"} else "none")
         return result
     except Exception as error:
