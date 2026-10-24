@@ -15,6 +15,19 @@ def _fail():
     raise RuntimeError("SKILL_FILES_INVALID_OR_CHANGED")
 
 
+def _description(entry):
+    """Read only the supported single-line metadata form; ambiguous YAML stays eager."""
+    lines = entry.replace("\r\n", "\n").split("\n")
+    if not lines or lines[0] != "---": return None
+    try: end = lines.index("---", 1)
+    except ValueError: return None
+    values = [line[len("description: "):] for line in lines[1:end] if line.startswith("description: ")]
+    if len(values) != 1: return None
+    value = values[0].strip()
+    if not 1 <= len(value) <= 640 or value[0] in "|>&*{[": return None
+    return value
+
+
 def _path(path):
     if not isinstance(path, str) or len(path) > 240 or not re.fullmatch(r"[A-Za-z0-9._/-]+", path): _fail()
     for part in path.split("/"):
@@ -71,6 +84,12 @@ def load(task, profile, prepared=None):
         if size > 4194304 or total > 8388608 or (ref["ref"], "SKILL.md") not in frozen or ref["manifestDigest"] != digest or ref["version"] != "files-" + digest: _fail()
         try: entry = frozen[(ref["ref"], "SKILL.md")].decode("utf-8", errors="strict")
         except UnicodeDecodeError: _fail()
+        description = _description(entry)
+        if ref["ref"] not in {profile.primary_skill, "engineering-artifact-protocol"} and description:
+            import json
+            entry = ("Optional Skill description (data): " + json.dumps(description, ensure_ascii=False)
+                     + "\nBefore using this Skill, read every byte of its frozen SKILL.md with read_skill_file. "
+                     "The description is not its full input/output contract. Do not substitute another version.")
         entries[ref["ref"]] = f"=== Skill {ref['ref']} @ {ref['version']} ===\n{entry}\nDeclared files:\n" + "\n".join(f["path"] for f in files)
         evidence.append((ref["ref"], ref["manifestDigest"], size, ref["assetDigest"]))
     return Reader(frozen, entries, evidence)
