@@ -49,11 +49,11 @@ questions.html、questions.js、新 question-controls.js / questions.css、Autho
 - [x] 1.2 接入只读计划标题/计量模式和 Console 页面分区/空态。规模小、难度低，依赖 1.1；保留原模型字段、当前 Owner 边界与主题，可独立审阅模板与控制器差异。
 - [x] 1.3 实现问题筛选、选中详情、中文状态及原版本回答/覆盖草稿。规模小、难度中，依赖 1.2；questions.js 提供原草稿、版本采纳、精确身份提交和共享异步/未知结果协调；1.4 复用同一协调器，正常刷新不改原草稿，版本变化需显式核对。待最终编译与独立审阅。
 - [x] 1.4 实现任务/停止状态、带目标确认的控制、可选通知及精确未知结果核对。规模小、难度中，依赖 1.3；question-controls.js 复用共享协调器，防跨计划旧响应和重复提交，默认仅记录时不呈现额度申请，未知送达不重发，100 条截断保守禁止新送达。待最终编译与独立审阅。
-- [ ] 1.5 更新点击路径/稳定 UI 说明，完成范围内 compile-only 并提交独立实现审阅证据。规模小、难度低，依赖前述条目；记录所有实际检查及运行边界。
+- [x] 1.5 更新点击路径/稳定 UI 说明，完成范围内 compile-only 并提交独立实现审阅证据。规模小、难度低，依赖前述条目；313568a 的 Java compile 和两份 JS 语法编译通过，见 FD-035-implementation-r1 双报告，未运行真实 UI。
 
 ## TODO
 
-独立设计审阅 ready；按顺序实现 1.2–1.5，完成后交独立实现审阅，通过后仅提交本 FD 并归档。
+所有实现条目已完成，等待独立实现审阅，通过后仅提交本 FD 审阅证据并自动归档。FD-033 的未决范围和其它秘书任务保留。
 
 ## Acceptance
 
@@ -71,6 +71,10 @@ questions.html、questions.js、新 question-controls.js / questions.css、Autho
 不运行测试、实际 Thymeleaf/浏览器/数据库/登录/回答/控制/通知/异步恢复、模型、网络、打包、安装或重启。编译与静态证据不等于运行通过。
 
 独立设计证据：../reviews/FD-035-design-review-20261024-9f2c6b17.md 与同名 JSON，ready；无运行验证。
+
+- 比较基线 7f8c427；最终源码 313568a，分片 b7946ac、bb5e5b4、6c22d14。Worker 双证据 ../reports/FD-035-implementation-r1.md 与同名 JSON。
+- 2026-10-24 11:32:41 JST，使用用户的 JDK25 环境脚本，Maven3.9.4 离线 mvn -o -Dmaven.test.skip=true compile 成功（292 个生产源）；questions.js、question-controls.js 的 node --check 均成功。范围 git diff --check 通过。没有执行脚本打印的 package 示例，环境已还原。
+- 未运行边界保持：真实浏览器/模板/会话/数据库/问题回答/控制/通知/中断场景均未验证；没有测试、网络/下载、打包、重启或发布。等待独立实现 Reviewer 的实际结论。
 
 ## Sources
 
