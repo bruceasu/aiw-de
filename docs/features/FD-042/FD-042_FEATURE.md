@@ -1,7 +1,7 @@
 # FD-042: 平台页面统一强制登录
 
-**Status:** Design
-**Revision:** 2
+**Status:** Open
+**Revision:** 3
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -23,7 +23,7 @@ WebConsoleSecurityInterceptor合并重复的持久锁存/普通登录判断，�
 
 兼容与上线：旧auth.enabled及AIW_WEB_CONSOLE_AUTH_ENABLED不再控制访问，即使外部旧配置为false也需登录。原四参数Java构造接口保留用于兼容，但首boolean明确忽略。旧免登录actor数据仍保留原Owner/actor，不迁移、不删除、不自动认领；旧匿名来源operator授权不能继续被解释为有效真实授权。未配置密码时只展示登录提示，不创建默认密码或绕过认证。回退旧版本会恢复其可选认证语义：回退前必须对旧版本显式设置AIW_WEB_CONSOLE_AUTH_ENABLED=true，保留用户名/非空密码，并由部署方确认匿名请求仍被拒绝，不能直接沿用false或缺省。正常部署/重启或回退另行处理，本FD不操作环境或读取.env秘密。
 
-修改现有安全回归断言及Operations/Approval夹具，使其用测试凭据真实登录；仅源编辑，不运行测试。更新当前中英文配置/快速启动/安全指南及相关稳定规范，历史FD证据不改。
+修改现有安全回归断言及Operations/Approval及只读S1夹具，使其用测试凭据真实登录；仅源编辑，不运行测试。更新当前中英文配置/快速启动/安全指南及相关稳定规范，历史FD证据不改。
 
 ## Scope
 
@@ -32,14 +32,14 @@ WebConsoleSecurityInterceptor合并重复的持久锁存/普通登录判断，�
 ## Work items
 
 - [x] 1.1 完成登录统一策略、机器边界/旧数据/回退与配置兼容并取得独立设计审阅。规模小、难度中，无依赖；明确用户新政策优先，不需重复确认。
-- [ ] 1.2 移除Service匿名认证/ADMIN/actor授权和配置开关，保持构造/真实账号摘要兼容。规模小、难度低，依赖1.1；false/空会话也不能获得已认证状态或高权限。
-- [ ] 1.3 统一拦截器页面/API未登录分流与原query返回，保留登录资源/上下文感知模板URL/CSRF/角色和机器分离。规模小、难度中，依赖1.2；无开放的新业务页面。
-- [ ] 1.4 更新安全回归与受影响的Operations/Approval测试夹具，使用真实测试登录；不执行或编译测试。规模小、难度中，依赖1.2–1.3；旧开关false不能绕过、登录资源/返回目标（含contextPath/query）和未登录API拒绝都有断言。
-- [ ] 1.5 更新当前说明与稳定规格，完成一次范围静态检查及离线生产compile-only，提交双报告后独立fd-review。规模小、难度低，依赖全部实现；未运行项明确。
+- [x] 1.2 移除Service匿名认证/ADMIN/actor授权和配置开关，保持构造/真实账号摘要兼容。规模小、难度低，依赖1.1；false/空会话也不能获得已认证状态或高权限。
+- [x] 1.3 统一拦截器页面/API未登录分流与原query返回，保留登录资源/上下文感知模板URL/CSRF/角色和机器分离。规模小、难度中，依赖1.2；无开放的新业务页面。
+- [x] 1.4 更新安全回归与受影响的Operations/Approval及只读S1测试夹具，使用真实测试登录；不执行或编译测试。规模小、难度中，依赖1.2–1.3；旧开关false不能绕过、登录资源/返回目标（含contextPath/query）和未登录API拒绝都有断言。
+- [x] 1.5 更新当前说明与稳定规格，完成一次范围静态检查及离线生产compile-only，提交双报告后独立fd-review。规模小、难度低，依赖全部实现；未运行项明确。
 
 ## TODO
 
-独立设计审阅ready；contextPath登录模板和旧版本回退两处已补齐。继续实现、源码回归更新、静态/编译及独立实现审阅后范围归档。
+WI1.1–1.5已完成。等待独立实现审阅，真实通过后由宿主核对回执与范围并归档；未部署或重启。
 
 ## Acceptance
 
@@ -51,7 +51,13 @@ WebConsoleSecurityInterceptor合并重复的持久锁存/普通登录判断，�
 
 ## Verification
 
-默认一次范围diff --check及只读配置/匿名分支/路由/调用者/文档/测试源码检查，随后C:/green/bin/setup-jdk25.ps1和mvn -o '-Dmaven.test.skip=true' compile，只编译生产源码，不执行/编译测试或下载。独立设计和实现静态审阅各按有界Skill授权进行，不派额外代理。未运行测试、服务/数据库、浏览器/HTTP、模型/Worker、打包/部署/重启；静态和compile不作运行通过证据。没有读取或打印.env、密码或机器凭证。独立设计报告：[Markdown](../reviews/FD-042-design-r1.md)及同名JSON，结论ready，原两处发现已解决。
+实现1f5eb6a，比较基线a654adf，共20源码/测试/配置/当前说明和规格文件。Worker双报告：[Markdown](../reports/FD-042-implementation-r1.md) / [JSON](../reports/FD-042-implementation-r1.json)。一次范围diff --check及只读匿名分支/退役配置/context-aware登录URL/原路由与登录Controller/当前文档检查通过；测试只编辑和静态审阅。
+
+C:/green/bin/setup-jdk25.ps1后mvn -o '-Dmaven.test.skip=true' compile一次成功，2026-10-24T15:05:55+09:00，资源2+143、javac25编译300生产源；环境恢复。没有测试编译/执行或依赖下载，未执行脚本打印的打包/启动示例。
+
+未运行真实HTTP/浏览器/会话/Thymeleaf、机器lease、数据库、服务/网络、模型/Worker、打包/部署/重启/回退；静态/生产编译/回归源码不当作运行通过。没有读取.env或实际密码/token；其他任务脏改动排除。
+
+独立设计[r1](../reviews/FD-042-design-r1.md)及同名JSON为ready，contextPath模板与旧版本回退两个问题已解决。没有其他未决设计Gate。独立实现审阅待补。
 
 ## Sources
 
