@@ -6,6 +6,7 @@
 <div class="content workflow-page" id="goal-workshop">
 <p class="callout">Goals belong to your console account. With authentication disabled, browsers share local-console. Worker tasks and plans handed off for execution use the existing operator-visible console.</p>
 <p id="goal-status" role="status" aria-live="polite"></p>
+<div id="goal-deletion-check" class="callout" role="status" aria-live="polite" hidden><p id="goal-deletion-state"></p><button type="button" id="goal-check-deletion" class="btn ghost">核对操作结果</button></div>
 <div class="goal-layout"><aside class="card"><div class="section-title"><h2>Goals</h2><button class="btn primary" id="goal-new">New goal</button></div><div class="goal-list-filters" role="group" aria-label="目标列表"><button type="button" class="btn ghost small-btn" id="goal-show-active" aria-pressed="true" aria-controls="goal-list">当前目标</button><button type="button" class="btn ghost small-btn" id="goal-show-deleted" aria-pressed="false" aria-controls="goal-list">已删除</button><button type="button" class="btn ghost small-btn" id="goal-refresh-list">刷新</button></div><p class="help">仅列出最近 100 个目标。删除后可在“已删除”中恢复，已创建的执行计划保留。</p><div id="goal-list"></div></aside>
 <section id="goal-empty" class="card"><h2>选择一个目标</h2><p class="help">在左侧打开目标，或直接删除不再需要的目标。“已删除”中可以恢复。</p></section>
 <section id="goal-detail" hidden><div class="card"><div class="section-title"><h2>Current goal</h2><span class="pill neutral" id="goal-revision"></span></div>

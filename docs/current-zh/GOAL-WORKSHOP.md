@@ -10,6 +10,8 @@
 
 删除是可恢复操作：在“已删除”中点击“恢复”，再到“当前目标”打开。原目标内容与正式版本保留，旧待处理讨论回复不再写回；已创建的执行计划和工作区不会连带删除。列表数量只统计接口返回的最近 100 个目标，不代表全部历史。可用“刷新”核对当前状态；请求结果未确认时不会自动重复删除或恢复，明确成功后刷新失败会单独提示。
 
+删除只有提交前的确认弹窗，没有提交后的审批或第二次确认。服务器拒绝时显示错误原因；连接中断、服务器异常或返回内容无法读取时，页面显示“结果暂时未知”及“核对操作结果”按钮。该按钮按原目标读取当前状态，不会再次删除或恢复，也不依赖最近 100 条列表。读取失败可再次核对；核对成功显示当前已删除/未删除状态，并保留详情中的本地编辑。若详情仍打开，请先复制未保存文本，再重新加载已保存版本。读到的状态只代表读取时的结果，无法证明具体是哪一次请求造成。
+
 ## Worker 与后端
 
 独立角色 `goal-discussion` 已在 TypeScript、Python、Go 三包实现，共享角色与 Skill 契约。TS/Python 用 `AIW_PROCESS_ROLE=goal-discussion`（TS 的 start:all/管理器 all 也包含它），Go 用 `profiles/goal-discussion.toml` 启动。默认 OpenAI backend 接受 TS/Python 的 `openai-agents` 和 Go 的 `openai-api`；显式 Codex backend 接受 TS/Go 的 `codex-cli`/`codex-app-server` 及 Python 的 `codex-app-server`。Python 已删除 `codex-sdk`，需显式迁移旧配置。TS/Python 的原生 Windows Codex 路径拒绝启动，使用 Unix/WSL 或 Agents。完整 [角色/语言/后端矩阵](../../workers/README.md) 明确源码支持与未验证限制。没有在线匹配 Worker 时显示原因，人工编辑仍可用。

@@ -4,6 +4,7 @@
   const csrf = document.querySelector('meta[name="csrf-token"]').content;
   let current = null, data = null, dirty = false, selectedSources = new Set(), busy = false;
   let goals = [], showDeleted = false;
+  let pendingDeletion = null;
   const editorDirty = new Set();
   const status = message => { $('goal-status').textContent = message; };
   const node = (tag, text, className) => { const n = document.createElement(tag); if (text != null) n.textContent = text; if (className) n.className = className; return n; };
@@ -16,12 +17,20 @@
     if (response.status === 401 || response.redirected && new URL(response.url).pathname === '/ui/login') {
       const error = new Error('Your console session is unavailable. Copy any unsaved changes before signing in again.');
       error.loginRequired = true;
+      error.httpStatus = 401;
       throw error;
     }
     const type = response.headers.get('content-type') || '';
-    if (!type.includes('application/json')) throw new Error('Console session expired or request was rejected. Reload the page.');
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || `Request failed (${response.status})`);
+    const failure = message => {
+      const error = new Error(message);
+      error.httpStatus = response.status;
+      return error;
+    };
+    if (!type.includes('application/json')) throw failure(`服务器返回了无法读取的响应（HTTP ${response.status}），请刷新页面核对登录状态。`);
+    let result;
+    try { result = await response.json(); }
+    catch (_) { throw failure(`服务器响应无法解析（HTTP ${response.status}）。`); }
+    if (!response.ok) throw failure(result?.message || result?.error || result?.detail || `请求失败（HTTP ${response.status}）。`);
     return result;
   }
   async function run(action) {
@@ -81,15 +90,29 @@
   });
   async function changeDeleted(draft, deleted) {
     clean();
+    if (pendingDeletion) throw new Error('请先使用“核对操作结果”读取上一次删除或恢复的当前状态。无需再次确认或提交。');
     const unsent = current?.id === draft.id && $('goal-message').value.trim() ? '\n当前未发送的消息也将放弃。' : '';
     if (deleted && !window.confirm(`删除目标“${draft.title}”？\n可在“已删除”中恢复。旧的待处理讨论回复不再采用，已创建的执行计划继续保留。${unsent}`)) return;
+    $('goal-deletion-check').hidden = true;
     const controls = [...$('goal-workshop').querySelectorAll('input,textarea,select,button')].map(el => [el, el.disabled]);
     controls.forEach(([el]) => { el.disabled = true; });
     let saved;
     try {
       saved = await api(`/${encodeURIComponent(draft.id)}/${deleted ? 'delete' : 'restore'}`, {revision:draft.revision});
+      if (saved?.id !== draft.id || saved.deleted !== deleted || !Number.isSafeInteger(saved.revision)) {
+        throw new Error('服务器未返回有效的目标状态。');
+      }
     } catch (error) {
-      error.message = `${deleted ? '删除' : '恢复'}请求未确认：${error.message} 请先刷新核对，不要重复提交。`;
+      const action = deleted ? '删除' : '恢复';
+      if (error.httpStatus >= 400 && error.httpStatus < 500) {
+        error.message = `${action}请求被拒绝：${error.message} 无需再次确认；请处理错误后刷新目标状态。`;
+      } else {
+        pendingDeletion = {id:draft.id, title:draft.title};
+        $('goal-deletion-check').hidden = false;
+        $('goal-check-deletion').hidden = false;
+        $('goal-deletion-state').textContent = `暂时无法判断“${draft.title}”是否已${action}。无需再次确认，请点击“核对操作结果”；核对只读取状态，不会重复提交。`;
+        error.message = `${action}结果暂时未知：${error.message} 请使用下方“核对操作结果”。`;
+      }
       throw error;
     } finally {
       controls.forEach(([el, disabled]) => { el.disabled = disabled; });
@@ -101,6 +124,20 @@
     try { await list(); status(message); }
     catch (error) { status(`${message} 列表刷新失败：${error.message}`); }
   }
+  $('goal-check-deletion').onclick = () => run(async () => {
+    if (!pendingDeletion) return;
+    const target = pendingDeletion;
+    const result = await api(`/${encodeURIComponent(target.id)}`);
+    const draft = result?.draft;
+    if (draft?.id !== target.id || typeof draft.deleted !== 'boolean' || !Number.isSafeInteger(draft.revision)) {
+      throw new Error('未能读取有效的目标状态，请稍后再次核对；无需重复提交删除或恢复。');
+    }
+    goals = goals.map(row => row.id === draft.id ? draft : row);
+    pendingDeletion = null;
+    $('goal-check-deletion').hidden = true;
+    $('goal-deletion-state').textContent = `已读取“${target.title}”的当前状态：${draft.deleted ? '已删除，可在“已删除”中恢复。' : '未删除，可在“当前目标”中打开。'}没有待确认的删除审批。${current?.id === draft.id ? ' 当前详情保留原有内容；请先复制未保存的编辑，再重新加载已保存版本。' : ''}`;
+    status('目标状态核对完成，未重复提交任何操作。');
+  });
   async function load(id) {
     data = await api(`/${encodeURIComponent(id)}`); current = data.draft; dirty = false; editorDirty.clear();
     showDeleted = current.deleted;
