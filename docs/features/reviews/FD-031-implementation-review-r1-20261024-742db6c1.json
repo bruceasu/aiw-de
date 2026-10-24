@@ -1,0 +1,91 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-031",
+  "source_event": "FD-031-000005-implementation-ready",
+  "human_report": "FD-031-implementation-review-r1-20261024-742db6c1.md",
+  "data": {
+    "reviewer_session": "fd031-reviewer-20261024-742db6c1",
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "fd_revision": 5,
+    "reviewed_commit": "da3d738bbfb98106cc9eeafcc5257fe3b56a3bb2",
+    "worker_evidence_commit": "bd16961",
+    "comparison": "Full in-scope desktop and pairing source from 8126bca, pairing isolation ece0ae5, and corrective implementation da3d738; unrelated changes in the concurrent baseline excluded.",
+    "scope": [
+      "workers/personal-secretary/desktop.py",
+      "workers/personal-secretary/desktop_client.py",
+      "workers/personal-secretary/desktop_win32.py",
+      "workers/personal-secretary/start-desktop.ps1",
+      "workers/personal-secretary/desktop-assets/",
+      "scripts/compile-secretary-desktop.ps1",
+      "workers/personal-secretary/main.py: protected pairing endpoint and pairing resource routing",
+      "workers/personal-secretary/ui/pairing.js",
+      "workers/personal-secretary/ui/pairing.css",
+      "workers/personal-secretary/ui/index.html: pairing resources and card",
+      "workers/personal-secretary/ui/app.js and console.css: removal of coupled pairing adapter only",
+      "workers/personal-secretary/README.md: desktop instructions"
+    ],
+    "excluded": [
+      "Unrelated Java, Web layout, and private-plan changes in 8126bca",
+      "Current uncommitted README, app.js, console.css, index.html and pairing.js pairing changes"
+    ],
+    "recommendation": "verification-passed",
+    "review_mode": "independent-static-implementation-review",
+    "implementation_review_round": 1,
+    "prior_failed_implementation_outcomes": 0,
+    "findings": [],
+    "resolved_design_findings": [
+      {
+        "id": "D031-01",
+        "result": "implemented",
+        "locations": ["desktop.py:524", "desktop.py:551"],
+        "evidence": "Frozen visible work snapshot; ordinary refresh detects conflict and disables confirmation; explicit reload accepts new data; submitted ID and revision remain frozen."
+      },
+      {
+        "id": "D031-02",
+        "result": "implemented",
+        "locations": ["desktop.py:676", "desktop.py:693", "desktop.py:707"],
+        "evidence": "Persistent SELECTED_GOAL history with a separate original query ID; history selection cannot authorize submission or replace a pending preview."
+      }
+    ],
+    "results": [
+      {"acceptance": 1, "result": "supported-by-static-evidence", "detail": "Independent HTTP UI reuses existing private work and messages; no database or platform credential access."},
+      {"acceptance": 2, "result": "supported-by-static-evidence", "detail": "Host, Origin, session and CSRF precede bounded one-shot pairing generation; existing sessions stay unchanged."},
+      {"acceptance": 3, "result": "supported-by-static-evidence", "detail": "Drag, monitor work area clamping, edge snapping, topmost and tray fallback paths inspected; no runtime claim."},
+      {"acceptance": 4, "result": "supported-by-static-evidence", "detail": "Explicit chat route and single background request queue leave the Tk main thread available."},
+      {"acceptance": 5, "result": "supported-by-static-evidence", "detail": "Frozen scheduling and existing CAS; policy load/save reset confirmation and preserve explicit capabilities."},
+      {"acceptance": 6, "result": "supported-by-static-evidence", "detail": "Exact preview tuple, edit invalidation, one-shot submit lock and persistent original-request lookup."},
+      {"acceptance": 7, "result": "supported-by-static-evidence", "detail": "Withdraw preserves forms; exit never stops Worker and warns on unconfirmed active operation."},
+      {"acceptance": 8, "result": "supported-by-static-evidence", "detail": "Committed README documents first upgrade restart and existing process authorization rules."}
+    ],
+    "commands_run": [
+      "Get-Content / rg / Get-ChildItem / Get-Item: bounded static instruction, source and evidence reads",
+      "git status --short; git log -5 --oneline; git show; git diff; git rev-parse da3d738",
+      "view_image: local desktop-assets/secretary.png",
+      "aiw fd show FD-031",
+      "aiw fd claim FD-031 FD-031-000005-implementation-ready --session fd031-reviewer-20261024-742db6c1",
+      "aiw fd claim --help; aiw fd emit --help",
+      "apply_patch: review Markdown/JSON and FD TODO/Verification only"
+    ],
+    "read_command_failures": [
+      "Shared resource reads used an incorrect relative base before locating fd-review/skills",
+      "aiw fd state FD-031 --json: unsupported subcommand",
+      "aiw fd show FD-031 --json: unsupported flag; corrected to aiw fd show FD-031"
+    ],
+    "worker_compile_evidence": {
+      "command": "powershell -NoProfile -File scripts/compile-secretary-desktop.ps1 -Revision HEAD",
+      "revision": "da3d738bbfb98106cc9eeafcc5257fe3b56a3bb2",
+      "reported_result": "passed",
+      "inspected": true,
+      "rerun_by_reviewer": false,
+      "scope": "Four Python source syntax checks, app.js and pairing.js syntax, identical PowerShell launcher parse; no application import."
+    },
+    "skipped": ["tests", "compilation rerun", "GUI and browser", "Tk/Win32/tray/monitor runtime", "service and live pairing", "model and platform calls", "network", "downloads and installation", "packages and publication", "sub-agents", "implementation source edits", "commits, merge and archive"],
+    "residual_risks": [
+      "Windows transparency edges, DPI, multi-monitor movement and tray/Explorer recovery remain unverified at runtime.",
+      "Live multi-UI sessions and real model/platform integration remain unverified.",
+      "Current uncommitted Web pairing increment is outside this review and cannot inherit its verdict."
+    ],
+    "recorded_date": "2026-10-24"
+  }
+}

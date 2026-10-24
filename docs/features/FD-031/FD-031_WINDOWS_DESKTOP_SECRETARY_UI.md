@@ -1,7 +1,7 @@
 # FD-031: Windows desktop secretary UI
 
-**Status:** Open
-**Revision:** 4
+**Status:** Complete
+**Revision:** 6
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -70,7 +70,7 @@ Web 在“状态与备份”增加配对码生成、显式显示与复制。桌�
 
 ## TODO
 
-- 所有实现条目已完成，等待独立实现审阅；通过后在当前主工作区提交审阅证据并自动归档。
+- 所有实现条目已完成，已通过独立静态实现审阅；由 PM 在当前主工作区仅提交本 FD 审阅/流程证据并继续自动归档。已通过范围为提交 da3d738 的完整桌面及配对实现，当前未提交 Web 配对增量不在本次结论内。
 
 ## Acceptance
 
@@ -88,10 +88,11 @@ Web 在“状态与备份”增加配对码生成、显式显示与复制。桌�
 - 已静态核对私人服务路由与原有认证/CSRF 顺序、Store.put 返回结构、Windows 托盘结构及窗口适配代码。
 - 图片静态检查：1024 × 1536、Format32bppArgb；角落/侧边 alpha=0，中心采样 alpha=253。尚未验收 Windows 色键透明的实际边缘显示。
 - 已执行并通过：powershell -NoProfile -File scripts/compile-secretary-desktop.ps1（仅 Python/JavaScript/PowerShell 语法编译，不启动模块或程序）。启动入口明确采用可见窗口模式，符合用户请求的交互界面；默认 pythonw 不产生终端窗口。该参数修正后重新执行同一编译命令。
-- 未运行：Tk/Win32 窗口、托盘、屏幕拖动、并行 UI 配对、真实模型/平台调用、测试、依赖安装、打包及独立审阅。
-- 本次 Auto 已完成独立设计静态审阅，原报告见 ../reviews/FD-031-design-review-20261024-a6529740.md 及同名 JSON；两项 findings 的实现修正已完成，独立实现审阅尚待进行。
+- 未运行：Tk/Win32 窗口、托盘、屏幕拖动、并行 UI 配对、真实模型/平台调用、测试、依赖安装及打包；这些结果未被标记为通过。
+- 本次 Auto 已完成独立设计静态审阅，原报告见 ../reviews/FD-031-design-review-20261024-a6529740.md 及同名 JSON；两项 findings 的修正已经独立实现审阅核对落实。
 - 2026-10-24：`powershell -NoProfile -File scripts/compile-secretary-desktop.ps1 -Revision HEAD` 在实际实现提交 da3d738 通过。检查该提交中的四个 Python 源文件、两个 Web 脚本以及与该提交一致的 PowerShell 启动脚本，不导入应用或启动程序。
 - Worker 实施证据：../reports/FD-031-implementation-r1.md 与同名 JSON；工作区/提交基线问题及恢复见 ../reports/FD-031-blocker-scope-20261024.md 与同名 JSON，当前 resolved。
+- 2026-10-24：独立 Reviewer `fd031-reviewer-20261024-742db6c1` 认领 `FD-031-000005-implementation-ready`，对 `da3d738bbfb98106cc9eeafcc5257fe3b56a3bb2` 的完整 FD 范围进行一次静态实现审阅，未发现阻断性缺陷，结论为 `verification-passed`。报告见 ../reviews/FD-031-implementation-review-r1-20261024-742db6c1.md 及同名 JSON；未重复编译，未运行应用。当前未提交的 README/Web 配对增量明确排除，不随本结论获得通过。
 
 ## Sources
 
