@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -61,6 +62,9 @@ class R9WebConsoleApprovalIT {
         registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + DB.toAbsolutePath());
         registry.add("aidev.approval.policy.mode", () -> "MANUAL");
         registry.add("aidev.web-console.auth.enabled", () -> "false");
+        registry.add("aidev.web-console.auth.username", () -> "console-admin");
+        registry.add("aidev.web-console.auth.password", () -> "test-console-secret");
+        registry.add("aidev.web-console.auth.role", () -> "ADMIN");
         registry.add("spring.thymeleaf.cache", () -> "false");
     }
 
@@ -74,6 +78,13 @@ class R9WebConsoleApprovalIT {
     private final CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
     private final HttpClient http = HttpClient.newBuilder().cookieHandler(cookies).connectTimeout(Duration.ofSeconds(3))
             .followRedirects(HttpClient.Redirect.NORMAL).build();
+
+    @BeforeEach
+    void signIn() throws Exception {
+        var response = post("/ui/login", form(Map.of("username", "console-admin", "password", "test-console-secret")));
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.uri().getPath()).isEqualTo("/ui");
+    }
 
     @Test
     void pendingApprovalCanBeDecidedFromWebConsoleUsingExistingApprovalAuthority() throws Exception {
@@ -126,7 +137,7 @@ class R9WebConsoleApprovalIT {
         assertThat(approved.body()).contains("APPROVED");
         var authoritative = approvals.find(pending.id()).orElseThrow();
         assertThat(authoritative.status()).isEqualTo(ApprovalStatus.APPROVED);
-        assertThat(authoritative.decidedBy()).isEqualTo("web:local-console");
+        assertThat(authoritative.decidedBy()).isEqualTo("web:console-admin");
         assertThat(authoritative.decisionNote()).isEqualTo("Approved from Web Console");
     }
 

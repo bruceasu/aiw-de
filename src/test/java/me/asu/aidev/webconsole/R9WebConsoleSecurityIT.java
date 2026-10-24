@@ -19,7 +19,13 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import me.asu.aidev.webconsole.security.WebConsoleSecurityService;
+import me.asu.aidev.webconsole.security.WebConsoleSecurityInterceptor;
+import me.asu.aidev.webconsole.security.WebConsoleRole;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("sqlite")
@@ -37,7 +43,7 @@ class R9WebConsoleSecurityIT {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + DB.toAbsolutePath());
-        registry.add("aidev.web-console.auth.enabled", () -> "true");
+        registry.add("aidev.web-console.auth.enabled", () -> "false"); // Legacy false must not bypass login.
         registry.add("aidev.web-console.auth.username", () -> "viewer");
         registry.add("aidev.web-console.auth.password", () -> "test-secret");
         registry.add("aidev.web-console.auth.role", () -> "VIEWER");
@@ -54,6 +60,13 @@ class R9WebConsoleSecurityIT {
         HttpResponse<String> unauthenticated = get("/ui");
         assertThat(unauthenticated.statusCode()).isEqualTo(302);
         assertRedirect(unauthenticated, "/ui/login", "next=%2Fui");
+        for (String path : new String[]{"/ui/goals", "/ui/tasks", "/ui/workers", "/ui/system"}) {
+            var protectedPage = get(path);
+            assertThat(protectedPage.statusCode()).isEqualTo(302);
+            assertRedirect(protectedPage, "/ui/login", "next=" + encode(path));
+        }
+        assertThat(get("/ui/login").statusCode()).isEqualTo(200);
+        assertThat(get("/api/r1/goals").statusCode()).isEqualTo(401);
 
         HttpResponse<String> login = post("/ui/login", form(Map.of(
                 "username", "viewer", "password", "test-secret", "next", "/ui")));
@@ -73,6 +86,47 @@ class R9WebConsoleSecurityIT {
                 "_csrf", csrf, "maxParallelism", "1", "reason", "should be denied")));
         assertThat(forbidden.statusCode()).isEqualTo(403);
         assertThat(forbidden.body()).contains("Access denied");
+
+        var logout = post("/ui/logout", form(Map.of("_csrf", csrf)));
+        assertThat(logout.statusCode()).isEqualTo(302);
+        assertRedirect(logout, "/ui/login", null);
+        assertThat(get("/ui/goals").statusCode()).isEqualTo(302);
+    }
+
+    @Test
+    void oldFalseFlagAndEmptyPasswordCannotCreateAnonymousAuthority() {
+        var security = new WebConsoleSecurityService(false, "admin", "", "ADMIN");
+        assertThat(security.enabled()).isTrue();
+        assertThat(security.authenticated(null)).isFalse();
+        assertThat(security.username(null)).isEmpty();
+        assertThat(security.role(null)).isEqualTo(WebConsoleRole.VIEWER);
+        assertThat(security.authenticate("admin", "")).isFalse();
+        assertThat(security.currentOperatorAuthority("web:local-console")).isEmpty();
+        assertThatThrownBy(() -> security.actor(null)).isInstanceOf(SecurityException.class);
+        assertThatThrownBy(() -> security.requireAdmin(null)).isInstanceOf(SecurityException.class);
+    }
+
+    @Test
+    void consoleGatePreservesContextAndQueryAndLeavesMachineAuthenticationSeparate() throws Exception {
+        var gate = new WebConsoleSecurityInterceptor(new WebConsoleSecurityService(false, "admin", "fixture", "ADMIN"));
+        for (String method : new String[]{"GET", "HEAD"}) {
+            var request = new MockHttpServletRequest(method, "/platform/ui/configurations");
+            request.setContextPath("/platform");request.setQueryString("view=roles");
+            var response = new MockHttpServletResponse();
+            assertThat(gate.preHandle(request, response, new Object())).isFalse();
+            assertThat(response.getRedirectedUrl()).isEqualTo("/platform/ui/login?next=" + encode("/ui/configurations?view=roles"));
+        }
+        for (String method : new String[]{"GET", "HEAD", "POST"}) {
+            var response = new MockHttpServletResponse();
+            assertThat(gate.preHandle(new MockHttpServletRequest(method, "/api/r1/goals"), response, new Object())).isFalse();
+            assertThat(response.getStatus()).isEqualTo(401);
+            assertThat(response.getRedirectedUrl()).isNull();
+        }
+        for (String path : new String[]{"/ui/login", "/ui/console.css", "/ui/console.js", "/api/r1/worker-protocol/v1/workers/fixture/heartbeat"}) {
+            var request = new MockHttpServletRequest("GET", path);
+            assertThat(gate.preHandle(request, new MockHttpServletResponse(), new Object())).isTrue();
+            assertThat(request.getSession(false)).isNull(); // Machine routes keep their own credential checks.
+        }
     }
 
     private static void assertRedirect(HttpResponse<?> response, String expectedPath, String expectedRawQuery) {

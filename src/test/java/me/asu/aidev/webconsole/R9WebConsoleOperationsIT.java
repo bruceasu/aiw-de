@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -47,6 +48,9 @@ class R9WebConsoleOperationsIT {
         registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + DB.toAbsolutePath());
         registry.add("aidev.approval.policy.mode", () -> "MANUAL");
         registry.add("aidev.web-console.auth.enabled", () -> "false");
+        registry.add("aidev.web-console.auth.username", () -> "console-admin");
+        registry.add("aidev.web-console.auth.password", () -> "test-console-secret");
+        registry.add("aidev.web-console.auth.role", () -> "ADMIN");
         registry.add("spring.thymeleaf.cache", () -> "false");
     }
 
@@ -60,6 +64,13 @@ class R9WebConsoleOperationsIT {
             .connectTimeout(Duration.ofSeconds(3))
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
+
+    @BeforeEach
+    void signIn() throws Exception {
+        var response = post("/ui/login", form(Map.of("username", "console-admin", "password", "test-console-secret")));
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.uri().getPath()).isEqualTo("/ui");
+    }
 
     @Test
     void browserConsoleCreatesRunControlsSchedulingAndManagesWorkerWithoutBypassingAuthority() throws Exception {
