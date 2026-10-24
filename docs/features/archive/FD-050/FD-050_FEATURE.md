@@ -47,3 +47,5 @@
 - Issue: none
 - 用户当前要求；desktop.py Canvas 构造，desktop_pet.py _draw，desktop-assets/README.md。
 - Session: pet-caption-20261024-7e18c2；设计来源 FD-050-000002-design-requested。
+
+**Completed:** 2026-10-24
