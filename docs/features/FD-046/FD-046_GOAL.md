@@ -1,7 +1,7 @@
 # FD-046: Goal 删除请求绑定与统一确认弹窗修复
 
-**Status:** Design
-**Revision:** 2
+**Status:** Open
+**Revision:** 3
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -23,13 +23,13 @@
 
 ## Work items
 
-- [ ] 1.1 补齐所有 Revision 请求字段，核对 Controller 对应调用。小/低，无依赖，证据为请求字面量与 DTO。
-- [ ] 1.2 接入控制台统一异步确认弹窗，保持取消语义。小/中，依赖 1.1，证据为四处确认及脚本加载顺序。
-- [ ] 1.3 更新说明，静态检查和 JS 语法编译，提交 Worker 证据及独立审阅。小/低，依赖 1.2。
+- [x] 1.1 补齐所有 Revision 请求字段，核对 Controller 对应调用。小/低，无依赖，证据为请求字面量与 DTO。
+- [x] 1.2 接入控制台统一异步确认弹窗，保持取消语义。小/中，依赖 1.1，证据为四处确认及脚本加载顺序。
+- [x] 1.3 更新说明，静态检查和 JS 语法编译，提交 Worker 证据及独立审阅。小/低，依赖 1.2。
 
 ## TODO
 
-实施 1.1–1.3，实际 HTTP 结果未验证。
+1.1–1.3 已实现，git diff --check 与 node --check 通过；等待独立实现审阅，实际 HTTP 结果未验证。
 
 ## Acceptance
 

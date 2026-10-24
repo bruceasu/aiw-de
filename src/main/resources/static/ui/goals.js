@@ -78,7 +78,7 @@
   }
   for (const deleted of [false, true]) $(deleted ? 'goal-show-deleted' : 'goal-show-active').onclick = () => run(async () => {
     clean();
-    if (current && current.deleted !== deleted && $('goal-message').value.trim() && !window.confirm('切换列表将放弃当前未发送的消息，是否继续？')) return;
+    if (current && current.deleted !== deleted && $('goal-message').value.trim() && !await window.aiwConfirm('切换列表将放弃当前未发送的消息，是否继续？', {title:'切换目标列表'})) return;
     showDeleted = deleted;
     if (current && current.deleted !== deleted) clearSelection();
     renderList();
@@ -92,13 +92,13 @@
     clean();
     if (pendingDeletion) throw new Error('请先使用“核对操作结果”读取上一次删除或恢复的当前状态。无需再次确认或提交。');
     const unsent = current?.id === draft.id && $('goal-message').value.trim() ? '\n当前未发送的消息也将放弃。' : '';
-    if (deleted && !window.confirm(`删除目标“${draft.title}”？\n可在“已删除”中恢复。旧的待处理讨论回复不再采用，已创建的执行计划继续保留。${unsent}`)) return;
+    if (deleted && !await window.aiwConfirm(`删除目标“${draft.title}”？\n可在“已删除”中恢复。旧的待处理讨论回复不再采用，已创建的执行计划继续保留。${unsent}`, {title:'删除目标', danger:true})) return;
     $('goal-deletion-check').hidden = true;
     const controls = [...$('goal-workshop').querySelectorAll('input,textarea,select,button')].map(el => [el, el.disabled]);
     controls.forEach(([el]) => { el.disabled = true; });
     let saved;
     try {
-      saved = await api(`/${encodeURIComponent(draft.id)}/${deleted ? 'delete' : 'restore'}`, {revision:draft.revision});
+      saved = await api(`/${encodeURIComponent(draft.id)}/${deleted ? 'delete' : 'restore'}`, {revision:draft.revision,confirmed:deleted});
       if (saved?.id !== draft.id || saved.deleted !== deleted || !Number.isSafeInteger(saved.revision)) {
         throw new Error('服务器未返回有效的目标状态。');
       }
@@ -160,7 +160,7 @@
   ['goal-title','goal-body','goal-missing','goal-backend'].forEach(id => $(id).addEventListener('input', () => { dirty = true; }));
   $('goal-new').onclick = () => run(async () => { clean(); const draft = await api('', {}); await load(draft.id); status('Goal created. Start with your intent.'); });
   $('goal-reload').onclick = () => run(async () => {
-    if ((dirty || editorDirty.size) && !window.confirm('Discard your unsaved edits and reload?')) return;
+    if ((dirty || editorDirty.size) && !await window.aiwConfirm('放弃尚未保存的目标和计划编辑，重新加载已保存版本？', {title:'重新加载目标', danger:true})) return;
     await load(current.id); status('Saved version restored.');
   });
   $('goal-save').onclick = () => run(async () => {
@@ -209,7 +209,7 @@
   $('goal-formalize').onclick=()=>run(async()=>{
     clean();const version=await api(`/${current.id}/formalize`,{revision:current.revision,confirmed:$('goal-accept').checked});
     let message='Formal version saved. It does not start work.';
-    if($('goal-plan-now').checked){try{await api(`/versions/${version.id}/analyze`,{revision:version.editorRevision});message+=' AI Steps requested.';}catch(e){message+=` Plan editing draft retained: ${e.message}`;}}
+    if($('goal-plan-now').checked){try{await api(`/versions/${version.id}/analyze`,{revision:version.editorRevision,confirmed:false});message+=' AI Steps requested.';}catch(e){message+=` Plan editing draft retained: ${e.message}`;}}
     await load(current.id);status(message);
   });
   const roles=[['requirement-analysis','software-requirements-analyst','Clarify requirements'],['solution-architecture','solution-architect','Design solution'],['implementation-planning','implementation-planner','Plan implementation'],['coding','coding-work-package-executor','Implement'],['integration','coding-work-package-executor','Integrate'],['repair','coding-work-package-executor','Repair']];
@@ -237,9 +237,9 @@
       function button(title,action){const b=node('button',title,'btn ghost');b.onclick=()=>run(action);actions.append(b);}
       button('Add step',async()=>{if(spec.steps.length>=32)throw new Error('At most 32 steps.');let n=spec.steps.length+1;while(spec.steps.some(s=>s.key===`step${n}`))n++;spec.steps.push({key:`step${n}`,requiredSkills:['requirement-analysis'],preferredSkills:[],skillRef:'software-requirements-analyst',instruction:'',repositoryRef:null,baseRevision:null,dependsOn:[]});changed();renderSteps();});
       button('Save editing draft',async()=>{if(dirty||[...editorDirty].some(id=>id!==v.id))throw new Error('Save other goal or editing changes first.');await api(`/versions/${v.id}/editor`,{revision:v.editorRevision,editor:spec});editorDirty.delete(v.id);await load(current.id);status('Editing draft saved, including incomplete steps.');});
-      button('Analyze Steps',async()=>{clean();await api(`/versions/${v.id}/analyze`,{revision:v.editorRevision});await load(current.id);status('AI Steps requested. Your saved editing draft remains available.');});
-      button('Check / apply AI Steps',async()=>{clean();const result=await api(`/versions/${v.id}/analysis`);if(result.state!=='READY_TO_APPLY'){status(`${result.state}: ${result.error||'Waiting for analysis; manual editing remains available.'}`);return;}await api(`/versions/${v.id}/apply`,{revision:v.editorRevision});await load(current.id);status('AI Steps applied to the editing draft. Review before preparing execution.');});
-      button('Prepare execution plan',async()=>{clean();if(!window.confirm('Hand this version to the operator-visible Plans console? Missing workspaces will be created now and retained. This saves a draft; you must confirm execution separately.'))return;const saved=await api(`/versions/${v.id}/prepare`,{revision:v.editorRevision,confirmed:true});await load(current.id);status(`Execution draft ${saved.planId} saved. Review it before confirming execution.`);});
+      button('Analyze Steps',async()=>{clean();await api(`/versions/${v.id}/analyze`,{revision:v.editorRevision,confirmed:false});await load(current.id);status('AI Steps requested. Your saved editing draft remains available.');});
+      button('Check / apply AI Steps',async()=>{clean();const result=await api(`/versions/${v.id}/analysis`);if(result.state!=='READY_TO_APPLY'){status(`${result.state}: ${result.error||'Waiting for analysis; manual editing remains available.'}`);return;}await api(`/versions/${v.id}/apply`,{revision:v.editorRevision,confirmed:false});await load(current.id);status('AI Steps applied to the editing draft. Review before preparing execution.');});
+      button('Prepare execution plan',async()=>{clean();if(!await window.aiwConfirm('将此版本交给操作员可见的 Plans 控制台？缺少的工作区将被创建并保留。这里只保存执行草案，启动执行仍需单独确认。', {title:'准备执行计划'}))return;const saved=await api(`/versions/${v.id}/prepare`,{revision:v.editorRevision,confirmed:true});await load(current.id);status(`Execution draft ${saved.planId} saved. Review it before confirming execution.`);});
       box.append(actions);$('goal-versions').append(box);
     });
   }
