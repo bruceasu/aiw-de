@@ -1,0 +1,64 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-040",
+  "source_event": "FD-040-000004-implementation-ready",
+  "human_report": "FD-040-implementation-r1.md",
+  "data": {
+    "reviewer_session": "fd040-review-20261024-7d2c965a",
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "comparison_base": "30f8883",
+    "implementation_commit": "b05b5ffd539fad168ec0d3e0fd981b8c38cc8da6",
+    "worker_evidence_commit": "8c076ff",
+    "verdict": "passed",
+    "scope_file_count": 43,
+    "hard_violations": [],
+    "smell_findings": [],
+    "findings": [],
+    "acceptance": [
+      {"id": 1, "result": "supported", "evidence": "Nine declared entries and public assets; existing UI catalogue/additionalSkills path; no new Worker or role"},
+      {"id": 2, "result": "supported", "evidence": "All nine entries inspected for concrete inputs, steps, deliverables, completion and evidence gaps"},
+      {"id": 3, "result": "supported", "evidence": "Primary role/output/readOnly/task/tool scope retained; host agent, persistent course, publication and dispatch behavior excluded"},
+      {"id": 4, "result": "supported", "evidence": "Nine hashes and 27 copies match; ten old assets, eleven methods, eight primary profiles and old file lists unchanged; six-additional limit unchanged; immutable configuration and SkillFiles paths inspected"},
+      {"id": 5, "result": "supported", "evidence": "Chinese guide and stable specification explain selection and limitations; evidence does not claim model/runtime success"}
+    ],
+    "commands": [
+      {"command": "Targeted Get-Content, rg, git diff --stat and git show for instructions, FD, dual evidence, fixed source diff, Skill entries and assembly paths", "result": "reviewed"},
+      {"command": "aiw fd status FD-040", "result": "invalid read-only subcommand; corrected to documented show"},
+      {"command": "aiw fd --help; aiw fd show FD-040; aiw fd claim --help", "result": "pending revision 4 reviewer handoff confirmed"},
+      {"command": "aiw fd claim FD-040 FD-040-000004-implementation-ready --session fd040-review-20261024-7d2c965a", "result": "claimed"},
+      {"command": "git diff --check 30f8883 b05b5ffd539fad168ec0d3e0fd981b8c38cc8da6 plus inline read-only JSON/SHA256/index/name/old-field/byte-copy checks", "result": "passed", "new_assets": 9, "matching_copies": 27, "unchanged_assets": 10, "unchanged_methods": 11, "unchanged_profiles": 8},
+      {"command": "Targeted read of five current-workspace versus committed-byte differences", "result": "only checkout CRLF versus Git LF; no substantive drift; new Skill entries and copies already exact"},
+      {"command": "aiw fd emit --help", "result": "reviewer event syntax inspected"}
+    ],
+    "discovery_corrections": [
+      "Missing review.md corrected to existing code-review.md",
+      "Missing Java paths corrected to execution/skills/SkillFiles.java and execution/config/AgentFactory.java",
+      "Truncated output followed by targeted missing-content reads"
+    ],
+    "compile_evidence": {
+      "source": "Worker dual report",
+      "command": "mvn -o '-Dmaven.test.skip=true' compile",
+      "reported_result": "passed; 2+140 resources copied; Java up to date",
+      "reported_initial_failure": "PowerShell split unquoted argument before compilation; one corrected-quoting retry",
+      "reviewer_reran": false,
+      "proves_skill_behavior": false
+    },
+    "skipped": [
+      "tests and compile rerun",
+      "model/Worker/factory/live UI and actual nine-Skill tasks",
+      "Git conflict operations/tools/recovery",
+      "database/services/browser/network/downloads",
+      "build/package/install/restart/publish",
+      "production-module import or host Skill script execution"
+    ],
+    "risks": [
+      "Static contracts and reported resource compile do not prove actual model adherence, selection/claim or quality improvement",
+      "External-source and Git-operation adapter gaps remain explicit limits",
+      "New assets require normal platform update; existing task bindings remain frozen",
+      "Shared-workspace unrelated dirty files are excluded and were not independently approved"
+    ],
+    "blockers": [],
+    "next_step": "Host PM checks real verification receipt and scoped diff before local delivery/archive; Reviewer performs no commit/archive/merge/release"
+  }
+}

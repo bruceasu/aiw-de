@@ -1,7 +1,7 @@
 # FD-040: 将设计诊断研究等方法注册为可配置的 Worker 附加技能
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -39,7 +39,7 @@ index.files增加九包，profiles保持。software-catalog.json只追加九个*
 
 ## TODO
 
-WI 1.1–1.7 已完成，等待独立 Reviewer；通过后宿主核对回执和范围并归档。Worker 完成不等于 Reviewer 通过。
+WI 1.1–1.7 已完成；独立 Reviewer 静态实现审阅通过，宿主待核对真实回执、范围并完成本地交付与归档。实际模型、界面与九类任务未运行验证。
 
 ## Acceptance
 
@@ -57,7 +57,9 @@ WI 1.1–1.7 已完成，等待独立 Reviewer；通过后宿主核对回执和�
 
 C:/green/bin/setup-jdk25.ps1后首次Maven参数被PowerShell拆分，生命周期解析失败；仅修正引号后，mvn -o '-Dmaven.test.skip=true' compile于2026-10-24T13:53:24+09:00成功，复制2+140资源，Java已最新，环境变量恢复。未运行测试或依赖下载，未执行脚本打印的打包/运行示例。
 
-未运行模型/Worker/实际技能任务、工厂实例/界面、SDK/工具/恢复、服务/数据库/浏览器/网络、打包/发布/重启；结构及编译不证明运行与质量。共享工作区其他未提交改动不属于本FD审阅。独立Reviewer结论待补。
+未运行模型/Worker/实际技能任务、工厂实例/界面、SDK/工具/恢复、服务/数据库/浏览器/网络、打包/发布/重启；结构及编译不证明运行与质量。共享工作区其他未提交改动不属于本FD审阅。
+
+独立 Reviewer Session `fd040-review-20261024-7d2c965a` 已领取 `FD-040-000004-implementation-ready`，审阅 `30f8883..b05b5ffd539fad168ec0d3e0fd981b8c38cc8da6` 的43文件实现与实际装配合同，未发现硬性违约或需修改的结构异味，五项验收均获静态证据支持。独立摘要/索引/旧字段/27副本检查通过；工作区五个文件的字节差异确认为CRLF行尾，未发现实质实现漂移。Reviewer未重跑编译、测试或模型。双报告：[Markdown](../reviews/FD-040-implementation-r1.md) / [JSON](../reviews/FD-040-implementation-r1.json)。
 
 ## Sources
 
