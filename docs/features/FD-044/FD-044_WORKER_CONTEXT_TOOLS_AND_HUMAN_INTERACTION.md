@@ -1,7 +1,7 @@
 # FD-044: Worker 上下文、可组合能力与人工交互补齐
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** High
 **Evidence policy:** Dual
 
@@ -86,7 +86,7 @@ Python Broker 统一 begin/execute/finish/unknown/settle 扩展点；复用原�
 
 ## TODO
 
-独立设计r1已ready，RESERVED批次/精确MODEL绑定/严格RUNNING Lease及DRAIN/seal修正已纳入。1.2–1.14实现及Worker双证据完成。Java生产编译、原生TS/UI/Python语法与离线Go编译通过；首选脚本缺依赖和自动审查拒绝已以无清理/无产物方式解决。待独立实现审阅及真实回执归档；没有自签验收。
+独立设计r1已ready，RESERVED批次/精确MODEL绑定/严格RUNNING Lease及DRAIN/seal修正已纳入。1.2–1.14实现及Worker双证据完成。Java生产编译、原生TS/UI/Python语法与离线Go编译通过；首选脚本缺依赖和自动审查拒绝已以无清理/无产物方式解决。独立实现Reviewer已完成真实代码与契约审阅，无阻断发现；由PM核对真实回执后继续交付归档，不以静态/编译代替运行验证。
 
 ## Acceptance
 
@@ -106,7 +106,9 @@ Python Broker 统一 begin/execute/finish/unknown/settle 扩展点；复用原�
 
 [Worker r1](../reports/FD-044-implementation-r1.md)及同名JSON记录33个实现文件、最终源码`5cc5e5dc1702824614d9588a23f2f32d7abd56ae`和实际命令。Java BUILD SUCCESS（304源/2+151资源）；首选Worker脚本缺typescript未执行检查，带清理替代命令被自动审查拒绝，随后原生TS/UI/Python语法和Go离线输出NUL通过。README空行修正后仅复查该文件及未执行的静态断言，通过；最终Python偏好共享修正单文件编译通过。源码范围未混入原脏改动。
 
-[编译反馈](../reports/FD-044-blocker-compile-20261024-r1.md)及JSON已resolved；缺失blocker模板沿用FD-014既有schema，不扩大模板修复。数据库/迁移、SDK/模型/浏览器/并发/问答/回退及测试均未运行，不将编译说成运行通过。独立实现审阅待真实交接。
+[编译反馈](../reports/FD-044-blocker-compile-20261024-r1.md)及JSON已resolved；缺失blocker模板沿用FD-014既有schema，不扩大模板修复。数据库/迁移、SDK/模型/浏览器/并发/问答/回退及测试均未运行，不将编译说成运行通过。
+
+独立实现[r1](../reviews/FD-044-implementation-r1.md)及同名JSON：Reviewer `fd044-review-20261024-8f24b61e`独立领取`FD-044-000004-implementation-ready`，审阅基线`2ebe0c5`至最终源`5cc5e5d`及Worker证据提交`d74aa00`，无阻断发现，结论verification-passed。实际核对V19/事务Owner与Lease、不可撤回批次/精确MODEL/ACK/DRAIN、Python原始历史重建与摘要/总限额、私有能力包/角色约束、工作台及探索来源和兼容入口。仅静态读取及报告校验，未重跑Worker检查；真实SDK/数据库/并发/页面仍未验证，不新增运行门禁。提交、合并、归档由PM依据真实回执完成。
 
 ## Sources
 

@@ -1,0 +1,55 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-044",
+  "source_event": "FD-044-000004-implementation-ready",
+  "human_report": "FD-044-implementation-r1.md",
+  "data": {
+    "reviewer_session": "fd044-review-20261024-8f24b61e",
+    "worker_session": "worker-context-20261024-61db8e4a",
+    "comparison_base": "2ebe0c595c3da356eebaba29e7b98f2d49019273",
+    "implementation_commit": "5cc5e5dc1702824614d9588a23f2f32d7abd56ae",
+    "worker_evidence_commit": "d74aa00",
+    "reviewed_fd_revision": 4,
+    "scope_source": "docs/features/reports/FD-044-implementation-r1.json#data.source_paths",
+    "scope_file_count": 33,
+    "recommendation": "verification-passed",
+    "blocking_findings": 0,
+    "findings": [],
+    "acceptance_results": [
+      {"id": 1, "result": "supported-by-static-review", "evidence": ["Three fixed Skill loaders and TypeScript caller primary/protocol order", "Original byte/manifest/resource read contracts"]},
+      {"id": 2, "result": "supported-by-static-review", "evidence": ["V19 schema and Workbench transaction/owner/revision/lease paths", "Immutable reservation, exact STARTED MODEL link, successful receipt ACK and atomic DRAIN/seal", "Owner/request/digest receipt reconciliation", "Python raw-prefix insertion and same-Attempt FOLLOW_UP"]},
+      {"id": 3, "result": "supported-by-static-review", "evidence": ["Visible source projection and complete function call/result boundary", "Exact protected supplements and separately retained fixed instructions", "Original model/effort/tier and shared model-call/operation accounting", "Bounded in-memory sources and explicit capacity failure"]},
+      {"id": 4, "result": "supported-by-static-review", "evidence": ["Valid tool preview envelopes, source paging and no effect replay", "Existing Broker/ToolContext locks and model finalization/cancellation paths", "Platform terminal state separated from observed phase hints"]},
+      {"id": 5, "result": "supported-by-static-review", "evidence": ["Original private immutable asset registration and fixed Skill lookup", "Role UI original references, output/tool checks and same-request recovery"]},
+      {"id": 6, "result": "supported-by-static-review", "evidence": ["Owned same-task immutable parent and real Attempt/result provenance", "Append-only choices, history, comparison and explicit draft transfer", "No model transcript or file rollback claim"]},
+      {"id": 7, "result": "supported-by-static-review-and-worker-compile-evidence", "evidence": ["Original default routes and constructor compatibility", "Stable specs and explicit backend support matrix", "Worker compile/static outcomes distinguished from runtime evidence", "Independent source review completed"]}
+    ],
+    "commands_run": [
+      "aiw fd resume FD-044",
+      "aiw fd claim FD-044 FD-044-000004-implementation-ready --session fd044-review-20261024-8f24b61e",
+      "Bounded git diff/git show over explicit comparison/source commits",
+      "rg and Get-Content for explicit instructions, reports, specs and adjacent source call paths",
+      "One report-only static schema/reference/FD validation after writing",
+      "aiw fd emit FD-044 verification-passed --producer reviewer --artifact docs/features/reviews/FD-044-implementation-r1.md --source-event FD-044-000004-implementation-ready"
+    ],
+    "worker_evidence_assessment": {
+      "java_production_compile": "reported-success-at-8869eb4-with-unchanged-final-src-main",
+      "preferred_worker_compile_script": "failed-before-checks-missing-typescript",
+      "combined_cleanup_alternative": "blocked-by-automatic-review-not-executed",
+      "safe_native_alternatives": "reported-success-TS-and-UI-syntax-Python-compile-Go-offline-build-to-NUL",
+      "final_python_preference_refactor": "reported-single-file-syntax-success",
+      "static_readme_failure": "fixed-and-targeted-rechecked-with-previously-unrun-assertions",
+      "blocker_report_status": "resolved",
+      "reviewer_repeated_worker_checks": false
+    },
+    "checks_skipped": ["tests", "test compilation", "production compilation", "SDK/model/Worker execution", "database/SQL/migration execution", "HTTP/services/browser", "runtime race/cancel/question/rollback checks", "network/downloads", "subagents", "commit/merge/archive", "package/deploy/restart"],
+    "remaining_risks": [
+      "Actual installed Agents SDK low-level compatibility and real model summary quality remain unrun",
+      "Actual database migrations, transaction races and UI flows remain unrun",
+      "Attempt-local source capacity and lifecycle can make full source unavailable and must not trigger effect replay",
+      "New Worker rollout requires the V19-capable control plane first"
+    ],
+    "next_step": "PM checks actual reviewer receipt and continues authorized local delivery/archive"
+  }
+}
