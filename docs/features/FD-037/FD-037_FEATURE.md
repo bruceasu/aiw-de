@@ -1,7 +1,7 @@
 # FD-037: 未登录控制台身份显示为未登录
 
-**Status:** Design
-**Revision:** 2
+**Status:** Open
+**Revision:** 3
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -25,12 +25,12 @@ fragments.html 目前存在其它任务的导航改动，本 FD 只暂存两处�
 
 ## Work items
 
-- [ ] 1.1 修正公共页头与侧栏角色标签，精确保留并行模板差异。规模小、难度低，无依赖；证据为两处条件与原 signedIn 属性对应。
-- [ ] 1.2 更新说明，提交编译及静态 Worker 双证据。规模小、难度低，依赖 1.1；独立 Reviewer 结论属于下一交接阶段。
+- [x] 1.1 修正公共页头与侧栏角色标签，精确保留并行模板差异。规模小、难度低，无依赖；证据为两处条件与原 signedIn 属性对应。
+- [x] 1.2 更新说明，提交编译及静态 Worker 双证据。规模小、难度低，依赖 1.1；独立 Reviewer 结论属于下一交接阶段。
 
 ## TODO
 
-真实交接后实施与编译，交独立审阅，实际通过后范围归档。
+1.1–1.2 已完成，d1a5cf7 两处标签与说明已范围提交；待独立实现审阅，通过后归档。
 
 ## Acceptance
 
@@ -47,3 +47,5 @@ fragments.html 目前存在其它任务的导航改动，本 FD 只暂存两处�
 
 - 用户要求；fragments.html；WebConsoleSecurityInterceptor.preHandle；WebConsoleSecurityService.signedIn/role；docs/current-zh/09-SECURITY-AUTHORITY-AND-TRUST-BOUNDARIES.md。
 - Planner/Worker Session secretary-desktop-20261024-a6529740；来源 FD-037-000002-design-requested；无关联 Issue。
+
+- Worker 双证据：../reports/FD-037-implementation-r1.md/.json；范围静态 diff --check 通过，mvn -o -Dmaven.test.skip=true compile 通过（JDK25，2026-10-24T12:52:44+09:00，无需重编 Java，生产资源复制完成）。实际源码 d1a5cf7；模板其它导航差异未提交，服务/浏览器/真实登录和测试未运行。

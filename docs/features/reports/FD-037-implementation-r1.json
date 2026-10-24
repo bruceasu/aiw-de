@@ -1,0 +1,54 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-037",
+  "source_event": "FD-037-000003-design-ready",
+  "human_report": "FD-037-implementation-r1.md",
+  "data": {
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "comparison_base": "244b62b",
+    "implementation_commit": "d1a5cf7",
+    "implementation_review_failure_count": 0,
+    "scope": [
+      "two conditional role text spans in fragments.html only",
+      "nearby console identity display documentation"
+    ],
+    "diagnosis": "Local anonymous access has internal ADMIN; raw role was incorrectly displayed as authenticated identity",
+    "solution": "Existing consoleAuthEnabled attribute is actual signedIn; conditional text uses role only when signed in, otherwise 未登录",
+    "sparse_staging": "Patch produced from HEAD with exactly two role text replacements, applied to index only; existing navigation differences preserved in worktree",
+    "static": {
+      "command": "git diff --check -- fragments.html and nearby documentation; exact diff/call-path read",
+      "result": "passed"
+    },
+    "compile": {
+      "environment_script": "C:/green/bin/setup-jdk25.ps1",
+      "command": "mvn -o -Dmaven.test.skip=true compile",
+      "result": "passed",
+      "revision": "d1a5cf7",
+      "finished_at": "2026-10-24T12:52:44+09:00",
+      "java": "25.0.1",
+      "maven": "3.9.4",
+      "details": "Production resources copied; Java up to date",
+      "environment_restored": true,
+      "printed_package_examples_executed": false
+    },
+    "skipped": [
+      "tests",
+      "Thymeleaf/browser",
+      "real login/logout/session/HTTP",
+      "database",
+      "services/models/network/downloads",
+      "package/build/install/restart/release"
+    ],
+    "risks": [
+      "Template expression and real rendering have static evidence only",
+      "Source update not a live application restart"
+    ],
+    "excluded": [
+      "parallel navigation labels in same template",
+      "unrelated secretary/Python/model/launcher/configuration/professional-task/authority changes"
+    ],
+    "blockers": [],
+    "next_step": "Independent implementation review then normal scoped archive"
+  }
+}
