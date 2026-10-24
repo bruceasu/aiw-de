@@ -163,3 +163,16 @@ For non-trivial implementation, the coding method SHALL guide a small acceptance
 #### Scenario: A Skill authoring task has only static evidence
 - **WHEN** the assigned task updates Skill content and declared references
 - **THEN** the result distinguishes structural checks from unrun model behavior or comparative quality evaluation, and does not infer registration, installation or publication
+
+### Requirement: Composable prototype Skill
+The registered prototype Skill SHALL be selectable as an additional Skill on an existing working method. Its files and immutable asset reference SHALL use the existing configuration and Skill-file binding contracts. Selecting it SHALL preserve the primary Skill, Worker role, runtime, output format and current tool authority; it SHALL NOT create a separate Worker type or process.
+
+The Skill SHALL guide actual minimal UI or logic artifact creation, a concrete entry point, relevant interactions and an observation/handoff against a bounded question. Prototype code and conclusions SHALL remain distinguishable from accepted production behavior. Missing write or execution authority SHALL be reported rather than inferred from Skill selection.
+
+#### Scenario: A coding Worker needs to explore a UI choice
+- **WHEN** its configured method includes prototype and the task permits that experiment
+- **THEN** it can follow the declared UI resource to create appropriately scoped runnable artifacts and report actual checks in its existing result format, without changing roles or granting additional tools
+
+#### Scenario: Prototype files can be written but preview is not authorized
+- **WHEN** the Worker has file authority but lacks the required command or preview capability
+- **THEN** the method guides file delivery and exact entry instructions with preview marked not run; no server, browser session or permission is synthesized

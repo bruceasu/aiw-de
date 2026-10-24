@@ -29,6 +29,8 @@ Runtime 只注入各入口和声明文件索引。调用 `read_skill_file(ref,pa
 
 ## 从宿主工程技能吸收方法
 
+FD-039 新增可组合的公共 `prototype` 技能包（入口、逻辑与 UI 三文件），通过原有附加 Skill 目录装配给现有 Worker；不增加主角色或工具权限。新目录资产仅追加 `prototype-v1`，旧资产和方法保持，使用步骤见[原型制作技能](WORKER-PROTOTYPE-SKILL.md)。
+
 FD-038 将 `.agents/skills` 的可复用方法适配到既有 Worker 角色，详见[来源与去向矩阵](WORKER-SKILL-METHODS.md)。现有拆分、审阅、诊断和测试方法上补充局部步骤、交接/修订覆盖、决策聚焦和按需 Skill 编写参考。入口与辅助文件保持各自声明，本文不授权宿主 FD 命令、代理、测试、安装或发布。
 
 编码步骤和继续说明使用现有报告字段；没有新增平台持久 TODO、恢复状态机或输出协议。新增参考进入 `index.json`，本次修改同步到三语言同名独立部署副本。受影响文件集产生新 manifest 版本，既有已冻结任务仍使用旧内容。`execution/software-catalog.json` 的历史文本资产版本/摘要继续保持原义，不把它称为更新后文件集的完整正文。
