@@ -1,0 +1,22 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-048",
+  "source_event": "FD-048-000002-design-requested",
+  "human_report": "FD-048-design-r1.md",
+  "data": {
+    "recommendation": "ready",
+    "blocking_findings": [],
+    "scope": ["persisted execution mode", "startup recovery", "timed expiry", "legacy compatibility", "existing execution and cancellation routes", "Web and desktop choices"],
+    "implementation_notes": [
+      "Unknown modes require confirmation",
+      "Check timed expiry before pause handling",
+      "Immediate work only needs recovery confirmation across restart",
+      "Retain interrupted and professional result reconciliation",
+      "Explicitly update mode on each human reschedule"
+    ],
+    "not_run": ["tests", "compile", "HTTP", "browser", "model", "service", "database"],
+    "runtime_verified": false,
+    "workflow_state_changed": false
+  }
+}
