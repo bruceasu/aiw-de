@@ -63,6 +63,9 @@ class OperatorInputs:
     def link(self, operation):
         if self.pending: self._post("LINK", self.pending["batchId"], operation_id=operation, batch_digest=self.pending["digest"])
 
+    def protected_messages(self):
+        return {sha(encoded(item["message"])) for item in self.insertions}
+
     def delivered(self, operation):
         if not self.pending: return
         self._post("ACK", self.pending["batchId"], operation_id=operation, batch_digest=self.pending["digest"])

@@ -201,10 +201,14 @@ class _GuardedModel(Model):
         self._summary_tracing = tracing
         if previous_response_id or conversation_id: raise RuntimeError("SERVER_HISTORY_CONTEXT_TRANSFORMS_UNSUPPORTED")
         if self._request.broker is not None:
+            if self._request.broker.pending_question:
+                from formal_questions import YieldRequested
+                raise YieldRequested("QUESTION_WAITING")
             if self.inputs is None:
                 from operator_inputs import OperatorInputs
                 self.inputs = OperatorInputs(self._request.broker)
             input = self.inputs.project(_json_value(input))
+            self.history.protected = self.inputs.protected_messages()
         else: input = _json_value(input)
         input = await self.history.prepare(instructions, input,
             [_json_value(getattr(tool, "params_json_schema", {})) for tool in tools], self._summarize)
