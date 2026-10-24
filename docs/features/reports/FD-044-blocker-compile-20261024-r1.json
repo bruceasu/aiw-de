@@ -1,0 +1,25 @@
+{
+  "schema": "aiw.fd.blocker.v1",
+  "fd_id": "FD-044",
+  "stage": "worker-compile",
+  "role": "worker",
+  "source_event": "FD-044-000003-design-ready",
+  "human_report": "FD-044-blocker-compile-20261024-r1.md",
+  "status": "resolved",
+  "observed_at": "2026-10-24T08:32:30.110695+00:00",
+  "symptom": "Preferred Worker compiler unavailable; combined native compile/temporary cleanup command rejected by automatic review; initial diff check found one trailing blank line",
+  "cause": "Missing local typescript module confirmed; policy reason was only blocked by policy with no detailed cause; README EOF whitespace confirmed",
+  "attempts": [
+    "preferred compile script failed before checks: MODULE_NOT_FOUND typescript",
+    "combined native compile/temporary-directory cleanup request denied and not executed",
+    "README corrected; focused README diff and remaining never-run static checks passed",
+    "native Node TS and UI syntax, six Python source compiles, offline Go build to Windows NUL passed",
+    "one changed Python runtime syntax recompile after preference correction passed"
+  ],
+  "human_decision_need": null,
+  "resolution": "Existing native compilers completed the affected source checks without dependency installation, downloads, a retained executable or the rejected cleanup action",
+  "resolved_at": "2026-10-24T08:32:30.110695+00:00",
+  "next_step": "Independent implementation review and managed archive",
+  "reusable_improvement": "Use bounded native compile fallback when preferred compiler is absent; keep exact rejection and absence of detailed reason. Restore missing blocker templates in a separate skill-maintenance scope.",
+  "template_status": "Referenced root templates missing; existing FD-014 blocker schema used"
+}

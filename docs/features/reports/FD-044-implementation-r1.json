@@ -1,0 +1,162 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-044",
+  "source_event": "FD-044-000003-design-ready",
+  "human_report": "FD-044-implementation-r1.md",
+  "data": {
+    "worker_session": "worker-context-20261024-61db8e4a",
+    "comparison_base": "2ebe0c595c3da356eebaba29e7b98f2d49019273",
+    "implementation_commit": "5cc5e5dc1702824614d9588a23f2f32d7abd56ae",
+    "scope_file_count": 33,
+    "source_paths": [
+      "docs/COMPOSABLE-ROLES.md",
+      "docs/WORKER-DELEGATION-METHODS.md",
+      "docs/WORKER-SKILL-FILES.md",
+      "docs/WORKER-WORKBENCH.md",
+      "docs/worker-pi-integration-plan.md",
+      "openspec/specs/control-plane-api/spec.md",
+      "openspec/specs/task-orchestration/spec.md",
+      "src/main/java/me/asu/aidev/authority/AuthorityPageController.java",
+      "src/main/java/me/asu/aidev/execution/config/CapabilityPacks.java",
+      "src/main/java/me/asu/aidev/execution/config/ConfigurationController.java",
+      "src/main/java/me/asu/aidev/execution/config/ExecutionConfigurations.java",
+      "src/main/java/me/asu/aidev/execution/config/ExecutionWorkbench.java",
+      "src/main/java/me/asu/aidev/execution/config/WorkbenchContract.java",
+      "src/main/java/me/asu/aidev/execution/guard/ExecutionGuardController.java",
+      "src/main/resources/db/migration/V19__worker_workbench.sql",
+      "src/main/resources/static/ui/configuration-methods.js",
+      "src/main/resources/static/ui/roles.js",
+      "src/main/resources/static/ui/worker-workbench.css",
+      "src/main/resources/static/ui/worker-workbench.js",
+      "src/main/resources/templates/ui/execution-observations.html",
+      "src/main/resources/templates/ui/plan-task-detail.html",
+      "src/main/resources/templates/ui/roles.html",
+      "src/main/resources/templates/ui/worker-workbench.html",
+      "workers/process-go/skill_files.go",
+      "workers/process-python/README.md",
+      "workers/process-python/THIRD-PARTY-NOTICES.md",
+      "workers/process-python/context_window.py",
+      "workers/process-python/execution_configuration.py",
+      "workers/process-python/guarded_openai_tools.py",
+      "workers/process-python/openai_api_runtime.py",
+      "workers/process-python/operator_inputs.py",
+      "workers/process-python/skill_files.py",
+      "workers/process-typescript/src/skill-files.ts"
+    ],
+    "implementation_commits": [
+      "481f219",
+      "bda9a71",
+      "d6b0787",
+      "4d76184",
+      "0378de9",
+      "d886c82",
+      "75e9235",
+      "16bb44b",
+      "b6d1763",
+      "681fe07",
+      "da3d8ce",
+      "80c01f6",
+      "ebe693f",
+      "9d83075",
+      "a8644fc",
+      "8869eb4",
+      "ea902e9",
+      "5cc5e5d"
+    ],
+    "implementation_review_failure_count": 0,
+    "design_review": "FD-044-design-r1",
+    "work_items_completed": [
+      "1.1",
+      "1.2",
+      "1.3",
+      "1.4",
+      "1.5",
+      "1.6",
+      "1.7",
+      "1.8",
+      "1.9",
+      "1.10",
+      "1.11",
+      "1.12",
+      "1.13",
+      "1.14"
+    ],
+    "static": {
+      "initial_result": "failed at scoped diff check: README extra EOF blank; later assertions were not executed",
+      "resolution": "README-only corrected diff check plus first execution of remaining text/JSON/AST/SQL/DOM/source checks passed",
+      "revision": "ea902e91b3ab0fa860dafc61538f2048c5c377cc",
+      "product_or_sql_execution": false,
+      "final_preference_helper": "one changed Python file syntax-compiled at final revision"
+    },
+    "compile": {
+      "java": {
+        "command": ". C:/green/bin/setup-jdk25.ps1; mvn -o '-Dmaven.test.skip=true' compile",
+        "result": "passed",
+        "revision": "8869eb4",
+        "production_sources": 304,
+        "resources": "2+151",
+        "finished_at": "2026-10-24T17:24:55+09:00",
+        "src_main_unchanged_to_final": true,
+        "test_compilation": false,
+        "package_examples_executed": false,
+        "environment_restored": true
+      },
+      "preferred_worker_script": {
+        "command": "node scripts/compile-worker-runtime.mjs",
+        "result": "failed-environment",
+        "reason": "MODULE_NOT_FOUND typescript before any Worker checks",
+        "dependencies_installed": false
+      },
+      "blocked_combined_command": {
+        "result": "not executed: automatic review rejected",
+        "reason": "blocked by policy; no more specific reason given",
+        "rejected_cleanup_executed": false
+      },
+      "native": {
+        "typescript": "node --experimental-strip-types --check workers/process-typescript/src/skill-files.ts passed",
+        "ui": "node --check on three changed JS files passed",
+        "python": "six changed files via standard-library compile(); final runtime file recompiled after shared preferences; passed",
+        "go": "offline go build -buildvcs=false -o NUL . passed; exit0, no executable retained or run",
+        "ts_go_ui_unchanged_since": "ea902e9",
+        "type_check": false,
+        "product_imports": false
+      }
+    },
+    "documentation_sources": [
+      "https://developers.openai.com/api/docs/guides/agents/results",
+      "https://developers.openai.com/api/docs/guides/agents/running-agents",
+      "https://developers.openai.com/api/docs/guides/agents/models"
+    ],
+    "sdk_source_absent": true,
+    "skipped": [
+      "tests/test compilation/type checks",
+      "SDK/models/Workers",
+      "application HTTP/browser/Thymeleaf",
+      "SQL/database/V19 migration application",
+      "concurrency/cancel/question/rollback/behavior evaluation",
+      "dependency downloads",
+      "final build/package/install/deploy/restart"
+    ],
+    "risks": [
+      "static and compile do not establish SDK/provider/ModelSettings or actual runtime behavior",
+      "SQLite/PostgreSQL migration and concurrency races unrun",
+      "new live inputs are Python API only; no silent backend downgrade",
+      "source retention is bounded and Attempt-local, not cloud log storage",
+      "shared dirty Java compilation is not approval of unrelated changes",
+      "Control Plane before new Workers; preserve unconfirmed batches on rollback"
+    ],
+    "excluded": [
+      "AuthorityHttpConfiguration/ConfigurationUiOptions/old configurations/fragments/questions template dirty changes",
+      "personal-secretary files and desktop compile script",
+      "credentials/environment secrets"
+    ],
+    "blockers": [
+      {
+        "report": "FD-044-blocker-compile-20261024-r1.md",
+        "status": "resolved"
+      }
+    ],
+    "next_step": "Independent implementation review through actual pending Reviewer event"
+  }
+}
