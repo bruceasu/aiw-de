@@ -175,6 +175,7 @@ public class ExecutionWorkbench {
             if(!input.operationId().equals(row.get("operation_id"))||!"SUCCEEDED".equals(operations.getFirst().get("state")))throw new IllegalStateException("Original bound MODEL has no successful receipt");
             repo.jdbc().update("UPDATE execution_workbench_batch SET state='DELIVERED' WHERE attempt_id=? AND batch_id=?",attempt,input.batchId());
             repo.jdbc().update("UPDATE execution_workbench_message SET state='DELIVERED',updated_ms=? WHERE attempt_id=? AND batch_id=? AND state='RESERVED'",System.currentTimeMillis(),attempt,input.batchId());
+            row.put("state","DELIVERED");
         }
         repo.jdbc().update("UPDATE execution_workbench_session SET updated_ms=? WHERE attempt_id=?",System.currentTimeMillis(),attempt);
         return batch(row);
@@ -196,7 +197,7 @@ public class ExecutionWorkbench {
         if(attempt!=null&&visible.stream().noneMatch(e->e.attemptId().equals(attempt)))throw new SecurityException("Attempt belongs to another task or view");
         var result=new LinkedHashMap<String,Object>();result.put("protocol",PROTOCOL);result.put("ownerId",owner);result.put("observedAt",observations.observedAt());
         result.put("attempts",entries);result.put("taskId",task);result.put("attemptId",attempt);
-        result.put("sessions",repo.jdbc().queryForList("SELECT task_id,attempt_id,instruction_revision,runtime,phase,updated_ms FROM execution_workbench_session WHERE owner_id=? ORDER BY updated_ms DESC LIMIT 100",owner));
+        result.put("sessions",repo.jdbc().queryForList("SELECT task_id,attempt_id,instruction_revision,runtime,phase,updated_ms FROM execution_workbench_session WHERE owner_id=? ORDER BY CASE WHEN attempt_id=? THEN 0 ELSE 1 END,updated_ms DESC LIMIT 100",owner,attempt));
         result.put("messages",attempt==null?List.of():repo.jdbc().queryForList("""
                 SELECT id,request_id,instruction_revision,mode,state,body,digest,sequence_no,batch_id,created_ms,updated_ms
                   FROM execution_workbench_message WHERE owner_id=? AND attempt_id=? ORDER BY sequence_no LIMIT 128

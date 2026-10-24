@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 
 
 def encoded(value):
@@ -16,21 +17,28 @@ def sha(text):
 class Sources:
     def __init__(self, max_bytes=8 * 1024 * 1024):
         self.limit, self.bytes, self.values = max_bytes, 0, {}
+        self.lock, self.closed = threading.RLock(), False
 
     def add(self, text, kind="source", required=True):
         raw = text.encode("utf-8"); identity = kind + "-" + hashlib.sha256(raw).hexdigest()
-        if identity not in self.values:
-            if self.bytes + len(raw) > self.limit:
-                if required: raise RuntimeError("CONTEXT_SOURCE_CAPACITY_EXCEEDED")
+        with self.lock:
+            if self.closed:
+                if required: raise RuntimeError("CONTEXT_SOURCE_WINDOW_CLOSED")
                 return None
-            self.values[identity] = raw; self.bytes += len(raw)
+            if identity not in self.values:
+                if self.bytes + len(raw) > self.limit:
+                    if required: raise RuntimeError("CONTEXT_SOURCE_CAPACITY_EXCEEDED")
+                    return None
+                self.values[identity] = raw; self.bytes += len(raw)
         return identity
 
     def page(self, source_id, offset, limit):
         if type(offset) is not int or type(limit) is not int or offset < 0 or not 1 <= limit <= 8192:
             raise RuntimeError("CONTEXT_SOURCE_RANGE_INVALID")
-        if source_id not in self.values: raise RuntimeError("CONTEXT_SOURCE_NOT_AVAILABLE")
-        raw = self.values[source_id]; start = min(offset, len(raw))
+        with self.lock:
+            if source_id not in self.values: raise RuntimeError("CONTEXT_SOURCE_NOT_AVAILABLE")
+            raw = self.values[source_id]
+        start = min(offset, len(raw))
         while start < len(raw) and raw[start] & 0xC0 == 0x80: start += 1
         end = min(start + limit, len(raw))
         while end >= start:
@@ -53,7 +61,8 @@ class Sources:
                         "modelPreviewComplete": False, "facts": facts})
 
     def clear(self):
-        self.values.clear(); self.bytes = 0
+        with self.lock:
+            self.values.clear(); self.bytes = 0; self.closed = True
 
 
 def _visible(items):

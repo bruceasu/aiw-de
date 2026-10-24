@@ -197,7 +197,8 @@ class _GuardedModel(Model):
         if self.calls >= self._config.max_turns: raise RuntimeError("MODEL_TOTAL_CALL_LIMIT")
         self.calls += 1
 
-    async def _prepare(self, instructions, input, tools, previous_response_id=None, conversation_id=None):
+    async def _prepare(self, instructions, input, tools, previous_response_id=None, conversation_id=None, tracing=None):
+        self._summary_tracing = tracing
         if previous_response_id or conversation_id: raise RuntimeError("SERVER_HISTORY_CONTEXT_TRANSFORMS_UNSUPPORTED")
         if self._request.broker is not None:
             if self.inputs is None:
@@ -223,7 +224,7 @@ class _GuardedModel(Model):
             operation = self._begin(include_inputs=False, purpose="history-summary")
             response = await self._model.get_response(instructions, input,
                 ModelSettings(max_tokens=2048, tool_choice="none", parallel_tool_calls=False, store=False,
-                              truncation="disabled", preserve_raw_usage=True), [], None, [], None,
+                              truncation="disabled", preserve_raw_usage=True), [], None, [], self._summary_tracing,
                 previous_response_id=None, conversation_id=None, prompt=None)
             self._request.attempt.check(); self._validate(response)
             self._finish(operation, response); operation = None
@@ -308,9 +309,8 @@ class _GuardedModel(Model):
                            previous_response_id: str | None, conversation_id: str | None, prompt: Any) -> Any:
         operation = None
         try:
-            input = await self._prepare(system_instructions, input, tools, previous_response_id, conversation_id)
+            input = await self._prepare(system_instructions, input, tools, previous_response_id, conversation_id, tracing)
             self._count()
-            self._request_check(system_instructions, input, tools)
             operation = self._begin()
             response = await self._model.get_response(system_instructions, input, model_settings, tools, output_schema,
                                                       handoffs, tracing, previous_response_id=previous_response_id,
@@ -335,7 +335,7 @@ class _GuardedModel(Model):
             terminal_seen = False
             operation = None
             try:
-                prepared = await self._prepare(system_instructions, input, tools, previous_response_id, conversation_id)
+                prepared = await self._prepare(system_instructions, input, tools, previous_response_id, conversation_id, tracing)
                 self._count()
                 operation = self._begin()
                 async for event in self._model.stream_response(
@@ -368,7 +368,7 @@ class _GuardedModel(Model):
         return guarded_stream()
 
     def get_retry_advice(self, request: Any) -> Any:
-        if self._request.attempt.resource_uncertain or self.inputs and self.inputs.pending: return None
+        if getattr(self._request.attempt, "resource_uncertain", False) or self.inputs and self.inputs.pending: return None
         advice = getattr(self._model, "get_retry_advice", None)
         return advice(request) if advice else None
 
