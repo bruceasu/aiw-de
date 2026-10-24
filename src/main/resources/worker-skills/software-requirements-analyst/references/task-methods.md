@@ -30,3 +30,16 @@ requirement IDs and baselines; return proposals through the existing requirement
 Check each proposed rule against its source and acceptance scenarios. Identify what can
 proceed independently and what requires a missing decision. Report unknowns in existing
 gap fields rather than inventing requirements or introducing a new result schema.
+
+## Focus the next decision
+- At a decision checkpoint, select the unresolved question with the largest effect on
+  scope or acceptance. Explain the choice, alternatives and consequences in the
+  existing clarification proposal. Do not ask every possible question at once.
+- Test consequential wording with a normal case and a counterexample. Reuse confirmed
+  decisions and distinguish missing evidence from a missing human preference.
+- For incoming feedback, retain its source and observed problem. Compare related work
+  against the actual unmet need before labelling it solved or a duplicate.
+- When rules change, identify affected scenarios, existing outputs and work that can
+  continue. Proposed wording is not an accepted replacement baseline.
+- Stop the discussion method when the assigned question has a supported answer or a
+  precise gap and owner. Do not add another approval or interview workflow.
