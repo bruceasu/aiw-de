@@ -1,0 +1,92 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-038",
+  "source_event": "FD-038-000003-design-ready",
+  "human_report": "FD-038-implementation-r1.md",
+  "data": {
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "comparison_base": "d4e9efd",
+    "implementation_commit": "e34651f",
+    "implementation_commits": [
+      "8b4b466",
+      "78963c0",
+      "446ec39",
+      "e34651f"
+    ],
+    "implementation_review_failure_count": 0,
+    "scope": [
+      "27-entry method absorption matrix",
+      "12 changed platform Skill resources across 9 packages",
+      "2 new declared references and index",
+      "36 identical corresponding standalone bundle resources",
+      "WORKER-SKILL-FILES documentation and task-orchestration spec"
+    ],
+    "method_sources": [
+      "host FD workflow/testing shared methods",
+      "handoff",
+      "writing-great-skills including authoring principles",
+      "grill-with-docs",
+      "existing codebase design/diagnosis/prototype/review/requirements methods"
+    ],
+    "comparison_limit": "All 27 entry descriptions classified; relevant method bodies compared, not every auxiliary source file audited",
+    "behavior": [
+      "acceptance-linked local implementation steps in existing text fields",
+      "handoff exact versions, original operations, consumed authority and stale evidence",
+      "focused decisions and boundary examples",
+      "review repair scope and verification oracle/evidence gaps",
+      "conditional Skill authoring reference"
+    ],
+    "preserved": [
+      "Control Plane authority and role boundaries",
+      "original Artifact/REPORT/VERDICT schemas",
+      "tool/runtime/test/network/delegation authorization",
+      "historical software-catalog text identity",
+      "frozen existing task Skill file sets"
+    ],
+    "static": {
+      "command": "git diff --check d4e9efd -- scoped paths plus inline read-only JSON/path/link/size/source-matrix/copy comparison",
+      "result": "passed",
+      "mapped_entries": 27,
+      "changed_platform_resources": 12,
+      "identical_standalone_copies": 36,
+      "declared_packages": 9,
+      "production_modules_executed": false,
+      "skill_scripts_executed": false
+    },
+    "compile": {
+      "environment_script": "C:/green/bin/setup-jdk25.ps1",
+      "java": "25.0.1",
+      "maven": "3.9.4",
+      "command": "mvn -o -Dmaven.test.skip=true compile",
+      "revision": "e34651f",
+      "result": "passed",
+      "finished_at": "2026-10-24T13:05:46+09:00",
+      "details": "128 application resources plus 2 config resources copied; Java up to date",
+      "environment_restored": true,
+      "printed_package_examples_executed": false
+    },
+    "skipped": [
+      "tests",
+      "model/comparative evaluations",
+      "live Worker/SDK/tool/recovery",
+      "Thymeleaf/browser",
+      "database/migrations",
+      "services/network/downloads",
+      "build/package/install/restart/release"
+    ],
+    "risks": [
+      "Static structure and resource copy do not prove activation accuracy or output quality",
+      "Local outline is derived report guidance, not durable TODO/state machine",
+      "Existing frozen tasks intentionally retain old instructions; new task resources require normal platform update"
+    ],
+    "excluded": [
+      "unrelated Java/configuration/authority/template changes",
+      "secretary/Python/model/launcher changes",
+      "host .agents/skills source edits",
+      "advisory or legacy roles outside platform package set"
+    ],
+    "blockers": [],
+    "next_step": "Independent implementation review of actual methods, role and result boundaries, resource freezing and synchronization"
+  }
+}
