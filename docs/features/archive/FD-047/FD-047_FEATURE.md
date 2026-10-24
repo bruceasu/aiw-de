@@ -49,3 +49,5 @@
 - Issue: none
 - 用户本轮请求；workers/personal-secretary/ui/{index.html,app.js}；main.py /api/run-work、/api/schedule；runtime.schedule；daily_assistant.schedule/tick；README。
 - Session: secretary-now-20261024-873d19；设计来源 FD-047-000002-design-requested。
+
+**Completed:** 2026-10-24
