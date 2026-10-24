@@ -120,6 +120,14 @@ public class ExecutionConfigurations {
         }
         return List.copyOf(choices);
     }
+    public ExecutionObservations.Snapshot observations() {
+        String owner=currentOwner();
+        return new ExecutionObservations(repo).read(owner,binding->{
+            var content=repo.decode(get(owner,binding.ref()).contentJson(),Content.class);var candidate=content.candidate();
+            return ComposedRoles.CAPABILITY.equals(candidate.method().roleCapability())
+                    ?roles.verify(candidate,content.assets()).name():candidate.method().name();
+        });
+    }
     PreparedConfigRef existing(Candidate input) {
         for(var row:repo.jdbc().queryForList("SELECT content_json,digest FROM execution_configuration WHERE owner_id=? AND repository_ref=? ORDER BY id,revision",input.ownerId(),input.repositoryRef())) {
             var c=repo.decode(String.valueOf(row.get("content_json")),Content.class).candidate();
