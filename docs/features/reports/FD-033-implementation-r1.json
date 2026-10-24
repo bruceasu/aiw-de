@@ -91,6 +91,7 @@
       "Runtime platform/secretary must be updated and restarted separately",
       "Human permission count remains a hard cap independent of record-only execution budgets"
     ],
-    "next_step": "Independent implementation review; 1.5 review evidence checkbox remains pending until actual verdict"
+    "next_step": "Independent implementation review; 1.5 Worker evidence complete, real review remains required before archive",
+    "handoff_correction": "First implementation-ready rejected without new event because 1.5 conflated Worker evidence preparation and next-stage Reviewer verdict; clarified stage ownership and completed Worker evidence without waiving review"
   }
 }
