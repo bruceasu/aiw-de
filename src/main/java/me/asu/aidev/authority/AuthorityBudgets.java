@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Cumulative identity belongs to the target, never to a grant or Worker. */
 @Service
 public class AuthorityBudgets {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<BusinessActionPermissions> businessPermissions;
     private final JdbcTemplate jdbc;
     private final AuthorityBoundary boundary;
     private final AuthorityRepository repo;
@@ -34,6 +36,7 @@ public class AuthorityBudgets {
         return list().stream().filter(b -> b.target().equals(key) && b.action().equals(rule.action().name())).findFirst().orElseThrow();
     }
     public void consume(Grant grant, String request, boolean reserved) {
+        businessPermissions.getObject().consume(grant,request);
         Budget budget = current(grant.rule());
         long limit = Math.min(budget.limit(), grant.rule().maximumUses());
         if (enforced() && budget.used() >= limit) throw new IllegalStateException("Cumulative target/action budget is exhausted");

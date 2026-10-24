@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 /** All permission checks are platform-owned, including the actual fixed attempt start. */
 @Component
 public class AuthorityTaskPolicy implements WorkerTaskClaimPolicy,TaskExecutionPolicy {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<BusinessActionPermissions> businessPermissions;
     private final AuthorityRepository repo;
     private final AuthorityBoundary boundary;
     private final AuthorityGrantService grants;
@@ -53,7 +55,7 @@ public class AuthorityTaskPolicy implements WorkerTaskClaimPolicy,TaskExecutionP
             catch(SecurityException error) { return false; }
         } else if(permit.get("grant_id")!=null) {
             var grant=repo.get(String.valueOf(permit.get("grant_id")));
-            if(!grants.current(grant) || ((Number)permit.get("grant_revision")).longValue()!=grant.revision()) return false;
+            if(!grants.current(grant) || !businessPermissions.getObject().admitted(grant) || ((Number)permit.get("grant_revision")).longValue()!=grant.revision()) return false;
             worker=grant.workerId();scope=grant.rule();
         } else {
             var managers=repo.jdbc().queryForList("SELECT * FROM authority_managed_plan WHERE plan_id=?",task.subjectId());
@@ -85,7 +87,7 @@ public class AuthorityTaskPolicy implements WorkerTaskClaimPolicy,TaskExecutionP
             var publication=publications.getFirst();
             if(publication.get("grant_id")!=null) {
                 var publicationGrant=repo.get(String.valueOf(publication.get("grant_id")));
-                if(!grants.current(publicationGrant) || !Objects.equals(publicationGrant.targetKey(),publication.get("target_key"))
+                if(!grants.current(publicationGrant) || !businessPermissions.getObject().admitted(publicationGrant) || !Objects.equals(publicationGrant.targetKey(),publication.get("target_key"))
                         || !Objects.equals(publicationGrant.owner(),publication.get("owner_id"))
                         || !grants.targetCurrent(publicationGrant,((Number)publication.get("target_generation")).longValue(),((Number)publication.get("restriction_revision")).longValue())
                         || publicationGrant.revision()!=((Number)publication.get("grant_revision")).longValue()

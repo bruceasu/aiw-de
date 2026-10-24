@@ -12,6 +12,10 @@ import org.springframework.dao.DataAccessException;
 @Service
 public class ActionAdmissionService {
     @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<BusinessActionPermissions> businessPermissions;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<PermissionActionPreparer> permissionPreparer;
+    @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.PersonalQuestions> personalQuestions;
     private final AuthorityRepository repo;
     private final AuthorityBoundary boundary;
@@ -74,6 +78,11 @@ public class ActionAdmissionService {
     public Receipt receipt(AuthorityBoundary.Principal principal,String request) {
         enabled(principal);
         var receipt=existing(principal.owner(),request).orElseThrow(()->new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND,"Receipt not visible"));
+        var original=repo.jdbc().queryForMap("SELECT worker_id,grant_id FROM authority_receipt WHERE instance_id=? AND owner_id=? AND request_id=?",boundary.instance(),principal.owner(),request);
+        if(businessPermissions.getObject().child(String.valueOf(original.get("grant_id"))).isPresent()) {
+            if(!principal.worker().equals(original.get("worker_id")))throw new SecurityException("Original receipt belongs to another secretary");
+            return receipt;
+        }
         String target=repo.jdbc().queryForObject("SELECT target_key FROM authority_receipt WHERE owner_id=? AND request_id=?",String.class,principal.owner(),request);
         readable(principal,target);return receipt;
     }
@@ -100,7 +109,7 @@ public class ActionAdmissionService {
             throw new IllegalArgumentException("Exact versioned action envelope required");
         String digest=businessDigest(input);
         try {
-            return transaction.execute(status->boundary.as(principal,()->{
+            return transaction.execute(status->businessPermissions.getObject().inRequest(input.requestId(),()->boundary.as(principal,()->{
                 boundary.lock();enabled(principal);
                 personalQuestions.getObject().validateEnvelope(principal,input);
                 var previous=existing(principal.owner(),input.requestId());
@@ -108,6 +117,7 @@ public class ActionAdmissionService {
                     if(!previous.get().actionDigest().equals(digest)) throw new IllegalStateException("REQUEST_DIGEST_CONFLICT");
                     return receipt(principal,input.requestId());
                 }
+                permissionPreparer.getObject().validateEnvelope(principal,input);
                 boundary.requireMigrationSafeInstallation();
                 var grant=repo.get(input.grantId());var scope=grant.rule();
                 if(!grant.owner().equals(principal.owner()) || !grant.workerId().equals(principal.worker())) throw new SecurityException("Action grant not visible");
@@ -147,7 +157,7 @@ public class ActionAdmissionService {
                 boolean admitted=repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_task p JOIN authority_target t ON t.target_key=p.target_key WHERE p.request_id=? AND t.owner_id=?",Long.class,input.requestId(),principal.owner())>0;
                 repo.audit(target,grant.id(),input.requestId(),"personal:"+principal.worker(),"ACTION_ADMITTED",scope.action().name()+"; fixed business parameters only");
                 return save(principal,input.requestId(),digest,grant.id(),grant.revision(),admitted?"ADMITTED":"APPLIED",Map.of("value",result==null?"Applied":result));
-            }));
+            })));
         } catch(DataAccessException error) {
             // Commit acknowledgement may itself be lost. Never invent a failure/refund here.
             throw new IllegalStateException("COMMIT_OUTCOME_UNCONFIRMED; query the original requestId");

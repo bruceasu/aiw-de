@@ -32,16 +32,17 @@ public class PermissionTargetResolver {
     public void plan(String owner,String id) {plan(owner,id,new HashSet<>());}
     private void plan(String owner,String id,Set<String> visiting) {
         if(visiting.size()>16||!visiting.add(id))throw new SecurityException("Invalid provenance cycle");
-        var facts=new HashSet<String>();
+        var facts=new HashSet<String>();boolean mappedPublication=false;
         var publication=repo.jdbc().queryForList("SELECT file_id FROM task_output_publication WHERE plan_id=?",String.class,id);
         if(!publication.isEmpty()) {
             file(owner,publication.getFirst(),visiting);facts.add(owner);
             var mapping=repo.jdbc().queryForList("SELECT t.owner_id FROM authority_publication_plan p JOIN authority_target t ON t.target_key=p.target_key WHERE p.plan_id=?",String.class,id);
-            if(mapping.size()!=1)throw new SecurityException("Registered publication provenance required");facts.addAll(mapping);
+            if(mapping.size()>1)throw new SecurityException("Ambiguous publication provenance");facts.addAll(mapping);mappedPublication=mapping.size()==1;
         }
         for(String creator:repo.jdbc().queryForList("SELECT created_by FROM flexible_workflow_plan WHERE id=?",String.class,id)) {
             if(creator.equals(repo.actor(owner)))facts.add(owner);
             else if(!publication.isEmpty()&&creator.startsWith("personal:")) {
+                if(!mappedPublication)throw new SecurityException("Registered delegated publication provenance required");
                 var actors=repo.jdbc().queryForList("SELECT owner_id FROM authority_identity WHERE worker_id=?",String.class,creator.substring(9));
                 if(actors.size()!=1)throw new SecurityException("Publication actor provenance unavailable");facts.addAll(actors);
             } else throw new SecurityException("Plan belongs to another actor");
@@ -53,13 +54,13 @@ public class PermissionTargetResolver {
     public String task(String owner,String id) {return task(owner,id,new HashSet<>());}
     private String task(String owner,String id,Set<String> visiting) {
         var row=repo.jdbc().queryForMap("SELECT subject_type,subject_id FROM work_task WHERE id=?",id);
-        var contexts=repo.jdbc().queryForList("SELECT c.plan_id,p.owner_id FROM execution_context c JOIN execution_policy p ON p.plan_id=c.plan_id WHERE c.task_id=?",id);
+        var contexts=repo.jdbc().queryForList("SELECT c.plan_id,p.owner_id,c.owner_id AS context_owner FROM execution_context c JOIN execution_policy p ON p.plan_id=c.plan_id WHERE c.task_id=?",id);
         String plan;
         if("flexible-plan".equals(row.get("subject_type"))) {
             plan=String.valueOf(row.get("subject_id"));
-            if(contexts.stream().anyMatch(c->!owner.equals(c.get("owner_id"))||!plan.equals(c.get("plan_id"))))throw new SecurityException("Conflicting task owner");
+            if(contexts.stream().anyMatch(c->!owner.equals(c.get("owner_id"))||!owner.equals(c.get("context_owner"))||!plan.equals(c.get("plan_id"))))throw new SecurityException("Conflicting task owner");
         } else {
-            if(contexts.size()!=1||!owner.equals(contexts.getFirst().get("owner_id")))throw new SecurityException("Formal task context required");
+            if(contexts.size()!=1||!owner.equals(contexts.getFirst().get("owner_id"))||!owner.equals(contexts.getFirst().get("context_owner")))throw new SecurityException("Formal task context required");
             plan=String.valueOf(contexts.getFirst().get("plan_id"));
         }
         plan(owner,plan,visiting);return plan;

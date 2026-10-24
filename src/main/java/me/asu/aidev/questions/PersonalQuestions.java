@@ -10,6 +10,8 @@ import static me.asu.aidev.questions.QuestionContract.*;
 /** The staged projection is inert. Existing exact action admission owns its eventual effect. */
 @Service
 public class PersonalQuestions {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<PermissionActionPreparer> permissionPreparer;
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final ActionAdmissionService admission;
     private final FormalQuestions questions;private final TransactionTemplate tx;
     public PersonalQuestions(AuthorityRepository repo,AuthorityBoundary boundary,ActionAdmissionService admission,FormalQuestions questions,PlatformTransactionManager manager) {
@@ -31,7 +33,7 @@ public class PersonalQuestions {
     public ActionAdmissionService.Receipt submit(AuthorityBoundary.Principal principal,PersonalReply input) {
         tx.executeWithoutResult(status->{
             boundary.lock();var e=input.envelope();uuid(e.requestId());var projection=repo.decode(input.projectionJson(),Projection.class);var q=questions.get(projection.reply().questionId());
-            admission.readable(principal,"PLAN:"+q.source().planId());
+            if(!permissionPreparer.getObject().questionRead(principal,input,q))admission.readable(principal,"PLAN:"+q.source().planId());
             if(!q.ownerId().equals(principal.owner())||!e.targetId().equals(q.source().planId())||e.taskId()!=null||e.step()!=null
                     ||!Set.of(ActionScope.Action.A19_ANSWER,ActionScope.Action.A18_BUDGET).contains(e.action())) throw new SecurityException("Exact question action required");
             String json=input.projectionJson(),digest=AuthorityRepository.hash(json);

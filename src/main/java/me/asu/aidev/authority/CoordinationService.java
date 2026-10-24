@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Existing bounded Plan coordination, requested by the independent private process. */
 @Service
 public class CoordinationService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<BusinessActionPermissions> businessPermissions;
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final AuthorityGrantService grants;
     private final ActionAdmissionService receipts;private final ManagedPlanAdmission manager;private final WorkflowPlanService plans;
     private final WorkflowStepCompletedHandler completion;private final WorkTaskRepository tasks;private final ExecutionAttemptRepository attempts;
@@ -59,6 +61,10 @@ public class CoordinationService {
             return receipts.receipt(principal,input.requestId());
         }
         var row=repo.jdbc().queryForMap("SELECT * FROM authority_managed_plan WHERE plan_id=?",input.planId());
+        if(input.sourceTask()==null&&(businessPermissions.getObject().regime(principal.owner(),principal.worker(),ActionScope.Action.A05)
+                ||businessPermissions.getObject().regime(principal.owner(),principal.worker(),ActionScope.Action.A12_EXECUTE)
+                &&repo.jdbc().queryForObject("SELECT COUNT(*) FROM task_output_publication WHERE plan_id=?",Long.class,input.planId())>0))
+            throw new IllegalStateException("Confirm through the fixed action permission; managed START cannot bypass its count");
         if(!Objects.equals(row.get("owner_id"),principal.owner()) || !Objects.equals(row.get("worker_id"),principal.worker())
                 || AuthorityRepository.flag(row.get("paused")) || !Objects.equals(row.get("authority"),security.currentOperatorAuthority(repo.actor(principal.owner()))))
             throw new SecurityException("Current owner management authority required");

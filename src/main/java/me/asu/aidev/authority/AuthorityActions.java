@@ -23,6 +23,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthorityActions implements AuthorityTargets {
     @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<PermissionActionPreparer> permissionPreparer;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<BusinessActionPermissions> businessPermissions;
+    @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.PersonalQuestions> personalQuestions;
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.FormalQuestions> formalQuestions;
@@ -385,8 +389,10 @@ public class AuthorityActions implements AuthorityTargets {
         var owner=repo.get(grant);
         var link=outputRepo.publication(rule.targetId()).orElseThrow();
         String key=publicationKey(link.fileId(),link.targetPath());
+        permissionPreparer.getObject().publication(owner,rule.targetId(),link.fileId(),link.reviewTaskId(),link.targetPath());
         var allowed=repo.grants().stream().filter(g->g.rule().action()==ActionScope.Action.A12_EXECUTE
                 && g.rule().effect().equals("ALLOW") && key(g.rule()).equals(key) && g.owner().equals(owner.owner())
+                && businessPermissions.getObject().child(g.id()).map(c->Objects.equals(c.requestId(),businessPermissions.getObject().requestId())).orElse(true)
                 && g.workerId().equals(owner.workerId()) && g.rule().targetId().equals(rule.targetId())
                 && grants.getObject().permitted(g,snapshot(g.rule()))).findFirst()
                 .orElseThrow(()->new IllegalStateException("Separate publication execution authority is required"));

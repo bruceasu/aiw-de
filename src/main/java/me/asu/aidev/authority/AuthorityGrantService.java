@@ -7,6 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthorityGrantService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<BusinessActionPermissions> businessPermissions;
     public static final class InvalidIdentityInput extends IllegalArgumentException {
         private final String field;
         private InvalidIdentityInput(String field,String message) { super(message);this.field=field; }
@@ -112,6 +114,7 @@ public class AuthorityGrantService {
     }
     @Transactional public AuthorityRepository.Grant issue(String owner,String worker,ActionScope scope,long expiry,String actor) {
         Objects.requireNonNull(scope);human(actor,scope.action().name());owns(owner,actor);boundary.lock();
+        if(businessPermissions.getObject().regime(owner,worker,scope.action()))throw new IllegalStateException("This action uses business permissions; legacy parallel grants are disabled");
         boundary.requireMigrationSafeInstallation();
         if(!scope.effect().equals("ALLOW") || expiry<=System.currentTimeMillis())
             throw new IllegalArgumentException("Explicit minimal ALLOW scope, expiry and separate restriction controls required");
@@ -132,6 +135,7 @@ public class AuthorityGrantService {
     }
     public boolean current(AuthorityRepository.Grant grant) {
         return grant.state().equals("ENABLED") && grant.effectiveMs()<=System.currentTimeMillis() && grant.expiresMs()>System.currentTimeMillis()
+                && businessPermissions.getObject().grantActive(grant)
                 && grant.authority().equals(security.currentDelegationAuthority(repo.actor(grant.owner()),grant.rule().action().name()));
     }
     public boolean permitted(AuthorityRepository.Grant grant,Map<String,Object> snapshot) {

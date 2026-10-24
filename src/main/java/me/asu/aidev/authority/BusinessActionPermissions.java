@@ -51,7 +51,9 @@ public class BusinessActionPermissions {
         var linked=child(grant.id());
         if(linked.isEmpty())return !regime(grant.owner(),grant.workerId(),grant.rule().action());
         var p=get(linked.get().permissionId());
-        return active(p)&&p.ownerId().equals(grant.owner())&&p.workerId().equals(grant.workerId())&&p.action()==grant.rule().action();
+        if(!active(p)||!p.ownerId().equals(grant.owner())||!p.workerId().equals(grant.workerId())||p.action()!=grant.rule().action())return false;
+        try {targets.getObject().check(p,grant.rule(),linked.get().sourceTask(),linked.get().questionId());return true;}
+        catch(SecurityException|IllegalArgumentException error){return false;}
     }
     public boolean admitted(AuthorityRepository.Grant grant) {
         var c=child(grant.id());return c.isEmpty()||repo.jdbc().queryForObject(
