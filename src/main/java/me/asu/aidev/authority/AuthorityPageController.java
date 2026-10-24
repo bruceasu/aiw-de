@@ -14,7 +14,15 @@ public class AuthorityPageController {
         boolean operate=!consoleSecurity.currentDelegationAuthority(actor,"A19_ANSWER").isEmpty(),approve=!consoleSecurity.currentDelegationAuthority(actor,"A18_BUDGET").isEmpty();
         if(!operate&&!approve) throw new SecurityException("Current operation or approval role required");
         model.addAttribute("questionCanOperate",operate);model.addAttribute("questionCanApprove",approve);
-        model.addAttribute("questionPlans",repo.jdbc().queryForList("SELECT p.plan_id FROM execution_policy p JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY p.plan_id",String.class,actor));
+        var ids=repo.jdbc().queryForList("SELECT p.plan_id FROM execution_policy p JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY p.plan_id",String.class,actor);
+        Map<String,String> titles=new HashMap<>();
+        plans.list().stream().filter(p->actor.equals(p.createdBy())).forEach(p->{
+            String goal=p.spec().goal().strip().split("\\R",2)[0];
+            titles.put(p.id(),goal.length()>80?goal.substring(0,80)+"…":goal);
+        });
+        model.addAttribute("questionPlans",ids);
+        model.addAttribute("questionPlanChoices",ids.stream().map(id->Map.of("id",id,"title",titles.getOrDefault(id,id))).toList());
+        model.addAttribute("questionAccountingEnforced",accounting.enforced());
         return "ui/questions";
     }
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.ExecutionConfigurations configurations;

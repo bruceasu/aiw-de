@@ -6,6 +6,7 @@
   <a th:if="${canOperate}" th:classappend="${active == 'goals' ? 'active' : ''}" href="/ui/goals">Goals</a>
   <a th:classappend="${active == 'authority' ? 'active' : ''}" href="/ui/authority">个人 Worker 授权</a>
   <a th:if="${canOperate}" th:classappend="${active == 'configurations' ? 'active' : ''}" href="/ui/configurations">任务准备与工作方法</a>
+  <a th:if="${canOperate or canApprove}" th:classappend="${active == 'questions' ? 'active' : ''}" href="/ui/questions">工作问题与人工控制</a>
   <a th:classappend="${active == 'plans' ? 'active' : ''}" href="/ui/plans">Plans</a>
   <a th:if="${canOperate}" th:classappend="${active == 'workspaces' ? 'active' : ''}" href="/ui/workspaces">Workspaces</a>
   <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Fleet</a>
