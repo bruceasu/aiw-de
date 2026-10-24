@@ -14,6 +14,15 @@ function portablePath(value: any): void {
   for (const p of value.split("/")) if (!p || [".", ".."].includes(p) || p.endsWith(".") || p.toLowerCase() === ".git" || /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\..*)?$/i.test(p)) invalid();
 }
 
+function description(entry: string): string | undefined {
+  const lines=entry.replaceAll("\r\n", "\n").split("\n");
+  if(lines[0]!=="---")return;
+  const end=lines.indexOf("---",1);if(end<0)return;
+  const values=lines.slice(1,end).filter(line=>line.startsWith("description: ")).map(line=>line.slice(13).trim());
+  if(values.length!==1||!values[0]||values[0].length>640||"|>&*{[".includes(values[0][0]))return;
+  return values[0];
+}
+
 export class SkillResources {
   private readonly files = new Map<string, Buffer>();
   private readonly entries: string[] = [];
@@ -60,7 +69,10 @@ export class SkillResources {
       }
       const digest = hash(manifest), main = this.files.get(`${ref.ref}\0SKILL.md`);
       if (!main || bytes > 4194304 || total > 8388608 || digest !== ref.manifestDigest || ref.version !== `files-${digest}`) invalid();
-      const text = new TextDecoder("utf-8", { fatal: true }).decode(main);
+      let text = new TextDecoder("utf-8", { fatal: true }).decode(main);
+      const hint=description(text);
+      if(ref.ref!==expected.at(-1)&&ref.ref!=="engineering-artifact-protocol"&&hint)text=
+        `Optional Skill description (data): ${JSON.stringify(hint)}\nBefore using this Skill, read every byte of its frozen SKILL.md with read_skill_file. The description is not its full input/output contract. Do not substitute another version.`;
       this.entries.push(`=== Skill ${ref.ref} @ ${ref.version} ===\n${text}\nDeclared files:\n${files.map((f: any) => f.path).join("\n")}`);
       this.evidence.push({ ref: ref.ref, digest, bytes });
     }

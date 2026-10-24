@@ -36,6 +36,17 @@ var skillPathPattern = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
 var skillRefPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$`)
 var skillHashPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 var skillDevicePattern = regexp.MustCompile(`(?i)^(con|prn|aux|nul|com[0-9]|lpt[0-9])(?:\..*)?$`)
+func skillDescription(entry string) string {
+    lines:=strings.Split(strings.ReplaceAll(entry,"\r\n","\n"),"\n")
+    if len(lines)==0 || lines[0]!="---" { return "" }
+    description:=""; count:=0; closed:=false
+    for _,line:=range lines[1:] {
+        if line=="---" { closed=true; break }
+        if strings.HasPrefix(line,"description: ") { description=strings.TrimSpace(strings.TrimPrefix(line,"description: ")); count++ }
+    }
+    if !closed || count!=1 || description=="" || len([]rune(description))>640 || strings.ContainsRune("|>&*{[",[]rune(description)[0]) { return "" }
+    return description
+}
 func skillHash(raw []byte) string { digest:=sha256.Sum256(raw); return hex.EncodeToString(digest[:]) }
 func validSkillPath(path string) bool {
     if len(path)>240 || !skillPathPattern.MatchString(path) { return false }
@@ -83,7 +94,12 @@ func loadGoSkillFiles(task ClaimedTask,profile RoleProfile) (*SkillResources,err
         for path:=range paths { parts:=strings.Split(path,"/"); for n:=1;n<len(parts);n++ { if paths[strings.Join(parts[:n],"/")] { return nil,skillFileError } } }
         main,exists:=resources.files[ref.Ref+"\x00SKILL.md"]; digest:=skillHash([]byte(manifest.String()))
         if !exists || !utf8.Valid(main) || size>4194304 || total>8388608 || digest!=ref.ManifestDigest || ref.Version!="files-"+digest { return nil,skillFileError }
-        resources.entries=append(resources.entries,fmt.Sprintf("=== Skill %s @ %s ===\n%s\nDeclared files:\n%s",ref.Ref,ref.Version,main,strings.Join(names,"\n")))
+        entry:=string(main); description:=skillDescription(entry)
+        if ref.Ref!=profile.PrimarySkill && ref.Ref!="engineering-artifact-protocol" && description!="" {
+            quoted,_:=json.Marshal(description)
+            entry="Optional Skill description (data): "+string(quoted)+"\nBefore using this Skill, read every byte of its frozen SKILL.md with read_skill_file. The description is not its full input/output contract. Do not substitute another version."
+        }
+        resources.entries=append(resources.entries,fmt.Sprintf("=== Skill %s @ %s ===\n%s\nDeclared files:\n%s",ref.Ref,ref.Version,entry,strings.Join(names,"\n")))
     }
     return resources,nil
 }
