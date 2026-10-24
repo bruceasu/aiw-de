@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · AIW:DE</title><link rel="stylesheet" href="/ui/console.css" th:href="@{/ui/console.css}"></head>
 <body class="login-body"><main class="login-shell">
   <div class="login-brand"><div class="brand-mark">AIW</div><div><h1>AIW:DE</h1><p>Web Console</p></div></div>
   <div class="card login-card">
@@ -12,7 +12,7 @@ AIW_WEB_CONSOLE_PASSWORD=&lt;设置你自己的密码&gt;</pre>
       <p>其他启动方式请将这两项设置为环境变量。登录页始终可用，无需启用开关。</p>
     </div>
     <div th:if="${errorMessage}" class="flash error" th:text="${errorMessage}"></div>
-    <form action="/ui/login" method="post">
+    <form action="/ui/login" th:action="@{/ui/login}" method="post">
       <input type="hidden" name="next" th:value="${next}"/>
       <div class="field"><label>Username</label><input name="username" autocomplete="username" required autofocus/></div>
       <div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" required/></div>

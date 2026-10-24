@@ -24,19 +24,14 @@ public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         if (path.equals("/ui/login") || path.equals("/ui/console.css") || path.equals("/ui/console.js")) return true;
-        if (!path.equals("/ui") && !path.startsWith("/ui/") && !WebConsoleApiRoutes.matches(path)) return true;
+        boolean page = path.equals("/ui") || path.startsWith("/ui/");
+        if (!page && !WebConsoleApiRoutes.matches(path)) return true;
         HttpSession session = request.getSession(true);
-        if(delegation!=null && delegation.humanAuthRequired() && !security.signedIn(session)) {
-            if ((path.equals("/ui") || path.startsWith("/ui/")) && HttpMethod.GET.matches(request.getMethod())) {
-                response.sendRedirect(request.getContextPath() + "/ui/login?next=" + URLEncoder.encode(path, StandardCharsets.UTF_8));
-            } else response.sendError(HttpServletResponse.SC_UNAUTHORIZED,"Human console authentication required after delegation activation");
-            return false;
-        }
-
         if (!security.authenticated(session)) {
-            if (HttpMethod.GET.matches(request.getMethod())) {
-                String next = URLEncoder.encode(path, StandardCharsets.UTF_8);
-                response.sendRedirect("/ui/login?next=" + next);
+            if (page && (HttpMethod.GET.matches(request.getMethod()) || HttpMethod.HEAD.matches(request.getMethod()))) {
+                String target = path + (request.getQueryString() == null ? "" : "?" + request.getQueryString());
+                String next = URLEncoder.encode(target, StandardCharsets.UTF_8);
+                response.sendRedirect(request.getContextPath() + "/ui/login?next=" + next);
             } else {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Web Console authentication required");
             }
