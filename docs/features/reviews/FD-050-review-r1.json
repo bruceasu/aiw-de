@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-050",
+  "source_event": "FD-050-000004-implementation-ready",
+  "human_report": "FD-050-review-r1.md",
+  "data": {
+    "session": "fd050-review-20261024-f4729a",
+    "base_commit": "4f1dac8",
+    "implementation_commit": "e6bccda",
+    "result": "passed",
+    "findings": [],
+    "acceptance": ["supported", "supported", "supported"],
+    "commands": ["Get-Content", "Select-String", "git diff/show", "rg", "aiw fd show/claim"],
+    "not_run": ["tests", "compile", "GUI", "service", "restart", "packaging"],
+    "failed_review_count": 0,
+    "remaining_risks": ["Actual Windows rendering and interaction unverified"],
+    "unrelated_dirty_changes": "excluded from review scope"
+  }
+}

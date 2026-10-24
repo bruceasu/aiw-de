@@ -1,7 +1,7 @@
 # FD-050: 桌面人物移除底部文字与底板
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -28,7 +28,7 @@
 
 ## TODO
 
-1.1–1.2 已实施，暂存差异检查及当前/提交区 Python 编译通过，待独立实现审阅。
+1.1–1.2 已实施，暂存差异检查及当前/提交区 Python 编译通过；独立实现审阅 r1 通过，待 host 核对实际 receipt 后归档。
 
 ## Acceptance
 
@@ -40,6 +40,7 @@
 
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
+- Reviewer Session fd050-review-20261024-f4729a 已审阅 4f1dac8..e6bccda，三项验收静态支持，无阻塞发现；报告 docs/features/reviews/FD-050-review-r1.md 及 JSON。未重跑编译或运行测试/GUI，真实布局与交互未验证。通过事件以 CLI 实际 receipt 为准。
 
 ## Sources
 
