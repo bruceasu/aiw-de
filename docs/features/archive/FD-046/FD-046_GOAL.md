@@ -49,3 +49,5 @@
 - Issue: none
 - 用户反馈、FD-045；GoalController.Revision 及对应路由；goals.js、goals.html、console.js、console.css；Boot 4.0.8 本地 BOM 与 Jackson 3.1.5 DeserializationFeature 字节码。
 - Session: goal-delete-binding-20261024-44a708；设计来源 FD-046-000002-design-requested。
+
+**Completed:** 2026-10-24
