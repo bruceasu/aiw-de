@@ -91,3 +91,5 @@
 - 文章 https://www.heyuan110.com/zh/posts/ai/2026-04-13-harness-subagent-architecture/；上轮已核对Cognition/Anthropic一手说明，采用方法而非未经验证的数字和品牌规则。
 - 现有COMPOSABLE-ROLES/WORKER-OPTIONAL-SKILLS、planner/handoff/protocol方法、SkillFiles/index/catalogue、ExecutionLedger与V12/V13、Attempt模型字段及配置页面。
 - Planner/Worker Session delegation-methods-20261024-8a2bb0a5；真实来源FD-043-000002-design-requested。
+
+**Completed:** 2026-10-24
