@@ -1,7 +1,7 @@
 # FD-036: Goal Workshop 列表删除与已删除目标恢复入口
 
-**Status:** Design
-**Revision:** 2
+**Status:** Open
+**Revision:** 3
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -28,13 +28,13 @@
 
 ## Work items
 
-- [ ] 1.1 在列表提供当前/已删除视图、数量、刷新、行内删除/恢复和空状态。规模小、难度低，无依赖；完成证据为本页模板/样式/渲染逻辑。
-- [ ] 1.2 统一列表/详情删除恢复流程，保留原 revision、确认、未保存保护和明确成功/未知状态。规模小、难度中，依赖 1.1；完成证据为原接口调用及选择/列表更新路径。
-- [ ] 1.3 更新使用说明、完成 JS 语法编译和静态证据，再交独立实现审阅。规模小、难度低，依赖 1.2；只准备 Worker 证据，Reviewer 结论属于后续交接阶段。
+- [x] 1.1 在列表提供当前/已删除视图、数量、刷新、行内删除/恢复和空状态。规模小、难度低，无依赖；完成证据为本页模板/样式/渲染逻辑。
+- [x] 1.2 统一列表/详情删除恢复流程，保留原 revision、确认、未保存保护和明确成功/未知状态。规模小、难度中，依赖 1.1；完成证据为原接口调用及选择/列表更新路径。
+- [x] 1.3 更新使用说明、完成 JS 语法编译和静态证据，再交独立实现审阅。规模小、难度低，依赖 1.2；只准备 Worker 证据，Reviewer 结论属于后续交接阶段。
 
 ## TODO
 
-设计已收敛，真实交接后完成 1.1–1.3，再独立实现审阅和归档。
+1.1–1.3 已完成，源码 70cc7bd；待独立实现审阅，通过后范围归档。
 
 ## Acceptance
 
@@ -55,3 +55,5 @@
 - src/main/resources/templates/ui/goals.html；static/ui/goals.js、goals.css、console.css。
 - goal/GoalController、GoalDiscussionService.deleted、GoalRepository，V7__goal_discussion.sql（只读）。
 - docs/current-zh/GOAL-WORKSHOP.md。
+
+- Worker 证据：../reports/FD-036-implementation-r1.md 与同名 JSON。3d8f026..70cc7bd 完成页面与说明；git diff --check 通过，node --check src/main/resources/static/ui/goals.js 通过。无 Java 修改，未运行 Maven、测试、浏览器、数据库、服务或重启。无持久化或 API 变化，复用原删除/恢复协议，不额外改变稳定能力规格。
