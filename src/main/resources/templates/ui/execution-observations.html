@@ -7,7 +7,7 @@
 <body><div class="app configuration-page observations-page"><nav th:replace="~{ui/fragments :: nav('configurations')}"></nav><main class="main">
 <header th:replace="~{ui/fragments :: topbar('执行记录','查看实际消耗、上报结果与交付依据。')}"></header>
 <div class="content configuration-content">
-<section class="configuration-intro"><div><span class="configuration-eyebrow">工作方法 · 执行 · 证据</span><h2>用实际记录了解执行情况</h2><p>当前账号最近 100 个有计量记录的尝试，按尝试创建时间排序。这里只读取已有数据，不增加预算限制。</p></div><div class="observations-actions"><a class="btn ghost" href="/ui/configurations?view=roles">组合角色</a><a class="btn ghost" href="/ui/configurations">准备任务</a></div></section>
+<section class="configuration-intro"><div><span class="configuration-eyebrow">工作方法 · 执行 · 证据</span><h2>用实际记录了解执行情况</h2><p>当前账号最近 100 个有计量记录的尝试，按尝试创建时间排序。这里只读取已有数据，不增加预算限制。</p></div><div class="observations-actions"><a class="btn ghost" href="/ui/configurations?view=workbench">Worker 工作台</a><a class="btn ghost" href="/ui/configurations?view=roles">组合角色</a><a class="btn ghost" href="/ui/configurations">准备任务</a></div></section>
 <p th:if="${ownerId.isEmpty()}" class="callout warn-callout">请先到<a href="/ui/authority">个人授权</a>页绑定当前身份。</p>
 <p id="observations-feedback" class="configuration-feedback" role="status" aria-live="polite" hidden></p>
 <section class="card"><div class="observations-heading"><div><h2>最近的尝试</h2><p id="observations-updated" class="muted">正在读取…</p></div><button id="observations-refresh" class="btn ghost" type="button">刷新记录</button></div>

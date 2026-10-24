@@ -7,7 +7,7 @@
 <div class="content workflow-page task-detail-page">
   <div class="callout" data-attempt-duration-warning hidden role="status">Long-running task. Check Worker progress; elapsed time alone does not stop execution.</div>
   <div class="section-title"><a th:href="@{/ui/plans/{id}(id=${planId})}">Back to plan</a><div class="form-actions"><span class="small muted" data-refresh-label th:if="${taskActive}">Refresh in 8s</span><a class="btn ghost small-btn" th:href="@{/ui/plans/{id}/tasks/{taskId}(id=${planId},taskId=${taskDetail.task.id.value})}">Refresh now</a></div></div>
-  <section class="card"><h2>Task overview</h2><dl class="kv">
+  <section class="card"><div class="section-title"><h2>Task overview</h2><a class="btn ghost small-btn" th:href="@{/ui/configurations(view='workbench',task=${taskDetail.task.id.value})}">打开 Worker 工作台</a></div><dl class="kv">
     <dt>Task ID</dt><dd class="mono" th:text="${taskDetail.task.id.value}"></dd>
     <dt>State</dt><dd><span class="badge" th:attr="data-status=${taskDetail.task.state}" th:text="${taskDetail.task.state}"></span></dd>
     <dt>Skill</dt><dd th:text="${taskDetail.task.skillRef}"></dd>

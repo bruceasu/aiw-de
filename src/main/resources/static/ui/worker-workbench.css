@@ -1,0 +1,19 @@
+.workbench-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.workbench-picker{display:grid;grid-template-columns:minmax(0,2fr) minmax(180px,1fr) auto;gap:20px;align-items:end}
+.workbench-summary{display:flex;align-items:flex-start;gap:24px;flex-wrap:wrap;margin-top:24px}
+.workbench-summary strong,.workbench-summary small{display:block}
+.workbench-summary strong{font-size:15px;margin-bottom:7px}
+.workbench-summary small{font-size:12px;line-height:1.8;color:var(--muted)}
+.workbench-tabs{position:sticky;top:0;z-index:2;background:var(--bg);justify-content:flex-start;overflow:auto;margin-top:24px;padding-top:10px}
+.workbench-tabs button{white-space:nowrap}
+.workbench-record{padding:16px 0;border-top:1px solid var(--line);font-size:12px;line-height:1.8;overflow-wrap:anywhere}
+.workbench-record h3{font-size:14px;margin:0 0 8px}
+.workbench-record p{margin:6px 0}
+.workbench-record pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;color:var(--text);background:var(--panel);padding:12px;border-radius:4px;max-height:320px;overflow:auto}
+.workbench-record details{margin-top:10px;color:var(--muted)}
+.workbench-record summary{cursor:pointer}
+.workbench-record .field{margin-top:12px}
+.workbench-comparison{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}
+.workbench-page #wb-operations{margin-top:18px}
+.workbench-page [role=tabpanel][hidden]{display:none!important}
+@media(max-width:760px){.workbench-picker{grid-template-columns:1fr}.workbench-tabs{top:0}.workbench-summary{gap:16px}.workbench-comparison{grid-template-columns:1fr}}

@@ -7,6 +7,8 @@
   const observations=UI.node('a','查看执行记录','btn ghost');
   observations.href='/ui/configurations?view=observations';
   $('panel-methods').querySelector('.configuration-section-heading').append(observations);
+  const workbench=UI.node('a','打开 Worker 工作台','btn ghost');workbench.href='/ui/configurations?view=workbench';
+  $('panel-methods').querySelector('.configuration-section-heading').append(workbench);
   let initialized=false,epoch=0,previewBusy=false,saveBusy=false,assetBusy=false,proposal=null,uncertainSave=null,pendingAsset=null;
   const refKey=asset=>asset.ref+':'+asset.version+':'+asset.digest;
   const selected=id=>[...$(id).querySelectorAll('input:checked')].map(input=>input.value);

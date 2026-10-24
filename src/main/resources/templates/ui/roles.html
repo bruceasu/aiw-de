@@ -7,7 +7,7 @@
 <body><div class="app configuration-page role-page"><nav th:replace="~{ui/fragments :: nav('configurations')}"></nav><main class="main">
 <header th:replace="~{ui/fragments :: topbar('组合角色','把共同技能和工作流程组合成适合任务的角色。')}"></header>
 <div class="content configuration-content">
-<section class="configuration-intro"><div><span class="configuration-eyebrow">角色 · 技能 · 流程</span><h2>角色由你组合</h2><p>从空白开始，或复制默认模板。选择共享技能、安排使用顺序，写清整体交付要求，再保存为可复用的角色。同一 Worker 完成角色内的工作；跨 Worker 继续使用平台流程。</p></div><div class="configuration-form-actions"><a class="btn ghost" href="/ui/configurations?view=observations">查看执行记录</a><a class="btn ghost" href="/ui/configurations">返回任务准备</a></div></section>
+<section class="configuration-intro"><div><span class="configuration-eyebrow">角色 · 技能 · 流程</span><h2>角色由你组合</h2><p>从空白开始，或复制默认模板。选择共享技能、安排使用顺序，写清整体交付要求，再保存为可复用的角色。同一 Worker 完成角色内的工作；跨 Worker 继续使用平台流程。</p></div><div class="configuration-form-actions"><a class="btn ghost" href="/ui/configurations?view=workbench">Worker 工作台</a><a class="btn ghost" href="/ui/configurations?view=observations">查看执行记录</a><a class="btn ghost" href="/ui/configurations">返回任务准备</a></div></section>
 <p th:if="${ownerId.isEmpty()}" class="callout warn-callout">请先到<a href="/ui/authority">个人授权</a>页绑定当前身份。</p>
 <p id="role-feedback" class="configuration-feedback" role="status" aria-live="polite" hidden></p>
 <div class="configuration-columns"><section class="card">
