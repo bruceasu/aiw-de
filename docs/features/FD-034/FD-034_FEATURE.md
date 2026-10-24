@@ -54,11 +54,11 @@
 - [x] 1.3 用清晰表单与准备记录替换意图/JSON 输入输出，维护原请求/版本/世代和失败恢复。规模小、难度中，依赖 1.2；证据为 configurations.html/js/css，原输入/版本/世代内存维护，未知响应先刷新核对，再显式重试原对象，记录恢复与选择项更新分开。
 - [x] 1.4 提供可选方法装配、摘要预览、保存/复用/选用以及资料登记表单。规模小、难度中，依赖 1.2；证据为 configuration-methods.js、对应表单和摘要面板，额外 Skill 排除基础引用、输入指纹/序号使旧预览失效，保存/登记提交原对象并区分后续刷新失败。
 - [x] 1.5 对齐控制台布局/文案与使用说明，执行范围内编译并提交独立实现审阅证据。规模小、难度中，依赖前述条目；控制台外壳与导航、附近说明/稳定规格已同步，ebeacaa 的离线 Java compile 和两个浏览器脚本语法编译通过，未运行真实页面。
-- [x] 1.6 修正 r1 的 R034-01，提供经 Owner 验证的本次任务状态及刷新入口，计划链接仅指向定义。规模小、难度中，依赖 1.3；uiOptions.taskProgress 复用既有 Owner/context/policy 关联查询的 taskId/state，结果卡片区分创建结果与实际执行状态，读取缺失时明确未知，待本次编译及独立复审。
+- [x] 1.6 修正 r1 的 R034-01，提供经 Owner 验证的本次任务状态及刷新入口，计划链接仅指向定义。规模小、难度中，依赖 1.3；uiOptions.taskProgress 复用既有 Owner/context/policy 关联查询的 taskId/state，结果卡片区分创建结果与实际执行状态，读取缺失时明确未知。3b251cd 的 Java/已修改 JS 编译通过，待独立复审。
 
 ## TODO
 
-- R034-01 已完成源码修正，执行本次范围内编译后提交 r2 独立实现审阅；动作授权 FD-033 的缺省范围选择仍单独待确认。
+- R034-01 已修正并完成范围内编译，等待 r2 独立实现审阅，通过后仅提交本 FD 审阅证据并自动归档；动作授权 FD-033 的缺省范围选择仍单独待确认。
 
 ## Acceptance
 
@@ -80,6 +80,8 @@
 - `node --check src/main/resources/static/ui/configurations.js` 与 `node --check src/main/resources/static/ui/configuration-methods.js` 均通过。范围内 git diff --check 通过；定向静态检索只剩内部请求序列化/指纹使用 JSON，不再向页面输出原始 JSON 或要求 JSON 输入。
 - 未运行：测试、Thymeleaf 渲染、浏览器/响应式布局、数据库、实际登录/准备/候选保存、乱序请求与中断恢复、模型、网络下载、打包、安装、重启和发布。编译与静态证据不是运行通过。
 - Worker 双证据：../reports/FD-034-implementation-r1.md 与同名 JSON。
+- r1 独立实现审阅：../reviews/FD-034-implementation-review-r1-20261024-c6b9087d.md 与同名 JSON，实际 FD-034-000006-changes-requested，唯一 R034-01/P2；本周期失败累计 1 次。
+- Worker 已认领该来源事件并在 3b251cd 修正 R034-01；2026-10-24 11:21:52 JST 同一 JDK25/Maven3.9.4 离线 compile 再次通过（292 个生产源），已修改 configurations.js 的 node --check 通过。未改 configuration-methods.js，沿用 r1 证据。详见 ../reports/FD-034-implementation-r2.md 与同名 JSON；原未运行边界保持，等待 r2 独立实现审阅。
 - 独立实现审阅第 1 轮：../reviews/FD-034-implementation-review-r1-20261024-c6b9087d.md 与同名 JSON，changes-requested；来源 FD-034-000005-implementation-ready，独立 Session fd034-reviewer-20261024-c6b9087d，审阅 ebeacaa1872178d69411eb59cfcebe906d3e40b1。R034-01 为静态确认的实际任务入口/进度语义缺陷；未重复编译、运行测试或服务。
 
 ## Sources
