@@ -91,3 +91,5 @@
 - 用户（2026-10-24）：JSON 输出干扰使用，软件任务准备和组合/声明式候选均看不懂。
 - 来源事件 FD-034-000002-design-requested；Planner/Worker Session secretary-desktop-20261024-a6529740。
 - templates/ui/configurations.html、static/ui/configurations.js、ConfigurationController、ConfigurationContract、ExecutionConfigurations、AgentFactory、AiProfileCatalog、WorkflowPlanSpec、docs/EXECUTION-CONFIGURATION.md。
+
+**Completed:** 2026-10-24
