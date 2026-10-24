@@ -15,7 +15,7 @@ public class ExecutionConfigurations {
     private me.asu.aidev.execution.skills.SkillFiles skillFiles;
     @org.springframework.beans.factory.annotation.Autowired public void setSkillFiles(me.asu.aidev.execution.skills.SkillFiles value) { skillFiles=value; }
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final ExecutionGuard guard;
-    private final WorkerRepository workers;private final Catalogue catalogue;
+    private final WorkerRepository workers;private final Catalogue catalogue;private final ComposedRoles roles;
     public ExecutionConfigurations(AuthorityRepository repo,AuthorityBoundary boundary,ExecutionGuard guard,WorkerRepository workers) {
         this.repo=repo;this.boundary=boundary;this.guard=guard;this.workers=workers;
         try(var stream=getClass().getResourceAsStream("/execution/software-catalog.json")) {
@@ -23,6 +23,7 @@ public class ExecutionConfigurations {
             catalogue=repo.decode(new String(stream.readNBytes(1_048_577),java.nio.charset.StandardCharsets.UTF_8),Catalogue.class);
             if(!PROTOCOL.equals(catalogue.protocol())) throw new IllegalStateException("Bundled catalogue protocol mismatch");
         } catch(java.io.IOException error) { throw new IllegalStateException("Cannot read software catalogue",error); }
+        roles=new ComposedRoles(repo,catalogue);
     }
     public List<Category> categories() { return List.of(
         new Category("executive-assistant","秘书助理","秘書室","Executive Assistant",true),
@@ -76,16 +77,48 @@ public class ExecutionConfigurations {
         repo.audit("CONFIG:"+input.ownerId(),null,null,Objects.toString(boundary.human(),"platform"),"CONFIGURATION_VERSION_SAVED",input.id()+":"+input.revision()+":"+digest);
         return ref(input,digest);
     }
-    private Content content(Candidate input) {
+    private Content content(Candidate input) { return content(input,null); }
+    private Content content(Candidate input,Asset previewRole) {
         if(categories().stream().noneMatch(c->c.id().equals(input.category()) && c.softwareWorker())) throw new IllegalArgumentException("Responsibility category has no first-phase software method");
-        if(catalogue.methods().stream().noneMatch(m->m.method().roleCapability().equals(input.method().roleCapability()))) throw new IllegalArgumentException("Unimplemented role capability");
+        boolean composed=ComposedRoles.CAPABILITY.equals(input.method().roleCapability());
+        if(!composed && catalogue.methods().stream().noneMatch(m->m.method().roleCapability().equals(input.method().roleCapability()))) throw new IllegalArgumentException("Unimplemented role capability");
         var expected=new HashSet<>(input.method().protocolSkills());expected.add(input.method().primarySkill());
         if(!expected.equals(new HashSet<>(input.skills().stream().map(AssetRef::ref).toList())) || !expected.contains("engineering-artifact-protocol"))
             throw new IllegalArgumentException("Exact registered primary/protocol Skills required");
         var assets=new ArrayList<Asset>();
-        input.skills().forEach(r->assets.add(asset("skill",r,input.ownerId(),input.repositoryRef())));
+        input.skills().forEach(r->assets.add(previewRole!=null && previewRole.reference().equals(r)?previewRole:asset("skill",r,input.ownerId(),input.repositoryRef())));
         input.knowledge().forEach(r->assets.add(asset("knowledge",r,input.ownerId(),input.repositoryRef())));
+        if(composed) roles.verify(input,assets);
         return new Content(PROTOCOL,input,List.copyOf(assets));
+    }
+    @Transactional public ComposedRoles.Preview proposeRole(ComposedRoles.Definition definition) {
+        boundary.lock();var compiled=roles.compile(definition,currentOwner());
+        content(compiled.candidate(),compiled.asset());
+        var reused=existing(compiled.candidate());
+        return new ComposedRoles.Preview(ComposedRoles.PROTOCOL,AuthorityRepository.hash(repo.encode(definition)),reused,reused==null?compiled.candidate():null);
+    }
+    @Transactional public PreparedConfigRef saveRole(ComposedRoles.Definition definition) {
+        boundary.lock();var compiled=roles.compile(definition,currentOwner());
+        content(compiled.candidate(),compiled.asset());
+        registerAsset(compiled.asset());
+        return saveAuthorized(compiled.candidate());
+    }
+    public ComposedRoles.Definition role(PreparedConfigRef reference) {
+        var content=repo.decode(get(currentOwner(),reference).contentJson(),Content.class);
+        if(!ComposedRoles.CAPABILITY.equals(content.candidate().method().roleCapability())) throw new ComposedRoles.Invalid("NOT_COMPOSED_ROLE");
+        return roles.verify(content.candidate(),content.assets());
+    }
+    public List<ComposedRoles.Choice> roleChoices(String owner) {
+        var choices=new ArrayList<ComposedRoles.Choice>();
+        for(var row:repo.jdbc().queryForList("SELECT content_json,digest FROM execution_configuration WHERE owner_id=? ORDER BY id,revision",owner)) {
+            var content=repo.decode((String)row.get("content_json"),Content.class);var c=content.candidate();
+            if(ComposedRoles.CAPABILITY.equals(c.method().roleCapability())) {
+                if(!AuthorityRepository.hash((String)row.get("content_json")).equals(row.get("digest"))) throw new IllegalStateException("Stored configuration corrupted");
+                var definition=roles.verify(c,content.assets());
+                choices.add(new ComposedRoles.Choice(definition.name(),c.method().name(),c.repositoryRef(),ref(c,(String)row.get("digest"))));
+            }
+        }
+        return List.copyOf(choices);
     }
     PreparedConfigRef existing(Candidate input) {
         for(var row:repo.jdbc().queryForList("SELECT content_json,digest FROM execution_configuration WHERE owner_id=? AND repository_ref=? ORDER BY id,revision",input.ownerId(),input.repositoryRef())) {
