@@ -1,0 +1,62 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd": "FD-041",
+  "source_event": "FD-041-000002-design-requested",
+  "session": "fd041-design-recheck-20261024-15e8a3cb",
+  "planner_session": "composable-role-20261024-cf71803a",
+  "reviewed_commit": "476361b",
+  "recommendation": "ready",
+  "scope": "仅定向复核r1 DR-1/2/3的FD修正；不重做全设计，不作实现或运行判定",
+  "previous_report": "docs/features/reviews/FD-041-design-r1.md",
+  "rechecks": [
+    {
+      "id": "DR-1",
+      "status": "resolved",
+      "evidence": "FD-041_FEATURE.md:42,73",
+      "reason": "保留旧专业primary Skill和原instruction及全部任务/来源/输入约束；目录型resultKind/readOnly冲突拒绝；其余语义冲突走原gap路径，不宣称能自动检测所有冲突。"
+    },
+    {
+      "id": "DR-2",
+      "status": "resolved",
+      "evidence": "FD-041_FEATURE.md:38,40,58",
+      "reason": "增加角色级delivery，独立必填并编译至原outputContract，与step completion分开，保持外层输出格式。"
+    },
+    {
+      "id": "DR-3",
+      "status": "resolved",
+      "evidence": "FD-041_FEATURE.md:40,60",
+      "reason": "Method.name保留原机器id规则；友好名留role.json并通过state.roles显示；回退运行明确未经验证并保持冻结资料，不再由放宽name声称兼容。"
+    }
+  ],
+  "findings": [],
+  "unresolved_findings": [],
+  "facts": [
+    "只读取FD三项修正及其对应工作项、验收。",
+    "没有重新审阅全设计、代码或其他任务脏文件。",
+    "本次不修改FD或工作流状态。"
+  ],
+  "assumptions": [
+    "后续实现遵循FD中的delivery保留、旧角色约束和机器Method.name规则。"
+  ],
+  "commands_run": [
+    "One PowerShell inline python -X utf8 - read: FD-041_FEATURE.md numbered lines 26-65 and 70-101"
+  ],
+  "checks_skipped": [
+    "post-edit command validation",
+    "tests/compile/production execution",
+    "models/services/browser/network",
+    "other agents",
+    "workflow claim/emit",
+    "git commit/archive"
+  ],
+  "risks": [
+    "无实现或模型行为证据；ready仅表示三项设计修正可进入后续交接。",
+    "事务、未知保存结果、确定性编译、UI数据保留和实际回退仍须按既定范围审阅和验证。"
+  ],
+  "files_written": [
+    "docs/features/reviews/FD-041-design-r2.md",
+    "docs/features/reviews/FD-041-design-r2.json"
+  ],
+  "workflow_mutations": false
+}

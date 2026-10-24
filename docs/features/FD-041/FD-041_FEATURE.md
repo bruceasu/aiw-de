@@ -35,7 +35,7 @@
 
 ### 声明和编译
 
-新增 `RoleComposition`（protocol=aiw.role.composition.v1）：id/revision、repositoryRef/category、人类可读name、goal、delivery（角色级交付要求）、resultKind、steps、knowledge、toolRequirements。每步包含key/title、固定Skill引用、instruction、whenCondition和completion；角色内顺序由列表确定，条件是模型遵循的说明，不执行脚本或表达式。最多8步、6种非协议Skill、8知识，字段有长度/非空/重复/版本一致校验，协议资产自动加入。允许同一技能在不同步骤复用，同ref不能引用不同版本/摘要。
+新增 `RoleComposition`（protocol=aiw.role.composition.v1）：id/revision、自动带入的固定protocolSkill引用、repositoryRef/category、人类可读name、goal、delivery（角色级交付要求）、resultKind、steps、knowledge、toolRequirements。每步包含key/title、固定Skill引用、instruction、whenCondition和completion；角色内顺序由列表确定，条件是模型遵循的说明，不执行脚本或表达式。最多8步、6种非协议Skill、8知识，字段有长度/非空/重复/版本一致校验，协议资产自动加入。允许同一技能在不同步骤复用，同ref不能引用不同版本/摘要；本期步骤不嵌套已生成的组合角色包，复用共享/专业Skill方法。
 
 `ComposedRoles` 纯声明编译器生成：私有Skill资产（SKILL.md + role.json，标准aiw.skill.files.v1 Document）；原v1 Method/Candidate。primarySkill是该固定角色包，protocolSkills为工程成果协议及去重的步骤技能；roleCapability使用通用技术执行标记composed-role-v1，业务角色不再按内置枚举限制。Method.name继续使用原机器id规则，角色的可读名称只存在role.json；state新增当前Owner的roles摘要（name/methodName/repositoryRef/reference），供界面显示及复制，不输出角色正文。Worker前缀独立。按resultKind导出readOnly；保持原结果/工具一致校验。delivery编译进原outputContract，和每步completion分别保存，原REPORT/VERDICT/WORKSPACE外层格式不变。
 
@@ -59,7 +59,7 @@
 
 兼容及发布策略：只增加新DTO/页面及现有操作的显式分支，不新增依赖、迁移或授权。11份默认方法、19个公共Skill资产及旧配置不变；对新组合配置由原配置/SkillFiles版本固定，后续编辑不追写旧任务。升级仅Control Plane新界面/服务，现有支持config-v1和skill-files-v1的Python Worker继续消费同形v1任务。正常部署另行处理，本FD不部署或启动服务。服务回退不再提供创建/编辑组合角色入口；机器Method.name和v1封闭字段保持，使旧读取路径仍可解码已固定配置/文件集。已有任务及正式续行仍使用原固定内容，不改成默认角色；回退后的具体领取/执行行为未经运行验证，需要部署方按实际证据决定是否暂停这些任务，不能自动重建或删除它们。
 
-需要独立设计审阅具体闭合DTO兼容、私有角色包与候选匹配、无写入预览、原子保存/未知结果、原保护路径及主工作区隔离；修复所有重大设计问题后才design-ready。
+独立设计审阅：[r1](../reviews/FD-041-design-r1.md) / [r2](../reviews/FD-041-design-r2.md)，含同名JSON。r1三项问题已解决，r2给ready；确认闭合DTO兼容、私有角色包匹配、预览无写入、原子保存/未知结果及原保护路径。
 
 ## Scope
 
@@ -69,7 +69,7 @@
 
 ## Work items
 
-- [ ] 1.1 完成执行粒度、责任及兼容方案和独立设计审阅。规模小、难度中，无依赖；完成标准是确认方案及全部重大设计发现解决。
+- [x] 1.1 完成执行粒度、责任及兼容方案和独立设计审阅。规模小、难度中，无依赖；完成标准是确认方案及全部重大设计发现解决。
 - [ ] 1.2 实现闭合RoleComposition/Step与确定性私有角色包编译/验证。规模小、难度中，依赖1.1；同技能复用/版本冲突、范围/上限、角色级delivery、旧模板输入/产出约束及role.json再编译匹配有明确路径。
 - [ ] 1.3 实现预览/原子保存/按固定引用读取的kind=role接口分支及通用技术标记准入。规模小、难度中，依赖1.2；旧DTO/授权保持、预览无写入、原事务覆盖、重复/不可变冲突和隔离明确。
 - [ ] 1.4 实现角色表单、技能步骤顺序/条件/完成、预览保存及复制编辑。规模小、难度中，依赖1.3；复用Console样式，未知保存结果与过期响应不覆盖草稿。
@@ -78,7 +78,7 @@
 
 ## TODO
 
-执行粒度已确认；完成有界独立设计审阅并吸收发现后发design-ready，再按现有工厂/文件集合同实施完整路径。
+执行粒度及兼容设计已确认。独立设计审阅r1提出三项问题，FD已修正专用Skill约束、整体delivery和机器Method.name；r2定向复核ready。继续按Work Items实施完整路径。
 
 ## Acceptance
 
@@ -93,7 +93,7 @@
 
 目前仅定向静态读取配置/工厂/图流程/Worker/Profile与相邻页面。未运行生产模块、测试或实际任务。完整设计后按根预算执行一次范围静态检查和适用最小compile-only检查；Maven离线且使用C:/green/bin/setup-jdk25.ps1，不下载依赖或生成发行包。无默认测试、模型或运行环境验证；静态及编译不作为行为通过证据。
 
-公开合同/兼容设计采用独立设计审阅；完成实现后使用独立fd-review，两者不互相替代。设计待独立审阅；未编译或实现。
+公开合同/兼容设计采用独立设计审阅；完成实现后使用独立fd-review，两者不互相替代。独立设计审阅r2已ready；尚未编译或实现。执行粒度Gate已解决，记录见[反馈](../reports/FD-041-blocker-flow-granularity.md)。
 
 ## Sources
 
