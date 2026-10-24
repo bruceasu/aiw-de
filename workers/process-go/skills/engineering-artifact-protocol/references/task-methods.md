@@ -43,6 +43,19 @@ Keep the role's output schema and Control Plane authority unchanged.
   Otherwise propose the learning through existing fields; do not update a shared
   library, policy or requirement because one task produced a useful observation.
 
+## Traceable evidence packet
+- For research or a handoff, return a compact claim-to-evidence index in the existing
+  description fields: conclusion, exact artifact/path and revision, relevant location,
+  observed result, limitations and the next consumer. Keep raw evidence in its authorized
+  home so the receiver can inspect it without carrying the full exploration transcript.
+- Include important decisions, failed hypotheses and contrary evidence. If a decisive
+  source cannot be accessed, name that gap; a summary does not make it verified.
+- Reuse unaffected evidence, and selectively re-read decisive or changed material with a
+  reason. Neither copying every log nor banning all repeated reads improves traceability.
+- Keep measurements separate from interpretation. Cumulative input includes cached input;
+  partial/UNKNOWN data is not zero. Recorded repeat reads are not proof of waste, a reported
+  verdict is not a measured quality score, and unmeasured overhead/savings stay unknown.
+
 ## Check
 Check source/claim alignment and agreement between human text and structured fields.
 Return only the assigned result; do not add a top-level schema, state, or handoff event.

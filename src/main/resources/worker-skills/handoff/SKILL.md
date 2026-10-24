@@ -34,6 +34,13 @@ Do not include credentials, tokens, private unrelated data or invented session
 IDs. A short brief should explain what can proceed and what must first be
 reconciled. Preserve important failures even when a later summary is shorter.
 
+Give the receiver a compact claim-to-evidence index: each important conclusion,
+its exact source/artifact revision and location, actual observation, contrary
+evidence and access limits. Keep original evidence in its authorized home.
+Do not replace a consequential decision or failed hypothesis with an unsupported
+summary. Name the next consumer and the question that the evidence answers.
+Selective re-reading of decisive or changed evidence is useful; explain why.
+
 ## Resume from a brief
 
 Treat the brief as a dated snapshot. Compare it with the current formal task,

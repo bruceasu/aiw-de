@@ -31,6 +31,23 @@ DAG acceptance, readiness, scheduling, and permission.
 Review coverage, cycles, oversized items, hidden decisions, and evidence gaps. Put extra
 sizing rationale in existing descriptive fields; do not add unsupported schema fields.
 
+## Local work and proposed delegation
+- A role can use several Skills in one Worker task. Keep a coherent outcome and shared
+  decisions together; do not turn every Skill step into an independently dispatched node.
+- Isolate a bounded investigation when extensive exploration can return a concise answer
+  and exact evidence references. Keep dependent debugging hypotheses in one context.
+- Independent review has a separate purpose even for small inputs. Propose it when the
+  assigned process requires independent judgment; do not impose a new review gate.
+- Parallel proposals need explicit inputs, completion/output contracts, decision ownership
+  and joins. Shared writable state or hidden design dependencies need coordination first.
+- Explain each proposed execution boundary in existing task/item instruction fields. State
+  the consumer, allowed tools, source revisions, evidence gaps and minimal useful handoff.
+  The platform adopts the graph and creates tasks; this method cannot dispatch them.
+- Choose from supplied approved profiles or state capability needs. Never invent model
+  references, change an active task's model, or use fixed vendor/token thresholds as policy.
+- Use actual supplied consumption and result records for comparison. Missing startup cost,
+  quality scores or savings stay unmeasured; a self-reported PASS is not independent acceptance.
+
 ## Changed acceptance and handoff
 - Compare a supplied change with the exact accepted requirement and architecture.
   Identify affected outputs, dependency edges, checks and completed evidence; preserve
