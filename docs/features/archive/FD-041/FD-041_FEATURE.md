@@ -106,3 +106,5 @@ C:/green/bin/setup-jdk25.ps1 后 mvn -o '-Dmaven.test.skip=true' compile 一次�
 - FD-039/040 的附加Skill资源和指南；ConfigurationContract.Method/Assembly、ExecutionConfigurations.content/propose/defaultCandidate、AgentFactory.prepareAuthorized。
 - GraphContract.Task/Node、GraphRunner.prepare；Python execution_configuration.load / ProcessProfile；configuration-methods.js 的基础方法与附加Skill入口。
 - Planner Session：composable-role-20261024-cf71803a；真实来源：FD-041-000002-design-requested。
+
+**Completed:** 2026-10-24

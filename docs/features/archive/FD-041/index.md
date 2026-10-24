@@ -3,5 +3,7 @@
 <!-- aiw: feature-folder-index -->
 
 - [Design: FD-041_FEATURE.md](FD-041_FEATURE.md)
+- [Reports](reports/)
+- [Reviews](reviews/)
 
 Run `aiw fd show FD-041` for current status and handoff.
