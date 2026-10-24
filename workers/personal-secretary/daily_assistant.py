@@ -57,6 +57,8 @@ class DailyAssistant:
         for work in self.store.list("work"):
             if work.get("state") == "DAILY_RUNNING":
                 self._report(work["id"], "NEEDS_HUMAN", "INTERRUPTED", "上次处理因服务中断而停止，结果未确认。请核对已保存文件后再安排，不会自动重复执行。")
+            elif work.get("assistantMode") == "daily" and work.get("state") == "SCHEDULED":
+                self._hold_schedule(work, recovering=True)
         for message in self.store.list("message"):
             if message.get("state") == "PENDING":
                 self._message(message["id"], "上次对话因服务中断而停止，请重新发送。", "FAILED")
@@ -124,19 +126,42 @@ class DailyAssistant:
         threading.Thread(target=run, daemon=True).start()
         return message
 
-    def schedule(self, work, due_ms, time_zone):
+    def _hold_schedule(self, work, recovering=False):
+        mode = work.get("executionMode")
+        if mode not in ("IMMEDIATE", "TIMED"):
+            self._report(work["id"], "NEEDS_CONFIRMATION", "LEGACY_SCHEDULE_CONFIRMATION",
+                         "这条旧安排没有记录执行方式，尚未自动执行。请选择现在执行、重新定时或取消。")
+        elif mode == "IMMEDIATE" and recovering:
+            self._report(work["id"], "NEEDS_CONFIRMATION", "RECOVERY_CONFIRMATION",
+                         "上次的马上执行任务在停机前尚未开始。现在还需要执行吗？请选择现在执行、重新定时或取消。")
+        elif mode == "TIMED" and now_ms() >= work["dueMs"] + 60_000:
+            self._report(work["id"], "NEEDS_CONFIRMATION", "MISSED_TIME",
+                         "已错过定时任务的执行分钟，未自动补跑。请选择现在执行、重新定时或取消。")
+        else:
+            return False
+        return True
+
+    def schedule(self, work, due_ms, time_zone, execution_mode="TIMED"):
+        if execution_mode not in ("IMMEDIATE", "TIMED"):
+            raise ValueError("请选择马上执行或定时执行。")
         if self.runtime.professional.pending(work["id"]):
             raise ValueError("已有专业任务正在执行或核对，请先查看原任务结果，不要重复安排。")
         with self.lock:
             if work["id"] in self.busy:
                 raise ValueError("这项工作正在处理，请等待当前结果后再安排，避免重复执行。")
         plan = {"id": "DAILY-" + work["id"], "executor": "daily-assistant-v1", "goal": work["title"], "state": "SCHEDULED"}
-        return self._report(work["id"], "SCHEDULED", "SCHEDULED", "已安排，到点后秘书会自行处理；完成、受阻或需要你确认时都会报告。",
-                            dueMs=due_ms, timeZone=time_zone, localPlan=plan, assistantMode="daily")
+        message = ("已提交马上执行；若停机前尚未开始，恢复后会请你重新确认。" if execution_mode == "IMMEDIATE"
+                   else "已安排定时执行；错过执行分钟不会自动补跑。完成、受阻或需要你确认时都会报告。")
+        return self._report(work["id"], "SCHEDULED", "SCHEDULED", message,
+                            dueMs=due_ms, timeZone=time_zone, executionMode=execution_mode, localPlan=plan, assistantMode="daily")
 
     def tick(self):
         for work in self.store.list("work"):
-            if work.get("assistantMode") != "daily" or work.get("state") != "SCHEDULED" or now_ms() < work["dueMs"]:
+            if work.get("assistantMode") != "daily" or work.get("state") != "SCHEDULED":
+                continue
+            with self.lock:
+                running = work["id"] in self.busy
+            if running or self._hold_schedule(work) or now_ms() < work["dueMs"]:
                 continue
             if self.settings.value.get("paused", False):
                 self._report(work["id"], "SCHEDULED", "PAUSED", "已到安排时间，但秘书处于暂停状态；点击“继续工作”后将处理这项安排。")

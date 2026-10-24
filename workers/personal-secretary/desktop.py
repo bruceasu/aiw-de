@@ -520,10 +520,11 @@ def main():
             self.work_plan = self.field(group, "关联已确认托管的 Plan（可选）")
             bar = ttk.Frame(group); bar.pack(fill="x")
             self.action(bar, "保存私人工作", self.save_work, True)
-            group = ttk.LabelFrame(body, text="确认安排时间"); group.pack(fill="x")
+            group = ttk.LabelFrame(body, text="安排执行与恢复确认"); group.pack(fill="x")
             self.schedule_work = self.work_select(group, "选择工作", lambda: self.update_schedule(True))
             quick = ttk.Frame(group); quick.pack(fill="x", pady=8)
-            self.action(quick, "现在处理", lambda: self.operate_selected_work("run-work", "开始处理"))
+            self.run_work_button = self.action(quick, "现在处理", lambda: self.operate_selected_work("run-work", "开始处理"))
+            self.action(quick, "取消所选工作", lambda: self.operate_selected_work("cancel", "取消工作"))
             self.action(quick, "移除工作", lambda: self.operate_selected_work("work-trash", "移除工作"))
             self.action(quick, "恢复已移除的工作", self.show_trash)
             self.schedule_revision = self.field(group, "当前版本（自动带入）", readonly=True)
@@ -543,7 +544,12 @@ def main():
             work = next((row for row in self.snapshot.get("work", []) if row["id"] == identity), None)
             if not work:
                 self.status.set("请先选择一项工作。"); return
-            self.operate(route, {"id": identity, "revision": work["revision"]}, label)
+            if route == "run-work" and work.get("report", {}).get("code") == "INTERRUPTED" and (
+                    not self.schedule_preview or self.schedule_preview["id"] != identity or self.schedule_preview["revision"] != work["revision"]):
+                self.status.set("请先重新载入所选工作，核对中断报告和已有结果，再选择重新执行。"); return
+            data = {"id": identity, "revision": work["revision"]}
+            if route == "cancel": data["kind"] = "work"
+            self.operate(route, data, label)
 
         def show_trash(self):
             if not self.require_session(): return
@@ -583,6 +589,8 @@ def main():
         def update_schedule(self, reload=False):
             work_id = self.selected_work(self.schedule_work)
             work = next((row for row in self.snapshot.get("work", []) if row["id"] == work_id), None)
+            report = work.get("report", {}) if work else {}
+            self.run_work_button.configure(text="已核对结果，重新执行" if report.get("code") == "INTERRUPTED" else "现在处理")
             if work is None:
                 self.schedule_preview = None
                 self.schedule_revision.set("")
@@ -595,12 +603,13 @@ def main():
                 self.schedule_conflict = False
                 self.set_text(self.schedule_summary, "标题：" + work.get("title", "") + "\n状态：" + work.get("state", "未记录")
                     + "\n私人版本：" + str(work["revision"]) + "\nPlan 引用：" + (work.get("planId") or "未关联")
+                    + "\n工作报告：" + work.get("report", {}).get("message", "暂无报告")
                     + "\n\n" + work.get("body", ""), True)
                 self.schedule_notice.set("请核对以上已载入内容。关联 Plan 的托管内容仍按平台原有规则校验。")
             else:
                 self.schedule_conflict = work != self.schedule_preview
                 if self.schedule_conflict:
-                    self.schedule_notice.set("所选工作已发生变化，当前显示仍是原确认版本。请显式重新载入并核对后再安排。")
+                    self.schedule_notice.set("所选工作已发生变化，当前显示仍是原确认版本。请显式重新载入并核对后再安排。\n最新报告：" + report.get("message", "暂无报告"))
             self.sync_schedule_button()
 
         def sync_schedule_button(self):

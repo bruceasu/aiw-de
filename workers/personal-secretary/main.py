@@ -236,7 +236,7 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
                         work = runtime.store.get("work", data["id"])
                         if not work or work["revision"] != data["revision"]:
                             raise PersonalChatError("WORK_CHANGED", "这项工作已变化，请刷新后重新选择。")
-                        result = runtime.daily.schedule(work, int(time.time() * 1000), time.tzname[0])
+                        result = runtime.daily.schedule(work, int(time.time() * 1000), time.tzname[0], execution_mode="IMMEDIATE")
                     elif self.path == "/api/work-trash":
                         work = runtime.store.get("work", data["id"])
                         if not work or work["revision"] != data["revision"]:

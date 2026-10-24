@@ -1,7 +1,7 @@
 # FD-048: 秘书任务过期与跨停机执行确认
 
-**Status:** Design
-**Revision:** 2
+**Status:** Open
+**Revision:** 3
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -23,13 +23,13 @@ workers/personal-secretary 的 daily_assistant.py、main.py、Web app.js/index.h
 
 ## Work items
 
-- [ ] 1.1 保存模式并实现启动/到期状态分流。小/中，无依赖，证据为 JSON 更新、构造及 tick 各分支。
-- [ ] 1.2 Web 恢复确认列表及桌面报告/执行/取消入口。小/中，依赖 1.1，证据为原 API 调用及可见用户选择。
-- [ ] 1.3 同步文档、静态检查与最小 Python/JS 编译，提交 Worker 证据并独立审阅。小/低，依赖 1.2。
+- [x] 1.1 保存模式并实现启动/到期状态分流。小/中，无依赖，证据为 JSON 更新、构造及 tick 各分支。
+- [x] 1.2 Web 恢复确认列表及桌面报告/执行/取消入口。小/中，依赖 1.1，证据为原 API 调用及可见用户选择。
+- [x] 1.3 同步文档、静态检查与最小 Python/JS 编译，提交 Worker 证据并独立审阅。小/低，依赖 1.2。
 
 ## TODO
 
-取得设计审阅，实施 1.1–1.3。
+独立设计审阅 r1 ready，1.1–1.3 已实施；静态差异检查、三份 Python 内存编译与 JS 语法编译通过。等待独立实现审阅。
 
 ## Acceptance
 
@@ -50,3 +50,5 @@ workers/personal-secretary 的 daily_assistant.py、main.py、Web app.js/index.h
 - Issue: none
 - 用户本轮授权及前两轮规则确认；daily_assistant.__init__/schedule/tick/run，main /api/run-work 与 /api/cancel，runtime.schedule，store.put/cancel_record，Web/桌面现有安排入口。
 - Session: secretary-recovery-20261024-f46715；设计来源 FD-048-000002-design-requested。
+
+- 设计证据：docs/features/reviews/FD-048-design-r1.md 及 JSON；独立审阅 ready，无阻塞。

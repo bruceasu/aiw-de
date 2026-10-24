@@ -58,7 +58,7 @@
 <section class="card"><h2>编辑私人资料</h2><p class="muted">列表中选择已有记录时自动带入版本；新建记录从版本 0 开始。</p><form class="form-grid" data-route="record"><label class="field">类型<select name="kind"><option value="draft">草稿</option><option value="template">模板</option><option value="todo">待办</option></select></label><label class="field">资料标识<input name="id" placeholder="例如 weekly-notes" required></label><label class="field">当前版本（新建为 0）<input name="revision" type="number" min="0" value="0" required></label><label class="field full">私人内容（JSON 对象）<textarea name="data" required>{"text":""}</textarea></label><button class="btn primary" type="submit">保存私人记录</button></form></section>
 </section>
 <section id="view-confirmations" class="view" role="tabpanel" aria-labelledby="tab-confirmations" data-view="confirmations" hidden>
-<div class="panel-heading"><h2>待你确认</h2><p>日常范围内直接处理。这里只列出超范围或不可恢复删除的具体操作；允许仅适用于这一次。</p></div><div id="confirmation-list" class="record-list"></div>
+<div class="panel-heading"><h2>待你确认</h2><p>停机前未开始的马上执行任务、错过时间的定时任务会在这里请你决定执行、改期或取消。执行中断的工作请先核对已有结果。超范围或不可恢复删除的允许仍只适用于这一次。</p></div><div id="confirmation-list" class="record-list"></div>
 </section>
 <section id="view-setup" class="view" role="tabpanel" aria-labelledby="tab-setup" data-view="setup" hidden>
 <div class="panel-heading"><h2>首次设置</h2><p>连接一次模型，之后自动恢复。平台身份、Plan 和 Worker 不属于日常必填项。</p></div>

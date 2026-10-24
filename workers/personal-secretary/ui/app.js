@@ -84,7 +84,7 @@ const rows = key => Array.isArray(snapshot?.[key]) ? snapshot[key].filter(row =>
 let settingsLoaded = false;
 const viewInfo = {
   setup: ["设置", "首次连接模型，之后直接使用"],
-  confirmations: ["待你确认", "核对超范围或不可恢复的具体操作"],
+  confirmations: ["待你确认", "处理恢复待确认、已错过的工作，以及需要你允许的具体操作"],
   overview: ["工作总览", "查看你的工作、安排与待处理请求"],
   work: ["工作与安排", "记录私人工作，马上执行或按需定时"],
   chat: ["私人对话", "围绕具体工作，与个人模型讨论"],
@@ -212,7 +212,7 @@ function workCard(work, compact = false) {
   meta.append(node("span", "", `版本 ${work.revision}`), node("span", "", dateLabel(work.dueMs)));
   const actions = node("div", "record-actions");
   actions.append(button("继续对话", () => selectWork(work.id, "chat")), button("安排执行", () => selectWork(work.id, "work")));
-  if (!["DAILY_RUNNING", "CANCELLED"].includes(work.state)) actions.append(button("现在处理", () => assistantOperation("run-work", { id: work.id, revision: work.revision }, "已交给秘书处理，结果会自动更新。")));
+  if (!["DAILY_RUNNING", "CANCELLED"].includes(work.state)) actions.append(button(work.report?.code === "INTERRUPTED" ? "已核对结果，重新执行" : "现在处理", () => assistantOperation("run-work", { id: work.id, revision: work.revision }, "已交给秘书处理，结果会自动更新。")));
   actions.append(button("移除工作", () => assistantOperation("work-trash", { id: work.id, revision: work.revision }, "已移到设置中的“已删除工作”，可以恢复。")));
   const planId = work.professionalPlanId || work.professionalDraftPlanId || work.planId;
   if (planId && snapshot.platformOrigin) {
@@ -453,8 +453,23 @@ function renderAssistant() {
   const target = byId("confirmation-list");
   target.replaceChildren();
   const pending = rows("decisions").filter(row => row.kind === "DAILY_CONFIRMATION" && row.state === "WAITING");
-  byId("tab-confirmations").textContent = pending.length ? `待你确认（${pending.length}）` : "待你确认";
-  if (!pending.length) empty(target, "没有需要确认的操作", "日常范围内，秘书会直接处理。");
+  const recovery = rows("work").filter(work => ["NEEDS_CONFIRMATION", "NEEDS_HUMAN"].includes(work.state)
+    && ["RECOVERY_CONFIRMATION", "LEGACY_SCHEDULE_CONFIRMATION", "MISSED_TIME", "INTERRUPTED"].includes(work.report?.code));
+  const count = pending.length + recovery.length;
+  byId("tab-confirmations").textContent = count ? `待你确认（${count}）` : "待你确认";
+  if (!count) empty(target, "没有需要确认的操作", "正常在线排队无需反复确认；跨停机恢复或错过时间的工作会在这里提示。");
+  for (const work of recovery) {
+    const item = node("article", "record-item");
+    item.append(node("h3", "", work.title), node("p", "", work.report.message));
+    const controls = node("div", "record-actions");
+    controls.append(button(work.report.code === "INTERRUPTED" ? "已核对结果，重新执行" : "现在执行",
+      () => assistantOperation("run-work", { id: work.id, revision: work.revision }, "已重新提交执行。")),
+      button("重新定时", () => {
+        formFor("schedule").elements.executionMode.value = "scheduled";
+        updateExecutionMode(); selectWork(work.id, "work");
+      }), button("取消这项工作", () => assistantOperation("cancel", { kind: "work", id: work.id, revision: work.revision }, "已取消这项工作。")));
+    item.append(controls); target.append(item);
+  }
   for (const decision of pending) {
     const item = node("article", "record-item");
     item.append(node("h3", "", decision.message));
