@@ -1,0 +1,18 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-046",
+  "source_event": "FD-046-000004-implementation-ready",
+  "human_report": "FD-046-review-r1.md",
+  "data": {
+    "session": "fd046-review-20261024-f371c8",
+    "base_commit": "7afec60",
+    "implementation_commit": "bf4f65f",
+    "result": "passed",
+    "findings": [],
+    "acceptance_supported_statically": [1, 2, 3, 4],
+    "failed_review_count": 0,
+    "not_run": ["tests", "compile", "browser", "HTTP", "database", "network"],
+    "residual_risks": ["Actual deletion and dialog interactions unverified", "User runtime exception not reproduced"]
+  }
+}

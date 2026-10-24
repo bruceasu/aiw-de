@@ -1,7 +1,7 @@
 # FD-046: Goal 删除请求绑定与统一确认弹窗修复
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -29,7 +29,7 @@
 
 ## TODO
 
-1.1–1.3 已实现，git diff --check 与 node --check 通过；等待独立实现审阅，实际 HTTP 结果未验证。
+1.1–1.3 已实现，git diff --check 与 node --check 通过；独立实现审阅 r1 通过，待 host 核对真实 receipt 后归档。实际 HTTP 结果未验证。
 
 ## Acceptance
 
@@ -42,6 +42,7 @@
 
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
+- 独立 Reviewer fd046-review-20261024-f371c8 已认领 FD-046-000004-implementation-ready，静态审阅 7afec60..bf4f65f 六文件及相关原调用链，无阻塞发现；报告 ../reviews/FD-046-review-r1.md 及同名 JSON。本轮失败审阅 0。Reviewer 未重跑编译或执行测试/浏览器/HTTP/数据库；实际通过以 CLI receipt 为准。
 
 ## Sources
 
