@@ -84,6 +84,16 @@ public class ActionAdmissionService {
                 principal.worker(),grant,revision,target,state,repo.encode(result),now,now);
         return new Receipt(request,digest,state,result,now,now);
     }
+    /** Historical accounting cannot freeze unrelated work; live executions still occupy the Plan. */
+    public boolean blocksNewExecution(String plan) {
+        return repo.jdbc().queryForObject("""
+                SELECT COUNT(*) FROM authority_task p JOIN work_task t ON t.id=p.task_id
+                WHERE t.subject_id=? AND (
+                    (? AND (p.state='UNKNOWN' OR (p.state='IN_PROGRESS' AND t.state<>'COMPLETED')))
+                    OR t.state IN ('CLAIMED','RUNNING') OR t.lease_token IS NOT NULL
+                    OR EXISTS (SELECT 1 FROM execution_attempt a WHERE a.task_id=t.id AND a.state IN ('CLAIMED','RUNNING')))
+                """,Long.class,plan,budgets.enforced())>0;
+    }
     public Receipt apply(AuthorityBoundary.Principal principal,Envelope input) {
         if(input.protocolVersion()!=1 || input.action()==null || input.requestId()==null || !UUID.fromString(input.requestId()).toString().equals(input.requestId())
                 || input.parameters()==null || input.evidence()==null || input.evidence().size()>32 || input.expectedSnapshot()==null)
@@ -114,8 +124,8 @@ public class ActionAdmissionService {
                 if(snapshot.get("version") instanceof Number version && (input.expectedVersion()==null || version.longValue()!=input.expectedVersion()))
                     throw new IllegalStateException("EXPECTED_VERSION_CHANGED");
                 if(Set.of(ActionScope.Action.A01,ActionScope.Action.A03,ActionScope.Action.A04,ActionScope.Action.A05,ActionScope.Action.A06,ActionScope.Action.A12_EXECUTE).contains(scope.action())
-                        && repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_task p JOIN work_task t ON t.id=p.task_id WHERE t.subject_id=? AND (p.state='UNKNOWN' OR (p.state='IN_PROGRESS' AND t.state<>'COMPLETED'))",Long.class,scope.targetId())>0)
-                    throw new IllegalStateException("Existing attempt outcome is not reconciled; no new execution admission allowed");
+                        && blocksNewExecution(scope.targetId()))
+                    throw new IllegalStateException("Existing live execution or enforced reconciliation blocks new admission");
                 if(scope.action()==ActionScope.Action.A03 && ("CURRENT".equals(scope.parameters().get("taskId")) || !Objects.equals(input.taskId(),scope.parameters().get("taskId"))))
                     throw new IllegalArgumentException("Retry requires the exact task identity");
                 if(input.taskId()!=null) {

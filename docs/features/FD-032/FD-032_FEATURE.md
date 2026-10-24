@@ -36,7 +36,7 @@ ExecutionGuard 的创建/固定输入/领取/推进和 AgentFactory 准备共用
 - [x] 1.1 确定统一模式及兼容规则，完成独立静态设计审阅。规模小、难度中，无依赖；证据为本设计与 FD-032-design-review-20261024-b4c92a1f 双证据；D032-01/02/03 均已采纳到 Solution，实现 Reviewer 必须逐项核对。原 changes-needed 结论保留，不改写为通过。
 - [x] 1.2 动作累计额度仅计数，保留授权及重复请求保护。规模小、难度中，依赖 1.1；证据为 ExecutionAccounting、application.yaml 与 AuthorityBudgets 的统一模式及原子计数，授权/幂等路径未跳过。
 - [x] 1.3 执行准备、任务计数、Attempt 预留/结算及回跳支持缺省预算并持续记录。规模小、难度中，依赖 1.1；证据为 ExecutionLedger、GuardContract、ExecutionGuard、AgentFactory、GraphRunner 的模式感知路径，费用未知不虚构、冻结定价不追溯改写。
-- [ ] 1.4 待核对历史只记录，保留同一原任务/Attempt 的防重复与真实在途保护。规模小、难度中，依赖 1.2、1.3；证据为准入/推进路径及审阅报告。
+- [x] 1.4 待核对历史只记录，保留同一原任务/Attempt 的防重复与真实在途保护。规模小、难度中，依赖 1.2、1.3；证据为动作/协调共用 blocksNewExecution，Task/Lease/Attempt 仍判断真实在途；同任务 UNKNOWN、静止核验和原请求幂等路径保留。
 - [ ] 1.5 更新授权页、稳定规格与部署说明，完成窄范围编译、独立实现审阅及范围内本地交付归档。规模小、难度中，依赖前述条目；未运行的检查保持未运行。
 
 ## TODO

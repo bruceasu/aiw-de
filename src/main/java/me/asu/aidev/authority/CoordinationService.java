@@ -63,8 +63,8 @@ public class CoordinationService {
                 || AuthorityRepository.flag(row.get("paused")) || !Objects.equals(row.get("authority"),security.currentOperatorAuthority(repo.actor(principal.owner()))))
             throw new SecurityException("Current owner management authority required");
         var plan=plans.get(input.planId());
-        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_task p JOIN work_task t ON t.id=p.task_id WHERE t.subject_id=? AND (p.state='UNKNOWN' OR (p.state='IN_PROGRESS' AND t.state<>'COMPLETED'))",Long.class,plan.id())>0)
-            throw new IllegalStateException("Unconfirmed effects block new coordination until reconciliation");
+        if(receipts.blocksNewExecution(plan.id()))
+            throw new IllegalStateException("Existing live execution or enforced reconciliation blocks new coordination");
         if(plan.version()!=input.expectedVersion() || !Objects.equals(row.get("spec_digest"),input.specDigest())
                 || !AuthorityRepository.hash(repo.encode(plan.spec())).equals(input.specDigest())
                 || manager.generation("PLAN:"+plan.id())!=input.expectedTargetGeneration()
