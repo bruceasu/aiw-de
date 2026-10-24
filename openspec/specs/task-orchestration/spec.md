@@ -214,3 +214,20 @@ The role compiler SHALL retain the existing execution-config-v1 Candidate, Metho
 #### Scenario: A Worker follows a role-local workflow
 - **WHEN** a configured task uses several Skill steps with conditions and completion requirements
 - **THEN** one Worker follows those instructions within the same Task/Attempt and reports actual step outcomes in existing descriptive fields; these notes SHALL NOT be represented as platform-enforced step states, independent recovery or independent review, and cross-Worker orchestration SHALL remain platform-owned
+
+### Requirement: Composable delegation decisions and traceable handoffs
+The optional delegation-planning Skill SHALL guide a reasoned choice among local work, isolated research, independent review and proposed parallel work. It SHALL describe bounded inputs, evidence, dependencies, completion criteria and the next consumer in existing result fields. Independent review SHALL NOT depend on a fixed token threshold. Selecting the Skill SHALL NOT create Tasks, spawn agents, change the fixed model, add Worker types or grant execution authority. Cross-Worker orchestration SHALL remain platform-owned.
+
+Planning and handoff methods SHALL link important claims to source revisions, locations, observations and limits. They SHALL retain relevant decisions, contrary evidence, unresolved effects and consumed authority. Summaries SHALL provide an index to authoritative evidence rather than replace it; justified selective rereads SHALL remain possible. No fixed savings percentage, overhead ratio, vendor-model route or new budget gate SHALL be inferred from this method.
+
+#### Scenario: Shared state makes splitting unsafe
+- WHEN debugging steps depend on evolving decisions and shared evidence
+- THEN the method guides continued local work, without inventing an input-size rule or an automatic dispatcher
+
+#### Scenario: A bounded question can be reviewed separately
+- WHEN independent judgment or isolated evidence gathering is justified
+- THEN the Worker proposes explicit scope, inputs, completion and integration responsibility in its existing output; actual dispatch still requires the original platform flow and authority
+
+#### Scenario: A consumer receives a compact handoff
+- WHEN it needs to verify a material claim
+- THEN the handoff identifies the original evidence and version, decisions and limits, with missing access reported rather than a guessed result or renewed execution budget

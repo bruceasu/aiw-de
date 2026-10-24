@@ -30,6 +30,8 @@
 
 模型、工具需求与执行授权分别管理。选择技能不会获得网络、命令、写入或 Git 权限。当前仅支持原有 Python 动态配置后端；没有增加 Go/TypeScript 动态配置能力。
 
+需要判断工作是否适合隔离或并行时，可把 `delegation-planning`（委派判断）放入角色步骤；它输出有依据的建议，跨 Worker 的真实派发仍属于平台。在组合角色页点击“查看执行记录”进入 `/ui/configurations?view=observations`，按已有账本关联方法、模型、实际消耗与交付引用。上报结论不是独立验收，未采集数据不填零，记录也不增加预算限制。详见[委派方法与记录](WORKER-DELEGATION-METHODS.md)。
+
 ## 实现与兼容
 
 `ComposedRoles.Definition` 使用 `aiw.role.composition.v1`，包含自动生成的 id/revision、自动带入的固定工程协议引用、仓库/分类、name、goal、delivery、resultKind、steps、knowledge 和 toolRequirements。每步有固定 Skill 引用及工作/条件/完成说明。

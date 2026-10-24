@@ -67,3 +67,24 @@ addresses SHALL NOT be registered as compatibility aliases or redirects.
 
 ### Requirement: Personal authority route separation
 Platform authority APIs SHALL live under /api/r1/authority. Human routes require configured session authentication, CSRF and the current action role. Machine routes use a dedicated credential, claimed process boot and explicit owner/target scope; they SHALL NOT accept a browser cookie or shared lease token instead. Unknown method/path combinations are rejected. Action bodies are bounded to 32 KiB and strict closed DTOs. The human page is /ui/authority. Old secretary/delegation APIs are removed, not aliased.
+
+### Requirement: Owned read-only execution observations
+`POST /api/r1/authority/execution-configurations/state?kind=observations` SHALL accept the closed empty request and return `aiw.execution.observations.v1` for the server-resolved current Owner only. Existing session, CSRF and operator checks SHALL apply. Default method and role state behavior SHALL remain compatible. The protected `/ui/configurations?view=observations` view SHALL show readable records and explicit manual refresh without running tasks or dumping raw JSON.
+
+The projection SHALL read at most the latest 100 metered Attempts by Attempt creation time, joining the actual task, selected profile/runtime/model, frozen configuration and formal delivery. A bound configuration SHALL be owned by the current Owner; composed names SHALL come from the verified frozen role package. The projection SHALL NOT write state or return credentials, lease tokens, machine sessions, full instructions, command arguments or full completion summaries. Delivery sources SHALL include their fixed references and total count, with at most 16 listed per Attempt.
+
+#### Scenario: Usage or pricing has not been collected
+- WHEN an Attempt has unknown usage, has not started metering or lacks settled time/cost data
+- THEN absent values are shown as unknown rather than known zero, cached tokens are described as a subset of input, and no runtime total, quality score or savings ratio is invented
+
+#### Scenario: A manual reconciliation preserves an unknown flag
+- WHEN existing stored time or cost is present alongside the original unknown marker
+- THEN both the stored value with its price unit and the marker remain visible, without treating the marker as permission to discard the correction
+
+#### Scenario: A read operation is repeated
+- WHEN successful READ records within a visible Attempt share the same resource and result digest
+- THEN the extra count can be displayed as same-result rereads, without representing all reads, waste, quality or a reason to block execution
+
+#### Scenario: The browser identity or response scope changes
+- WHEN a refreshed snapshot has a different Owner or an expired page receives an older response
+- THEN the page does not combine those records with the current identity and requires a valid new snapshot; Worker-reported verdicts remain distinct from independent acceptance
