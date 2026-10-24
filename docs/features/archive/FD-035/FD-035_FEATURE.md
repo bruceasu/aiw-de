@@ -82,3 +82,5 @@ questions.html、questions.js、新 question-controls.js / questions.css、Autho
 - 用户：工作问题与人工控制 UI 不友好；此前页面分区切换、无 JSON 干扰、预算暂时仅记录的偏好。
 - 来源事件 FD-035-000002-design-requested；Planner/Worker Session secretary-desktop-20261024-a6529740。
 - questions.html/js、AuthorityPageController.questions、QuestionController/QuestionContract/FormalQuestions/TelegramQuestions、ExecutionAccounting、docs/FORMAL-QUESTIONS.md、FD-034 既有页面风格。
+
+**Completed:** 2026-10-24
