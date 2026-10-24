@@ -29,6 +29,8 @@ Runtime 只注入各入口和声明文件索引。调用 `read_skill_file(ref,pa
 
 ## 从宿主工程技能吸收方法
 
+FD-040 将设计、架构、领域建模、诊断、冲突修复、研究、交接、教学和文章编辑登记为九个完整可选 Skill，各包入口进入 `index.files` 和公共目录，不改主 Profile。与 prototype 一起配置给现有 Worker；参见[附加技能配置指南](WORKER-OPTIONAL-SKILLS.md)。
+
 FD-039 新增可组合的公共 `prototype` 技能包（入口、逻辑与 UI 三文件），通过原有附加 Skill 目录装配给现有 Worker；不增加主角色或工具权限。新目录资产仅追加 `prototype-v1`，旧资产和方法保持，使用步骤见[原型制作技能](WORKER-PROTOTYPE-SKILL.md)。
 
 FD-038 将 `.agents/skills` 的可复用方法适配到既有 Worker 角色，详见[来源与去向矩阵](WORKER-SKILL-METHODS.md)。现有拆分、审阅、诊断和测试方法上补充局部步骤、交接/修订覆盖、决策聚焦和按需 Skill 编写参考。入口与辅助文件保持各自声明，本文不授权宿主 FD 命令、代理、测试、安装或发布。

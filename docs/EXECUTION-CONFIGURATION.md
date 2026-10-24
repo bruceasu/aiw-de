@@ -14,6 +14,8 @@ FD-030补充：平台Skill改为固定文件集，Claim新增`skillFiles`，并�
 
 ## 自定义工作方法（可选）
 
+设计、架构、领域建模、诊断、冲突修复、研究、交接、教学与文章编辑也可作为附加 Skill。最多选六项，不会替换基础职责或增加工具权限；用途和组合示例见[附加技能配置指南](WORKER-OPTIONAL-SKILLS.md)。
+
 原型制作可在这里勾选附加 `prototype` Skill，配置给现有 AI Worker；无需新增 Worker 类型。UI/逻辑原型的制作、预览权限与交付说明见[原型制作技能](WORKER-PROTOTYPE-SKILL.md)。
 
 普通任务直接使用默认方法即可，不需要先组合 Skill。只有默认方法不够用时，切换“自定义工作方法”：
@@ -26,7 +28,7 @@ FD-030补充：平台Skill改为固定文件集，Claim新增`skillFiles`，并�
 
 “准备任务”“准备记录”“自定义工作方法”切换显示。页面使用现有 Web Console 外壳，不再要求手写 Assembly/Candidate/Intent JSON，也不显示预留但尚不能执行的职责目录。确认成功后的列表刷新失败会保留实际成功结果和精确引用，不把它描述为未保存。
 
-默认目录静态派生自现有 11 份 Python TOML Profile 及 9 个 Skill 包，保持九字段方法和现有工程输出协议。`src/main/resources/execution/software-catalog.json` 是受审内容快照，不在启动时抓取外部材料。原 Profile/Skill 更新不会静默改写已有配置；更换快照需新版本和摘要。默认 verifier/integration-verifier 声明 COMMAND 需求，没有独立命令许可和兼容 Linux/WSL 隔离适配器时保持阻塞。
+默认主方法静态派生自现有 11 份 Python TOML Profile；原 9 个 Skill 包加上 prototype 和 FD-040 九项附加技能，共 19 包。十一份主方法保持九字段方法和现有工程输出协议。`src/main/resources/execution/software-catalog.json` 是受审内容快照，不在启动时抓取外部材料。原 Profile/Skill 更新不会静默改写已有配置；更换快照需新版本和摘要。默认 verifier/integration-verifier 声明 COMMAND 需求，没有独立命令许可和兼容 Linux/WSL 隔离适配器时保持阻塞。
 
 ## 不可变引用及职责边界
 

@@ -176,3 +176,20 @@ The Skill SHALL guide actual minimal UI or logic artifact creation, a concrete e
 #### Scenario: Prototype files can be written but preview is not authorized
 - **WHEN** the Worker has file authority but lacks the required command or preview capability
 - **THEN** the method guides file delivery and exact entry instructions with preview marked not run; no server, browser session or permission is synthesized
+
+### Requirement: Composable engineering and communication Skills
+The public Skill catalogue SHALL offer codebase-design, improve-codebase-architecture, domain-modeling, diagnosing-bugs, resolving-merge-conflicts, research, handoff, teach and edit-article as optional additions to an existing working method. Each SHALL provide task-relevant inputs, practical steps, completion output and evidence-gap handling in declared Skill files. Registration SHALL use the existing immutable asset and Skill-file contracts, without changing existing assets, default methods or primary profiles.
+
+Selection SHALL preserve primary responsibilities, read-only constraints, runtime, output schema, frozen source scope and tool authority. The existing maximum of six additional Skills SHALL remain. When a requested activity cannot fit the primary task or available tools, the Worker SHALL report the gap through its existing result/question path instead of switching roles or inventing authority.
+
+#### Scenario: An architecture task needs domain clarification and research
+- **WHEN** its method selects codebase-design, domain-modeling and research within the current task scope
+- **THEN** the Skills guide concrete interfaces, terms and source-backed conclusions in the existing output, using only permitted evidence; selection does not grant external-source access or start another agent
+
+#### Scenario: A conflict-repair task lacks operation evidence or an adapter
+- **WHEN** the actual merge/rebase base, both sides' intent, operation state or necessary Git adapter is unavailable
+- **THEN** the conflict Skill guides preservation of the current state and a precise gap report, without raw Git-state manipulation, guessed completion or replay of an unknown operation
+
+#### Scenario: A task requests teaching, prose editing or a handoff
+- **WHEN** a selected Skill supports that activity within the primary task
+- **THEN** it guides a useful lesson with practice, a faithful article revision or an evidence-based continuation brief as applicable; file writes require existing scope, and no course state, publication or workflow dispatch is implied

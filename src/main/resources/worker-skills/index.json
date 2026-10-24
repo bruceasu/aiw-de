@@ -86,6 +86,33 @@
       "SKILL.md",
       "references/logic.md",
       "references/ui.md"
+    ],
+    "codebase-design": [
+      "SKILL.md"
+    ],
+    "improve-codebase-architecture": [
+      "SKILL.md"
+    ],
+    "domain-modeling": [
+      "SKILL.md"
+    ],
+    "diagnosing-bugs": [
+      "SKILL.md"
+    ],
+    "resolving-merge-conflicts": [
+      "SKILL.md"
+    ],
+    "teach": [
+      "SKILL.md"
+    ],
+    "research": [
+      "SKILL.md"
+    ],
+    "handoff": [
+      "SKILL.md"
+    ],
+    "edit-article": [
+      "SKILL.md"
     ]
   },
   "profiles": {
