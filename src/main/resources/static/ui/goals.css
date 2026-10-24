@@ -1,7 +1,15 @@
 .goal-layout {display:grid;grid-template-columns:minmax(200px,260px) minmax(0,1fr);gap:var(--space-4,20px);align-items:start}
 .goal-layout .card {margin-bottom:20px;padding:20px}.goal-layout .field {display:grid;gap:8px;margin:12px 0}
 .goal-layout textarea,.goal-layout input:not([type=checkbox]),.goal-layout select {width:100%;max-width:100%}
-.goal-list-item {display:block;width:100%;text-align:left;margin:8px 0}.goal-messages {max-height:460px;overflow:auto}
+#goal-workshop [hidden] {display:none!important}
+.goal-list-filters {display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
+.goal-list-filters [aria-pressed=true] {border-color:var(--accent);color:var(--accent)}
+.goal-list-row {display:flex;align-items:center;gap:8px;margin:8px 0;min-width:0}
+.goal-list-row .goal-list-item {flex:1;min-width:0;text-align:left;justify-content:flex-start;overflow-wrap:anywhere}
+.goal-list-item[aria-current=true] {border-color:var(--accent);background:var(--panel)}
+.goal-list-action {flex-shrink:0}
+.goal-list-empty {border:1px dashed var(--line);padding:18px 12px;color:var(--muted);font-size:12px;line-height:1.8}
+.goal-messages {max-height:460px;overflow:auto}
 .goal-message {border-left:2px solid var(--accent,#60e6dc);padding:12px;margin:12px 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .goal-source,.goal-attachment,.goal-version {padding:12px 0;border-bottom:1px solid var(--border,rgba(255,255,255,.12))}
 .goal-step {margin:16px 0;padding:14px;border:1px solid var(--border,rgba(255,255,255,.12));border-radius:10px}

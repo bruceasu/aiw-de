@@ -3,6 +3,7 @@
   const $ = id => document.getElementById(id);
   const csrf = document.querySelector('meta[name="csrf-token"]').content;
   let current = null, data = null, dirty = false, selectedSources = new Set(), busy = false;
+  let goals = [], showDeleted = false;
   const editorDirty = new Set();
   const status = message => { $('goal-status').textContent = message; };
   const node = (tag, text, className) => { const n = document.createElement(tag); if (text != null) n.textContent = text; if (className) n.className = className; return n; };
@@ -33,21 +34,77 @@
         login.href = '/ui/login?next=' + encodeURIComponent(window.location.pathname);
         $('goal-status').append(' ', login);
       }
-    } finally { busy = false; }
+    } finally { busy = false; renderList(); }
   }
   function clean() {
     if (dirty || editorDirty.size) throw new Error('Save your goal and plan editing changes before continuing, or reload the saved version.');
   }
   async function list() {
-    const rows = await api(''); $('goal-list').replaceChildren();
+    goals = await api(''); renderList();
+  }
+  function renderList() {
+    $('goal-show-active').textContent = `当前目标（${goals.filter(row => !row.deleted).length}）`;
+    $('goal-show-deleted').textContent = `已删除（${goals.filter(row => row.deleted).length}）`;
+    $('goal-show-active').setAttribute('aria-pressed', String(!showDeleted));
+    $('goal-show-deleted').setAttribute('aria-pressed', String(showDeleted));
+    $('goal-list').replaceChildren();
+    const rows = goals.filter(row => row.deleted === showDeleted);
     rows.forEach(row => {
-      const b = node('button', `${row.deleted ? '[Deleted] ' : ''}${row.title}`, 'btn ghost goal-list-item');
-      b.onclick = () => run(async () => { clean(); await load(row.id); }); $('goal-list').append(b);
+      const item = node('div', null, 'goal-list-row');
+      const b = node('button', row.title, 'btn ghost goal-list-item'); b.type = 'button';
+      b.setAttribute('aria-current', String(current?.id === row.id));
+      b.onclick = () => run(async () => { clean(); await load(row.id); });
+      const action = node('button', row.deleted ? '恢复' : '删除', `btn ${row.deleted ? 'ghost' : 'danger'} small-btn goal-list-action`);
+      action.type = 'button'; action.setAttribute('aria-label', `${row.deleted ? '恢复' : '删除'}目标：${row.title}`);
+      action.onclick = () => run(() => changeDeleted(row, !row.deleted));
+      b.disabled = busy; action.disabled = busy;
+      item.append(b, action); $('goal-list').append(item);
     });
+    if (!rows.length) $('goal-list').append(node('p', showDeleted ? '最近的目标中没有已删除记录。' : '最近的目标中没有当前记录。可新建目标，或从“已删除”恢复。', 'goal-list-empty'));
+  }
+  function clearSelection() {
+    current = null; data = null; dirty = false; editorDirty.clear();
+    $('goal-detail').hidden = true; $('goal-empty').hidden = false;
+    $('goal-message').value = '';
+  }
+  for (const deleted of [false, true]) $(deleted ? 'goal-show-deleted' : 'goal-show-active').onclick = () => run(async () => {
+    clean();
+    if (current && current.deleted !== deleted && $('goal-message').value.trim() && !window.confirm('切换列表将放弃当前未发送的消息，是否继续？')) return;
+    showDeleted = deleted;
+    if (current && current.deleted !== deleted) clearSelection();
+    renderList();
+  });
+  $('goal-refresh-list').onclick = () => run(async () => {
+    clean();
+    if (current) await load(current.id); else await list();
+    status('目标列表已刷新。');
+  });
+  async function changeDeleted(draft, deleted) {
+    clean();
+    const unsent = current?.id === draft.id && $('goal-message').value.trim() ? '\n当前未发送的消息也将放弃。' : '';
+    if (deleted && !window.confirm(`删除目标“${draft.title}”？\n可在“已删除”中恢复。旧的待处理讨论回复不再采用，已创建的执行计划继续保留。${unsent}`)) return;
+    const controls = [...$('goal-workshop').querySelectorAll('input,textarea,select,button')].map(el => [el, el.disabled]);
+    controls.forEach(([el]) => { el.disabled = true; });
+    let saved;
+    try {
+      saved = await api(`/${encodeURIComponent(draft.id)}/${deleted ? 'delete' : 'restore'}`, {revision:draft.revision});
+    } catch (error) {
+      error.message = `${deleted ? '删除' : '恢复'}请求未确认：${error.message} 请先刷新核对，不要重复提交。`;
+      throw error;
+    } finally {
+      controls.forEach(([el, disabled]) => { el.disabled = disabled; });
+    }
+    goals = goals.map(row => row.id === saved.id ? saved : row);
+    if (current?.id === saved.id) clearSelection();
+    renderList();
+    const message = deleted ? '目标已删除，可在“已删除”中恢复；已创建的执行计划保留。' : '目标已恢复，请在“当前目标”中打开。';
+    try { await list(); status(message); }
+    catch (error) { status(`${message} 列表刷新失败：${error.message}`); }
   }
   async function load(id) {
     data = await api(`/${encodeURIComponent(id)}`); current = data.draft; dirty = false; editorDirty.clear();
-    $('goal-detail').hidden = false;
+    showDeleted = current.deleted;
+    $('goal-detail').hidden = false; $('goal-empty').hidden = true;
     $('goal-title').value = current.title; $('goal-body').value = current.content.body;
     $('goal-missing').value = current.content.missing; $('goal-backend').value = current.content.backend;
     selectedSources = new Set(current.content.knowledgeIds);
@@ -75,10 +132,7 @@
       missing:$('goal-missing').value,backend:$('goal-backend').value,knowledgeIds:[...selectedSources]});
     await load(current.id); status('Goal saved. Existing formal versions and plans are unchanged.');
   });
-  for (const action of ['delete','restore']) $('goal-'+action).onclick = () => run(async () => {
-    clean(); if (action === 'delete' && !window.confirm('Delete this goal? You can restore it. Old pending replies will be discarded.')) return;
-    await api(`/${current.id}/${action}`, {revision:current.revision}); await load(current.id); status(`Goal ${action === 'delete' ? 'deleted' : 'restored'}.`);
-  });
+  for (const action of ['delete','restore']) $('goal-'+action).onclick = () => run(() => changeDeleted(current, action === 'delete'));
   $('goal-send').onclick = () => run(async () => {
     clean(); const text = $('goal-message').value;
     const attachments = [...document.querySelectorAll('[data-share-file]:checked')].map(n => n.value);

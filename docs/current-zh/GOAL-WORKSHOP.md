@@ -4,6 +4,12 @@
 
 工作台使用现有控制台账号的 actor 隔离。认证关闭时全部浏览器属于 `local-console`；这不是匿名浏览器隔离或新增多租户认证。讨论任务及其输入进入现有运维可见面。点击“准备执行计划”时明确确认交接到既有操作员可见的 Plans；数据库管理员和原管理 API 不受工作台的界面隔离承诺约束。
 
+## 删除与恢复目标
+
+左侧默认显示“当前目标”，每个目标旁可直接点击“删除”，无需先打开详情。确认框会显示目标名称；取消不会提交。删除当前目标后详情关闭，删除其它目标保留原选择。未保存的目标或计划编辑需先保存，或用原有重新加载入口明确放弃。
+
+删除是可恢复操作：在“已删除”中点击“恢复”，再到“当前目标”打开。原目标内容与正式版本保留，旧待处理讨论回复不再写回；已创建的执行计划和工作区不会连带删除。列表数量只统计接口返回的最近 100 个目标，不代表全部历史。可用“刷新”核对当前状态；请求结果未确认时不会自动重复删除或恢复，明确成功后刷新失败会单独提示。
+
 ## Worker 与后端
 
 独立角色 `goal-discussion` 已在 TypeScript、Python、Go 三包实现，共享角色与 Skill 契约。TS/Python 用 `AIW_PROCESS_ROLE=goal-discussion`（TS 的 start:all/管理器 all 也包含它），Go 用 `profiles/goal-discussion.toml` 启动。默认 OpenAI backend 接受 TS/Python 的 `openai-agents` 和 Go 的 `openai-api`；显式 Codex backend 接受 TS/Go 的 `codex-cli`/`codex-app-server` 及 Python 的 `codex-app-server`。Python 已删除 `codex-sdk`，需显式迁移旧配置。TS/Python 的原生 Windows Codex 路径拒绝启动，使用 Unix/WSL 或 Agents。完整 [角色/语言/后端矩阵](../../workers/README.md) 明确源码支持与未验证限制。没有在线匹配 Worker 时显示原因，人工编辑仍可用。
