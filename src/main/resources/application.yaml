@@ -32,6 +32,8 @@ aidev:
       # Add repository mappings here, for example: core: D:/projects/core
   worker-protocol:
     token: ${AIW_WORKER_TOKEN:}
+  execution:
+    accounting-mode: ${AIW_EXECUTION_ACCOUNTING_MODE:record-only}
   lease-recovery:
     enabled: ${AIW_LEASE_RECOVERY_ENABLED:true}
     interval-ms: ${AIW_LEASE_RECOVERY_INTERVAL_MS:5000}

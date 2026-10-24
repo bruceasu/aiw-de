@@ -3,6 +3,7 @@ package me.asu.aidev.authority;
 import java.util.List;
 
 import me.asu.aidev.authority.AuthorityRepository.Grant;
+import me.asu.aidev.execution.guard.ExecutionAccounting;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,9 +15,11 @@ public class AuthorityBudgets {
     private final AuthorityBoundary boundary;
     private final AuthorityRepository repo;
     private final AuthorityTargets targets;
-    public AuthorityBudgets(JdbcTemplate jdbc, AuthorityBoundary boundary, AuthorityRepository repo, AuthorityTargets targets) {
-        this.jdbc = jdbc; this.boundary = boundary; this.repo = repo; this.targets = targets;
+    private final ExecutionAccounting accounting;
+    public AuthorityBudgets(JdbcTemplate jdbc, AuthorityBoundary boundary, AuthorityRepository repo, AuthorityTargets targets, ExecutionAccounting accounting) {
+        this.jdbc = jdbc; this.boundary = boundary; this.repo = repo; this.targets = targets; this.accounting = accounting;
     }
+    public boolean enforced() { return accounting.enforced(); }
     public record Budget(String target, String action, long limit, long used, long reserved) {}
     public List<Budget> list() {
         return jdbc.query("SELECT * FROM authority_budget ORDER BY target_key,action", (rs,n) -> new Budget(
@@ -33,12 +36,12 @@ public class AuthorityBudgets {
     public void consume(Grant grant, String request, boolean reserved) {
         Budget budget = current(grant.rule());
         long limit = Math.min(budget.limit(), grant.rule().maximumUses());
-        if (budget.used() >= limit) throw new IllegalStateException("Cumulative target/action budget is exhausted");
-        if (jdbc.update("UPDATE authority_budget SET used_value=used_value+1,reserved_value=reserved_value+? WHERE target_key=? AND action=? AND used_value<?",
-                reserved ? 1 : 0, budget.target(), budget.action(), limit) != 1)
+        if (enforced() && budget.used() >= limit) throw new IllegalStateException("Cumulative target/action budget is exhausted");
+        if (jdbc.update("UPDATE authority_budget SET used_value=used_value+1,reserved_value=reserved_value+? WHERE target_key=? AND action=? AND (? OR used_value<?)",
+                reserved ? 1 : 0, budget.target(), budget.action(), !enforced(), limit) != 1)
             throw new IllegalStateException("Cumulative budget changed");
         repo.audit(budget.target(),grant.id(),request,"delegate:"+grant.workerId(),reserved ? "ROUND_RESERVED" : "BUDGET_CONSUMED",
-                "One unit; action " + budget.action() + "; grant revision " + grant.revision());
+                "One recorded unit; mode " + accounting.mode() + "; action " + budget.action() + "; grant revision " + grant.revision());
     }
     @Transactional public void supplement(String target, String action, long amount, String actor) {
         boundary.lock();
