@@ -60,7 +60,7 @@ class R9S1WebConsoleIT {
                 .POST(HttpRequest.BodyPublishers.ofString("username=console-viewer&password=test-console-secret")).build(),
                 HttpResponse.BodyHandlers.ofString());
         assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.uri().getPath()).isEqualTo("/ui");
+        assertThat(response.uri().getPath()).isEqualTo("/ui/plans");
     }
 
     @Test

@@ -6,7 +6,11 @@ import jakarta.servlet.http.HttpSession;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.server.PathContainer;
+import org.springframework.http.server.RequestPath;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.ServletRequestPathUtils;
+import org.springframework.web.util.UriUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
@@ -20,16 +24,33 @@ public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
         this.security = security;
     }
 
+    private record ConsolePath(String match,String target) {}
+
+    private static ConsolePath consolePath(HttpServletRequest request) {
+        RequestPath parsed = ServletRequestPathUtils.hasParsedRequestPath(request)
+                ? ServletRequestPathUtils.getParsedRequestPath(request)
+                : RequestPath.parse(request.getRequestURI(),request.getContextPath());
+        var match = new StringBuilder();var target = new StringBuilder();
+        for (var element : parsed.pathWithinApplication().elements()) {
+            if (element instanceof PathContainer.PathSegment segment) {
+                match.append(segment.valueToMatch());
+                target.append(UriUtils.encode(segment.valueToMatch(),StandardCharsets.UTF_8));
+            } else { match.append(element.value());target.append(element.value()); }
+        }
+        return new ConsolePath(match.toString(),target.toString());
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        String path = request.getRequestURI().substring(request.getContextPath().length());
+        ConsolePath route = consolePath(request);
+        String path = route.match();
         if (path.equals("/ui/login") || path.equals("/ui/console.css") || path.equals("/ui/console.js")) return true;
         boolean page = path.equals("/ui") || path.startsWith("/ui/");
-        if (!page && !WebConsoleApiRoutes.matches(path)) return true;
+        // MVC registration owns scope; raw URI aliases must never open an early pass.
         HttpSession session = request.getSession(true);
         if (!security.authenticated(session)) {
             if (page && (HttpMethod.GET.matches(request.getMethod()) || HttpMethod.HEAD.matches(request.getMethod()))) {
-                String target = path + (request.getQueryString() == null ? "" : "?" + request.getQueryString());
+                String target = route.target() + (request.getQueryString() == null ? "" : "?" + request.getQueryString());
                 String next = URLEncoder.encode(target, StandardCharsets.UTF_8);
                 response.sendRedirect(request.getContextPath() + "/ui/login?next=" + next);
             } else {

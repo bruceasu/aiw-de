@@ -8,6 +8,11 @@ Every business page under `/ui` and `/ui/**` SHALL require a real signed-in brow
 - THEN it is redirected to login with the original path, query and application context preserved
 - AND successful login returns through the existing session flow rather than an anonymous local-console actor
 
+#### Scenario: A console URL uses a routing alias
+- WHEN Spring MVC maps an encoded or matrix-parameter alias to a console page or data API
+- THEN the same signed-in-session gate applies using the parsed path segments, without an early pass based on the raw URI
+- AND page redirects use an encoded canonical console path with the original query preserved, without turning encoded path characters into URL fragments or separators
+
 #### Scenario: A console data request has no signed-in session
 - WHEN a registered console JSON/file API or console write is requested anonymously
 - THEN the console gate returns 401 rather than data or a login HTML redirect

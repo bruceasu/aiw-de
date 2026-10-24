@@ -69,7 +69,7 @@ class R9WebConsoleOperationsIT {
     void signIn() throws Exception {
         var response = post("/ui/login", form(Map.of("username", "console-admin", "password", "test-console-secret")));
         assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.uri().getPath()).isEqualTo("/ui");
+        assertThat(response.uri().getPath()).isEqualTo("/ui/plans");
     }
 
     @Test

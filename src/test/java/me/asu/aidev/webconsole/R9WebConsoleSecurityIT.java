@@ -24,6 +24,11 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import me.asu.aidev.webconsole.security.WebConsoleSecurityService;
 import me.asu.aidev.webconsole.security.WebConsoleSecurityInterceptor;
 import me.asu.aidev.webconsole.security.WebConsoleRole;
+import me.asu.aidev.webconsole.security.WebConsoleApiRoutes;
+import org.springframework.web.servlet.handler.MappedInterceptor;
+import org.springframework.web.util.ServletRequestPathUtils;
+import java.util.stream.Stream;
+import java.util.Arrays;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -73,7 +78,7 @@ class R9WebConsoleSecurityIT {
         assertThat(login.statusCode()).isEqualTo(302);
         assertRedirect(login, "/ui", null);
 
-        HttpResponse<String> dashboard = get("/ui");
+        HttpResponse<String> dashboard = get("/ui/plans");
         assertThat(dashboard.statusCode()).isEqualTo(200);
         assertThat(dashboard.body()).contains("VIEWER");
         assertThat(dashboard.body()).doesNotContain("Start Autonomous Run");
@@ -109,6 +114,8 @@ class R9WebConsoleSecurityIT {
     @Test
     void consoleGatePreservesContextAndQueryAndLeavesMachineAuthenticationSeparate() throws Exception {
         var gate = new WebConsoleSecurityInterceptor(new WebConsoleSecurityService(false, "admin", "fixture", "ADMIN"));
+        var patterns = Stream.concat(Stream.of("/ui", "/ui/**"), Arrays.stream(WebConsoleApiRoutes.patterns())).toArray(String[]::new);
+        var mapped = new MappedInterceptor(patterns, null, gate);
         for (String method : new String[]{"GET", "HEAD"}) {
             var request = new MockHttpServletRequest(method, "/platform/ui/configurations");
             request.setContextPath("/platform");request.setQueryString("view=roles");
@@ -122,11 +129,34 @@ class R9WebConsoleSecurityIT {
             assertThat(response.getStatus()).isEqualTo(401);
             assertThat(response.getRedirectedUrl()).isNull();
         }
-        for (String path : new String[]{"/ui/login", "/ui/console.css", "/ui/console.js", "/api/r1/worker-protocol/v1/workers/fixture/heartbeat"}) {
+        for (String path : new String[]{"/ui/login", "/ui/console.css", "/ui/console.js"}) {
             var request = new MockHttpServletRequest("GET", path);
             assertThat(gate.preHandle(request, new MockHttpServletResponse(), new Object())).isTrue();
-            assertThat(request.getSession(false)).isNull(); // Machine routes keep their own credential checks.
+            assertThat(request.getSession(false)).isNull();
         }
+        for (String path : new String[]{"/ui;v=1/workers", "/%75i/workers", "/ui/%77orkers"}) {
+            var request = new MockHttpServletRequest("GET", path);request.setQueryString("view=current");
+            ServletRequestPathUtils.parseAndCache(request);
+            assertThat(mapped.matches(request)).isTrue();
+            var response = new MockHttpServletResponse();
+            assertThat(gate.preHandle(request, response, new Object())).isFalse();
+            assertThat(response.getRedirectedUrl()).isEqualTo("/ui/login?next=" + encode("/ui/workers?view=current"));
+        }
+        var encodedId = new MockHttpServletRequest("GET", "/ui/tasks/task%23one");
+        ServletRequestPathUtils.parseAndCache(encodedId);
+        var encodedResponse = new MockHttpServletResponse();
+        assertThat(gate.preHandle(encodedId, encodedResponse, new Object())).isFalse();
+        assertThat(encodedResponse.getRedirectedUrl()).isEqualTo("/ui/login?next=" + encode("/ui/tasks/task%23one"));
+        var apiAlias = new MockHttpServletRequest("GET", "/api/r1/%67oals");
+        ServletRequestPathUtils.parseAndCache(apiAlias);
+        assertThat(mapped.matches(apiAlias)).isTrue();
+        var apiResponse = new MockHttpServletResponse();
+        assertThat(gate.preHandle(apiAlias, apiResponse, new Object())).isFalse();
+        assertThat(apiResponse.getStatus()).isEqualTo(401);
+        var machine = new MockHttpServletRequest("POST", "/api/r1/worker-protocol/v1/workers/fixture/heartbeat");
+        ServletRequestPathUtils.parseAndCache(machine);
+        assertThat(mapped.matches(machine)).isFalse(); // The browser gate is not invoked for machine routes.
+        assertThat(machine.getSession(false)).isNull();
     }
 
     private static void assertRedirect(HttpResponse<?> response, String expectedPath, String expectedRawQuery) {
