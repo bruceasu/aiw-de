@@ -102,3 +102,5 @@ Web 在“状态与备份”增加配对码生成、显式显示与复制。桌�
 - 用户工作区选择：在当前工作区完成，仅提交 FD-031（2026-10-24）。
 - workers/personal-secretary/main.py、runtime.py、store.py、desktop*.py、ui/。
 - workers/personal-secretary/README.md、desktop-assets/README.md（图片来源、完整生成提示词与官方接口参考）。
+
+**Completed:** 2026-10-24

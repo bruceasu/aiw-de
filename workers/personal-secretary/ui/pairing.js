@@ -4,7 +4,8 @@
 (() => {
   const element = id => document.getElementById(id);
   const generate = element("create-desktop-pairing");
-  if (!generate) return;
+  if (!generate || generate.dataset.pairingBound === "true") return;
+  generate.dataset.pairingBound = "true";
   let expires = 0;
   let timer;
   const input = element("desktop-pairing-code");

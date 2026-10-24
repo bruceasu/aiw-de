@@ -3,5 +3,7 @@
 <!-- aiw: feature-folder-index -->
 
 - [Design: FD-031_WINDOWS_DESKTOP_SECRETARY_UI.md](FD-031_WINDOWS_DESKTOP_SECRETARY_UI.md)
+- [Reports](reports/)
+- [Reviews](reviews/)
 
 Run `aiw fd show FD-031` for current status and handoff.

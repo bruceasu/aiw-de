@@ -227,3 +227,12 @@ td .raw-details { margin-top: 0; }
   .pairing-features { margin-top: 20px; }
   .pairing-card { padding: 28px; }
 }
+
+#desktop-pairing-card .inline-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 18px; }
+#desktop-pairing-card .help { color: var(--muted); font-size: 12px; }
+#desktop-pairing-result { display: grid; gap: 12px; margin-top: 20px; }
+#desktop-pairing-result[hidden], #desktop-pairing-status[hidden] { display: none !important; }
+#desktop-pairing-result label { display: grid; gap: 8px; }
+#desktop-pairing-status { padding: 12px 16px; border: 1px solid var(--line); border-radius: 7px; color: var(--ok); }
+#desktop-pairing-status[data-tone="error"] { color: var(--bad); }
+#desktop-pairing-status[data-tone="warn"] { color: var(--warn); }

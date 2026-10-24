@@ -78,7 +78,7 @@ python workers/personal-secretary/main.py --owner-id O-EXPLICIT-ID --worker-id m
 
 安排表单展示并固定载入时的私人正文、Plan 引用、状态及版本。普通刷新发现记录变化时会禁用安排确认，必须点击“重新载入所选工作”并核对内容。目标窗口的“原请求回执与历史”从已持久化的 SELECTED_GOAL 决策载入原请求；退出重开或重新配对后仍可选择原 SENDING/UNKNOWN/RECORDED 请求查询。历史查询与当前预览分别展示，历史入口不会启用重发。
 
-Web 再次配对由独立的 `ui/pairing.js` 和 `ui/pairing.css` 提供，仅在用户显式生成时读取当前会话 CSRF 并请求新码；可与原有秘书 Web 页面或其新版布局共同使用，不依赖页面其它全局脚本。
+Web 再次配对使用原有的 `ui/app.js` 和 `ui/console.css`，避免旧进程不认识新增静态资源路由而导致按钮未绑定。配对处理在其它页面初始化前绑定；仅在用户显式生成时读取当前会话 CSRF 并请求新码。点击后立即显示等待信息，十五秒未完成会报告超时，不自动重试。旧进程缺少 `/api/pairing` 时明确提示更新并重启；脚本未加载时保留“配对组件尚未就绪”的提示。更新后先强制刷新页面；若提示接口尚不支持，需重启个人服务并重新配对。独立的 `pairing.js`/`pairing.css` 保留兼容旧页面引用，按钮绑定标记防止重复请求。
 
 桌面代码分为 `desktop.py`（Tk 窗口与用户操作）、`desktop_client.py`（私人服务会话/请求）和 `desktop_win32.py`（窗口位置/托盘）。人物素材及生成提示词见 [desktop-assets](desktop-assets/README.md)。窗口工作在主线程，单次服务请求在后台线程执行，结果通过队列返回；关闭 UI 不调用 `Runtime.cancel()`。
 
