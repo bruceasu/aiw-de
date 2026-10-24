@@ -81,6 +81,6 @@ Worker 可以运行 Git、构建脚本和 AI Runtime。因此应：
 
 个人秘书的[动作授权说明](../ACTION-PERMISSIONS.md)解释功能分组、可选业务范围、共享次数、旧能力迁入和原请求恢复。动作次数是人明确设置的上限，与默认仅记录的执行费用等预算分开。
 
-R9 对 `/ui/**` 支持可选 Session Login、CSRF，以及 VIEWER/OPERATOR/APPROVER/ADMIN 角色。该机制只属于浏览器 Console 边界，不会自动给已有 Management REST API 增加 Auth/RBAC；因此默认 localhost 绑定仍是当前最安全的本地模式。
+所有 `/ui` 及 `/ui/**` 业务页面统一要求真实Session Login，并保留CSRF及VIEWER/OPERATOR/APPROVER/ADMIN角色。只有登录页和指定公共资源可匿名，旧enabled=false不再提供匿名认证或ADMIN。该机制只属于浏览器 Console 边界，不会自动给已有 Management REST API 增加 Auth/RBAC；因此默认 localhost 绑定仍是当前最安全的本地模式。
 
-页头和侧栏角色标签按真实登录会话展示：未登录显示“未登录”，登录后显示当前角色。免登录访问模式内部的 ADMIN 访问角色不作为已登录身份展示；该文字修正不改变原有访问权限。
+页头和侧栏角色标签按真实登录会话展示：未登录显示“未登录”，登录后显示当前角色。未登录会话不再获得内部ADMIN、actor或operator授权，不能访问平台业务页面；登录页仍可显示“未登录”。旧匿名数据保留原归属，不自动转给配置账号。

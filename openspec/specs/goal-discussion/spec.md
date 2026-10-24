@@ -5,7 +5,7 @@ Define the console goal discussion workflow delivered by FD-019.
 ## Requirements
 
 ### Requirement: Durable actor-owned goals
-The system SHALL persist each goal's content, conversation, selected sources and recoverable deletion state under its authenticated console actor. Without console authentication, clients share the existing local-console actor. Suggestions SHALL NOT overwrite human goal edits.
+The system SHALL persist each goal's content, conversation, selected sources and recoverable deletion state under its authenticated console actor. Anonymous goal access SHALL be rejected; legacy local-console data SHALL retain its existing ownership and SHALL NOT be reassigned automatically. Suggestions SHALL NOT overwrite human goal edits.
 
 #### Scenario: A late discussion response
 - **WHEN** a response refers to an older goal revision

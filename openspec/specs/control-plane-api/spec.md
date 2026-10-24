@@ -1,5 +1,23 @@
 # Control Plane API
 
+### Requirement: Mandatory browser console sessions
+Every business page under `/ui` and `/ui/**` SHALL require a real signed-in browser session. Only `/ui/login` and the designated public console.css/console.js resources SHALL bypass this gate. The former authentication enable flag SHALL NOT permit anonymous authentication, ADMIN access or operator authority, including when set to false. Login SHALL remain available without an enable switch and SHALL reject blank or unconfigured passwords.
+
+#### Scenario: An anonymous browser opens a role or goal page
+- WHEN it requests a console business page with GET or HEAD
+- THEN it is redirected to login with the original path, query and application context preserved
+- AND successful login returns through the existing session flow rather than an anonymous local-console actor
+
+#### Scenario: A console data request has no signed-in session
+- WHEN a registered console JSON/file API or console write is requested anonymously
+- THEN the console gate returns 401 rather than data or a login HTML redirect
+- AND authenticated requests retain existing CSRF, role and ownership checks
+
+#### Scenario: A machine operates its lease
+- WHEN it calls an existing worker or dedicated personal-machine route
+- THEN its original credential, identity, scope and lease checks apply without adding a browser-session requirement
+- AND legacy anonymous console records are not reassigned or converted into current human authority
+
 ## Requirements
 
 ### Requirement: Configuration preparation and capability snapshots

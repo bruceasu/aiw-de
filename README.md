@@ -79,10 +79,9 @@ mvn spring-boot:run
 | 配置 | 环境变量使用 `AIW_` 前缀；具体配置键见配置参考 |
 | Java 命名空间 | `me.asu.aidev` |
 
-浏览器控制台认证默认关闭，适合本地体验。需要启用时配置：
+所有平台控制台业务页面均要求真实登录，登录页始终可用。配置用户名和非空密码：
 
 ```text
-AIW_WEB_CONSOLE_AUTH_ENABLED=true
 AIW_WEB_CONSOLE_USERNAME=admin
 AIW_WEB_CONSOLE_PASSWORD=<strong secret>
 AIW_WEB_CONSOLE_ROLE=ADMIN

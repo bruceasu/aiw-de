@@ -98,7 +98,6 @@ When `AIW_REPOSITORY_REF=core` is set, the reference worker automatically adds `
 ## Web Console
 
 ```text
-AIW_WEB_CONSOLE_AUTH_ENABLED=false
 AIW_WEB_CONSOLE_USERNAME=admin
 AIW_WEB_CONSOLE_PASSWORD=
 AIW_WEB_CONSOLE_ROLE=ADMIN
@@ -106,4 +105,6 @@ AIW_WEB_CONSOLE_SESSION_TIMEOUT=8h
 AIW_WEB_CONSOLE_COOKIE_SECURE=false
 ```
 
-Roles: `VIEWER`, `OPERATOR`, `APPROVER`, `ADMIN`. Authentication is intentionally optional for localhost-first use. If enabled, password must be non-blank.
+Roles: `VIEWER`, `OPERATOR`, `APPROVER`, `ADMIN`. All console business pages require a real signed-in session. The login page and its public resources remain available; a nonblank password is required to sign in. The former enabled property/environment flag is ignored, including false. Existing local-console data retains its original ownership and is not automatically assigned to the configured account.
+
+Before rolling back to an older optional-auth version, explicitly set that version's `AIW_WEB_CONSOLE_AUTH_ENABLED=true`, retain nonblank credentials, and verify anonymous access is rejected. This change does not perform a deployment or rollback.

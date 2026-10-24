@@ -231,6 +231,6 @@ AIW_WEB_CONSOLE_PASSWORD=<strong secret>
 AIW_WEB_CONSOLE_ROLE=ADMIN
 ```
 
-未登录访问个人授权等受保护页面时，会进入登录页，登录成功后返回原页面。普通控制台页面默认保留本地免登录访问；如果也需要保护这些页面，可额外设置 `AIW_WEB_CONSOLE_AUTH_ENABLED=true`。该设置不控制登录页是否可用。
+所有平台业务页面都要求登录；未登录进入登录页，成功后返回原页面及查询参数。无需启用开关，旧false值也不能绕过认证。未配置非空密码时按登录页提示设置；退出或会话失效后重新登录。
 
-注意：该登录保护 `/ui/**` 及 `/api/r1/` 下六个控制台数据根：goals、secretary、delegation、task-outputs、workflow-plans、plan-editor，保留 session、CSRF、角色及所有者校验。其他旧管理写入在首次代理启用前保持原本地策略，首次启用后持久要求人工 session、CSRF 和动作角色；Worker 租约协议继续使用机器认证。Control Plane 仍应绑定 localhost 或置于合适的内网/边缘访问保护后。
+注意：该登录保护 `/ui`、`/ui/**` 及现有 `/api/r1/` 控制台数据根：goals、task-outputs、workflow-plans、plan-editor；个人授权等人工接口继续单独检查真实身份，保留 session、CSRF、角色及所有者校验。其他旧管理写入在首次代理启用前保持原本地策略，首次启用后持久要求人工 session、CSRF 和动作角色；Worker 租约协议继续使用机器认证。Control Plane 仍应绑定 localhost 或置于合适的内网/边缘访问保护后。

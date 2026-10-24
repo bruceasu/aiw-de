@@ -92,5 +92,5 @@ The current recommendation is to validate the real autonomous engineering loop b
 - Run/Fleet runtime scheduling control;
 - Worker Drain / Offline;
 - Approval Request / Approve / Reject;
-- optional session login + CSRF;
+- mandatory real-session login for console business pages, with CSRF;
 - VIEWER / OPERATOR / APPROVER / ADMIN.

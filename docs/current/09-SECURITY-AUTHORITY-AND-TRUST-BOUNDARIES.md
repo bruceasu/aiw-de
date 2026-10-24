@@ -136,4 +136,4 @@ Recommended future hardening:
 
 ## Web Console security
 
-R9 supports optional session authentication and per-session CSRF for `/ui/**` with VIEWER/OPERATOR/APPROVER/ADMIN roles. This is a browser-console boundary only; existing management REST APIs are not automatically protected by it. Default localhost binding remains the primary safe local mode.
+All console business pages under `/ui` and `/ui/**` require real session authentication, with per-session CSRF and VIEWER/OPERATOR/APPROVER/ADMIN roles. Only login and its designated public resources bypass the browser gate; the former enabled=false mode cannot grant anonymous authority. This is a browser-console boundary only; existing management REST APIs are not automatically protected by it. Default localhost binding remains the primary safe local mode.

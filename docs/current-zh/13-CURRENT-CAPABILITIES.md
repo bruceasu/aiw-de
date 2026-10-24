@@ -88,5 +88,5 @@
 - Run/Fleet Runtime Scheduling Control；
 - Worker Drain / Offline；
 - Approval Request / Approve / Reject；
-- 可选 Session Login + CSRF；
+- 全部控制台业务页面要求真实 Session Login，保留 CSRF；
 - VIEWER / OPERATOR / APPROVER / ADMIN。

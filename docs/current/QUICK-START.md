@@ -251,13 +251,12 @@ From the browser you can now:
 
 When `AIW_APPROVAL_POLICY=MANUAL`, a PASSED Engineering Gate can be turned into an ApprovalRequest directly from Run Detail.
 
-Optional Web Console login:
+Required Web Console login:
 
 ```text
-AIW_WEB_CONSOLE_AUTH_ENABLED=true
 AIW_WEB_CONSOLE_USERNAME=admin
 AIW_WEB_CONSOLE_PASSWORD=<strong secret>
 AIW_WEB_CONSOLE_ROLE=ADMIN
 ```
 
-The login protects `/ui/**` only. Keep the Control Plane on localhost/protected internal networking because the management REST APIs retain their existing trust boundary.
+All `/ui` and `/ui/**` business pages require sign-in. Login stays public, missing passwords cannot authenticate, and the former enable flag no longer permits anonymous access. Registered console APIs and human authority operations retain their session/CSRF/role checks; machine operations keep their separate credentials. Keep the Control Plane on localhost/protected internal networking because the management REST APIs retain their existing trust boundary.

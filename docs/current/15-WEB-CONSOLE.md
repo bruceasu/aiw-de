@@ -58,7 +58,7 @@ Evidence is linked using the approval's source task, result revision and gate cl
 
 ## Authorization roles
 
-Optional browser-session authentication supports:
+Mandatory browser-session authentication supports:
 
 ```text
 VIEWER    read-only
@@ -70,17 +70,16 @@ ADMIN     all Web Console operations
 Configuration:
 
 ```text
-AIW_WEB_CONSOLE_AUTH_ENABLED=false
 AIW_WEB_CONSOLE_USERNAME=admin
 AIW_WEB_CONSOLE_PASSWORD=
 AIW_WEB_CONSOLE_ROLE=ADMIN
 ```
 
-The login page at `/ui/login` is always available and validates the configured username and nonblank password. With no password configured, it shows credential setup instructions and rejects sign-in attempts. `AIW_WEB_CONSOLE_AUTH_ENABLED` controls whether otherwise-local console pages require sign-in; it does not enable or disable the login page. Personal authority pages always require a signed-in human session and return to the requested page after sign-in. Signed-in sessions use the configured role even when ordinary pages allow local access. Browser mutations require a per-session CSRF token.
+All console business pages require a real signed-in session, including Goal Workshop, task preparation and composed roles. The login page at `/ui/login` and its public resources remain available. Login validates the configured username and nonblank password; missing credentials show setup instructions and cannot create an authenticated session. The old enabled property/environment flag is ignored even when false. Page GET/HEAD redirects retain the original path/query and application context. Existing console APIs reject unauthenticated calls with 401. Browser mutations retain per-session CSRF and role checks.
 
 ## Security boundary
 
-Web Console authentication protects `/ui/**` and the six console data roots under `/api/r1/`: goals, secretary, delegation, task-outputs, workflow-plans and plan-editor. They retain session, CSRF, current role and ownership checks. Other legacy administrative writes retain their original local policy until first delegate activation, which permanently requires human session, CSRF and action roles for those writes; Worker lease operations remain machine-authenticated. Default bind remains `127.0.0.1`. Remote deployment still needs an appropriate network/edge boundary; these custom application checks are not a complete production edge-security framework.
+Web Console authentication protects `/ui` and `/ui/**`, and the registered console data roots under `/api/r1/`: goals, task-outputs, workflow-plans and plan-editor. Human authority routes retain their separate closed session boundary. They retain session, CSRF, current role and ownership checks. Other legacy administrative writes retain their original local policy until first delegate activation, which permanently requires human session, CSRF and action roles for those writes; Worker lease operations remain machine-authenticated. Default bind remains `127.0.0.1`. Remote deployment still needs an appropriate network/edge boundary; these custom application checks are not a complete production edge-security framework.
 
 ## Technology
 
