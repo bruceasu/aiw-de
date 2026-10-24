@@ -1,0 +1,118 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-033",
+  "source_event": "FD-033-000002-design-requested",
+  "human_report": "FD-033-design-review-20261024-5d1a7275.md",
+  "artifact": "docs/features/FD-033/FD-033_FEATURE.md",
+  "revision": 2,
+  "reviewer_session": "fd033-design-review-20261024-5d1a7275",
+  "recorded_date": "2026-10-24",
+  "recommendation": "changes-needed",
+  "data": {
+    "scope": "一次有界独立静态设计审阅，不是实现验证",
+    "confirmed_human_decision": "ALL覆盖当前账号现有及后续适用目标，同一授权期共享累计次数；旧范围blocker已resolved",
+    "findings": [
+      {
+        "id": "D1",
+        "priority": "P1",
+        "title": "逐动作确定 TASK/PLAN/ALL 范围兼容性，保留精确来源",
+        "evidence": [
+          "AuthorityActions.java:70-108：A01-A04 以 Plan+step 为目标；A02 更改整个 step 的模型约束",
+          "AuthorityActions.java:301-353：A05/A06 操作整个 Plan，A01/A03/A04 从当前恢复/重试任务衍生操作",
+          "PersonalQuestions.java:35-36：问题 Envelope 禁止 taskId/step，问题来源保存在 Projection/Question",
+          "FormalQuestions.java:63-77：来源可能为现有 task 或 workflow graph execution"
+        ],
+        "required_design": "列兼容矩阵；仅能核对精确来源/影响边界的动作接受 TASK，A01/A03/A04/A11/A12/A19 还需分别核对恢复源、重试源、审批源、成果源或问题源；不能以同 step、同 Plan 或同仓库代替精确 task。A02、A05-A10、A13-A17 等整体对象动作拒绝不适用的 TASK；Fleet/Worker 也拒绝 PLAN。TASK 对无 taskId 的 graph 问题不得猜测来源。父子记录独立保存 sourceTask/question，不能破坏旧 Envelope 固定尝试语义。"
+      },
+      {
+        "id": "D2",
+        "priority": "P1",
+        "title": "覆盖隐式发布消费与协调启动的平行受理路径",
+        "evidence": [
+          "AuthorityActions.java:383-395：requirePublicationAuthority 从另一 A12_EXECUTE Grant 隐式 consume，调用者包括 A01/A03/A05/A06",
+          "CoordinationService.java:57-89：advance 使用独立托管记录，sourceTask 为 null 时直接 plans.confirm，未经过 ActionAdmissionService",
+          "AuthorityTaskPolicy.java:51-69,96-105：普通任务及发布 Claim 检查当前 Grant；selection/guidance 另有模型 Grant 消费"
+        ],
+        "required_design": "新 A05 权限期存在时，/coordination START 必须转入同一父权限固定/计数或明确拒绝并要求新路径；不得旁路确认。后续正常托管推进与新的 confirm/repair/retry 分清。隐式 A12 执行需在同事务内核对其自己的当前父权限、范围和硬计数，以原 requestId+父权限/action 去重；不把 request=null 的旧预算消费当作父计数。所有旧 Grant 消费/Claim/模型/发布校验识别父映射或已被替代的 legacy 期，不能靠隐藏调用续用。"
+      },
+      {
+        "id": "D3",
+        "priority": "P1",
+        "title": "新问答路径和回执需要专用最小读取核对，不能扩大通用 read_scope",
+        "evidence": [
+          "AuthorityActions.java:155-205,231-239：snapshot 包含 Plan spec、所有任务 instruction/report 及审批/发布来源信息",
+          "PersonalQuestions.java:31-46：submit 在原投影写入前调用 readable(PLAN)，继而调用原 admission；validateEnvelope 逐字段核对完整 Envelope",
+          "PersonalQuestions.java:48-54：已选投影还绑定 instance/platformBoot/workerGeneration/workerBoot",
+          "ActionAdmissionService.java:74-78：receipt 目前按 Owner 查找并经通用 read_scope，不检查原 worker_id",
+          "ExecutionGuard.java:73-77：A18/A19 目标判断依赖 boundary.delegated()/principal"
+        ],
+        "required_design": "固定阶段置于 boundary.as(principal) 的鉴权上下文，完整 snapshot 只用于服务端 digest；机器只得到原 Envelope 和动作必要摘要。新问题请求保存原 projectionJson/digest/question/source/Envelope；仅存在可信父子映射且同 Owner+Worker、精确来源的请求可走专用问题核对，旧 submit/list/state 保持旧 read_scope。A19 继续原 question-replies/正式投影，不能绕过用户确认或加入私人内容。原回执查询可在身份重新启用后按 instance+Owner+原 Worker+requestId 核对原记录，不依赖父有效性或当前 read_scope，也不能返回当前快照；其它 Worker 不可借 requestId 查询。"
+      },
+      {
+        "id": "D4",
+        "priority": "P1",
+        "title": "区分已受理子能力有效性与新操作剩余额度",
+        "evidence": [
+          "ActionAdmissionService.java:141-149：成功受理先消费再绑定 permit、返回 ADMITTED",
+          "AuthorityTaskPolicy.java:51-54,96-105：执行 Claim/发布要求 grants.current",
+          "AuthorityBudgets.java:64-72：旧 A01 settle 在执行前取消时可释放旧 used_value"
+        ],
+        "required_design": "parentActive 检查授权期/角色/撤销/到期/替代，parentAdmissible 在 active 基础上追加剩余额度及原子扣次。不得将 used==limit 放入所有子 Grant 的 current，否则最后一次 ADMITTED 将无法 Claim。已受理的最后一次操作可按原 permit 开始；新请求拒绝。父计数只随唯一成功受理增加，不由旧预算 settle、取消、后续失败、查询或 Claim 减少/增加。"
+      },
+      {
+        "id": "D5",
+        "priority": "P1",
+        "title": "把 Owner 证明链和冲突失败策略写成可实现契约",
+        "evidence": [
+          "AuthorityGrantService.java:128-132：旧 bindTarget 仅首次插入/核对 authority_target.owner，不检查 Plan creator",
+          "CoordinationService.java:28-33：显式托管检查 Plan.createdBy 或已关联发布目标",
+          "ExecutionGuard.java:82-87：policy 创建分别核对已有 authority_target、graph Owner、Plan creator",
+          "V1__initial_schema.sql:9-54：普通 worker/work_task 没有 Owner 列；V12__execution_guard.sql:2-17：execution_policy/context 提供正式归属",
+          "TaskOutputService.java:254-270：发布从 file→bundle.taskId 生成 Plan，createdBy 可能是 personal actor"
+        ],
+        "required_design": "定义公共 Owner resolver：Plan creator→绑定 actor、execution_policy/context、审批 source task、发布 file→bundle source task及正式发布关联分别核对；多个正式事实冲突时拒绝，不选择宽松来源。对已有 delegated publication 用正式来源+authority_publication_plan/target 关联证明，不能仅看 personal actor 字符串。无可证明任务来源拒绝；不以 repository 认领。无天然 Owner 的 GLOBAL:FLEET/普通 Worker 仅用现有人类确认的 authority_target，机器不得首次绑定；页面说明尚无归属时需人类先处理，而不是把授权表单变回手填内部协议。"
+      }
+    ],
+    "positive_assessment": [
+      "父业务权限与旧精确 ActionScope/Envelope 分离合理",
+      "显式替代授权期并保留历史，比通配旧 scope 更能保存现有契约",
+      "固定候选不扣次，原受理事务硬计数与 FD-032 仅记录预算分离正确",
+      "原 requestId/Envelope 与持久 outbox 适合未知结果恢复"
+    ],
+    "reconciliation": "Planner将以上具体工程约束纳入FD并拆分1.3；无需新的人类策略答复，也不要求例行第二次设计审阅。若选择改变这些范围/兼容语义而不是纳入约束，相关设计仍须解决后才能design-ready。",
+    "human_decisions_required": [],
+    "implementation_boundaries": [
+      "权限期表、精确候选/父子映射、去重扣次须在新增迁移中定义键和唯一约束；不回填推断历史Owner/计数、不修改历史迁移",
+      "新路由加入 AuthorityHttpConfiguration 和 Python platform_client 封闭映射，分别保留机器 Bearer/processBoot 与人类角色/CSRF",
+      "固定请求本地先持久化原requestId和选择；未知响应只核对或同请求重试；拿到原Envelope后才进入原outbox，不复用set-replace破坏immutablebody",
+      "人类创建/替代权限的未知写响应同样保留原requestId/expectedPriorId，不能生成新期偷偷归零",
+      "按可独立审阅结果拆分1.3，单独覆盖Owner/scope、固定编译、硬扣次/兼容、Worker恢复和UI"
+    ],
+    "validation": {
+      "mode": "local-static-design-review",
+      "commands_run": [
+        "Get-Content / Get-Content -Encoding UTF8 / Select-Object",
+        "rg / rg --files",
+        "apply_patch：仅写本审阅MD和同名JSON"
+      ],
+      "corrected_discovery_errors": [
+        "最初planning/shared资源路径错误，改为 references/planning.md 和 skills/reviewed-skill-contract.md",
+        "PersonalQuestions目录单数猜测错误，通过rg --files定位 questions/",
+        "FD-034对照报告已归档，改读archive路径；无源码操作"
+      ],
+      "not_run": [
+        "测试、编译、格式化、构建或验证脚本",
+        "应用、数据库、浏览器、服务、模型或网络",
+        "下级Agent",
+        "源码、FD、事件、Git提交或归档变更"
+      ]
+    },
+    "evidence_limits": [
+      "仅核对当前设计Revision2与已有源码；未实现、未运行权限/并发/迁移场景",
+      "changes-needed为设计建议，不是Reviewer changes-requested或verification-passed事件",
+      "原FD033范围blocker解决事实已核对；本报告不擅自写新的流程状态",
+      "其它并发私人秘书/模型/启动脚本变更排除，未覆盖或暂存"
+    ]
+  }
+}

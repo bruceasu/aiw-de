@@ -1,0 +1,36 @@
+{
+    "schema":  "aiw.fd.evidence.v1",
+    "kind":  "blocker-feedback",
+    "fd_id":  "FD-033",
+    "source_event":  "FD-033-000002-design-requested",
+    "human_report":  "FD-033-blocker-default-scope-20261024-a6529740.md",
+    "data":  {
+                 "stage":  "design",
+                 "role":  "planner",
+                 "session":  "secretary-desktop-20261024-a6529740",
+                 "status":  "resolved",
+                 "symptom":  "Optional target scope lacks a confirmed rule for future targets",
+                 "confirmed_cause":  "Existing exact-target contract cannot establish the intended default scope of the new action-type permission",
+                 "attempts":  [
+                                  "Inspected authority and private Worker contracts statically",
+                                  "Prepared grouped action and simplified permission design in FD-033",
+                                  "Asked one scope question and retained it pending; no authorization behavior changed"
+                              ],
+                 "human_decision_required":  false,
+                 "human_decision":  "用户明确选择：覆盖当前账号现有及后续全部适用事务/任务，共享本条授权累计次数。",
+                 "next_step":  "Reconcile the answer into FD-033, complete compatibility design, then independent design review",
+                 "risk":  "Assuming future coverage could expand actual authority beyond the intended scope",
+                 "reusable_improvement":  "Show default target scope and shared action-count meaning before granting; avoid protocol-level input fields in user permission forms",
+                 "template_status":  "Required templates absent at this session\u0027s prior check; complete skill fields and existing Dual structure used",
+                 "not_run":  [
+                                 "source implementation",
+                                 "compile",
+                                 "tests",
+                                 "service or browser",
+                                 "design-ready",
+                                 "commits or archive"
+                             ],
+                 "resolved_at":  "2026-10-24T11:52:39.4744701+09:00",
+                 "resolution":  "收到原异步范围问题的用户答复；FD-033 已记录确定范围规则，继续兼容设计与独立设计审阅。"
+             }
+}
