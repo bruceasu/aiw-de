@@ -1,7 +1,7 @@
 # FD-039: 原型制作作为可组合技能配置给现有 AI Worker
 
-**Status:** Design
-**Revision:** 2
+**Status:** Open
+**Revision:** 3
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -27,13 +27,13 @@
 
 ## Work items
 
-- [ ] 1.1 编写prototype入口及逻辑/UI参考，明确组合语义、任务范围与制作/预览证据。规模小、难度中，无依赖；证据为资源与原宿主方法对比。
-- [ ] 1.2 声明文件集、追加新资产及三语言副本，接入既有附加Skill配置链。规模小、难度中，依赖1.1；原资产/角色/协议保持。
-- [ ] 1.3 更新使用说明/规格，提交静态一致性/资源编译及Worker双证据。规模小、难度低，依赖前项；独立审阅结论属于下一阶段。
+- [x] 1.1 编写prototype入口及逻辑/UI参考，明确组合语义、任务范围与制作/预览证据。规模小、难度中，无依赖；证据为资源与原宿主方法对比。
+- [x] 1.2 声明文件集、追加新资产及三语言副本，接入既有附加Skill配置链。规模小、难度中，依赖1.1；原资产/角色/协议保持。
+- [x] 1.3 更新使用说明/规格，提交静态一致性/资源编译及Worker双证据。规模小、难度低，依赖前项；独立审阅结论属于下一阶段。
 
 ## TODO
 
-完成可配置原型技能及静态装配核对，离线编译后交独立审阅，通过后归档。
+1.1–1.3 已完成，资源/说明源码 aaa172c；待独立实现审阅，通过后范围归档。
 
 ## Acceptance
 
@@ -54,3 +54,5 @@
 - Issue: none
 
 - 来源：用户澄清；.agents/skills/prototype/SKILL.md、LOGIC.md、UI.md（适配方法，不调用宿主流程）；ConfigurationContract.Assembly、ExecutionConfigurations.propose/content、ConfigurationUiOptions.assets、configuration-methods.js、SkillFiles.configured 与 Python execution_configuration.load。Planner/Worker Session secretary-desktop-20261024-a6529740；FD-039-000002-design-requested。
+
+- Worker 双证据：../reports/FD-039-implementation-r1.md/.json；范围09e2485..aaa172c。静态diff及只读资产/索引/引用/副本检查通过：1新增prototype-v1、旧9资产/11方法/主角色映射不变、3声明文件与9一致副本；既有additionalSkills链保持。离线mvn -o -Dmaven.test.skip=true compile通过（2026-10-24T13:44:12+09:00，131应用资源+2配置资源复制，Java up to date）。未运行工厂实例、UI、模型、Worker、真实原型、浏览器、测试、网络、数据库、打包或重启。

@@ -1,0 +1,78 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-039",
+  "source_event": "FD-039-000003-design-ready",
+  "human_report": "FD-039-implementation-r1.md",
+  "data": {
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "comparison_base": "09e2485",
+    "implementation_commit": "aaa172c",
+    "implementation_commits": [
+      "500080d",
+      "8d48126",
+      "aaa172c"
+    ],
+    "implementation_review_failure_count": 0,
+    "scope": [
+      "prototype Skill entry and UI/logic references",
+      "new immutable prototype-v1 public asset and explicit file index",
+      "9 matching standalone bundle files",
+      "configuration usage, file contract, source-matrix and task-orchestration specification"
+    ],
+    "composition_path": [
+      "existing catalogue assets -> ConfigurationUiOptions skill options",
+      "configuration-methods additionalSkills -> ExecutionConfigurations.propose protocolSkills",
+      "existing immutable config references -> SkillFiles.configured bundle -> existing Worker reader"
+    ],
+    "not_added": [
+      "Worker type or process",
+      "primary profile/default method",
+      "new output/API/schema/tool/persistence",
+      "automatic runtime authority"
+    ],
+    "static": {
+      "command": "git diff --check 09e2485 -- scoped paths plus inline read-only asset/hash/index/link/copy/composition inspection",
+      "result": "passed",
+      "new_assets": 1,
+      "unchanged_existing_assets": 9,
+      "unchanged_methods": 11,
+      "new_declared_files": 3,
+      "matching_standalone_copies": 9,
+      "primary_profile_map_unchanged": true,
+      "production_modules_or_skills_executed": false
+    },
+    "compile": {
+      "environment_script": "C:/green/bin/setup-jdk25.ps1",
+      "java": "25.0.1",
+      "maven": "3.9.4",
+      "command": "mvn -o -Dmaven.test.skip=true compile",
+      "revision": "aaa172c",
+      "result": "passed",
+      "finished_at": "2026-10-24T13:44:12+09:00",
+      "details": "131 application resources plus 2 config resources copied; Java up to date",
+      "environment_restored": true,
+      "printed_package_examples_executed": false
+    },
+    "skipped": [
+      "tests",
+      "factory constructor/live catalogue and UI",
+      "models/Worker/actual prototypes/browser/preview",
+      "SDK/tool/recovery",
+      "database/services/network/downloads",
+      "final build/package/install/restart/release"
+    ],
+    "risks": [
+      "Static resource integration does not demonstrate real selection/claim/runtime or prototype quality",
+      "Existing dynamic configuration language/runtime support remains unchanged",
+      "Updated platform resources must be loaded normally; existing frozen tasks retain old bytes"
+    ],
+    "excluded": [
+      "parallel Java/authority/configuration/templates",
+      "secretary/Python/models/launchers",
+      "host .agents/skills changes"
+    ],
+    "blockers": [],
+    "next_step": "Independent implementation review of assignable Skill semantics, composition, compatible registration and permissions"
+  }
+}
