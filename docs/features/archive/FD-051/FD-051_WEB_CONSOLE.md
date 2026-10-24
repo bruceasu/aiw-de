@@ -49,3 +49,5 @@ static/ui/i18n.js、preferences.js、templates/ui/fragments.html、docs/current-
 - Issue: none
 - 用户当前要求；i18n.js、preferences.js、fragments.html 语言面板、docs/current-zh/15-WEB-CONSOLE.md。
 - Session: japanese-ui-20261024-583a41；设计来源 FD-051-000002-design-requested。
+
+**Completed:** 2026-10-24
