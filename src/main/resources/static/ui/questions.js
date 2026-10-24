@@ -43,6 +43,7 @@
     $('question-retry').hidden=!pending||!['reply','budget'].includes(pending.kind);
     $('question-retry').disabled=busy||reading||!ready||!pending?.checked;
     $('question-release').disabled=busy||reading||!ready||!pending?.checked;
+    $('question-confirm-submit').disabled=busy||reading||!ready||Boolean(pending);
     document.dispatchEvent(new Event('question-ui-state'));
   }
   function sendBlock(q) {
@@ -103,7 +104,7 @@
       write('reply','reply',draft.sent.body,q.answer?'覆盖秘书回答':'提交此问题的回答');
     };
     const actions=node('div',undefined,'question-actions');
-    if(q.kind==='AUTHORIZATION'){for(const [raw,text] of [['APPROVE','批准此申请'],['REJECT','拒绝此申请']]){const button=node('button',text,'btn '+(raw==='APPROVE'?'primary':'ghost'));button.type='button';button.addEventListener('click',()=>submit(raw));actions.append(button);}}
+    if(q.kind==='AUTHORIZATION'){form.addEventListener('submit',event=>event.preventDefault());for(const [raw,text] of [['APPROVE','批准此申请'],['REJECT','拒绝此申请']]){const button=node('button',text,'btn '+(raw==='APPROVE'?'primary':'ghost'));button.type='button';button.addEventListener('click',()=>submit(raw));actions.append(button);}}
     else {const button=node('button',q.answer?'确认覆盖并提交':'提交回答','btn primary');button.type='submit';actions.append(button);form.addEventListener('submit',event=>{event.preventDefault();submit(draft.raw);});}
     fields.append(actions);form.append(fields);host.append(form,node('p','回答只保存这项问题的决定；实际继续工作仍受当前执行范围和停止状态约束。','help'));
   }

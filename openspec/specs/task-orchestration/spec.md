@@ -11,6 +11,13 @@ Read-only UI choices SHALL retain exact immutable configuration references and e
 
 Optional method composition SHALL use form selections and a readable preview, not raw protocol input. Input changes and stale asynchronous preview responses SHALL invalidate the old candidate. Explicit save SHALL submit that preview's exact candidate. A confirmed write SHALL remain reported as successful even when a later list refresh fails. Composition and content registration SHALL NOT invoke models or grant tools or execution permission.
 
+### Requirement: Human-readable formal question inbox and controls
+The console SHALL present formal questions as a selectable inbox with readable context, answer requirements, original answers and state, without raw API JSON. Professional answers and exact authorization decisions SHALL keep their distinct roles, original question/answer versions and immutable message identity. Only an unapplied delegated answer MAY offer an explicit human override with a reason. Refresh SHALL preserve page-local drafts and require explicit adoption of changed versions.
+
+The inbox, task/control view and optional notification settings SHALL switch as panels. The control view SHALL distinguish stop requests from actual acknowledgment. Manual budget increment forms SHALL be optional and absent in record-only mode. Account-wide private-chat binding and bounded delivery history SHALL be explained; incomplete history, pending sends and UNKNOWN SHALL prevent another send, with no expiry-based UNKNOWN replay.
+
+Stale responses from another selected plan SHALL be discarded. Writes SHALL freeze duplicate actions and plan switching. Unknown writes SHALL be checked against the original record before explicit same-body retry of an idempotent answer or budget request; controls and notification operations SHALL NOT offer automatic replay. Confirmed writes SHALL remain confirmed if a subsequent refresh fails. Unsafe integer versions or amounts SHALL NOT be silently rounded and submitted.
+
 ### Requirement: Prepared immutable execution configuration
 Tasks requiring `aiw.execution.config.v1` SHALL become claimable only after registered method, Skill/knowledge versions, exact approved model, required adapter capability, confirmed policy and the deployment accounting mode have been checked. Budget completeness, pricing and balances SHALL block preparation only in enforce mode; record-only is the default. The unique intent version and preparation generation SHALL protect retries. READY, fixed references and business-task materialization SHALL commit atomically. Known preparation failures SHALL retain a reason and explicit recovery action without creating claimable work.
 

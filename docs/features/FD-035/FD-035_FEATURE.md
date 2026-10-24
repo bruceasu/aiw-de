@@ -39,7 +39,7 @@ Telegram 显示真实绑定用户/私聊、送达状态及未知结果，不展�
 
 ## Scope
 
-questions.html、questions.js、新 questions.css、AuthorityPageController 的 questions 方法、共享导航中的问题入口、docs/FORMAL-QUESTIONS.md 和相关稳定 UI 规格。继续沿用当前主工作区的范围提交方式，保留 FD-033 未决草案及其它私人秘书、模型和启动脚本改动。
+questions.html、questions.js、新 question-controls.js / questions.css、AuthorityPageController 的 questions 方法、共享导航中的问题入口、docs/FORMAL-QUESTIONS.md 和相关稳定 UI 规格。questions.js 持有唯一的读取/原请求/草稿协调状态，控制与通知脚本复用它，不复制请求状态机。继续沿用当前主工作区的范围提交方式，保留 FD-033 未决草案及其它私人秘书、模型和启动脚本改动。
 
 不改变授权范围、服务端事务、Telegram 传输、预算默认模式或任务执行。不运行测试、浏览器、数据库、服务、模型、真实 Telegram、网络下载、打包或发布。主要风险是跨计划异步响应、回答版本/覆盖与未知写结果；实施前独立静态设计审阅，实施后另行独立实现审阅。
 
