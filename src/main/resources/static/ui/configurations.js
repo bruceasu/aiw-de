@@ -66,6 +66,8 @@
     });
   });
   function methodLabel(name) {
+    const composed=snapshot?.roles?.find(item=>item.methodName===name);
+    if(composed) return composed.name;
     const method=snapshot?.methods.find(item=>item.role===name||item.method.name===name);
     return methodNames[method?.role||name]||name;
   }
@@ -261,8 +263,15 @@
   function selectSaved(reference,repositoryRef,methodName) {
     if(busy||uncertain) throw new Error('当前任务正在准备或等待核对，请先处理原请求；已保存方法会保留。');
     const key=savedKey(reference); sources.set(key,{defaultRole:null,configRef:clone(reference),candidate:null,repositoryRef,methodName}); populateSources(key); showTab('prepare');
+    if($('prepare-method').selectedOptions[0]?.dataset.unavailable) $('prepare-method').selectedOptions[0].textContent=methodLabel(methodName)+' · 请先选择匹配的计划与仓库';
     feedback('已选用保存的方法。请核对同一仓库、任务内容和模型，再明确准备。');
   }
   window.ConfigurationUI=Object.freeze({get snapshot(){return snapshot;},get options(){return options;},get taskBusy(){return busy||Boolean(uncertain);},request,refresh,feedback,showTab,unique,fingerprint,methodLabel,outputNames,node,selectSaved});
-  if(owner) refresh().catch(error=>feedback(error.message,'error')); else syncBusy();
+  if(owner) refresh().then(()=>{
+    const query=new URLSearchParams(location.search),id=query.get('method'),revision=query.get('revision');
+    if(!id) return;
+    const item=options.saved.find(item=>item.reference.id===id&&String(item.reference.revision)===revision);
+    if(!item) throw new Error('当前账号没有这个固定方法版本，请刷新记录核对。');
+    selectSaved(item.reference,item.repositoryRef,item.methodName);
+  }).catch(error=>feedback(error.message,'error')); else syncBusy();
 })();

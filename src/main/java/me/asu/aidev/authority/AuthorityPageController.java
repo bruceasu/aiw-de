@@ -26,13 +26,14 @@ public class AuthorityPageController {
         return "ui/questions";
     }
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
-    @GetMapping("/ui/configurations") public String configurations(Model model) {
+    public String configurations(Model model) { return configurations(model,""); }
+    @GetMapping("/ui/configurations") public String configurations(Model model,@org.springframework.web.bind.annotation.RequestParam(defaultValue="") String view) {
         String actor=Objects.requireNonNull(boundary.human(),"Authenticated human required");
         var owners=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
         model.addAttribute("ownerId",owners.size()==1?owners.getFirst():"");
         model.addAttribute("categories",configurations.categories());
         model.addAttribute("methods",configurations.catalogue().methods());
-        return "ui/configurations";
+        return view.equals("roles")?"ui/roles":"ui/configurations";
     }
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;
     private final me.asu.aidev.workflow.application.WorkflowPlanService plans;

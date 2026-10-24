@@ -1,6 +1,9 @@
 'use strict';
 (() => {
   const UI=window.ConfigurationUI,$=id=>document.getElementById(id),clone=value=>structuredClone(value);
+  const composeRole=UI.node('a','组合新的角色：选择技能与流程','btn ghost');
+  composeRole.href='/ui/configurations?view=roles';
+  $('panel-methods').querySelector('.configuration-section-heading').append(composeRole);
   let initialized=false,epoch=0,previewBusy=false,saveBusy=false,assetBusy=false,proposal=null,uncertainSave=null,pendingAsset=null;
   const refKey=asset=>asset.ref+':'+asset.version+':'+asset.digest;
   const selected=id=>[...$(id).querySelectorAll('input:checked')].map(input=>input.value);
@@ -16,7 +19,7 @@
   function listAssets(hostId,kind,selectedKeys) {
     const host=$(hostId),repository=$('method-repository').value;
     const required=new Set(base()?[...base().method.protocolSkills,base().method.primarySkill]:[]);
-    const assets=UI.options.assets.filter(asset=>asset.kind===kind&&(!asset.repositoryRef||asset.repositoryRef===repository)&&!(kind==='skill'&&required.has(asset.ref)));
+    const assets=UI.options.assets.filter(asset=>asset.kind===kind&&(!asset.repositoryRef||asset.repositoryRef===repository)&&!(kind==='skill'&&(required.has(asset.ref)||/^role-[0-9a-f]{64}$/.test(asset.ref))));
     host.replaceChildren();
     for(const asset of assets) {
       const row=UI.node('label'),input=document.createElement('input'); input.type='checkbox'; input.value=refKey(asset); input.checked=selectedKeys.includes(input.value);
