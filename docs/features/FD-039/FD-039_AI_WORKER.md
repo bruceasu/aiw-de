@@ -1,7 +1,7 @@
 # FD-039: 原型制作作为可组合技能配置给现有 AI Worker
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -33,7 +33,7 @@
 
 ## TODO
 
-1.1–1.3 已完成，资源/说明源码 aaa172c；待独立实现审阅，通过后范围归档。
+1.1–1.3 已完成，资源/说明源码 aaa172c；独立实现审阅 r1 静态通过，无阻断发现。待 host 核对真实通过事件和审阅后无实现漂移，完成范围归档。
 
 ## Acceptance
 
@@ -48,6 +48,7 @@
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
 - 一次范围diff --check与只读JSON/引用/摘要/副本/旧资产不变/组合字段一致性检查，不执行生产模块、技能脚本或实际原型。离线mvn -o -Dmaven.test.skip=true compile复制生产资源，不代表工厂构造器、UI、模型、Worker或原型运行通过。无测试、网络、下载、服务、浏览器、数据库、打包和重启。
+- 独立 Reviewer `fd039-review-20261024-b84d2e61` 已认领来源 `FD-039-000004-implementation-ready`，静态审阅 `09e2485..aaa172c` 的实际 19 文件和现有配置/文件集/Python消费路径，通过且无整改项；报告 `../reviews/FD-039-implementation-r1.md` 与同名 JSON。未重复编译或运行模型/Worker/原型，真实效果及质量仍未验证；三语言副本不增加动态配置支持范围。
 
 ## Sources
 

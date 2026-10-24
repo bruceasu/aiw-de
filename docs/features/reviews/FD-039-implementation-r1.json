@@ -1,0 +1,61 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-039",
+  "source_event": "FD-039-000004-implementation-ready",
+  "human_report": "FD-039-implementation-r1.md",
+  "data": {
+    "reviewer_session": "fd039-review-20261024-b84d2e61",
+    "independent_from_worker": true,
+    "comparison_base": "09e2485",
+    "implementation_commit": "aaa172c",
+    "worker_evidence_commit": "14d5259",
+    "round": 1,
+    "verdict": "passed",
+    "findings": [],
+    "hard_violations": [],
+    "smell_findings": [],
+    "acceptance": [
+      {"id": 1, "result": "supported-by-static-evidence", "evidence": "Public asset follows existing additionalSkills -> protocolSkills/content -> configured Skill bundle chain; no new Worker or primary method"},
+      {"id": 2, "result": "supported-by-static-evidence", "evidence": "Entry and UI/logic references guide actual minimal runnable artifacts, interactions, observations and handoff"},
+      {"id": 3, "result": "supported-by-static-evidence", "evidence": "Original primary method/result/tool policy retained; add-on does not grant write, command, browser, preview, service or external-effect authority"},
+      {"id": 4, "result": "supported-by-static-evidence", "evidence": "Three indexed files; new asset digest matches; previous 9 assets, 11 methods and profiles unchanged; 9 standalone copies match; frozen binding code remains unchanged"},
+      {"id": 5, "result": "supported-by-static-evidence", "evidence": "Existing configuration usage, composition, permission and runtime limits documented; no language/runtime support expansion claimed"}
+    ],
+    "commands_run": [
+      "Get-Content -Encoding UTF8 on scoped FD, reports, instructions, receipt and source prototype references",
+      "aiw fd receipt FD-039 (invalid command; no receipt created)",
+      "aiw fd --help; aiw fd claim --help; aiw fd emit --help; aiw fd show FD-039",
+      "aiw fd claim FD-039 FD-039-000004-implementation-ready --session fd039-review-20261024-b84d2e61",
+      "rg/rg --files scoped paths and entry symbols; one SkillFiles path corrected after locating actual file",
+      "git diff --stat/--name-only and scoped diff 09e2485 aaa172c; git show aaa172c:<scoped or nearby path>; git status --short; git rev-parse --short HEAD",
+      "Inline read-only Python reading committed files through git show, parsing catalogue/index JSON, comparing old fields and standalone files, and SHA-256 calculation"
+    ],
+    "static_results": {
+      "changed_file_count": 19,
+      "old_assets_unchanged": 9,
+      "methods_unchanged": 11,
+      "protocol_and_profile_map_unchanged": true,
+      "new_declared_files": 3,
+      "matching_standalone_copies": 9,
+      "new_asset_digest": "7a3b7ad55fe726b3c5cb76909a85d0e5c6804910aea94908c30e2c914d62755c",
+      "production_modules_or_skill_scripts_executed": false
+    },
+    "worker_compile_evidence": {
+      "command": "mvn -o -Dmaven.test.skip=true compile",
+      "revision": "aaa172c",
+      "reported_result": "passed resource copy; Java up to date",
+      "reviewer_reran": false,
+      "does_not_prove": ["factory construction", "live UI", "model behavior", "Worker execution", "prototype quality"]
+    },
+    "skipped": ["tests", "compile rerun", "factory constructor or live catalogue", "model/Worker/actual prototype", "browser/preview", "network/downloads", "database/services", "packaging/install/restart/release"],
+    "risks": [
+      "Real selection, task claim and model use of Skill are not runtime verified",
+      "Prototype quality remains unevaluated by a real task",
+      "Existing language/runtime support remains unchanged; frozen prior tasks retain original content"
+    ],
+    "excluded": ["unrelated dirty Java/configuration/authority/templates", "personal secretary/Python/model/launcher work"],
+    "unresolved_blockers": [],
+    "next_step": "Host checks actual verification event and unchanged reviewed implementation, then performs scoped local archive"
+  }
+}
