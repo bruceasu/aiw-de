@@ -4,6 +4,8 @@ import me.asu.aidev.autonomous.application.AutonomousRequirementService;
 import me.asu.aidev.autonomous.application.StartAutonomousRequirementCommand;
 import me.asu.aidev.work.domain.TaskPriority;
 import java.net.URI;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -12,6 +14,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -38,13 +41,27 @@ class R9S1WebConsoleIT {
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + DB.toAbsolutePath());
         registry.add("aidev.approval.policy.mode", () -> "MANUAL");
+        registry.add("aidev.web-console.auth.username", () -> "console-viewer");
+        registry.add("aidev.web-console.auth.password", () -> "test-console-secret");
+        registry.add("aidev.web-console.auth.role", () -> "VIEWER");
         registry.add("spring.thymeleaf.cache", () -> "false");
     }
 
     @LocalServerPort int port;
     @Autowired AutonomousRequirementService autonomous;
 
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NORMAL).build();
+    private final HttpClient http = HttpClient.newBuilder().cookieHandler(new CookieManager(null, CookiePolicy.ACCEPT_ALL))
+            .connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NORMAL).build();
+
+    @BeforeEach
+    void signIn() throws Exception {
+        var response = http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/ui/login"))
+                .timeout(Duration.ofSeconds(5)).header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString("username=console-viewer&password=test-console-secret")).build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.uri().getPath()).isEqualTo("/ui");
+    }
 
     @Test
     void consoleRendersDashboardRunsRunDetailWorkersApprovalsAndSystem() throws Exception {
