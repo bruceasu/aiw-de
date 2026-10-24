@@ -23,7 +23,7 @@ Worker 自动声明已实现的能力，不能在 `AIW_WORKER_CAPABILITIES` 中�
 
 自定义 Skill 可沿用资产登记接口，以文本形成仅含 `SKILL.md` 的包；显式完整文件集使用 Asset.content 的 JSON 文档 `{"protocol":"aiw.skill.files.v1","files":[...]}`，正文的原文本 digest 与内部文件/清单 digest 分别校验。JSON文档不能以文本方式静默回退。身份/配置版本仍按既有不可变登记合同；公开内置与私有资产来源明确区分。
 
-Runtime 只注入各入口和声明文件索引。调用 `read_skill_file(ref,path,offset,limit)` 读取辅助文件；offset/limit 按字节计，limit 为1–8192。返回 `encoding=base64`、分页字节、完整文件 SHA256、size、offset、nextOffset 和 complete；二进制也不损失字节。工具只能读本次声明文件，没有目录枚举、写入、脚本执行或工具注册功能。取消/Lease丢失继续由原 Attempt/心跳处理；问答暂停关闭资源工具。App Server 不支持动态工具时明确报错，不能改用 CLI 或本地目录继续。
+Runtime 对主技能、工程协议及无法可靠提取描述的入口保留全文；其他已选技能先注入有界摘要、固定版本及声明文件索引，使用前须读完整 SKILL.md。调用 `read_skill_file(ref,path,offset,limit)` 读取入口或辅助文件；offset/limit 按字节计，limit 为1–8192。返回 `encoding=base64`、分页字节、完整文件 SHA256、size、offset、nextOffset 和 complete；二进制也不损失字节。工具只能读本次声明文件，没有目录枚举、写入、脚本执行或工具注册功能。取消/Lease丢失继续由原 Attempt/心跳处理；问答暂停关闭资源工具。App Server 不支持动态工具时明确报错，不能改用 CLI 或本地目录继续。
 
 本文件描述实现合同。编译/静态审查不能证明真实 SDK、App Server、数据库、并发、取消或模型运行通过；实际证据见 FD-030 报告。
 

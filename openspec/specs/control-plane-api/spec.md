@@ -88,3 +88,20 @@ The projection SHALL read at most the latest 100 metered Attempts by Attempt cre
 #### Scenario: The browser identity or response scope changes
 - WHEN a refreshed snapshot has a different Owner or an expired page receives an older response
 - THEN the page does not combine those records with the current identity and requires a valid new snapshot; Worker-reported verdicts remain distinct from independent acceptance
+
+### Requirement: Owned Worker workbench
+The protected configurations view SHALL provide readable progress, input receipts and exploration alternatives. Existing session, CSRF, operator and server Owner checks SHALL apply through explicit configuration state/candidate kinds. Original method/role/observation behavior and response keys SHALL remain, with an additive capability-pack index in default state. Private credentials, lease tokens, hidden reasoning and full original prompts SHALL NOT be projected.
+
+Machine workbench operations on the existing execution-context read path SHALL require an exact RUNNING Task/Attempt, live Lease, no stop request and the original instruction revision. Original fixed context reads SHALL remain compatible. Appended records SHALL NOT rewrite old task/configuration/Skill bytes or backfill old Workers as supporting live input.
+
+#### Scenario: A human loses a command response
+- WHEN its original request identifier and content are checked or explicitly retried
+- THEN the owned original receipt is returned; conflicting content is rejected without generating a new identity or duplicating the action
+
+#### Scenario: An execution reports a model-turn end
+- WHEN tools, queued work or finalization may remain
+- THEN the UI distinguishes observed phases and report time from the platform's actual terminal Task/Attempt state; it does not declare completion from text or a self-reported verdict
+
+#### Scenario: A user chooses an exploration alternative
+- WHEN the node or its source belongs to another Owner/task or invents a result version
+- THEN it is rejected, and existing nodes/choices remain unchanged

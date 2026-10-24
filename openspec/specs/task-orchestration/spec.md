@@ -231,3 +231,30 @@ Planning and handoff methods SHALL link important claims to source revisions, lo
 #### Scenario: A consumer receives a compact handoff
 - WHEN it needs to verify a material claim
 - THEN the handoff identifies the original evidence and version, decisions and limits, with missing access reported rather than a guessed result or renewed execution budget
+
+### Requirement: Progressive fixed Skills and reusable capability packs
+Workers SHALL retain the complete task-pinned Skill bytes and references while exposing optional entry descriptions before use. The primary Skill, engineering protocol and entries without a supported description SHALL remain fully available. Before using an optional Skill, its complete fixed entry SHALL be read through the existing bounded resource tool. This SHALL NOT grant scripts, tools or a latest-directory fallback.
+
+An Owner SHALL be able to save fixed Skill references and shared work guidance as an immutable repository-scoped capability pack and import it into role steps. Conditions and completion criteria remain role-owned. Original role/output/reference/tool checks and limits SHALL still apply; packs SHALL NOT install executable extensions or introduce Worker types.
+
+### Requirement: Attempt-scoped supplemental inputs and traceable context
+Supported API Workers SHALL distinguish current-work supplements from follow-ups within the same Task/Attempt, role, instruction revision and original authority. Follow-ups SHALL continue before formal finalization without renewing the deadline or total model-call allowance. Other backends SHALL state their actual support without silent substitution.
+
+#### Scenario: A Worker reserves an input before a human withdraws it
+- WHEN the input has moved from QUEUED into an immutable RESERVED batch
+- THEN withdrawal is rejected; DELIVERED requires that batch's bound successful MODEL operation, while unknown results are not automatically replayed or returned to the queue
+
+#### Scenario: A supplement races finalization
+- WHEN the Worker drains inputs and attempts to seal its input window
+- THEN enqueue and drain/seal share a serialized boundary; queued inputs are reserved, and outstanding batches or active/unknown operations prevent sealing
+- AND the sealed Attempt rejects new input without restarting the Task
+
+#### Scenario: History needs to be reduced
+- WHEN a supported Worker summarizes older visible history
+- THEN it preserves fixed instructions, exact authenticated supplements, recent messages and complete call/result boundaries, retains bounded original-source access, labels the summary derived, and accounts for summary calls using the original model and limits
+- AND missing capacity, unsafe boundaries or failed summaries remain explicit rather than invented continuity
+
+Tool outputs SHALL distinguish bounded model previews from complete available source data and execution metadata. Missing full output SHALL NOT justify repeating a side effect. Existing operation/resource coordination SHALL cover full read-modify-write sequences; no cross-process-lock guarantee is implied.
+
+### Requirement: Recorded exploration alternatives
+An Owner SHALL be able to record named same-task exploration nodes, immutable parent references, actual Attempt/revision/result provenance and append-only choice reasons. The UI SHALL support comparison and explicit transfer into an input draft. Recording or choosing SHALL NOT navigate a model transcript, roll back files, dispatch a Task or replace independent acceptance.

@@ -1,7 +1,7 @@
 # FD-044: Worker 上下文、可组合能力与人工交互补齐
 
-**Status:** Design
-**Revision:** 2
+**Status:** Open
+**Revision:** 3
 **Priority:** High
 **Evidence policy:** Dual
 
@@ -86,7 +86,7 @@ Python Broker 统一 begin/execute/finish/unknown/settle 扩展点；复用原�
 
 ## TODO
 
-独立设计r1已ready，RESERVED批次/精确MODEL绑定/严格RUNNING Lease及DRAIN/seal修正已纳入。按工作项实施，最终由独立Reviewer判定；不新增测试授权。
+独立设计r1已ready，RESERVED批次/精确MODEL绑定/严格RUNNING Lease及DRAIN/seal修正已纳入。1.2–1.13 源码已实施，正在进行范围静态检查、生产编译及双证据；最终由独立Reviewer判定，不新增测试授权。
 
 ## Acceptance
 
@@ -100,7 +100,7 @@ Python Broker 统一 begin/execute/finish/unknown/settle 扩展点；复用原�
 
 ## Verification
 
-默认一次范围 git diff --check + 仅标准库源码/JSON/hash/Owner SQL/消息状态/DOM引用/目录一致性静态核对。随后 scripts/compile-worker-runtime.mjs（生产语法/临时Go编译、不留分发产物、离线）和 C:/green/bin/setup-jdk25.ps1 + mvn -o '-Dmaven.test.skip=true' compile，分别覆盖受影响模块。无测试/测试编译、数据库迁移执行、SDK/模型/Worker/服务/HTTP/浏览器、网络/下载、打包部署或重启。fd-workflow仅授权一次必要设计审阅与独立实现审阅（失败周期最多3轮）；静态/编译不冒充并发、模型方法或运行验证。
+默认一次范围 git diff --check + 仅标准库源码/JSON/hash/Owner SQL/消息状态/DOM引用/目录一致性静态核对。随后 scripts/compile-worker-runtime.mjs（生产语法/临时Go编译、不留分发产物、离线）和 C:/green/bin/setup-jdk25.ps1 + mvn -o '-Dmaven.test.skip=true' compile，分别覆盖受影响模块。UI JavaScript 另做原生node --check语法编译。无测试/测试编译、数据库迁移执行、SDK/模型/Worker/服务/应用HTTP/浏览器、依赖下载、打包部署或重启。因本地缺Python SDK源码，仅补充读取OpenAI官方结果/流式文档核对to_input_list续行表面；未安装SDK，低层ModelSettings/provider实际兼容仍未运行证明。fd-workflow仅授权一次必要设计审阅与独立实现审阅（失败周期最多3轮）；静态/编译不冒充并发、模型方法或运行验证。
 
 独立设计[r1](../reviews/FD-044-design-r1.md)及同名JSON为ready，确认输入领取/撤回竞争已解决。
 
