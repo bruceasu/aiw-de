@@ -51,3 +51,5 @@
 - Issue: none
 - 用户本轮反馈；FD-036；goals.js、goals.html、GoalController.delete/restore、GoalDiscussionService.deleted、GoalRepository.get。
 - Planner/Worker Session: goal-delete-20261024-682ecf；设计来源 FD-045-000002-design-requested。
+
+**Completed:** 2026-10-24
