@@ -14,6 +14,8 @@ FD-030补充：平台Skill改为固定文件集，Claim新增`skillFiles`，并�
 
 ## 自定义工作方法（可选）
 
+角色现在也可从空白或默认模板组合：进入 `/ui/configurations?view=roles`，配置职责、共享技能、角色内步骤和整体交付要求，再预览、保存并选用于准备任务。内置角色仍可直接使用；业务角色不再必须来自固定模板。使用及单Worker流程边界见[组合角色](COMPOSABLE-ROLES.md)。
+
 设计、架构、领域建模、诊断、冲突修复、研究、交接、教学与文章编辑也可作为附加 Skill。最多选六项，不会替换基础职责或增加工具权限；用途和组合示例见[附加技能配置指南](WORKER-OPTIONAL-SKILLS.md)。
 
 原型制作可在这里勾选附加 `prototype` Skill，配置给现有 AI Worker；无需新增 Worker 类型。UI/逻辑原型的制作、预览权限与交付说明见[原型制作技能](WORKER-PROTOTYPE-SKILL.md)。
@@ -45,6 +47,8 @@ FD-030补充：平台Skill改为固定文件集，Claim新增`skillFiles`，并�
 先使用精确配置引用或语义完全匹配的既存配置。`propose` 根据已登记默认方法、额外 Skill、知识及方法说明生成可审阅的声明对象：能复用时返回 EXACT_REUSE；否则返回 SKILL_COMPOSITION 或 DECLARATIVE_CANDIDATE。此处是确定性的声明装配，不暗中调用模型。模型产生的候选也必须经过相同保存和校验入口；不会获得新的可执行工具或权限。
 
 Assembly 字段为 id、revision、repositoryRef、category、defaultRole、additionalSkills、knowledge、toolRequirements、methodInstruction（可空）。输出 Candidate 包含 id/revision/ownerId/repositoryRef/category、九字段 method、skills/knowledge、toolRequirements、outputContract、source。primary/protocol Skills 必须与实际登记集合相符，包含 engineering-artifact-protocol；resultKind 为 REPORT/VERDICT/WORKSPACE，readOnly 与其一致。
+
+FD-041 为原 propose/candidates/state 增加显式 `kind=role` 分支，接收闭合的角色定义或固定引用；缺省 `kind=method` 保留上述合同。组合角色编译为原九字段Method和Candidate，私有Skill包保存入口及role.json；不向Worker的封闭v1 JSON添加字段。原state追加当前Owner的roles名称/引用摘要，供人类名称显示。角色级delivery进入原outputContract，步骤completion单独保留。专业模板的输入/来源/产出限制不会因组合取消。
 
 候选和知识版本只能由当前认证人类在其范围内登记。平台计划消费者可在自己的正式版本/控制事务中调用内部 `prepareAuthorized` 端口，必须对应已经确认的执行政策和 Owner；内部固定上下文端口不另授予权限，也没有机器 HTTP 写入口。后续问答/图拥有者消费正式继续事务；配置绑定可原样继承，问题或图的有效绑定仍由所属模块更新。
 

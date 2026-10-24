@@ -193,3 +193,24 @@ Selection SHALL preserve primary responsibilities, read-only constraints, runtim
 #### Scenario: A task requests teaching, prose editing or a handoff
 - **WHEN** a selected Skill supports that activity within the primary task
 - **THEN** it guides a useful lesson with practice, a faithful article revision or an evidence-based continuation brief as applicable; file writes require existing scope, and no course state, publication or workflow dispatch is implied
+
+### Requirement: Composable role definitions
+A business role SHALL be definable as a goal, immutable Skill references, ordered local workflow steps and overall delivery requirements. Built-in roles SHALL remain available as templates rather than the exclusive business-role list. A human SHALL be able to start from a blank definition, import a default template, preview, save and explicitly select a fixed role for task preparation without adding a Worker process or launch profile.
+
+The role compiler SHALL retain the existing execution-config-v1 Candidate, Method and output shapes. A private Owner/repository-scoped Skill file package SHALL contain its generated entry and role.json. The composed technical capability SHALL require an exact recompile match with that private package, together with existing reference, scope, digest, result and tool validation. A preview SHALL NOT persist the package or configuration; save SHALL register both in the existing transaction. Old default methods and fixed task bindings SHALL remain unchanged.
+
+#### Scenario: Two roles reuse the same research method
+- **WHEN** their workflows reference the same research Skill version with different steps and delivery requirements
+- **THEN** they share the immutable Skill reference, keep distinct role definitions and can be prepared through the existing factory without a business-role whitelist change
+
+#### Scenario: A professional template conflicts with the selected output
+- **WHEN** its imported primary Skill requires an incompatible result kind or read-only setting
+- **THEN** preview and save reject the conflict; other source, input or natural-language conflicts remain binding and SHALL be reported through the existing gap path when detected rather than waived by composition
+
+#### Scenario: A role save response is unknown
+- **WHEN** the user refreshes to reconcile the original role identifier, revision and definition
+- **THEN** a matching saved result is retained, an absent result permits an explicit retry of the original object, and conflicting content is not overwritten or replaced by an automatically generated identifier
+
+#### Scenario: A Worker follows a role-local workflow
+- **WHEN** a configured task uses several Skill steps with conditions and completion requirements
+- **THEN** one Worker follows those instructions within the same Task/Attempt and reports actual step outcomes in existing descriptive fields; these notes SHALL NOT be represented as platform-enforced step states, independent recovery or independent review, and cross-Worker orchestration SHALL remain platform-owned
