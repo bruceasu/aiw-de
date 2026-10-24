@@ -71,7 +71,7 @@ public class ConfigurationUiOptions {
         }
         var drafts=repo.jdbc().queryForList("SELECT intent_json FROM execution_preparation WHERE owner_id=? ORDER BY intent_id,intent_version",String.class,owner)
                 .stream().map(raw->new DraftChoice(repo.decode(raw,Intent.class))).toList();
-        return Map.of("plans",choices,"models",factory.supportedProfiles(),"assets",assets,"saved",saved,"drafts",drafts,
+        return Map.of("ownerId",owner,"plans",choices,"models",factory.supportedProfiles(),"assets",assets,"saved",saved,"drafts",drafts,
                 "upstream",tasks.stream().filter(t->t.state().equals("COMPLETED")).toList());
     }
     private static boolean baseline(String value) { return value!=null && value.matches("[0-9a-f]{40}|[0-9a-f]{64}"); }
