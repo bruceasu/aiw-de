@@ -48,8 +48,7 @@ aidev:
 
   web-console:
     auth:
-      # Require login for otherwise-local console pages; /ui/login is always available.
-      enabled: ${AIW_WEB_CONSOLE_AUTH_ENABLED:false}
+      # All console pages require login; /ui/login remains publicly available.
       username: ${AIW_WEB_CONSOLE_USERNAME:admin}
       password: ${AIW_WEB_CONSOLE_PASSWORD:}
       role: ${AIW_WEB_CONSOLE_ROLE:ADMIN}

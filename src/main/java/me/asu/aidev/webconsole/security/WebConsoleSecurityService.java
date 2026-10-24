@@ -16,17 +16,15 @@ public class WebConsoleSecurityService {
     public static final String SESSION_ROLE = "aiw.web.role";
     public static final String SESSION_CSRF = "aiw.web.csrf";
 
-    private final boolean enabled;
     private final String configuredUsername;
     private final String configuredPassword;
     private final WebConsoleRole configuredRole;
 
     public WebConsoleSecurityService(
-            @Value("${aidev.web-console.auth.enabled:false}") boolean enabled,
+            @Value("true") boolean ignoredEnabled,
             @Value("${aidev.web-console.auth.username:admin}") String username,
             @Value("${aidev.web-console.auth.password:}") String password,
             @Value("${aidev.web-console.auth.role:ADMIN}") String role) {
-        this.enabled = enabled;
         this.configuredUsername = normalize(username, "username");
         this.configuredPassword = password == null ? "" : password;
         try {
@@ -36,9 +34,9 @@ public class WebConsoleSecurityService {
         }
     }
 
-    /** Whether otherwise-local console routes require sign-in; the login page is always available. */
+    /** Compatibility accessor: console login is mandatory; the old enable flag is ignored. */
     public boolean enabled() {
-        return enabled;
+        return true;
     }
 
     public boolean loginConfigured() {
@@ -62,7 +60,7 @@ public class WebConsoleSecurityService {
     }
 
     public boolean authenticated(HttpSession session) {
-        return !enabled || signedIn(session);
+        return signedIn(session);
     }
 
     public boolean signedIn(HttpSession session) {
@@ -70,28 +68,27 @@ public class WebConsoleSecurityService {
     }
 
     public String username(HttpSession session) {
-        if (!enabled && !signedIn(session)) return "local-console";
+        if (!signedIn(session)) return "";
         Object value = session.getAttribute(SESSION_USERNAME);
         return value == null ? configuredUsername : value.toString();
     }
 
     public WebConsoleRole role(HttpSession session) {
-        if (!enabled && !signedIn(session)) return WebConsoleRole.ADMIN;
+        if (!signedIn(session)) return WebConsoleRole.VIEWER;
         Object value = session.getAttribute(SESSION_ROLE);
         if (value == null) return configuredRole;
         return WebConsoleRole.valueOf(value.toString());
     }
 
     public String actor(HttpSession session) {
+        if (!signedIn(session)) throw new SecurityException("Authenticated console actor required");
         return "web:" + username(session);
     }
 
     /** Re-evaluate durable human delegations against current configuration, not an old session. */
     public String currentOperatorAuthority(String actor) {
         boolean identified = ("web:" + configuredUsername).equals(actor);
-        if (identified) {
-            if (!loginConfigured() || !configuredRole.canOperate()) return "";
-        } else if (enabled || !"web:local-console".equals(actor)) return "";
+        if (!identified || !loginConfigured() || !configuredRole.canOperate()) return "";
         try {
             String source = identified + "\n" + configuredUsername + "\n" + configuredRole;
             return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
