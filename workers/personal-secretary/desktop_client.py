@@ -5,9 +5,15 @@ from __future__ import annotations
 import http.cookiejar
 import ipaddress
 import json
+import hashlib
+from pathlib import Path
+import subprocess
+import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from private_config import read_private
 
 
 class PersonalError(Exception):
@@ -59,13 +65,28 @@ class PersonalClient:
                     raise PersonalError("私人状态超过桌面显示上限，请在 Web 中查看并备份。")
                 return json.loads(raw)
         except urllib.error.HTTPError as error:
-            error.close()
+            details = {}
+            try:
+                if error.code == 422:
+                    raw = error.read(8193)
+                    if len(raw) <= 8192:
+                        try:
+                            details = json.loads(raw)
+                        except (ValueError, UnicodeError):
+                            pass
+            finally:
+                error.close()
             if error.code == 401:
                 message = "配对码无效、已使用或已过期，或当前会话已失效。请在 Web 的“状态与备份”中生成新的配对码。"
             elif error.code == 403:
                 message = "会话或服务地址校验失败。请先刷新状态，并核对地址与启动终端一致。"
             elif error.code == 422:
-                message = "操作未获确认。请刷新状态，检查当前版本及授权，并核对原请求回执。"
+                if isinstance(details, dict) and details.get("code") and isinstance(details.get("message"), str):
+                    message = details["message"][:500]
+                elif route == "chat":
+                    message = "对话失败。请检查个人服务是否已配置 AIW_PERSONAL_MODEL_COMMAND，以及模型程序能否正常运行；更新并重启服务后可显示具体原因。"
+                else:
+                    message = "这次操作没有完成，服务可能仍是旧版本。请重启个人服务并刷新界面；新版本会说明具体原因。"
             else:
                 message = f"个人服务返回 {error.code}。请核对原回执，避免重复提交。"
             raise PersonalError(message, error.code) from None
@@ -84,6 +105,51 @@ class PersonalClient:
     def login(self, code):
         # Keep the accepted session even if the subsequent state read fails.
         return self.operate("login", {"code": code.strip()})
+
+    def auto_connect(self):
+        def attach():
+            path = Path.home() / ".aiw-personal" / "desktop-attach" / (hashlib.sha256(self.origin.encode()).hexdigest() + ".json")
+            try:
+                value = read_private(path, {})
+            except (OSError, ValueError):
+                raise PersonalError("无法读取本机连接信息。请检查当前系统账号，或在连接窗口输入配对码。", 401) from None
+            if value.get("origin") != self.origin or not value.get("token"):
+                raise PersonalError("当前服务尚未提供本机自动连接。请更新并重启个人服务，或填写一次性配对码。", 401)
+            try:
+                self.request("attach", {"token": value["token"]})
+            except PersonalError as error:
+                if error.status == 404:
+                    raise PersonalError("正在运行的服务是旧版本，请重启个人服务后再连接。", 404) from None
+                raise
+            return {}, self.state(), ""
+        try:
+            state = self.state()
+        except PersonalError as error:
+            if error.status:
+                return attach()
+        else:
+            return {}, state, ""
+        parsed = urllib.parse.urlsplit(self.origin)
+        if parsed.scheme != "http":
+            raise PersonalError("个人服务尚未运行。HTTPS 服务请先在已配置的反向代理后启动。")
+        try:
+            subprocess.Popen([sys.executable, str(Path(__file__).with_name("main.py")), "--host", parsed.hostname,
+                "--port", str(parsed.port), "--no-browser"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        except OSError:
+            raise PersonalError("无法启动个人服务。请在秘书目录运行 start.ps1 后再连接。") from None
+        for _ in range(50):
+            time.sleep(0.2)
+            try:
+                state = self.state()
+            except PersonalError as error:
+                if error.status:
+                    try: return attach()
+                    except PersonalError as attach_error:
+                        if attach_error.status not in {0, 401}: raise
+            else:
+                return {}, state, ""
+        raise PersonalError("个人服务没有完成启动。请运行 start.ps1 查看终端中的具体原因，再重新连接。")
 
     def operate(self, route, data):
         result = self.request(route, data)

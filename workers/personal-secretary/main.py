@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import atexit
+import getpass
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 import secrets
@@ -18,8 +21,9 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from platform_client import PlatformClient
-from runtime import Runtime
+from platform_client import PlatformClient, PlatformError, LocalPlatform
+from private_config import read_private, write_private, PrivateProcessLock
+from runtime import Runtime, PersonalChatError
 from store import SQLiteStore, encode
 from business_actions import BusinessActions
 
@@ -34,19 +38,34 @@ def desktop_session_available():
     return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
 
 
+def loopback_host(host):
+    if host == "localhost":
+        return True
+    try:
+        address = ipaddress.ip_address(host)
+        return address.is_loopback or bool(getattr(address, "ipv4_mapped", None) and address.ipv4_mapped.is_loopback)
+    except ValueError:
+        return False
+
+
 def serve(runtime, host, port, public_origin=None, open_browser=True):
     origin = public_origin or f"http://{'[' + host + ']' if ':' in host else host}:{port}"
     parsed = urllib.parse.urlsplit(origin)
     if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password or parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
         raise ValueError("Explicit UI origin without path or credentials required")
-    if host not in {"127.0.0.1", "::1", "localhost"} and (public_origin is None or parsed.scheme != "https"):
+    if not loopback_host(host) and (public_origin is None or parsed.scheme != "https"):
         raise ValueError("Remote UI requires an explicit HTTPS reverse-proxy origin")
     origin = origin.rstrip("/")
     cookie_name = "AIW_PERSONAL_" + hashlib.sha256((runtime.store.owner + runtime.store.worker).encode()).hexdigest()[:16]
     pairing = secrets.token_urlsafe(24)
     pairing_expiry = time.monotonic() + 300
+    attach_token = secrets.token_urlsafe(32)
+    local_attach = loopback_host(host) and loopback_host(parsed.hostname)
+    attach_path = Path.home() / ".aiw-personal" / "desktop-attach" / (hashlib.sha256(origin.encode()).hexdigest() + ".json")
     attempts = 0
-    sessions = {}
+    session_path = runtime.store.path.parent / "ui-sessions.json"
+    sessions = read_private(session_path, {})
+    sessions = {key: value for key, value in sessions.items() if isinstance(value, dict) and value.get("expires", 0) > time.time()}
     stop = threading.Event()
     lock = threading.RLock()
 
@@ -62,11 +81,45 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
             self.send_header("Content-Length", str(len(payload)))
+            if getattr(self, "session_cookie", None):
+                self.send_header("Set-Cookie", self.session_cookie)
+                self.session_cookie = None
             self.end_headers()
             self.wfile.write(payload)
 
         def valid_host(self):
-            return self.headers.get("Host", "").lower() == parsed.netloc.lower()
+            authority = self.headers.get("Host", "").lower()
+            if authority == parsed.netloc.lower():
+                return True
+            try:
+                target = urllib.parse.urlsplit(f"{parsed.scheme}://{authority}")
+                return (local_attach and loopback_host(target.hostname) and not target.username
+                        and not target.password and not target.path and not target.query and not target.fragment
+                        and (target.port or (443 if parsed.scheme == "https" else 80))
+                        == (parsed.port or (443 if parsed.scheme == "https" else 80)))
+            except ValueError:
+                return False
+
+        def request_origin(self):
+            return f"{parsed.scheme}://{self.headers.get('Host', '')}"
+
+        def local_request(self):
+            # A public reverse proxy must not turn its loopback backend into local trust.
+            return (local_attach and loopback_host(self.client_address[0])
+                    and not any(name.lower().startswith("x-forwarded-") or name.lower() == "forwarded"
+                                for name in self.headers))
+
+        def new_session(self):
+            key = secrets.token_urlsafe(32)
+            value = {"csrf": secrets.token_urlsafe(32), "expires": time.time() + 12 * 3600}
+            for expired in [token for token, item in sessions.items() if item["expires"] <= time.time()]:
+                del sessions[expired]
+            sessions[key] = value
+            if len(sessions) > 64:
+                del sessions[next(iter(sessions))]
+            write_private(session_path, sessions)
+            self.session_cookie = f"{cookie_name}={key}; Path=/; Max-Age=43200; HttpOnly; SameSite=Strict" + ("; Secure" if parsed.scheme == "https" else "")
+            return value
 
         def session(self):
             cookie = SimpleCookie()
@@ -76,12 +129,13 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
             except Exception:
                 return None
             session = sessions.get(key.value) if key else None
-            if session and session["expires"] > time.monotonic():
+            if session and session["expires"] > time.time():
                 return session
             return None
 
         def do_GET(self):
-            if not self.valid_host():
+            if (not self.valid_host() or self.headers.get("Sec-Fetch-Site") == "cross-site"
+                    or self.headers.get("Origin") not in {None, self.request_origin()}):
                 self.respond(403, {"error": "Invalid UI host"})
                 return
             files = {"/": ("index.html", "text/html"), "/app.js": ("app.js", "application/javascript"),
@@ -93,12 +147,16 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
                 return
             with lock:
                 session = self.session()
+                if session is None and self.path == "/api/state" and self.local_request():
+                    session = self.new_session()
                 if session is None:
                     self.respond(401, {"error": "Personal login required"})
                 elif self.path == "/api/state":
                     self.respond(200, {"csrf": session["csrf"], "ownerId": runtime.store.owner, "workerId": runtime.store.worker,
                         "platformOrigin": runtime.platform.base.removesuffix("/api/r1/authority"),
-                        "enabled": runtime.enabled, "work": runtime.store.list("work"), "messages": runtime.store.list("message"),
+                        "serviceVersion": "daily-assistant-v1", "assistant": runtime.settings.public(),
+                        "enabled": not runtime.settings.value.get("paused", False), "platformEnabled": runtime.enabled,
+                        "modelConfigured": runtime.settings.configured(), "work": runtime.store.list("work"), "messages": runtime.store.list("message"),
                         "policies": runtime.store.list("policy"), "drafts": runtime.store.list("draft"), "templates": runtime.store.list("template"),
                         "todos": runtime.store.list("todo"), "decisions": runtime.store.list("decision"),
                         "receipts": [{key: row[key] for key in ("request_id", "state", "receipt")} for row in runtime.store.pending()]})
@@ -112,7 +170,7 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
 
         def do_POST(self):
             nonlocal attempts, pairing, pairing_expiry
-            if not self.valid_host() or self.headers.get("Origin") != origin:
+            if not self.valid_host() or self.headers.get("Origin") != self.request_origin():
                 self.respond(403, {"error": "Same-origin personal UI required"})
                 return
             try:
@@ -124,21 +182,15 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
                 if not isinstance(data, dict):
                     raise ValueError()
                 with lock:
-                    if self.path == "/api/login":
-                        attempts += 1
-                        if not pairing or attempts > 5 or time.monotonic() > pairing_expiry or not hmac.compare_digest(str(data.get("code", "")), pairing):
+                    if self.path in {"/api/login", "/api/attach"}:
+                        attaching = self.path == "/api/attach"
+                        if not attaching: attempts += 1
+                        valid = self.local_request() and hmac.compare_digest(str(data.get("token", "")), attach_token) if attaching else bool(pairing) and attempts <= 5 and time.monotonic() <= pairing_expiry and hmac.compare_digest(str(data.get("code", "")), pairing)
+                        if not valid:
                             self.respond(401, {"error": "Pairing code invalid or expired; restart to request a new code"})
                             return
-                        pairing = ""
-                        key = secrets.token_urlsafe(32)
-                        csrf = secrets.token_urlsafe(32)
-                        sessions[key] = {"csrf": csrf, "expires": time.monotonic() + 12 * 3600}
-                        self.send_response(200)
-                        self.send_header("Set-Cookie", f"{cookie_name}={key}; Path=/; HttpOnly; SameSite=Strict" + ("; Secure" if parsed.scheme == "https" else ""))
-                        self.send_header("Cache-Control", "no-store")
-                        self.send_header("Content-Type", "application/json")
-                        self.end_headers()
-                        self.wfile.write(encode({"csrf": csrf}).encode())
+                        if not attaching: pairing = ""
+                        self.respond(200, {"csrf": self.new_session()["csrf"]})
                         return
                     session = self.session()
                     if session is None or not hmac.compare_digest(self.headers.get("X-CSRF-Token", ""), session["csrf"]):
@@ -150,10 +202,54 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
                         pairing_expiry = time.monotonic() + 300
                         attempts = 0
                         result = {"code": pairing, "expiresIn": 300}
+                    elif self.path == "/api/settings":
+                        try:
+                            result = runtime.settings.save(data)
+                        except ValueError as error:
+                            raise PersonalChatError("SETTINGS_INVALID", str(error)) from None
+                    elif self.path == "/api/settings/check":
+                        try:
+                            runtime.model("Reply with OK only. Do not use tools or perform any action.")
+                        except ValueError as error:
+                            raise PersonalChatError("MODEL_CONNECTION_FAILED", str(error)) from None
+                        result = {"note": "模型连接正常，可以直接聊天或安排工作。"}
+                    elif self.path == "/api/assistant/control":
+                        try:
+                            result = runtime.settings.pause(data.get("paused"))
+                        except ValueError as error:
+                            raise PersonalChatError("SETTINGS_INVALID", str(error)) from None
+                    elif self.path == "/api/assistant/confirm":
+                        try:
+                            result = runtime.daily.confirm(data["id"], data["revision"], data["accepted"])
+                        except ValueError as error:
+                            raise PersonalChatError("CONFIRMATION_INVALID", str(error)) from None
                     elif self.path == "/api/work":
-                        result = runtime.create_work(data["title"], data["body"], data.get("planId") or None)
+                        result = runtime.create_work(data["title"], data["body"], data.get("planId") or None, data.get("outputPath") or None)
                     elif self.path == "/api/chat":
-                        result = runtime.chat(data["workId"], data["text"])
+                        work_id = data.get("workId")
+                        if not work_id:
+                            work = next((row for row in runtime.store.list("work") if row.get("title") == "日常对话" and row.get("state") not in {"CANCELLED", "TRASHED"}), None)
+                            if work is None: work = runtime.create_work("日常对话", "")
+                            work_id = work["id"]
+                        result = runtime.chat(work_id, data["text"])
+                    elif self.path == "/api/run-work":
+                        work = runtime.store.get("work", data["id"])
+                        if not work or work["revision"] != data["revision"]:
+                            raise PersonalChatError("WORK_CHANGED", "这项工作已变化，请刷新后重新选择。")
+                        result = runtime.daily.schedule(work, int(time.time() * 1000), time.tzname[0])
+                    elif self.path == "/api/work-trash":
+                        work = runtime.store.get("work", data["id"])
+                        if not work or work["revision"] != data["revision"]:
+                            raise PersonalChatError("WORK_CHANGED", "这项工作已变化，请刷新后再移到已删除列表。")
+                        value = {key: value for key, value in work.items() if key not in {"id", "revision"}}
+                        value["state"] = "TRASHED"
+                        result = runtime.store.put("work", work["id"], value, work["revision"])
+                        runtime.daily.dismiss(work["id"])
+                    elif self.path == "/api/work-restore":
+                        work = runtime.store.get("work", data["id"])
+                        if not work or work["state"] != "TRASHED" or work["revision"] != data["revision"]:
+                            raise PersonalChatError("WORK_CHANGED", "这项工作已恢复或发生变化，请刷新后查看。")
+                        result = runtime.report_work(work, "DRAFT", "RESTORED", "已恢复工作，可直接处理或重新安排。")
                     elif self.path == "/api/enable":
                         if type(data.get("enabled")) is not bool:
                             raise ValueError()
@@ -186,6 +282,7 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
                         result = runtime.save_policy(data["id"], data["revision"], data["originalText"], data["grantId"], data.get("confirmed"), data.get("deny"), data.get("expiresAt"))
                     elif self.path == "/api/cancel" and data.get("kind") in {"work", "policy"}:
                         result = runtime.store.cancel_record(data["kind"], data["id"], data["revision"])
+                        if data["kind"] == "work": runtime.daily.dismiss(data["id"])
                     elif self.path == "/api/record" and data.get("kind") in {"draft", "template", "todo"}:
                         result = runtime.store.put(data["kind"], data["id"], data["data"], data["revision"])
                     elif self.path == "/api/delete-draft":
@@ -194,8 +291,17 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
                         self.respond(404, {"error": "Unknown personal route"})
                         return
                     self.respond(200, result)
+            except PersonalChatError as error:
+                self.respond(422, {"code": error.code, "message": str(error)})
+            except PlatformError as error:
+                message = "专业平台尚未连接。日常聊天和本机工作仍可使用；如需专业平台功能，请在启动时使用平台提供的连接信息。" if error.status == "PLATFORM_NOT_CONNECTED" else "专业平台没有接受这次请求。请在高级功能中检查平台连接和权限；日常助理不需要这些配置。"
+                self.respond(422, {"code": "PLATFORM_REQUEST_FAILED", "message": message})
             except Exception:
-                self.respond(422, {"error": "Operation rejected or unconfirmed. Reload private state and query the original receipt; delegation was not expanded."})
+                messages = {"/api/schedule": "安排未保存：请选择一项工作和未来时间。若工作刚被修改，请刷新后重新安排。",
+                    "/api/record": "资料未保存：内容需要是有效的 JSON 对象；若版本已变化，请重新打开资料后保存。",
+                    "/api/delete-draft": "草稿未删除：可能已被修改或删除，请刷新资料列表再操作。",
+                    "/api/chat": "对话未开始：请打开“设置”检查模型连接，再重新发送。若仍失败，请重启个人服务以加载新版本。"}
+                self.respond(422, {"code": "OPERATION_NOT_COMPLETED", "message": messages.get(self.path, "这次操作未完成。请刷新当前列表后重试；需要继续时，界面会列出具体待确认内容。")})
 
     def tick():
         while not stop.wait(5):
@@ -212,7 +318,13 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
     class IPv6Server(ThreadingHTTPServer):
         address_family = socket.AF_INET6
     server = (IPv6Server if ":" in host else ThreadingHTTPServer)((host, port), Handler)
-    print(f"Personal UI: {origin}\nOne-time pairing code (5 minutes): {pairing}", flush=True)
+    if local_attach:
+        write_private(attach_path, {"origin": origin, "token": attach_token})
+    print(f"Personal UI: {origin}", flush=True)
+    if local_attach:
+        print("Local loopback access connects automatically; no pairing code is required.", flush=True)
+    else:
+        print(f"One-time pairing code (5 minutes): {pairing}", flush=True)
     thread = threading.Thread(target=tick, daemon=True)
     thread.start()
     try:
@@ -230,6 +342,8 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
         server.serve_forever()
     finally:
         stop.set()
+        if local_attach:
+            attach_path.unlink(missing_ok=True)
         runtime.cancel()
         server.server_close()
         thread.join(timeout=25)
@@ -239,9 +353,9 @@ def serve(runtime, host, port, public_origin=None, open_browser=True):
 
 def main():
     parser = argparse.ArgumentParser(description="Independent personal-secretary Worker")
-    parser.add_argument("--owner-id", required=True)
-    parser.add_argument("--worker-id", required=True)
-    parser.add_argument("--platform", required=True)
+    parser.add_argument("--owner-id", help="Optional professional platform owner")
+    parser.add_argument("--worker-id", help="Optional professional platform Worker")
+    parser.add_argument("--platform", help="Optional professional platform origin")
     parser.add_argument("--data-root", type=Path, default=Path.home() / ".aiw-personal")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8766)
@@ -249,17 +363,58 @@ def main():
     parser.add_argument("--allow-loopback-http", action="store_true")
     parser.add_argument("--no-browser", action="store_true", help="Do not automatically open the personal UI")
     args = parser.parse_args()
-    credential = os.environ.get("AIW_PERSONAL_CREDENTIAL", "")
+    profile_path = args.data_root.expanduser() / "connection.json"
+    try:
+        profile = read_private(profile_path, {})
+    except (OSError, ValueError):
+        raise SystemExit("无法读取已保存的连接设置。请检查个人数据目录的访问权限，不要删除私人数据库。") from None
+    local_identity = hashlib.sha256((getpass.getuser() + "\n" + socket.gethostname()).encode()).hexdigest()[:16]
+    owner = args.owner_id or profile.get("ownerId") or "local-" + local_identity
+    worker = args.worker_id or profile.get("workerId") or "personal-secretary"
+    platform_url = args.platform or profile.get("platform")
+    credential = os.environ.get("AIW_PERSONAL_CREDENTIAL") or profile.get("credential", "")
     command = json.loads(os.environ["AIW_PERSONAL_MODEL_COMMAND"]) if os.environ.get("AIW_PERSONAL_MODEL_COMMAND") else None
     if command is not None and (not isinstance(command, list) or not command or any(not isinstance(item, str) or not item for item in command)):
         raise ValueError("Model command must be an explicit nonempty argv JSON array")
-    platform = PlatformClient(args.platform, args.worker_id, credential, args.allow_loopback_http)
-    identity = platform.request("/sessions", {"workerBoot": platform.boot})
-    if identity.get("ownerId") != args.owner_id or identity.get("workerId") != args.worker_id:
-        raise ValueError("Explicit private owner/Worker does not match the enrolled platform identity")
-    print(f"Personal process boot: {platform.boot}. Confirm this process in the platform, then enable the private UI.", flush=True)
-    store = SQLiteStore(args.data_root, args.owner_id, args.worker_id)
-    serve(Runtime(store, platform, command), args.host, args.port, args.public_origin, open_browser=not args.no_browser)
+    store = SQLiteStore(args.data_root, owner, worker)
+    instance = PrivateProcessLock(store.path.parent / "service.lock")
+    try:
+        instance.acquire()
+    except OSError:
+        store.close()
+        raise SystemExit("这份秘书数据已有服务在运行，或私库目录不能锁定。请连接已有服务；如需重启，请先关闭原服务。") from None
+    atexit.register(instance.release)
+    platform = LocalPlatform()
+    if platform_url and credential:
+        allow_http = args.allow_loopback_http or profile.get("allowLoopbackHttp", False) and platform_url == profile.get("platform")
+        try:
+            connected = PlatformClient(platform_url, worker, credential, allow_http)
+            platform = connected
+            if args.platform or args.owner_id or args.worker_id:
+                identity = connected.request("/sessions", {"workerBoot": connected.boot})
+                if identity.get("ownerId") != owner or identity.get("workerId") != worker:
+                    raise SystemExit("平台返回的身份与所选个人数据身份不一致，已停止启动。请使用平台提供的正确连接信息。")
+                connected.session_started = True
+                write_private(profile_path, {"ownerId": owner, "workerId": worker, "platform": platform_url,
+                    "credential": credential, "allowLoopbackHttp": bool(allow_http)})
+        except PlatformError as error:
+            platform = LocalPlatform()
+            print(f"专业平台暂未连接（{error.status}）。本机日常助理仍可使用；专业功能请检查平台身份和凭证。", flush=True)
+        except ValueError:
+            platform = LocalPlatform()
+            print("专业平台连接设置不完整或地址不符合要求。本机日常助理仍可使用；专业连接可稍后重新配置。", flush=True)
+    print("秘书已启动。首次使用请在“设置”连接模型；以后会恢复设置，无需再次启用日常工作。", flush=True)
+    try:
+        runtime = Runtime(store, platform, command)
+    except (OSError, ValueError):
+        store.close()
+        raise SystemExit("无法读取个人设置或恢复私人状态。请检查个人数据目录的访问权限；不要删除私人数据库。") from None
+    if not profile.get("ownerId") and not profile.get("workerId"):
+        write_private(profile_path, {"ownerId": owner, "workerId": worker})
+    try:
+        serve(runtime, args.host, args.port, args.public_origin, open_browser=not args.no_browser)
+    finally:
+        instance.release()
 
 
 if __name__ == "__main__":

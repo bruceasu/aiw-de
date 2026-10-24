@@ -3,5 +3,7 @@
 <!-- aiw: feature-folder-index -->
 
 - [Design: FD-044_WORKER_CONTEXT_TOOLS_AND_HUMAN_INTERACTION.md](FD-044_WORKER_CONTEXT_TOOLS_AND_HUMAN_INTERACTION.md)
+- [Reports](reports/)
+- [Reviews](reviews/)
 
 Run `aiw fd show FD-044` for current status and handoff.

@@ -2,14 +2,14 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" th:content="${csrfToken}"><meta name="configuration-owner" th:content="${ownerId}">
-<title>任务准备与工作方法 · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/configurations.css?v=human-forms-1">
+<title>专业 Worker 任务配置（高级） · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/configurations.css?v=human-forms-1">
 <script src="/ui/configurations.js?v=human-forms-1" defer></script><script src="/ui/configuration-methods.js?v=human-forms-1" defer></script></head>
 <body><div class="app configuration-page"><nav th:replace="~{ui/fragments :: nav('configurations')}"></nav><main class="main">
-<header th:replace="~{ui/fragments :: topbar('任务准备与工作方法','描述要做的工作，选择方法与模型，再检查是否可以交给 Worker。')}"></header>
+<header th:replace="~{ui/fragments :: topbar('专业 Worker 任务配置（高级）','手动配置专业软件任务，选择工作方法与模型，检查 Worker 执行条件。')}"></header>
 <div class="content configuration-content">
-<section class="configuration-intro"><div><span class="configuration-eyebrow">软件工作 · 准备与配置</span><h2>从一个具体任务开始</h2><p>普通任务直接使用已有工作方法。只有默认方法不够用时，才需要自定义。</p></div><a class="btn ghost" href="/ui/authority">管理执行范围</a></section>
+<section class="configuration-intro"><div><span class="configuration-eyebrow">软件工作 · 准备与配置</span><h2>从一个具体任务开始</h2><p>秘书可在已授权范围内自动准备并委派专业任务，跟踪 Worker 的进度和实际结果。此页供人手动配置或排查准备记录，日常安排工作无需填写。没有已授权计划时，秘书会先创建草稿并报告需要确认的执行范围；自定义工作方法为可选项。</p></div><a class="btn ghost" href="/ui/authority">管理执行范围</a></section>
 <ol class="configuration-steps"><li><span>1</span><div><strong>选计划</strong><small>使用已确认的执行范围</small></div></li><li><span>2</span><div><strong>描述任务</strong><small>选择方法和已批准模型</small></div></li><li><span>3</span><div><strong>检查准备结果</strong><small>创建任务或查看需要补齐的条件</small></div></li></ol>
-<p th:if="${ownerId.isEmpty()}" class="callout warn-callout">请先到<a href="/ui/authority">个人 Worker 授权</a>页登记身份，再返回这里。</p>
+<p th:if="${ownerId.isEmpty()}" class="callout warn-callout">请先到<a href="/ui/authority">秘书平台授权（高级）</a>页登记身份，再返回这里。</p>
 <p id="configuration-result" class="configuration-feedback" role="status" aria-live="polite" hidden></p>
 <div class="configuration-summary" aria-label="可用准备条件"><a href="/ui/authority"><strong id="configuration-plan-count">—</strong><span>已配置执行范围的计划</span></a><a href="/ui/system"><strong id="configuration-model-count">—</strong><span>可用的已批准模型</span></a><a href="/ui/workers"><strong id="configuration-worker-count">—</strong><span>已登记配置协议的 Worker</span></a></div>
 <div class="configuration-navigation"><div role="tablist" aria-label="任务准备分区"><button id="tab-prepare" type="button" role="tab" aria-controls="panel-prepare" aria-selected="true" data-configuration-tab="prepare">准备任务</button><button id="tab-records" type="button" role="tab" aria-controls="panel-records" aria-selected="false" tabindex="-1" data-configuration-tab="records">准备记录</button><button id="tab-methods" type="button" role="tab" aria-controls="panel-methods" aria-selected="false" tabindex="-1" data-configuration-tab="methods">自定义工作方法<span>可选</span></button></div><button id="refresh-configurations" type="button" class="btn ghost">刷新记录</button></div>

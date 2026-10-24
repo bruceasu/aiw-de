@@ -11,6 +11,7 @@ host_address=127.0.0.1
 port=8766
 public_origin=
 allow_loopback_http=false
+prompt_credential=false
 no_browser=false
 python_command=python3
 
@@ -25,10 +26,11 @@ Usage: bash start.sh [options]
   --port PORT            UI port (default: 8766)
   --public-origin URL    HTTPS reverse-proxy origin for remote UI access
   --allow-loopback-http  Explicitly allow HTTP to a loopback platform
+  --prompt-credential    Ask for a professional platform credential (optional)
   --no-browser          Do not automatically open the personal UI
   --python PATH          Python executable (default: python3)
   -h, --help             Show this help
-Credential: AIW_PERSONAL_CREDENTIAL or hidden terminal input.
+Credential: saved settings or AIW_PERSONAL_CREDENTIAL; optional for daily use.
 USAGE
 }
 
@@ -38,6 +40,7 @@ while (($#)); do
     case "$1" in
         -h|--help) usage; exit 0 ;;
         --allow-loopback-http) allow_loopback_http=true; shift ;;
+        --prompt-credential) prompt_credential=true; shift ;;
         --no-browser) no_browser=true; shift ;;
         --owner-id|--worker-id|--platform|--data-root|--host|--port|--public-origin|--python)
             (($# >= 2)) && [[ -n $2 ]] || fail "Missing value for $1"
@@ -56,6 +59,13 @@ while (($#)); do
     esac
 done
 
+if [[ -z $owner_id && -z $platform && $prompt_credential == false ]]; then
+    script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+    launch_arguments=("$script_dir/main.py" --data-root "$data_root" --host "$host_address" --port "$port")
+    if [[ -n $public_origin ]]; then launch_arguments+=(--public-origin "$public_origin"); fi
+    if [[ $no_browser == true ]]; then launch_arguments+=(--no-browser); fi
+    exec "$python_command" "${launch_arguments[@]}"
+fi
 if [[ -z $owner_id ]]; then
     read -r -p 'Owner ID from the platform authority page: ' owner_id
 fi
@@ -66,7 +76,7 @@ fi
 [[ $owner_id =~ [^[:space:]] && $worker_id =~ [^[:space:]] ]] ||
     fail 'Owner ID and Worker ID must match the identity enrolled on the platform.'
 
-if [[ $allow_loopback_http == false ]]; then
+if [[ $allow_loopback_http == false && ( $prompt_credential == true || ${AIW_PERSONAL_CREDENTIAL:-} =~ [^[:space:]] ) ]]; then
     case "$platform" in
         http://127.0.0.1|http://127.0.0.1:*|http://127.0.0.1/*|http://localhost|http://localhost:*|http://localhost/*|http://\[::1\]|http://\[::1\]:*|http://\[::1\]/*)
             read -r -p 'Allow plain HTTP to this loopback platform? [y/N] ' confirmation
@@ -77,7 +87,7 @@ if [[ $allow_loopback_http == false ]]; then
     esac
 fi
 
-if [[ ! ${AIW_PERSONAL_CREDENTIAL:-} =~ [^[:space:]] ]]; then
+if [[ $prompt_credential == true && ! ${AIW_PERSONAL_CREDENTIAL:-} =~ [^[:space:]] ]]; then
     [[ -t 0 ]] || fail 'Set AIW_PERSONAL_CREDENTIAL when no interactive terminal is available.'
     read -r -s -p 'Dedicated platform credential (hidden): ' AIW_PERSONAL_CREDENTIAL
     printf '\n'

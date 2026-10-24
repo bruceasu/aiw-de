@@ -17,10 +17,21 @@ from platform_client import PlatformError
 from store import encode
 from selected_goals import SelectedGoals
 from personal_plans import PersonalPlans
+from assistant_settings import AssistantSettings
+from assistant_model import complete
+from daily_assistant import DailyAssistant
+from professional_tasks import ProfessionalTasks
 
 
 def content(row):
     return {key: value for key, value in row.items() if key not in {"id", "revision"}}
+
+
+class PersonalChatError(ValueError):
+    """Bounded public diagnostics; never include model output or private context."""
+    def __init__(self, code, message):
+        super().__init__(message)
+        self.code = code
 
 
 class Runtime:
@@ -32,6 +43,10 @@ class Runtime:
         self.personal_plans = PersonalPlans(store, platform)
         self.cancelled = threading.Event()
         self.process = None
+        self.model_lock = threading.Lock()
+        self.settings = AssistantSettings(store.path.parent, model_command)
+        self.professional = ProfessionalTasks(self)
+        self.daily = DailyAssistant(self, self.settings)
 
     def cancel(self):
         self.cancelled.set()
@@ -43,38 +58,50 @@ class Runtime:
                 pass
 
     def model(self, instruction):
-        if not self.model_command:
-            raise ValueError("Configure a personal model command before asking for model assistance")
+        with self.model_lock:
+            return complete(self.settings, instruction, self.legacy_model)
+
+    def legacy_model(self, instruction, command=None):
+        command = command or self.model_command
+        if not command:
+            raise PersonalChatError("CHAT_MODEL_NOT_CONFIGURED", "个人服务尚未配置聊天模型。请在启动个人服务的终端设置 AIW_PERSONAL_MODEL_COMMAND 后重启服务；只启动 GUI 不会配置模型。")
         if len(instruction) > 60_000:
-            raise ValueError("Private model context is too large")
+            raise PersonalChatError("CHAT_CONTEXT_TOO_LARGE", "本次对话上下文过长，请缩短工作说明或新建一项工作后继续。")
         environment = {key: value for key, value in os.environ.items() if not key.startswith("AIW_PERSONAL_")}
         if self.cancelled.is_set():
-            raise ValueError("Personal runtime is stopping")
+            raise PersonalChatError("CHAT_STOPPING", "个人服务正在停止，暂时无法对话。请重新连接运行中的个人服务。")
         with tempfile.TemporaryFile() as output:
-            self.process = subprocess.Popen(self.model_command, stdin=subprocess.PIPE, stdout=output,
-                stderr=subprocess.DEVNULL, env=environment, shell=False,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            try:
+                self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=output,
+                    stderr=subprocess.DEVNULL, env=environment, shell=False,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            except OSError:
+                raise PersonalChatError("CHAT_MODEL_START_FAILED", "个人模型程序无法启动。请检查 AIW_PERSONAL_MODEL_COMMAND 中的程序路径和执行权限。") from None
             try:
                 self.process.communicate(instruction.encode("utf-8"), timeout=120)
                 if self.process.returncode != 0 or output.tell() > 64_000 or self.cancelled.is_set():
-                    raise ValueError("Personal model did not return a bounded result")
+                    raise PersonalChatError("CHAT_MODEL_FAILED", "个人模型程序失败、已被停止或输出过大。请检查模型程序自身的登录、配置及输出限制。")
                 output.seek(0)
                 reply = output.read(64_001).decode("utf-8")
                 if not reply.strip() or len(reply) > 16_000:
-                    raise ValueError("Personal model did not return a bounded result")
+                    raise PersonalChatError("CHAT_MODEL_INVALID_REPLY", "个人模型返回空回复或回复超过 16000 字符，请检查模型程序的标准输出。")
                 return reply.strip()
             except subprocess.TimeoutExpired:
                 self.process.kill()
                 self.process.wait()
-                raise ValueError("Personal model timed out") from None
+                raise PersonalChatError("CHAT_MODEL_TIMEOUT", "个人模型等待超过 120 秒，程序已停止，本次没有保存回复。请检查模型服务。") from None
+            except UnicodeError:
+                raise PersonalChatError("CHAT_MODEL_INVALID_REPLY", "个人模型输出不是有效的 UTF-8 文本，请检查模型程序的输出编码。") from None
             finally:
                 self.process = None
 
-    def create_work(self, title, body, plan_id=None):
+    def create_work(self, title, body, plan_id=None, output_path=None):
         if not isinstance(title, str) or not title.strip() or len(title) > 200 or not isinstance(body, str) or len(body) > 16_000:
             raise ValueError("Provide a bounded title and private work description")
         identity = str(uuid.uuid4())
-        return self.store.put("work", identity, {"title": title, "body": body, "planId": plan_id, "state": "DRAFT"}, 0)
+        if output_path is not None and (not isinstance(output_path, str) or len(output_path) > 4096):
+            raise ValueError("Output path must be a bounded string")
+        return self.store.put("work", identity, {"title": title, "body": body, "planId": plan_id, "outputPath": output_path, "state": "DRAFT"}, 0)
 
     def report_work(self, work, state, code, message, **extra):
         if work.get("state") == state and work.get("report", {}).get("code") == code and not extra:
@@ -85,22 +112,29 @@ class Runtime:
     def report_background_error(self):
         self.enabled = False
         for work in self.store.list("work"):
-            if work.get("state") in {"SCHEDULED", "START_PENDING", "ACTIVE"}:
+            if work.get("assistantMode") != "daily" and work.get("state") in {"SCHEDULED", "START_PENDING", "ACTIVE"}:
                 self.report_work(work, "NEEDS_HUMAN", "BACKGROUND_ERROR",
                     "后台处理发生异常，本地处理已暂停；执行结果尚未确认，请核对平台任务及原回执后重新启用。")
 
     def chat(self, work_id, text):
         work = self.store.get("work", work_id)
         if work is None or not isinstance(text, str) or not text.strip() or len(text) > 4000:
-            raise ValueError("Existing private work and a bounded message required")
-        history = [row for row in self.store.list("message") if row.get("workId") == work_id][-20:]
-        prompt = "Discuss this personal request. State facts, assumptions and gaps separately. Do not execute actions or claim platform authority.\n" + encode({"work": work, "history": history, "message": text})
-        reply = self.model(prompt)
-        return self.store.put("message", str(uuid.uuid4()), {"workId": work_id, "text": text, "reply": reply, "createdAt": int(time.time() * 1000)}, 0)
+            raise PersonalChatError("CHAT_INVALID_INPUT", "请选择仍然存在的工作，并输入 1–4000 字的消息；若工作已变化，请刷新后重新选择。")
+        try:
+            return self.daily.chat(work, text)
+        except ValueError as error:
+            raise PersonalChatError("CHAT_NOT_READY", str(error)) from None
 
     def enable(self, enabled):
         self.enabled = False
         if enabled:
+            if not getattr(self.platform, "session_started", False):
+                session = self.platform.request("/sessions", {"workerBoot": self.platform.boot})
+                if session.get("ownerId") != self.store.owner or session.get("workerId") != self.store.worker:
+                    raise ValueError("Configured private identity does not match the professional platform")
+                self.platform.session_started = True
+                return {"enabled": False, "workerBoot": self.platform.boot,
+                    "note": "专业平台会话已建立。请在平台确认当前进程后，再点击“连接已授权的专业平台”。本机日常工作可继续使用。"}
             # Invalid or disabled platform credentials cannot quietly become active locally.
             identity = self.platform.request("/identity")
             if identity.get("ownerId") != self.store.owner or identity.get("workerId") != self.store.worker:
@@ -116,32 +150,10 @@ class Runtime:
         now = int(time.time() * 1000)
         if due_ms < now or due_ms % 60_000 != 0:
             raise ValueError("Choose a current or future whole minute; missed times are never replayed")
-        if not work.get("planId"):
-            if not self.enabled:
-                return self.report_work(work, "NEEDS_HUMAN", "PERSONAL_DISABLED",
-                    "未执行：个人处理未启用，尚未创建平台 Plan。请先在平台及本地启用秘书，再重新安排。", dueMs=due_ms, timeZone=time_zone)
-            try:
-                result = self.personal_plans.ensure(work)
-            except (PlatformError, ValueError):
-                return self.report_work(work, "NEEDS_HUMAN", "PLAN_CREATION_BLOCKED",
-                    "未执行：平台 Plan 创建受阻。请检查平台连接、当前身份启用状态及工作内容大小，再重新安排。", dueMs=due_ms, timeZone=time_zone)
-            if result["state"] != "CREATED":
-                return self.report_work(work, "NEEDS_HUMAN", "PLAN_CREATION_UNKNOWN",
-                    "未执行：Plan 创建结果尚未确认。再次安排只查询原请求，不重复创建；请核对平台状态。", dueMs=due_ms, timeZone=time_zone)
-            return self.report_work(work, "NEEDS_CONFIRMATION", "PLAN_CREATED",
-                "已自动创建并关联平台 Plan 草稿，目前只有需求分析步骤，尚未执行。请在平台核对并补齐执行步骤、工具和输出位置，配置执行权限及预算、确认托管和读取范围，再重新安排。",
-                planId=result["receipt"]["planId"], dueMs=due_ms, timeZone=time_zone)
         try:
-            snapshot = self.platform.management(work["planId"])
-        except PlatformError:
-            return self.report_work(work, "NEEDS_HUMAN", "PLAN_ACCESS_BLOCKED",
-                "未执行：无法读取关联 Plan。请检查连接、秘书启用状态，以及该 Plan 的读取范围和托管配置，再重新安排。", dueMs=due_ms, timeZone=time_zone)
-        self.store.bind_platform(snapshot["platformInstanceId"])
-        if snapshot["state"] not in {"DRAFT", "CONFIRMED"}:
-            return self.report_work(work, "NEEDS_HUMAN", "PLAN_NOT_SCHEDULABLE",
-                "未执行：关联 Plan 已停止、撤回或不处于可安排状态，请在平台核对后重新安排。", dueMs=due_ms, timeZone=time_zone)
-        return self.report_work(work, "SCHEDULED", "SCHEDULED", "已记录安排，尚未执行；到点后申请平台处理，实际执行仍取决于授权及可用的专业 Worker。",
-            dueMs=due_ms, specDigest=snapshot["specDigest"], planVersion=snapshot["version"], planState=snapshot["state"], timeZone=time_zone)
+            return self.daily.schedule(work, due_ms, time_zone)
+        except ValueError as error:
+            raise PersonalChatError("WORK_NOT_READY", str(error)) from None
 
     def queue_action(self, grant_id, request=None, decision=None):
         if not self.enabled:
@@ -277,8 +289,12 @@ class Runtime:
                     self.report_work(work, state, "PLATFORM_" + receipt["state"], message)
 
     def tick(self):
+        self.professional.tick()
+        self.daily.tick()
         now = int(time.time() * 1000)
         for work in self.store.list("work"):
+            if work.get("assistantMode") in {"daily", "professional"}:
+                continue
             if work.get("state") == "SCHEDULED" and not work.get("planId") and now >= work["dueMs"]:
                 self.report_work(work, "NEEDS_CONFIRMATION", "NO_PLAN",
                     "未执行：这条旧安排没有关联平台 Plan。请重新安排，系统将自动创建 Plan 草稿；本次不会将提醒标记为任务完成。")
@@ -291,6 +307,8 @@ class Runtime:
         self.reconcile()
         now = int(time.time() * 1000)
         for work in self.store.list("work"):
+            if work.get("assistantMode") in {"daily", "professional"}:
+                continue
             if not work.get("planId"):
                 continue
             if work.get("state") == "SCHEDULED":

@@ -4,8 +4,8 @@
   <div class="brand" data-i18n-skip><div class="brand-mark" title="AI Worker" aria-label="AI Worker">AIW</div><span>Digital Employee</span></div>
   <a th:if="${canOperate}" th:classappend="${active == 'new-plan' ? 'active' : ''}" href="/ui/plans/new">New Plan</a>
   <a th:if="${canOperate}" th:classappend="${active == 'goals' ? 'active' : ''}" href="/ui/goals">Goals</a>
-  <a th:classappend="${active == 'authority' ? 'active' : ''}" href="/ui/authority">个人 Worker 授权</a>
-  <a th:if="${canOperate}" th:classappend="${active == 'configurations' ? 'active' : ''}" href="/ui/configurations">任务准备与工作方法</a>
+  <a th:classappend="${active == 'authority' ? 'active' : ''}" href="/ui/authority">秘书平台授权（高级）</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'configurations' ? 'active' : ''}" href="/ui/configurations">专业 Worker 任务配置（高级）</a>
   <a th:if="${canOperate or canApprove}" th:classappend="${active == 'questions' ? 'active' : ''}" href="/ui/questions">工作问题与人工控制</a>
   <a th:classappend="${active == 'plans' ? 'active' : ''}" href="/ui/plans">Plans</a>
   <a th:if="${canOperate}" th:classappend="${active == 'workspaces' ? 'active' : ''}" href="/ui/workspaces">Workspaces</a>

@@ -13,7 +13,8 @@ def source(path):
     if revision:
         return subprocess.run(["git", "show", revision + ":" + path], cwd=root, check=True, stdout=subprocess.PIPE).stdout
     return (root / path).read_bytes()
-for name in ("main.py", "desktop.py", "desktop_client.py", "desktop_win32.py"):
+names = ("main.py", "desktop.py", "desktop_client.py", "desktop_win32.py") if revision else tuple(path.name for path in (root / prefix).glob("*.py"))
+for name in names:
     compile(source(prefix + name).decode("utf-8-sig"), prefix + name, "exec")
 for name in ("ui/app.js", "ui/pairing.js"):
     javascript = source(prefix + name)
@@ -40,4 +41,10 @@ $parseTokens = $null
 $parseErrors = $null
 $null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $taskRoot 'workers/personal-secretary/start-desktop.ps1'), [ref]$parseTokens, [ref]$parseErrors)
 if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
+if (-not $Revision) {
+    $parseTokens = $null
+    $parseErrors = $null
+    $null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $taskRoot 'workers/personal-secretary/start.ps1'), [ref]$parseTokens, [ref]$parseErrors)
+    if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
+}
 Write-Output 'Desktop compile-only passed. No application imports, windows, services, tests, network, downloads or packages.'

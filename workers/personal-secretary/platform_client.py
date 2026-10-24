@@ -20,6 +20,18 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         raise PlatformError(code)
 
 
+class LocalPlatform:
+    """Daily tools do not need a platform identity or a professional Worker."""
+    base = ""
+    boot = "local"
+
+    def request(self, *_args, **_kwargs):
+        raise PlatformError("PLATFORM_NOT_CONNECTED")
+
+    def management(self, *_args):
+        raise PlatformError("PLATFORM_NOT_CONNECTED")
+
+
 class PlatformClient:
     def __init__(self, base_url, worker, credential, allow_loopback_http=False):
         parsed = urllib.parse.urlsplit(base_url)
@@ -32,6 +44,7 @@ class PlatformClient:
         self.base = base_url.rstrip("/") + "/api/r1/authority"
         self.worker, self._credential = worker, credential
         self.boot = str(uuid.uuid4())
+        self.session_started = False
         self.transport = urllib.request.build_opener(NoRedirect())
 
     def request(self, path, body=None):
@@ -39,7 +52,8 @@ class PlatformClient:
         goal_receipt = operation.startswith("/goal-proposals/") and operation == "/goal-proposals/" + str(uuid.UUID(operation.removeprefix("/goal-proposals/")))
         plan_receipt = operation.startswith("/personal-plans/") and operation == "/personal-plans/" + str(uuid.UUID(operation.removeprefix("/personal-plans/")))
         permission_receipt = operation.startswith("/permission-actions/") and operation != "/permission-actions/prepare" and operation == "/permission-actions/" + str(uuid.UUID(operation.removeprefix("/permission-actions/")))
-        if operation not in {"/sessions", "/identity", "/grants", "/action-permissions", "/permission-questions", "/permission-actions/prepare", "/state", "/management-state", "/actions", "/coordination", "/restrictions", "/questions", "/question-replies", "/goal-proposals", "/personal-plans"} and not operation.startswith("/receipts/") and not permission_receipt and not goal_receipt and not plan_receipt:
+        professional_receipt = operation.startswith("/professional-tasks/") and operation != "/professional-tasks/options" and operation == "/professional-tasks/" + str(uuid.UUID(operation.removeprefix("/professional-tasks/")))
+        if operation not in {"/professional-tasks", "/professional-tasks/options", "/sessions", "/identity", "/grants", "/action-permissions", "/permission-questions", "/permission-actions/prepare", "/state", "/management-state", "/actions", "/coordination", "/restrictions", "/questions", "/question-replies", "/goal-proposals", "/personal-plans"} and not operation.startswith("/receipts/") and not permission_receipt and not goal_receipt and not plan_receipt and not professional_receipt:
             raise ValueError("Unknown platform operation")
         payload = None if body is None else encode(body).encode()
         if payload is not None and len(payload) > 32768:

@@ -24,8 +24,8 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
     }
     private boolean personalMachine(String method,String path) {
-        return method.equals("GET") && (Set.of("/identity","/state","/target-state","/grants","/management-state","/questions","/permission-questions","/action-permissions").contains(path) || path.matches("/permission-actions/[0-9a-f-]{36}") || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))
-                || method.equals("POST") && Set.of("/sessions","/actions","/restrictions","/coordination","/question-replies","/goal-proposals","/personal-plans","/permission-actions/prepare").contains(path);
+        return method.equals("GET") && (Set.of("/professional-tasks/options","/identity","/state","/target-state","/grants","/management-state","/questions","/permission-questions","/action-permissions").contains(path) || path.matches("/professional-tasks/[0-9a-f-]{36}") || path.matches("/permission-actions/[0-9a-f-]{36}") || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))
+                || method.equals("POST") && Set.of("/professional-tasks","/sessions","/actions","/restrictions","/coordination","/question-replies","/goal-proposals","/personal-plans","/permission-actions/prepare").contains(path);
     }
     private boolean humanRoute(String method,String path) {
         return method.equals("POST") && (Set.of("/owners/bind","/workers","/workers/new","/grants","/managed-plans","/execution-policies","/execution-budgets/increment","/execution-effects/reconcile","/execution-meters/reconcile").contains(path)

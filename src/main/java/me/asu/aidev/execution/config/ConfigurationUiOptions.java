@@ -29,7 +29,10 @@ public class ConfigurationUiOptions {
     public record DraftChoice(Intent intent) {}
 
     public Map<String,Object> snapshot() {
-        String owner=configs.currentOwner();
+        return snapshot(configs.currentOwner());
+    }
+    /** Owner is supplied only by an authenticated platform service. */
+    public Map<String,Object> snapshot(String owner) {
         String actor=repo.actor(owner);
         Map<String,WorkflowPlan> ownedPlans=new HashMap<>();
         plans.list().stream().filter(p->actor.equals(p.createdBy())).forEach(p->ownedPlans.put(p.id(),p));

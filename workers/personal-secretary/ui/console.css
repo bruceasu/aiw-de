@@ -236,3 +236,5 @@ td .raw-details { margin-top: 0; }
 #desktop-pairing-status { padding: 12px 16px; border: 1px solid var(--line); border-radius: 7px; color: var(--ok); }
 #desktop-pairing-status[data-tone="error"] { color: var(--bad); }
 #desktop-pairing-status[data-tone="warn"] { color: var(--warn); }
+[data-advanced][hidden] { display: none !important; }
+.record-actions { flex-wrap: wrap; align-items: center; }

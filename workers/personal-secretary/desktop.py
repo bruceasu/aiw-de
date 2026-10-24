@@ -92,7 +92,10 @@ def main():
             self.menu.add_command(label="目标提案", command=lambda: self.show_workbench(2))
             self.menu.add_separator()
             self.menu.add_command(label="刷新状态", command=self.refresh)
-            self.menu.add_command(label="暂停动作申请", command=lambda: self.operate("enable", {"enabled": False}, "暂停动作申请"))
+            self.menu.add_command(label="暂停秘书", command=lambda: self.operate("assistant/control", {"paused": True}, "暂停秘书"))
+            self.menu.add_command(label="继续工作", command=lambda: self.operate("assistant/control", {"paused": False}, "继续工作"))
+            self.menu.add_command(label="设置模型", command=self.show_settings)
+            self.menu.add_command(label="待你确认", command=self.show_confirmations)
             self.menu.add_command(label="打开 Web", command=lambda: self.open_web())
             self.menu.add_command(label="连接与设置", command=self.show_connection)
             self.menu.add_checkbutton(label="人物置顶", variable=self.topmost, command=lambda: self.root.attributes("-topmost", self.topmost.get()))
@@ -102,7 +105,8 @@ def main():
             self.menu.add_command(label="退出桌面界面（服务继续运行）", command=self.close)
             self.root.bind_all("<MouseWheel>", self.scroll_page, add="+")
             self.root.after(100, self.drain)
-            self.root.after(200, self.show_connection)
+            self.root.after(200, self.start_connection)
+            self.root.after(3000, self.poll_state)
 
         def setup_style(self):
             self.root.option_add("*Font", ("Microsoft YaHei UI", 10))
@@ -211,7 +215,7 @@ def main():
             return ids[index] if 0 <= index < len(ids) else ""
 
         def update_choices(self):
-            work = sorted(self.snapshot.get("work", []), key=lambda row: row.get("title", ""))
+            work = sorted((row for row in self.snapshot.get("work", []) if row.get("state") != "TRASHED"), key=lambda row: row.get("title", ""))
             counts = Counter(row.get("title", "未命名工作") for row in work)
             seen = Counter()
             labels = []
@@ -233,7 +237,9 @@ def main():
         def update_state(self, state):
             self.snapshot = state
             self.update_choices()
-            runtime_label = "状态待读取" if "enabled" not in state else ("动作申请已启用" if state["enabled"] else "动作申请已暂停")
+            runtime_label = "先连接模型" if state.get("modelConfigured") is False else ("秘书可用" if state.get("enabled") else "秘书已暂停")
+            waiting = sum(1 for row in state.get("decisions", []) if row.get("kind") == "DAILY_CONFIRMATION" and row.get("state") == "WAITING")
+            if waiting: runtime_label += f" · {waiting} 项待你确认"
             self.canvas.itemconfigure(self.pet_label, text=runtime_label + " · 点击对话")
             if self.chat_window:
                 self.render_chat()
@@ -260,7 +266,7 @@ def main():
                 except PersonalError as error:
                     self.events.put(("result", complete, None, error))
                 except Exception:
-                    self.events.put(("result", complete, None, PersonalError("操作结果未确认。请刷新状态并核对原请求回执。")))
+                    self.events.put(("result", complete, None, PersonalError("这次界面请求失败。请重新连接个人服务；已安排工作可在工作列表中查看进度。")))
             threading.Thread(target=work, daemon=True).start()
 
         def drain(self):
@@ -292,10 +298,22 @@ def main():
                         try:
                             complete(result)
                         except Exception:
-                            self.status.set("结果已返回，但界面更新失败。请刷新状态并核对原回执。")
+                            self.status.set("服务已返回，但界面没有完成更新。请点击“刷新状态”；不要重复提交刚才的操作。")
             except queue.Empty:
                 pass
             self.root.after(100, self.drain)
+
+        def poll_state(self):
+            if self.closing: return
+            if self.client and self.client.csrf and not self.busy:
+                previous = self.status.get()
+                pending = {row["id"] for row in self.snapshot.get("messages", []) if row.get("state") == "PENDING"}
+                def complete(state):
+                    finished = any(row["id"] in pending and row.get("state") != "PENDING" for row in state.get("messages", []))
+                    self.update_state(state)
+                    self.status.set("秘书已有回复，请查看对话。" if finished else previous)
+                self.run("读取最新进度", self.client.state, complete)
+            self.root.after(3000, self.poll_state)
 
         def require_session(self):
             if not self.client:
@@ -316,7 +334,7 @@ def main():
                     self.update_state(state)
                 if callback:
                     callback(result)
-                self.status.set(warning or ("个人模型回复已保存。" if route == "chat" else label + "已返回结果，状态已更新。"))
+                self.status.set(warning or ("已收到，秘书正在处理，回复会自动显示。" if route == "chat" else result.get("note") or result.get("report", {}).get("message") or label + "已完成。"))
                 if warning:
                     self.canvas.itemconfigure(self.pet_label, text="状态读取失败 · 请刷新")
             self.run(label, lambda: self.client.operate(route, data), complete)
@@ -334,9 +352,9 @@ def main():
                 body = ttk.Frame(self.connection, padding=28)
                 body.pack(fill="both", expand=True)
                 ttk.Label(body, text="连接你的秘书", style="Title.TLabel").pack(anchor="w")
-                ttk.Label(body, text="在 Web 的“状态与备份”生成新配对码；尚未使用的启动配对码也可使用。", wraplength=580, style="Muted.TLabel").pack(anchor="w", pady=(8, 12))
+                ttk.Label(body, text="本机默认自动连接，并在需要时启动后台服务。旧版本服务或另一账号的服务，才需要手动配对。", wraplength=580, style="Muted.TLabel").pack(anchor="w", pady=(8, 12))
                 self.service = self.field(body, "本机个人服务地址", origin)
-                self.code = self.field(body, "一次性配对码（不填写平台凭证）", secret=True)
+                self.code = self.field(body, "配对码（自动连接时留空）", secret=True)
                 bar = ttk.Frame(body); bar.pack(fill="x")
                 self.action(bar, "配对并连接", self.connect, True)
                 self.action(bar, "刷新已有会话", self.refresh)
@@ -353,12 +371,14 @@ def main():
                 self.connection.protocol("WM_DELETE_WINDOW", lambda: (self.code.set(""), self.connection.withdraw()))
             self.activate(self.connection)
 
+        def start_connection(self):
+            self.show_connection()
+            self.connect()
+
         def connect(self):
             try:
                 candidate = PersonalClient(self.service.get())
                 code = self.code.get()
-                if not code.strip():
-                    raise PersonalError("请填写个人服务的一次性配对码。")
             except PersonalError as error:
                 self.status.set(str(error)); return
             def complete(outcome):
@@ -378,7 +398,8 @@ def main():
                 if state is not None:
                     self.connection.withdraw()
                     self.show_chat()
-            self.run("连接个人服务", lambda: candidate.login(code), complete)
+                    if state.get("modelConfigured") is False: self.show_settings()
+            self.run("连接个人服务", lambda: candidate.login(code) if code.strip() else candidate.auto_connect(), complete)
 
         def create_pairing(self):
             def complete(result):
@@ -409,6 +430,9 @@ def main():
                 self.action(header, "新建工作", lambda: self.show_workbench(0))
                 self.action(header, "日常对话", self.start_conversation)
                 self.chat_work = self.work_select(body, "围绕哪项工作讨论？", self.render_chat)
+                work_actions = ttk.Frame(body); work_actions.pack(fill="x")
+                self.action(work_actions, "移除所选工作", lambda: self.operate_selected_work("work-trash", "移除工作", self.chat_work))
+                self.action(work_actions, "恢复已移除的工作", self.show_trash)
                 self.chat_history = self.text(body, 15, True)
                 self.chat_history.tag_configure("speaker", foreground=ACCENT, spacing1=14, spacing3=6)
                 self.chat_history.tag_configure("body", spacing3=12)
@@ -430,9 +454,9 @@ def main():
             self.chat_history.configure(state="normal")
             self.chat_history.delete("1.0", "end")
             if not work_id:
-                self.chat_history.insert("end", "选择一项工作，或点击“日常对话”直接开始。工作安排可通过“新建工作”填写。")
+                self.chat_history.insert("end", "直接输入需要帮助的事，秘书会自动开始日常对话。也可以选择已有工作继续讨论。")
             elif not messages:
-                self.chat_history.insert("end", "写下问题或想法，发送给你配置的个人模型。")
+                self.chat_history.insert("end", "请打开“设置模型”完成首次连接，保存后就能聊天。" if self.snapshot.get("modelConfigured") is False else "告诉秘书你需要什么帮助；日常范围内会直接处理。")
             for row in messages:
                 stamp = datetime.fromtimestamp(row["createdAt"] / 1000).strftime("%m-%d %H:%M") if row.get("createdAt") else ""
                 for label, key in [("你", "text"), ("个人模型", "reply")]:
@@ -450,18 +474,23 @@ def main():
                 if record.get("id") in ids:
                     self.chat_work.current(ids.index(record["id"]))
                     self.render_chat()
-            existing = next((row for row in self.snapshot.get("work", []) if row.get("title") == "日常对话" and row.get("state") != "CANCELLED"), None)
+            existing = next((row for row in self.snapshot.get("work", []) if row.get("title") == "日常对话" and row.get("state") not in {"CANCELLED", "TRASHED"}), None)
             if existing:
                 choose(existing)
             else:
                 self.operate("work", {"title": "日常对话", "body": "", "planId": ""}, "创建私人日常对话", choose)
 
         def send_chat(self):
+            if self.snapshot.get("modelConfigured") is False:
+                self.status.set("请先在“设置模型”连接模型，保存后即可直接聊天。"); self.show_settings(); return
             work_id, text = self.selected_work(self.chat_work), self.chat_input.get("1.0", "end-1c")
-            if not work_id or not text.strip() or len(text) > 4000:
-                self.status.set("请选择工作并输入 1–4000 字的消息。"); return
-            def complete(_result):
-                if self.selected_work(self.chat_work) == work_id and self.chat_input.get("1.0", "end-1c") == text:
+            if not text.strip() or len(text) > 4000:
+                self.status.set("请输入 1–4000 字的消息。"); return
+            def complete(result):
+                if not work_id and result.get("workId") in self.choice_ids.get(self.chat_work, []):
+                    self.chat_work.current(self.choice_ids[self.chat_work].index(result["workId"]))
+                    self.render_chat()
+                if (not work_id or self.selected_work(self.chat_work) == work_id) and self.chat_input.get("1.0", "end-1c") == text:
                     self.set_text(self.chat_input, "")
             self.operate("chat", {"workId": work_id, "text": text}, "等待个人模型回复", complete)
 
@@ -485,6 +514,7 @@ def main():
         def build_work(self, body):
             group = ttk.LabelFrame(body, text="新建私人工作"); group.pack(fill="x", pady=(0, 20))
             self.work_title = self.field(group, "工作标题")
+            self.work_output = self.field(group, "结果文件位置 · 可选，例如 C:/temp/weather.md")
             ttk.Label(group, text="私人说明", style="Muted.TLabel").pack(anchor="w")
             self.work_body = self.text(group, 4)
             self.work_plan = self.field(group, "关联已确认托管的 Plan（可选）")
@@ -492,6 +522,10 @@ def main():
             self.action(bar, "保存私人工作", self.save_work, True)
             group = ttk.LabelFrame(body, text="确认安排时间"); group.pack(fill="x")
             self.schedule_work = self.work_select(group, "选择工作", lambda: self.update_schedule(True))
+            quick = ttk.Frame(group); quick.pack(fill="x", pady=8)
+            self.action(quick, "现在处理", lambda: self.operate_selected_work("run-work", "开始处理"))
+            self.action(quick, "移除工作", lambda: self.operate_selected_work("work-trash", "移除工作"))
+            self.action(quick, "恢复已移除的工作", self.show_trash)
             self.schedule_revision = self.field(group, "当前版本（自动带入）", readonly=True)
             ttk.Label(group, text="本次确认的私人工作内容", style="Muted.TLabel").pack(anchor="w")
             self.schedule_summary = self.text(group, 6, True)
@@ -504,10 +538,34 @@ def main():
             self.action(bar, "重新载入所选工作", lambda: self.update_schedule(True))
             self.action(bar, "查看 Web 工作列表", lambda: self.open_web("work"))
 
+        def operate_selected_work(self, route, label, control=None):
+            identity = self.selected_work(self.schedule_work if control is None else control)
+            work = next((row for row in self.snapshot.get("work", []) if row["id"] == identity), None)
+            if not work:
+                self.status.set("请先选择一项工作。"); return
+            self.operate(route, {"id": identity, "revision": work["revision"]}, label)
+
+        def show_trash(self):
+            if not self.require_session(): return
+            if not getattr(self, "trash_window", None):
+                self.trash_window = self.window("已移除的工作", "640x500")
+                self.trash_body = ttk.Frame(self.trash_window, padding=24); self.trash_body.pack(fill="both", expand=True)
+            for child in self.trash_body.winfo_children(): child.destroy()
+            rows = [row for row in self.snapshot.get("work", []) if row.get("state") == "TRASHED"]
+            if not rows: ttk.Label(self.trash_body, text="没有已移除的工作。").pack(anchor="w")
+            for row in rows:
+                bar = ttk.Frame(self.trash_body); bar.pack(fill="x", pady=8)
+                ttk.Label(bar, text=row["title"]).pack(side="left")
+                def restore(record=row):
+                    self.operate("work-restore", {"id": record["id"], "revision": record["revision"]}, "恢复工作", lambda _result: self.show_trash())
+                ttk.Button(bar, text="恢复", command=restore).pack(side="right")
+            self.activate(self.trash_window)
+
         def save_work(self):
             title = self.work_title.get()
             body = self.work_body.get("1.0", "end-1c")
             plan = self.work_plan.get().strip()
+            output = self.work_output.get()
             if not title.strip() or len(title) > 200 or len(body) > 16000:
                 self.status.set("请填写 1–200 字工作标题；私人说明最多 16000 字。"); return
             def complete(result):
@@ -519,7 +577,8 @@ def main():
                 if self.chat_window: self.render_chat()
                 if self.work_title.get() == title and self.work_body.get("1.0", "end-1c") == body and self.work_plan.get().strip() == plan:
                     self.work_title.set(""); self.work_plan.set(""); self.set_text(self.work_body, "")
-            self.operate("work", {"title": title, "body": body, "planId": plan}, "保存私人工作", complete)
+                    if self.work_output.get() == output: self.work_output.set("")
+            self.operate("work", {"title": title, "body": body, "planId": plan, "outputPath": output}, "保存私人工作", complete)
 
         def update_schedule(self, reload=False):
             work_id = self.selected_work(self.schedule_work)
@@ -717,13 +776,67 @@ def main():
             ttk.Label(body, text="界面共用私人记录；以下为最近读取的快照。关闭桌面界面不会停止后台服务。", wraplength=760, style="Muted.TLabel").pack(anchor="w", pady=(0, 12))
             bar = ttk.Frame(body); bar.pack(fill="x")
             self.action(bar, "刷新状态", self.refresh)
-            self.action(bar, "启用本地动作申请", lambda: self.operate("enable", {"enabled": True}, "启用本地动作申请"))
-            self.action(bar, "暂停动作申请", lambda: self.operate("enable", {"enabled": False}, "暂停动作申请"))
+            self.action(bar, "继续工作", lambda: self.operate("assistant/control", {"paused": False}, "继续工作"))
+            self.action(bar, "暂停秘书", lambda: self.operate("assistant/control", {"paused": True}, "暂停秘书"))
+            self.action(bar, "设置模型", self.show_settings)
+            self.action(bar, "待你确认", self.show_confirmations)
             self.state_text = self.text(body, 18, True)
             bar = ttk.Frame(body); bar.pack(fill="x")
             self.action(bar, "Web 中查看回执与备份", lambda: self.open_web("state"))
             self.action(bar, "Web 中处理平台问题", lambda: self.open_web("platform"))
             self.action(bar, "连接与设置", self.show_connection)
+
+        def show_settings(self):
+            if not self.require_session(): return
+            if not getattr(self, "settings_window", None):
+                self.settings_window = self.window("设置模型", "680x660")
+                body = ttk.Frame(self.settings_window, padding=24); body.pack(fill="both", expand=True)
+                ttk.Label(body, text="连接一次，之后直接使用", style="Title.TLabel").pack(anchor="w")
+                ttk.Label(body, text="使用兼容 Chat Completions 的模型服务。日常查询、整理和保存到指定位置无需逐次确认。", wraplength=610, style="Muted.TLabel").pack(anchor="w", pady=12)
+                value = self.snapshot.get("assistant", {})
+                self.settings_endpoint = self.field(body, "模型服务地址，例如 https://你的服务/v1", value.get("endpoint", ""))
+                self.settings_model = self.field(body, "模型名称", value.get("model", ""))
+                self.settings_key = self.field(body, "模型密钥 · 已保存时留空保持原值", secret=True)
+                self.settings_roots = self.field(body, "常用资料目录 · 可选，多个目录用分号分隔", ";".join(value.get("roots", [])))
+                bar = ttk.Frame(body); bar.pack(fill="x", pady=16)
+                self.action(bar, "保存并开始使用", self.save_settings, True)
+                self.action(bar, "检查连接", lambda: self.operate("settings/check", {}, "检查模型连接"))
+                self.action(bar, "高级设置", lambda: self.open_web("setup"))
+                ttk.Label(body, textvariable=self.status, wraplength=610, style="Muted.TLabel").pack(anchor="w", pady=12)
+            self.activate(self.settings_window)
+
+        def save_settings(self):
+            data = {"provider": "chat", "endpoint": self.settings_endpoint.get(), "model": self.settings_model.get(),
+                "key": self.settings_key.get(), "roots": [value.strip() for value in self.settings_roots.get().split(";") if value.strip()]}
+            def saved(_result):
+                self.settings_key.set("")
+                self.settings_window.withdraw()
+            self.operate("settings", data, "保存模型设置", saved)
+
+        def show_confirmations(self):
+            if not self.require_session(): return
+            if not getattr(self, "confirmation_window", None):
+                self.confirmation_window = self.window("待你确认", "760x740")
+                self.confirmation_body = ttk.Frame(self.confirmation_window, padding=24)
+                self.confirmation_body.pack(fill="both", expand=True)
+            body = self.confirmation_body
+            for child in body.winfo_children(): child.destroy()
+            ttk.Label(body, text="仅确认这一次具体操作", style="Title.TLabel").pack(anchor="w", pady=(0, 12))
+            pending = [row for row in self.snapshot.get("decisions", []) if row.get("kind") == "DAILY_CONFIRMATION" and row.get("state") == "WAITING"]
+            if not pending: ttk.Label(body, text="没有需要你确认的操作，日常工作会直接处理。").pack(anchor="w")
+            for row in pending:
+                group = ttk.LabelFrame(body, text=row["message"]); group.pack(fill="x", pady=8)
+                action = row["action"]
+                ttk.Label(group, text=action.get("path", ""), wraplength=680).pack(anchor="w", pady=8)
+                if isinstance(action.get("text"), str):
+                    preview = ScrolledText(group, height=5, wrap="word")
+                    preview.pack(fill="x"); preview.insert("1.0", action["text"]); preview.configure(state="disabled")
+                bar = ttk.Frame(group); bar.pack(fill="x", pady=8)
+                def choose(accepted, record=row):
+                    self.operate("assistant/confirm", {"id": record["id"], "revision": record["revision"], "accepted": accepted}, "处理确认", lambda _result: self.show_confirmations())
+                ttk.Button(bar, text="允许这一次", command=lambda handler=choose: handler(True)).pack(side="left", padx=5)
+                ttk.Button(bar, text="拒绝", command=lambda handler=choose: handler(False)).pack(side="left", padx=5)
+            self.activate(self.confirmation_window)
 
         def open_web(self, section="", use_draft=False):
             try:

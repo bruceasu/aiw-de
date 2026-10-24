@@ -80,8 +80,11 @@ let csrf = "";
 let snapshot = null;
 const byId = id => document.getElementById(id);
 const formFor = route => document.querySelector(`form[data-route="${route}"]`);
-const rows = key => Array.isArray(snapshot?.[key]) ? snapshot[key] : [];
+const rows = key => Array.isArray(snapshot?.[key]) ? snapshot[key].filter(row => key !== "work" || row.state !== "TRASHED") : [];
+let settingsLoaded = false;
 const viewInfo = {
+  setup: ["设置", "首次连接模型，之后直接使用"],
+  confirmations: ["待你确认", "核对超范围或不可恢复的具体操作"],
   overview: ["工作总览", "查看你的工作、安排与待处理请求"],
   work: ["工作与安排", "记录私人工作，确认安排时间"],
   chat: ["私人对话", "围绕具体工作，与个人模型讨论"],
@@ -92,6 +95,7 @@ const viewInfo = {
 };
 const stateLabels = {
   DRAFT: ["草稿", "neutral"], SCHEDULED: ["已安排", "info"],
+  DAILY_RUNNING: ["正在处理", "info"], WAITING_CONFIRMATION: ["待你确认", "warn"], TRASHED: ["已移除", "neutral"],
   START_PENDING: ["启动待确认", "warn"], ACTIVE: ["跟进中", "info"], DONE: ["已完成", "ok"],
   NEEDS_CONFIRMATION: ["需重新确认", "warn"], NEEDS_HUMAN: ["待人工处理", "warn"],
   CONFIRMED: ["已确认", "ok"], PAUSED: ["已暂停", "warn"],
@@ -123,10 +127,13 @@ function errorMessage(error) {
   return error.message || "操作未确认，请刷新状态并核对原请求回执。";
 }
 function apiError(response, result, route = "") {
+  if (typeof result.message === "string" && result.code) return new Error(result.message.slice(0, 1000));
   if (route === "login" && [401, 403].includes(response.status)) return new Error("配对码无效、已使用或已过期。请核对本服务启动终端提供的配对码；失效时需重新启动个人服务。");
   if (response.status === 401) return new Error("个人会话已失效，请使用本服务启动终端提供的配对码登录。配对码失效时需重新启动个人服务。");
   if (response.status === 403) return new Error("当前个人会话或校验令牌无效，请先刷新状态；若会话已过期，需重新配对登录。");
-  if (response.status === 422) return new Error("操作未获确认。请检查所选记录、当前版本及平台授权，刷新状态并核对原请求回执。");
+  if (response.status === 422 && typeof result.code === "string" && result.code.startsWith("CHAT_") && typeof result.message === "string") return new Error(result.message.slice(0, 500));
+  if (response.status === 422 && route === "chat") return new Error("对话失败。请检查个人服务是否已配置 AIW_PERSONAL_MODEL_COMMAND，以及模型程序能否正常运行；更新并重启服务后可显示具体原因。");
+  if (response.status === 422) return new Error("这次操作没有完成，当前运行的服务可能仍是旧版本。请重启个人服务并刷新页面；新版本会说明具体原因和处理方法。");
   return new Error(result.error || `操作未确认（${response.status}），请刷新状态并核对原请求回执。`);
 }
 function showSession(authenticated) {
@@ -205,9 +212,12 @@ function workCard(work, compact = false) {
   meta.append(node("span", "", `版本 ${work.revision}`), node("span", "", dateLabel(work.dueMs)));
   const actions = node("div", "record-actions");
   actions.append(button("继续对话", () => selectWork(work.id, "chat")), button("安排时间", () => selectWork(work.id, "work")));
-  if (work.planId && snapshot.platformOrigin) {
+  if (!["DAILY_RUNNING", "CANCELLED"].includes(work.state)) actions.append(button("现在处理", () => assistantOperation("run-work", { id: work.id, revision: work.revision }, "已交给秘书处理，结果会自动更新。")));
+  actions.append(button("移除工作", () => assistantOperation("work-trash", { id: work.id, revision: work.revision }, "已移到设置中的“已删除工作”，可以恢复。")));
+  const planId = work.professionalPlanId || work.professionalDraftPlanId || work.planId;
+  if (planId && snapshot.platformOrigin) {
     const link = node("a", "text-button", "查看平台 Plan");
-    link.href = new URL("/ui/plans/" + encodeURIComponent(work.planId), snapshot.platformOrigin).href;
+    link.href = new URL("/ui/plans/" + encodeURIComponent(planId), snapshot.platformOrigin).href;
     link.target = "_blank"; link.rel = "noopener noreferrer";
     actions.append(link);
   }
@@ -229,7 +239,8 @@ function renderWorks() {
     for (const item of id === "overview-work" ? work.slice(0, 5) : work) target.append(workCard(item, id === "overview-work"));
   }
   document.querySelectorAll("[data-work-select]").forEach(select => {
-    selectOptions(select, work, item => item.title || "未命名工作", work.length ? "请选择工作" : "请先创建私人工作");
+    const chatting = select === formFor("chat").elements.workId;
+    selectOptions(select, work, item => item.title || "未命名工作", chatting ? "日常对话，无需先建工作" : work.length ? "请选择工作" : "请先创建工作");
     if (!select.value && work.length === 1) select.value = work[0].id;
   });
   updateSchedule();
@@ -240,8 +251,8 @@ function renderChat() {
   const workId = formFor("chat").elements.workId.value;
   const messages = rows("messages").filter(item => item.workId === workId).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   target.replaceChildren();
-  if (!workId) empty(target, "先选择一项工作", "每项工作都有独立的私人对话记录。");
-  else if (!messages.length) empty(target, "从一个问题开始", "写下问题或想法，发送给你配置的个人模型。");
+  if (!workId) empty(target, "直接开始对话", "输入需要帮助的事，无需先创建工作。");
+  else if (!messages.length) empty(target, "从一个问题开始", "写下问题或想法，秘书会在日常范围内直接处理。");
   for (const message of messages) {
     for (const [kind, label, text] of [["user", "你", message.text], ["assistant", "个人模型", message.reply]]) {
       if (text === undefined || text === null || text === "") continue;
@@ -302,7 +313,6 @@ function renderRecords() {
           feedback("资料正在保存，请等待完成后再删除。", "warn");
           return;
         }
-        if (!window.confirm(`删除草稿“${String(data.title || record.id)}”？历史版本仍保留在私人备份中。`)) return;
         remove.disabled = true;
         try {
           const { refreshed } = await post("delete-draft", { id: record.id, revision: record.revision });
@@ -367,11 +377,12 @@ function updateCancelRevision() {
   form.elements.revision.value = record?.revision ?? "";
 }
 function render() {
+  renderAssistant();
   for (const element of document.querySelectorAll("[data-count]")) element.textContent = rows(element.dataset.count).length;
   byId("worker-label").textContent = snapshot.workerId || "个人秘书";
   byId("worker-label").title = snapshot.workerId || "";
   const enabled = snapshot.enabled === true;
-  byId("runtime-state").textContent = enabled ? "本地动作申请已启用" : "本地动作申请已暂停";
+  byId("runtime-state").textContent = snapshot.modelConfigured === false ? "先连接模型" : enabled ? "秘书可用" : "秘书已暂停";
   byId("runtime-state").className = "pill " + (enabled ? "ok" : "neutral");
   byId("enable").hidden = enabled;
   byId("pause").hidden = !enabled;
@@ -403,6 +414,64 @@ async function post(route, data) {
   let refreshed = true;
   try { await refresh(); } catch (_) { refreshed = false; }
   return { result, refreshed };
+}
+
+async function assistantOperation(route, data, message) {
+  try {
+    const { result, refreshed } = await post(route, data);
+    feedback(refreshed ? result.note || result.report?.message || message : "操作已返回结果，请刷新列表查看最新状态。", refreshed ? "ok" : "warn");
+  } catch (error) { feedback(errorMessage(error), "error"); }
+}
+
+function renderAssistant() {
+  const settings = snapshot.assistant;
+  if (!settings) {
+    feedback("页面已更新，但运行中的个人服务仍是旧版本。请重启个人服务并刷新页面，新版本会显示具体错误原因。", "warn");
+    return;
+  }
+  if (!settingsLoaded) {
+    const form = formFor("settings");
+    form.elements.provider.value = settings.provider;
+    form.elements.endpoint.value = settings.endpoint;
+    form.elements.model.value = settings.model;
+    form.elements.roots.value = settings.roots.join("\n");
+    form.elements.key.placeholder = settings.hasKey ? "密钥已保存；留空保持原值" : "本机无认证模型可留空";
+    settingsLoaded = true;
+    if (!settings.configured) {
+      feedback("首次使用请打开“设置”连接模型。保存后可直接聊天、查询和安排工作。", "warn");
+      switchView("setup");
+    }
+  }
+  const target = byId("confirmation-list");
+  target.replaceChildren();
+  const pending = rows("decisions").filter(row => row.kind === "DAILY_CONFIRMATION" && row.state === "WAITING");
+  byId("tab-confirmations").textContent = pending.length ? `待你确认（${pending.length}）` : "待你确认";
+  if (!pending.length) empty(target, "没有需要确认的操作", "日常范围内，秘书会直接处理。");
+  for (const decision of pending) {
+    const item = node("article", "record-item");
+    item.append(node("h3", "", decision.message));
+    const action = decision.action;
+    const names = { read_file: "读取文件", write_file: "写入文件", delete_file: "不可恢复删除" };
+    item.append(node("p", "", (names[action.action] || action.action) + "：" + (action.path || "")));
+    if (typeof action.text === "string") {
+      const preview = node("details", "raw-details");
+      preview.append(node("summary", "", "查看将写入的完整内容"), node("pre", "", action.text));
+      item.append(preview);
+    }
+    const controls = node("div", "record-actions");
+    controls.append(button("允许这一次", () => assistantOperation("assistant/confirm", { id: decision.id, revision: decision.revision, accepted: true }, "已允许这一次操作。")),
+      button("拒绝", () => assistantOperation("assistant/confirm", { id: decision.id, revision: decision.revision, accepted: false }, "已拒绝。")));
+    item.append(controls); target.append(item);
+  }
+  const trash = byId("trashed-work");
+  trash.replaceChildren();
+  const deleted = (snapshot.work || []).filter(work => work.state === "TRASHED");
+  if (!deleted.length) empty(trash, "没有已移除的工作", "移除后的工作可在这里恢复。");
+  for (const work of deleted) {
+    const item = node("article", "record-item");
+    item.append(node("h3", "", work.title), button("恢复工作", () => assistantOperation("work-restore", { id: work.id, revision: work.revision }, "工作已恢复。")));
+    trash.append(item);
+  }
 }
 function invalidatePreview(route) {
   previewVersions[route] += 1;
@@ -489,13 +558,25 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
     if ("dueMs" in data) { data.dueMs = new Date(data.dueMs).getTime(); data.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone; }
     if (route === "policy") { data.confirmed = data.confirmed === "on"; if (data.deny.trim()) data.deny = parseInput(data.deny, "禁止范围"); else delete data.deny; }
     if (route === "record") data.data = parseInput(data.data, "私人内容");
+    if (route === "settings") {
+      data.roots = data.roots.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+      if (data.command.trim()) data.command = parseInput(data.command, "模型程序参数"); else delete data.command;
+    }
     const { result, refreshed } = await post(route, data);
+    if (route === "settings") {
+      settingsLoaded = false;
+      form.elements.key.value = "";
+      renderAssistant();
+    }
     const current = applyResult(route, result, version);
     updateSavedEditor(route, data, refreshed);
     if (route === "login") form.reset();
     if (route === "chat" && form.elements.text.value === data.text) form.elements.text.value = "";
+    if (route === "chat" && result.workId) { form.elements.workId.value = result.workId; renderChat(); }
     let message = route === "login" ? "个人服务已接受配对。" : (refreshed ? "操作已记录，状态已更新。" : "操作已返回结果。");
     if (route === "schedule" && result.report) message = result.report.message;
+    if (route === "chat") message = "已收到，秘书正在处理，回复会自动显示。";
+    if (route === "settings") message = "设置已保存，可以直接聊天或安排工作。";
     if (route === "question-preview" || route === "goal-preview") message = current ? "本地预览已生成，请核对精确内容后确认提交。" : "内容已变化，请重新生成本地预览。";
     if (route === "goal-submit" || route === "goal-receipt") message = "目标提案：" + (stateLabels[result.state]?.[0] || result.state || "待核对") + "。" + (result.note || "平台采纳前不会创建任务。");
     if (!refreshed) message += " 服务已返回结果，但状态读取失败。请先刷新状态、核对原回执，避免重复提交。";
@@ -511,11 +592,24 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
 for (const [id, enabled] of [["enable", true], ["pause", false]]) byId(id).addEventListener("click", async () => {
   byId("enable").disabled = true; byId("pause").disabled = true;
   try {
-    const { refreshed } = await post("enable", { enabled });
-    feedback(refreshed ? (enabled ? "本地动作申请已启用，平台仍按当前身份和授权校验每次申请。" : "本地动作申请已暂停。") : "服务已返回结果，但状态读取失败。请刷新状态后核对启用情况。", refreshed ? "ok" : "warn", byId("personal-app").hidden);
+    const { refreshed } = await post("assistant/control", { paused: !enabled });
+    feedback(refreshed ? (enabled ? "秘书已继续工作，安排会自动处理。" : "秘书已暂停，后续工具操作会停止；已完成操作保留。") : "状态读取失败，请刷新查看秘书状态。", refreshed ? "ok" : "warn", byId("personal-app").hidden);
   } catch (error) { feedback(errorMessage(error), "error"); }
   finally { byId("enable").disabled = false; byId("pause").disabled = false; }
 });
+byId("show-advanced").addEventListener("click", event => {
+  const show = event.currentTarget.textContent === "显示高级功能";
+  for (const element of document.querySelectorAll("[data-advanced]")) element.hidden = !show;
+  event.currentTarget.textContent = show ? "隐藏高级功能" : "显示高级功能";
+});
+byId("check-model").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  feedback("正在检查模型连接，请稍候……");
+  try { await assistantOperation("settings/check", {}, "模型连接正常。"); }
+  finally { button.disabled = false; }
+});
+byId("enable-platform").addEventListener("click", () => assistantOperation("enable", { enabled: true }, "已连接当前已授权的专业平台；日常助理设置不受影响。"));
 byId("refresh").addEventListener("click", async () => {
   byId("refresh").disabled = true;
   try { await refresh(); feedback("已读取最新私人状态。"); }
