@@ -1,7 +1,7 @@
 # FD-043: 吸收委派判断与可追溯交接及执行记录
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -68,7 +68,7 @@
 
 ## TODO
 
-1.2–1.6 的实现、指南、静态证据、离线生产编译和 Worker 双证据已完成；待独立实现审阅及按真实回执范围归档，不自签验收。
+实现与独立审阅已完成，r1 未发现阻断项；由宿主 PM 核对真实 verification-passed 回执、源码无漂移及范围证据提交后按授权归档。运行、测试和部署边界保持，不自称运行通过。
 
 ## Acceptance
 
@@ -82,7 +82,7 @@
 
 默认一次范围diff --check和只读目录/索引/hash/副本/路由/SQL Owner条件/字段/UNKNOWN/DOM引用与旧合同比较，随后C:/green/bin/setup-jdk25.ps1 + mvn -o '-Dmaven.test.skip=true' compile。无测试、模型、生产方法/脚本、SQL/DB/服务、HTTP/浏览器、网络/下载、打包/部署/重启。仅独立设计与实现审阅由fd-workflow明确授权，其他代理预算为零。静态和生产compile不能证明实际技能产出/数据库查询/前端运行。独立设计[r1](../reviews/FD-043-design-r1.md)及同名JSON为ready，特别保留校正值/UNKNOWN和冻结角色名边界。
 
-实现提交 `5fc0b35e67d0fc7ec6df1f1185e965657ce1cd4e`，34 个实现文件；[Worker r1](../reports/FD-043-implementation-r1.md)及同名 JSON 记录实际边界。初始静态命令在不支持的任务页面路径断言处失败，去除链接后一次范围修正复查通过；前序 catalogue/hash/副本/DOM/API/SQL 断言通过。离线生产编译 BUILD SUCCESS（301 源、2+147 资源，2026-10-24T16:04:35+09:00）；测试、真实 SQL/浏览器/模型及部署未运行。独立实现审阅待交接。
+实现提交 `5fc0b35e67d0fc7ec6df1f1185e965657ce1cd4e`，34 个实现文件；[Worker r1](../reports/FD-043-implementation-r1.md)及同名 JSON 记录实际边界。初始静态命令在不支持的任务页面路径断言处失败，去除链接后一次范围修正复查通过；前序 catalogue/hash/副本/DOM/API/SQL 断言通过。离线生产编译 BUILD SUCCESS（301 源、2+147 资源，2026-10-24T16:04:35+09:00）；测试、真实 SQL/浏览器/模型及部署未运行。独立实现[审阅 r1](../reviews/FD-043-implementation-r1.md)及同名 JSON 结论通过（Reviewer Session fd043-review-20261024-b8c91a70，来源 FD-043-000004-implementation-ready），34 文件基线/源码及运行证据边界已核对，未发现阻断项。保留真实数据库/浏览器/模型及部署未验证风险，后续由宿主 PM 读取真实回执归档。
 
 ## Sources
 

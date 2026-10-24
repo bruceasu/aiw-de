@@ -1,0 +1,71 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-043",
+  "source_event": "FD-043-000004-implementation-ready",
+  "human_report": "FD-043-implementation-r1.md",
+  "data": {
+    "reviewer_session": "fd043-review-20261024-b8c91a70",
+    "worker_session": "delegation-methods-20261024-8a2bb0a5",
+    "comparison_base": "4fab62b77272bf558d48f0eb4eecc4a4d10331dc",
+    "reviewed_commit": "5fc0b35e67d0fc7ec6df1f1185e965657ce1cd4e",
+    "worker_evidence_commit": "81415c7",
+    "reviewed_fd_revision": 4,
+    "reviewed_fd_sha256_before_report": "88bd6a77e07c9fb9f4fd7b4b3ad4de1ac8044710dbbe839cf1e1e6d9f093a7f7",
+    "scope_file_count": 34,
+    "recommendation": "pass",
+    "findings": [],
+    "acceptance_coverage": {
+      "1": "composable Skill, bounded proposal, no automatic dispatch/model/authority change",
+      "2": "exact evidence index with decisions and contrary evidence in existing descriptions",
+      "3": "recent100 metered attempts, actual model/usage/outcome/delivery, explicit missing values",
+      "4": "server Owner filter plus binding Owner, human session/CSRF/operator, no writes/secrets/budget gate",
+      "5": "existing assets/default methods and stored frozen task bytes preserved; source docs and evidence aligned"
+    },
+    "static_trace": [
+      "SQL V12/V13 and Attempt JDBC fields",
+      "currentOwner and exact get/ref/role.json verification",
+      "SkillFiles startup/package freeze/payload/inherit",
+      "strict Mapper and original kind behavior",
+      "committed AuthorityHttpConfiguration route/session/CSRF/operator",
+      "safe DOM, Owner/protocol/epoch and cached-page invalidation",
+      "existing recorded hash/copy/compile results, not rerun"
+    ],
+    "commands_run": [
+      "aiw fd resume FD-043",
+      "aiw fd claim FD-043 FD-043-000004-implementation-ready --session fd043-review-20261024-b8c91a70",
+      "git diff --stat 4fab62b 5fc0b35",
+      "scoped git diff 4fab62b 5fc0b35 -- paths",
+      "git show 5fc0b35:src/main/java/me/asu/aidev/authority/AuthorityHttpConfiguration.java",
+      "bounded rg/Get-Content/standard-library text reads",
+      "git status --short",
+      "write review pair and FD Verification/TODO",
+      "one report/FD-only static validation before event"
+    ],
+    "discovery_limit_note": "truncated output and guessed path recovery required bounded exact-path follow-up; no product/runtime or topic expansion",
+    "worker_compile_reviewed": {
+      "command": "mvn -o '-Dmaven.test.skip=true' compile",
+      "revision": "5fc0b35e67d0fc7ec6df1f1185e965657ce1cd4e",
+      "result": "passed per actual Worker evidence",
+      "production_sources": 301,
+      "resources": "2+147",
+      "reviewer_rerun": false
+    },
+    "checks_skipped": [
+      "tests/test compilation/compile rerun",
+      "product code/SQL/database/services",
+      "HTTP/browser/Thymeleaf/session-switch runtime",
+      "models/Workers/Skill behavioral evaluation",
+      "network/downloads/subagents",
+      "package/install/deploy/restart/rollback"
+    ],
+    "risks": [
+      "static and Worker compile do not establish actual SQL/UI/model behavior",
+      "concurrent snapshot and real owner-switch behavior remain unverified",
+      "recent100 is not global accounting and missing data is not zero",
+      "shared dirty Java compilation is not approval of unrelated edits",
+      "existing service not updated; documented rollback limitation retained"
+    ],
+    "next_step": "Host PM checks actual passed receipt and unchanged source, commits only this evidence/FD, then authorized archive"
+  }
+}
