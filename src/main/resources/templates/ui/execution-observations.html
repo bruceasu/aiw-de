@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="csrf-token" th:content="${csrfToken}"><meta name="configuration-owner" th:content="${ownerId}">
+<title>执行记录 · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/configurations.css"><link rel="stylesheet" href="/ui/execution-observations.css">
+<script src="/ui/execution-observations.js?v=observations-1" defer></script></head>
+<body><div class="app configuration-page observations-page"><nav th:replace="~{ui/fragments :: nav('configurations')}"></nav><main class="main">
+<header th:replace="~{ui/fragments :: topbar('执行记录','查看实际消耗、上报结果与交付依据。')}"></header>
+<div class="content configuration-content">
+<section class="configuration-intro"><div><span class="configuration-eyebrow">工作方法 · 执行 · 证据</span><h2>用实际记录了解执行情况</h2><p>当前账号最近 100 个有计量记录的尝试，按尝试创建时间排序。这里只读取已有数据，不增加预算限制。</p></div><div class="observations-actions"><a class="btn ghost" href="/ui/configurations?view=roles">组合角色</a><a class="btn ghost" href="/ui/configurations">准备任务</a></div></section>
+<p th:if="${ownerId.isEmpty()}" class="callout warn-callout">请先到<a href="/ui/authority">个人授权</a>页绑定当前身份。</p>
+<p id="observations-feedback" class="configuration-feedback" role="status" aria-live="polite" hidden></p>
+<section class="card"><div class="observations-heading"><div><h2>最近的尝试</h2><p id="observations-updated" class="muted">正在读取…</p></div><button id="observations-refresh" class="btn ghost" type="button">刷新记录</button></div>
+<p class="help">缓存 token 已包含在输入中。费用使用记录中的计价单位；缺计价或缺用量时显示未知。上报结论由 Worker 提交，不等于独立审阅或验收。</p>
+<div id="observations-records" aria-busy="true"><p class="empty">正在读取已有记录…</p></div></section>
+<details class="configuration-disclosure section"><summary>这些记录可以说明什么？</summary><ul class="observations-notes"><li>没有记录不代表没有执行。此页仅覆盖已有账本的最近尝试，不提供全局汇总。</li><li>未知标记与已存耗时、费用并列展示；人工校正后也可能保留历史未知标记。</li><li>同结果再次读取仅统计相同尝试中，已成功且资源与结果摘要相同的 READ 记录，不代表浪费，也不包括所有读取。</li><li>启动开销、协调比例与真实质量分数尚未采集，不能从上报结论推算。</li><li>展开记录可查看固定配置与正式交付的来源引用。每次交付最多列出 16 项，完整事实以原交付记录为准。</li></ul></details>
+<noscript><p class="callout warn-callout">此页面需要 JavaScript 来读取执行记录。</p></noscript>
+</div></main></div><script src="/ui/console.js"></script></body></html>

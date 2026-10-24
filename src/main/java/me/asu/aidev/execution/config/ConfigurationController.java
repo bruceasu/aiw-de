@@ -29,6 +29,7 @@ public class ConfigurationController {
     }
     @PostMapping("/api/r1/authority/execution-configurations/prepare") public Object prepare(@RequestBody String raw) { return factory.prepare(read(raw,Intent.class)); }
     @PostMapping("/api/r1/authority/execution-configurations/state") public Object state(@RequestBody String raw,@RequestParam(defaultValue="method") String kind) {
+        if("observations".equals(kind)) { read(raw,Empty.class);return configs.observations(); }
         if(role(kind)) return configs.role(read(raw,PreparedConfigRef.class));
         read(raw,Empty.class);String owner=configs.currentOwner();
         return Map.of("protocol",PROTOCOL,"categories",configs.categories(),"methods",configs.catalogue().methods(),

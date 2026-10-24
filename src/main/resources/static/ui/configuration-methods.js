@@ -4,6 +4,9 @@
   const composeRole=UI.node('a','组合新的角色：选择技能与流程','btn ghost');
   composeRole.href='/ui/configurations?view=roles';
   $('panel-methods').querySelector('.configuration-section-heading').append(composeRole);
+  const observations=UI.node('a','查看执行记录','btn ghost');
+  observations.href='/ui/configurations?view=observations';
+  $('panel-methods').querySelector('.configuration-section-heading').append(observations);
   let initialized=false,epoch=0,previewBusy=false,saveBusy=false,assetBusy=false,proposal=null,uncertainSave=null,pendingAsset=null;
   const refKey=asset=>asset.ref+':'+asset.version+':'+asset.digest;
   const selected=id=>[...$(id).querySelectorAll('input:checked')].map(input=>input.value);

@@ -2,7 +2,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const owner = document.querySelector('meta[name="configuration-owner"]').content;
-  const methodNames = { 'goal-discussion':'目标梳理', requirements:'需求分析', architect:'方案设计', planner:'实施计划', coder:'代码实现', integrator:'代码集成', reviewer:'代码审查', 'stage-reviewer':'阶段审查', verifier:'测试验证', 'integration-verifier':'集成验证', repairer:'问题修复' };
+  const methodNames = { 'goal-discussion':'目标梳理', requirements:'需求分析', architect:'方案设计', planner:'实施计划', coder:'代码实现', integrator:'代码集成', reviewer:'代码审查', 'stage-reviewer':'阶段审查', verifier:'测试验证', 'integration-verifier':'集成验证', repairer:'问题修复', 'delegation-planning':'委派判断' };
   const outputNames = { REPORT:'分析报告', VERDICT:'审查结论', WORKSPACE:'代码与工作区成果' };
   const problems = {
     INVALID_CONFIGURATION:['配置需要修正','检查工作方法、资料引用和任务填写内容。'],

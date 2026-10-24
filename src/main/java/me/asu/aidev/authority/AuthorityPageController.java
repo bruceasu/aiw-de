@@ -33,7 +33,7 @@ public class AuthorityPageController {
         model.addAttribute("ownerId",owners.size()==1?owners.getFirst():"");
         model.addAttribute("categories",configurations.categories());
         model.addAttribute("methods",configurations.catalogue().methods());
-        return view.equals("roles")?"ui/roles":"ui/configurations";
+        return view.equals("observations")?"ui/execution-observations":view.equals("roles")?"ui/roles":"ui/configurations";
     }
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;
     private final me.asu.aidev.workflow.application.WorkflowPlanService plans;

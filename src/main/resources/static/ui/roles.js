@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   const $=id=>document.getElementById(id),clone=value=>structuredClone(value);
-  const names={'goal-discussion':'目标梳理',requirements:'需求分析',architect:'方案设计',planner:'实施计划',coder:'代码实现',integrator:'代码集成',reviewer:'代码审查','stage-reviewer':'阶段审查',verifier:'测试验证','integration-verifier':'集成验证',repairer:'问题修复',research:'资料研究','domain-modeling':'领域建模','codebase-design':'代码设计','improve-codebase-architecture':'架构改进','diagnosing-bugs':'故障诊断','resolving-merge-conflicts':'冲突修复',teach:'讲解与教学',handoff:'工作交接','edit-article':'文章编辑',prototype:'原型制作'};
+  const names={'goal-discussion':'目标梳理',requirements:'需求分析',architect:'方案设计',planner:'实施计划',coder:'代码实现',integrator:'代码集成',reviewer:'代码审查','stage-reviewer':'阶段审查',verifier:'测试验证','integration-verifier':'集成验证',repairer:'问题修复',research:'资料研究','domain-modeling':'领域建模','codebase-design':'代码设计','improve-codebase-architecture':'架构改进','diagnosing-bugs':'故障诊断','resolving-merge-conflicts':'冲突修复',teach:'讲解与教学',handoff:'工作交接','edit-article':'文章编辑',prototype:'原型制作','delegation-planning':'委派判断'};
   const outputs={REPORT:'分析报告',VERDICT:'审查结论',WORKSPACE:'代码与工作区成果'};
   const reasons={INCOMPATIBLE_OUTPUT:'所选专业技能与最终产出不兼容。请保持模板原产出，或更换为适合的技能。',SKILL_VERSION_CONFLICT:'同一个技能的步骤引用了不同版本，请统一版本。',ROLE_LIMIT_EXCEEDED:'角色最多八步、六种技能和八份知识；也请缩短过长的说明。',STEP_SKILLS_INVALID:'每步请选择一至六种技能；工程协议和已生成角色不能用作步骤技能。',ROLE_TOOLS_INVALID:'工具需求与产出不一致，请重新选择产出并预览。',ROLE_ASSET_MISMATCH:'角色定义与保存配置不一致，请核对原版本。',NOT_COMPOSED_ROLE:'这份配置不是可复制的组合角色。'};
   let state=null,draft=null,epoch=0,refreshEpoch=0,preview=null,previewBusy=false,saveBusy=false,copyBusy=false,uncertain=null;
