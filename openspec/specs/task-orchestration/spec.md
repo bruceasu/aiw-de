@@ -4,6 +4,13 @@ Define how the Control Plane owns work tasks, dependencies, worker leases, and e
 
 ## Requirements
 
+### Requirement: Human-readable preparation and optional method composition
+The console SHALL offer plan, repository, method, approved-model and owner-scoped upstream choices without requiring hand-written Intent, Assembly or Candidate JSON. Internal preparation identity, versions and generations SHALL be maintained by the UI. Results SHALL explain readiness, blockers and recovery without rendering raw API JSON; READY SHALL mean task creation, not execution success. Default methods SHALL be usable without custom composition.
+
+Read-only UI choices SHALL retain exact immutable configuration references and expose personal assets only as owner/repository-scoped metadata. Recovering an original preparation SHALL preserve its original input. Refreshing choices SHALL NOT silently substitute a new policy, model or configuration. Unchanged retries SHALL use the original input and current generation; edited content SHALL create the next intent version. Unknown write outcomes SHALL be checked before any explicit retry of the same original request, with no automatic identity replacement or replay.
+
+Optional method composition SHALL use form selections and a readable preview, not raw protocol input. Input changes and stale asynchronous preview responses SHALL invalidate the old candidate. Explicit save SHALL submit that preview's exact candidate. A confirmed write SHALL remain reported as successful even when a later list refresh fails. Composition and content registration SHALL NOT invoke models or grant tools or execution permission.
+
 ### Requirement: Prepared immutable execution configuration
 Tasks requiring `aiw.execution.config.v1` SHALL become claimable only after registered method, Skill/knowledge versions, exact approved model, required adapter capability, confirmed policy and the deployment accounting mode have been checked. Budget completeness, pricing and balances SHALL block preparation only in enforce mode; record-only is the default. The unique intent version and preparation generation SHALL protect retries. READY, fixed references and business-task materialization SHALL commit atomically. Known preparation failures SHALL retain a reason and explicit recovery action without creating claimable work.
 

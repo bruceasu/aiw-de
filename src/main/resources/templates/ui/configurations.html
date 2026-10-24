@@ -18,10 +18,10 @@
 <div class="configuration-columns"><section class="card"><h2>准备一个软件任务</h2><p class="muted">准备会核对配置与执行条件。就绪后创建任务，等待兼容 Worker 领取；此按钮不会替你执行模型或命令。</p>
 <form id="prepare-configuration"><fieldset id="preparation-fields" disabled><div class="form-grid">
 <label class="field">关联计划<select id="prepare-plan" name="planId" required><option value="">正在载入计划…</option></select><small>没有可选计划？先到授权页为计划确认工具与仓库范围。</small></label>
-<label class="field">工作方法<select id="prepare-method" required><option value="">请选择工作方法</option></select><small id="prepare-method-help">选择这项任务需要的专业工作。</small></label>
-<label class="field configuration-full">要完成什么<textarea id="prepare-instruction" required rows="6" maxlength="16384" placeholder="例如：为登录表单增加邮箱校验，错误时显示提示；保留现有登录流程，并说明实际检查结果。"></textarea><small>写清目标、范围和完成标准。不要粘贴凭证或完整私人对话。</small></label>
 <label class="field">工作仓库<select id="prepare-repository" required><option value="">先选择计划</option></select><small>仅显示所选计划执行范围中的仓库。</small></label>
+<label class="field">工作方法<select id="prepare-method" required><option value="">请选择工作方法</option></select><small id="prepare-method-help">选择这项任务需要的专业工作。</small></label>
 <label class="field">已批准模型<select id="prepare-model" required><option value="">正在载入模型…</option></select><small>后端随模型配置带入，不会自动切换到其它模型。</small></label>
+<label class="field configuration-full">要完成什么<textarea id="prepare-instruction" required rows="6" maxlength="16384" placeholder="例如：为登录表单增加邮箱校验，错误时显示提示；保留现有登录流程，并说明实际检查结果。"></textarea><small>写清目标、范围和完成标准。不要粘贴凭证或完整私人对话。</small></label>
 <label class="field configuration-full">起始代码版本<input id="prepare-baseline" required list="prepare-baselines" pattern="([0-9a-f]{40}|[0-9a-f]{64})" autocomplete="off" placeholder="从已确认计划带入，或填写完整 Git 提交"><datalist id="prepare-baselines"></datalist><small>固定任务从哪份代码开始。无法自动确定时，可在仓库执行 git rev-parse HEAD 后复制完整提交；系统不会猜测或自行运行 Git。</small></label>
 <details class="configuration-full configuration-disclosure"><summary>依赖其它任务的正式成果（可选）</summary><p class="help">只有需要使用上游产出时才选择。仅列出当前账号、同仓库的已完成任务。</p><div id="prepare-dependencies" class="configuration-checks"></div></details>
 </div></fieldset><div class="configuration-form-actions"><button id="prepare-submit" class="btn primary" disabled>检查并准备任务</button><button id="new-preparation" type="button" class="btn ghost">另建一个任务</button><button id="reload-preparation-options" type="button" class="btn ghost">更新选择项</button></div><p id="prepare-draft-note" class="help">内部标识、版本和重试状态由系统维护，无需填写。</p></form></section>

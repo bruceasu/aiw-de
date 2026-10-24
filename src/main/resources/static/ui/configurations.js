@@ -173,11 +173,17 @@
   }
   async function refresh() {
     const sequence=++refreshSequence,data=await request('state',{}); if(sequence!==refreshSequence) return false;
+    if(!data.uiOptions) throw new Error('平台仍提供旧版页面数据，请更新并重启平台后强制刷新页面。');
     if(data.uiOptions.ownerId!==owner) throw new Error('当前登录身份已改变，请重新打开页面，避免混用原草稿。');
     snapshot=data; options=data.uiOptions;
     if(origin) {
       const current=data.preparations.find(item=>item.intentId===origin.intent.intentId&&item.intentVersion===origin.intent.intentVersion);
       if(current) origin.preparation=clone(current);
+    }
+    if(!origin&&sent&&!uncertain) {
+      const current=data.preparations.find(item=>item.intentId===sent.intentId&&item.intentVersion===sent.intentVersion);
+      const original=options.drafts.find(item=>item.intent.intentId===sent.intentId&&item.intent.intentVersion===sent.intentVersion)?.intent;
+      if(current&&original&&business(original)===business(sent)) origin={intent:clone(original),preparation:clone(current)};
     }
     $('configuration-plan-count').textContent=options.plans.length; $('configuration-model-count').textContent=options.models.length; $('configuration-worker-count').textContent=data.workers.length;
     if(!initialized) { populateChoices(); initialized=true; }
@@ -196,7 +202,7 @@
     const dependencyIds=[...$('prepare-dependencies').querySelectorAll('input:checked')].map(input=>input.value);
     if(dependencyIds.some(id=>!options.upstream.some(item=>item.id===id&&item.repositoryRef===repository))) throw new Error('原上游已不在当前账号的同仓库可选范围，请取消或重新选择。');
     const candidate={intentId:origin?.intent.intentId||sent?.intentId||unique('task'),intentVersion:1,expectedGeneration:0,planId:plan.id,policyRevision,repositoryRef:repository,baseRevision:$('prepare-baseline').value.trim(),instruction:$('prepare-instruction').value,dependencies:dependencyIds,runtime:profile.profile.runtime,aiProfileId:profile.id,defaultRole:source.defaultRole,configRef:clone(source.configRef),candidate:clone(source.candidate)};
-    if(origin&&business(candidate)===business(origin.intent)) { candidate.intentVersion=origin.intent.intentVersion; candidate.expectedGeneration=origin.preparation.generation; }
+    if(origin&&business(candidate)===business(origin.intent)) return {...clone(origin.intent),expectedGeneration:origin.preparation.generation};
     else if(origin) candidate.intentVersion=Math.max(...snapshot.preparations.filter(item=>item.intentId===candidate.intentId).map(item=>item.intentVersion),origin.intent.intentVersion)+1;
     return candidate;
   }

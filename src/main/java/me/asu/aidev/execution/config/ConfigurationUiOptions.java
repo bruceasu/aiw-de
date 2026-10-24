@@ -60,7 +60,8 @@ public class ConfigurationUiOptions {
                 .forEach(a->assets.add(new AssetChoice(a.kind(),a.ref(),a.version(),a.digest(),null,a.ref())));
         for(String raw:repo.jdbc().queryForList("SELECT asset_json FROM execution_asset WHERE owner_id=? ORDER BY kind,ref,version",String.class,owner)) {
             var asset=repo.decode(raw,Asset.class);
-            assets.add(new AssetChoice(asset.kind(),asset.ref(),asset.version(),asset.digest(),asset.repositoryRef(),title(asset.content())));
+            String label=asset.content().startsWith("# ")?title(asset.content()):asset.ref();
+            assets.add(new AssetChoice(asset.kind(),asset.ref(),asset.version(),asset.digest(),asset.repositoryRef(),label));
         }
         var saved=new ArrayList<SavedChoice>();
         for(var row:repo.jdbc().queryForList("SELECT content_json,digest FROM execution_configuration WHERE owner_id=? ORDER BY id,revision",owner)) {
