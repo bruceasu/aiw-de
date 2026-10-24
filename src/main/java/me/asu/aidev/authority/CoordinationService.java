@@ -48,7 +48,8 @@ public class CoordinationService {
         if(sources.size()>1) sources.subList(1,sources.size()).clear();
         return Map.of("platformInstanceId",boundary.instance(),"planId",plan,"version",current.version(),"state",current.state().name(),
                 "specDigest",AuthorityRepository.hash(repo.encode(current.spec())),"spec",current.spec(),"sources",sources,
-                "generation",manager.generation("PLAN:"+plan),"restrictionRevision",manager.restriction("PLAN:"+plan));
+                "generation",manager.generation("PLAN:"+plan),"restrictionRevision",manager.restriction("PLAN:"+plan),
+                "tasks",plans.effectiveSteps(plan).stream().map(task -> Map.of("taskId",task.id().value(),"state",task.state().name())).toList());
     }
     @Transactional public ActionAdmissionService.Receipt advance(AuthorityBoundary.Principal principal,Advance input) {
         boundary.lock();receipts.enabled(principal);boundary.requireMigrationSafeInstallation();UUID.fromString(input.requestId());

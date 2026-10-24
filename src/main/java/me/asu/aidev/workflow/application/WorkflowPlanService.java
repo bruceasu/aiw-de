@@ -95,6 +95,25 @@ public class WorkflowPlanService {
     @Transactional
     public WorkflowPlan copy(String id, String actor) { return draft(get(id).spec(), actor); }
 
+    /** Creates an inert draft with a stable identity for a separately authenticated request. */
+    @Transactional
+    public WorkflowPlan draftFromRequest(WorkflowPlanSpec spec, String actor, String requestKey) {
+        WorkflowEditorService.validateSpec(spec, false);
+        actor = actor(actor);
+        String id = "FP-" + UUID.nameUUIDFromBytes((actor + "\n" + requestKey).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        var previous = plans.find(id);
+        if (previous.isPresent()) {
+            if (!previous.get().createdBy().equals(actor) || !previous.get().spec().equals(spec))
+                throw new IllegalStateException("PERSONAL_PLAN_REQUEST_CHANGED");
+            return previous.get();
+        }
+        Instant now = Instant.now();
+        WorkflowPlan plan = new WorkflowPlan(id, WorkflowPlan.State.DRAFT, 0, spec, actor, actor,
+                "Created from an explicitly scheduled personal work request; execution is not authorized", now, now);
+        plans.insert(plan);
+        return plan;
+    }
+
     @Transactional(readOnly = true)
     public WorkflowPlan get(String id) {
         return plans.find(id).orElseThrow(() -> new PlanNotFound(id));

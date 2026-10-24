@@ -28,7 +28,7 @@ public class GoalAttachments {
             throw new IllegalArgumentException("Invalid filename");
         repo.lock(draft);
         if (repo.attachments(goal, actor).size() >= 20) throw new IllegalStateException("At most 20 attachments per goal");
-        repo.jdbc.update("INSERT INTO goal_attachment VALUES (?,?,?,?,?,?,?,?)", UUID.randomUUID().toString(), goal,
+        repo.jdbc().update("INSERT INTO goal_attachment VALUES (?,?,?,?,?,?,?,?)", UUID.randomUUID().toString(), goal,
             filename, Base64.getEncoder().encodeToString(bytes), hash(bytes), "SAVED", "", "Select Convert to extract text locally");
         repo.save(draft, draft.title(), draft.content(), false, false);
         return repo.attachments(goal, actor);
@@ -40,7 +40,7 @@ public class GoalAttachments {
     }
     public byte[] bytes(String goal, String attachment, String actor) {
         active(goal, actor);
-        return repo.jdbc.query("SELECT content_base64 FROM goal_attachment WHERE id=? AND goal_id=?",
+        return repo.jdbc().query("SELECT content_base64 FROM goal_attachment WHERE id=? AND goal_id=?",
             (rs,n) -> Base64.getDecoder().decode(rs.getString(1)), attachment, goal).stream().findFirst()
             .orElseThrow(() -> new IllegalArgumentException("Attachment not found"));
     }
@@ -86,7 +86,7 @@ public class GoalAttachments {
     public Draft finish(String goal, String attachment, String actor, Conversion converted) {
         Draft draft = active(goal, actor);
         repo.lock(draft);
-        if (repo.jdbc.update("UPDATE goal_attachment SET status=?,extracted=?,detail=? WHERE id=? AND goal_id=?",
+        if (repo.jdbc().update("UPDATE goal_attachment SET status=?,extracted=?,detail=? WHERE id=? AND goal_id=?",
             converted.status(), converted.text(), converted.detail(), attachment, goal) != 1) throw new IllegalArgumentException("Attachment not found");
         return repo.save(draft, draft.title(), draft.content(), false, false);
     }

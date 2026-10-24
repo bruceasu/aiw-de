@@ -13,7 +13,7 @@ spring:
   profiles:
     default: sqlite
   application:
-    name: ai-dev-manager-r9
+    name: aiw:de-r10
   datasource:
     url: ${AIW_DB_URL:jdbc:postgresql://localhost:5432/aidev_r3}
     username: ${AIW_DB_USER:aidev}
@@ -46,6 +46,7 @@ aidev:
 
   web-console:
     auth:
+      # Require login for otherwise-local console pages; /ui/login is always available.
       enabled: ${AIW_WEB_CONSOLE_AUTH_ENABLED:false}
       username: ${AIW_WEB_CONSOLE_USERNAME:admin}
       password: ${AIW_WEB_CONSOLE_PASSWORD:}

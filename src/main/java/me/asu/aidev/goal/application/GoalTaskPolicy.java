@@ -29,7 +29,7 @@ public class GoalTaskPolicy implements WorkerTaskClaimPolicy {
         return new Frozen(backend, profiles.version(), selected);
     }
     public Frozen frozen(WorkTask task) {
-        return repo.jdbc.query("SELECT frozen_json FROM goal_request WHERE id=?", (rs,n) -> repo.decode(rs.getString(1), Frozen.class),
+        return repo.jdbc().query("SELECT frozen_json FROM goal_request WHERE id=?", (rs,n) -> repo.decode(rs.getString(1), Frozen.class),
             task.id().value()).stream().findFirst().orElseThrow(() -> new IllegalStateException("Frozen goal request missing"));
     }
     public boolean matches(Frozen f, String runtime) {

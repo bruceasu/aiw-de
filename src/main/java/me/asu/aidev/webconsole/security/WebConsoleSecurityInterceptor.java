@@ -25,11 +25,14 @@ public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         if (path.equals("/ui/login") || path.equals("/ui/console.css") || path.equals("/ui/console.js")) return true;
         if (!path.equals("/ui") && !path.startsWith("/ui/") && !WebConsoleApiRoutes.matches(path)) return true;
-        if(delegation!=null && delegation.humanAuthRequired() && !security.enabled()) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED,"Human console authentication must remain enabled after delegation activation");return false;
+        HttpSession session = request.getSession(true);
+        if(delegation!=null && delegation.humanAuthRequired() && !security.signedIn(session)) {
+            if ((path.equals("/ui") || path.startsWith("/ui/")) && HttpMethod.GET.matches(request.getMethod())) {
+                response.sendRedirect(request.getContextPath() + "/ui/login?next=" + URLEncoder.encode(path, StandardCharsets.UTF_8));
+            } else response.sendError(HttpServletResponse.SC_UNAUTHORIZED,"Human console authentication required after delegation activation");
+            return false;
         }
 
-        HttpSession session = request.getSession(true);
         if (!security.authenticated(session)) {
             if (HttpMethod.GET.matches(request.getMethod())) {
                 String next = URLEncoder.encode(path, StandardCharsets.UTF_8);
@@ -48,8 +51,8 @@ public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
         }
 
         WebConsoleRole role = security.role(session);
-        if(delegation!=null && security.enabled()) delegation.human(security.actor(session));
-        request.setAttribute("consoleAuthEnabled", security.enabled());
+        if(delegation!=null && security.signedIn(session)) delegation.human(security.actor(session));
+        request.setAttribute("consoleAuthEnabled", security.signedIn(session));
         request.setAttribute("consolePrincipal", security.username(session));
         request.setAttribute("consoleRole", role.name());
         request.setAttribute("canOperate", role.canOperate());

@@ -1,7 +1,10 @@
 package me.asu.aidev.authority;
 
 import jakarta.servlet.http.*;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import me.asu.aidev.webconsole.security.WebConsoleApiRoutes;
 import me.asu.aidev.webconsole.security.WebConsoleSecurityService;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -21,18 +24,18 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
     }
     private boolean personalMachine(String method,String path) {
-        return method.equals("GET") && (Set.of("/identity","/state","/target-state","/grants","/management-state","/questions").contains(path) || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}"))
-                || method.equals("POST") && Set.of("/sessions","/actions","/restrictions","/coordination","/question-replies","/goal-proposals").contains(path);
+        return method.equals("GET") && (Set.of("/identity","/state","/target-state","/grants","/management-state","/questions").contains(path) || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))
+                || method.equals("POST") && Set.of("/sessions","/actions","/restrictions","/coordination","/question-replies","/goal-proposals","/personal-plans").contains(path);
     }
     private boolean humanRoute(String method,String path) {
-        return method.equals("POST") && (Set.of("/owners/bind","/workers","/grants","/managed-plans","/execution-policies","/execution-budgets/increment","/execution-effects/reconcile","/execution-meters/reconcile").contains(path)
+        return method.equals("POST") && (Set.of("/owners/bind","/workers","/workers/new","/grants","/managed-plans","/execution-policies","/execution-budgets/increment","/execution-effects/reconcile","/execution-meters/reconcile").contains(path)
                 || path.matches("/execution-policies/[^/]+/(pause|resume|revoke)") || path.matches("/execution-contexts/[^/]+/bind")
                 || path.matches("/execution-tasks/[^/]+/stopped")
                 || path.matches("/execution-configurations/(assets|candidates|propose|prepare|state)")
                 || path.matches("/questions/(read|reply|budget|control|progress|telegram)")
                 || path.matches("/workflow-graphs/(read|change|decide|recommend)")
                 || path.matches("/software-development/(proposals|adopt|read)")
-                || path.matches("/workers/[^/]+/(enable|disable)") || path.matches("/grants/[^/]+/revoke")
+                || path.matches("/workers/[^/]+/(enable|disable|credential)") || path.matches("/grants/[^/]+/revoke")
                 || path.matches("/targets/[^/]+/(takeover|return)") || path.matches("/restrictions/[^/]+/revoke")
                 || path.matches("/budgets/[^/]+/supplement") || path.matches("/effects/[^/]+/reconcile"));
     }
@@ -54,9 +57,16 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 } else {
                     if(leaseMachine(path)) return true;
                     if(!Set.of("/ui/authority","/ui/configurations","/ui/questions","/ui/workflow-graphs","/ui/software-development").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
+                    // The earlier console interceptor already checks local-session CSRF and the persistent auth requirement.
+                    if(WebConsoleApiRoutes.matches(path) && !security.enabled() && !security.signedIn(request.getSession(false)) && !boundary.humanAuthRequired()) return true;
                 }
                 var session=request.getSession(false);
-                if(!security.enabled() || session==null || !security.authenticated(session)) { response.sendError(401,"Configured human authentication required");return false; }
+                if(!security.signedIn(session)) {
+                    if(path.startsWith("/ui/") && method.equals("GET")) {
+                        response.sendRedirect(request.getContextPath()+"/ui/login?next="+URLEncoder.encode(path,StandardCharsets.UTF_8));
+                    } else response.sendError(401,"Configured human authentication required");
+                    return false;
+                }
                 if(!Set.of("GET","HEAD").contains(method)) {
                     String csrf=request.getHeader("X-CSRF-Token");if(csrf==null) csrf=request.getParameter("_csrf");
                     if(!security.validCsrf(session,csrf)) { response.sendError(403,"Current human CSRF token required");return false; }

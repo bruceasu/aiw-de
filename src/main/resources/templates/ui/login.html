@@ -1,1 +1,23 @@
-<!DOCTYPE html><html lang="en" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · AI Dev Manager</title><link rel="stylesheet" href="/ui/console.css"></head><body class="login-body"><main class="login-shell"><div class="login-brand"><div class="brand-mark">AIW</div><div><h1>AI Dev Manager</h1><p>Web Console</p></div></div><div class="card login-card"><h2>Sign in</h2><p class="muted">Authentication is enabled for the browser console.</p><div th:if="${errorMessage}" class="flash error" th:text="${errorMessage}"></div><form action="/ui/login" method="post"><input type="hidden" name="next" th:value="${next}"/><div class="field"><label>Username</label><input name="username" autocomplete="username" required autofocus/></div><div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" required/></div><button class="btn primary full-btn" type="submit">Sign in</button></form></div><div class="footer-note">The management REST APIs have their own trust boundary; keep the Control Plane on localhost or a protected internal network.</div></main></body></html>
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"></head>
+<body class="login-body"><main class="login-shell">
+  <div class="login-brand"><div class="brand-mark">AIW</div><div><h1>AIW:DE</h1><p>Web Console</p></div></div>
+  <div class="card login-card">
+    <h2>Sign in</h2><p class="muted">Sign in to continue.</p>
+    <div th:unless="${loginConfigured}" class="callout warn-callout" lang="zh-CN" role="status">
+      <p>尚未配置登录密码。请在项目根目录的 <code>.env</code> 中设置用户名和非空密码，再通过启动脚本重启：</p>
+      <pre>AIW_WEB_CONSOLE_USERNAME=admin
+AIW_WEB_CONSOLE_PASSWORD=&lt;设置你自己的密码&gt;</pre>
+      <p>其他启动方式请将这两项设置为环境变量。登录页始终可用，无需启用开关。</p>
+    </div>
+    <div th:if="${errorMessage}" class="flash error" th:text="${errorMessage}"></div>
+    <form action="/ui/login" method="post">
+      <input type="hidden" name="next" th:value="${next}"/>
+      <div class="field"><label>Username</label><input name="username" autocomplete="username" required autofocus/></div>
+      <div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" required/></div>
+      <button class="btn primary full-btn" type="submit">Sign in</button>
+    </form>
+  </div>
+  <div class="footer-note">The management REST APIs have their own trust boundary; keep the Control Plane on localhost or a protected internal network.</div>
+</main></body></html>

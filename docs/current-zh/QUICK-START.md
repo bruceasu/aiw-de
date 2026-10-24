@@ -21,16 +21,19 @@ PowerShell：
 
 ```powershell
 New-Item -ItemType Directory -Force data | Out-Null
+$env:AIW_DB_URL = "jdbc:sqlite:./data/aidev-r3.db"
 mvn clean verify
 mvn spring-boot:run
 ```
 
-默认使用 SQLite：
+以上命令显式使用项目目录下的 SQLite 数据库：
 
 ```text
 127.0.0.1:8080
 ./data/aidev-r3.db
 ```
+
+通过 `scripts/startup.bat` 或 `scripts/startup.sh` 启动时，脚本会加载根目录的 `.env`；其中的 `AIW_DB_URL` 会覆盖 YAML 中的默认地址，也会替换当前终端的同名变量。Windows 可使用 `jdbc:sqlite:d:/temp/data/aidev-r3.db`，Linux 可使用 `jdbc:sqlite:/mnt/temp/data/aidev-r3.db`。请使用当前系统的实际路径，并先创建数据库的父目录；SQLite 不会自动创建父目录，否则启动时可能报 `SQLITE_CANTOPEN`。
 
 新终端检查：
 
@@ -220,13 +223,14 @@ http://127.0.0.1:8080/ui
 
 默认 `AIW_APPROVAL_POLICY=MANUAL` 时，Engineering Gate PASSED 后可以直接在 Run Detail 中点击 **Request Approval**。
 
-可选启用 Web Console 登录：
+Web Console 登录页 `/ui/login` 始终可用。配置登录凭据：
 
 ```text
-AIW_WEB_CONSOLE_AUTH_ENABLED=true
 AIW_WEB_CONSOLE_USERNAME=admin
 AIW_WEB_CONSOLE_PASSWORD=<strong secret>
 AIW_WEB_CONSOLE_ROLE=ADMIN
 ```
+
+未登录访问个人授权等受保护页面时，会进入登录页，登录成功后返回原页面。普通控制台页面默认保留本地免登录访问；如果也需要保护这些页面，可额外设置 `AIW_WEB_CONSOLE_AUTH_ENABLED=true`。该设置不控制登录页是否可用。
 
 注意：该登录保护 `/ui/**` 及 `/api/r1/` 下六个控制台数据根：goals、secretary、delegation、task-outputs、workflow-plans、plan-editor，保留 session、CSRF、角色及所有者校验。其他旧管理写入在首次代理启用前保持原本地策略，首次启用后持久要求人工 session、CSRF 和动作角色；Worker 租约协议继续使用机器认证。Control Plane 仍应绑定 localhost 或置于合适的内网/边缘访问保护后。

@@ -12,6 +12,11 @@
       method: post ? 'POST' : 'GET', headers: post ? {'Content-Type':'application/json'} : {},
       ...(post ? {body:JSON.stringify(value)} : {}), ...options
     });
+    if (response.status === 401 || response.redirected && new URL(response.url).pathname === '/ui/login') {
+      const error = new Error('Your console session is unavailable. Copy any unsaved changes before signing in again.');
+      error.loginRequired = true;
+      throw error;
+    }
     const type = response.headers.get('content-type') || '';
     if (!type.includes('application/json')) throw new Error('Console session expired or request was rejected. Reload the page.');
     const result = await response.json();
@@ -21,7 +26,14 @@
   async function run(action) {
     if (busy) return;
     busy = true;
-    try { await action(); } catch (e) { status(e.message); } finally { busy = false; }
+    try { await action(); } catch (e) {
+      status(e.message);
+      if (e.loginRequired) {
+        const login = node('a', 'Sign in');
+        login.href = '/ui/login?next=' + encodeURIComponent(window.location.pathname);
+        $('goal-status').append(' ', login);
+      }
+    } finally { busy = false; }
   }
   function clean() {
     if (dirty || editorDirty.size) throw new Error('Save your goal and plan editing changes before continuing, or reload the saved version.');

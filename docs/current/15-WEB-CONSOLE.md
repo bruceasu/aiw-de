@@ -76,7 +76,7 @@ AIW_WEB_CONSOLE_PASSWORD=
 AIW_WEB_CONSOLE_ROLE=ADMIN
 ```
 
-When authentication is enabled, all browser mutations also require a per-session CSRF token.
+The login page at `/ui/login` is always available and validates the configured username and nonblank password. With no password configured, it shows credential setup instructions and rejects sign-in attempts. `AIW_WEB_CONSOLE_AUTH_ENABLED` controls whether otherwise-local console pages require sign-in; it does not enable or disable the login page. Personal authority pages always require a signed-in human session and return to the requested page after sign-in. Signed-in sessions use the configured role even when ordinary pages allow local access. Browser mutations require a per-session CSRF token.
 
 ## Security boundary
 

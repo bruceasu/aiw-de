@@ -23,6 +23,7 @@ class Store(Protocol):
     def get(self, kind: str, identity: str): ...
     def list(self, kind: str) -> list: ...
     def put(self, kind: str, identity: str, value: dict, revision: int | None = None): ...
+    def delete_draft(self, identity: str, revision: int): ...
     def queue(self, request: str, path: str, body: dict, decision: dict | None = None): ...
     def bind_platform(self, instance: str): ...
     def pending(self) -> list: ...
@@ -110,9 +111,22 @@ class SQLiteStore:
             current = 0 if old is None else old[0]
             if revision is not None and revision != current:
                 raise ValueError("Private record changed; reload before saving")
-            db.execute("INSERT INTO personal_record VALUES(?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET revision=excluded.revision,data=excluded.data", (kind, identity, current + 1, encode(value)))
-            db.execute("INSERT INTO personal_history VALUES(?,?,?,?,?)", (kind, identity, current + 1, encode(value), int(time.time() * 1000)))
+            # Reusing a deleted draft ID must not reuse an earlier revision.
+            next_revision = current + 1
+            if old is None and kind == "draft":
+                next_revision = db.execute("SELECT COALESCE(MAX(revision),0)+1 FROM personal_history WHERE kind=? AND id=?", (kind, identity)).fetchone()[0]
+            db.execute("INSERT INTO personal_record VALUES(?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET revision=excluded.revision,data=excluded.data", (kind, identity, next_revision, encode(value)))
+            db.execute("INSERT INTO personal_history VALUES(?,?,?,?,?)", (kind, identity, next_revision, encode(value), int(time.time() * 1000)))
         return self.get(kind, identity)
+
+    def delete_draft(self, identity, revision):
+        if type(revision) is not int or revision < 1:
+            raise ValueError("Current draft revision required")
+        with self.transaction() as db:
+            if db.execute("DELETE FROM personal_record WHERE kind='draft' AND id=? AND revision=?", (identity, revision)).rowcount != 1:
+                raise ValueError("Draft changed or was deleted; reload before deleting")
+            db.execute("INSERT INTO personal_history VALUES('draft',?,?,?,?)", (identity, revision + 1, encode({"deleted": True}), int(time.time() * 1000)))
+        return {"id": identity, "deleted": True}
 
     def queue(self, request, path, body, decision=None):
         if path not in {"/actions", "/coordination", "/question-replies"} or (body.get("envelope", {}) if path == "/question-replies" else body).get("requestId") != request:

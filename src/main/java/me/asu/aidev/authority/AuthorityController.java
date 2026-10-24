@@ -18,6 +18,7 @@ public class AuthorityController {
     private String human() { return Objects.requireNonNull(boundary.human(),"Verified human required"); }
     private AuthorityBoundary.Principal principal(HttpServletRequest request) { return (AuthorityBoundary.Principal)request.getAttribute("authorityPrincipal"); }
     public record IdentityInput(String ownerId,String workerId,String credential,List<String> readScope) {}
+    public record RegistrationInput(String credential,List<String> readScope) {}
     public record GrantInput(String ownerId,String workerId,ActionScope scope,long expiresAt) {}
     public record TargetInput(String target,long generation) {}
     public record SupplementInput(String target,String action,long amount) {}
@@ -34,8 +35,26 @@ public class AuthorityController {
         var input=repo.decode(raw,ReconcileInput.class);controls.reconcile(id,input.attempt(),input.conclusion(),input.evidenceRef(),human());return Map.of("state","RECONCILED_NO_AUTOMATIC_REPLAY");
     }
     @PostMapping("/owners/bind") public Object bind() { return Map.of("ownerId",grants.bind(human())); }
+    @PostMapping("/workers/new") public Object register(@RequestBody String raw) {
+        RegistrationInput input;
+        try { input=repo.decode(raw,RegistrationInput.class); }
+        catch(IllegalArgumentException error) { return invalidIdentityInput("request","登记请求格式不正确，请刷新后重试。身份标识由系统生成。"); }
+        if(input==null) return invalidIdentityInput("request","登记请求不能为空。");
+        return grants.register(input.credential(),input.readScope(),human());
+    }
+    @PostMapping("/workers/{id}/credential") public Object rotateCredential(@PathVariable String id,@RequestBody String raw) {
+        RegistrationInput input;
+        try { input=repo.decode(raw,RegistrationInput.class); }
+        catch(IllegalArgumentException error) { return invalidIdentityInput("request","凭证轮换请求格式不正确，请刷新后重新选择秘书。"); }
+        if(input==null) return invalidIdentityInput("request","凭证轮换请求不能为空。");
+        return grants.rotateCredential(id,input.credential(),input.readScope(),human());
+    }
     @PostMapping("/workers") public Object enroll(@RequestBody String raw) {
-        var input=repo.decode(raw,IdentityInput.class);grants.enroll(input.ownerId(),input.workerId(),input.credential(),input.readScope(),human());return Map.of("state","DISABLED");
+        IdentityInput input;
+        try { input=repo.decode(raw,IdentityInput.class); }
+        catch(IllegalArgumentException error) { return invalidIdentityInput("request","登记请求格式不正确，请刷新页面后重新提交。请求仅接受 ownerId、workerId、credential 和列表类型的 readScope。"); }
+        if(input==null) return invalidIdentityInput("request","登记请求不能为空。");
+        grants.enroll(input.ownerId(),input.workerId(),input.credential(),input.readScope(),human());return Map.of("state","DISABLED");
     }
     @PostMapping("/workers/{id}/{operation:enable|disable}") public Object enable(@PathVariable String id,@PathVariable String operation,@RequestBody String raw) {
         var input=repo.decode(raw,EnableInput.class);grants.enabled(id,input.generation(),input.workerBoot(),operation.equals("enable"),human());return Map.of("state",operation.equals("enable")?"ENABLED":"DISABLED");
@@ -75,6 +94,11 @@ public class AuthorityController {
         return ResponseEntity.status(status).body(receipt);
     }
     @ExceptionHandler(SecurityException.class) public ResponseEntity<?> denied() { return ResponseEntity.status(403).body(Map.of("code","SCOPE_DENIED","message","Current owner, identity and action authority required")); }
+    @ExceptionHandler(AuthorityGrantService.InvalidIdentityInput.class)
+    public ResponseEntity<?> invalidIdentityInput(AuthorityGrantService.InvalidIdentityInput error) { return invalidIdentityInput(error.field(),error.getMessage()); }
+    private static ResponseEntity<?> invalidIdentityInput(String field,String message) {
+        return ResponseEntity.status(422).body(Map.of("code","INVALID_ACTION","field",field,"message",message));
+    }
     @ExceptionHandler({IllegalArgumentException.class,NoSuchElementException.class}) public ResponseEntity<?> invalid() { return ResponseEntity.status(422).body(Map.of("code","INVALID_ACTION","message","Invalid or unavailable action input")); }
     @ExceptionHandler(IllegalStateException.class) public ResponseEntity<?> conflict() { return ResponseEntity.status(409).body(Map.of("code","STATE_CHANGED","message","Reload authoritative state or query the original request receipt")); }
 }

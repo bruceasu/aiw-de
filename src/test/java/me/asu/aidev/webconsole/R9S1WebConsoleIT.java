@@ -53,7 +53,7 @@ class R9S1WebConsoleIT {
                 "Render the first read-only Web Console from existing Control Plane projections.",
                 "repo-main", BASE, Set.of("java", "maven"), TaskPriority.HIGH));
 
-        assertHtml("/ui", "AI Dev Manager", "Dashboard");
+        assertHtml("/ui", "AIW:DE", "Dashboard");
         assertHtml("/ui/runs", "Autonomous Runs", run.runId());
         assertHtml("/ui/runs/" + run.runId(), "Autonomous run authority", "REQUIREMENT_ANALYSIS");
         assertHtml("/ui/workers", "Worker Fleet", "Registered runtimes");

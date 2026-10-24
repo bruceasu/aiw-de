@@ -10,9 +10,12 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class GoalRepository {
-    public final JdbcTemplate jdbc;
-    public final ObjectMapper json = new ObjectMapper();
+    private final JdbcTemplate jdbc;
+    private final ObjectMapper json = new ObjectMapper();
     public GoalRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+    // Methods let Spring repository proxies delegate access to the initialized target.
+    public JdbcTemplate jdbc() { return jdbc; }
+    public ObjectMapper json() { return json; }
     public String encode(Object value) {
         try { return json.writeValueAsString(value); }
         catch (Exception e) { throw new IllegalStateException("Cannot encode goal data", e); }
@@ -28,8 +31,10 @@ public class GoalRepository {
             .stream().findFirst().orElseThrow(() -> new SecurityException("Goal is not owned by this operator"));
     }
     public List<Draft> list(String actor) {
-        return jdbc.query("SELECT id FROM goal_draft WHERE actor=? ORDER BY updated_at DESC,id LIMIT 100",
-            (rs,n) -> get(rs.getString(1), actor), actor);
+        List<String> ids = jdbc.query("SELECT id FROM goal_draft WHERE actor=? ORDER BY updated_at DESC,id LIMIT 100",
+            (rs,n) -> rs.getString(1), actor);
+        // Finish the outer query before loading details from the single-connection SQLite pool.
+        return ids.stream().map(id -> get(id, actor)).toList();
     }
     public Draft create(String actor) {
         String id = UUID.randomUUID().toString();
@@ -57,7 +62,9 @@ public class GoalRepository {
     }
     public List<Version> versions(String goal, String actor) {
         get(goal, actor);
-        return jdbc.query("SELECT id FROM goal_version WHERE goal_id=? ORDER BY source_revision DESC", (rs,n) -> version(rs.getString(1), actor), goal);
+        List<String> ids = jdbc.query("SELECT id FROM goal_version WHERE goal_id=? ORDER BY source_revision DESC",
+            (rs,n) -> rs.getString(1), goal);
+        return ids.stream().map(id -> version(id, actor)).toList();
     }
     public List<Attachment> attachments(String goal, String actor) {
         get(goal, actor);

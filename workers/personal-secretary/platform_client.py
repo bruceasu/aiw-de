@@ -37,7 +37,8 @@ class PlatformClient:
     def request(self, path, body=None):
         operation = path.split("?", 1)[0]
         goal_receipt = operation.startswith("/goal-proposals/") and operation == "/goal-proposals/" + str(uuid.UUID(operation.removeprefix("/goal-proposals/")))
-        if operation not in {"/sessions", "/identity", "/grants", "/state", "/management-state", "/actions", "/coordination", "/restrictions", "/questions", "/question-replies", "/goal-proposals"} and not operation.startswith("/receipts/") and not goal_receipt:
+        plan_receipt = operation.startswith("/personal-plans/") and operation == "/personal-plans/" + str(uuid.UUID(operation.removeprefix("/personal-plans/")))
+        if operation not in {"/sessions", "/identity", "/grants", "/state", "/management-state", "/actions", "/coordination", "/restrictions", "/questions", "/question-replies", "/goal-proposals", "/personal-plans"} and not operation.startswith("/receipts/") and not goal_receipt and not plan_receipt:
             raise ValueError("Unknown platform operation")
         payload = None if body is None else encode(body).encode()
         if payload is not None and len(payload) > 32768:

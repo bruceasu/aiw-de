@@ -20,8 +20,10 @@ public class WebConsoleAuthController {
 
     @GetMapping("/ui/login")
     public String loginPage(@RequestParam(required = false) String next, HttpSession session, Model model) {
-        if (!security.enabled() || security.authenticated(session)) return "redirect:/ui";
-        model.addAttribute("next", safeNext(next));
+        String target = safeNext(next);
+        if (security.signedIn(session)) return "redirect:" + (target == null ? "/ui" : target);
+        model.addAttribute("loginConfigured", security.loginConfigured());
+        model.addAttribute("next", target);
         return "ui/login";
     }
 
@@ -31,7 +33,6 @@ public class WebConsoleAuthController {
                         @RequestParam(required = false) String next,
                         HttpSession session,
                         RedirectAttributes flash) {
-        if (!security.enabled()) return "redirect:/ui";
         if (!security.authenticate(username, password)) {
             flash.addFlashAttribute("errorMessage", "Invalid username or password.");
             String target = safeNext(next);

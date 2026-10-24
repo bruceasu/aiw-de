@@ -34,17 +34,19 @@ public class WebConsoleSecurityService {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("invalid Web Console role; expected VIEWER, OPERATOR, APPROVER or ADMIN", e);
         }
-        if (enabled && this.configuredPassword.isBlank()) {
-            throw new IllegalArgumentException("Web Console authentication is enabled but password is blank");
-        }
     }
 
+    /** Whether otherwise-local console routes require sign-in; the login page is always available. */
     public boolean enabled() {
         return enabled;
     }
 
+    public boolean loginConfigured() {
+        return !configuredPassword.isBlank();
+    }
+
     public boolean authenticate(String username, String password) {
-        if (!enabled) return true;
+        if (!loginConfigured()) return false;
         byte[] expectedUser = configuredUsername.getBytes(StandardCharsets.UTF_8);
         byte[] actualUser = (username == null ? "" : username).getBytes(StandardCharsets.UTF_8);
         byte[] expectedPassword = configuredPassword.getBytes(StandardCharsets.UTF_8);
@@ -60,17 +62,21 @@ public class WebConsoleSecurityService {
     }
 
     public boolean authenticated(HttpSession session) {
-        return !enabled || Boolean.TRUE.equals(session.getAttribute(SESSION_AUTHENTICATED));
+        return !enabled || signedIn(session);
+    }
+
+    public boolean signedIn(HttpSession session) {
+        return session != null && Boolean.TRUE.equals(session.getAttribute(SESSION_AUTHENTICATED));
     }
 
     public String username(HttpSession session) {
-        if (!enabled) return "local-console";
+        if (!enabled && !signedIn(session)) return "local-console";
         Object value = session.getAttribute(SESSION_USERNAME);
         return value == null ? configuredUsername : value.toString();
     }
 
     public WebConsoleRole role(HttpSession session) {
-        if (!enabled) return WebConsoleRole.ADMIN;
+        if (!enabled && !signedIn(session)) return WebConsoleRole.ADMIN;
         Object value = session.getAttribute(SESSION_ROLE);
         if (value == null) return configuredRole;
         return WebConsoleRole.valueOf(value.toString());
@@ -82,10 +88,12 @@ public class WebConsoleSecurityService {
 
     /** Re-evaluate durable human delegations against current configuration, not an old session. */
     public String currentOperatorAuthority(String actor) {
-        String expected = "web:" + (enabled ? configuredUsername : "local-console");
-        if (!expected.equals(actor) || enabled && !configuredRole.canOperate()) return "";
+        boolean identified = ("web:" + configuredUsername).equals(actor);
+        if (identified) {
+            if (!loginConfigured() || !configuredRole.canOperate()) return "";
+        } else if (enabled || !"web:local-console".equals(actor)) return "";
         try {
-            String source = enabled + "\n" + configuredUsername + "\n" + configuredRole;
+            String source = identified + "\n" + configuredUsername + "\n" + configuredRole;
             return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
                     .digest(source.getBytes(StandardCharsets.UTF_8)));
         } catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
@@ -93,13 +101,13 @@ public class WebConsoleSecurityService {
 
     /** A grant cannot retain a role that its owner no longer has. */
     public String currentDelegationAuthority(String actor, String action) {
-        String expected = "web:" + (enabled ? configuredUsername : "local-console");
-        if (!expected.equals(actor)) return "";
-        WebConsoleRole current = enabled ? configuredRole : WebConsoleRole.ADMIN;
+        String expected = "web:" + configuredUsername;
+        if (!loginConfigured() || !expected.equals(actor)) return "";
+        WebConsoleRole current = configuredRole;
         boolean allowed = action.startsWith("A11_") || action.equals("A18_BUDGET") ? current.canApprove()
                 : action.startsWith("A17_") ? current.canAdmin() : current.canOperate();
         if (!allowed) return "";
-        return me.asu.aidev.authority.AuthorityRepository.hash(enabled + "\n" + expected + "\n" + current + "\n" + action);
+        return me.asu.aidev.authority.AuthorityRepository.hash(true + "\n" + expected + "\n" + current + "\n" + action);
     }
 
     public String ensureCsrf(HttpSession session) {

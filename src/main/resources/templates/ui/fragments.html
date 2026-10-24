@@ -4,7 +4,7 @@
   <div class="brand" data-i18n-skip><div class="brand-mark" title="AI Worker" aria-label="AI Worker">AIW</div><span>Digital Employee</span></div>
   <a th:if="${canOperate}" th:classappend="${active == 'new-plan' ? 'active' : ''}" href="/ui/plans/new">New Plan</a>
   <a th:if="${canOperate}" th:classappend="${active == 'goals' ? 'active' : ''}" href="/ui/goals">Goals</a>
-  <a href="/ui/authority">个人 Worker 授权</a>
+  <a th:classappend="${active == 'authority' ? 'active' : ''}" href="/ui/authority">个人 Worker 授权</a>
   <a th:classappend="${active == 'plans' ? 'active' : ''}" href="/ui/plans">Plans</a>
   <a th:if="${canOperate}" th:classappend="${active == 'workspaces' ? 'active' : ''}" href="/ui/workspaces">Workspaces</a>
   <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Fleet</a>
@@ -32,6 +32,7 @@
   <div><h1 th:text="${title}">Title</h1><p th:text="${subtitle}">Subtitle</p></div>
   <div class="topbar-actions">
     <span class="pill neutral" th:text="${consoleRole}">ADMIN</span>
+    <a th:unless="${consoleAuthEnabled}" class="btn primary small-btn" href="/ui/login">Sign in</a>
     <form th:if="${consoleAuthEnabled}" action="/ui/logout" method="post" class="inline-form">
       <input type="hidden" name="_csrf" th:value="${csrfToken}"/>
       <button class="btn ghost small-btn" type="submit">Sign out</button>

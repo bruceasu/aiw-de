@@ -7,6 +7,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthorityGrantService {
+    public static final class InvalidIdentityInput extends IllegalArgumentException {
+        private final String field;
+        private InvalidIdentityInput(String field,String message) { super(message);this.field=field; }
+        public String field() { return field; }
+    }
     private final AuthorityRepository repo;
     private final AuthorityBoundary boundary;
     private final WebConsoleSecurityService security;
@@ -16,11 +21,11 @@ public class AuthorityGrantService {
         this.repo=repo;this.boundary=boundary;this.security=security;this.actions=actions;
     }
     public void human(String actor,String action) {
-        if(!security.enabled() || security.currentDelegationAuthority(actor,action).isBlank())
+        if(security.currentDelegationAuthority(actor,action).isBlank())
             throw new SecurityException("Current authenticated human role required");
     }
     public void identityHuman(String actor) {
-        if(!security.enabled() || security.currentDelegationAuthority(actor,"A05").isBlank()
+        if(security.currentDelegationAuthority(actor,"A05").isBlank()
                 && security.currentDelegationAuthority(actor,"A11_APPROVE").isBlank()) throw new SecurityException("Current identified human role required");
     }
     public void owns(String owner,String actor) {
@@ -30,13 +35,46 @@ public class AuthorityGrantService {
         identityHuman(actor);boundary.lock();boundary.instance();
         var existing=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
         if(!existing.isEmpty()) return existing.getFirst();
-        String id="O-"+UUID.randomUUID();repo.jdbc().update("INSERT INTO authority_owner VALUES(?,?)",id,actor);return id;
+        String id=shortIdentityId(true);repo.jdbc().update("INSERT INTO authority_owner VALUES(?,?)",id,actor);return id;
+    }
+    private String shortIdentityId(boolean ownerIdentity) {
+        for(int attempt=0;attempt<8;attempt++) {
+            String id=(ownerIdentity?"o-":"s-")+UUID.randomUUID().toString().substring(0,8);
+            boolean exists=ownerIdentity
+                    ? repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_owner WHERE id=?",Long.class,id)>0
+                    : repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE worker_id=?",Long.class,id)>0
+                        || repo.jdbc().queryForObject("SELECT COUNT(*) FROM worker WHERE id=?",Long.class,id)>0;
+            if(!exists) return id;
+        }
+        throw new IllegalStateException("Unable to allocate a unique personal identity; retry registration explicitly");
+    }
+    @Transactional public Map<String,Object> register(String key,List<String> readScope,String actor) {
+        String owner=bind(actor); // Explicit registration owns this transaction; a page view never calls it.
+        String worker=shortIdentityId(false);
+        enroll(owner,worker,key,readScope,actor);
+        return identityResult(owner,worker,readScope);
+    }
+    @Transactional public Map<String,Object> rotateCredential(String worker,String key,List<String> readScope,String actor) {
+        identityHuman(actor);boundary.lock();
+        var owners=repo.jdbc().queryForList("SELECT i.owner_id FROM authority_identity i JOIN authority_owner o ON o.id=i.owner_id WHERE i.worker_id=? AND o.actor=?",String.class,worker,actor);
+        if(owners.size()!=1) throw new SecurityException("Current owner must select an existing personal Worker");
+        String owner=owners.getFirst();
+        enroll(owner,worker,key,readScope,actor);
+        return identityResult(owner,worker,readScope);
+    }
+    private Map<String,Object> identityResult(String owner,String worker,List<String> readScope) {
+        return Map.of("ownerId",owner,"workerId",worker,"generation",repo.jdbc().queryForObject("SELECT generation FROM authority_identity WHERE worker_id=?",Long.class,worker),"readScope",readScope,"state","DISABLED");
     }
     @Transactional public void enroll(String owner,String worker,String key,List<String> readScope,String actor) {
         identityHuman(actor);owns(owner,actor);boundary.lock();
-        if(worker==null || !worker.matches("[A-Za-z0-9_.-]{1,128}") || key==null || !key.matches("[A-Za-z0-9_-]{43,128}")
-                || readScope==null || readScope.size()>128 || readScope.stream().anyMatch(k->k==null || k.length()>1024))
-            throw new IllegalArgumentException("Explicit identity, private random credential and bounded read scope required");
+        if(worker==null || !worker.matches("[A-Za-z0-9_.-]{1,128}"))
+            throw new InvalidIdentityInput("workerId","Worker ID 必须为 1–128 位英文字母、数字、下划线、点或短横线，例如 my-secretary。");
+        if(key==null || !key.matches("[A-Za-z0-9_-]{43,128}"))
+            throw new InvalidIdentityInput("credential","独立凭证必须为 43–128 位英文字母、数字、下划线或短横线。请使用“生成并复制”重新生成。");
+        if(readScope==null || readScope.size()>128)
+            throw new InvalidIdentityInput("readScope","读取范围必须为列表，最多包含 128 个目标；暂不读取目标时可提交空列表。");
+        if(readScope.stream().anyMatch(k->k==null || k.length()>1024))
+            throw new InvalidIdentityInput("readScope","读取范围的每个目标必须为文本，长度不得超过 1024 个字符。");
         if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM worker WHERE id=?",Long.class,worker)>0
                 || repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE worker_id=? AND owner_id<>?",Long.class,worker,owner)>0)
             throw new IllegalStateException("Worker identity already belongs to a different runtime or owner");
