@@ -26,3 +26,9 @@ Worker 自动声明已实现的能力，不能在 `AIW_WORKER_CAPABILITIES` 中�
 Runtime 只注入各入口和声明文件索引。调用 `read_skill_file(ref,path,offset,limit)` 读取辅助文件；offset/limit 按字节计，limit 为1–8192。返回 `encoding=base64`、分页字节、完整文件 SHA256、size、offset、nextOffset 和 complete；二进制也不损失字节。工具只能读本次声明文件，没有目录枚举、写入、脚本执行或工具注册功能。取消/Lease丢失继续由原 Attempt/心跳处理；问答暂停关闭资源工具。App Server 不支持动态工具时明确报错，不能改用 CLI 或本地目录继续。
 
 本文件描述实现合同。编译/静态审查不能证明真实 SDK、App Server、数据库、并发、取消或模型运行通过；实际证据见 FD-030 报告。
+
+## 从宿主工程技能吸收方法
+
+FD-038 将 `.agents/skills` 的可复用方法适配到既有 Worker 角色，详见[来源与去向矩阵](WORKER-SKILL-METHODS.md)。现有拆分、审阅、诊断和测试方法上补充局部步骤、交接/修订覆盖、决策聚焦和按需 Skill 编写参考。入口与辅助文件保持各自声明，本文不授权宿主 FD 命令、代理、测试、安装或发布。
+
+编码步骤和继续说明使用现有报告字段；没有新增平台持久 TODO、恢复状态机或输出协议。新增参考进入 `index.json`，本次修改同步到三语言同名独立部署副本。受影响文件集产生新 manifest 版本，既有已冻结任务仍使用旧内容。`execution/software-catalog.json` 的历史文本资产版本/摘要继续保持原义，不把它称为更新后文件集的完整正文。

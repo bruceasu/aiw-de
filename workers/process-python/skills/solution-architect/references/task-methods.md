@@ -30,3 +30,16 @@ Keep accepted requirements and repository permissions unchanged.
 ## Check
 Trace the recommendation to callers, accepted behavior, and evidence. Use existing
 architecture/contract proposal fields, with explicit unresolved trade-offs and limits.
+
+## Walk the boundary before handoff
+- Walk one representative caller and one relevant error through the proposed interface.
+  Identify who owns the rule, state and side effects, and what the caller must know.
+- Compare the change with keeping the current design. Check whether an added layer
+  hides a real contract or only moves complexity into callers and configuration.
+- For linked decisions, name the prerequisite that prevents a sound choice. Do not
+  select an implementation for unresolved business policy or compatibility rules.
+- Keep prototype observations separate from production claims. State the exact question
+  a spike could settle and what it could not prove, including runtime or performance
+  limits. Proposing a spike does not authorize building or running one.
+- On changed requirements, identify the affected interface, owner and evidence without
+  rewriting accepted contracts or starting an unassigned refactor.

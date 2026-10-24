@@ -15,11 +15,13 @@
       "references/object-model.md",
       "references/persistence-model.md",
       "references/protocol-envelope.md",
+      "references/skill-authoring.md",
       "references/task-methods.md",
       "references/traceability.md"
     ],
     "goal-discussion": [
-      "SKILL.md"
+      "SKILL.md",
+      "references/task-methods.md"
     ],
     "software-requirements-analyst": [
       "SKILL.md",

@@ -30,3 +30,13 @@ and the Control Plane's repair limits and acceptance authority.
 ## Check
 Ensure the explanation supports PASS or REPAIR_REQUIRED for this step alone.
 No code edits, test execution without authority, next-role dispatch, or new report schema.
+
+## Handoff and release scope
+- Check that the supplied output names the completed outcome, exact inputs/outputs,
+  unresolved work, real checks and next responsible role. A continuation summary is
+  derived evidence; it cannot replace an accepted baseline or missing formal result.
+- If the assigned stage is a release assessment, use its supplied target environment,
+  rollout/rollback and operational evidence. State decisive missing evidence and its
+  effect in the existing verdict explanation. Do not invent a release checklist for
+  an unrelated stage, issue a new GO schema or treat a code-review PASS as deployment
+  approval. Actual release and acceptance decisions remain with the Control Plane.

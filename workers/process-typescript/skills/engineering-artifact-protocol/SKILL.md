@@ -5,6 +5,10 @@ description: Define how software-engineering agents exchange structured artifact
 
 # Engineering Artifact Protocol
 
+When the assigned artifact is Skill content, read
+[Skill authoring methods](references/skill-authoring.md) if supplied in the fixed
+file set. This condition does not grant shared-library edits or new tools.
+
 ## Adapted task methods
 
 Use source-backed evidence and a continuation brief inside the current output contract. Keep observations, causes, proposals, and permissions separate.

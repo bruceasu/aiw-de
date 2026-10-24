@@ -30,3 +30,16 @@ execution. Keep the existing verification result and runtime budgets unchanged.
 ## Check
 Report important assertions, actual version coverage, command results, consequential
 omissions, and evidence limits. Never turn partial execution into a whole-scope pass.
+
+## Close the assigned verification scope
+- Relate each required acceptance outcome to a meaningful assertion or explicit evidence
+  gap. A compiled fixture, returned success flag or large pass count is not enough
+  when the rule requires a specific state, value or side effect.
+- On changed code, tests or rules, identify which previous results remain relevant and
+  why. Do not claim that old execution covered new content or a different environment.
+- For a blocked check, preserve the observation, likely cause, raw output and versions.
+  Name the smallest next check and its owner/needed authority without executing it.
+- Keep unmet required behavior separate from an optional unrun check. An authorized
+  waiver changes the required evidence, not the truth of a result or the business rule.
+- On handoff, carry consumed retries and diagnosis-only state. New sessions, scenarios
+  or reviewer requests do not restart an exhausted execution budget.

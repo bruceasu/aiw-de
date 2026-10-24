@@ -5,6 +5,11 @@ description: Discuss one frozen goal snapshot and identify missing information.
 
 # Goal discussion
 
+For a goal with open decisions, read the relevant
+[discussion methods](references/task-methods.md) when supplied in the fixed Skill
+file set. Use only the Skill resource reader for that reference; the method does
+not grant workspace, shell or external-service tools.
+
 This is the canonical Skill for all maintained process Worker languages.
 Sync bundled copies with scripts/sync-goal-discussion-assets.py.
 Load only for the goal-discussion role. Keep this role read-only and its

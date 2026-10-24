@@ -146,3 +146,20 @@ New platform EXTERNAL_WORK tasks SHALL pin a complete declared Skill file set at
 #### Scenario: An adapter lacks the resource reader
 - **WHEN** a Worker uses Codex CLI or lacks skill-files-v1
 - **THEN** it cannot claim new platform Skill tasks; unsupported dynamic tool contracts fail explicitly rather than falling back to another executor
+
+### Requirement: Scoped engineering methods in Worker Skills
+Platform Worker Skills SHALL adapt useful planning, implementation, clarification, review, verification and handoff methods to the assigned role. They SHALL preserve frozen inputs, existing result formats and Control Plane lifecycle authority. Host FD commands, delivery, delegation and external-service powers SHALL NOT be inferred from adapted instructions.
+
+For non-trivial implementation, the coding method SHALL guide a small acceptance-linked local work outline and an honest continuation of completed, pending and blocked outcomes. These notes SHALL use existing descriptive fields and SHALL NOT be represented as durable WorkItems, an automatic recovery state machine or independent review. Continuation SHALL preserve original operation identities, unknown effects and consumed execution authority, and identify stale evidence against changed inputs.
+
+#### Scenario: A host method recommends running a test or another agent
+- **WHEN** that method is adapted into a platform Skill
+- **THEN** the Worker may propose the relevant next action, but execution still requires its existing task/tool authority; a new session or method does not renew an exhausted budget
+
+#### Scenario: A task is interrupted after partial implementation
+- **WHEN** the Worker returns a continuation in its assigned report
+- **THEN** it identifies actual outputs, unverified or blocked acceptance, original unresolved operations and the next responsible role without claiming task acceptance or automatically replaying effects
+
+#### Scenario: A Skill authoring task has only static evidence
+- **WHEN** the assigned task updates Skill content and declared references
+- **THEN** the result distinguishes structural checks from unrun model behavior or comparative quality evaluation, and does not infer registration, installation or publication

@@ -12,6 +12,27 @@ conflict repair. Preserve frozen inputs, repository scope, and the existing resu
 - Reuse existing interfaces. Propose structural work outside the package instead of
   adding an unrelated refactor or independently executing other planned items.
 
+## Local steps inside one work package
+- For non-trivial work, outline a few steps by observable result: inspect the relevant
+  path, implement a coherent change, perform authorized checks and self-review.
+  A simple change may use one step; do not plan a separate item per file or tool call.
+- Relate each step to the assigned acceptance, its dependencies and completion evidence.
+  Use supplied item IDs when present. Local labels are notes, not new WorkItems,
+  accepted scope or permission to implement other items in the feature.
+- Keep completed, pending and blocked work distinct in existing progress or handoff
+  text. Mark a step done only when its output exists; record unrun verification
+  separately. A successful edit or commit alone is not proof of behavior.
+- Update the note when new evidence changes the approach. Preserve completed outcomes
+  and explain superseded work. Do not rewrite the accepted rule to fit the code.
+- Before continuing from a summary, recheck the supplied baseline, current changes,
+  prior operation outcomes and remaining authority. Unknown effects need the existing
+  reconciliation path, not a fresh request or an automatic repeat.
+- Return a concise continuation in the required report if work stops: exact outputs,
+  next unfinished step, blocker, failed checks and responsible role. Do not create an
+  ungranted plan file or claim these notes are a durable execution state machine.
+- Self-review is part of implementation evidence. Independent review and acceptance
+  are separate platform work; do not run another role or an FD lifecycle yourself.
+
 ## Diagnose before repeated repair
 - Separate the symptom from its cause. Follow the affected input and call path using
   preserved logs, exact revisions, and source.

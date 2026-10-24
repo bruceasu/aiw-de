@@ -30,3 +30,19 @@ DAG acceptance, readiness, scheduling, and permission.
 ## Check
 Review coverage, cycles, oversized items, hidden decisions, and evidence gaps. Put extra
 sizing rationale in existing descriptive fields; do not add unsupported schema fields.
+
+## Changed acceptance and handoff
+- Compare a supplied change with the exact accepted requirement and architecture.
+  Identify affected outputs, dependency edges, checks and completed evidence; preserve
+  unaffected work with a reason instead of restarting the whole plan.
+- Distinguish a changed requirement from a defect against the existing requirement.
+  Propose the needed decision before planning executable work for unresolved policy.
+- Keep one owner for each outcome and shared rule. Link the formal scope and proposed
+  verification in existing plan fields; do not maintain a competing FD or task list.
+- For a proposed handoff, name required inputs, expected output and observable finish.
+  State missing contracts, authorization or evidence explicitly. A small item is not
+  ready merely because its estimated size is small.
+- Check that any optional experiment answers a decision that blocks real work. Do not
+  make a prototype, test suite or release gate mandatory when the task did not ask for it.
+- Return sizing, coverage and readiness proposals. The Control Plane assigns IDs,
+  accepts the plan and dispatches roles; the planner does not grant itself those actions.
