@@ -116,13 +116,7 @@ class OpenAIApiRuntime:
         tools.extend(_context_tools(request, sources))
         guarded_model = _GuardedModel(base_model, request, self.config,
                                       {tool.name: tool.params_json_schema for tool in tools}, sources)
-        effort = request.reasoning_effort or self.config.reasoning_effort
-        settings: dict[str, Any] = {"parallel_tool_calls": True, "truncation": "disabled", "store": False,
-                                    "preserve_raw_usage": True}
-        if effort and effort != "none":
-            settings["reasoning"] = {"effort": effort}
-        if request.service_tier:
-            settings["extra_args"] = {"service_tier": request.service_tier}
+        settings = _model_preferences(request, self.config)
         agent = Agent(name=request.profile.name, instructions=request.instruction,
                       model=guarded_model, tools=tools, model_settings=ModelSettings(**settings))
         run_config = RunConfig(tracing_disabled=True, model_provider=provider)
@@ -226,9 +220,10 @@ class _GuardedModel(Model):
         operation = None
         try:
             operation = self._begin(include_inputs=False, purpose="history-summary")
+            settings = _model_preferences(self._request, self._config)
+            settings.update(max_tokens=2048, tool_choice="none", parallel_tool_calls=False)
             response = await self._model.get_response(instructions, input,
-                ModelSettings(max_tokens=2048, tool_choice="none", parallel_tool_calls=False, store=False,
-                              truncation="disabled", preserve_raw_usage=True), [], None, [], self._summary_tracing,
+                ModelSettings(**settings), [], None, [], self._summary_tracing,
                 previous_response_id=None, conversation_id=None, prompt=None)
             self._request.attempt.check(); self._validate(response)
             self._finish(operation, response); operation = None
@@ -388,6 +383,14 @@ class _GuardedModel(Model):
         close = getattr(self._model, "close", None)
         if close:
             await close()
+
+
+def _model_preferences(request, config):
+    settings = {"parallel_tool_calls": True, "truncation": "disabled", "store": False, "preserve_raw_usage": True}
+    effort = request.reasoning_effort or config.reasoning_effort
+    if effort and effort != "none": settings["reasoning"] = {"effort": effort}
+    if request.service_tier: settings["extra_args"] = {"service_tier": request.service_tier}
+    return settings
 
 
 def _context_tools(request, sources):
