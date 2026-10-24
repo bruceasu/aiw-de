@@ -76,9 +76,15 @@ python workers/personal-secretary/main.py --owner-id O-EXPLICIT-ID --worker-id m
 
 两种 UI 的状态以最近一次读取为准，可手动刷新。版本冲突不会覆盖他人修改；刷新后重新载入相应记录再保存。目标提案须先本地预览并核对精确原文/摘要；编辑来源字段后原确认失效。提交尝试后只提供原 ID 回执查询，UNKNOWN/网络异常不会触发自动重发。平台问题、资料、取消和备份仍可通过菜单打开 Web 完成。
 
+安排表单展示并固定载入时的私人正文、Plan 引用、状态及版本。普通刷新发现记录变化时会禁用安排确认，必须点击“重新载入所选工作”并核对内容。目标窗口的“原请求回执与历史”从已持久化的 SELECTED_GOAL 决策载入原请求；退出重开或重新配对后仍可选择原 SENDING/UNKNOWN/RECORDED 请求查询。历史查询与当前预览分别展示，历史入口不会启用重发。
+
+Web 再次配对由独立的 `ui/pairing.js` 和 `ui/pairing.css` 提供，仅在用户显式生成时读取当前会话 CSRF 并请求新码；可与原有秘书 Web 页面或其新版布局共同使用，不依赖页面其它全局脚本。
+
 桌面代码分为 `desktop.py`（Tk 窗口与用户操作）、`desktop_client.py`（私人服务会话/请求）和 `desktop_win32.py`（窗口位置/托盘）。人物素材及生成提示词见 [desktop-assets](desktop-assets/README.md)。窗口工作在主线程，单次服务请求在后台线程执行，结果通过队列返回；关闭 UI 不调用 `Runtime.cancel()`。
 
 `scripts/compile-secretary-desktop.ps1` 仅做这次变化的 Python 内存编译、JavaScript 语法编译和启动脚本语法解析；不导入 Tk/Win32 模块、不打开窗口或启动服务，不运行测试、模型、网络、下载或打包。编译通过不代表透明窗口、托盘、多显示器或多界面配对已在桌面验收。
+
+在包含其他未提交工作的目录中，可用 `-Revision HEAD` 编译实际提交版本中的 Python 和独立配对脚本。启动脚本必须与该版本逐字节一致，才继续做 PowerShell 语法解析。临时 JavaScript 源文件编译后删除，不保留可分发产物。
 
 ## Web 使用与恢复
 

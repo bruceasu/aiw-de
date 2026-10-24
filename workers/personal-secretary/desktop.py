@@ -59,6 +59,8 @@ def main():
             self.goal_preview = None
             self.goal_version = 0
             self.goal_submitted = False
+            self.schedule_preview = None
+            self.schedule_conflict = False
             self.chat_window = self.workbench = self.connection = None
             self.tray = None
             self.status = tk.StringVar(value="请连接本机秘书服务")
@@ -223,7 +225,7 @@ def main():
                 control.configure(values=labels)
                 if previous in self.choice_ids[control]:
                     control.current(self.choice_ids[control].index(previous))
-                elif len(work) == 1:
+                elif len(work) == 1 and not previous:
                     control.current(0)
                 else:
                     control.set("")
@@ -237,6 +239,7 @@ def main():
                 self.render_chat()
             if self.workbench:
                 self.update_schedule()
+                self.update_goal_history()
                 policies = self.snapshot.get("policies", [])
                 self.policy_choices.configure(values=[row["id"] for row in policies])
                 self.set_text(self.state_text, json.dumps(state, ensure_ascii=False, indent=2), True)
@@ -279,6 +282,7 @@ def main():
                     for control in self.controls:
                         control.configure(state="normal")
                     self.sync_goal_button()
+                    self.sync_schedule_button()
                     if error:
                         self.status.set(str(error))
                         self.canvas.itemconfigure(self.pet_label, text="操作未确认 · 点击查看")
@@ -364,6 +368,9 @@ def main():
                 self.goal_preview = None
                 if self.workbench:
                     self.goal_request.set(""); self.goal_digest.set("")
+                    self.goal_query_id.set("")
+                    self.goal_history.set("")
+                    self.schedule_preview = None
                     self.new_policy()
                     self.sync_goal_button()
                 self.update_state(state if state is not None else {})
@@ -484,12 +491,17 @@ def main():
             bar = ttk.Frame(group); bar.pack(fill="x")
             self.action(bar, "保存私人工作", self.save_work, True)
             group = ttk.LabelFrame(body, text="确认安排时间"); group.pack(fill="x")
-            self.schedule_work = self.work_select(group, "选择工作", self.update_schedule)
+            self.schedule_work = self.work_select(group, "选择工作", lambda: self.update_schedule(True))
             self.schedule_revision = self.field(group, "当前版本（自动带入）", readonly=True)
+            ttk.Label(group, text="本次确认的私人工作内容", style="Muted.TLabel").pack(anchor="w")
+            self.schedule_summary = self.text(group, 6, True)
+            self.schedule_notice = tk.StringVar(value="请先选择工作，再核对所载入内容。")
+            ttk.Label(group, textvariable=self.schedule_notice, wraplength=720, style="Muted.TLabel").pack(anchor="w", pady=8)
             self.schedule_due = self.field(group, "本地时间 · 格式 YYYY-MM-DD HH:MM")
             ttk.Label(group, text="只接受未来整分钟；关联 Plan 时会核对当前托管状态和内容。", style="Muted.TLabel").pack(anchor="w")
             bar = ttk.Frame(group); bar.pack(fill="x")
-            self.action(bar, "确认时间与当前内容", self.schedule, True)
+            self.schedule_button = self.action(bar, "确认所载入内容与时间", self.schedule, True)
+            self.action(bar, "重新载入所选工作", lambda: self.update_schedule(True))
             self.action(bar, "查看 Web 工作列表", lambda: self.open_web("work"))
 
         def save_work(self):
@@ -509,19 +521,43 @@ def main():
                     self.work_title.set(""); self.work_plan.set(""); self.set_text(self.work_body, "")
             self.operate("work", {"title": title, "body": body, "planId": plan}, "保存私人工作", complete)
 
-        def update_schedule(self):
+        def update_schedule(self, reload=False):
             work_id = self.selected_work(self.schedule_work)
             work = next((row for row in self.snapshot.get("work", []) if row["id"] == work_id), None)
-            self.schedule_revision.set(str(work["revision"]) if work else "")
+            if work is None:
+                self.schedule_preview = None
+                self.schedule_revision.set("")
+                self.schedule_conflict = False
+                self.set_text(self.schedule_summary, "请先选择一项私人工作。", True)
+                self.schedule_notice.set("请先选择工作，再核对所载入内容。")
+            elif reload or self.schedule_preview is None or self.schedule_preview["id"] != work_id:
+                self.schedule_preview = json.loads(json.dumps(work))
+                self.schedule_revision.set(str(work["revision"]))
+                self.schedule_conflict = False
+                self.set_text(self.schedule_summary, "标题：" + work.get("title", "") + "\n状态：" + work.get("state", "未记录")
+                    + "\n私人版本：" + str(work["revision"]) + "\nPlan 引用：" + (work.get("planId") or "未关联")
+                    + "\n\n" + work.get("body", ""), True)
+                self.schedule_notice.set("请核对以上已载入内容。关联 Plan 的托管内容仍按平台原有规则校验。")
+            else:
+                self.schedule_conflict = work != self.schedule_preview
+                if self.schedule_conflict:
+                    self.schedule_notice.set("所选工作已发生变化，当前显示仍是原确认版本。请显式重新载入并核对后再安排。")
+            self.sync_schedule_button()
+
+        def sync_schedule_button(self):
+            if hasattr(self, "schedule_button"):
+                self.schedule_button.configure(state="normal" if self.schedule_preview and not self.schedule_conflict and not self.busy else "disabled")
 
         def schedule(self):
+            if self.busy or not self.schedule_preview or self.schedule_conflict:
+                self.status.set("请先载入并核对当前工作；内容变化后须显式重新载入。"); return
             try:
                 due = datetime.strptime(self.schedule_due.get().strip(), "%Y-%m-%d %H:%M")
-                revision = int(self.schedule_revision.get())
+                revision = self.schedule_preview["revision"]
                 if due.timestamp() <= time.time(): raise ValueError()
             except ValueError:
                 self.status.set("请选择工作并填写未来整分钟，例如 2026-10-25 09:00。"); return
-            self.operate("schedule", {"workId": self.selected_work(self.schedule_work), "revision": revision,
+            self.operate("schedule", {"workId": self.schedule_preview["id"], "revision": revision,
                 "dueMs": int(due.timestamp() * 1000), "timeZone": due.astimezone().tzname() or "local"}, "确认工作安排")
 
         def build_policy(self, body):
@@ -594,8 +630,16 @@ def main():
             self.goal_submit_button = self.action(bar, "确认原文并提交", self.submit_goal, True)
             self.goal_submit_button.configure(state="disabled")
             self.goal_projection = self.text(body, 7, True)
-            self.goal_request = self.field(body, "原请求 ID · 回执查询只使用此 ID", readonly=True)
+            self.goal_request = self.field(body, "当前预览的原请求 ID", readonly=True)
             self.goal_digest = self.field(body, "确认摘要", readonly=True)
+            ttk.Separator(body).pack(fill="x", pady=18)
+            ttk.Label(body, text="原请求回执与历史", font=("Microsoft YaHei UI", 12, "bold")).pack(anchor="w")
+            ttk.Label(body, text="重开或重新配对后，从私人决策中选回原请求。选择历史仅供查询，不会启用重新提交。", wraplength=720, style="Muted.TLabel").pack(anchor="w", pady=8)
+            self.goal_history = ttk.Combobox(body, state="readonly")
+            self.goal_history.pack(fill="x", pady=8)
+            self.goal_history.bind("<<ComboboxSelected>>", lambda _event: self.select_goal_history())
+            self.goal_history_records = []
+            self.goal_query_id = self.field(body, "所查询的原请求 ID", readonly=True)
             bar = ttk.Frame(body); bar.pack(fill="x")
             self.action(bar, "查询原请求回执", self.query_goal)
             self.goal_receipt = self.text(body, 5, True)
@@ -629,17 +673,42 @@ def main():
                 self.sync_goal_button()
             self.operate("goal-preview", data, "生成本地预览", complete)
 
+        def update_goal_history(self):
+            previous = self.goal_query_id.get()
+            self.goal_history_records = [row for row in self.snapshot.get("decisions", [])
+                if row.get("kind") == "SELECTED_GOAL" and isinstance(row.get("requestId"), str)]
+            labels = []
+            for index, row in enumerate(self.goal_history_records):
+                try:
+                    projection = json.loads(row.get("projectionJson", "{}"))
+                    title = str(projection.get("selectedGoal", "目标提案")) if isinstance(projection, dict) else "目标提案"
+                except ValueError:
+                    title = "目标提案"
+                labels.append(f"{index + 1}. {row.get('state', '未记录')} · {title[:42]} · {row['requestId'][:8]}")
+            self.goal_history.configure(values=labels)
+            match = next((index for index, row in enumerate(self.goal_history_records) if row["requestId"] == previous), None)
+            if match is not None: self.goal_history.current(match)
+            else: self.goal_history.set("")
+
+        def select_goal_history(self):
+            index = self.goal_history.current()
+            if 0 <= index < len(self.goal_history_records):
+                record = self.goal_history_records[index]
+                self.goal_query_id.set(record["requestId"])
+                self.set_text(self.goal_receipt, json.dumps(record, ensure_ascii=False, indent=2), True)
+
         def submit_goal(self):
             if self.busy or not self.goal_preview or self.goal_submitted: return
             self.goal_submitted = True
+            self.goal_query_id.set(self.goal_preview["requestId"])
             self.sync_goal_button()
             self.operate("goal-submit", dict(self.goal_preview), "提交已确认目标", self.show_goal_receipt)
 
         def query_goal(self):
-            if self.goal_request.get():
-                self.operate("goal-receipt", {"requestId": self.goal_request.get()}, "查询原请求回执", self.show_goal_receipt)
+            if self.goal_query_id.get():
+                self.operate("goal-receipt", {"requestId": self.goal_query_id.get()}, "查询原请求回执", self.show_goal_receipt)
             else:
-                self.status.set("请先生成目标预览，查询时保留原请求 ID。")
+                self.status.set("请选择私人决策中的原请求。PREVIEWED 表示尚未确认发送，只供查看。")
 
         def show_goal_receipt(self, result):
             self.set_text(self.goal_receipt, json.dumps(result, ensure_ascii=False, indent=2), True)
