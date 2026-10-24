@@ -131,13 +131,33 @@
     $('new-preparation').disabled=busy||Boolean(uncertain); $('reload-preparation-options').disabled=busy||Boolean(uncertain);
   }
   function stateLabel(state) { return ({READY:'任务已创建',BLOCKED:'需要补齐条件',PREPARING:'正在准备',NEEDS_CONFIGURATION:'等待配置'})[state]||'状态待确认'; }
+  function renderTaskProgress(host) {
+    const taskId=host.dataset.configurationTaskId,task=options?.taskProgress?.find(item=>item.taskId===taskId);
+    const states={BLOCKED:'等待前置条件',READY:'等待 Worker 领取',CLAIMED:'Worker 已领取',RUNNING:'正在执行',YIELDING:'正在移交执行',WAITING_INPUT:'等待补充输入',CONTINUED:'已继续处理',COMPLETED:'执行已完成',FAILED:'执行失败',CANCELLED:'已取消'};
+    host.replaceChildren(node('p','任务编号：'+taskId,'mono'));
+    host.append(node('p',task?'当前任务状态：'+(states[task.state]||'状态待确认'):'尚未读取到这项任务的当前状态，请刷新核对。'));
+    host.append(node('p','显示最近成功读取的正式状态，点击刷新更新。任务完成不等于验证或交付通过。','help'));
+    const button=node('button','刷新此任务进度','btn ghost'); button.type='button';
+    button.addEventListener('click',async()=>{
+      button.disabled=true;
+      try { await refresh(); feedback('已刷新任务记录，当前填写内容保持不变。'); }
+      catch(error) { feedback(error.message,'error'); }
+      finally { button.disabled=false; }
+    });
+    host.append(button);
+  }
   function renderOutcome(preparation,intent) {
     const host=$('preparation-outcome'); host.replaceChildren(node('span',stateLabel(preparation.state),'pill '+(preparation.state==='READY'?'ok':'warn')));
-    host.append(node('h3',preparation.state==='READY'?'已创建任务，等待 Worker 处理':(problems[preparation.errorCode]||['请检查准备条件'])[0]));
+    host.append(node('h3',preparation.state==='READY'?'任务已创建':(problems[preparation.errorCode]||['请检查准备条件'])[0]));
     host.append(node('p',preparation.state==='READY'?'准备与任务创建已经提交。这不表示执行、验证或交付已完成。':(problems[preparation.errorCode]||['','请按当前记录补齐配置。'])[1]));
     if(preparation.taskId) host.append(node('p','任务编号：'+preparation.taskId,'mono'));
-    const link=node('a',preparation.state==='READY'?'查看关联计划与进度':preparation.errorCode==='NO_COMPATIBLE_WORKER'?'查看 Worker':'查看执行范围');
-    link.href=preparation.state==='READY'?options.plans.find(item=>item.id===intent.planId)?.url||'/ui/plans':preparation.errorCode==='NO_COMPATIBLE_WORKER'?'/ui/workers':'/ui/authority'; host.append(link);
+    if(preparation.state==='READY'&&preparation.taskId) {
+      const details=node('details'),progress=node('div'); progress.dataset.configurationTaskId=preparation.taskId;
+      details.append(node('summary','查看当前任务进度'),progress); renderTaskProgress(progress); host.append(details);
+    }
+    const planUrl=options.plans.find(item=>item.id===intent.planId)?.url;
+    const link=node('a',preparation.state==='READY'&&planUrl?.startsWith('/ui/plans/')?'查看关联计划定义':preparation.errorCode==='NO_COMPATIBLE_WORKER'?'查看 Worker':'查看执行范围');
+    link.href=preparation.state==='READY'&&planUrl?.startsWith('/ui/plans/')?planUrl:preparation.errorCode==='NO_COMPATIBLE_WORKER'?'/ui/workers':'/ui/authority'; host.append(link);
     if(preparation.missing?.length) {
       const details=node('details'); details.append(node('summary','查看服务器提供的具体缺口'));
       const list=node('ul'); for(const missing of preparation.missing) list.append(node('li',missing)); details.append(list); host.append(details);
@@ -192,6 +212,7 @@
       if(found) { const fixed=uncertain.intent; uncertain=null; origin={intent:clone(fixed),preparation:clone(found)}; renderOutcome(found,fixed); }
       else { uncertain.checked=true; feedback('暂未查到原请求。可明确重试同一个原请求，系统不会自动换标识或重复准备。','warn'); }
     }
+    for(const host of document.querySelectorAll('[data-configuration-task-id]')) renderTaskProgress(host);
     renderRecords(); syncBusy(); document.dispatchEvent(new CustomEvent('configuration-state-updated',{detail:data})); return true;
   }
   function makeIntent() {
@@ -216,7 +237,7 @@
       try {
         const preparation=await request('prepare',intent);
         uncertain=null; origin={intent:clone(intent),preparation:clone(preparation)};
-        renderOutcome(preparation,intent); feedback(preparation.state==='READY'?'任务已创建。实际执行进度请查看关联计划。':'准备记录已保存，请按结果补齐条件。',preparation.state==='READY'?'info':'warn');
+        renderOutcome(preparation,intent); feedback(preparation.state==='READY'?'任务已创建。展开“查看当前任务进度”读取这项任务的实际状态。':'准备记录已保存，请按结果补齐条件。',preparation.state==='READY'?'info':'warn');
         try { await refresh(); } catch(_) { feedback('准备结果已返回并保留，但记录刷新失败。请稍后刷新；不要另建同一个任务。','warn'); }
       } catch(error) { if(error.uncertain) uncertain={intent:clone(intent),checked:false}; throw error; }
     } catch(error) { feedback(error.message,'error'); }

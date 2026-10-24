@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-034",
+  "source_event": "FD-034-000005-implementation-ready",
+  "human_report": "FD-034-implementation-review-r1-20261024-c6b9087d.md",
+  "data": {
+    "reviewer_session": "fd034-reviewer-20261024-c6b9087d",
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "comparison_base": "8e7342c852ed42dbcad94ba6ca90b435ec5cdc8a",
+    "reviewed_commit": "ebeacaa1872178d69411eb59cfcebe906d3e40b1",
+    "worker_evidence_commit": "445623f",
+    "recommendation": "changes-requested",
+    "implementation_review_failure_count": 1,
+    "findings": [
+      {
+        "id": "R034-01",
+        "severity": "P2",
+        "file": "src/main/resources/static/ui/configurations.js",
+        "line": 139,
+        "requirement": "FD-034 Solution task entry and Acceptance 2 human-readable recovery/task links",
+        "title": "READY progress link cannot show the created configured-plan task",
+        "evidence": [
+          "AgentFactory.java:91 creates CF-* with subjectType configured-plan",
+          "configurations.js:139-140 links READY outcome to WorkflowPlan or unselected software-development overview",
+          "WorkflowPlanController.get invokes WorkflowPlanService.steps, which selects subject flexible-plan only",
+          "Preparation READY does not represent current task execution status"
+        ],
+        "impact": "Users cannot follow the advertised next step to inspect their exact newly created task; the unrelated plan state and perpetual waiting message are misleading",
+        "requested_change": "Provide an owner-validated exact-task status/readback or actual task entry; retain a plan link only with accurate auxiliary wording and distinguish preparation creation from current task status"
+      }
+    ],
+    "supported_areas": [
+      "Guided non-JSON preparation and optional form-based method composition",
+      "Owner/repository metadata filtering and exact PreparedConfigRef",
+      "Shared supported approved-model filter and preserved original authorization contracts",
+      "Original Intent and dependency order preservation, current generation and next version",
+      "Unknown write outcome check before explicit retry of captured original object",
+      "Preview fingerprint/sequence invalidation and exact Candidate save",
+      "Confirmed save/register/prepare results preserved after list refresh failure",
+      "Console visual tokens, accessible named controls and keyboard tabs"
+    ],
+    "commands_run": [
+      "Get-Content -Encoding UTF8, Select-Object, Select-String",
+      "Scoped rg and rg --files",
+      "Static software-catalog ConvertFrom-Json summary",
+      "git status --short; git diff --stat/--name-only/scoped diff; git log -5 --oneline; git rev-parse",
+      "aiw fd show FD-034",
+      "aiw fd claim FD-034 FD-034-000005-implementation-ready --session fd034-reviewer-20261024-c6b9087d",
+      "aiw fd claim --help; aiw fd emit --help"
+    ],
+    "worker_compile_evidence": "Previously reported offline JDK25 Maven compile and two node --check passes inspected, not rerun by Reviewer",
+    "skipped": ["tests", "browser and Thymeleaf rendering", "database", "service", "live login/preparation/save/recovery", "compiler rerun", "models", "network/downloads", "packages", "installation", "restart", "publication", "sub-agents"],
+    "risks": ["Runtime layout, session, SQL and asynchronous behavior remain unverified", "R034-01 is a statically confirmed behavior defect, not a missing runtime gate"],
+    "excluded": ["Unrelated personal-secretary/Python/model/launcher changes", "FD-033 design and unresolved default authorization scope"],
+    "next_step": "Worker fixes R034-01 and submits a fresh implementation-ready handoff for independent static review"
+  }
+}

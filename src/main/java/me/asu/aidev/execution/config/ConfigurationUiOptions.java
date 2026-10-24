@@ -23,6 +23,7 @@ public class ConfigurationUiOptions {
     public record PlanChoice(String id,String title,long policyRevision,boolean paused,boolean revoked,long expiresAt,
                              String url,List<RepositoryChoice> repositories) {}
     public record TaskChoice(String id,String title,String planId,String repositoryRef,String baseRevision,String state) {}
+    public record TaskProgress(String taskId,String state) {}
     public record AssetChoice(String kind,String ref,String version,String digest,String repositoryRef,String title) {}
     public record SavedChoice(String repositoryRef,String methodName,PreparedConfigRef reference) {}
     public record DraftChoice(Intent intent) {}
@@ -73,6 +74,7 @@ public class ConfigurationUiOptions {
         var drafts=repo.jdbc().queryForList("SELECT intent_json FROM execution_preparation WHERE owner_id=? ORDER BY intent_id,intent_version",String.class,owner)
                 .stream().map(raw->new DraftChoice(repo.decode(raw,Intent.class))).toList();
         return Map.of("ownerId",owner,"plans",choices,"models",factory.supportedProfiles(),"assets",assets,"saved",saved,"drafts",drafts,
+                "taskProgress",tasks.stream().map(t->new TaskProgress(t.id(),t.state())).toList(),
                 "upstream",tasks.stream().filter(t->t.state().equals("COMPLETED")).toList());
     }
     private static boolean baseline(String value) { return value!=null && value.matches("[0-9a-f]{40}|[0-9a-f]{64}"); }
