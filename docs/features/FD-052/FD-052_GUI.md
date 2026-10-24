@@ -1,7 +1,7 @@
 # FD-052: GUI 启动秘书时自动载入托盘桌面宠物
 
-**Status:** Design
-**Revision:** 2
+**Status:** Open
+**Revision:** 3
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -11,7 +11,7 @@
 
 ## Options and decision
 
-选择复用两套既有 GUI，默认隐藏且仅在托盘可用后保持隐藏，无托盘显示可恢复窗口。服务 GUI 启动按本机环境选择已安装的 Qt，Windows 无 Qt 时回退 Tk；无可用桌面依赖或 headless 时不影响服务/浏览器。增加内部 DesktopLease 单实例避免服务自动载入与手动 GUI 重复。新增 --no-desktop-pet 抑制自动人物启动，GUI 启动服务时同时传 --no-browser/--no-desktop-pet，避免递归。公共 CLI、进程与窗口生命周期有变化，必须独立设计审阅；最终实现审阅另行进行。
+选择复用两套既有 GUI，默认隐藏且仅在托盘可用后保持隐藏，无托盘显示可恢复窗口。Qt 前置入口同时沿用用户既有“人物下方不显示文字底板”偏好。服务 GUI 启动按本机环境选择已安装的 Qt，Windows 无 Qt 时回退 Tk；Windows 当前 window station 不可见时不自动启动；无可用桌面依赖或 headless 时不影响服务/浏览器。增加内部 DesktopLease 单实例避免服务自动载入与手动 GUI 重复。新增 --no-desktop-pet 抑制自动人物启动，GUI 启动服务时同时传 --no-browser/--no-desktop-pet，避免递归。公共 CLI、进程与窗口生命周期有变化，必须独立设计审阅；最终实现审阅另行进行。
 
 ## Solution
 
@@ -23,13 +23,13 @@
 
 ## Work items
 
-- [ ] 1.1 实现桌面选择/单实例与服务自动载入，防止 GUI 启动服务递归。小/中，无依赖，证据为启动参数、环境门控和锁释放。
-- [ ] 1.2 Qt/Tk 默认托盘与安静连接，显式显示选项及无托盘回退，纳入批准的 Qt 前置。小/中，依赖 1.1，证据为可见性路径及菜单。
-- [ ] 1.3 更新说明、静态/最小 Python 与 PowerShell 语法编译、范围提交及独立审阅。小/低，依赖 1.2。
+- [x] 1.1 实现桌面选择/单实例与服务自动载入，防止 GUI 启动服务递归。小/中，无依赖，证据为启动参数、环境门控和锁释放。
+- [x] 1.2 Qt/Tk 默认托盘与安静连接，显式显示选项及无托盘回退，纳入批准的 Qt 前置。小/中，依赖 1.1，证据为可见性路径及菜单。
+- [x] 1.3 更新说明、静态/最小 Python 与 PowerShell 语法编译、范围提交及独立审阅。小/低，依赖 1.2。
 
 ## TODO
 
-取得设计审阅，实施 1.1–1.3。
+独立设计审阅 r1 ready，1.1–1.3 已实施；暂存差异检查、仓库编译脚本、三份提交区 Python 源码编译及 PowerShell 语法编译通过，待独立实现审阅。
 
 ## Acceptance
 
@@ -51,3 +51,5 @@
 - 用户当前要求及“纳入 Qt GUI 前置文件并统一调整”明确选择。
 - main.desktop_session_available/serve、desktop_client.auto_connect、Tk start_connection/connect、Qt ready/tray、private_config.PrivateProcessLock 既有模式（只读参考）。
 - Session: gui-pet-tray-20261024-c81e62；设计来源 FD-052-000002-design-requested。
+
+- 独立设计证据：docs/features/reviews/FD-052-design-r1.md 及 JSON，ready，无阻塞。

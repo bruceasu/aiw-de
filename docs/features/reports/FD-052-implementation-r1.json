@@ -1,0 +1,24 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-052",
+  "source_event": "FD-052-000003-design-ready",
+  "human_report": "FD-052-implementation-r1.md",
+  "data": {
+    "session": "gui-pet-tray-20261024-c81e62",
+    "base_commit": "400426b",
+    "work_items": ["1.1", "1.2", "1.3"],
+    "design_review": "ready",
+    "qt_prerequisites": "explicit user approval received",
+    "checks": [
+      {"command": "git diff --cached --check", "result": "passed"},
+      {"command": "scripts/compile-secretary-runtime.ps1", "result": "passed; compile-only"},
+      {"command": "Python compile() on staged main.py, desktop.py and desktop_client.py", "result": "passed", "exit_code": 0},
+      {"command": "PowerShell Parser.ParseFile on start-desktop.ps1", "result": "no syntax errors; launcher not executed"}
+    ],
+    "default_visibility": "tray; visible fallback without tray",
+    "single_instance": "origin-scoped OS lease shared by Qt and Tk",
+    "not_run": ["tests", "GUI", "service", "models", "HTTP", "network", "dependency installation", "restart", "packaging", "deployment"],
+    "remaining_risks": ["OS tray, lease competition and GUI availability unverified", "Process startup and hidden-window behavior unverified"]
+  }
+}

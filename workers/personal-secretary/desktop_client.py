@@ -134,7 +134,7 @@ class PersonalClient:
             raise PersonalError("个人服务尚未运行。HTTPS 服务请先在已配置的反向代理后启动。")
         try:
             subprocess.Popen([sys.executable, str(Path(__file__).with_name("main.py")), "--host", parsed.hostname,
-                "--port", str(parsed.port), "--no-browser"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                "--port", str(parsed.port), "--no-browser", "--no-desktop-pet"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         except OSError:
             raise PersonalError("无法启动个人服务。请在秘书目录运行 start.ps1 后再连接。") from None

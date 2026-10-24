@@ -16,6 +16,7 @@ import webbrowser
 
 from desktop_client import PersonalClient, PersonalError, personal_origin
 from desktop_pet import PetAnimator
+from desktop_startup import DesktopLease
 
 BG, PANEL, TEXT, MUTED, LINE, ACCENT = "#080e17", "#111c2b", "#e2edf8", "#9aadbf", "#2b4055", "#64e4dc"
 TRANSPARENT = "#010203"
@@ -31,15 +32,21 @@ def main():
 
     parser = argparse.ArgumentParser(description="AIW:DE desktop secretary; attach to an existing service")
     parser.add_argument("--service", default="http://127.0.0.1:8766")
+    parser.add_argument("--show-pet", action="store_true", help="Show the companion instead of starting in the tray")
     args = parser.parse_args()
     try:
         origin = personal_origin(args.service)
     except PersonalError as error:
         raise SystemExit(str(error)) from None
 
+    desktop_lease = DesktopLease(origin)
+    if not desktop_lease.acquire():
+        return
+
     class Desktop:
         def __init__(self):
             self.root = tk.Tk()
+            self.root.withdraw()
             self.root.title("我的秘书 · AIW:DE")
             self.root.overrideredirect(True)
             self.root.configure(bg=TRANSPARENT)
@@ -105,6 +112,10 @@ def main():
             self.menu.add_command(label="隐藏人物", command=self.hide_pet, state="normal" if self.tray else "disabled")
             self.menu.add_separator()
             self.menu.add_command(label="退出桌面界面（服务继续运行）", command=self.close)
+            if args.show_pet or not self.tray or not self.tray.active:
+                self.show_pet()
+            else:
+                self.pet.set_visible(False)
             self.root.bind_all("<MouseWheel>", self.scroll_page, add="+")
             self.root.after(100, self.drain)
             self.root.after(200, self.start_connection)
@@ -373,19 +384,18 @@ def main():
             self.activate(self.connection)
 
         def start_connection(self):
-            self.show_connection()
-            self.connect()
+            self.connect(automatic=True)
 
-        def connect(self):
+        def connect(self, automatic=False):
             try:
-                candidate = PersonalClient(self.service.get())
-                code = self.code.get()
+                candidate = PersonalClient(origin if automatic else self.service.get())
+                code = "" if automatic else self.code.get()
             except PersonalError as error:
                 self.status.set(str(error)); return
             def complete(outcome):
                 _result, state, warning = outcome
                 self.client = candidate
-                self.code.set("")
+                if self.connection: self.code.set("")
                 self.goal_preview = None
                 if self.workbench:
                     self.goal_request.set(""); self.goal_digest.set("")
@@ -397,9 +407,10 @@ def main():
                 self.update_state(state if state is not None else {})
                 self.status.set(warning or "个人服务已连接。")
                 if state is not None:
-                    self.connection.withdraw()
-                    self.show_chat()
-                    if state.get("modelConfigured") is False: self.show_settings()
+                    if self.connection: self.connection.withdraw()
+                    if not automatic:
+                        self.show_chat()
+                        if state.get("modelConfigured") is False: self.show_settings()
             self.run("连接个人服务", lambda: candidate.login(code) if code.strip() else candidate.auto_connect(), complete)
 
         def create_pairing(self):
@@ -905,7 +916,10 @@ def main():
             self.root.destroy()
 
     app = Desktop()
-    app.root.mainloop()
+    try:
+        app.root.mainloop()
+    finally:
+        desktop_lease.release()
 
 
 if __name__ == "__main__":
