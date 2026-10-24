@@ -156,6 +156,7 @@
   $('question-release').addEventListener('click',()=>{if(!pending?.checked||!ready||busy||reading)return;pending=null;message('已结束此次人工核对。请按当前正式状态继续，不会自动重放原操作。','warn');render();});
   $('question-plan').addEventListener('change',()=>{++sequence;data=null;telegram=null;ready=false;reading=false;selected=null;message('');render();if($('question-plan').value)readCurrent();});
   $('question-filter').addEventListener('change',()=>{renderInbox();sync();});$('question-search').addEventListener('input',()=>{renderInbox();sync();});
-  window.QuestionUI=Object.freeze({$,node,flag,safe,number,readout,message,dimensions,canOperate,canApprove,enforced,writable,write,confirm,showTab,get data(){return data;},get telegram(){return telegram;},get pending(){return pending;},get busy(){return busy;},get reading(){return reading;}});
+  function openQuestion(id) {if(!data?.questions.some(q=>q.questionId===id))return;selected=id;$('question-filter').value='all';$('question-search').value='';showTab('inbox');renderInbox();sync();}
+  window.QuestionUI=Object.freeze({$,node,flag,safe,number,readout,message,dimensions,canOperate,canApprove,enforced,writable,write,confirm,showTab,openQuestion,get data(){return data;},get telegram(){return telegram;},get pending(){return pending;},get busy(){return busy;},get reading(){return reading;}});
   render();
 })();
