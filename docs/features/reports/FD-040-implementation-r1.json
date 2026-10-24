@@ -1,0 +1,101 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-040",
+  "source_event": "FD-040-000003-design-ready",
+  "human_report": "FD-040-implementation-r1.md",
+  "data": {
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "comparison_base": "30f8883",
+    "implementation_commit": "b05b5ffd539fad168ec0d3e0fd981b8c38cc8da6",
+    "implementation_commits": [
+      "446f597",
+      "877ccb4",
+      "2c485a4",
+      "a7b7989",
+      "537e06d",
+      "b05b5ff"
+    ],
+    "implementation_review_failure_count": 0,
+    "skills": [
+      "codebase-design",
+      "improve-codebase-architecture",
+      "domain-modeling",
+      "diagnosing-bugs",
+      "resolving-merge-conflicts",
+      "teach",
+      "research",
+      "handoff",
+      "edit-article"
+    ],
+    "scope": [
+      "9 standalone optional Skill entries",
+      "explicit index and immutable catalogue assets",
+      "27 matching standalone Worker copies",
+      "compatibility and selection guides, current source matrix and stable specification"
+    ],
+    "composition_path": [
+      "existing catalogue -> ConfigurationUiOptions skill options",
+      "additionalSkills -> ExecutionConfigurations.propose skills/protocolSkills with unchanged primary method",
+      "fixed configuration -> SkillFiles.configured -> existing Worker reader"
+    ],
+    "not_added": [
+      "Worker type or process",
+      "primary profile/default method",
+      "output/API/schema/persistence/tool",
+      "automatic execution or external access"
+    ],
+    "static": {
+      "command": "git diff --check 30f8883 -- scoped paths; inline read-only JSON/hash/index/link/byte-copy checks and targeted rg composition inspection (one command batch)",
+      "result": "passed",
+      "new_assets": 9,
+      "unchanged_existing_assets": 10,
+      "unchanged_methods": 11,
+      "new_declared_files": 9,
+      "matching_standalone_copies": 27,
+      "total_skill_packages": 19,
+      "unchanged_primary_profiles": 8,
+      "unchanged_additional_skill_limit": 6,
+      "implementation_file_count": 43,
+      "old_file_lists_unchanged": true,
+      "production_modules_or_skills_executed": false,
+      "nonfatal_warning": "Python invalid escape in search-pattern literals; checks completed successfully"
+    },
+    "compile": {
+      "environment_script": "C:/green/bin/setup-jdk25.ps1",
+      "java": "25.0.1",
+      "maven": "3.9.4",
+      "initial_command": "mvn -o -Dmaven.test.skip=true compile",
+      "initial_result": "PowerShell split the unquoted argument; Maven rejected lifecycle .test.skip=true before compilation",
+      "corrected_command": "mvn -o '-Dmaven.test.skip=true' compile",
+      "syntax_correction_retries": 1,
+      "revision": "b05b5ffd539fad168ec0d3e0fd981b8c38cc8da6",
+      "result": "passed",
+      "finished_at": "2026-10-24T13:53:24+09:00",
+      "details": "2 config resources and 140 application resources copied; Java classes up to date",
+      "environment_restored": true,
+      "printed_package_examples_executed": false
+    },
+    "skipped": [
+      "tests",
+      "models/Worker/real nine-Skill tasks",
+      "factory constructor/live catalogue/UI",
+      "SDK/tool/recovery",
+      "database/services/browser/network/downloads",
+      "final build/package/install/restart/release"
+    ],
+    "risks": [
+      "Static resources and compile do not prove real selection, claim, model behavior or quality improvement",
+      "Existing frozen tasks retain original content; new resources need normal deployment",
+      "Existing language/runtime support is unchanged",
+      "Compile used shared workspace with unrelated edits; those edits are excluded from this review"
+    ],
+    "excluded": [
+      "unrelated dirty Java/authority/configuration/templates",
+      "secretary Python/UI/models/launchers and desktop compile script",
+      "host .agents/skills and archived earlier FD evidence"
+    ],
+    "blockers": [],
+    "next_step": "Independent implementation review, then host verifies receipt and performs scoped local archive"
+  }
+}
