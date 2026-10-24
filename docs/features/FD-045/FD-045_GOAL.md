@@ -1,7 +1,7 @@
 # FD-045: Goal 删除结果提示与状态核对修复
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -29,7 +29,7 @@
 
 ## TODO
 
-1.1–1.3 已实施，静态差异检查及 JS 语法编译检查通过；等待独立实现审阅。实际运行错误原因未复现。
+1.1–1.3 已实施；独立实现审阅 r1 通过，无阻塞发现。待 host 核对真实通过 receipt 和无源码漂移后范围归档。实际运行错误原因未复现。
 
 ## Acceptance
 
@@ -43,6 +43,8 @@
 
 - Compile-only check and static review by default. Optional tests use `$fd-test`
   when requested and do not gate FD acceptance.
+- Worker 实际 git diff --check 与 node --check src/main/resources/static/ui/goals.js 通过。无 Java 修改，未运行 Maven、测试、浏览器、HTTP、数据库、服务重启或部署。
+- 独立 Reviewer fd045-review-20261024-a7c4e2 已认领 FD-045-000004-implementation-ready，静态核对 3d3d18d..1a2e0fc 全部六文件、原 Controller/Service/Repository 与 hidden 样式。r1 无阻塞发现，五项验收由静态证据支持；报告见 docs/features/reviews/FD-045-review-r1.md 及同名 JSON。未重跑 Worker 检查；实际交互及原运行错误原因仍未验证。失败审阅次数 0；事件以 CLI 实际 receipt 为准。
 
 ## Sources
 

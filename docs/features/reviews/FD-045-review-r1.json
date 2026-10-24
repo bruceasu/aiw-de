@@ -1,0 +1,20 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-045",
+  "source_event": "FD-045-000004-implementation-ready",
+  "human_report": "FD-045-review-r1.md",
+  "data": {
+    "session": "fd045-review-20261024-a7c4e2",
+    "base_commit": "3d3d18d",
+    "reviewed_commit": "1a2e0fc",
+    "verdict": "passed",
+    "findings": [],
+    "acceptance": [{"id":1,"result":"supported-statically"},{"id":2,"result":"supported-statically"},{"id":3,"result":"supported-statically"},{"id":4,"result":"supported-statically"},{"id":5,"result":"supported-statically"}],
+    "worker_checks_reviewed": ["git diff --check", "node --check src/main/resources/static/ui/goals.js"],
+    "reviewer_checks": ["read-only source and evidence inspection"],
+    "not_run": ["tests", "compile", "browser", "HTTP", "database", "service", "deployment"],
+    "remaining_risks": ["Original runtime failure cause unknown", "Actual browser interaction and deployment unverified"],
+    "failed_review_count": 0
+  }
+}
