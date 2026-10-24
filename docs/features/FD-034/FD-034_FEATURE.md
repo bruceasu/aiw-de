@@ -53,11 +53,11 @@
 - [x] 1.2 提供 Owner 过滤的表单选择项，并复用后端模型筛选。规模小、难度中，依赖 1.1；证据为 ConfigurationUiOptions、state 附加 uiOptions 和 AgentFactory.supportedProfiles，尚待最终编译/审阅。
 - [x] 1.3 用清晰表单与准备记录替换意图/JSON 输入输出，维护原请求/版本/世代和失败恢复。规模小、难度中，依赖 1.2；证据为 configurations.html/js/css，原输入/版本/世代内存维护，未知响应先刷新核对，再显式重试原对象，记录恢复与选择项更新分开。
 - [x] 1.4 提供可选方法装配、摘要预览、保存/复用/选用以及资料登记表单。规模小、难度中，依赖 1.2；证据为 configuration-methods.js、对应表单和摘要面板，额外 Skill 排除基础引用、输入指纹/序号使旧预览失效，保存/登记提交原对象并区分后续刷新失败。
-- [ ] 1.5 对齐控制台布局/文案与使用说明，执行范围内编译并提交独立实现审阅证据。规模小、难度中，依赖前述条目；运行效果未验证则保留说明。
+- [x] 1.5 对齐控制台布局/文案与使用说明，执行范围内编译并提交独立实现审阅证据。规模小、难度中，依赖前述条目；控制台外壳与导航、附近说明/稳定规格已同步，ebeacaa 的离线 Java compile 和两个浏览器脚本语法编译通过，未运行真实页面。
 
 ## TODO
 
-- 设计已 ready，实施本页易用性修改；动作授权 FD-033 的缺省范围选择单独保持待确认。
+- 全部实现条目已完成，等待独立实现审阅，通过后仅提交本 FD 审阅证据并自动归档；动作授权 FD-033 的缺省范围选择仍单独待确认。
 
 ## Acceptance
 
@@ -74,6 +74,11 @@
   when requested and do not gate FD acceptance.
 - 静态核对契约、Owner 过滤、原请求/异步失效和页面语义；源码完成后一次 JDK 25 离线 Maven compile 与配置脚本 node --check。使用已知本机环境，不下载依赖、不打包，不运行测试/浏览器/数据库/服务或模型。
 - 独立设计审阅：../reviews/FD-034-design-review-20261024-742db6c1.md 与同名 JSON，ready；未执行运行验证。
+- 实现比较基线 8e7342c；实现分片 1ca288a、9d2dae1、e9bb9ae、ebeacaa。所有相关 Java/资源/说明/稳定规格已提交，其它私人秘书/模型/启动脚本和 FD-033 草案/反馈不在范围内。
+- 2026-10-24 11:17 JST：使用用户提供的 `C:/green/bin/setup-jdk25.ps1` 设置 JDK 25/Maven 3.9.4 环境，`mvn -o -Dmaven.test.skip=true compile` 通过，292 个生产源。脚本仅运行版本显示，打印的 package 示例没有执行；环境在结束后还原。
+- `node --check src/main/resources/static/ui/configurations.js` 与 `node --check src/main/resources/static/ui/configuration-methods.js` 均通过。范围内 git diff --check 通过；定向静态检索只剩内部请求序列化/指纹使用 JSON，不再向页面输出原始 JSON 或要求 JSON 输入。
+- 未运行：测试、Thymeleaf 渲染、浏览器/响应式布局、数据库、实际登录/准备/候选保存、乱序请求与中断恢复、模型、网络下载、打包、安装、重启和发布。编译与静态证据不是运行通过。
+- Worker 双证据：../reports/FD-034-implementation-r1.md 与同名 JSON。
 
 ## Sources
 

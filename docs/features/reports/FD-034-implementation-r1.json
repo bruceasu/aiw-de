@@ -1,0 +1,22 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-034",
+  "source_event": "FD-034-000004-design-ready",
+  "human_report": "FD-034-implementation-r1.md",
+  "data": {
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "comparison_base": "8e7342c",
+    "implementation_commit": "ebeacaa",
+    "implementation_commits": ["1ca288a", "9d2dae1", "e9bb9ae", "ebeacaa"],
+    "workspace": "Primary, explicit scoped commits; unrelated secretary/Python/model/launcher changes and FD-033 draft/feedback excluded",
+    "scope": ["ConfigurationUiOptions", "ConfigurationController state additive uiOptions", "AgentFactory supported-profile extraction", "configurations.html/js/css", "configuration-methods.js", "shared navigation entry", "EXECUTION-CONFIGURATION documentation", "task-orchestration stable UI requirement"],
+    "static_check": {"command": "git diff --check 8e7342c -- scoped paths", "result": "passed"},
+    "compile": {"environment_script": "C:/green/bin/setup-jdk25.ps1", "java": "25.0.1", "maven": "3.9.4", "command": "mvn -o -Dmaven.test.skip=true compile", "revision": "ebeacaa", "result": "passed", "production_sources": 292, "environment_restored": true, "printed_package_examples_executed": false},
+    "script_compiles": [{"command": "node --check src/main/resources/static/ui/configurations.js", "result": "passed"}, {"command": "node --check src/main/resources/static/ui/configuration-methods.js", "result": "passed"}],
+    "design_review": {"report": "FD-034-design-review-20261024-742db6c1.md", "recommendation": "ready", "constraints_implemented": ["Owner/repository metadata isolation", "Exact immutable references", "Original Intent survives refresh", "Preview fingerprint and sequence", "Confirmed writes survive refresh failure"]},
+    "skipped": ["tests", "database or migration", "service", "Thymeleaf rendering", "browser and responsive layout", "live login/preparation/save/recovery", "models", "network/downloads", "packages", "installation", "restart", "publication"],
+    "risks": ["Runtime SQL, template, layout and asynchronous behavior remain unverified", "Current platform must be updated and restarted to provide the added UI metadata", "FD-033 default action-scope question remains independent and unanswered"],
+    "next_step": "Independent static implementation review"
+  }
+}
