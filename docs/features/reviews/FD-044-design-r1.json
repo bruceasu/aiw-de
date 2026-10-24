@@ -1,0 +1,75 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-044",
+  "source_event": "FD-044-000002-design-requested",
+  "human_report": "FD-044-design-r1.md",
+  "data": {
+    "reviewer_session": "fd044-design-20261024-d3e9a016",
+    "planner_worker_session": "worker-context-20261024-61db8e4a",
+    "reviewed_plan_commit": "408fc32052da05f7681fe2dedddb81f9e1062f09",
+    "reviewed_fd_revision": 2,
+    "reviewed_fd_sha256": "b7ea598c28d436751863c7620fa0de2b313dfcf73d4d9532569193659df724c8",
+    "recommendation": "ready",
+    "initial_blocking_findings": 1,
+    "unresolved_blocking_findings": 0,
+    "findings": [
+      {
+        "id": "D044-01",
+        "severity": "P1",
+        "status": "resolved-in-design-same-review",
+        "path": "docs/features/FD-044/FD-044_WORKER_CONTEXT_TOOLS_AND_HUMAN_INTERACTION.md",
+        "lines": [
+          36,
+          38,
+          42
+        ],
+        "problem": "Worker could read a queued input before model terminal ACK while the human still cancelled it as undelivered",
+        "resolution": [
+          "transactional QUEUED to RESERVED batch with immutable sequence/digest",
+          "cancel only QUEUED",
+          "bind batch to exact STARTED MODEL operation before provider dispatch",
+          "DELIVERED only after corresponding successful terminal and operation receipt",
+          "unknown/failure never automatically requeue or replay under a new id",
+          "atomic DRAIN or seal rejects pending/reserved/unknown batches and active/unknown operations",
+          "strict running live Lease with no stop request and unchanged original revision",
+          "human owner/requestId original digest/result receipts"
+        ]
+      }
+    ],
+    "coverage": [
+      "nine mechanisms mapped to bounded dependent Work Items",
+      "frozen skill/task/configuration compatibility and same Attempt continuation",
+      "owner/running lease/receipt/batch/seal boundaries",
+      "traceable compaction and cumulative actual model usage/call limits",
+      "existing tool locks and structured result separation",
+      "immutable capability assets and original role compiler",
+      "same-task exploration records without transcript or file rewind",
+      "runtime capability differences and honest static/compile evidence"
+    ],
+    "commands_run": [
+      "bounded standard-library text reads of explicit instruction/design/source paths",
+      "git rev-parse 408fc32",
+      "git diff 408fc32 -- docs/features/FD-044/FD-044_WORKER_CONTEXT_TOOLS_AND_HUMAN_INTERACTION.md",
+      "FD file SHA256 read",
+      "one report-only static check after writing"
+    ],
+    "checks_skipped": [
+      "tests and compilers",
+      "product code, SDK/model/Worker execution",
+      "database and migration application",
+      "HTTP/browser/services",
+      "network/dependency downloads",
+      "subagents",
+      "stage mutations/claim/emit/commit/archive",
+      "package/publish/deploy/restart"
+    ],
+    "remaining_risks": [
+      "real SDK input/history lifecycle and compaction behavior unverified",
+      "actual SQLite/PostgreSQL migrations and race conditions unverified",
+      "model understanding and UI behavior not demonstrated",
+      "runtime support differences must stay explicit"
+    ],
+    "next_step": "Planner incorporates and commits current reviewed design; implementation still requires independent final source review"
+  }
+}

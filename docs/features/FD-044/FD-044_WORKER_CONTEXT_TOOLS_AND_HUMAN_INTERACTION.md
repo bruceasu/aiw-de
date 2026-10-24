@@ -23,7 +23,7 @@
 
 保持完整 Skill 字节、manifest、已有固定资产和传输 shape。默认主技能、engineering-artifact-protocol 保持完整入口；其他已选技能先给 ref/version/有界 description/目录及明确读取指令，执行相关步骤前读其完整 SKILL.md。无有效描述时保留正文，避免隐式漏合同；不凭文件名猜技能语义。read_skill_file 继续精确读取已冻结字节，不能发现未批准技能或执行脚本。三语言使用相同规则。
 
-能力包是共享 Skill 引用、工作说明、工具需求的可复用组合，不是另一种 Worker 或角色生命周期。定义 aiw.capability.pack.v1，含服务器生成短 id、name、repositoryRef、description、skills（固定引用）和 work；不包含可执行模块、网络安装、任意工具定义或模型路由。保存为既有 Owner/仓库范围不可变 knowledge 资产，服务核对包内固定 Skill 引用；角色编辑器可保存已选步骤为包，再导入任一新/旧角色步骤。选择工具仍由原角色编译器和授权校验；六技能/八步等旧上限保持。
+能力包是共享 Skill 引用、工作说明、工具需求的可复用组合，不是另一种 Worker 或角色生命周期。定义 aiw.capability.pack.v1，含服务器生成短 id、name、repositoryRef、description、skills（固定引用）、work 和原闭合枚举内的 toolRequirements；不包含可执行模块、网络安装、任意工具定义或模型路由。保存为既有 Owner/仓库范围不可变 knowledge 资产，服务核对包内固定 Skill 引用；角色编辑器可保存已选步骤为包，再导入任一新/旧角色步骤。选择工具仍由原角色编译器和授权校验；六技能/八步等旧上限保持。
 
 ### 2. 受控 Worker 工作台与输入合同
 
@@ -33,13 +33,13 @@
 
 新增便携 V19 追加表，存工作台 session（attempt、task、owner、后端、phase、更新时间）、输入收据（owner+requestId 唯一、原 attempt/revision、mode、文本、digest、state、交付来源）和探索节点。只给新运行时主动开启的尝试建 session，不回填旧数据，不修改原指令/输入快照或账本。Owner 由现有 execution_policy 归属确定，不接受客户端 owner；受控事务沿用 boundary.lock，SQLite/PostgreSQL 使用 TEXT/BIGINT/INTEGER、参数 SQL。旧服务回退不读新表，旧任务仍原冻结内容；回退前暂停新交互会话，新记录保留不自动重放。
 
-输入分 STEER（下一模型请求边界补充当前工作）和 FOLLOW_UP（本轮报告结束后、正式结果收尾前继续处理）。仅同一原任务/Attempt/指令修订和原授权范围，不能替代换目标的正式修订或创建别的业务任务。文本有界，系统生成 requestId，重试相同 ID+digest 返回原记录，内容冲突拒绝。只给明确开启支持的 Python API session 发送；老 Worker/Codex/Go/TS 不显示虚假可用控制，仍可使用原问答/指令修订流程。
+输入分 STEER（下一模型请求边界补充当前工作）和 FOLLOW_UP（本轮报告结束后、正式结果收尾前继续处理）。仅同一原任务/Attempt/指令修订和原授权范围，不能替代换目标的正式修订或创建别的业务任务。文本有界，系统生成 requestId，重试相同 ID+digest 返回原记录，内容冲突拒绝。机器新kind不能直接沿用原read中running=false的宽松校验：open、reserve、link、ACK、drain/seal必须明确verifyLease(task,lease,true,true)，确认Task/Attempt均RUNNING、无stop request、当前live lease及原instructionRevision一致，归属由服务器固定上下文取得。人类发送也核对当前Attempt/revision及session阶段。只给明确开启支持的 Python API session 发送；老 Worker/Codex/Go/TS 不显示虚假可用控制，仍可使用原问答/指令修订流程。
 
-Python API wrapper 在模型请求前收集 STEER，在原 SDK input 的有界、验证过的前缀位置追加 user-data 消息并在后续请求重建相同顺序；不修改冻结 system/task/Skill，不把文本当权限。只在原模型成功终态及其受控 MODEL 收据后 ACK 为 DELIVERED（意为已递交，非理解/验收）；未知请求保留不确定记录，不重新执行未知工具。SDK input 前缀变化无法确认时停止依赖操作。
+Python API wrapper 在模型请求前收集 STEER，在原 SDK input 的有界、验证过的前缀位置追加 user-data 消息并在后续请求重建相同顺序；不修改冻结 system/task/Skill，不把文本当权限。消息领取在同一事务中将QUEUED变为RESERVED，保存不可变批次ID、mode、消息序列与内容digest；模型操作begin后、实际模型请求前，将批次绑定该Attempt的确切STARTED MODEL操作。只有该绑定操作成功且模型终态确认后ACK为DELIVERED（意为已递交，非理解/验收），不能用任意其他成功MODEL冒充。未知请求/失联/失败后批次保持RESERVED或显示UNKNOWN，不自动返队、换ID或重新执行未知工具。SDK input 前缀变化无法确认时停止依赖操作。
 
 当 SDK 产生最终报告时，Worker 原 Attempt 内读取 FOLLOW_UP，有则追加固定补充输入继续同一角色，最终报告需覆盖原任务与已递交补充。所有模型调用和摘要共用原总体期限与实际总调用上限，不因新一轮重新获得次数。上下文只属于当前 Attempt，不伪称持久模型会话。
 
-机器 seal 与人类 enqueue 共用锁：没有待递交输入、没有 STARTED/UNKNOWN 操作时才将 session 标 FINALIZING，拒绝后来新增输入；有待处理输入则不封口并继续。已进入收尾或终态后未执行输入显示实际状态，不能默默重启 Task。取消只撤回未递交消息；停止/撤权仍沿原机制，不承诺撤销已发生副作用。后端不支持时不自动降级或假装成功。
+机器DRAIN/seal与人类enqueue共用锁：有QUEUED则原子领取剩余输入为下一批；没有QUEUED、RESERVED/UNKNOWN批次及STARTED/UNKNOWN操作时才将session标FINALIZING，拒绝后来新增输入；有待处理输入则不封口并继续。已进入收尾或终态后未执行输入显示实际状态，不能默默重启 Task。取消只撤回QUEUED；RESERVED已经领取不能显示已撤回。人类写入统一保留owner+requestId的原命令digest/结果收据，响应未知先核对原收据、仅重试同一ID+内容，不能生成新ID重放。停止/撤权仍沿原机制，不承诺撤销已发生副作用。后端不支持时不自动降级或假装成功。
 
 ### 3. 上下文、工具结果与执行扩展点
 
@@ -69,7 +69,7 @@ Python Broker 统一 begin/execute/finish/unknown/settle 扩展点；复用原�
 
 每项规模小，难度低或中，预计半日内可独立评审；实现前保持编号。
 
-- [ ] 1.1 完成九项映射、兼容/Owner/输入状态设计和一次有界独立设计审阅。中；无依赖；无重大未决问题才就绪。
+- [x] 1.1 完成九项映射、兼容/Owner/输入状态设计和一次有界独立设计审阅。中；无依赖；无重大未决问题才就绪。
 - [ ] 1.2 Python 固定技能入口渐进披露，必需入口与无描述回退保持。低；依赖1.1；原冻结字节/工具不变。
 - [ ] 1.3 TS/Go 对齐相同入口规则及旧传输兼容。低；依赖1.2；无动态配置后端扩张。
 - [ ] 1.4 V19 与工作台闭合合同、Owner/Lease/session状态。中；依赖1.1；旧记录不回填/不改原快照。
@@ -86,7 +86,7 @@ Python Broker 统一 begin/execute/finish/unknown/settle 扩展点；复用原�
 
 ## TODO
 
-Planner 已领取 FD-044-000002-design-requested，正在形成设计；独立设计审阅后实施，最终由独立 Reviewer 判定。不新增测试授权。
+独立设计r1已ready，RESERVED批次/精确MODEL绑定/严格RUNNING Lease及DRAIN/seal修正已纳入。按工作项实施，最终由独立Reviewer判定；不新增测试授权。
 
 ## Acceptance
 
@@ -101,6 +101,8 @@ Planner 已领取 FD-044-000002-design-requested，正在形成设计；独立�
 ## Verification
 
 默认一次范围 git diff --check + 仅标准库源码/JSON/hash/Owner SQL/消息状态/DOM引用/目录一致性静态核对。随后 scripts/compile-worker-runtime.mjs（生产语法/临时Go编译、不留分发产物、离线）和 C:/green/bin/setup-jdk25.ps1 + mvn -o '-Dmaven.test.skip=true' compile，分别覆盖受影响模块。无测试/测试编译、数据库迁移执行、SDK/模型/Worker/服务/HTTP/浏览器、网络/下载、打包部署或重启。fd-workflow仅授权一次必要设计审阅与独立实现审阅（失败周期最多3轮）；静态/编译不冒充并发、模型方法或运行验证。
+
+独立设计[r1](../reviews/FD-044-design-r1.md)及同名JSON为ready，确认输入领取/撤回竞争已解决。
 
 ## Sources
 
