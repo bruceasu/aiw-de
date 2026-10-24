@@ -1,0 +1,58 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "design-review",
+  "fd_id": "FD-043",
+  "source_event": "FD-043-000002-design-requested",
+  "human_report": "FD-043-design-r1.md",
+  "data": {
+    "reviewer_session": "fd043-design-20261024-9e12c4b7",
+    "planner_session": "delegation-methods-20261024-8a2bb0a5",
+    "reviewed_commit": "6e43c86",
+    "reviewed_fd_revision": 2,
+    "recommendation": "ready",
+    "findings": [],
+    "supported_boundaries": [
+      "Delegation is a composable Skill recommendation; platform retains cross-Worker orchestration",
+      "No automatic spawn, fixed vendor model thresholds or new budget enforcement",
+      "Server currentOwner policy filter and matching task/attempt joins; frozen binding Owner check",
+      "Whitelisted metadata excludes credentials, lease tokens, private bodies and complete summaries",
+      "Existing mandatory human session, CSRF and operator boundary; original method/role DTOs preserved",
+      "Recent 100 metered attempts only; repeat READ counters are not global totals or waste verdicts",
+      "UNKNOWN, unstarted, settled and reported verdict semantics remain distinct from independent acceptance",
+      "Existing assets and frozen task bytes remain compatible; changed files receive new manifests"
+    ],
+    "implementation_notes": [
+      "Meter token defaults before start do not prove measured zero; cached tokens are an input subset",
+      "Manual reconciliation can fill time/cost without clearing original unknown flags; retain both values and flags",
+      "Resolve role names from exact frozen configuration, not a current catalogue name",
+      "Keep the projection read-only and preserve the documented rollback limitation for the added Skill"
+    ],
+    "commands_run": [
+      "Two initial targeted PowerShell inline Python UTF-8 read batches; the second output was truncated",
+      "Three bounded follow-up source reads: two included missing guessed package paths; the last used exact paths supplied by Planner",
+      "git ls-tree -r --name-only 6e43c86 and git show 6e43c86:src/main/java/me/asu/aidev/authority/AuthorityHttpConfiguration.java",
+      "Read current FD-043 Revision 2, ConfigurationController, ExecutionLedger and archived FD-042 design-review JSON",
+      "apply_patch created this Markdown/JSON report pair only"
+    ],
+    "discovery_budget_note": "Path recovery and one truncated tool result required follow-up beyond the initial three-batch plan; no runtime or topic expansion occurred",
+    "checks_skipped": [
+      "post-report validation command",
+      "tests and compile",
+      "SQL/database/application/services/HTTP/browser",
+      "models/network/dependency downloads",
+      "sub-agents",
+      "FD edits/implementation/claim/emit/commit/archive"
+    ],
+    "risks": [
+      "Actual database joins, concurrent observation consistency and owner-switch browser behavior remain unverified",
+      "Real model adherence and effect of shared prompt methods remain unmeasured",
+      "An older Control Plane lacks the added Skill; preserve the documented pause on new Skill configuration creation/preparation before rollback"
+    ],
+    "assumptions": [
+      "Existing immutable SkillFiles and configuration contracts remain unchanged",
+      "Implementation follows server-derived Owner checks, exact binding validation and explicit output whitelists"
+    ],
+    "workflow_mutations": false,
+    "next_step": "Planner may emit design-ready; implementation still requires independent implementation review"
+  }
+}
