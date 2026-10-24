@@ -1,0 +1,64 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-037",
+  "source_event": "FD-037-000004-implementation-ready",
+  "human_report": "FD-037-implementation-review-r1-b56f1d9a.md",
+  "data": {
+    "reviewer_session": "fd037-implementation-review-20261024-b56f1d9a",
+    "worker_session": "secretary-desktop-20261024-a6529740",
+    "comparison_base": "244b62b",
+    "implementation_commit": "d1a5cf7",
+    "worker_evidence_commit": "6ede329",
+    "prior_review_failure_count": 0,
+    "verdict": "passed",
+    "review_mode": "independent-static-only",
+    "findings": [],
+    "results": {
+      "correctness": "passed: both role spans use actual signedIn attribute, retaining actual role for signed-in sessions",
+      "standards": "passed: focused two-span change and adjacent documentation; parallel dirty navigation excluded",
+      "spec": "passed: FD acceptance 1-4 statically supported",
+      "evidence": "passed: Worker compile is explicitly not template or browser runtime evidence; Reviewer did not rerun it"
+    },
+    "inspected": [
+      "FD-037 acceptance and Worker Markdown/JSON evidence",
+      "244b62b..d1a5cf7 exact committed two-file diff",
+      "fragments.html role labels and unchanged sign-in/sign-out controls",
+      "WebConsoleSecurityInterceptor consoleAuthEnabled attribute",
+      "WebConsoleSecurityService signedIn, authenticated, role and actor",
+      "console.js original role-based partial refresh stop logic",
+      "adjacent security documentation and excluded dirty navigation diff"
+    ],
+    "commands_run": [
+      "Get-Content and rg targeted instruction/evidence/source reads",
+      "git diff 244b62b..d1a5cf7 -- scoped template and documentation",
+      "git diff --name-status 244b62b..d1a5cf7",
+      "git diff -- src/main/resources/templates/ui/fragments.html",
+      "git status --short -- scoped template/FD/reviews",
+      "git show --stat --oneline d1a5cf7",
+      "git log -3 --oneline",
+      "aiw fd --help; aiw fd claim --help; aiw fd emit --help",
+      "aiw fd claim FD-037 FD-037-000004-implementation-ready --session fd037-implementation-review-20261024-b56f1d9a",
+      "PowerShell ConvertFrom-Json and same-basename evidence marker check; scoped git diff --check (passed)"
+    ],
+    "discovery_correction": "Initial guessed web package and receipt.json did not exist; actual discovered webconsole source and events/000004 receipt were read instead",
+    "worker_compile": {
+      "command": "mvn -o -Dmaven.test.skip=true compile",
+      "reported_result": "passed; production resources copied, Java up to date",
+      "reviewer_reexecuted": false,
+      "proves_template_rendering": false
+    },
+    "skipped": [
+      "tests and compile rerun",
+      "Thymeleaf/browser/HTTP/real login/logout",
+      "database/services/network/downloads",
+      "build/package/install/restart/release"
+    ],
+    "residual_risks": [
+      "Actual Thymeleaf rendering and live login transitions have static evidence only",
+      "Current running instance was not restarted or browser-validated"
+    ],
+    "blockers": [],
+    "next_step": "Host verifies actual passed event and no implementation drift, then scoped local archive"
+  }
+}

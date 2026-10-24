@@ -1,7 +1,7 @@
 # FD-037: 未登录控制台身份显示为未登录
 
-**Status:** Open
-**Revision:** 3
+**Status:** Complete
+**Revision:** 6
 **Priority:** Medium
 **Evidence policy:** Dual
 
@@ -30,7 +30,7 @@ fragments.html 目前存在其它任务的导航改动，本 FD 只暂存两处�
 
 ## TODO
 
-1.1–1.2 已完成，d1a5cf7 两处标签与说明已范围提交；待独立实现审阅，通过后归档。
+1.1–1.2 已完成，d1a5cf7 两处标签与说明已范围提交；独立静态实现审阅通过，待 host 核对真实事件及无实现漂移后范围归档。
 
 ## Acceptance
 
@@ -42,6 +42,8 @@ fragments.html 目前存在其它任务的导航改动，本 FD 只暂存两处�
 ## Verification
 
 只读检查原 Interceptor/Service、公共模板、登录/退出及自动刷新使用的原角色。执行一次范围 git diff --check。使用 C:/green/bin/setup-jdk25.ps1 后离线 mvn -o -Dmaven.test.skip=true compile，不下载/跑测试或打包。没有修改 Java；当前工作区其它 Java 即使参与编译，也不属于本 FD 交付/审阅范围。Thymeleaf/浏览器、真实登录退出、数据库和服务均不运行。
+
+独立 Reviewer Session `fd037-implementation-review-20261024-b56f1d9a` 已领取 `FD-037-000004-implementation-ready`，审阅 `244b62b..d1a5cf7` 实际补丁及完整验收，结论通过、无发现。双证据：`../reviews/FD-037-implementation-review-r1-b56f1d9a.md/.json`。真实 signedIn 控制两处标签，原免登录角色/actor、权限按钮和自动刷新未改，并行导航未提交。Reviewer 未重跑编译或运行态检查；真实模板渲染、登录退出及当前运行实例展示仍未验证。随后由 Reviewer 发出真实 verification-passed，host 完成本地归档。
 
 ## Sources
 
