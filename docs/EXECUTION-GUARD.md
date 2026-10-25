@@ -16,6 +16,8 @@ FD-029 的接口版本为 `aiw.execution.guard.v1`。这是源码实现及部署
 
 1. 用户自行准备新运行库。V11 要求运行任务及 Attempt 表为空；遇到已有运行数据会停止，不删除或迁移旧数据。V11 扩展 SQLite/PostgreSQL 状态约束，V12 添加固定依据、意图、账本和交付记录。
 2. 配置人类控制台认证及 `AIW_WORKER_TOKEN`。没有共享机器凭证不能确认执行政策；浏览器 Cookie 不能代替任务的 Worker/Attempt/Lease。
+
+   Windows 本机可运行 `./scripts/configure-local-worker-token.ps1`，在仓库根目录的私有 `.env` 中生成缺省共享令牌；已有非空值保持不变，脚本不输出凭证，并拒绝写入已受 Git 跟踪的 `.env`。平台 `scripts/startup.bat` / `scripts/startup.sh` 会读取此文件。专业 Worker 启动时也必须加载同一份环境中的 `AIW_WORKER_TOKEN`，不要为每个进程单独生成新值。配置后需重启平台。秘书的个人身份凭证与此令牌用途不同，不能互相替代。网页准备文件范围时会提前检查此项，避免完成计划确认后才因平台缺项回滚。
 3. Python Worker 使用 `AIW_EXECUTION_GUARD=true`。启动时读取本地 Profile/Skill，按摘要声明 `fixed-profile:`、`fixed-skill:` 能力。执行前重新校验实际 Skill。旧 Go/TypeScript 不声明本协议能力。
 4. 通过 `/ui/authority` 确认执行范围和固定输入。默认仅记录，预算可选；严格模式还需确认预算。每个新受控业务任务在创建事务中记录一次 TASKS；技术 Attempt 不增加 TASKS。以前尚未执行的任务首次绑定时补记，重复绑定不重复消耗。
 5. 准备输入、工具、后端或命令能力有缺口时不领取。FD-027 负责新增动态配置/知识的准备，FD-028 负责正式问题和续行绑定，FD-026 负责图及循环转移；它们消费本协议，不复制账本。

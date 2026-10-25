@@ -46,42 +46,6 @@
   });
   document.addEventListener('change', event => { if (event.target.closest('form')) trackEdits(); });
   document.addEventListener('reset', () => setTimeout(trackEdits, 0));
-  const confirmation = document.createElement('dialog');
-  confirmation.className = 'workspace-confirm console-confirm';
-  confirmation.setAttribute('aria-labelledby', 'console-confirm-title');
-  confirmation.setAttribute('aria-describedby', 'console-confirm-message');
-  confirmation.innerHTML = '<div class="workspace-confirm__top"><span>Confirm action</span></div>'
-    + '<div class="workspace-confirm__body"><h2 id="console-confirm-title"></h2><p id="console-confirm-message"></p></div>'
-    + '<div class="workspace-confirm__footer"><button class="btn ghost" type="button" data-confirm-cancel>Cancel</button>'
-    + '<button class="btn primary" type="button" data-confirm-accept>Confirm</button></div>';
-  document.body.appendChild(confirmation);
-  let pendingConfirmation = null;
-  let confirmationFocus = null;
-  window.aiwConfirm = (message, { danger = false, title = 'Confirm action' } = {}) => {
-    if (pendingConfirmation || typeof confirmation.showModal !== 'function') return Promise.resolve(false);
-    confirmation.querySelector('#console-confirm-title').textContent = title;
-    confirmation.querySelector('#console-confirm-message').textContent = message;
-    confirmation.classList.toggle('console-confirm--danger', danger);
-    confirmation.querySelector('[data-confirm-accept]').className = danger ? 'btn danger' : 'btn primary';
-    confirmation.returnValue = '';
-    confirmationFocus = document.activeElement;
-    return new Promise(resolve => {
-      pendingConfirmation = resolve;
-      confirmation.showModal();
-      confirmation.querySelector('[data-confirm-cancel]').focus();
-    });
-  };
-  confirmation.querySelector('[data-confirm-cancel]').addEventListener('click', () => confirmation.close('cancel'));
-  confirmation.querySelector('[data-confirm-accept]').addEventListener('click', () => confirmation.close('confirm'));
-  confirmation.addEventListener('click', event => {
-    if (event.target === confirmation) confirmation.close('cancel');
-  });
-  confirmation.addEventListener('close', () => {
-    const resolve = pendingConfirmation;
-    pendingConfirmation = null;
-    if (confirmationFocus?.isConnected) confirmationFocus.focus();
-    resolve?.(confirmation.returnValue === 'confirm');
-  });
   const confirmedForms = new WeakSet();
   const confirmingForms = new WeakSet();
   document.addEventListener('submit', async event => {

@@ -2,13 +2,14 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" th:content="${csrfToken}"><title>秘书平台授权（高级） · AIW:DE</title>
-<link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/authority.css?v=accounting-records-5"><script src="/ui/authority.js?v=accounting-records-5" defer></script><link rel="stylesheet" href="/ui/action-permissions.css?v=grouped-1"><script src="/ui/action-permissions.js?v=grouped-1" defer></script></head>
+<link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/authority.css?v=page-scroll-3"><script src="/ui/authority.js?v=accounting-records-5" defer></script><link rel="stylesheet" href="/ui/action-permissions.css?v=grouped-1"><script src="/ui/action-permissions.js?v=grouped-1" defer></script></head>
 <body><div class="app authority-page"><nav th:replace="~{ui/fragments :: nav('authority')}"></nav><main class="main">
 <header th:replace="~{ui/fragments :: topbar('秘书平台授权（高级）','管理秘书调用专业平台时的身份、操作权限与执行范围')}"></header>
 <div class="content">
+<section class="card"><h2>秘书连接与授权</h2><p>连接秘书、选择计划和确认文件范围已移到独立页面。</p><a class="btn primary" href="/ui/secretary-setup">打开秘书连接与授权</a></section>
 <section class="authority-intro" aria-labelledby="authority-intro-title">
 <div class="authority-intro-copy"><span class="authority-eyebrow">个人秘书 · 平台权限</span><h2 id="authority-intro-title">由你决定秘书可以做什么</h2><p>此处供你配置秘书调用专业平台的权限。日常聊天、查询资料和保存文件无需在此登记或启用。专业平台授权限定动作、目标和有效期；私人对话、策略和安排保存在秘书本地。</p>
-<ol class="authority-steps" aria-label="授权顺序"><li><span>01</span>登记秘书</li><li><span>02</span>复制命令并启动</li><li><span>03</span>确认权限并启用</li></ol></div>
+<ol class="authority-steps" aria-label="授权顺序"><li><span>01</span>连接本机秘书</li><li><span>02</span>核对代理范围</li><li><span>03</span>返回秘书继续工作</li></ol></div>
 <div class="authority-intro-actions"><a class="btn ghost" href="/ui/configurations">专业 Worker 任务配置（高级） <span aria-hidden="true">↗</span></a><a class="btn ghost" href="/ui/questions">工作问题与控制 <span aria-hidden="true">↗</span></a><a class="authority-refresh" href="/ui/authority" data-authority-refresh>刷新当前状态</a></div>
 </section>
 <p class="callout ok-callout" th:unless="${accountingEnforced}">当前仅记录：预算可不填写，累计次数、时间、费用和未知项会持续留存，不会因缺少预算、超额或未核对历史计量而阻止新工作。登录、动作授权和人工暂停继续有效；原任务的未知操作不自动重试。</p>

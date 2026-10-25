@@ -19,13 +19,16 @@ public class AgentFactory {
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final ExecutionGuard guard;
     private final ExecutionConfigurations configurations;private final WorkTaskService tasks;
     private final WorkerRepository workers;private final AiProfileCatalog ai;private final ExecutionAttemptRepository attempts;
+    @org.springframework.beans.factory.annotation.Autowired private AgentFactorySettings factorySettings;
+    @org.springframework.beans.factory.annotation.Autowired private ManagedWorkerProvisioner provisioner;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.workflow.application.FactoryPlanLifecycle planLifecycle;
     public AgentFactory(AuthorityRepository repo,AuthorityBoundary boundary,ExecutionGuard guard,ExecutionConfigurations configurations,
                         WorkTaskService tasks,WorkerRepository workers,AiProfileCatalog ai,ExecutionAttemptRepository attempts) {
         this.repo=repo;this.boundary=boundary;this.guard=guard;this.configurations=configurations;this.tasks=tasks;this.workers=workers;this.ai=ai;this.attempts=attempts;
     }
     public record Details(List<String> missing,List<String> recoveryActions) {}
     public List<AiProfileCatalog.NamedProfile> supportedProfiles() {
-        return ai.approved(TaskType.EXTERNAL_WORK).stream().filter(p->p.profile().provider().equals("openai") && !p.profile().fast()
+        return (factorySettings==null?ai.approved(TaskType.EXTERNAL_WORK):factorySettings.profiles()).stream().filter(p->p.profile().provider().equals("openai") && !p.profile().fast()
                 && Set.of("openai-agents","codex-app-server").contains(p.profile().runtime())
                 && (p.profile().runtime().equals("codex-app-server")?Set.of("none","minimal","low","medium","high","xhigh"):Set.of("none","minimal","low","medium","high")).contains(p.profile().effort())).toList();
     }
@@ -69,13 +72,12 @@ public class AgentFactory {
         if(!content.candidate().repositoryRef().equals(intent.repositoryRef())) return blocked(intent,Error.INVALID_CONFIGURATION,"Use the registered repository scope",next);
         var approved=supportedProfiles().stream().filter(p->p.id().equals(intent.aiProfileId()) && p.profile().runtime().equals(intent.runtime())).findFirst();
         if(approved.isEmpty()) return blocked(intent,Error.UNSUPPORTED_RUNTIME,"Configure an approved, supported AI profile for the exact requested runtime",next);
-        var guidance=new AiProfileCatalog.Guidance(ai.version(),List.of(approved.get()),null,approved.get().id());
+        var guidance=new AiProfileCatalog.Guidance(factorySettings==null?ai.version():factorySettings.version(),List.of(approved.get()),null,approved.get().id());
         var binding=new Binding(owner,ref,intent.runtime(),guidance);
         var capabilities=ConfigurationContract.requiredCapabilities(intent.repositoryRef());
         boolean available=repo.jdbc().queryForList("SELECT id FROM worker WHERE status='ACTIVE' AND last_heartbeat_at_epoch_ms>=?",String.class,java.time.Instant.now().minus(me.asu.aidev.worker.domain.WorkerLiveness.HEARTBEAT_WINDOW).toEpochMilli()).stream()
                 .map(id->workers.find(new me.asu.aidev.worker.domain.WorkerId(id)).orElseThrow())
                 .anyMatch(worker->worker.supports(capabilities) && configurations.compatible(worker,binding));
-        if(!available) return blocked(intent,Error.NO_COMPATIBLE_WORKER,"Connect a compatible Python Worker for this repository, runtime and required adapters",next);
         GuardContract.Policy policy;
         try { policy=guard.preparationPolicy(intent.planId(),intent.policyRevision()); }
         catch(SecurityException failure) { return blocked(intent,Error.AUTHORIZATION_REQUIRED,"Confirm or resume the exact active execution policy",next); }
@@ -83,16 +85,24 @@ public class AgentFactory {
         if(!guard.preparationBudget(policy)) return blocked(intent,Error.BUDGET_CONFIGURATION_REQUIRED,"Configure required limits/pricing or obtain an explicit budget increment",next);
         for(var tool:ref.toolRequirements()) {
             boolean permitted=policy.rules().stream().anyMatch(rule->rule.tool()==tool && rule.repositoryRef().equals(intent.repositoryRef())
+                    && (rule.baseRevision()==null || rule.baseRevision().equals(intent.baseRevision()))
                     && (!Set.of(GuardContract.Tool.GIT,GuardContract.Tool.MODEL).contains(tool) || Set.of("", ".").contains(rule.pathPrefix())));
             if(!permitted || tool==GuardContract.Tool.COMMAND && policy.commands().isEmpty()) return blocked(intent,Error.AUTHORIZATION_REQUIRED,"Obtain explicit "+tool+" permission and any required command profile",next);
         }
         if(intent.dependencies().stream().anyMatch(task->attempts.findCompletedInput(new TaskId(task)).isEmpty())) return blocked(intent,Error.SOURCE_CHANGED,"Wait for exact successful upstream results before preparing this task",next);
+        planLifecycle.confirm(intent,owner,ref,content.candidate().method());
+        if(!available) {
+            var provisioning=provisioner==null?null:provisioner.request(intent.repositoryRef(),intent.runtime(),ref.toolRequirements().contains(GuardContract.Tool.COMMAND));
+            return blocked(intent,provisioning!=null&&provisioning.starting()?Error.WORKER_STARTING:Error.NO_COMPATIBLE_WORKER,
+                    provisioning==null?"Connect a compatible Worker for this repository and runtime":provisioning.message(),next);
+        }
         String taskId="CF-"+AuthorityRepository.hash(owner+":"+intent.intentId()+":"+intent.intentVersion());
         var task=tasks.create(new CreateWorkTaskCommand(new TaskId(taskId),TaskType.EXTERNAL_WORK,"configured-plan",intent.planId(),capabilities,content.candidate().method().primarySkill(),intent.instruction(),intent.repositoryRef(),intent.baseRevision(),new TaskPriority(0),intent.dependencies().stream().map(TaskId::new).collect(java.util.stream.Collectors.toSet())));
         configurations.bindTask(taskId,binding);
         var sources=new ArrayList<GuardContract.FrozenRef>();ref.skills().forEach(r->sources.add(r.frozen("skill")));ref.knowledge().forEach(r->sources.add(r.frozen("knowledge")));
         sources.add(new GuardContract.FrozenRef("configuration",ref.id(),Long.toString(ref.revision()),ref.digest()));
         guard.bindPrepared(taskId,new GuardContract.Bind(intent.planId(),intent.policyRevision(),"PREP-"+AuthorityRepository.hash(intent.intentId()+":"+intent.intentVersion()),ref.digest(),List.copyOf(sources)),owner);
+        planLifecycle.bind(intent,taskId,ref.resultKind());
         if(repo.jdbc().update("UPDATE execution_preparation SET state='READY',config_json=?,task_id=?,error_code=NULL,details_json=? WHERE intent_id=? AND intent_version=? AND generation=? AND state='PREPARING'",repo.encode(ref),task.id().value(),repo.encode(new Details(List.of(),List.of())),intent.intentId(),intent.intentVersion(),next)!=1) throw new IllegalStateException("Preparation lost materialization race");
         return view(repo.jdbc().queryForMap("SELECT * FROM execution_preparation WHERE intent_id=? AND intent_version=?",intent.intentId(),intent.intentVersion()));
     }

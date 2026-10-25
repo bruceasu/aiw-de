@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-const localModule = '../../workers/process-typescript/runtime-core/index.mjs';
+const localModule = '../../extern-workers/process-typescript/runtime-core/index.mjs';
 const oldModule = '../../workers/runtime-core/index.mjs';
 let passed = 0;
 

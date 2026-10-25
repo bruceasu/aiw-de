@@ -124,17 +124,22 @@ public class TaskClaimService {
                 });
         for (var schedulingCandidate : rankedCandidates) {
             var candidate = schedulingCandidate.task();
+            boolean configured = configurations != null && configurations.managed(candidate.id().value());
+            // Factory tasks carry immutable reviewed model guidance in their binding.
+            // Keep ordinary external tasks on the existing global catalog policy.
+            if (configured && !configurations.canClaim(candidate.id().value(), worker)) continue;
             var skills = preferred.getOrDefault(candidate.id(), java.util.Set.<String>of());
             if (!skills.isEmpty() && now.isBefore(candidate.updatedAt().plus(SPECIALIST_WINDOW))) {
                 int currentScore = (int) skills.stream().filter(worker.capabilities()::contains).count();
                 boolean betterAvailable = available.stream().anyMatch(other -> !other.id().equals(workerId)
                         && other.supports(candidate.requiredCapabilities())
-                        && aiProfiles.canRun(candidate.type(), other.runtimeType())
+                        && (configured ? configurations.canClaim(candidate.id().value(), other) : aiProfiles.canRun(candidate.type(), other.runtimeType()))
                         && skills.stream().filter(other.capabilities()::contains).count() > currentScore);
                 if (betterAvailable) continue;
             }
             if ((recommendationPolicy == null || !recommendationPolicy.managed(candidate))
                     && (goalPolicy == null || !goalPolicy.managed(candidate))
+                    && !configured
                     && !aiProfiles.canRun(candidate.type(), worker.runtimeType())) continue;
             boolean allowed = true;
             for (TaskClaimPolicy policy : claimPolicies) {

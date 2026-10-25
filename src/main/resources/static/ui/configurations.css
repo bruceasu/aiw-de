@@ -12,8 +12,9 @@
 .configuration-steps strong,.configuration-steps small{display:block;font-size:12px}
 .configuration-steps small{color:var(--muted);font-size:11px;margin-top:4px}
 .configuration-summary{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:6px;margin:24px 0;background:var(--panel)}
-.configuration-summary a{display:flex;gap:12px;align-items:center;padding:18px;text-decoration:none;color:var(--text);font-size:12px}
-.configuration-summary a+a{border-left:1px solid var(--line)}
+.configuration-summary-item{display:flex;gap:12px;align-items:center;padding:18px;color:var(--text);font-size:12px}
+.configuration-summary-item+.configuration-summary-item{border-left:1px solid var(--line)}
+.configuration-summary-item small{display:block;color:var(--muted);font-size:11px;line-height:1.7;margin-top:5px}
 .configuration-summary strong{font-size:24px;color:var(--accent);font-variant-numeric:tabular-nums}
 .configuration-navigation{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid var(--line);margin-bottom:24px;padding-bottom:10px}
 .configuration-navigation [role=tablist]{display:flex;gap:6px;overflow:auto}
@@ -61,4 +62,4 @@
 .configuration-page button:disabled{cursor:wait;opacity:.55}
 .configuration-page :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @media(max-width:1050px){.configuration-columns{grid-template-columns:1fr}.configuration-guide ul{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}}
-@media(max-width:720px){.configuration-content{padding:20px 16px 36px}.configuration-intro{align-items:flex-start;flex-direction:column}.configuration-steps{grid-template-columns:1fr;gap:14px}.configuration-summary{grid-template-columns:1fr}.configuration-summary a+a{border-left:0;border-top:1px solid var(--line)}.configuration-navigation{align-items:flex-start;flex-direction:column}.configuration-guide ul{display:block}.configuration-record{flex-direction:column}.configuration-page .form-grid{grid-template-columns:1fr}}
+@media(max-width:720px){.configuration-content{padding:20px 16px 36px}.configuration-intro{align-items:flex-start;flex-direction:column}.configuration-steps{grid-template-columns:1fr;gap:14px}.configuration-summary{grid-template-columns:1fr}.configuration-summary-item+.configuration-summary-item{border-left:0;border-top:1px solid var(--line)}.configuration-navigation{align-items:flex-start;flex-direction:column}.configuration-guide ul{display:block}.configuration-record{flex-direction:column}.configuration-page .form-grid{grid-template-columns:1fr}}

@@ -21,7 +21,7 @@ STOP_REQUESTED，须到对应 Plan/Task 使用现有停止控制核实结果，�
 协调本身失败或请求人工时，可在页面明确选择 **Retry coordination only**，只重新请求对未改变
 Plan 的只读协调，不重试专业动作。站内反馈不代表外部主动通知；分析由用户自行发起。
 
-新增角色在 `workers/process-typescript` 提供：`secretary`（secretary-chat）和
+新增角色在 `extern-workers/process-typescript` 提供：`secretary`（secretary-chat）和
 `plan-coordinator`（plan-coordination）。使用现有 run-role.ps1/run-role.sh，分别选这两个角色，
 并显式选择已有 `codex-cli`、`codex-app-server` 或 `openai-agents` 后端。
 使用不同 Worker ID；平台禁止同一个 Plan 的协调 Worker 兼任专业执行或评审。start-all 会包含

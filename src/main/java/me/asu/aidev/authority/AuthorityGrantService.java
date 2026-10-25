@@ -105,12 +105,28 @@ public class AuthorityGrantService {
         if(boot==null || !UUID.fromString(boot).toString().equals(boot)) throw new IllegalArgumentException("Fresh canonical process UUID required");
         String previous=repo.jdbc().queryForObject("SELECT worker_boot FROM authority_identity WHERE worker_id=?",String.class,principal.worker());
         if(!boot.equals(previous)) {
-            if(repo.jdbc().update("UPDATE authority_identity SET worker_boot=?,enabled_boot=NULL,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND generation=?",
-                    boot,"personal:"+principal.worker(),System.currentTimeMillis(),principal.worker(),principal.generation())!=1)
+            // Deliver one unconsumed human confirmation to the same returning identity.
+            // Disable, credential rotation and previous delivery invalidate its generation.
+            boolean approved=false;
+            var notice=SecretaryAuthorizationNotice.latest(repo,principal.worker());
+            if(!notice.isEmpty()) {
+                var approval=repo.decode(String.valueOf(notice.get("detail")),SecretaryAuthorizationNotice.Approval.class);
+                if(principal.owner().equals(approval.ownerId()) && principal.worker().equals(approval.workerId())
+                        && Objects.equals(previous,approval.workerBoot()) && principal.generation()==approval.generation()
+                        && approval.expiresAt()>System.currentTimeMillis()) {
+                    try { identityHuman(String.valueOf(notice.get("actor")));boundary.requireMigrationSafeInstallation();approved=true; }
+                    catch(SecurityException ignored) { /* Removed human authority cannot be delivered. */ }
+                }
+            }
+            if(repo.jdbc().update("UPDATE authority_identity SET worker_boot=?,enabled_boot=?,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND generation=?",
+                    boot,approved?boundary.boot():null,"personal:"+principal.worker(),System.currentTimeMillis(),principal.worker(),principal.generation())!=1)
                 throw new IllegalStateException("Personal process generation changed; reload session state");
-            repo.audit(null,null,null,"personal:"+principal.worker(),"PERSONAL_SESSION_STARTED","New claimed process boot; explicit human enablement required");
+            repo.audit("WORKER:"+principal.worker(),null,null,"personal:"+principal.worker(),"PERSONAL_SESSION_STARTED",
+                    approved?"Delivered one pending human setup confirmation":"New claimed process boot; explicit human enablement required");
+            if(approved)repo.audit("WORKER:"+principal.worker(),null,String.valueOf(notice.get("id")),"personal:"+principal.worker(),"SECRETARY_AUTHORIZATION_DELIVERED","Pending confirmation consumed for this process; scopes unchanged");
         }
-        return Map.of("ownerId",principal.owner(),"workerId",principal.worker(),"workerBoot",boot,"state","DISABLED_UNTIL_HUMAN_ENABLE");
+        boolean enabled=boundary.boot().equals(repo.jdbc().queryForObject("SELECT enabled_boot FROM authority_identity WHERE worker_id=?",String.class,principal.worker()));
+        return Map.of("ownerId",principal.owner(),"workerId",principal.worker(),"workerBoot",boot,"state",enabled?"ENABLED":"DISABLED_UNTIL_HUMAN_ENABLE");
     }
     @Transactional public AuthorityRepository.Grant issue(String owner,String worker,ActionScope scope,long expiry,String actor) {
         Objects.requireNonNull(scope);human(actor,scope.action().name());owns(owner,actor);boundary.lock();

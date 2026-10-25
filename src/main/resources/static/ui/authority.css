@@ -1,6 +1,10 @@
 /* Personal Worker authority uses the shared console shell and color tokens. */
 .authority-page .content{max-width:1400px;margin:0 auto;padding:28px 32px 48px}
 .authority-page [hidden]{display:none!important}
+.secretary-setup-actions{position:sticky;bottom:12px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px;border:1px solid var(--line);border-radius:var(--theme-radius,6px);background:var(--panel);box-shadow:var(--shadow)}
+.secretary-setup-actions .help{margin:0;flex:1 1 250px}
+.secretary-setup-actions .btn{min-height:44px;flex-shrink:0}
+.secretary-setup-actions .secretary-save-error{color:var(--bad);font-weight:600;white-space:pre-wrap}
 .authority-intro{display:flex;justify-content:space-between;gap:32px;padding:8px 0 26px}
 .authority-intro-copy{max-width:740px;min-width:0}
 .authority-eyebrow{color:var(--accent);font-size:11px;font-weight:650;letter-spacing:.08em}
@@ -90,15 +94,17 @@
 @media(max-width:760px){.authority-page .content{padding:22px 16px 36px}.authority-intro{flex-direction:column;gap:18px}.authority-intro-actions{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start}.authority-intro-actions .btn{gap:12px}.authority-refresh{align-self:center}.authority-overview{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:18px}.authority-overview>div{padding:16px}.authority-overview>div:nth-child(3){border-left:0}.authority-overview>div:nth-child(n+3){border-top:1px solid var(--line)}.authority-tabs{gap:2px;margin-bottom:22px}.authority-tabs button{padding:9px 11px;font-size:12px}.authority-page .authority-panel>.card{padding:20px 18px}.authority-page .form-grid{grid-template-columns:minmax(0,1fr);gap:18px}.authority-panel-heading{align-items:flex-start}.authority-steps{gap:10px 16px}}
 @media(forced-colors:active){.authority-tabs button[aria-selected="true"]{outline:2px solid Highlight}.authority-feedback,.authority-state{border-color:CanvasText}}
 
-/* Keep the desktop tab bar outside the scrolling panel. */
+/* Scroll the complete content, including setup and the active advanced panel. */
 @media(min-width:761px){
   .authority-page{height:100dvh;min-height:0;overflow:hidden}
   .authority-page .main{display:flex;flex-direction:column;height:100dvh;min-height:0;overflow:hidden}
   .authority-page .main>.topbar{flex-shrink:0}
-  .authority-page .content{display:flex;flex-direction:column;flex:1;min-height:0;width:100%;overflow:hidden;padding-bottom:20px}
+  .authority-page .content{display:block;flex:1;min-height:0;width:100%;overflow-x:hidden;overflow-y:scroll;scrollbar-gutter:stable;padding-bottom:32px}
+  .authority-page .sidebar{overflow-y:auto;scrollbar-gutter:stable}
   .authority-intro,.authority-overview,.authority-tabs,.authority-feedback,.authority-page-note{flex-shrink:0}
-  .authority-tabs,.authority-feedback{position:static}
-  .authority-panel{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+  .authority-tabs{position:sticky;top:0}
+  .authority-feedback{position:static}
+  .authority-panel{min-height:0;overflow:visible}
   .authority-page-note{margin-top:12px}
 }
 @media(min-width:761px) and (max-height:850px){

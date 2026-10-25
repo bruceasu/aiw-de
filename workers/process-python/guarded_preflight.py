@@ -91,6 +91,11 @@ def capabilities(runtime, profile, skills_root):
         from app_server_runtime import StdioSession, preflight
         from guarded_app_server import verify_config
         result.add(protocol_capability(model=True))
+        if os.environ.get("AIW_CODEX_GUARD_MODE") == "host-actions":
+            # Text-only calls use the same account as the secretary. Workspace
+            # operations remain exclusively in the independently guarded broker.
+            result.add("guarded-host-actions-v1")
+            return result
         value = os.environ.get("AIW_CODEX_GUARD_HOME")
         if not value: raise RuntimeError("DEDICATED_GUARDED_CODEX_HOME_REQUIRED")
         home = Path(value).resolve(strict=True)

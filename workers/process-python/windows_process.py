@@ -92,9 +92,18 @@ class WindowsJob:
             raise RuntimeError("WINDOWS_JOB_LIMIT_FAILED")
 
     def start(self, argv, cwd, environment):
+        # The desktop/service may run under pythonw.exe. Use the matching
+        # console interpreter for this pipe-only child: pythonw's GUI subsystem
+        # does not provide the same standard-handle startup as python.exe.
+        # CREATE_NO_WINDOW below still keeps the bootstrap invisible.
+        interpreter = Path(sys.executable)
+        if interpreter.name.lower() == "pythonw.exe":
+            interpreter = interpreter.with_name("python.exe")
+            if not interpreter.is_file():
+                raise RuntimeError("WINDOWS_JOB_BOOTSTRAP_UNAVAILABLE")
         # os.read avoids buffering any of the JSON-RPC bytes after the gate.
         bootstrap = "import os,sys; gate=os.read(0,1); sys.exit(1) if gate!=b'G' else os.execv(sys.argv[1],sys.argv[1:])"
-        child = subprocess.Popen([sys.executable, "-I", "-c", bootstrap, *argv], cwd=cwd,
+        child = subprocess.Popen([str(interpreter), "-I", "-c", bootstrap, *argv], cwd=cwd,
             env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
         try:

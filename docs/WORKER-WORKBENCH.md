@@ -64,6 +64,6 @@ V19 仅追加工作台/批次/收据/探索表，不回填旧尝试，不改原�
 
 实际数据库迁移、SDK/模型/Worker、浏览器、并发、问答/取消、回退和效果评估未运行；静态与生产编译不能代替运行证明。本次不安装、部署或重启服务。
 
-算法复用本仓库 [FD-005 context.mjs](../workers/process-typescript/runtime-core/context.mjs) 的安全切点与可见来源思路，原 [Pi 来源记录](../workers/process-typescript/runtime-core/SOURCE-PROVENANCE.md) 及 [Python 参考许可](../workers/process-python/THIRD-PARTY-NOTICES.md) 保留，没有嵌入 Pi SDK。
+算法复用本仓库 [FD-005 context.mjs](../extern-workers/process-typescript/runtime-core/context.mjs) 的安全切点与可见来源思路，原 [Pi 来源记录](../extern-workers/process-typescript/runtime-core/SOURCE-PROVENANCE.md) 及 [Python 参考许可](../workers/process-python/THIRD-PARTY-NOTICES.md) 保留，没有嵌入 Pi SDK。
 
 SDK 概念核对使用 [OpenAI 官方结果与状态](https://developers.openai.com/api/docs/guides/agents/results)、[运行与流式结束](https://developers.openai.com/api/docs/guides/agents/running-agents)：本地续行用 `to_input_list()`，流结束后处理报告。当前环境缺对应 Python SDK 源码，具体 provider/ModelSettings 兼容仍需运行证据，官方文档不等于本系统运行通过。

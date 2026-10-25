@@ -57,14 +57,14 @@
       }
       const detail=node('details'),facts=node('p',e.taskId+' / '+e.attemptId,'help');detail.append(node('summary','内部引用'),facts);summary.append(detail);
     }
-    $('wb-updated').textContent='读取时间：'+new Date(state.observedAt).toLocaleString('zh-CN')+' · 阶段是当时记录，未刷新时不能代表当前状态。';
+    $('wb-updated').textContent='读取时间：'+new Date(state.observedAt).toLocaleString(window.aiwI18n?.locale || 'en')+' · 阶段是当时记录，未刷新时不能代表当前状态。';
     $('wb-input-availability').textContent=canInput()?'这次尝试已开启输入，可选择处理时机。':s?'本次尝试正在停止、收尾或已结束，不能再添加输入。':'本次尝试没有开启实时输入能力。可使用原任务问答、指令修订与停止流程。';
     renderOperations();renderMessages();renderBranches();sync();
   }
   function renderOperations(){
     const host=$('wb-operations');host.replaceChildren();
     for(const op of state.operations){const card=node('article',null,'workbench-record');card.append(node('h3',op.tool_id+' · '+label(op.state)),node('p',op.resource,'muted'));
-      const detail=node('details');detail.append(node('summary','查看记录依据'),node('p','操作：'+op.operation_id),node('p','结果摘要：'+(op.result_digest||'未记录')),node('p','证据位置：'+(op.evidence_ref||'未记录')),node('p','开始：'+new Date(op.started_ms).toLocaleString('zh-CN')));card.append(detail);host.append(card);}
+      const detail=node('details');detail.append(node('summary','查看记录依据'),node('p','操作：'+op.operation_id),node('p','结果摘要：'+(op.result_digest||'未记录')),node('p','证据位置：'+(op.evidence_ref||'未记录')),node('p','开始：'+new Date(op.started_ms).toLocaleString(window.aiwI18n?.locale || 'en')));card.append(detail);host.append(card);}
     if(!host.childElementCount)host.append(node('p','此尝试暂无工具操作记录。','empty'));
   }
   function renderMessages(){
@@ -84,9 +84,9 @@
       if(branch.parent_id)card.append(node('p','继续自：'+(byId.get(branch.parent_id)?.title||'原方案'),'muted'));
       card.append(node('pre',branch.body),node('p','结果版本：'+(branch.result_revision||'未关联代码结果'),'help'));
       const choice=state.choices.find(c=>c.node_id===branch.id);if(choice)card.append(node('p',(choice.decision==='SELECT'?'已记录采用：':'已记录放弃：')+choice.reason,'help'));
-      const provenance=node('details');provenance.append(node('summary','来源与选择记录'),node('p','原尝试：'+branch.attempt_id+' · 指令版本 '+branch.instruction_revision),node('p','记录人：'+branch.actor+' · '+new Date(branch.created_ms).toLocaleString('zh-CN')));
+      const provenance=node('details');provenance.append(node('summary','来源与选择记录'),node('p','原尝试：'+branch.attempt_id+' · 指令版本 '+branch.instruction_revision),node('p','记录人：'+branch.actor+' · '+new Date(branch.created_ms).toLocaleString(window.aiwI18n?.locale || 'en')));
       const history=node('div');provenance.append(history);let loaded=false;
-      provenance.addEventListener('toggle',async()=>{if(!provenance.open||loaded)return;const generation=epoch,sourceTask=state.taskId;history.replaceChildren(node('p','正在读取选择记录…'));try{const result=await request('state?kind=branch-history',{taskId:sourceTask,nodeId:branch.id});if(generation!==epoch||state?.taskId!==sourceTask)return;if(result.ownerId!==owner||result.protocol!=='aiw.worker.workbench.v1'||result.nodeId!==branch.id)throw new Error('记录身份已变化，请重新打开页面。');history.replaceChildren();for(const item of result.history)history.append(node('p',(item.decision==='SELECT'?'采用：':'放弃：')+item.reason+' · '+item.actor+' · '+new Date(item.created_ms).toLocaleString('zh-CN')));if(!result.history.length)history.append(node('p','尚无选择记录。'));loaded=true;}catch(e){history.replaceChildren(node('p',e.message));}});card.append(provenance);
+      provenance.addEventListener('toggle',async()=>{if(!provenance.open||loaded)return;const generation=epoch,sourceTask=state.taskId;history.replaceChildren(node('p','正在读取选择记录…'));try{const result=await request('state?kind=branch-history',{taskId:sourceTask,nodeId:branch.id});if(generation!==epoch||state?.taskId!==sourceTask)return;if(result.ownerId!==owner||result.protocol!=='aiw.worker.workbench.v1'||result.nodeId!==branch.id)throw new Error('记录身份已变化，请重新打开页面。');history.replaceChildren();for(const item of result.history)history.append(node('p',(item.decision==='SELECT'?'采用：':'放弃：')+item.reason+' · '+item.actor+' · '+new Date(item.created_ms).toLocaleString(window.aiwI18n?.locale || 'en')));if(!result.history.length)history.append(node('p','尚无选择记录。'));loaded=true;}catch(e){history.replaceChildren(node('p',e.message));}});card.append(provenance);
       const reason=node('input');reason.maxLength=2000;reason.placeholder='采用或放弃的原因';reason.value=reasons.get(branch.id)||'';reason.addEventListener('input',()=>reasons.set(branch.id,reason.value));
       const field=node('label','选择原因','field');field.append(reason);card.append(field);const actions=node('div',null,'configuration-form-actions');
       for(const [action,text] of [['SELECT','记录采用'],['DISCARD','记录放弃']]){const button=node('button',text,'btn ghost');button.type='button';button.dataset.wbAction='true';button.addEventListener('click',()=>{if(!reason.value.trim()){feedback('请填写选择原因。','warn');return;}submit(command(action,{messageId:branch.id,text:reason.value}));});actions.append(button);}

@@ -14,7 +14,7 @@ TypeScript Worker 的完整起点见 [worker.env.example](process-typescript/wor
 复制到自己的配置目录，修改后用 Node 的 `--env-file` 加载（需要支持该参数的 Node 版本）：
 
 ```sh
-cd workers/process-typescript
+cd extern-workers/process-typescript
 node --env-file=/absolute/path/worker.env dist/index.js
 ```
 

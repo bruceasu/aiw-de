@@ -1,4 +1,4 @@
-import * as runtime from '../../../workers/process-typescript/runtime-core/index.mjs';
+import * as runtime from '../../../extern-workers/process-typescript/runtime-core/index.mjs';
 import { createHash } from 'node:crypto';
 import { appendDiagnostic, currentBehavior, metadataDigest } from './diagnostics.mjs';
 import { assert, fs, path, sandbox, root, resultRoot, deferred, outcome } from './harness.mjs';
@@ -9,10 +9,10 @@ globalThis.fetch = async (input, init = {}) => {
   if (!activeFetch) throw new Error('FD005_FETCH_WITHOUT_SYNTHETIC_SERVER');
   return activeFetch(input, init);
 };
-const { createApiAttemptAdapter } = await import('../../../workers/process-typescript-with-api/src/api-adapter.ts');
-const { ApiRuntime } = await import('../../../workers/process-typescript-with-api/src/api-runtime.ts');
-const profileApi = await import('../../../workers/process-typescript-with-api/src/profiles.ts');
-const instructionApi = await import('../../../workers/process-typescript-with-api/src/instructions.ts');
+const { createApiAttemptAdapter } = await import('../../../extern-workers/process-typescript-with-api/src/api-adapter.ts');
+const { ApiRuntime } = await import('../../../extern-workers/process-typescript-with-api/src/api-runtime.ts');
+const profileApi = await import('../../../extern-workers/process-typescript-with-api/src/profiles.ts');
+const instructionApi = await import('../../../extern-workers/process-typescript-with-api/src/instructions.ts');
 export { runtime, createApiAttemptAdapter, ApiRuntime, profileApi, instructionApi };
 export const examples = JSON.parse(await fs.readFile(path.join(root, 'workers', 'runtime-contract.examples.json'), 'utf8'));
 export const rolesByName = new Map(examples.roles.map(item => [item.role, item]));

@@ -16,6 +16,8 @@ import org.springframework.stereotype.Component;
 public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
     @org.springframework.beans.factory.annotation.Autowired
     private me.asu.aidev.authority.ManagedPlanAdmission personal;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<FactoryPlanLifecycle> factoryPlans;
     public List<TaskId> advanceManaged(me.asu.aidev.work.domain.WorkTask task,me.asu.aidev.execution.domain.CompletionReport report) {
         if(!personal.inScope(task.subjectId())) throw new SecurityException("Server-validated managed admission required");
         return advance(task,report);
@@ -33,10 +35,14 @@ public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
     @Override public boolean supports(TaskCompletionContext context) {
         return TaskCompletionHandler.super.supports(context)
                 && (WorkflowPlanService.SUBJECT.equals(context.completedTask().subjectType())
-                    || repairDecisions.supports(context));
+                    || "configured-plan".equals(context.completedTask().subjectType()) || repairDecisions.supports(context));
     }
 
     @Override public List<TaskId> onCompleted(TaskCompletionContext context) {
+        if ("configured-plan".equals(context.completedTask().subjectType())) {
+            factoryPlans.getObject().completed(context.completedTask(),context.completionReport());
+            return List.of();
+        }
         if(personal.managed(context.completedTask().subjectId())) return List.of(); // Record the real result; wait for private coordinator admission.
         if (repairDecisions.supports(context)) return repairDecisions.onCompleted(context);
         return advance(context.completedTask(),context.completionReport());

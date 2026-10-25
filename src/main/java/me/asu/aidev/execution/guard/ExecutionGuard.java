@@ -76,9 +76,10 @@ public class ExecutionGuard {
             if(!owner.equals(boundary.principal().owner())) throw new SecurityException("Policy belongs to another owner");
         } else owner(owner);
     }
+    public boolean machineConnectionConfigured() { return machineToken!=null&&!machineToken.isBlank(); }
     @Transactional public Context confirm(Policy input) {
         boundary.lock();owner(input.ownerId());
-        if(machineToken==null || machineToken.isBlank()) throw new IllegalStateException("Configure the shared machine token before enabling guarded execution");
+        if(!machineConnectionConfigured()) throw new IllegalStateException("平台尚未配置专业 Worker 连接令牌。请先配置 AIW_WORKER_TOKEN 并重启平台；重复点击计划授权不能补齐此项。");
         var owners=repo.jdbc().queryForList("SELECT owner_id FROM authority_target WHERE target_key=?",String.class,"PLAN:"+input.planId());
         if(!owners.isEmpty() && !owners.getFirst().equals(input.ownerId())) throw new SecurityException("Existing target belongs to another owner");
         var graphOwners=repo.jdbc().queryForList("SELECT owner_id FROM workflow_graph WHERE id=?",String.class,input.planId());
@@ -253,7 +254,9 @@ public class ExecutionGuard {
         }
         var c=contextRow(task);var row=policyRow(String.valueOf(c.get("plan_id")));var original=repo.decode(String.valueOf(c.get("policy_json")),Policy.class);var current=policy(row);
         boolean allowed=active(row) && number(c,"generation")==number(row,"generation") && input.expectedGrantRevision()==current.revision()
-                && !uncertain(task,input.lease().attemptId()) && unchanged(task,c) && permits(original,input) && permits(current,input);
+                && !uncertain(task,input.lease().attemptId()) && unchanged(task,c)
+                && permits(original,input,repo.decode(String.valueOf(c.get("input_json")),Snapshot.class).task().baseRevision())
+                && permits(current,input,repo.decode(String.valueOf(c.get("input_json")),Snapshot.class).task().baseRevision());
         if(input.tool()==Tool.COMMAND) allowed=allowed && original.commands().stream().anyMatch(cmd->cmd.id().equals(input.resource()) && current.commands().contains(cmd));
         if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_meter WHERE attempt_id=? AND settled=FALSE",Long.class,input.lease().attemptId())!=1) allowed=false;
         repo.jdbc().update("""
@@ -262,8 +265,9 @@ public class ExecutionGuard {
                 """,input.operationId(),task,input.lease().attemptId(),input.lease().workerId(),input.lease().leaseToken(),current.planId(),digest,input.tool().name(),input.repositoryRef(),input.resource(),allowed?"STARTED":"REJECTED",System.currentTimeMillis());
         return new Receipt(PROTOCOL,input.operationId(),allowed?"STARTED":"REJECTED",allowed,allowed?"AUTHORIZED_START":"SCOPE_OR_STATE_DENIED");
     }
-    private boolean permits(Policy policy,Begin input) {
+    private boolean permits(Policy policy,Begin input,String baseline) {
         return policy.rules().stream().anyMatch(rule->rule.tool()==input.tool() && rule.repositoryRef().equals(input.repositoryRef())
+                && (rule.baseRevision()==null || rule.baseRevision().equals(baseline))
                 && (rule.pathPrefix().isEmpty() || rule.pathPrefix().equals(".") || input.resource().equals(rule.pathPrefix()) || input.resource().startsWith(rule.pathPrefix()+"/")));
     }
     public boolean unknownTask(String task) { return repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_operation WHERE task_id=? AND state IN ('STARTED','UNKNOWN')",Long.class,task)>0; }

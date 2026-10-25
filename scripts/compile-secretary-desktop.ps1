@@ -8,7 +8,7 @@ $compileSources = @'
 import pathlib, subprocess, sys, tempfile
 root = pathlib.Path(sys.argv[1])
 revision = sys.argv[2] if len(sys.argv) > 2 else ""
-prefix = "workers/personal-secretary/"
+prefix = "personal-secretary/"
 def source(path):
     if revision:
         return subprocess.run(["git", "show", revision + ":" + path], cwd=root, check=True, stdout=subprocess.PIPE).stdout
@@ -39,12 +39,12 @@ try {
 if ($LASTEXITCODE -ne 0) { throw 'Desktop Python/JavaScript syntax compile failed.' }
 $parseTokens = $null
 $parseErrors = $null
-$null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $taskRoot 'workers/personal-secretary/start-desktop.ps1'), [ref]$parseTokens, [ref]$parseErrors)
+$null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $taskRoot 'personal-secretary/start-desktop.ps1'), [ref]$parseTokens, [ref]$parseErrors)
 if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
 if (-not $Revision) {
     $parseTokens = $null
     $parseErrors = $null
-    $null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $taskRoot 'workers/personal-secretary/start.ps1'), [ref]$parseTokens, [ref]$parseErrors)
+    $null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $taskRoot 'personal-secretary/start.ps1'), [ref]$parseTokens, [ref]$parseErrors)
     if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
 }
 Write-Output 'Desktop compile-only passed. No application imports, windows, services, tests, network, downloads or packages.'

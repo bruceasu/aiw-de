@@ -431,6 +431,80 @@
       if (historyOpener?.isConnected) historyOpener.focus();
       historyOpener = null;
     });
+    let executionSignature = '';
+    const renderConfiguredExecution = history => {
+      const section = detail.querySelector('[data-configured-execution]');
+      if (!section) return;
+      section.hidden = !history || (!history.tasks.length && !history.preparations.length);
+      if (section.hidden) return;
+      const body = section.querySelector('[data-configured-history]');
+      const signature = JSON.stringify(history);
+      // Keep expanded records stable while the user reads; refresh them on the next collapsed poll.
+      if (signature === executionSignature || body.querySelector('details[open]')) return;
+      executionSignature = signature;
+      body.replaceChildren();
+      const field = (host, label, value) => {
+        line(host, 'dt', label);
+        line(host, 'dd', value || 'Not recorded', 'mono');
+      };
+      const report = (host, text) => {
+        if (!text) return;
+        try {
+          const data = JSON.parse(text);
+          if (!data || typeof data !== 'object') throw new Error('Plain report');
+          if (data.outcome) line(host, 'p', data.outcome, 'badge');
+          line(host, 'p', data.summary || text);
+          for (const [key, label] of [['checksRun', 'Checks performed'], ['checksNotRun', 'Checks not performed'], ['blockers', 'Blockers']]) {
+            if (Array.isArray(data[key]) && data[key].length) {
+              line(host, 'h4', label);
+              const list = line(host, 'ul');
+              data[key].forEach(item => line(list, 'li', item));
+            }
+          }
+        } catch (_) { line(host, 'pre', text, 'code task-report'); }
+      };
+      line(body, 'h3', 'Factory preparation history');
+      for (const preparation of history.preparations) {
+        const record = line(body, 'details', undefined, 'form-card top-gap');
+        line(record, 'summary', `${preparation.time ? new Date(preparation.time).toLocaleString() : ''} · ${preparation.state} · ${preparation.errorCode || preparation.repository}`);
+        const fields = line(record, 'dl', undefined, 'kv');
+        field(fields, 'Preparation', preparation.id);
+        field(fields, 'Task', preparation.taskId);
+        field(fields, 'Worker role', preparation.role);
+        field(fields, 'Generation', preparation.generation);
+        (preparation.missing || []).forEach(reason => line(record, 'p', reason, 'callout warn-callout'));
+        line(record, 'pre', preparation.instruction, 'code task-report');
+      }
+      line(body, 'h3', 'Actual Worker execution');
+      for (const task of history.tasks) {
+        const record = line(body, 'details', undefined, 'form-card top-gap');
+        line(record, 'summary', `${new Date(task.createdAt).toLocaleString()} · ${task.state} · ${task.id}`);
+        line(record, 'pre', task.instruction, 'code task-report');
+        for (const attempt of task.attempts) {
+          const attemptCard = line(record, 'article', undefined, 'top-gap');
+          const fields = line(attemptCard, 'dl', undefined, 'kv');
+          for (const [label, value] of [['Attempt', attempt.number], ['Worker', attempt.worker], ['State', attempt.state],
+            ['Started', attempt.startedAt], ['Finished', attempt.finishedAt], ['Failure code', attempt.failureCode],
+            ['Recorded verdict', attempt.verdict], ['Base revision', attempt.baseRevision], ['Result revision', attempt.resultRevision],
+            ['Changed files', attempt.changedFiles], ['Result branch', attempt.branch], ['Result workspace', attempt.workspace]]) field(fields, label, value);
+          report(attemptCard, attempt.report);
+          const operations = history.operations.filter(operation => operation.attemptId === attempt.id);
+          if (operations.length) {
+            const wrap = line(attemptCard, 'div', undefined, 'table-wrap');
+            const table = line(wrap, 'table');
+            const head = line(line(table, 'thead'), 'tr');
+            ['Started', 'Finished', 'Tool', 'Resource', 'State', 'Evidence reference'].forEach(label => line(head, 'th', label));
+            const rows = line(table, 'tbody');
+            for (const operation of operations) {
+              const row = line(rows, 'tr');
+              [operation.startedAt, operation.finishedAt, operation.tool, operation.resource, operation.state, operation.evidenceRef]
+                .forEach(value => line(row, 'td', value || 'Not recorded'));
+            }
+          } else line(attemptCard, 'p', 'No tool operations recorded.', 'muted');
+        }
+      }
+      if (history.operationsTruncated) line(body, 'p', 'Only the latest 500 tool operations are shown.', 'callout');
+    };
     const taskRecord = (row, reportStates = new Map()) => {
       const kind = row.task.id.value.includes('~review-') ? 'Independent review' : 'Execution';
       const record = el('div', undefined, 'workflow-task-record');
@@ -465,6 +539,27 @@
       const timeout = setTimeout(() => request?.abort(), 10000);
       try {
         const data = await api(`/plans/${encodeURIComponent(id)}`, undefined, { signal: request.signal, cache: 'no-store' }); plan = data.plan;
+        const configured = data.configuredExecution;
+        const hasConfigured = !!configured && (configured.tasks.length > 0 || configured.preparations.length > 0);
+        const formalFactory = !!data.factoryPlan;
+        const configuredOnly = formalFactory || hasConfigured && !data.steps.length;
+        const legacyDraft = !formalFactory && configuredOnly;
+        renderConfiguredExecution(configured);
+        const originalState = detail.querySelector('[data-original-graph-state]');
+        if (originalState) originalState.textContent = data.factoryPlan?.originalDraft.state || plan.state;
+        const originalReason = detail.querySelector('[data-original-graph-reason]');
+        if (originalReason) originalReason.textContent = data.factoryPlan?.originalDraft.reason || plan.reason || 'No decision recorded';
+        const draftSteps = detail.querySelector('[data-original-draft-steps]');
+        if (draftSteps && draftSteps.dataset.executionMode !== String(legacyDraft)) {
+          draftSteps.open = !legacyDraft;
+          draftSteps.dataset.executionMode = String(legacyDraft);
+        }
+        const draftHeading = detail.querySelector('[data-draft-steps-title]');
+        if (draftHeading) draftHeading.textContent = formalFactory ? 'Confirmed execution plan' : legacyDraft ? 'Original draft steps (not executed)' : 'Selected plan';
+        const reviewPolicy = detail.querySelector('[data-native-review-policy]');
+        if (reviewPolicy) reviewPolicy.hidden = formalFactory;
+        const originalNote = detail.querySelector('[data-original-draft-superseded]');
+        if (originalNote) originalNote.hidden = !formalFactory;
         reviewRecovery = data.reviewRecovery;
         const grants = data.repairAuthorizations || [];
         const pendingGrant = grants.find(grant => grant.status === 'PENDING' && grant.planVersion === plan.version
@@ -490,10 +585,12 @@
           ? data.humanOutcome.outcome === 'COMPLETE' ? 'COMPLETED_BY_HUMAN' : 'CANCELLED'
           : data.humanOutcome?.status === 'PENDING' ? 'WAITING_FOR_WORKER_STOP'
           : pendingGrant ? 'WAITING_FOR_RECOVERY_DECISION'
+          : configuredOnly ? data.displayState || configured.state
           : plan.state === 'CONFIRMED'
           ? pendingControl ? 'WAITING_FOR_WORKER_STOP' : finalReview?.verdict === 'PASS' ? 'COMPLETED' : exhausted ? 'NEEDS_ATTENTION' : 'IN_PROGRESS'
           : plan.state;
-        const needsAttention = detail.querySelector('[data-detail-state]').textContent === 'NEEDS_ATTENTION';
+        detail.querySelector('[data-detail-state]').dataset.status = detail.querySelector('[data-detail-state]').textContent;
+        const needsAttention = ['NEEDS_ATTENTION', 'DELEGATED_NEEDS_ATTENTION'].includes(detail.querySelector('[data-detail-state]').textContent);
         detail.dataset.planAttention = String(needsAttention);
         if (attention) attention.hidden = !needsAttention;
         const missionAlert = detail.querySelector('#plan-mission-alert');
@@ -501,7 +598,9 @@
         detail.querySelector('[data-detail-source]').textContent = plan.spec.source;
         detail.querySelector('[data-detail-version]').textContent = plan.version;
         detail.querySelector('[data-detail-created-by]').textContent = plan.createdBy;
-        detail.querySelector('[data-detail-audit]').textContent = `${plan.updatedBy} · ${plan.reason || 'No decision recorded'}`;
+        detail.querySelector('[data-detail-audit]').textContent = configuredOnly
+          ? 'Execution status follows the recorded Worker result.'
+          : `${plan.updatedBy} · ${plan.reason || 'No decision recorded'}`;
         detail.querySelector('[data-detail-time]').textContent = `${plan.createdAt} / ${plan.updatedAt}`;
         graph(detail.querySelector('[data-detail-graph]'), plan.spec.steps);
         const rows = detail.querySelector('[data-detail-steps]');
@@ -509,7 +608,7 @@
           [report.dataset.taskReport, { open: report.open, scrollTop: report.querySelector('pre').scrollTop }]));
         rows.replaceChildren();
         plan.spec.steps.forEach((step, index) => {
-          const actual = data.steps.filter(row => row.task.id.value.startsWith(`${id}~${step.key}~`))
+          const actual = data.steps.filter(row => row.stepKey === step.key || row.task.id.value.startsWith(`${id}~${step.key}~`))
             .sort((a, b) => (Date.parse(b.task.createdAt) || 0) - (Date.parse(a.task.createdAt) || 0)
               || b.task.id.value.localeCompare(a.task.id.value));
           const tr = el('tr');
@@ -555,12 +654,12 @@
           });
           if ([...target.options].some(option => option.value === selectedTarget)) target.value = selectedTarget;
         }
-        const confirm = detail.querySelector('[data-confirm]'); if (confirm) confirm.hidden = plan.state !== 'DRAFT';
-        const withdraw = detail.querySelector('[data-withdraw]'); if (withdraw) withdraw.hidden = plan.state !== 'CONFIRMED';
-        const jump = detail.querySelector('[data-jump]'); if (jump) jump.hidden = plan.state !== 'CONFIRMED' || !!pendingControl || !target?.options.length;
-        const stop = detail.querySelector('[data-stop-plan]'); if (stop) stop.hidden = plan.state !== 'CONFIRMED' || !!pendingControl || finalReview?.verdict === 'PASS';
-        const complete = detail.querySelector('[data-complete-plan]'); if (complete) complete.hidden = plan.state !== 'CONFIRMED' || !!pendingControl || !!data.humanOutcome || finalReview?.verdict === 'PASS';
-        const cancel = detail.querySelector('[data-cancel-plan]'); if (cancel) cancel.hidden = !['CONFIRMED', 'STOPPED'].includes(plan.state) || !!pendingControl || !!data.humanOutcome;
+        const confirm = detail.querySelector('[data-confirm]'); if (confirm) confirm.hidden = plan.state !== 'DRAFT' || hasConfigured;
+        const withdraw = detail.querySelector('[data-withdraw]'); if (withdraw) withdraw.hidden = formalFactory || plan.state !== 'CONFIRMED';
+        const jump = detail.querySelector('[data-jump]'); if (jump) jump.hidden = formalFactory || plan.state !== 'CONFIRMED' || !!pendingControl || !target?.options.length;
+        const stop = detail.querySelector('[data-stop-plan]'); if (stop) stop.hidden = formalFactory || plan.state !== 'CONFIRMED' || !!pendingControl || finalReview?.verdict === 'PASS';
+        const complete = detail.querySelector('[data-complete-plan]'); if (complete) complete.hidden = formalFactory || plan.state !== 'CONFIRMED' || !!pendingControl || !!data.humanOutcome || finalReview?.verdict === 'PASS';
+        const cancel = detail.querySelector('[data-cancel-plan]'); if (cancel) cancel.hidden = formalFactory || !['CONFIRMED', 'STOPPED'].includes(plan.state) || !!pendingControl || !!data.humanOutcome;
         const resolve = detail.querySelector('[data-resolve-stop]');
         if (resolve) resolve.hidden = !pendingControl || data.steps.some(row =>
           row.task.id.value === pendingControl.taskId && ['CLAIMED', 'RUNNING'].includes(row.task.state));
@@ -569,10 +668,15 @@
         const managerPhase = detail.querySelector('[data-manager-phase]');
         if (managerPhase) {
           managerPhase.textContent = detail.querySelector('[data-detail-state]').textContent;
-          managerPhase.dataset.status = exhausted ? 'WAITING_APPROVAL' : activeWork ? 'RUNNING' : plan.state;
+          managerPhase.dataset.status = configuredOnly ? data.displayState || configured.state
+            : exhausted ? 'WAITING_APPROVAL' : activeWork ? 'RUNNING' : plan.state;
         }
         const guidance = detail.querySelector('[data-manager-guidance]');
-        if (guidance) guidance.textContent = pendingGrant
+        if (guidance) guidance.textContent = formalFactory
+          ? 'This confirmed plan is executed by AgentFactory. Follow its task results below.'
+          : hasConfigured && !data.steps.length
+          ? 'Follow the factory execution history below. The original graph has not been started.'
+          : pendingGrant
           ? 'A decision Worker is assessing the fixed repair scope.'
           : exhausted ? 'Review needs changes. Authorize a bounded repair or request another review.'
           : activeWork ? 'Workers are active. Follow task progress before choosing another action.'
@@ -581,7 +685,7 @@
         const reviewCard = detail.querySelector('[data-review-recovery]');
         if (reviewCard) reviewCard.hidden = !reviewRecovery?.allowed || !!pendingGrant;
         const draftCard = detail.querySelector('[data-draft-action]');
-        if (draftCard) draftCard.hidden = plan.state !== 'DRAFT';
+        if (draftCard) draftCard.hidden = plan.state !== 'DRAFT' || hasConfigured;
         const repair = detail.querySelector('[data-repair-authorization]');
         if (repair) repair.hidden = !reviewRecovery?.allowed || !!pendingGrant;
         const delegate = detail.querySelector('[data-repair-delegate]');

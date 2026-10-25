@@ -2,7 +2,7 @@
 
 本文规划各角色 Worker 共用的执行基础，并选择 pi 中适合融入 AI Worker 的机制。目标是让需求分析、架构、规划、实现、集成、审查、验证和修复共享可靠的执行过程，同时通过角色政策表达不同职责。
 
-本文保留 2026-10-04 的原始规划背景。后续 FD-009 已将两个 TypeScript Worker 合并到 `workers/process-typescript`，删除旧 API 包和启动路径；当前实现入口见 [统一 Worker](../workers/process-typescript/README.md)。AI Worker 控制平面继续管理任务、调度、租约、模型授权、重试、审批和验收。pi 提供设计与算法参考，aiw 及其插件提供可选择的工具能力。
+本文保留 2026-10-04 的原始规划背景。后续 FD-009 已将两个 TypeScript Worker 合并到 `extern-workers/process-typescript`，删除旧 API 包和启动路径；当前实现入口见 [统一 Worker](../extern-workers/process-typescript/README.md)。AI Worker 控制平面继续管理任务、调度、租约、模型授权、重试、审批和验收。pi 提供设计与算法参考，aiw 及其插件提供可选择的工具能力。
 
 - 日期：2026-10-04
 - 状态：待评审的整体计划，尚未实施本计划
@@ -280,14 +280,14 @@ W08 的自动摘要可以独立禁用，基础预算与错误处理仍应成立�
 AI Worker 主要依据：
 
 - [系统架构](current/02-SYSTEM-ARCHITECTURE.md)
-- [统一 Worker 说明](../workers/process-typescript/README.md)
-- [任务编排和工作区](../workers/process-typescript/src/index.ts)
-- [API 运行时](../workers/process-typescript/src/api-runtime.ts)
-- [工具与路径处理](../workers/process-typescript/src/tools.ts)
-- [角色 Profile](../workers/process-typescript/src/profiles.ts)
-- [上下文与报告](../workers/process-typescript/src/instructions.ts)
-- [模型选择](../workers/process-typescript/src/ai-profiles.ts)
-- [Codex TypeScript 上下文](../workers/process-typescript/src/instructions.ts)
+- [统一 Worker 说明](../extern-workers/process-typescript/README.md)
+- [任务编排和工作区](../extern-workers/process-typescript/src/index.ts)
+- [API 运行时](../extern-workers/process-typescript/src/api-runtime.ts)
+- [工具与路径处理](../extern-workers/process-typescript/src/tools.ts)
+- [角色 Profile](../extern-workers/process-typescript/src/profiles.ts)
+- [上下文与报告](../extern-workers/process-typescript/src/instructions.ts)
+- [模型选择](../extern-workers/process-typescript/src/ai-profiles.ts)
+- [Codex TypeScript 上下文](../extern-workers/process-typescript/src/instructions.ts)
 - [Python Worker](../workers/process-python/process_worker.py)
 - [Go Worker](../workers/process-go/main.go)
 

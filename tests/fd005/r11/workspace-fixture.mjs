@@ -1,4 +1,4 @@
-import * as runtime from '../../../workers/process-typescript/runtime-core/index.mjs';
+import * as runtime from '../../../extern-workers/process-typescript/runtime-core/index.mjs';
 import { assert, fs, path, sandbox } from './harness.mjs';
 import { appendDiagnostic } from './diagnostics.mjs';
 

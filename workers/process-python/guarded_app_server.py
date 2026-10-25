@@ -12,6 +12,11 @@ from app_server_runtime import StdioSession, preflight
 from execution_guard import digest
 
 DISABLED = ("shell_tool", "shell_snapshot", "apps", "multi_agent", "browser_use", "browser_use_external", "computer_use", "skill_mcp_dependency_install")
+# Recent CLI versions report these implementation flags as enabled even when
+# explicitly false. They do not authorize tools: shell_tool must remain false,
+# the closed permission profile is verified, and native calls/items are denied.
+FIXED_IMPLEMENTATION_FLAGS = frozenset(("item_ids", "resize_all_images", "terminal_resize_reflow",
+    "tool_search_always_defer_mcp_tools", "tui_app_server", "unified_exec"))
 FORBIDDEN = {"sandbox_mode", "sandbox_workspace_write", "sandbox_read_only", "mcp_servers", "hooks", "plugins", "environments", "experimental_instructions_file", "developer_instructions", "instructions"}
 
 
@@ -29,7 +34,9 @@ def verify_features(session, configured=None, thread_id=None):
     else: raise RuntimeError("CODEX_FEATURE_LIST_NOT_COMPLETE")
     if not states or not set(DISABLED).issubset(states): raise RuntimeError("CODEX_REQUIRED_NATIVE_FEATURE_STATE_UNAVAILABLE")
     if configured is not None and set(configured) - set(states): raise RuntimeError("CODEX_CONFIG_HAS_UNRECOGNIZED_FEATURE_FLAGS")
-    enabled = sorted(name for name, active in states.items() if active)
+    if configured and configured.get("skip_host_skill_discovery") is True and states.get("skip_host_skill_discovery") is not True:
+        raise RuntimeError("CODEX_HOST_SKILL_DISCOVERY_NOT_DISABLED")
+    enabled = sorted(name for name, active in states.items() if active and name not in FIXED_IMPLEMENTATION_FLAGS and name != "skip_host_skill_discovery")
     if enabled: raise RuntimeError("CODEX_NATIVE_FEATURES_MUST_BE_DISABLED:" + ",".join(enabled)[:1024])
 
 
@@ -66,11 +73,17 @@ def verify_config(session, home, profile, *, command=False):
     if not command:
         if filesystem != {":root": "deny", ":minimal": "read"}: raise RuntimeError("MODEL_MUST_NOT_HAVE_PROJECT_FILESYSTEM_ACCESS")
         flags = merged.get("features", {})
-        if merged.get("web_search") != "disabled" or not set(DISABLED).issubset(flags) or any(v is not False for v in flags.values()):
+        if merged.get("web_search") != "disabled" or not set(DISABLED).issubset(flags) or any(v is not False and not (k == "skip_host_skill_discovery" and v is True) for k, v in flags.items()):
             raise RuntimeError("CODEX_NATIVE_CAPABILITIES_NOT_DISABLED")
         verify_features(session, flags)
         for name in ("plugins", "skills", "mcp", "hooks", "AGENTS.md", "instructions.md"):
             candidate = home / name
+            # The CLI creates its bundled system Skill cache on startup. It is
+            # inert only when the effective skip-discovery flag is confirmed.
+            if name == "skills" and flags.get("skip_host_skill_discovery") is True and candidate.is_dir() and not candidate.is_symlink():
+                entries = list(candidate.iterdir())
+                if all(item.name == ".system" and item.is_dir() and not item.is_symlink() for item in entries):
+                    continue
             if candidate.exists() and (not candidate.is_dir() or any(candidate.iterdir())): raise RuntimeError("CODEX_HOME_HAS_EXTERNAL_CAPABILITIES")
     effective = result.get("config", {})
     if effective.get("sandbox_mode") is not None or effective.get("sandbox_workspace_write") is not None: raise RuntimeError("CODEX_LEGACY_SANDBOX_OVERRIDES_PROFILE")
@@ -87,7 +100,7 @@ def definitions():
     string = {"type": "string"}
     return [
         tool("read_skill_file", "Read declared task Skill data as base64; offsets and limits are bytes. No script execution.", {"ref": string, "path": string, "offset": {"type": "integer"}, "limit": {"type": "integer"}}),
-        tool("read", "Read one bounded UTF-8 file. Keep sourceDigest for writes.", {"path": string, "offset": {"type": "integer"}, "limit": {"type": "integer"}}),
+        tool("read", "Read UTF-8 lines: offset is a 1-based line number, limit is 1 to 500 lines. Keep sourceDigest for writes.", {"path": string, "offset": {"type": "integer", "minimum": 1}, "limit": {"type": "integer", "minimum": 1, "maximum": 500}}),
         tool("ls", "List one visible folder.", {"path": string}),
         tool("grep", "Find literal text in one file.", {"path": string, "text": string}),
         tool("write", "Write one file only if its digest still matches. Use ABSENT for a new file.", {"path": string, "content": string, "expectedDigest": string}),

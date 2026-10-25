@@ -42,7 +42,8 @@ public class WorkflowPlanArchiveService {
     public boolean archivable(String id) {
         WorkflowPlan plan = plans.get(id);
         if (outcomes.find(id).filter(outcome -> outcome.status().equals("PENDING")).isPresent()) return false;
-        if (plan.state() != WorkflowPlan.State.STOPPED && plan.state() != WorkflowPlan.State.WITHDRAWN) {
+        if (plan.state() != WorkflowPlan.State.STOPPED && plan.state() != WorkflowPlan.State.WITHDRAWN
+                && plan.state() != WorkflowPlan.State.COMPLETED) {
             if (plan.state() != WorkflowPlan.State.CONFIRMED) return false;
             int last = plan.spec().steps().size() - 1;
             boolean passed = false;

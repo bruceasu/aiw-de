@@ -2,22 +2,27 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" th:content="${csrfToken}"><meta name="configuration-owner" th:content="${ownerId}">
-<title>专业 Worker 任务配置（高级） · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/configurations.css?v=human-forms-1">
-<script src="/ui/configurations.js?v=human-forms-1" defer></script><script src="/ui/configuration-methods.js?v=human-forms-1" defer></script></head>
+<title>专业 Worker 任务配置（高级） · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/configurations.css?v=clear-settings-2">
+<script src="/ui/configurations.js?v=clear-settings-2" defer></script><script src="/ui/configuration-methods.js?v=human-forms-1" defer></script></head>
 <body><div class="app configuration-page"><nav th:replace="~{ui/fragments :: nav('configurations')}"></nav><main class="main">
 <header th:replace="~{ui/fragments :: topbar('专业 Worker 任务配置（高级）','手动配置专业软件任务，选择工作方法与模型，检查 Worker 执行条件。')}"></header>
 <div class="content configuration-content">
-<section class="configuration-intro"><div><span class="configuration-eyebrow">软件工作 · 准备与配置</span><h2>从一个具体任务开始</h2><p>秘书可在已授权范围内自动准备并委派专业任务，跟踪 Worker 的进度和实际结果。此页供人手动配置或排查准备记录，日常安排工作无需填写。没有已授权计划时，秘书会先创建草稿并报告需要确认的执行范围；自定义工作方法为可选项。</p></div><a class="btn ghost" href="/ui/authority">管理执行范围</a></section>
+<section class="configuration-intro"><div><span class="configuration-eyebrow">软件工作 · 准备与配置</span><h2>手动准备任务或排查准备失败</h2><p>此页用于手动选择计划、仓库、工作方法和执行模型，检查条件并创建一项专业任务；也可查看之前的准备记录。日常交给秘书的工作由秘书自动准备，无需在这里重复提交。</p></div><a class="btn ghost" href="/ui/agent-factory">设置执行模型与自动 Worker</a></section>
 <ol class="configuration-steps"><li><span>1</span><div><strong>选计划</strong><small>使用已确认的执行范围</small></div></li><li><span>2</span><div><strong>描述任务</strong><small>选择方法和已批准模型</small></div></li><li><span>3</span><div><strong>检查准备结果</strong><small>创建任务或查看需要补齐的条件</small></div></li></ol>
-<p th:if="${ownerId.isEmpty()}" class="callout warn-callout">请先到<a href="/ui/authority">秘书平台授权（高级）</a>页登记身份，再返回这里。</p>
+<p th:if="${ownerId.isEmpty()}" class="callout warn-callout">当前账号尚无任务执行身份。请在<a href="/ui/secretary-setup">秘书连接与授权</a>完成连接后返回这里。</p>
 <p id="configuration-result" class="configuration-feedback" role="status" aria-live="polite" hidden></p>
-<div class="configuration-summary" aria-label="可用准备条件"><a href="/ui/authority"><strong id="configuration-plan-count">—</strong><span>已配置执行范围的计划</span></a><a href="/ui/system"><strong id="configuration-model-count">—</strong><span>可用的已批准模型</span></a><a href="/ui/workers"><strong id="configuration-worker-count">—</strong><span>已登记配置协议的 Worker</span></a></div>
+<div class="configuration-summary" aria-label="可用准备条件">
+<div class="configuration-summary-item"><strong id="configuration-plan-count">—</strong><div><span>已配置文件范围的计划</span><small>在下方“关联计划”中选择；暂停或到期的范围仍会列出。</small></div></div>
+<div class="configuration-summary-item"><strong id="configuration-model-count">—</strong><div><span>当前可选执行模型</span><small>来自 Agent 工厂设置，在下方表单中选择。</small></div></div>
+<div class="configuration-summary-item"><strong id="configuration-worker-count">—</strong><div><span>已登记任务执行能力的 Worker</span><small>这是登记数量，不代表全部在线或适合当前任务。</small></div></div>
+</div>
+<details class="configuration-disclosure"><summary>需要调整执行条件时</summary><p class="help">数量卡片只显示状态。下面的链接会打开对应设置页面。</p><div class="configuration-form-actions"><a class="btn ghost" data-configuration-scope href="/ui/secretary-setup#setup-files">配置计划与文件权限</a><a class="btn ghost" href="/ui/agent-factory">设置执行模型与自动 Worker</a><a class="btn ghost" href="/ui/workers">查看 Worker 集群与在线状态</a></div><p class="help">计划与文件权限在“秘书连接与授权”页维护；模型和自动启动方式在“Agent 工厂设置”页维护；集群页用于排查已有 Worker。</p></details>
 <div class="configuration-navigation"><div role="tablist" aria-label="任务准备分区"><button id="tab-prepare" type="button" role="tab" aria-controls="panel-prepare" aria-selected="true" data-configuration-tab="prepare">准备任务</button><button id="tab-records" type="button" role="tab" aria-controls="panel-records" aria-selected="false" tabindex="-1" data-configuration-tab="records">准备记录</button><button id="tab-methods" type="button" role="tab" aria-controls="panel-methods" aria-selected="false" tabindex="-1" data-configuration-tab="methods">自定义工作方法<span>可选</span></button></div><button id="refresh-configurations" type="button" class="btn ghost">刷新记录</button></div>
 <noscript><p class="callout warn-callout">此页面需要 JavaScript 来载入选择项和提交任务。</p></noscript>
 <section id="panel-prepare" role="tabpanel" aria-labelledby="tab-prepare" data-configuration-panel="prepare">
-<div class="configuration-columns"><section class="card"><h2>准备一个软件任务</h2><p class="muted">准备会核对配置与执行条件。就绪后创建任务，等待兼容 Worker 领取；此按钮不会替你执行模型或命令。</p>
+<div class="configuration-columns"><section class="card"><h2>准备一个软件任务</h2><p class="muted">准备会核对配置与执行条件。就绪后创建任务，由兼容 Worker 领取并执行；工厂按设置自动准备 Worker。</p>
 <form id="prepare-configuration"><fieldset id="preparation-fields" disabled><div class="form-grid">
-<label class="field">关联计划<select id="prepare-plan" name="planId" required><option value="">正在载入计划…</option></select><small>没有可选计划？先到授权页为计划确认工具与仓库范围。</small></label>
+<label class="field">关联计划<select id="prepare-plan" name="planId" required><option value="">正在载入计划…</option></select><small>没有可选计划？在“配置计划与文件权限”中确认计划的工具与仓库范围。</small><a data-configuration-scope href="/ui/secretary-setup#setup-files">配置计划与文件权限</a></label>
 <label class="field">工作仓库<select id="prepare-repository" required><option value="">先选择计划</option></select><small>仅显示所选计划执行范围中的仓库。</small></label>
 <label class="field">工作方法<select id="prepare-method" required><option value="">请选择工作方法</option></select><small id="prepare-method-help">选择这项任务需要的专业工作。</small></label>
 <label class="field">已批准模型<select id="prepare-model" required><option value="">正在载入模型…</option></select><small>后端随模型配置带入，不会自动切换到其它模型。</small></label>

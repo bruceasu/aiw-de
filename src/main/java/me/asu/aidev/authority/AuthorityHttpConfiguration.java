@@ -24,15 +24,15 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
     }
     private boolean personalMachine(String method,String path) {
-        return method.equals("GET") && (Set.of("/professional-tasks/options","/identity","/state","/target-state","/grants","/management-state","/questions","/permission-questions","/action-permissions").contains(path) || path.matches("/professional-tasks/[0-9a-f-]{36}") || path.matches("/permission-actions/[0-9a-f-]{36}") || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))
-                || method.equals("POST") && Set.of("/professional-tasks","/sessions","/actions","/restrictions","/coordination","/question-replies","/goal-proposals","/personal-plans","/permission-actions/prepare").contains(path);
+        return method.equals("GET") && (Set.of("/professional-tasks/options","/professional-tasks/diagnostics","/connection-state","/identity","/state","/target-state","/grants","/management-state","/questions","/permission-questions","/action-permissions").contains(path) || path.matches("/professional-tasks/[0-9a-f-]{36}") || path.matches("/permission-actions/[0-9a-f-]{36}") || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))
+                || method.equals("POST") && (Set.of("/professional-tasks","/sessions","/actions","/restrictions","/coordination","/question-replies","/goal-proposals","/personal-plans","/permission-actions/prepare").contains(path) || path.matches("/professional-tasks/[0-9a-f-]{36}/continue"));
     }
     private boolean humanRoute(String method,String path) {
         return method.equals("POST") && (Set.of("/owners/bind","/workers","/workers/new","/grants","/managed-plans","/execution-policies","/execution-budgets/increment","/execution-effects/reconcile","/execution-meters/reconcile").contains(path)
                 || path.matches("/execution-policies/[^/]+/(pause|resume|revoke)") || path.matches("/execution-contexts/[^/]+/bind")
                 || path.matches("/execution-tasks/[^/]+/stopped")
-                || path.matches("/execution-configurations/(assets|candidates|propose|prepare|state)")
-                || path.equals("/action-permissions") || path.equals("/action-permissions/state") || path.matches("/action-permissions/[^/]+/revoke")
+                || path.matches("/execution-configurations/(assets|candidates|propose|prepare|state|reconcile-plan)")
+                || path.equals("/action-permissions") || path.equals("/action-permissions/state") || Set.of("/secretary-setup/authorize","/secretary-setup/state","/secretary-setup/execution-preview","/agent-factory/state","/agent-factory/settings").contains(path) || path.matches("/action-permissions/[^/]+/revoke")
                 || path.matches("/questions/(read|reply|budget|control|progress|telegram)")
                 || path.matches("/workflow-graphs/(read|change|decide|recommend)")
                 || path.matches("/software-development/(proposals|adopt|read)")
@@ -57,14 +57,15 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                     if(!humanRoute(method,operation)) { response.sendError(403,"Authority route not allowed");return false; }
                 } else {
                     if(leaseMachine(path)) return true;
-                    if(!Set.of("/ui/authority","/ui/configurations","/ui/questions","/ui/workflow-graphs","/ui/software-development").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
+                    if(!Set.of("/ui/authority","/ui/delegation","/ui/secretary-setup","/ui/agent-factory","/ui/configurations","/ui/questions","/ui/workflow-graphs","/ui/software-development").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
                     // The earlier console interceptor already checks local-session CSRF and the persistent auth requirement.
                     if(WebConsoleApiRoutes.matches(path) && !security.enabled() && !security.signedIn(request.getSession(false)) && !boundary.humanAuthRequired()) return true;
                 }
                 var session=request.getSession(false);
                 if(!security.signedIn(session)) {
                     if(path.startsWith("/ui/") && method.equals("GET")) {
-                        response.sendRedirect(request.getContextPath()+"/ui/login?next="+URLEncoder.encode(path,StandardCharsets.UTF_8));
+                        String target=path+(request.getQueryString()==null?"":"?"+request.getQueryString());
+                        response.sendRedirect(request.getContextPath()+"/ui/login?next="+URLEncoder.encode(target,StandardCharsets.UTF_8));
                     } else response.sendError(401,"Configured human authentication required");
                     return false;
                 }
@@ -82,6 +83,6 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 boundary.human(security.actor(session));return true;
             }
             @Override public void afterCompletion(HttpServletRequest request,HttpServletResponse response,Object handler,Exception error) { boundary.human(null); }
-        }).addPathPatterns("/api/r1/**","/ui/authority","/ui/configurations","/ui/questions","/ui/workflow-graphs","/ui/software-development").order(10);
+        }).addPathPatterns("/api/r1/**","/ui/authority","/ui/secretary-setup","/ui/configurations","/ui/questions","/ui/workflow-graphs","/ui/software-development").order(10);
     }
 }

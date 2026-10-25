@@ -1,4 +1,4 @@
-import * as runtime from '../../workers/process-typescript/runtime-core/index.mjs';
+import * as runtime from '../../extern-workers/process-typescript/runtime-core/index.mjs';
 import { assert, fs, path, behavior, outcome } from './harness.mjs';
 import { syntheticPolicy, savePolicy, inEnvironment, launcherCommand, startLauncher, hash } from './session-fixture.mjs';
 

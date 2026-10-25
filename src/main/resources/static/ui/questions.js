@@ -160,4 +160,9 @@
   function openQuestion(id) {if(!data?.questions.some(q=>q.questionId===id))return;selected=id;$('question-filter').value='all';$('question-search').value='';showTab('inbox');renderInbox();sync();}
   window.QuestionUI=Object.freeze({$,node,flag,safe,number,readout,message,dimensions,canOperate,canApprove,enforced,writable,write,confirm,showTab,openQuestion,get data(){return data;},get telegram(){return telegram;},get pending(){return pending;},get busy(){return busy;},get reading(){return reading;}});
   render();
+  const requestedPlan=new URLSearchParams(location.search).get('planId');
+  if(requestedPlan&&[...$('question-plan').options].some(option=>option.value===requestedPlan)){
+    $('question-plan').value=requestedPlan;
+    readCurrent();
+  }
 })();

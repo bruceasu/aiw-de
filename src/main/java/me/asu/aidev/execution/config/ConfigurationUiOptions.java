@@ -49,6 +49,8 @@ public class ConfigurationUiOptions {
             var repositories=new ArrayList<RepositoryChoice>();
             for(String ref:policy.rules().stream().map(GuardContract.Rule::repositoryRef).distinct().sorted().toList()) {
                 Set<String> bases=new LinkedHashSet<>();
+                policy.rules().stream().filter(rule->ref.equals(rule.repositoryRef())).map(GuardContract.Rule::baseRevision)
+                        .filter(ConfigurationUiOptions::baseline).forEach(bases::add);
                 if(plan!=null) plan.spec().steps().stream().filter(s->ref.equals(s.repositoryRef()))
                         .map(s->s.baseRevision()).filter(ConfigurationUiOptions::baseline).forEach(bases::add);
                 tasks.stream().filter(t->t.planId().equals(policy.planId()) && ref.equals(t.repositoryRef()))

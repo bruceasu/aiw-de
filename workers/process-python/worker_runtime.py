@@ -32,7 +32,7 @@ def _regular_parents(target):
             entry.mkdir(mode=0o700)
 
 class Evidence:
-    fields = set("status runtime unknown usageKnown path digest bytes count inputBytes outputBytes durationMs complete truncated operation callId parentCallId tool inputTokens outputTokens cachedTokens publicationRef resultRevision sideEffect verdict code reportStatus reason model effort".split())
+    fields = set("status runtime unknown usageKnown path digest bytes count inputBytes outputBytes durationMs complete truncated operation callId parentCallId tool inputTokens outputTokens cachedTokens publicationRef resultRevision sideEffect verdict code reportStatus reason model effort phase".split())
     def __init__(self, config, task):
         root = Path(os.getenv("AIW_WORKER_EVIDENCE_ROOT", str(Path(config.fallback_workspace).parent / ".aidev-attempt-evidence"))).absolute()
         for candidate in (config.fallback_workspace, config.repository_root, config.worktree_root):

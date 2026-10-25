@@ -6,7 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { promisify } from 'node:util';
 
-import * as runtime from '../../workers/process-typescript/runtime-core/index.mjs';
+import * as runtime from '../../extern-workers/process-typescript/runtime-core/index.mjs';
 
 const execFileAsync = promisify(execFile);
 

@@ -2,14 +2,18 @@
 $ErrorActionPreference = 'Stop'
 $taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $sources = @(
-    Get-ChildItem -LiteralPath (Join-Path $taskRoot 'workers/personal-secretary') -Filter '*.py'
-    Get-ChildItem -LiteralPath (Join-Path $taskRoot 'workers/process-python') -Filter '*.py' |
-        Where-Object { $_.Name -notlike 'test_*' }
+    Get-ChildItem -LiteralPath (Join-Path $taskRoot 'personal-secretary') -Filter '*.py'
 ) | Select-Object -ExpandProperty FullName
 & python -c "import pathlib,sys; [compile(pathlib.Path(p).read_text(encoding='utf-8-sig'),p,'exec') for p in sys.argv[1:]]" @sources
-if ($LASTEXITCODE -ne 0) { throw 'Secretary/shared Runtime Python compile failed.' }
-foreach ($sourcePath in @('workers/personal-secretary/ui/app.js', 'src/main/resources/static/ui/appearance.js')) {
+if ($LASTEXITCODE -ne 0) { throw 'Secretary Runtime Python compile failed.' }
+foreach ($sourcePath in @('personal-secretary/ui/app.js')) {
     & node --check (Join-Path $taskRoot $sourcePath)
     if ($LASTEXITCODE -ne 0) { throw 'Secretary/theme JavaScript syntax compile failed.' }
 }
-Write-Output 'Secretary/shared Runtime compile-only passed. No tests, SDK imports, services, models, network or retained artifacts.'
+foreach ($scriptPath in @('personal-secretary/stop.ps1', 'scripts/configure-local-worker-token.ps1')) {
+    $parseTokens = $null
+    $parseErrors = $null
+    [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $taskRoot $scriptPath), [ref]$parseTokens, [ref]$parseErrors)
+    if ($parseErrors.Count -gt 0) { throw ('Secretary PowerShell syntax failed: ' + ($parseErrors -join '; ')) }
+}
+Write-Output 'Secretary Runtime compile-only passed (Python, JavaScript, stop.ps1). No Worker source, SDK imports, tests, services, models, network or retained artifacts.'

@@ -41,6 +41,14 @@ public class WorkflowEditorController {
     private final WebConsoleSecurityService security;
     private final ManagedWorkspaceService workspaces;
     private final me.asu.aidev.workflow.application.WorkflowRepairAuthorizationService repairs;
+    private me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository configuredHistory;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.FactoryPlanLifecycle> factoryPlans;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setConfiguredHistory(me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository history) {
+        this.configuredHistory = history;
+    }
 
     public WorkflowEditorController(WorkflowEditorService editor, WorkflowPlanService plans,
                                     WorkflowCancellationService cancellation,
@@ -66,6 +74,13 @@ public class WorkflowEditorController {
         model.addAttribute("archivedView", archived);
         var rows = plans.list(archived);
         model.addAttribute("plans", rows);
+        var executionStates = new java.util.HashMap<String, String>();
+        if (configuredHistory != null) for (WorkflowPlan plan : rows) {
+            var state = configuredHistory.stateForList(plan.id());
+            if (state != null && plans.steps(plan.id()).isEmpty()) executionStates.put(plan.id(),
+                    me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.displayState(state));
+        }
+        model.addAttribute("configuredExecutionStates", executionStates);
         model.addAttribute("archivablePlans", rows.stream().filter(p -> archives.archivable(p.id()))
                 .map(WorkflowPlan::id).collect(java.util.stream.Collectors.toSet()));
         var due = new java.util.HashMap<String, Instant>();
@@ -85,6 +100,12 @@ public class WorkflowEditorController {
     @GetMapping("/ui/plans/{id}")
     public String detailPage(@PathVariable String id, Model model) {
         requireEnabled();
+        var saved = plans.get(id);
+        String executionState = configuredHistory == null || !plans.steps(id).isEmpty() ? null
+                : me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.displayState(configuredHistory.stateForList(id));
+        model.addAttribute("planDisplayState", executionState == null ? saved.state().name() : executionState);
+        model.addAttribute("configuredOnly", executionState != null && factoryPlans.getObject().view(id)==null);
+        model.addAttribute("planGoal", saved.spec().goal());
         model.addAttribute("page", "plans");
         model.addAttribute("planId", id);
         model.addAttribute("archived", archives.archived(id));

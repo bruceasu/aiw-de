@@ -1,4 +1,4 @@
-import * as runtime from '../../../workers/process-typescript/runtime-core/index.mjs';
+import * as runtime from '../../../extern-workers/process-typescript/runtime-core/index.mjs';
 import { assert, fs, path, root, behavior, sandbox, outcome, deferred, within } from './harness.mjs';
 import { createHash } from 'node:crypto';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');

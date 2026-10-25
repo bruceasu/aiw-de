@@ -99,6 +99,20 @@ public class BusinessActionPermissions {
         try{return work.get();}finally{if(prior==null)request.remove();else request.set(prior);}
     }
     public String requestId() {return request.get();}
+    /** Consume the existing plan-confirmation permission for one frozen factory plan, not model/file access. */
+    @Transactional public void confirmFactoryPlan(AuthorityBoundary.Principal principal, String plan, String requestId) {
+        boundary.lock();
+        var permission = list(principal.owner()).stream().filter(p -> p.workerId().equals(principal.worker())
+                && p.action() == ActionScope.Action.A05 && active(p) && p.usedUses() < p.maximumUses()
+                && (p.scopeKind() == Scope.ALL || p.scopeKind() == Scope.PLAN && plan.equals(p.scopeId())))
+                .findFirst().orElseThrow(() -> new SecurityException("PLAN_CONFIRMATION_REQUIRED: authorize plan confirmation before factory execution"));
+        var rule = new ActionScope(ActionScope.Action.A05, plan, null, "ALLOW", Set.of("DRAFT"), 0, 1, Map.of());
+        var grant = grants.issue(permission.ownerId(), permission.workerId(), rule, permission.expiresMs(), repo.actor(permission.ownerId()));
+        targets.getObject().check(permission, rule, null, null);
+        repo.jdbc().update("INSERT INTO authority_permission_child(grant_id,permission_id,request_id,source_plan,source_task,question_id) VALUES(?,?,?,?,NULL,NULL)",
+                grant.id(), permission.id(), requestId, plan);
+        consume(grant, requestId);
+    }
     public void consume(AuthorityRepository.Grant grant,String originalRequest) {
         var linked=child(grant.id());
         if(linked.isEmpty()) {

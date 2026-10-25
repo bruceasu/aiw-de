@@ -115,6 +115,8 @@
   }
   function planChanged({repository,baseline,selectedDependencies=[],revision}={}) {
     const plan=planChoice(); policyRevision=revision??plan?.policyRevision??null;
+    for(const link of document.querySelectorAll('[data-configuration-scope]'))
+      link.href=plan?'/ui/secretary-setup?planId='+encodeURIComponent(plan.id)+'#setup-files':'/ui/secretary-setup#setup-files';
     const selected=repository??(plan?.repositories.length===1?plan.repositories[0].ref:'');
     setOptions($('prepare-repository'),(plan?.repositories||[]).map(item=>({value:item.ref,label:item.ref})),selected,'请选择工作仓库');
     repositoryChanged({baseline,selectedDependencies});
@@ -158,8 +160,10 @@
       details.append(node('summary','查看当前任务进度'),progress); renderTaskProgress(progress); host.append(details);
     }
     const planUrl=options.plans.find(item=>item.id===intent.planId)?.url;
-    const link=node('a',preparation.state==='READY'&&planUrl?.startsWith('/ui/plans/')?'查看关联计划定义':preparation.errorCode==='NO_COMPATIBLE_WORKER'?'查看 Worker':'查看执行范围');
-    link.href=preparation.state==='READY'&&planUrl?.startsWith('/ui/plans/')?planUrl:preparation.errorCode==='NO_COMPATIBLE_WORKER'?'/ui/workers':'/ui/authority'; host.append(link);
+    const workerGap=['NO_COMPATIBLE_WORKER','WORKER_STARTING'].includes(preparation.errorCode);
+    const ready=preparation.state==='READY'&&planUrl?.startsWith('/ui/plans/');
+    const link=node('a',ready?'查看关联计划与执行记录':workerGap?'设置执行模型与自动 Worker':'配置计划与文件权限');
+    link.href=ready?planUrl:workerGap?'/ui/agent-factory':'/ui/secretary-setup?planId='+encodeURIComponent(intent.planId)+'#setup-files'; host.append(link);
     if(preparation.missing?.length) {
       const details=node('details'); details.append(node('summary','查看服务器提供的具体缺口'));
       const list=node('ul'); for(const missing of preparation.missing) list.append(node('li',missing)); details.append(list); host.append(details);

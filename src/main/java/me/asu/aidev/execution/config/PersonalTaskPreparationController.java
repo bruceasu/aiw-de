@@ -18,6 +18,7 @@ public class PersonalTaskPreparationController {
         return (AuthorityBoundary.Principal)request.getAttribute("authorityPrincipal");
     }
     @GetMapping("/options") public Object options(HttpServletRequest request) { return preparations.options(principal(request)); }
+    @GetMapping("/diagnostics") public Object diagnostics(HttpServletRequest request,@RequestParam String planId) {return preparations.diagnostics(principal(request),planId);}
     @PostMapping public Object prepare(HttpServletRequest request,@RequestBody String raw) {
         if(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>32768) throw new IllegalArgumentException("Bounded selected task required");
         var input=repo.decode(raw,PersonalTaskPreparations.Input.class);
@@ -25,6 +26,10 @@ public class PersonalTaskPreparationController {
         return preparations.prepare(principal(request),input);
     }
     @GetMapping("/{id}") public Object read(HttpServletRequest request,@PathVariable String id) { return preparations.read(principal(request),id); }
+    @PostMapping("/{id}/continue") public Object continuePreparation(HttpServletRequest request,@PathVariable String id,@RequestBody String raw) {
+        if(!repo.decode(raw,Map.class).isEmpty())throw new IllegalArgumentException("Empty continuation required");
+        return preparations.continuePreparation(principal(request),id);
+    }
     @ExceptionHandler(SecurityException.class) public ResponseEntity<?> denied() { return ResponseEntity.status(403).body(Map.of("code","PROFESSIONAL_SCOPE_REQUIRED")); }
     @ExceptionHandler(NoSuchElementException.class) public ResponseEntity<?> missing() { return ResponseEntity.status(404).body(Map.of("code","PROFESSIONAL_REQUEST_NOT_FOUND")); }
     @ExceptionHandler(IllegalArgumentException.class) public ResponseEntity<?> invalid() { return ResponseEntity.unprocessableContent().body(Map.of("code","PROFESSIONAL_INPUT_INVALID")); }

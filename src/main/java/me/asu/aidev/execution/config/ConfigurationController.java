@@ -12,6 +12,11 @@ public class ConfigurationController {
     private final ConfigurationUiOptions uiOptions;
     @org.springframework.beans.factory.annotation.Autowired private ExecutionWorkbench workbench;
     @org.springframework.beans.factory.annotation.Autowired private CapabilityPacks capabilityPacks;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.workflow.application.FactoryPlanLifecycle planLifecycle;
+    @PostMapping("/api/r1/authority/execution-configurations/reconcile-plan")
+    public Object reconcilePlan(@RequestBody me.asu.aidev.workflow.application.FactoryPlanLifecycle.Reconcile input) {
+        return planLifecycle.reconcile(input);
+    }
     public ConfigurationController(AuthorityRepository repo,ExecutionConfigurations configs,AgentFactory factory,ConfigurationUiOptions uiOptions) { this.repo=repo;this.configs=configs;this.factory=factory;this.uiOptions=uiOptions; }
     private <T> T read(String raw,Class<T> type) { if(raw.length()>32768) throw new IllegalArgumentException("Bounded declarative request required");return repo.decode(raw,type); }
     public record Empty() {}

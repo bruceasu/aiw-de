@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" th:content="${csrfToken}"><title>Agent 工厂设置 · AIW:DE</title>
+<link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/authority.css"></head>
+<body><div class="app authority-page"><nav th:replace="~{ui/fragments :: nav('agent-factory')}"></nav><main class="main"><header th:replace="~{ui/fragments :: topbar('Agent 工厂设置','统一选择模型，自动准备 Worker')}"></header>
+<div class="content"><section class="card"><h2>Agent 工厂设置</h2><p>先复用兼容的在线 Worker，缺少时再启动本机 Worker。外部 Worker 仍可通过原协议接入。</p>
+<p id="factory-status" class="callout" role="status" aria-live="polite">正在读取…</p>
+<form id="factory-settings"><fieldset id="factory-fields" disabled><div class="form-grid">
+<label class="field">模型运行时<select name="runtime"><option value="codex-app-server">Codex App Server</option><option value="openai-agents">OpenAI Agents SDK</option></select></label>
+<label class="field">默认模型<input name="model" maxlength="120" required autocomplete="off" placeholder="填写已可用的模型名称"></label>
+<label class="field">推理强度<select name="effort"><option value="none">none</option><option value="minimal">minimal</option><option value="low">low</option><option value="medium" selected>medium</option><option value="high">high</option><option value="xhigh">xhigh</option></select></label>
+<label class="field"><span><input name="automaticWorkers" type="checkbox" checked>缺少兼容 Worker 时自动启动本机 Worker</span></label>
+</div><details class="authority-disclosure"><summary>本机运行环境（高级）</summary><div class="form-grid">
+<label class="field">Python 程序<input name="python" value="python" maxlength="2048" placeholder="python 或已安装程序的完整路径"></label>
+<label class="field">Codex 程序（可选）<input name="executable" maxlength="2048" placeholder="默认从 PATH 查找"></label>
+<label class="field authority-full">独立 Codex 环境（可选）<input name="guardHome" maxlength="2048" placeholder="默认复用已有 Codex 登录，无需另建目录"></label>
+</div><p class="help">本机 Worker 使用已安装的 Python。Codex 默认复用已有登录，由受控主机工具执行文件操作；只有需要独立账号环境时才指定目录。OpenAI API 使用平台进程已有的 API 凭证。工厂不复制凭证或自动安装依赖。</p></details>
+<p class="help">这里只设置默认模型和启动方式。计划、文件、命令及预算权限仍由原授权决定。</p></fieldset>
+<button class="btn primary" id="factory-save" type="submit" disabled>保存工厂设置</button></form></section>
+<section class="card"><h2>本机 Worker 状态</h2><div id="factory-workers" role="status"></div><button class="btn ghost" id="factory-refresh" type="button">刷新状态</button></section>
+<section class="card"><h2>接入外部 Worker</h2><p>外部 Worker 使用注册、心跳、领取任务和提交结果协议，无需由工厂启动。执行工厂任务时，还需声明匹配的运行时、仓库与配置执行能力。</p><a class="btn ghost" href="/ui/workers">查看 Worker</a></section>
+</div></main></div><script src="/ui/agent-factory.js" defer></script><script src="/ui/console.js"></script></body></html>

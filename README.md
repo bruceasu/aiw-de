@@ -56,7 +56,7 @@ mvn spring-boot:run
 
 按指南配置并启动 Worker，提供控制平面地址、仓库路径、角色、技术能力，以及所选 AI Runtime 的认证信息：
 
-- [TypeScript 流程 Worker](workers/process-typescript/README.md)：角色、Runtime、单进程与多角色启动说明。
+- [TypeScript 流程 Worker](extern-workers/process-typescript/README.md)：角色、Runtime、单进程与多角色启动说明。
 - [Python 流程 Worker](workers/process-python/README.md)。
 - [Go 流程 Worker](workers/process-go/README.md)。
 - [Worker 总览](workers/README.md)：其他语言示例与协议入口。
@@ -111,4 +111,8 @@ AIW_WEB_CONSOLE_ROLE=ADMIN
 
 ## Personal secretary
 
-FD-024 separates private secretary work into a user-owned process and SQLite store. Platform identity, minimal authority and receipts are managed at /ui/authority. See [operations](workers/personal-secretary/README.md) and [offline migration planning](scripts/secretary_migration/README.md). Old secretary APIs/modes are removed; actual data migration and cutover remain disabled.
+Agent Factory 支持集中设置默认模型、优先复用在线 Worker，以及在执行范围检查通过后按需启动本机 Worker。外部自定义 Worker 继续按原协议接入。入口、运行环境要求和兼容边界见 [Agent Factory 与外部 Worker](docs/AGENT-FACTORY.md)。
+
+FD-024 separates private secretary work into a user-owned process and SQLite store. Platform identity, minimal authority and receipts are managed at /ui/authority. See [operations](personal-secretary/README.md) and [offline migration planning](scripts/secretary_migration/README.md). Old secretary APIs/modes are removed; actual data migration and cutover remain disabled.
+
+秘书连接与授权页面保存后会保留同一计划下的文件范围勾选，并在保存按钮旁持续显示实际保存结果；修改设置或重新检查状态后，提示会更新。勾选状态表示本次提交选择，不代表后台已经保存成功。

@@ -82,5 +82,5 @@ UI 接口沿用登录会话；创建入库计划要求 Operator 权限及既有 
 尚未运行迁移、测试、真实 Worker、浏览器或部署验证；这些不能由编译检查代替。
 
 本次已通过离线 `mvn -o -DskipTests compile`、Worker TypeScript 语法编译、
-`npm --prefix workers/process-typescript run build`，以及 outputs/attempt/workspace/task-detail 的
+`npm --prefix extern-workers/process-typescript run build`，以及 outputs/attempt/workspace/task-detail 的
 `node --check`。静态核对了输入版本、租约、路径、独立评审、清理和旧协议调用链。

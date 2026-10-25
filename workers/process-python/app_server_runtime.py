@@ -23,6 +23,38 @@ from ai_preferences import preference_rejected
 from agent_runtime import HOST_ACTION_INSTRUCTIONS
 from worker_runtime import setting
 
+MODEL_ONLY_DISABLED = (
+    "shell_tool", "shell_snapshot", "apps", "enable_mcp_apps", "multi_agent", "multi_agent_v2",
+    "multi_agent_v2_dynamic_tools", "enable_fanout", "agent_message_board", "send_async_message",
+    "send_message_to_user_async", "browser_use", "browser_use_external", "browser_use_full_cdp_access",
+    "in_app_browser", "computer_use", "image_generation", "js_repl", "js_repl_tools_only", "code_mode",
+    "code_mode_host", "code_mode_host_grpc", "code_mode_only", "code_mode_only_strict_3p_tools", "tool_search",
+    "tool_suggest", "skill_search", "skill_mcp_dependency_install", "apply_patch_freeform",
+    "apply_patch_streaming_events", "plugins", "plugin_hooks", "hooks", "request_permissions_tool",
+    "remote_control", "goals", "sleep_tool", "view_image", "search_tool", "web_search_request",
+    "web_search_cached", "standalone_web_search",
+)
+
+
+def verify_model_only_tools(session, thread_id):
+    states, cursor = {}, None
+    for _ in range(8):
+        result = session.rpc("experimentalFeature/list", {"threadId": thread_id, "limit": 100, "cursor": cursor})
+        for item in result.get("data", []):
+            name, enabled = item.get("name"), item.get("enabled")
+            if not isinstance(name, str) or type(enabled) is not bool or name in states:
+                raise RuntimeError("CODEX_EFFECTIVE_FEATURE_SCHEMA_UNSUPPORTED")
+            states[name] = enabled
+        cursor = result.get("nextCursor")
+        if cursor is None:
+            break
+    else:
+        raise RuntimeError("CODEX_FEATURE_LIST_NOT_COMPLETE")
+    if not {"shell_tool", "multi_agent", "apps", "browser_use", "computer_use"}.issubset(states):
+        raise RuntimeError("CODEX_REQUIRED_NATIVE_FEATURE_STATE_UNAVAILABLE")
+    if any(states.get(name) is True for name in MODEL_ONLY_DISABLED):
+        raise RuntimeError("CODEX_MODEL_ONLY_NATIVE_FEATURE_ENABLED")
+
 
 class CodexRpcError(RuntimeError):
     """Keep the failed method/code, never the raw RPC body or private text."""
@@ -267,6 +299,9 @@ class CodexAppServerRuntime:
 
     def run(self, client, request, on_session):
         if request.broker is not None:
+            if os.environ.get("AIW_CODEX_GUARD_MODE") == "host-actions":
+                from guarded_text_runtime import run
+                return run(request, on_session)
             from guarded_app_server import run_guarded
             return run_guarded(request, on_session)
         attempt = request.attempt
@@ -280,6 +315,8 @@ class CodexAppServerRuntime:
                 raise RuntimeError("CODEX_SANDBOX_UNSUPPORTED")
             sandbox = request.sandbox
         def resource_request(message):
+            if getattr(request, "model_only", False):
+                raise RuntimeError("CODEX_MODEL_ONLY_NATIVE_TOOL_DENIED")
             params = message.get("params", {})
             if message["method"] in {"item/commandExecution/requestApproval", "item/fileChange/requestApproval"}:
                 return {"id": message["id"], "result": {"decision": "decline"}}
@@ -316,13 +353,17 @@ class CodexAppServerRuntime:
                                  "allow_login_shell": False, "features.shell_snapshot": False}}
             if model_only:
                 params.update(baseInstructions=HOST_ACTION_INSTRUCTIONS, dynamicTools=[])
-                params["config"].update({"features.shell_tool": False, "features.multi_agent": False, "web_search": "disabled"})
-            if getattr(attempt, "skill_files", None):
+                params.update(runtimeWorkspaceRoots=[], environments=[])
+                params["config"].update({"features." + name: False for name in MODEL_ONLY_DISABLED})
+                params["config"]["web_search"] = "disabled"
+            if getattr(attempt, "skill_files", None) and not model_only:
                 from skill_files import TOOL
                 params["dynamicTools"] = [TOOL]
             if request.model:
                 params["model"] = request.model
             started = session.rpc("thread/start", params)
+            if model_only:
+                verify_model_only_tools(session, started.get("thread", {}).get("id"))
             thread = started.get("thread", {})
             thread_id = thread.get("id")
             expected_type = "readOnly" if sandbox == "read-only" else "workspaceWrite"
@@ -364,6 +405,8 @@ class CodexAppServerRuntime:
                         raise RuntimeError("CODEX_OUTPUT_TOO_LARGE")
                 if event["method"] == "item/completed":
                     item = p.get("item", {})
+                    if model_only and item.get("type") not in {"agentMessage", "reasoning", "userMessage", "plan"}:
+                        raise RuntimeError("CODEX_MODEL_ONLY_NATIVE_ITEM_DENIED")
                     if item.get("status") in {"failed", "declined", "cancelled"} or item.get("exitCode") not in {None, 0}:
                         raise RuntimeError("CODEX_TOOL_FAILED")
                     if item.get("type") == "agentMessage":
@@ -385,6 +428,8 @@ class CodexAppServerRuntime:
                     # Some transports include completed items in the terminal
                     # Turn instead of sending every item/completed notification.
                     for item in turn.get("items", []) or []:
+                        if model_only and isinstance(item, dict) and item.get("type") not in {"agentMessage", "reasoning", "userMessage", "plan"}:
+                            raise RuntimeError("CODEX_MODEL_ONLY_NATIVE_ITEM_DENIED")
                         if not isinstance(item, dict) or item.get("type") != "agentMessage":
                             continue
                         key, text = item.get("id"), item.get("text")

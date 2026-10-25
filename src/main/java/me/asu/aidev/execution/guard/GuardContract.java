@@ -9,8 +9,14 @@ public final class GuardContract {
     private GuardContract() {}
     public enum Tool { READ, SEARCH, WRITE, GIT, COMMAND, MODEL, QUESTION }
     public enum Dimension { TIME_MS, TASKS, COST_MICROS, LOOP_BACKJUMPS }
-    public record Rule(Tool tool, String repositoryRef, String pathPrefix) {
-        public Rule { Objects.requireNonNull(tool); text(repositoryRef,120); path(pathPrefix); }
+    public record Rule(Tool tool, String repositoryRef, String pathPrefix,
+                       @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) String baseRevision) {
+        public Rule(Tool tool, String repositoryRef, String pathPrefix) { this(tool,repositoryRef,pathPrefix,null); }
+        public Rule {
+            Objects.requireNonNull(tool); text(repositoryRef,120); path(pathPrefix);
+            if(baseRevision!=null && !baseRevision.matches("([0-9a-f]{40}|[0-9a-f]{64})"))
+                throw new IllegalArgumentException("Immutable repository commit required");
+        }
     }
     public record Command(String id, List<String> argv, String cwd, String permissionProfile,
                           long timeoutMs, int outputBytes, long memoryBytes, int processLimit) {

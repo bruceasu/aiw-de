@@ -7,7 +7,7 @@ import os from "node:os";
 import path from "node:path";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const require = createRequire(new URL("../workers/process-typescript/package.json", import.meta.url));
+const require = createRequire(new URL("../extern-workers/process-typescript/package.json", import.meta.url));
 const ts = require("typescript");
 let failed = false;
 for (const worker of ["process-typescript"]) {
@@ -28,7 +28,7 @@ function compile(executable, args, cwd = root, env = process.env) {
   if (result.error || result.status !== 0) { failed = true; console.error(result.error?.message ?? result.stderr ?? "compile failed"); }
   return result;
 }
-for (const directory of [path.join(root, "workers/process-typescript/runtime-core"), path.join(root, "workers/process-typescript/scripts")]) {
+for (const directory of [path.join(root, "extern-workers/process-typescript/runtime-core"), path.join(root, "extern-workers/process-typescript/scripts")]) {
   for (const file of (await readdir(directory)).filter(file => file.endsWith(".mjs"))) compile(process.execPath, ["--check", path.join(directory, file)]);
 }
 const pyDirectory = path.join(root, "workers/process-python");

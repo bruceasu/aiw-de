@@ -72,7 +72,7 @@ The `demo-*-with-codex` directories are small language-specific Worker Protocol 
 
 ## Java deployment demo
 
-[`demo-deployer`](demo-deployer/README.md) demonstrates a separate deployment workflow: validate a request, package a Java artifact, and copy the verified artifact into an allowed directory. It does not restart an application, switch a live-release pointer, or roll back a release. Deployment permissions and approval must be designed independently for production use.
+[`demo-deployer`](../demo-workers/demo-deployer/README.md) demonstrates a separate deployment workflow: validate a request, package a Java artifact, and copy the verified artifact into an allowed directory. It does not restart an application, switch a live-release pointer, or roll back a release. Deployment permissions and approval must be designed independently for production use.
 
 ## Shared contracts and operations
 
@@ -82,4 +82,4 @@ The `demo-*-with-codex` directories are small language-specific Worker Protocol 
 
 ## Personal secretary (FD-024)
 
-The personal secretary is an independent user-owned process and database. See [personal-secretary/README.md](personal-secretary/README.md). The old in-platform secretary and obsolete secretary/coordinator/delegate specialist roles are retired; no compatibility mode is provided. Migration tools only produce offline plans; actual migration and cutover are disabled.
+The personal secretary is an independent user-owned process and database. See [personal-secretary/README.md](../personal-secretary/README.md). The old in-platform secretary and obsolete secretary/coordinator/delegate specialist roles are retired; no compatibility mode is provided. Migration tools only produce offline plans; actual migration and cutover are disabled.

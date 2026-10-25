@@ -5,7 +5,7 @@
   const csrf=document.querySelector('meta[name="csrf-token"]').content;
   const names={SUCCEEDED:'已完成',FAILED:'失败',RUNNING:'执行中',PENDING:'等待中',LEASED:'已领取',CANCELLED:'已取消',ABANDONED:'已放弃',TIMED_OUT:'已超时',BLOCKED:'已阻塞',PASS:'通过',FAIL:'未通过',UNKNOWN:'未知'};
   const label=value=>value==null||value===''?'未记录':names[value]||value;
-  const number=value=>value==null?'未知':Number.isSafeInteger(value)?value.toLocaleString('zh-CN'):'超出页面精确显示范围';
+  const number=value=>value==null?'未知':Number.isSafeInteger(value)?value.toLocaleString(window.aiwI18n?.locale || 'en'):'超出页面精确显示范围';
   let epoch=0,busy=false;
   function node(tag,text,className) {
     const item=document.createElement(tag);if(text!=null)item.textContent=text;if(className)item.className=className;return item;
@@ -34,7 +34,7 @@
   }
   function render(snapshot) {
     const target=$('observations-records');target.replaceChildren();
-    $('observations-updated').textContent='读取时间：'+new Date(snapshot.observedAt).toLocaleString('zh-CN')+' · '+snapshot.entries.length+' 条（最多 '+snapshot.limit+' 条）';
+    $('observations-updated').textContent='读取时间：'+new Date(snapshot.observedAt).toLocaleString(window.aiwI18n?.locale || 'en')+' · '+snapshot.entries.length+' 条（最多 '+snapshot.limit+' 条）';
     if(!snapshot.entries.length) { target.append(node('p','当前账号暂无可展示的计量记录。此结果不代表没有执行。','empty'));return; }
     const wrap=node('div',null,'observations-table-wrap'),table=node('table',null,'observations-table');
     table.append(node('caption','每行对应一次尝试；展开可查看固定配置和交付来源。'));

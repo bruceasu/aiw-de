@@ -21,7 +21,6 @@ from worker_runtime import Attempt, attempt_scope, current_attempt, git as runti
 from ai_preferences import step_selection
 from agent_runtime import AgentRunRequest, AgentRuntime
 from app_server_runtime import CodexAppServerRuntime, preflight as app_server_preflight
-from openai_api_runtime import OpenAIApiRuntime
 from formal_questions import YieldRequested
 import hashlib
 from contextlib import nullcontext
@@ -315,6 +314,11 @@ def _completion_report(result_kind: str, final_response: str) -> dict[str, str]:
     if not summary:
         raise RuntimeError("COMPLETION_REPORT_EMPTY")
     if result_kind in {"REPORT", "WORKSPACE"}:
+        if result_kind == "WORKSPACE":
+            try: detail = json.loads(summary)
+            except json.JSONDecodeError: detail = None
+            if isinstance(detail, dict) and (str(detail.get("outcome", "")).upper().startswith(("BLOCKED", "FAILED", "INCOMPLETE")) or detail.get("completed") is False):
+                return {"verdict": "REPAIR_REQUIRED", "summary": summary}
         return {"verdict": "PASS", "summary": summary}
     if result_kind != "VERDICT":
         raise RuntimeError("RESULT_KIND_INVALID")
@@ -372,7 +376,11 @@ class LeaseHeartbeat:
 class ProcessSlot:
     def __init__(self, slot_no: int, config: WorkerConfig, client: ControlPlaneClient, stop_event: threading.Event, force_event=None):
         self.force_event = force_event or threading.Event()
-        self.runtime: AgentRuntime = CodexAppServerRuntime() if config.runtime == "codex-app-server" else OpenAIApiRuntime.from_env()
+        if config.runtime == "codex-app-server":
+            self.runtime: AgentRuntime = CodexAppServerRuntime()
+        else:
+            from openai_api_runtime import OpenAIApiRuntime
+            self.runtime = OpenAIApiRuntime.from_env()
         self.slot_no = slot_no; self.config = config; self.client = client; self.stop_event = stop_event
         self.thread = threading.Thread(target=self._run, name=f"process-slot-{slot_no}", daemon=False)
     def start(self) -> None: self.thread.start()
@@ -521,6 +529,8 @@ class ProcessSlot:
                 attempt.evidence.record("report-validated", status="valid", digest=hashlib.sha256(final_response.encode("utf-8")).hexdigest())
                 phase = "TOOL_ERROR"
                 workspace_result = workspace.finalize(task, read_only=not profile.writable)
+                if profile.writable and not (workspace_result or {}).get("changedFiles") and report.get("verdict") == "PASS":
+                    report = {"verdict": "REPAIR_REQUIRED", "summary": "No implementation changes were produced relative to the assigned baseline. The requested file work is not confirmed complete.\n" + report["summary"]}
                 if broker: broker.record_delivery(workspace_result, report)
                 if profile.result_kind == "WORKSPACE" and (not workspace_result or not workspace_result.get("resultRevision") or not isinstance(workspace_result.get("changedFiles"), list)):
                     raise RuntimeError("WORKSPACE_RESULT_INVALID")
@@ -548,12 +558,14 @@ class ProcessSlot:
             except Exception:
                 if attempt: attempt.resource_uncertain = True
                 print("QUESTION_YIELD_OUTCOME_UNCONFIRMED", file=sys.stderr, flush=True)
-        except Exception:
+        except Exception as error:
             lost = heartbeat is not None and heartbeat.ownership_lost.is_set()
             status = "lease-lost" if lost else "report-unknown" if reporting else "failed"
             if attempt:
                 attempt.cancel("lease-lost" if lost else attempt.reason or "execution-failed")
-                try: attempt.evidence.record("attempt-failed", status=status, phase=phase, code="OPERATION_FAILED")
+                failure_code = str(error).split(":", 1)[0]
+                if not __import__("re").fullmatch(r"[A-Z][A-Z0-9_]{2,100}", failure_code): failure_code = "OPERATION_FAILED"
+                try: attempt.evidence.record("attempt-failed", status=status, phase=phase, code=failure_code)
                 except Exception: pass
                 if attempt.reason in {"deadline", "lease-lost", "force-shutdown"}:
                     try: attempt.evidence.record("attempt-cancelled", reason=attempt.reason)

@@ -80,13 +80,13 @@ Worker 禁止 `git push`，不要设置 `AIW_GIT_PUBLISH_REMOTE`。代码任务�
 
 ### 可选：使用 R10 流程专职 Worker
 
-上面的 Java Worker 适合单进程演示。若要让 R2 角色说明在 R9 Pull/Lease 协议下运行，可改用 [TypeScript 流程 Worker](../../workers/process-typescript/README.md)（Node.js 22+）、[Go 流程 Worker](../../workers/process-go/README.md)（Go 1.23+）或 [Python 流程 Worker](../../workers/process-python/README.md)（Python 3.11+）。每个角色使用独立进程，所有进程配置同一个 Control Plane 地址、Repository Ref、Repository Root 和所需技术能力。
+上面的 Java Worker 适合单进程演示。若要让 R2 角色说明在 R9 Pull/Lease 协议下运行，可改用 [TypeScript 流程 Worker](../../extern-workers/process-typescript/README.md)（Node.js 22+）、[Go 流程 Worker](../../workers/process-go/README.md)（Go 1.23+）或 [Python 流程 Worker](../../workers/process-python/README.md)（Python 3.11+）。每个角色使用独立进程，所有进程配置同一个 Control Plane 地址、Repository Ref、Repository Root 和所需技术能力。
 
 Go 版本在 `workers/process-go` 下运行 `go test ./...`、`go build -o process-worker .`，然后为每个角色分别设置 `AIW_PROCESS_PROFILE` 并启动。完整流程至少需要需求分析、架构、规划、编码、代码审查、验证和修复角色；可能产生集成任务时还需集成执行和集成验证角色。Python 版本使用 `scripts/run-role.ps1` 或 `scripts/run-role.sh`，分别启动 `requirements`、`architect`、`planner`、`coder`、`reviewer`、`verifier`、`repairer`，按需增加 `integrator`。具体命令见对应 Worker README。
 
 角色能力和 `repo:<AIW_REPOSITORY_REF>` 会自动注册；`AIW_WORKER_CAPABILITIES` 只填写附加技术能力（例如 `java,maven`）。并行或复制部署时给每个进程不同的 `AIW_WORKER_ID`。不要启动尚无 R9 TaskType 对应的 release-readiness 或 orchestrator 配置。
 
-TypeScript 版本在 `workers/process-typescript` 下运行 `npm ci --omit=optional` 和 `npm run build`，然后为每个角色显式选择后端，例如 `./scripts/run-role.ps1 coder codex-sdk` 或 `sh scripts/run-role.sh reviewer openai-agents`。Codex 后端需要已认证 CLI（从 `PATH` 或 `AIW_CODEX_PATH` 查找）；Agents 后端需要 `OPENAI_API_KEY`。旧 API 包及启动路径已删除。完整配置见 [TypeScript 指南](../../workers/process-typescript/README.md)。
+TypeScript 版本在 `extern-workers/process-typescript` 下运行 `npm ci --omit=optional` 和 `npm run build`，然后为每个角色显式选择后端，例如 `./scripts/run-role.ps1 coder codex-sdk` 或 `sh scripts/run-role.sh reviewer openai-agents`。Codex 后端需要已认证 CLI（从 `PATH` 或 `AIW_CODEX_PATH` 查找）；Agents 后端需要 `OPENAI_API_KEY`。旧 API 包及启动路径已删除。完整配置见 [TypeScript 指南](../../extern-workers/process-typescript/README.md)。
 
 ## 5. 提交 Requirement
 

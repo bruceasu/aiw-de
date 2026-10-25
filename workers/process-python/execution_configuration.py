@@ -24,7 +24,7 @@ def metadata(config):
     if CAPABILITY not in config.capabilities or "execution-guard-v1" not in config.capabilities:
         raise RuntimeError("CONFIGURATION_ADAPTER_NOT_VERIFIED")
     root = Path(__file__).resolve().parent
-    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_openai_tools.py", "process_worker.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py")
+    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_text_runtime.py", "guarded_openai_tools.py", "process_worker.py", "worker_runtime.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py")
     versions = {"broker": _digest({name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names})}
     if config.runtime == "openai-agents":
         versions.update({name: importlib.metadata.version(name) for name in ("openai-agents", "openai")})
@@ -34,6 +34,7 @@ def metadata(config):
         if "codex-protocol" not in versions: raise RuntimeError("CONFIGURATION_PROTOCOL_CAPABILITY_MISSING")
     resource = {key: os.environ.get(key) for key in ("AIW_CODEX_GUARD_HOME", "AIW_CODEX_GUARD_PROFILE", "AIW_GUARD_COMMAND_ENABLED", "AIW_COMMAND_CGROUP_ROOT", "AIW_COMMAND_TOOLCHAIN_ROOTS", "OPENAI_BASE_URL", "OPENAI_ORG_ID", "OPENAI_PROJECT_ID")}
     resource.update(runtime=config.runtime, platform=sys.platform, adapter=versions, guarded=True)
+    resource["codexGuardMode"] = os.environ.get("AIW_CODEX_GUARD_MODE", "dynamic-tools")
     return {"protocolVersions": [PROTOCOL, GUARD_PROTOCOL, "aiw.questions.v1", "aiw.skill.files.v1"], "runtime": config.runtime, "adapterVersions": versions,
             "platform": sys.platform, "resourcePolicyDigest": _digest(resource)}
 

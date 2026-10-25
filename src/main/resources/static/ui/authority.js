@@ -12,10 +12,10 @@ function startupCommand(identity) {
   const platform = window.location.origin;
   if (document.getElementById("authority-startup-shell").value === "powershell") {
     const quote = value => "'" + value.replace(/'/g, "''") + "'";
-    return `& '.\\workers\\personal-secretary\\start.ps1' -OwnerId ${quote(identity.ownerId)} -WorkerId ${quote(identity.workerId)} -Platform ${quote(platform)}`;
+    return `& '.\\personal-secretary\\start.ps1' -OwnerId ${quote(identity.ownerId)} -WorkerId ${quote(identity.workerId)} -Platform ${quote(platform)}`;
   }
   const quote = value => "'" + value.replace(/'/g, "'\"'\"'") + "'";
-  return `bash './workers/personal-secretary/start.sh' --owner-id ${quote(identity.ownerId)} --worker-id ${quote(identity.workerId)} --platform ${quote(platform)}`;
+  return `bash './personal-secretary/start.sh' --owner-id ${quote(identity.ownerId)} --worker-id ${quote(identity.workerId)} --platform ${quote(platform)}`;
 }
 function updateStartupCommand() {
   const identity = identities.get(document.getElementById("authority-startup-worker").value);

@@ -20,12 +20,18 @@ import org.springframework.stereotype.Service;
 public class WorkflowEditorService {
     public record Role(String capability, String skillRef, String resultKind, boolean needsWorkspace) {}
     public record Template(String id, String title, String use, WorkflowPlanSpec plan) {}
-    public record StepDetail(WorkTask task, List<String> dependencies, String report, String verdict) {}
+    public record StepDetail(WorkTask task, List<String> dependencies, String report, String verdict, String stepKey) {
+        public StepDetail(WorkTask task,List<String> dependencies,String report,String verdict) {
+            this(task,dependencies,report,verdict,null);
+        }
+    }
     public record Detail(WorkflowPlan plan, List<StepDetail> steps, List<Control> controls,
                          JdbcWorkflowHumanOutcomeRepository.Outcome humanOutcome,
                          WorkflowPlanService.ReviewRecovery reviewRecovery,
                          List<me.asu.aidev.workflow.jdbc.JdbcWorkflowRepairAuthorizationRepository.Authorization> repairAuthorizations,
-                         List<String> decisionWorkers, java.util.Map<String, String> repairDecisionReports) {}
+                         List<String> decisionWorkers, java.util.Map<String, String> repairDecisionReports,
+                         me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.History configuredExecution,
+                         String displayState, FactoryPlanLifecycle.View factoryPlan) {}
     public record TaskDetail(WorkTask task, List<JdbcWorkflowTaskReadRepository.Attempt> attempts,
                              WorkflowPlanService.RetryEligibility retry,
                              List<JdbcWorkflowTaskReadRepository.RetryEvent> retries) {}
@@ -47,6 +53,14 @@ public class WorkflowEditorService {
     private final JdbcWorkflowHumanOutcomeRepository outcomes;
     private final JdbcWorkflowTaskReadRepository taskReads;
     private final WorkflowRepairAuthorizationService repairs;
+    private me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository configuredHistory;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<FactoryPlanLifecycle> factoryPlans;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setConfiguredHistory(me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository history) {
+        this.configuredHistory = history;
+    }
 
     public WorkflowEditorService(WorkflowPlanService plans, TaskDependencyRepository dependencies,
                                  ExecutionAttemptRepository attempts, JdbcWorkflowHumanOutcomeRepository outcomes,
@@ -129,8 +143,13 @@ public class WorkflowEditorService {
     @Transactional(readOnly = true)
     public TaskDetail taskDetail(String id, String taskId) {
         plans.get(id);
-        WorkTask task = plans.steps(id).stream().filter(row -> row.id().value().equals(taskId))
-                .findFirst().orElseThrow(() -> new WorkflowPlanService.PlanNotFound(taskId));
+        var nativeTask = plans.steps(id).stream().filter(row -> row.id().value().equals(taskId)).findFirst();
+        if (nativeTask.isEmpty() && factoryPlans != null) {
+            var bound = factoryPlans.getObject().currentTasks(id).stream().filter(row -> row.task().id().value().equals(taskId)).findFirst();
+            if (bound.isPresent()) return new TaskDetail(bound.get().task(),taskReads.attempts(taskId),
+                    new WorkflowPlanService.RetryEligibility(plans.get(id).version(),false,"Continue or retry through the original factory preparation."),taskReads.retries(taskId));
+        }
+        WorkTask task = nativeTask.orElseThrow(() -> new WorkflowPlanService.PlanNotFound(taskId));
         return new TaskDetail(task, taskReads.attempts(taskId), plans.retryEligibility(id, taskId),
                 taskReads.retries(taskId));
     }
@@ -144,7 +163,17 @@ public class WorkflowEditorService {
             rows.add(new StepDetail(task, deps, report.map(r -> r.summary()).orElse(null),
                     report.map(r -> r.verdict().name()).orElse(null)));
         }
+        var configured = configuredHistory == null ? null : configuredHistory.read(id);
+        var factoryPlan = factoryPlans == null ? null : factoryPlans.getObject().view(id);
+        if (factoryPlan != null) for (var bound : factoryPlans.getObject().currentTasks(id)) {
+            var report = attempts.findCompletionReport(bound.task().id());
+            rows.add(new StepDetail(bound.task(),dependencies.findDependencies(bound.task().id()).stream().map(TaskId::value).toList(),
+                    report.map(r -> r.summary()).orElse(null),report.map(r -> r.verdict().name()).orElse(null),bound.stepKey()));
+        }
+        String displayState = plan.state()==WorkflowPlan.State.COMPLETED ? "COMPLETED" : (factoryPlan!=null || rows.isEmpty()) && configured != null
+                ? me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.displayState(configured.state()) : null;
         return new Detail(plan, rows, plans.controlHistory(id), outcomes.find(id).orElse(null), plans.reviewRecovery(id),
-                repairs.list(id), repairs.decisionWorkers(id), repairs.decisionReports(id));
+                repairs.list(id), repairs.decisionWorkers(id), repairs.decisionReports(id),
+                configured, displayState, factoryPlan);
     }
 }

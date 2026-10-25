@@ -1,6 +1,6 @@
 # Worker 公共基础运维说明
 
-**FD-020 及后续秘书 Runtime 接入优先：** Python 已删除 Codex SDK，支持 codex-app-server/openai-agents；App Server 为每 attempt 受管 stdio 进程。共享 transport 已增加原生 Windows Job Object 实现，Unix/WSL 保留进程组；Windows 和其它路径的账号/ephemeral/策略回执、本地终止均仍需真实 CLI、取消竞争及生产禁存认证。秘书复用这些 Runtime，使用独立的 model-only 请求，默认从 PATH 启动并沿用本机 Codex 配置与登录，无需专用目录。下文 Python wheel/SDK版本/SDK线程与FD-005准入记录为历史设计，不是当前启动步骤。迁移环境、审批模式和 AI Profiles 见 [Python README](process-python/README.md#codex-app-server-migration)；秘书设置见 [个人秘书 README](personal-secretary/README.md)。
+**FD-020 及后续秘书 Runtime 接入优先：** Python 已删除 Codex SDK，支持 codex-app-server/openai-agents；App Server 为每 attempt 受管 stdio 进程。共享 transport 已增加原生 Windows Job Object 实现，Unix/WSL 保留进程组；Windows 和其它路径的账号/ephemeral/策略回执、本地终止均仍需真实 CLI、取消竞争及生产禁存认证。秘书复用这些 Runtime，使用独立的 model-only 请求，默认从 PATH 启动并沿用本机 Codex 配置与登录，无需专用目录。下文 Python wheel/SDK版本/SDK线程与FD-005准入记录为历史设计，不是当前启动步骤。迁移环境、审批模式和 AI Profiles 见 [Python README](process-python/README.md#codex-app-server-migration)；秘书设置见 [个人秘书 README](../personal-secretary/README.md)。
 
 关联：FD-005 / FD-016。FD-016 本地交付优先于下文历史生产预览：TypeScript 使用系统 codex-cli/codex-app-server/openai-agents，生产禁存认证移交 FD-015；Python 保留原准入。**当前为实施预览：公共基础与 Codex 全会话禁存入口源码已接入，独立测试和审查未完成；没有实际平台的禁存认证，不能作为已验收发布包部署。**
 

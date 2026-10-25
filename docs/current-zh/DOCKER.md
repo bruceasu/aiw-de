@@ -58,7 +58,7 @@ docker run --rm \
   ai-worker:java25-node24 node /opt/aiw/worker/dist/index.js
 ```
 
-按 [TypeScript Worker 指南](../../workers/process-typescript/README.md)配置角色、Runtime、认证、准入与工作区；需要执行仓库操作时另外挂载可写 Workspace。通过 Docker network 让 `AIW_CONTROL_PLANE_URL` 指向控制平面容器；Worker 内 localhost 不指向其他容器。两端仓库引用和路径映射须一致。
+按 [TypeScript Worker 指南](../../extern-workers/process-typescript/README.md)配置角色、Runtime、认证、准入与工作区；需要执行仓库操作时另外挂载可写 Workspace。通过 Docker network 让 `AIW_CONTROL_PLANE_URL` 指向控制平面容器；Worker 内 localhost 不指向其他容器。两端仓库引用和路径映射须一致。
 
 镜像未包含 Go/Python 工具链。不改变旧 AR 与新版 EXTERNAL_WORK 的兼容性，不绕过已有生产准入；FD-015 生产验证仍是独立范围。
 

@@ -1,4 +1,4 @@
-import * as runtime from '../../../workers/process-typescript/runtime-core/index.mjs';
+import * as runtime from '../../../extern-workers/process-typescript/runtime-core/index.mjs';
 import { roles } from './cases.mjs';
 import { evidenceRows, verifyAll } from './diagnostics.mjs';
 import { assert, fs, path, behavior, sandbox, deferred, within, wait, outcome, assertDenied, directoryText, root } from './harness.mjs';

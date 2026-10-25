@@ -72,6 +72,14 @@ Codex authentication is the same as the existing `workers/codex-python` referenc
 
 For the OpenAI API runtime, set `$env:AIW_AGENT_RUNTIME = "openai-agents"` and `$env:OPENAI_API_KEY = "..."` in PowerShell, or export those variables in Linux/WSL before starting role scripts. The default is now `codex-app-server`; explicit `codex-sdk` is rejected.
 
+The OpenAI Agents SDK is loaded only when selecting `openai-agents`. Starting a Codex Worker does not import that optional backend or require its `agents` package.
+
+Factory-managed Codex Workers without an explicit guarded home use `AIW_CODEX_GUARD_MODE=host-actions`. The shared text-only transport inherits the existing CLI login. Native execution, browsing, plugins, agents and editing tools are disabled and checked; every file or Git action is executed by the existing guarded host broker. No second login directory or credential copy is required. An explicitly configured guarded home retains the existing dynamic-tool adapter. Both modes remain subject to the same task scope, lease and budget policy.
+
+Host `read` offsets are 1-based line numbers and limits are 1–500 lines; Skill-file offsets remain bytes starting at zero. Correctable read-range failures are returned as observations. Writable results with no actual changed files or a structured blocked/incomplete outcome cannot be reported as PASS.
+
+Guarded feature checks tolerate the CLI's fixed implementation flags (`item_ids`, `resize_all_images`, `terminal_resize_reflow`, `tool_search_always_defer_mcp_tools`, `tui_app_server`, `unified_exec`). They still require shell/browser/agent capabilities to be disabled, verify the closed permission profile, and reject native tool calls or unexpected tool items. Other enabled flags fail the check.
+
 ## Codex App Server migration
 
 FD-020 removes the Python Codex SDK dependency and execution path. Set `AIW_AGENT_RUNTIME=codex-app-server` (default), configure the installed CLI via `AIW_CODEX_PATH` if needed, and prepare CLI authentication separately. The Worker never installs the CLI, logs in, or modifies credentials. It verifies an existing account with `account/read` and rejects missing authentication.

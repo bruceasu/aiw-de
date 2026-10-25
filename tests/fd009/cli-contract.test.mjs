@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const launcher = resolve(repositoryRoot, 'workers/process-typescript/scripts/run-role.ps1');
+const launcher = resolve(repositoryRoot, 'extern-workers/process-typescript/scripts/run-role.ps1');
 
 function launch(...args) {
   return spawnSync('powershell.exe', [
@@ -20,7 +20,7 @@ function launch(...args) {
 }
 
 test('旧 API Worker 包和入口目录已移除', () => {
-  assert.equal(existsSync(resolve(repositoryRoot, 'workers/process-typescript-with-api')), false);
+  assert.equal(existsSync(resolve(repositoryRoot, 'extern-workers/process-typescript-with-api')), false);
   assert.equal(existsSync(launcher), true);
 });
 

@@ -39,7 +39,28 @@ public class AuthorityPageController {
     private final me.asu.aidev.workflow.application.WorkflowPlanService plans;
     private final ExecutionAccounting accounting;
     public AuthorityPageController(AuthorityRepository repo,AuthorityBoundary boundary,me.asu.aidev.workflow.application.WorkflowPlanService plans,ExecutionAccounting accounting) { this.repo=repo;this.boundary=boundary;this.plans=plans;this.accounting=accounting; }
-    @GetMapping("/ui/authority") public String page(Model model) {
+    @GetMapping("/ui/secretary-setup") public String secretarySetup() {
+        Objects.requireNonNull(boundary.human(),"Authenticated human required");
+        return "ui/secretary-setup";
+    }
+    @GetMapping("/ui/agent-factory") public String agentFactory() {
+        Objects.requireNonNull(boundary.human(),"Authenticated human required");
+        return "ui/agent-factory";
+    }
+    @GetMapping("/ui/authority") public String authorityPage(Model model,jakarta.servlet.http.HttpServletRequest request) {
+        if(request.getParameter("secretarySetup")!=null||request.getParameter("planId")!=null)
+            return "redirect:/ui/secretary-setup?"+request.getQueryString();
+        return page(model);
+    }
+    /** Preserve bookmarked delegation links after separating the setup and advanced pages. */
+    @GetMapping("/ui/delegation") public String delegation(jakarta.servlet.http.HttpServletRequest request) {
+        Objects.requireNonNull(boundary.human(),"Authenticated human required");
+        String target=request.getParameter("planId")!=null||request.getParameter("secretarySetup")!=null
+                ?"/ui/secretary-setup":"/ui/authority";
+        String query=request.getQueryString();
+        return "redirect:"+target+(query==null||query.isBlank()?"":"?"+query);
+    }
+    public String page(Model model) {
         String actor=Objects.requireNonNull(boundary.human(),"Authenticated human required");
         var owners=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
         model.addAttribute("owners",owners);

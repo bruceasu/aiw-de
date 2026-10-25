@@ -12,7 +12,7 @@ public final class ConfigurationContract {
     public static Set<String> requiredCapabilities(String repository) { return Set.of(CAPABILITY,GuardContract.CAPABILITY,me.asu.aidev.execution.skills.SkillFileContract.CAPABILITY,"repo:"+repository); }
     private ConfigurationContract() {}
     public enum State { NEEDS_CONFIGURATION, PREPARING, READY, BLOCKED }
-    public enum Error { INVALID_CONFIGURATION, UNSUPPORTED_RUNTIME, PREPARATION_FAILED, NO_COMPATIBLE_WORKER, AUTHORIZATION_REQUIRED, BUDGET_CONFIGURATION_REQUIRED, SOURCE_CHANGED }
+    public enum Error { INVALID_CONFIGURATION, UNSUPPORTED_RUNTIME, PREPARATION_FAILED, NO_COMPATIBLE_WORKER, WORKER_STARTING, AUTHORIZATION_REQUIRED, BUDGET_CONFIGURATION_REQUIRED, SOURCE_CHANGED }
     public record Category(String id,String chinese,String japanese,String english,boolean softwareWorker) {}
     public record AssetRef(String ref,String version,String digest) {
         public AssetRef { id(ref);text(version,64);hash(digest); }
@@ -59,7 +59,7 @@ public final class ConfigurationContract {
             if(!protocolVersions.containsAll(List.of(PROTOCOL,GuardContract.PROTOCOL)) || !Set.of("openai-agents","codex-app-server").contains(runtime)
                     || adapterVersions.isEmpty() || adapterVersions.size()>16) throw new IllegalArgumentException("Unsupported runtime capability");
             text(platform,80);hash(resourcePolicyDigest);adapterVersions.forEach((k,v)->{text(k,80);text(v,256);});
-            if(runtime.equals("codex-app-server") && !Set.of("linux","darwin").contains(platform)) throw new IllegalArgumentException("Codex requires Unix/WSL");
+            if(runtime.equals("codex-app-server") && !Set.of("linux","darwin","win32").contains(platform)) throw new IllegalArgumentException("Unsupported Codex worker platform");
         }
     }
     public record WorkerRegistration(String workerId,WorkerCapabilities capabilities) { public WorkerRegistration {text(workerId,128);Objects.requireNonNull(capabilities);} }
