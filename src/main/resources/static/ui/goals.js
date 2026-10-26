@@ -6,7 +6,12 @@
   let goals = [], showDeleted = false;
   let pendingDeletion = null;
   const editorDirty = new Set();
-  const status = message => { $('goal-status').textContent = message; };
+  let activeStatus = null, replyTimer = null, replyPolls = 0;
+  const text = message => window.aiwI18n?.t(message) || message;
+  const status = message => {
+    $('goal-status').textContent = text(message);
+    if (activeStatus) $(activeStatus).textContent = text(message);
+  };
   const node = (tag, text, className) => { const n = document.createElement(tag); if (text != null) n.textContent = text; if (className) n.className = className; return n; };
   async function api(path, value, options = {}) {
     const post = value !== undefined;
@@ -33,9 +38,11 @@
     if (!response.ok) throw failure(result?.message || result?.error || result?.detail || `请求失败（HTTP ${response.status}）。`);
     return result;
   }
-  async function run(action) {
+  async function run(action, target = null) {
     if (busy) return;
     busy = true;
+    activeStatus = target;
+    if (target) status('Processing…');
     try { await action(); } catch (e) {
       status(e.message);
       if (e.loginRequired) {
@@ -43,7 +50,7 @@
         login.href = '/ui/login?next=' + encodeURIComponent(window.location.pathname);
         $('goal-status').append(' ', login);
       }
-    } finally { busy = false; renderList(); }
+    } finally { busy = false; activeStatus = null; renderList(); }
   }
   function clean() {
     if (dirty || editorDirty.size) throw new Error('Save your goal and plan editing changes before continuing, or reload the saved version.');
@@ -138,8 +145,11 @@
     $('goal-deletion-state').textContent = `已读取“${target.title}”的当前状态：${draft.deleted ? '已删除，可在“已删除”中恢复。' : '未删除，可在“当前目标”中打开。'}没有待确认的删除审批。${current?.id === draft.id ? ' 当前详情保留原有内容；请先复制未保存的编辑，再重新加载已保存版本。' : ''}`;
     status('目标状态核对完成，未重复提交任何操作。');
   });
-  async function load(id) {
-    data = await api(`/${encodeURIComponent(id)}`); current = data.draft; dirty = false; editorDirty.clear();
+  async function load(id, preserveEdits = false) {
+    clearTimeout(replyTimer);
+    const latest = await api(`/${encodeURIComponent(id)}`);
+    if (preserveEdits && (dirty || editorDirty.size || current?.id !== id)) { scheduleReplies(); return; }
+    data = latest; current = data.draft; dirty = false; editorDirty.clear();
     showDeleted = current.deleted;
     $('goal-detail').hidden = false; $('goal-empty').hidden = true;
     $('goal-title').value = current.title; $('goal-body').value = current.content.body;
@@ -154,8 +164,32 @@
       const box = node('div', null, 'goal-message'); box.append(node('strong', `${m.role}${m.stale ? ' · Older goal context' : ''}`), node('p',m.text));
       $('goal-messages').append(box);
     });
-    $('goal-sources').replaceChildren(); selectedSources.forEach(id => sourceChoice({id, preview:'Selected project source'}));
-    renderFiles(); renderVersions(); await list();
+    if (!preserveEdits) {
+      $('goal-sources').replaceChildren(); selectedSources.forEach(id => sourceChoice({id, preview:'Selected project source'}));
+      renderFiles(); renderVersions();
+    }
+    await list();
+    scheduleReplies();
+  }
+  function scheduleReplies() {
+    clearTimeout(replyTimer);
+    if (!current || current.deleted || !data.requests.length || replyPolls >= 40) return;
+    const id = current.id;
+    replyTimer = setTimeout(async () => {
+      if (current?.id !== id) return;
+      if (busy || dirty || editorDirty.size) { scheduleReplies(); return; }
+      replyPolls++;
+      await run(async () => {
+        const results = [];
+        for (const request of data.requests) results.push(await api(`/${id}/replies/${request}`, {}));
+        if (current?.id !== id) return;
+        const terminal = results.some(r => ['FAILED','CANCELLED','INVALID','UNAVAILABLE'].includes(r.state));
+        await load(id, true);
+        if (terminal) clearTimeout(replyTimer);
+        status(results.map(r => `${text(r.state)}: ${text(r.detail)}`).join(' · '));
+        if (replyPolls >= 40) status('Automatic reply checks paused. Use Check replies to continue.');
+      }, 'goal-discussion-status');
+    }, 3000);
   }
   ['goal-title','goal-body','goal-missing','goal-backend'].forEach(id => $(id).addEventListener('input', () => { dirty = true; }));
   $('goal-new').onclick = () => run(async () => { clean(); const draft = await api('', {}); await load(draft.id); status('Goal created. Start with your intent.'); });
@@ -174,13 +208,13 @@
     clean(); const text = $('goal-message').value;
     const attachments = [...document.querySelectorAll('[data-share-file]:checked')].map(n => n.value);
     const reply = await api(`/${current.id}/messages`, {key:crypto.randomUUID(),revision:current.revision,text,attachments});
-    $('goal-message').value = ''; await load(current.id); status(reply.detail);
-  });
+    $('goal-message').value = ''; replyPolls = 0; await load(current.id); status(reply.detail);
+  }, 'goal-discussion-status');
   $('goal-replies').onclick = () => run(async () => {
-    clean(); const results = [];
+    clean(); replyPolls = 0; const results = [];
     for (const request of data.requests) results.push(await api(`/${current.id}/replies/${request}`, {}));
     await load(current.id); status(results.map(r => `${r.state}: ${r.detail}`).join(' · ') || 'No pending discussion requests.');
-  });
+  }, 'goal-discussion-status');
   function sourceChoice(source) {
     const label = node('label', null, 'goal-source'); const check = document.createElement('input'); check.type='checkbox'; check.checked=selectedSources.has(source.id);
     check.onchange=()=>{ if(check.checked) selectedSources.add(source.id); else selectedSources.delete(source.id); dirty=true; };
@@ -207,18 +241,26 @@
     });
   }
   $('goal-formalize').onclick=()=>run(async()=>{
-    clean();const version=await api(`/${current.id}/formalize`,{revision:current.revision,confirmed:$('goal-accept').checked});
-    let message='Formal version saved. It does not start work.';
-    if($('goal-plan-now').checked){try{await api(`/versions/${version.id}/analyze`,{revision:version.editorRevision,confirmed:false});message+=' AI Steps requested.';}catch(e){message+=` Plan editing draft retained: ${e.message}`;}}
+    clean();
+    let confirmed=$('goal-accept').checked;
+    if(current.content.missing.trim() && !confirmed) {
+      confirmed=await window.aiwConfirm(`${text('This goal still lists missing information. Save a formal version marked Not ready?')}\n\n${current.content.missing}`, {title:text('Create formal version')});
+      if(!confirmed){status('Formal version was not saved. Resolve the missing information or explicitly accept it.');return;}
+    }
+    const version=await api(`/${current.id}/formalize`,{revision:current.revision,confirmed});
+    let message=text('Formal version saved. It does not start work.');
+    if($('goal-plan-now').checked){try{await api(`/versions/${version.id}/analyze`,{revision:version.editorRevision,confirmed:false});message+=' '+text('AI Steps requested.');}catch(e){message+=' '+text('Plan editing draft retained:')+' '+e.message;}}
     await load(current.id);status(message);
-  });
+    const saved=[...$('goal-versions').children].find(el=>el.dataset.versionId===version.id);
+    saved?.scrollIntoView({block:'start',behavior:'smooth'});
+  }, 'goal-formalize-status');
   const roles=[['requirement-analysis','software-requirements-analyst','Clarify requirements'],['solution-architecture','solution-architect','Design solution'],['implementation-planning','implementation-planner','Plan implementation'],['coding','coding-work-package-executor','Implement'],['integration','coding-work-package-executor','Integrate'],['repair','coding-work-package-executor','Repair']];
   function field(parent,label,value,change,multiline=false){
     const wrapper=node('label',null,'field');wrapper.append(node('span',label));const input=node(multiline?'textarea':'input');input.value=value||'';if(multiline)input.rows=3;input.oninput=()=>change(input.value);wrapper.append(input);parent.append(wrapper);return input;
   }
   function renderVersions(){
     $('goal-versions').replaceChildren();data.versions.forEach(v=>{
-      const box=node('section',null,'goal-version');box.append(node('h3',`${v.snapshot.title} · Goal version ${v.sourceRevision}`),node('p',v.snapshot.ready?'Ready':'Not ready · Missing information accepted'),node('pre',v.snapshot.goal));
+      const box=node('section',null,'goal-version');box.dataset.versionId=v.id;box.append(node('h3',`${v.snapshot.title} · Goal version ${v.sourceRevision}`),node('p',v.snapshot.ready?'Ready':'Not ready · Missing information accepted'),node('pre',v.snapshot.goal));
       if(v.planId){const link=node('a','Review execution plan','btn primary');link.href=`/ui/plans/${encodeURIComponent(v.planId)}`;box.append(link);$('goal-versions').append(box);return;}
       const spec=structuredClone(v.editor);const steps=node('div');
       const changed=()=>editorDirty.add(v.id);

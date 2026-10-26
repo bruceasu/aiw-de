@@ -11,7 +11,8 @@ import org.springframework.transaction.support.*;
 @Service
 public class ManagedWorkerProvisioner {
     public record Result(boolean starting,String message) {}
-    private static final class Slot {Process process;Path status;String worker;long since=System.nanoTime();String failure;}
+    private static final class Slot {Process process;Path status;String worker;long since=System.nanoTime();String failure;String settingsVersion;}
+    @org.springframework.beans.factory.annotation.Autowired private FactoryWorkerRegistry registrations;
     private boolean closed;
     private final Map<String,Slot> slots=new HashMap<>();
     private final AgentFactorySettings settings;private final WorkspaceRegistry workspaces;
@@ -22,6 +23,26 @@ public class ManagedWorkerProvisioner {
     @org.springframework.beans.factory.annotation.Value("${aidev.agent-factory.max-workers:4}") private int maximum;
     public ManagedWorkerProvisioner(AgentFactorySettings settings,WorkspaceRegistry workspaces) {this.settings=settings;this.workspaces=workspaces;}
     public synchronized Result request(String repository,String runtime,boolean commandRequired) {
+        return request(repository,runtime,commandRequired,"coder");
+    }
+    public synchronized Result requestDiscussion(String backend) {
+        var config=settings.current();
+        if(config==null || !me.asu.aidev.goal.application.GoalTaskPolicy.runtime(backend,config.runtime()+":"))
+            return new Result(false,"The selected discussion backend does not match the Agent factory settings.");
+        return request(null,config.runtime(),false,"goal-discussion");
+    }
+    public synchronized Result analysisAvailability(String runtime) {
+        var config=settings.current();
+        if(closed || config==null || !config.automaticWorkers() || !config.runtime().equals(runtime))
+            return new Result(false,"No matching automatic analysis Worker is configured in Agent factory.");
+        if(token==null || token.isBlank() || !Files.isRegularFile(Path.of(workerRoot).toAbsolutePath().resolve("managed_worker.py")))
+            return new Result(false,"The local analysis Worker installation or connection credentials are unavailable.");
+        return new Result(true,"An analysis Worker will start automatically when requested.");
+    }
+    public synchronized Result requestAnalysis(String runtime) {
+        return request(null,runtime,false,"planner");
+    }
+    private Result request(String repository,String runtime,boolean commandRequired,String role) {
         if(closed)return new Result(false,"平台正在停止，不能启动新的 Worker。");
         var config=settings.current();
         if(config==null||!config.automaticWorkers())return new Result(false,"本机 Worker 自动启动尚未启用。请在 Agent 工厂设置中启用；外部 Worker 可继续自行接入。");
@@ -30,23 +51,29 @@ public class ManagedWorkerProvisioner {
         if(commandRequired)return new Result(false,"此方法要求命令执行适配器，请接入声明该能力的 Worker；自动 Worker 不隐式授予任意命令权限。");
         Path root=Path.of(workerRoot).toAbsolutePath().normalize();
         if(!Files.isRegularFile(root.resolve("managed_worker.py")))return new Result(false,"未找到随平台安装的 Worker 程序，请检查平台安装目录。");
-        String key=AuthorityRepository.hash(repository+":"+runtime+":"+settings.version());
+        String key=compatibilityKey(role,repository,config);
         var existing=slots.get(key);
         if(existing!=null) {
             readStatus(existing);
-            if(existing.failure!=null)return new Result(false,existing.failure);
+            if(existing.failure!=null && Objects.equals(existing.settingsVersion,settings.version()))return new Result(false,existing.failure);
             if(existing.process!=null&&!existing.process.isAlive()) {
-                existing.failure="本机 Worker 启动失败（退出码 "+existing.process.exitValue()+"）。请在 Agent 工厂设置查看登录、依赖和运行环境要求，修复后保存设置以重新准备。";
-                return new Result(false,existing.failure);
+                if(registrations.busy(existing.worker)) return new Result(false,"The previous Worker still has an active lease; wait for recovery before restarting it.");
+                slots.remove(key);
+            } else if(existing.failure!=null && existing.process==null) {
+                slots.remove(key);
+            } else {
+                if(existing.process!=null && existing.process.isAlive() && registrations.online(existing.worker)) return new Result(true,"A compatible local Worker is already running; its registration is being checked.");
+                if(System.nanoTime()-existing.since>120_000_000_000L)return new Result(false,"本机 Worker 尚未完成兼容能力登记。请核对运行环境；工厂不会重复启动同一 Worker。");
+                return new Result(true,"正在启动并等待本机 Worker 完成能力登记。");
             }
-            if(System.nanoTime()-existing.since>120_000_000_000L)return new Result(false,"本机 Worker 尚未完成兼容能力登记。请核对运行环境；工厂不会重复启动同一 Worker。");
-            return new Result(true,"正在启动并等待本机 Worker 完成能力登记。");
         }
         long running=slots.values().stream().filter(slot->slot.failure==null&&(slot.process==null||slot.process.isAlive())).count();
         if(running>=Math.max(1,maximum))return new Result(false,"平台管理的本机 Worker 已达到数量限制，请等待现有任务完成或接入外部 Worker。");
-        var slot=new Slot();slots.put(key,slot);
-        String directory=workspaces.repositoryPath(repository).toAbsolutePath().toString();
-        Runnable start=()->start(slot,config,key,repository,directory,root);
+        String directory=repository==null?"":workspaces.repositoryPath(repository).toAbsolutePath().toString();
+        var slot=new Slot();slot.worker="factory-"+key.substring(0,24);slot.settingsVersion=settings.version();
+        if(registrations.busy(slot.worker)) return new Result(false,"The previous Worker still has an active lease; wait for recovery before restarting it.");
+        registrations.remember(slot.worker,key);slots.put(key,slot);
+        Runnable start=()->start(slot,config,key,repository,directory,root,role);
         if(TransactionSynchronizationManager.isSynchronizationActive())TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() {Thread.ofVirtual().name("factory-worker-start").start(start);}
             @Override public void afterCompletion(int status) {if(status!=STATUS_COMMITTED)synchronized(ManagedWorkerProvisioner.this){slots.remove(key,slot);}}
@@ -54,21 +81,29 @@ public class ManagedWorkerProvisioner {
         else Thread.ofVirtual().name("factory-worker-start").start(start);
         return new Result(true,"正在启动并等待本机 Worker 完成能力登记。");
     }
-    private synchronized void start(Slot slot,AgentFactorySettings.Settings config,String key,String repository,String directory,Path root) {
+    static String compatibilityKey(String role,String repository,AgentFactorySettings.Settings config) {
+        return AuthorityRepository.hash(String.join("\n",role,Objects.toString(repository,""),config.runtime(),config.model(),
+                config.effort(),config.python(),config.executable(),config.guardHome()));
+    }
+    private synchronized void start(Slot slot,AgentFactorySettings.Settings config,String key,String repository,String directory,Path root,String role) {
         if(closed){slot.failure="平台正在停止。";return;}
         try {
             var builder=new ProcessBuilder(config.python(),root.resolve("managed_worker.py").toString()).directory(root.toFile());
             var env=builder.environment();env.keySet().removeIf(name->name.startsWith("AIW_PERSONAL_"));
             env.put("AIW_WORKER_TOKEN",token);env.put("AIW_CONTROL_PLANE_URL","http://127.0.0.1:"+port+contextPath);
-            env.put("AIW_AGENT_RUNTIME",config.runtime());env.put("AIW_REPOSITORY_REF",repository);env.put("AIW_REPOSITORY_ROOT",directory);
+            env.put("AIW_AGENT_RUNTIME",config.runtime());
+            env.remove("AIW_REPOSITORY_REF");env.remove("AIW_REPOSITORY_ROOT");
+            if(repository!=null){env.put("AIW_REPOSITORY_REF",repository);env.put("AIW_REPOSITORY_ROOT",directory);}
             slot.worker="factory-"+key.substring(0,24);
             Path statuses=Path.of(System.getProperty("user.home"),".aiw","agent-factory","status");Files.createDirectories(statuses);
             slot.status=statuses.resolve(slot.worker+".json");
             if(Files.isSymbolicLink(slot.status))throw new java.io.IOException("Unsafe status path");
             Files.deleteIfExists(slot.status);
-            env.put("AIW_FACTORY_STATUS_FILE",slot.status.toString());env.put("AIW_WORKER_ID",slot.worker);env.put("AIW_PROCESS_ROLE","coder");env.put("AIW_WORKER_MAX_CONCURRENCY","1");
+            env.put("AIW_FACTORY_STATUS_FILE",slot.status.toString());env.put("AIW_WORKER_ID",slot.worker);env.put("AIW_PROCESS_ROLE",role);env.put("AIW_WORKER_MAX_CONCURRENCY","1");
             env.remove("AIW_WORKER_CAPABILITIES");
-            env.put("AIW_DYNAMIC_CONFIG","true");env.put("AIW_EXECUTION_GUARD","true");env.put("AIW_GUARD_COMMAND_ENABLED","false");
+            boolean textRole=Set.of("goal-discussion","planner").contains(role);
+            env.put("AIW_DYNAMIC_CONFIG",Boolean.toString(!textRole));env.put("AIW_EXECUTION_GUARD",Boolean.toString(!textRole));env.put("AIW_GUARD_COMMAND_ENABLED","false");
+            if(textRole){env.put("AIW_CODEX_SANDBOX","read-only");env.put("AIW_AGENT_ALLOW_SHELL","false");}
             if(!config.executable().isEmpty())env.put("AIW_CODEX_PATH",config.executable());
             if(!config.guardHome().isEmpty())env.put("AIW_CODEX_GUARD_HOME",config.guardHome());
             env.put(config.runtime().equals("codex-app-server")?"AIW_CODEX_MODEL":"AIW_OPENAI_MODEL",config.model());

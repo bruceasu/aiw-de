@@ -29,6 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 /** Runtime-configured recommendation analysis through the existing read-only planner Worker. */
 @Service
 public class WorkflowRecommendationService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private me.asu.aidev.execution.config.AgentFactorySettings factorySettings;
+    @org.springframework.beans.factory.annotation.Autowired
+    private me.asu.aidev.execution.config.ManagedWorkerProvisioner provisioner;
     public record Request(String requestKey, long inputVersion, String goal, String contextId, Long contextRevision) {
         public Request(String requestKey, long inputVersion, String goal) { this(requestKey, inputVersion, goal, null, null); }
     }
@@ -65,12 +69,20 @@ public class WorkflowRecommendationService {
 
     public Settings settings() { return repository.settings(); }
     public List<Audit> audit() { return repository.audit(); }
-    public List<AiProfileCatalog.NamedProfile> profileOptions() { return profiles.approved(TaskType.EXTERNAL_WORK); }
+    public List<AiProfileCatalog.NamedProfile> profileOptions() {
+        var approved=new java.util.ArrayList<>(profiles.approved(TaskType.EXTERNAL_WORK));
+        if(factorySettings!=null && factorySettings.current()!=null)
+            factorySettings.profiles().stream().filter(p -> approved.stream().noneMatch(a -> a.id().equals(p.id()))).forEach(approved::add);
+        return List.copyOf(approved);
+    }
     private Frozen resolve(Settings settings) {
-        var approved = profiles.approved(TaskType.EXTERNAL_WORK);
+        boolean factory=factorySettings!=null && factorySettings.current()!=null;
+        boolean defaults=settings.planner()==null && settings.model()==null && settings.effort()==null;
+        var approved=factory && defaults?factorySettings.profiles():profileOptions();
+        String version=factory?profiles.version()+":"+factorySettings.version():profiles.version();
         if (approved.isEmpty() && settings.planner() == null && settings.model() == null && settings.effort() == null)
             return new Frozen(profiles.version(), List.of());
-        return new Frozen(profiles.version(), RecommendationProfiles.filter(approved, settings.planner(), settings.model(), settings.effort()));
+        return new Frozen(version, RecommendationProfiles.filter(approved, settings.planner(), settings.model(), settings.effort()));
     }
     public Availability availability() {
         var settings = repository.settings();
@@ -82,8 +94,16 @@ public class WorkflowRecommendationService {
         boolean online = repository.online(Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW)).stream()
                 .anyMatch(worker -> worker.supports(Set.of("implementation-planning"))
                         && RecommendationTaskPolicy.matches(frozen, worker.runtimeType()));
-        return online ? new Availability(true, "AVAILABLE", "An online analysis Worker can accept the request; busy Workers will queue it.")
-                : new Availability(false, "NO_ONLINE_WORKER", "No online analysis Worker matches the configured profiles. Retry after a Worker is online.");
+        if(online) return new Availability(true, "AVAILABLE", "An online analysis Worker can accept the request; busy Workers will queue it.");
+        String runtime=automaticRuntime(frozen);
+        var automatic=runtime==null?null:provisioner.analysisAvailability(runtime);
+        return automatic!=null && automatic.starting()
+                ? new Availability(true,"WORKER_CAN_START",automatic.message())
+                : new Availability(false,"NO_ONLINE_WORKER",automatic==null?"No online analysis Worker matches the configured profiles. Retry after a Worker is online.":automatic.message());
+    }
+    private String automaticRuntime(Frozen frozen) {
+        var config=factorySettings==null?null:factorySettings.current();
+        return provisioner!=null && config!=null && RecommendationTaskPolicy.matches(frozen,config.runtime()+":planner")?config.runtime():null;
     }
     private static String option(String value) {
         if (value == null || value.isBlank()) return null;
@@ -160,6 +180,10 @@ public class WorkflowRecommendationService {
         Frozen frozen = resolve(settings);
         var ready = availability(frozen);
         if (!ready.available()) throw new IllegalStateException(ready.reason());
+        if ("WORKER_CAN_START".equals(ready.code())) {
+            var started=provisioner.requestAnalysis(automaticRuntime(frozen));
+            if (!started.starting()) throw new IllegalStateException(started.message());
+        }
         Context context = request.contextId() == null ? repository.createContext(actor)
                 : repository.context(request.contextId(), actor, true);
         long expected = request.contextId() == null ? 0 : request.contextRevision() == null ? -1 : request.contextRevision();

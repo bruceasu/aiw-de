@@ -59,6 +59,7 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
                 SELECT id,runtime_type,capabilities,max_concurrency,active_leases,status,
                        last_heartbeat_at_epoch_ms
                   FROM worker
+                 WHERE NOT EXISTS (SELECT 1 FROM factory_worker_registration f WHERE f.worker_id=worker.id AND f.retired_at_epoch_ms IS NOT NULL)
                  ORDER BY id
                 """, (rs, n) -> new WorkerRow(
                 rs.getString("id"), rs.getString("runtime_type"), CapabilitySetCodec.decode(rs.getString("capabilities")),

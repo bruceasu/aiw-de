@@ -1,6 +1,19 @@
 // UI copy only. Rows are English, Chinese and Japanese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["The previous Worker still has an active lease; wait for recovery before restarting it.","该 Worker 仍有未恢复的任务租约，恢复后才可重新启动。","このWorkerには未回復のタスク実行枠があります。回復後に再起動できます。"],
+  ["A compatible local Worker is already running; its registration is being checked.","兼容的本机 Worker 已在运行，将复用该 Worker。","互換性のあるローカルWorkerは起動済みです。同じWorkerを再利用します。"],
+  ["AI Steps requested.","步骤分析已提交，分析 Worker 将按需自动启动。","ステップ分析を送信しました。必要に応じて分析Workerを自動起動します。"],
+  ["Plan editing draft retained:","计划编辑草稿已保留，分析未能启动：","プラン編集用の下書きは保持しています。分析を開始できませんでした："],
+  ["An analysis Worker will start automatically when requested.","提交分析时将自动启动分析 Worker。","分析の依頼時にWorkerを自動起動します。"],
+  ["No matching automatic analysis Worker is configured in Agent factory.","工厂未启用匹配的分析 Worker 自动启动，可检查工厂设置或连接外部分析 Worker。","対応する分析Workerの自動起動が設定されていません。工場の設定を確認するか、外部分析Workerを接続してください。"],
+  ["The local analysis Worker installation or connection credentials are unavailable.","本机分析 Worker 程序或连接凭据不可用，请检查平台运行环境。","ローカル分析Workerのプログラムまたは接続情報を利用できません。プラットフォームの環境を確認してください。"],
+  ["Processing…","正在处理…","処理中…"],
+  ["This goal still lists missing information. Save a formal version marked Not ready?","此目标仍列有缺失信息。是否保留这些缺口，保存为“尚未就绪”的正式版本？","この目標には不足情報があります。「未準備」の正式版として保存しますか？"],
+  ["Formal version was not saved. Resolve the missing information or explicitly accept it.","尚未保存正式版本。请补全缺失信息，或明确接受这些缺口。","正式版は保存していません。不足情報を補うか、明示的に受け入れてください。"],
+  ["The selected discussion backend does not match the Agent factory settings.","所选讨论后端与 Agent 工厂设置不一致。请使用相同后端，或连接相应的外部讨论 Worker。","選択した議論用バックエンドとAgent工場の設定が一致しません。同じバックエンドを選ぶか、対応する外部Workerを接続してください。"],
+  ["Automatic reply checks paused. Use Check replies to continue.","自动检查回复已暂停。可点击“检查回复”继续。","返信の自動確認を一時停止しました。「返信を確認」で続行できます。"],
+  ["UNAVAILABLE","讨论服务不可用","議論サービスを利用できません"],
   ["The result is already present. Record this delivery?","结果已在目标分支，是否记录本次交付？","結果は既に対象ブランチにあります。引き渡しを記録しますか？"],
   ["The target branch no longer contains the original task baseline. Review it manually.","目标分支已不包含原任务基线，需要人工核对。","対象ブランチに元のタスクのベースラインがありません。手動で確認してください。"],
   ["Local delivery started; merge result is not yet recorded","已开始本地交付，合并结果尚未记录","ローカルへの反映を開始しました。結果は未記録です。"],

@@ -16,16 +16,24 @@
 
 ## Worker 与后端
 
+工厂 Worker 按角色、仓库、运行时、模型、推理强度和启动路径等实际兼容配置标识；重复保存同一设置不会产生新 Worker ID。兼容的在线 Worker 会继续接收任务；进程退出且没有未恢复租约时，下次需要它会使用同一 ID 重新启动并注册。
+
+工厂创建且已离线或心跳过期的 Worker，在没有活动租约、运行中任务或尝试后，会自动退出注册列表及相关选择项；任务和审计历史保留。重新注册后会恢复显示。只凭 `factory-` 名称前缀不会移除外部 Worker；旧工厂记录需有本机工厂状态回执证明来源。在线空闲 Worker 保留供复用，不按每次任务完成就退出。
+
+工厂已配置模型且启用“自动启动 Worker”时，目标讨论会在没有匹配在线 Worker 时请求启动内置 `goal-discussion` 角色，沿用选择的后端和工厂默认模型。它只生成文字，不绑定项目仓库、不启用动态执行配置和文件工具；外部讨论 Worker 仍可自行接入。启动失败、工厂未启用或所选后端不匹配时，在讨论按钮旁显示具体原因。
+
+发送成功后显示排队状态，仅在当前目标存在待处理讨论且没有未保存编辑时，每 3 秒检查回复，最多 40 次；随后可手动“检查回复”。自动更新保留未发送消息，不覆盖目标正文或未保存编辑。正式版本保存结果在按钮旁显示，并定位到保存的版本；有缺失信息但未勾选接受时，使用统一确认框明确询问，不会默默取消或直接批准执行计划。
+
 独立角色 `goal-discussion` 已在 TypeScript、Python、Go 三包实现，共享角色与 Skill 契约。TS/Python 用 `AIW_PROCESS_ROLE=goal-discussion`（TS 的 start:all/管理器 all 也包含它），Go 用 `profiles/goal-discussion.toml` 启动。默认 OpenAI backend 接受 TS/Python 的 `openai-agents` 和 Go 的 `openai-api`；显式 Codex backend 接受 TS/Go 的 `codex-cli`/`codex-app-server` 及 Python 的 `codex-app-server`。Python 已删除 `codex-sdk`，需显式迁移旧配置。Python App Server 已支持原生 Windows，沿用本机 CLI 登录；讨论请求使用共享的纯文字模型模式，关闭原生工具。完整 [角色/语言/后端矩阵](../../workers/README.md) 记录其他运行时的支持边界。没有在线匹配 Worker 时显示原因，人工编辑仍可用。
 
-选择 Codex 不会自动启动讨论 Worker。在已有平台地址和 Worker 凭证的环境中，可用 PowerShell 启动：
+未启用工厂自动启动时，选择 Codex 仍需已有的外部讨论 Worker。在已有平台地址和 Worker 凭证的环境中，可用 PowerShell 手动启动：
 
 ```powershell
 $env:AIW_AGENT_RUNTIME = 'codex-app-server'
 ./workers/process-python/scripts/run-role.ps1 goal-discussion
 ```
 
-步骤分析另需在线的 `planner` 角色；讨论 Worker 不会自动获得实现或执行计划的权限。
+步骤分析使用独立的 `planner` 角色。工厂已启用自动启动且模型匹配时，提交分析会自动启动该角色；查询可用性不会启动进程。未启用工厂时仍可连接外部 planner。分析只根据正式目标生成步骤建议，使用独立临时目录及纯文字模型模式，不获得文件或执行计划的权限。讨论 Worker 同样不会自动获得实现或执行计划的权限。
 
 每次发送冻结完整已保存对话、当前正文、缺失清单、选择的项目知识和本次明确同意外发的附件文本。配置 AI Profile 时只允许对应后端的已批准配置；缺少匹配配置不回退到其他后端。三语言的 OpenAI 讨论角色均不提供文件、shell 或 AIW 工具。讨论使用独立空临时目录并拒绝意外工作区 assignment，避免读取运营者的默认源码目录；Codex 仍依赖宿主沙箱边界，空目录不等于操作系统访问隔离。此版本不自动执行工作区 research；可显式选择既有项目知识或上传分析资料。其他知识库和新索引平台不属于首版。
 

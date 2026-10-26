@@ -231,9 +231,9 @@ class GitWorkspace:
     @staticmethod
     def materialize(config: WorkerConfig, task: dict[str, Any]) -> "GitWorkspace":
         assignment = task.get("workspace")
-        if config.process_role == "goal-discussion" or task.get("subjectType") == "goal-discussion":
+        if config.process_role == "goal-discussion" or task.get("subjectType") in {"goal-discussion", "workflow-recommendation"}:
             if assignment:
-                raise RuntimeError("GOAL_WORKSPACE_ASSIGNMENT_DENIED")
+                raise RuntimeError("GOAL_WORKSPACE_ASSIGNMENT_DENIED" if task.get("subjectType") != "workflow-recommendation" else "ANALYSIS_WORKSPACE_ASSIGNMENT_DENIED")
             return GitWorkspace(config, str(Path(tempfile.mkdtemp(prefix="aiw-goal-")).resolve()), None)
         if not assignment:
             return GitWorkspace(config, config.fallback_workspace, None)
@@ -491,7 +491,7 @@ class ProcessSlot:
                     network_access=self.config.network_access,
                     service_tier="default" if selected and task.get("aiGuidance") and self.config.runtime == "codex-app-server" else None,
                     sandbox=self.config.sandbox, approval_mode=self.config.approval_mode, broker=broker,
-                    model_only=self.config.process_role == "goal-discussion",
+                    model_only=self.config.process_role == "goal-discussion" or task.get("subjectType") == "workflow-recommendation",
                 )
                 def set_session(runtime_session_id, handle=None):
                     nonlocal session_id

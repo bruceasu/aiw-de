@@ -14,6 +14,8 @@ public class GoalTaskPolicy implements WorkerTaskClaimPolicy {
     public record Frozen(String backend, String version, List<AiProfileCatalog.NamedProfile> profiles) {}
     private final GoalRepository repo;
     private final AiProfileCatalog profiles;
+    @org.springframework.beans.factory.annotation.Autowired
+    private me.asu.aidev.execution.config.AgentFactorySettings factorySettings;
     public GoalTaskPolicy(GoalRepository repo, AiProfileCatalog profiles) { this.repo = repo; this.profiles = profiles; }
     public boolean managed(WorkTask task) { return "goal-discussion".equals(task.subjectType()); }
     public static boolean runtime(String backend, String runtime) {
@@ -21,12 +23,14 @@ public class GoalTaskPolicy implements WorkerTaskClaimPolicy {
         return "codex".equals(backend) && List.of("codex-cli:", "codex-app-server:").stream().anyMatch(runtime::startsWith);
     }
     public Frozen freeze(String backend) {
-        var selected = profiles.approved(TaskType.EXTERNAL_WORK).stream()
+        var settings=factorySettings==null?null:factorySettings.current();
+        boolean factory=settings!=null && runtime(backend,settings.runtime()+":");
+        var selected = (factory?factorySettings.profiles():profiles.approved(TaskType.EXTERNAL_WORK)).stream()
             .filter(p -> runtime(backend, p.profile().runtime() + ":"))
             .filter(p -> me.asu.aidev.workflow.application.RecommendationProfiles.compatible(p.profile())).toList();
-        if (profiles.hasPolicy(TaskType.EXTERNAL_WORK) && selected.isEmpty())
+        if ((factory || profiles.hasPolicy(TaskType.EXTERNAL_WORK)) && selected.isEmpty())
             throw new IllegalStateException("No approved AI profile matches the selected backend");
-        return new Frozen(backend, profiles.version(), selected);
+        return new Frozen(backend, factory?factorySettings.version():profiles.version(), selected);
     }
     public Frozen frozen(WorkTask task) {
         return repo.jdbc().query("SELECT frozen_json FROM goal_request WHERE id=?", (rs,n) -> repo.decode(rs.getString(1), Frozen.class),
