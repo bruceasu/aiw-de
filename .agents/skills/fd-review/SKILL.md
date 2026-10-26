@@ -13,8 +13,12 @@ Skill when an FD is Pending Verification or the user explicitly requests an
 independent review. The Reviewer must use a separate session from the Worker
 that wrote the code. Do not implement new scope during review.
 
-Read the FD, Issue evidence when present, relevant stable specs, the Worker's
-implementation report, and the exact diff or commits under review. Check
+Inspect and write evidence from the FD's selected workspace. For explicit auto
+inside Git, claims, FD updates and reports all run in that FD worktree; do not
+write review artifacts into the parent workspace.
+
+Read the FD, Issue evidence when present, relevant stable specs, FD Verification
+and any separate Worker report, and the exact diff or commits under review. Check
 correctness, acceptance coverage, compatibility, unexpected files, and the
 truth of each reported verification result. This includes actual code logic,
 affected call paths and failure behavior, not only delivered documents. Apply
@@ -39,9 +43,9 @@ reference. Check the latest receipt before claiming and do not take over an
 event owned by another session. Include this Reviewer's reference in the report.
 
 Write a concise review report to a project-relative file under
-`docs/features/reviews/`. Include FD ID, source event ID, reviewed commit or
+`docs/features/<FD-ID>/reviews/`. Include FD ID, source event ID, reviewed commit or
 diff base, findings with file paths, commands actually run, skipped checks,
-and residual risk. Keep the report separate from the Worker's report.
+and residual risk. Keep the independent report separate from implementation evidence.
 For delivery recovery, inspect the recovery commit and diff together with the
 original Worker report and supplemental recovery evidence. Do not treat a
 commit or an empty sync result as proof of correct conflict resolution. A

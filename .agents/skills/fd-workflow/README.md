@@ -1,28 +1,27 @@
-# fd-workflow：编号 FD 主流程
+# fd-workflow：轻量 FD 工作流
 
-## 用途与适用场景
+默认流程：简短计划 → 实现与自查 → 本地交付归档。
 
-创建／完善 FD，或执行设计已就绪的工作项，完成独立评审、本地交付和归档。
-FD 保存唯一工程计划；角色包括 PM、Planner、Worker 和独立 Reviewer。
+主会话负责规划、实现和收尾。普通 FD 在 Verification 中记录自查结果；
+涉及重要接口、权限、持久化、并发、跨模块影响、影响范围不清，或明确要求
+review 时，在交付前增加一次独立 Reviewer。交接和单个 Work Item 不触发审查。
 
-## 输入与输出
+新 FD 默认使用 Review policy: Self、Evidence policy: Markdown。
+没有策略标记的历史 FD 和旧 Independent Tester FD 保留独立审查。
+历史 Dual 证据继续使用中文 Markdown 与同名 JSON，不重写旧报告。
 
-- 输入：明确请求或已批准 Issue、FD ID、规格、工作项及阶段限制。
-- 输出：编号 FD、实现、实际证据、独立评审记录，以及范围允许时的本地交付与归档。
+普通进度、验证和阻塞集中写在 FD，不要求逐项提交或重复 Worker 报告。
+默认 new 不创建逐阶段事件；--handoff、角色 runner 或既有交接仍使用真实收据。
 
-## 调用示例
+完整实现请求包含授权范围内的本地交付与归档；只规划、只实现、部分工作项、
+不提交和不合并等明确限制优先。测试、网络、push、发布和部署仍需各自授权。
 
-```text
-$fd-workflow FD-XXX auto
-$fd-workflow FD-XXX implementation only; no review or merge
-$fd-workflow FD-XXX auto with test
-```
+工作区规则：非 Git 不创建 worktree，也不初始化 Git；Git 普通请求默认在当前
+工作区，只有明确要求 worktree 或显式 auto 时才隔离。普通流程的自动继续
+不等于选择 auto。Git auto 从规划、实现、审查到归档都在同一 worktree 中。
+新 FD 通过 new --worktree 先创建 worktree 再写计划；归档提交完成后，工具
+将实现与归档一起 squash 到记录的父分支，验证后清理。
 
-这些是宿主请求，不是新 CLI 参数。“带测试”等同义表达也能选择测试支持。
-
-## 边界与资料
-
-完整实现默认自动继续交付；更窄限制优先。工作区、当前独立通过事件和证据必须
-满足交付条件。默认不授权测试、网络、push 或部署；测试支持有独立命令预算和诊断
-降级规则。见 [SKILL.md](SKILL.md)、[规划](references/planning.md)、
-[实现](references/implementation.md) 和 [可选测试](references/testing.md)。
+入口见 [SKILL.md](SKILL.md)。规划、实现、审查和交付细节按阶段加载。
+安装前阅读 [升级说明](UPGRADE.zh-CN.md)，共享资源按
+[依赖说明](references/dependencies.md) 定位。当前 CLI 与共享合同需要同步更新。

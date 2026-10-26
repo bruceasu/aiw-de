@@ -1,91 +1,55 @@
-# Numbered FD operations
+# Numbered FD command lookup
 
-The portable layout is `docs/templates/TEMPLATE.md`,
-`docs/features/FEATURE_INDEX.md`, `docs/features/FD-XXX_SLUG.md`, and
-`docs/features/archive/<FD-ID>/<FD-ID>_SLUG.md`. The FD file owns status and
-numbered Work Items. Active reports and reviews live under
-`docs/features/reports/` and `docs/features/reviews/`; close moves the FD's
-evidence into `archive/<FD-ID>/reports/` and `archive/<FD-ID>/reviews/`.
-The index is rebuilt by `aiw fd` after stage changes. Do not create a second
-status store or require a vendor-specific agent command.
+Load only for command/path lookup. Stage rules live in the linked references;
+this is not a second lifecycle or authorization source. Verify installed CLI
+compatibility and required authority before use; do not invent flags.
 
-## Create
+## Repository layout
 
-Run `aiw fd new "title" [--issue ID]`. The command allocates the next number
-across active and archived files, creates a Design FD from the template, and
-records a Planner handoff. `--issue` requires an approved Issue record. Do not
-invent an Issue ID or create an OpenSpec change unless requested.
+- Template: `docs/templates/TEMPLATE.md`.
+- Fixed navigation: `docs/features/FEATURE_INDEX.md`; use `aiw fd list` for status.
+- Active FD: `docs/features/FD-XXX/FD-XXX_SLUG.md`, with `index.md`, `reports/`, `reviews/`.
+- Archive: `docs/features/archive/<FD-ID>/<FD-ID>_SLUG.md` and associated evidence.
+- Receipts/workspace coordinates: `.ai/fd/<id>/`; isolated worktree: `.wt/<id>`.
+- FD owns status/items. No second status store or shared status table; read legacy
+  flat layout as compatibility input, use folders for new/reopened records.
 
-## Explore and design
+## FD commands and events
 
-Read the FD, project guidance, relevant code, stable specs, and earlier FDs.
-Compare meaningful options and record the chosen approach and reason. Use
-`%% NEEDS_INPUT` for material gaps. Planner emits `design-ready` only after the
-FD contains a solution, numbered Work Items, acceptance, and Verification.
+| Operation | Command/event | Required procedure |
+|---|---|---|
+| New | `aiw fd new "title" [--issue ID] [--handoff] [--worktree]` | Current workspace by default; use --worktree for explicit auto/worktree requests in Git, before planning |
+| Inspect | `aiw fd list`, `aiw fd show FD-001`, `aiw fd resume` | [handoffs](handoffs.md) |
+| Claim | `aiw fd claim <id> <event-id> --session <session-id>` | [handoffs](handoffs.md) |
+| Design handoff | `design-ready --producer planner --artifact <fd-path> --source-event <event-id>` | [planning](planning.md) |
+| Implementation handoff | `implementation-ready --producer worker --artifact <report-path> --source-event <event-id>` | [implementation](implementation.md) |
+| Review result | `verification-passed` / `changes-requested` with report and source event | [review](review.md) |
+| Decision | `needs-decision`, later `decision-recorded` | Existing CLI/contract; never guess decision |
+| Fresh review | `aiw fd request-review <id> --reason "..."` | [handoffs](handoffs.md) / [preflight](preflight.md) |
+| Refresh Worker | `aiw fd refresh-worker <id> --reason "..."` | [handoffs](handoffs.md) |
+| Reopen | `aiw fd reopen <id> --reason "..."` | [handoffs](handoffs.md) |
+| Correct unclaimed reopen reason | `aiw fd reopen <id> --reason "..." --correct-reason` | [handoffs](handoffs.md) |
+| Direct review | `aiw fd request-review <id> --reason "..."` | Ready Open/In Progress/Complete work can request review without a forced status change |
+| Close | `aiw fd close FD-001 Complete` | [delivery](delivery.md); Closed/Deferred require reason |
+| Explicit PM override | `aiw fd close <id> Complete --force --reason "..."` | Only user-chosen [preflight](preflight.md) exception |
 
-`aiw fd list` shows the index and `aiw fd show FD-001` shows one FD and its
-last handoff. If an event is pending, use the named role Skill or `aiw fd
-resume`. If it is launching or dispatched, inspect the original process,
-session, or log before trying to continue.
+## Git lookup
 
-## Implement and review
+- `aiw git wt add FD-001`: use only for an explicit isolated existing-FD request;
+  its plan must already be committed. New isolated FDs use new --worktree,
+  which calls add --prepare before the plan exists. Outside Git, skip both.
+  Read [preflight](preflight.md) and verify recorded coordinates.
+- `aiw git wt status FD-001`: inspect workspaces.
+- `aiw git wt local-merge FD-001`: after archive/commit inside the FD worktree,
+  squash-deliver implementation and archive together; read [delivery](delivery.md).
+- `aiw git wt sync FD-001 develop`: only if diagnosis requires a separate sync
+  and `develop` is the recorded parent. Never proactively sync every FD.
+- `wt commit` stages all changes; it is not conflict resolution. Use only after
+  every changed file is resolved, intentional and in scope. Do not rebase either branch.
+- Commit coherent reviewable changes; a small FD may use one implementation
+  commit. Do not combine unrelated changes into any scoped commit.
 
-Worker implements all ready items in order, updates the FD with real progress,
-and emits `implementation-ready` with an implementation report. Independent
-Reviewer emits `changes-requested` with findings or `verification-passed` with
-its report. Pass `--source-event` when completing a dispatched handoff. A
-business decision uses `needs-decision` and later `decision-recorded`.
-
-Run only checks allowed by the repository. Local focused commits are allowed
-under the project rules; commits do not authorize merge, push, or release.
-Every numbered FD uses an isolated worktree before implementation starts; this
-keeps parallel FD work from sharing writable files. An informational or
-design-only discussion does not create a worktree. Capture the current branch,
-commit the ready FD plan on the parent branch, and make sure the parent
-workspace is clean before creating the worktree with
-`aiw git wt add FD-001`. Commit unrelated parent changes separately; do
-not mix them into the FD plan commit. Keep the parent clean while the FD is in
-flight when possible, and wait to merge if it becomes dirty. The command records the FD ID,
-parent branch, feature branch, and worktree path in
-`.ai/fd/FD-001/workspace.json`. Read and verify that record immediately after
-creation; use its parent branch as the merge target. Stop if the record is
-missing or inconsistent. Use `aiw git wt status FD-001` to inspect both worktrees.
-
-Use `aiw git wt local-merge FD-001` directly for squash delivery after review.
-Do not proactively sync every FD. Diagnose delivery failure first; CLI
-recovery may already have started the parent merge. If a separate sync is
-needed, explicitly use the recorded parent: `aiw git wt sync FD-001 develop`
-only when `develop` is that recorded parent. Follow the recovery section in
-`../SKILL.md`, including fresh review when recovery changes implementation
-beyond the current pass. `wt commit` stages and commits; it does not choose
-correct conflict resolutions. Local-merge cleans Git resources but does not
-archive; the host separately closes the FD and commits the archive. Content
-conflicts are recovered in the FD worktree. The host loads
-`resolving-merge-conflicts` for one bounded attempt; unresolved conflicts keep
-their merge state. A changed recovered implementation needs current review
-before the host invokes a separate local-merge retry.
-Successful delivery validates the squash source and removes the FD worktree
-and branch while preserving `.ai/fd/` receipts. Archive only after delivery succeeds. Commit each completed
-Work Item separately before the Reviewer handoff. Do not rebase either branch.
-
-## Auto
-
-`$fd-workflow auto` is a host Skill operation, not an `aiw fd auto` CLI
-command. Follow `../SKILL.md`: one numbered FD, exact handoff claims, an
-independent Reviewer session, and at most three Reviewer outcomes across
-resumes of the same implementation cycle. New FDs go directly from Worker to
-Reviewer after compile-only and static checks. Optional tests use `$fd-test`
-only when requested and do not gate review. Existing Tester events remain a
-legacy CLI capability; Auto does not dispatch or evaluate them. The host may
-combine PM, Planner, and Worker, but it must not supply independent Reviewer
-evidence. With an isolation trigger, squash-deliver the reviewed FD result to
-its recorded parent before closing and archiving. Stop without merge or archive
-when a review, parent state, or merge gate fails.
-
-## Close
-
-Use `aiw fd close FD-001 Complete` only after a passed review and, in isolated
-mode, a successful merge to the recorded parent. Deferred and
-Closed require `--reason "..."`. Close archives the file and updates the
-index. It does not clean a worktree or deliver code. Update a project changelog
-only when the repository uses one.
+`$fd-workflow auto` is a host request, not an `aiw fd auto` command.
+Optional test support adds no Tester state/vote or coverage threshold; it never
+waives actual acceptance defects or silently skips requested scope. Follow
+[testing](testing.md). Local merge, archive and release are distinct operations.

@@ -581,7 +581,8 @@
         const pendingControl = data.controls.find(control => control.status === 'PENDING_STOP');
         const attention = detail.querySelector('[data-plan-attention]');
 
-        detail.querySelector('[data-detail-state]').textContent = data.humanOutcome?.status === 'APPLIED'
+        detail.querySelector('[data-detail-state]').textContent = data.gitDelivery && !['NOT_REQUIRED', 'DELIVERED'].includes(data.gitDelivery.state)
+          ? data.gitDelivery.state : data.humanOutcome?.status === 'APPLIED'
           ? data.humanOutcome.outcome === 'COMPLETE' ? 'COMPLETED_BY_HUMAN' : 'CANCELLED'
           : data.humanOutcome?.status === 'PENDING' ? 'WAITING_FOR_WORKER_STOP'
           : pendingGrant ? 'WAITING_FOR_RECOVERY_DECISION'
@@ -590,6 +591,41 @@
           ? pendingControl ? 'WAITING_FOR_WORKER_STOP' : finalReview?.verdict === 'PASS' ? 'COMPLETED' : exhausted ? 'NEEDS_ATTENTION' : 'IN_PROGRESS'
           : plan.state;
         detail.querySelector('[data-detail-state]').dataset.status = detail.querySelector('[data-detail-state]').textContent;
+        const deliveryPanel = detail.querySelector('[data-git-delivery]');
+        if (deliveryPanel) {
+          deliveryPanel.hidden = !data.gitDelivery?.items.length;
+          const items = deliveryPanel.querySelector('[data-git-delivery-items]');
+          items.replaceChildren();
+          for (const item of data.gitDelivery?.items || []) {
+            const row = line(items, 'article', undefined, 'form-card top-gap');
+            line(row, 'strong', item.repositoryRef).setAttribute('data-i18n-skip', '');
+            line(row, 'p', item.resultRevision, 'mono').setAttribute('data-i18n-skip', '');
+            line(row, 'p', item.files.join(', '), 'small').setAttribute('data-i18n-skip', '');
+            line(row, 'span', item.state, 'badge');
+            line(row, 'p', item.message, 'help');
+            if (['AWAITING_MERGE', 'BLOCKED'].includes(item.state) && detail.dataset.canOperate === 'true') {
+              const button = line(row, 'button', 'Merge locally', 'btn primary');
+              button.type = 'button';
+              button.addEventListener('click', async () => {
+                const feedback = deliveryPanel.querySelector('[data-git-delivery-status]');
+                button.disabled = true;
+                try {
+                  const preview = await api(`/plans/${encodeURIComponent(id)}/git-delivery/preview?repositoryRef=${encodeURIComponent(item.repositoryRef)}`);
+                  if (preview.blockedReason) { feedback.textContent = preview.blockedReason; return; }
+                  await api(`/plans/${encodeURIComponent(id)}/git-delivery/merge`, {
+                    planVersion: preview.planVersion, repositoryRef: preview.repositoryRef,
+                    repositoryPath: preview.repositoryPath,
+                    resultRevision: preview.resultRevision, targetBranch: preview.targetBranch,
+                    beforeRevision: preview.beforeRevision, requestId: crypto.randomUUID()
+                  });
+                  feedback.textContent = '';
+                  await load();
+                } catch (error) { feedback.textContent = error.message; }
+                finally { button.disabled = false; }
+              });
+            }
+          }
+        }
         const needsAttention = ['NEEDS_ATTENTION', 'DELEGATED_NEEDS_ATTENTION'].includes(detail.querySelector('[data-detail-state]').textContent);
         detail.dataset.planAttention = String(needsAttention);
         if (attention) attention.hidden = !needsAttention;
@@ -668,11 +704,13 @@
         const managerPhase = detail.querySelector('[data-manager-phase]');
         if (managerPhase) {
           managerPhase.textContent = detail.querySelector('[data-detail-state]').textContent;
-          managerPhase.dataset.status = configuredOnly ? data.displayState || configured.state
+          managerPhase.dataset.status = data.gitDelivery && !['NOT_REQUIRED', 'DELIVERED'].includes(data.gitDelivery.state)
+            ? data.gitDelivery.state : configuredOnly ? data.displayState || configured.state
             : exhausted ? 'WAITING_APPROVAL' : activeWork ? 'RUNNING' : plan.state;
         }
         const guidance = detail.querySelector('[data-manager-guidance]');
-        if (guidance) guidance.textContent = formalFactory
+        if (guidance) guidance.textContent = data.gitDelivery?.state === 'AWAITING_MERGE'
+          ? 'Execution passed; local delivery is pending.' : formalFactory
           ? 'This confirmed plan is executed by AgentFactory. Follow its task results below.'
           : hasConfigured && !data.steps.length
           ? 'Follow the factory execution history below. The original graph has not been started.'

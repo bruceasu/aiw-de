@@ -104,6 +104,18 @@ class WorkflowReviewRecoveryTest {
     }
 
     @Test
+    void resumedReviewReceivesTheAuthenticatedRecoveryReasonAsContext() {
+        setup();
+        var recovery = service.reviewRecovery(plan.id());
+        String evidence = "Focused offline behavior checks passed for the unchanged committed revision; reassess the missing verification evidence.";
+        service.resumeReview(plan.id(), recovery.taskId(), recovery.planVersion(), recovery.taskVersion(),
+                "operator", evidence, true);
+        assertThat(created.getFirst().instruction()).contains("Human review recovery context:\n" + evidence);
+        assertThat(created.getFirst().dependencies()).contains(WorkflowPlanService.executionId(plan, 1, 3));
+        assertThat(reports.get(new TaskId(recovery.taskId())).verdict()).isEqualTo(CompletionVerdict.REPAIR_REQUIRED);
+    }
+
+    @Test
     void manualRecoveryPreservesHistoryAndOnlyANewPassAdvancesTheOriginalPlan() {
         setup();
         var recovery = service.reviewRecovery(plan.id());

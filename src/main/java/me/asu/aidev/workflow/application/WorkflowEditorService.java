@@ -31,7 +31,9 @@ public class WorkflowEditorService {
                          List<me.asu.aidev.workflow.jdbc.JdbcWorkflowRepairAuthorizationRepository.Authorization> repairAuthorizations,
                          List<String> decisionWorkers, java.util.Map<String, String> repairDecisionReports,
                          me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.History configuredExecution,
-                         String displayState, FactoryPlanLifecycle.View factoryPlan) {}
+                         String displayState, FactoryPlanLifecycle.View factoryPlan, WorkflowGitDeliveryService.View gitDelivery) {}
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<WorkflowGitDeliveryService> gitDelivery;
     public record TaskDetail(WorkTask task, List<JdbcWorkflowTaskReadRepository.Attempt> attempts,
                              WorkflowPlanService.RetryEligibility retry,
                              List<JdbcWorkflowTaskReadRepository.RetryEvent> retries) {}
@@ -172,8 +174,10 @@ public class WorkflowEditorService {
         }
         String displayState = plan.state()==WorkflowPlan.State.COMPLETED ? "COMPLETED" : (factoryPlan!=null || rows.isEmpty()) && configured != null
                 ? me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.displayState(configured.state()) : null;
+        var delivery = gitDelivery == null ? null : gitDelivery.getObject().view(id);
+        if (delivery != null && !Set.of("NOT_REQUIRED", "DELIVERED").contains(delivery.state())) displayState=delivery.state();
         return new Detail(plan, rows, plans.controlHistory(id), outcomes.find(id).orElse(null), plans.reviewRecovery(id),
                 repairs.list(id), repairs.decisionWorkers(id), repairs.decisionReports(id),
-                configured, displayState, factoryPlan);
+                configured, displayState, factoryPlan, delivery);
     }
 }

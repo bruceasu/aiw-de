@@ -1,35 +1,24 @@
 # FD PM
 
-Load when creating, grooming, routing, resolving a workflow Gate, or closing
-an FD.
+The host normally handles workflow management alongside planning and implementation.
+Read the current FD and actual evidence; inspect receipts only when present.
+Keep the authorized scope and applicable review policy clear.
 
-## Inputs and output
+Before delivery, use Self for routine changes and Independent for the shared
+risk criteria or an explicit review request. Handoffs and Work Items do not
+trigger review. Required independent review uses one separate Reviewer;
+self-checks never count as that independent pass.
 
-Read the current FD and receipt, linked approved Issue, role reports, and
-relevant stable specs. Own the workflow decision, status transition, and exact
-next handoff. Record rationale, evidence, exceptions, skipped stages, and
-residual risk in the FD or a versioned decision artifact as required.
+Proceed automatically when scope, evidence, workspace and review conditions pass.
+In an isolated flow, archive and commit inside that worktree before final
+squash delivery and verified cleanup; outside Git, skip Git operations. Honor
+stage limits and no-commit/no-merge instructions. Ordinary Self completion
+uses normal close, not a forced override. Never describe skipped checks as passed.
 
-## Boundaries
-
-- Do not present missing or waived evidence as completed or passed.
-- Do not claim Reviewer independence from the PM session.
-- No default test gate or assessor agents. Explicit test support follows
-  ../references/testing.md; related facts/defects can inform the normal review,
-  but counts alone decide nothing. Preserve diagnosis-only and the consumed
-  budget across resumes; continue independent work without waiving defects.
-- A material unresolved human decision is a Gate. Continue unrelated work that
-  does not rely on that decision.
-- Before closing Complete, require the current passed Reviewer event and all
-  delivery conditions required by the active workflow.
-- For a normal full FD implementation, continue automatically through local
-  delivery, verified cleanup and archive when shared-contract gates pass.
-  Do not request another auto command; explicit stage limits still apply.
-- Attempt reviewed local delivery without proactively syncing every FD.
-  Diagnose a failure before sync; use the recorded parent explicitly when
-  needed. Load resolving-merge-conflicts for one bounded attempt on actual
-  conflicts; preserve the merge state when any conflict cannot be safely
-  resolved. Follow fd-workflow recovery and fresh review of
-  changed implementation. Keep the active review count and stage limits.
-- Preserve state and report failed gates, merge conflicts or cleanup/archive
-  errors. Do not silently override them or take over another dispatched role.
+Record routine blockers in the FD. Preserve foreign/in-flight ownership,
+review/test budgets and unresolved state. On delivery failure, diagnose before
+sync/retry and read ../references/delivery.md. Use resolving-merge-conflicts for
+one bounded supported conflict resolution; preserve an uncertain merge.
+Refresh self-checks after recovery and obtain focused fresh review when the
+changed implementation requires independence. Do not repeat successful delivery
+because cleanup or archive failed.

@@ -16,7 +16,16 @@
 
 ## Worker 与后端
 
-独立角色 `goal-discussion` 已在 TypeScript、Python、Go 三包实现，共享角色与 Skill 契约。TS/Python 用 `AIW_PROCESS_ROLE=goal-discussion`（TS 的 start:all/管理器 all 也包含它），Go 用 `profiles/goal-discussion.toml` 启动。默认 OpenAI backend 接受 TS/Python 的 `openai-agents` 和 Go 的 `openai-api`；显式 Codex backend 接受 TS/Go 的 `codex-cli`/`codex-app-server` 及 Python 的 `codex-app-server`。Python 已删除 `codex-sdk`，需显式迁移旧配置。TS/Python 的原生 Windows Codex 路径拒绝启动，使用 Unix/WSL 或 Agents。完整 [角色/语言/后端矩阵](../../workers/README.md) 明确源码支持与未验证限制。没有在线匹配 Worker 时显示原因，人工编辑仍可用。
+独立角色 `goal-discussion` 已在 TypeScript、Python、Go 三包实现，共享角色与 Skill 契约。TS/Python 用 `AIW_PROCESS_ROLE=goal-discussion`（TS 的 start:all/管理器 all 也包含它），Go 用 `profiles/goal-discussion.toml` 启动。默认 OpenAI backend 接受 TS/Python 的 `openai-agents` 和 Go 的 `openai-api`；显式 Codex backend 接受 TS/Go 的 `codex-cli`/`codex-app-server` 及 Python 的 `codex-app-server`。Python 已删除 `codex-sdk`，需显式迁移旧配置。Python App Server 已支持原生 Windows，沿用本机 CLI 登录；讨论请求使用共享的纯文字模型模式，关闭原生工具。完整 [角色/语言/后端矩阵](../../workers/README.md) 记录其他运行时的支持边界。没有在线匹配 Worker 时显示原因，人工编辑仍可用。
+
+选择 Codex 不会自动启动讨论 Worker。在已有平台地址和 Worker 凭证的环境中，可用 PowerShell 启动：
+
+```powershell
+$env:AIW_AGENT_RUNTIME = 'codex-app-server'
+./workers/process-python/scripts/run-role.ps1 goal-discussion
+```
+
+步骤分析另需在线的 `planner` 角色；讨论 Worker 不会自动获得实现或执行计划的权限。
 
 每次发送冻结完整已保存对话、当前正文、缺失清单、选择的项目知识和本次明确同意外发的附件文本。配置 AI Profile 时只允许对应后端的已批准配置；缺少匹配配置不回退到其他后端。三语言的 OpenAI 讨论角色均不提供文件、shell 或 AIW 工具。讨论使用独立空临时目录并拒绝意外工作区 assignment，避免读取运营者的默认源码目录；Codex 仍依赖宿主沙箱边界，空目录不等于操作系统访问隔离。此版本不自动执行工作区 research；可显式选择既有项目知识或上传分析资料。其他知识库和新索引平台不属于首版。
 
@@ -38,8 +47,93 @@
 
 正式版本自带可持久保存的计划编辑快照，允许零步骤或不完整步骤；它不同于校验通过的 `WorkflowPlan`。可选同时请求 AI Steps；推荐不可用时保留人工编辑路径。点击检查/应用后，仅当编辑 revision 仍匹配才填入建议步骤。保存新编辑后可重新请求分析。计划编辑快照最多 32 步、128000 字符，不会放宽既有实际计划保存校验。
 
+HTTP 接口将正式版本的 `snapshot` 和 `editor` 转换为普通 JSON 对象，再交给 Spring MVC 输出；提交编辑也先接收普通对象，再转换到内部树模型。这样避免 Spring Boot 4 的 Jackson 3 将内部 Jackson 2 节点当作 Java Bean，导致页面只收到 `nodeType` 等类型属性而丢失目标与步骤。
+
+AI Steps 提示包含完整步骤字段、key 格式和依赖规则。具体代码需求的建议应包含编码步骤，不能只生成“继续制定实现计划”的循环；结果仍按现有模型严格校验，无效建议不会自动应用。
+
 用户明确点击准备执行后，才为缺少工作区的编码步骤创建受管临时目录，根目录由 `aidev.goals.workspace-root` 配置，默认 `data/goal-workspaces`。Git 可用时初始化；没有 Git 时使用现有 DIRECT 模式。异常中留下的目录保留供恢复；重试使用确定的版本目录与注册 ID。默认不随目标或计划删除目录，也不自动清理。用户仍需到 Plans 页面独立确认执行，本功能不会自动 confirm/start。
 
 ## 验证边界
 
-新增数据库迁移 V7，仅追加目标相关表。部署前仍需按实际数据库/备份策略运行迁移；本次开发未执行迁移、浏览器、转换器、真实模型、多进程或部署验证。源代码编译与独立静态审查的结果见 FD-019 报告，不能当成上述运行检查通过。
+新增数据库迁移 V7，仅追加目标相关表。部署前仍需按实际数据库/备份策略运行迁移。初始开发的源代码编译与独立静态审查结果见 FD-019 报告，不能代替运行检查。
+
+2026-10-26 使用本机 Windows、Python Codex App Server Worker 和已登录的控制台 API，实跑了 `sudoku2.htm` 后退功能的两轮目标讨论、保存明确目标与验收、创建就绪正式版本、生成并应用 AI Steps、保存带有现有工作区与 Git 基线的四步执行草稿。过程中修复了正式版本 JSON 对象转换和步骤提示字段缺失；首次无效分析保留为历史记录。修复后结果达到 `READY_TO_APPLY`，准备后的 Plan 为 `DRAFT`、没有执行任务，两页面 HTTP 200。本次没有修改目标项目文件，没有运行该计划、自动化测试或浏览器交互测试，也没有验证转换器和其他模型后端。Java 离线 compile、Python 语法解析、翻译脚本语法检查通过。
+
+同日继续进行执行验收：确认接口使原草稿变成 `CONFIRMED`（version 1），自动创建需求分析任务；接入需求分析 Worker 后，该任务真实完成，平台自动创建独立审查任务。此原生多步骤流程没有调用 AgentFactory 自动拉起角色进程，验证所需角色由操作者启动，不能据此声称已验证自动创建 Worker。独立审查第一次因异常处理中局部 `YieldRequested` 导入遮蔽全局类型，未正确上报失败，最终租约过期；移除两个重复局部导入后，第二次正确记录为 `FAILED`，证据码 `CODEX_TOOL_FAILED`。另补充失败工具类型与退出码元数据，等待额外审查运行授权，尚无该次元数据。没有绕过审查推进计划，编码步骤未开始，Git 实际提交仍未验证。
+
+随后经用户确认额外运行一次，原计划 version 变为 2；第三次审查仍因 `CODEX_TOOL_FAILED` 失败，且被未加载新增诊断的旧进程领取，因此未产生工具类型/退出码证据。停止旧进程时，机器 drain/offline 被拒绝；进一步确认服务层将这两个动作规定为人类管理操作，不能通过扩大机器白名单解决。相关候选路由改动已撤回并重新编译部署，使用已登录的人类 `/ui/workers/{id}/drain` 与 `/offline` 成功返回 200，两个旧审查进程已停止。额外真实审查次数已用完；下一次需明确授权并使用独立 Worker ID。计划仍停在失败审查，没有新编码任务或 Git 提交；这次没有验证最终完成链路。
+
+源码中的 Git 行为：带不可变基线的任务使用独立 worktree；可写 Worker 在完成时暂存并提交该 worktree 的变更，回报 `resultRevision` 与 `changedFiles`。只读任务不创建提交。该提交不等于合并到用户主分支或推送远端；本次剩余验收必须以真实提交对象和任务回执为证据，不能用源码推断代替。
+
+后续独立诊断进程确认 `CODEX_TOOL_FAILED` 对应 `commandExecution`、status `failed`、exitCode `1`。适配器修复后，原需求审查通过，架构步骤收到一次 `REPAIR_REQUIRED` 并由平台自动返工，第二轮审查通过；规划步骤的 `SKILL_FILE_NOT_DECLARED` 也改为明确的未读取错误观察，保持冻结清单校验。规划和规划审查随后通过，平台自动创建编码任务。编码的三轮执行均报告无法访问分配 worktree，结果保持原基线、无变更，三轮独立审查均为 `REPAIR_REQUIRED`，没有虚报完成。Git 实际核对三条结果分支均仍指向原提交，主 checkout 的 `sudoku2.htm` 内容也与基线一致。
+
+静态检查另发现任务提示没有明确附上本次实际创建的 worktree 路径；Worker 现补充当前 cwd、仓库引用和基线，区分历史路径与当前尝试目录，且不改变沙箱权限。六项离线回归测试通过。此修复尚待用户授权的一轮更正执行与独立审查验证；是否存在独立的 Windows 沙箱权限问题仍未确认，最终完成和实际新增 Git 提交仍未验证。
+
+经用户再次确认，通过原有 `repair-authorizations` 接口消费一轮更正授权，原计划 version 变为 7，创建 `implement~work-4` 及其独立 `review-4`。实际工作树路径已记录在 `workspace-assigned` 证据并写入提示，但编码和审查均报告命令执行器位于 `C:\Windows\System32`，进入该实际目录被拒绝。两项任务均以 `REPAIR_REQUIRED` 结束；尚不能从这些回执区分 Windows 沙箱权限与命令工作目录问题，路径提示修复没有解决整个阻断。未扩权或绕到主 checkout 写文件。数据库回执及 Git 分支对象核对均为原基线、空变更，主 checkout 的 `sudoku2.htm` 也未变化。自动安排任务与返工已有实测证据，最终完成和新增提交验证仍未通过。本次验证创建的剩余空闲角色进程已通过人类管理入口停止，平台服务及全部历史回执保留。
+
+## Windows 命令目录的只读对比诊断
+
+后续授权的本机诊断没有调用模型，而是使用已安装 Codex 导出的协议，通过 `command/exec` 直接提交固定 argv 和真实存在的受管 worktree `cwd`，策略为 `readOnly`、禁止网络。结果如下：
+
+| 固定命令 | 宿主直接执行 | Codex App Server 受限执行 |
+| --- | --- | --- |
+| `cmd.exe /d /c cd` | 返回所指定的 worktree，退出码 0 | 同样返回所指定的 worktree，退出码 0 |
+| `cmd.exe /d /c dir /b sudoku2.htm` | 返回 `sudoku2.htm`，退出码 0 | 返回“找不到文件”，退出码 1 |
+
+因此能确认此对比中的 cwd 已传到命令进程，差异出现在受限环境的目录内容访问，不能再只凭模型报告的 System32 断言平台丢失 cwd。文件检查失败后停止该路径，未继续尝试另一个 shell。具体沙箱/ACL 原因、原生模型工具为何报告 System32、以及 PowerShell 的实际位置仍未确定。本机配置的默认 `sandbox_mode` 为 `danger-full-access`，`windows.sandbox` 为 `unelevated`；Worker 显式请求受限策略，所以命令行可运行不等于 Worker 的执行条件相同。未修改这些配置、项目文件或权限，未重跑业务任务。
+
+本机 Windows `command/exec` 明确拒绝自定义 `outputBytesCap`（RPC -32600）；诊断移除此可选参数后才得到上述命令回执。诊断结果仅保存命令、目录、退出码及短输出，未保存凭证或聊天内容。
+
+
+### Windows 工作目录 ACL 的后续证据
+
+2026-10-26 继续诊断：同一条固定 `cmd.exe` 命令输出正确 cwd，但在 Codex `readOnly` 环境中，相对与绝对路径的 `sudoku2.htm` 存在性检查均为 MISSING；宿主相对路径检查为 VISIBLE。证据保存于本机临时目录 `aiw-cwd-diagnostic/visibility-result.json`，没有调用模型。
+
+只读 ACL 对比发现：`.aidev-worktrees`、诊断工作树及其 `sudoku2.htm` 只授予 OWNER RIGHTS、SYSTEM、Administrators 完全控制；原始 `sudoku` 仓库还明确授予当前用户权限、Users 读取和执行权限。源码 `worker_runtime._regular_parents` 使用 `mkdir(mode=0o700)`；`GitWorkspace.materialize` 通过 `safe_directories` 创建工作树父目录，Git 创建的目录和文件继承该父目录 ACL。这是目录创建策略与 Windows 受限令牌不兼容的有力线索，但尚未通过 ACL 对比实验确认因果。
+
+本轮没有修改 ACL、沙箱模式或登录配置，没有再次提交模型编码任务。权限失败后的下一项候选实验仅临时授予诊断工作树本机 Users 只读权限，并允许遍历工作树父目录，执行一次无模型文件可见性检查后恢复原 ACL；已单独请求该实验授权。最终实现与实际新增 Git 提交仍未验证。
+
+随后用户确认该临时 ACL 实验。执行脚本保存了三个指定路径的 DACL，但临时授权阶段未完整完成，尚未运行 Python/Codex 读取检查；恢复阶段的严格 SDDL 字符串比较又覆盖了前面的异常，原始失败原因没有被保留下来。这属于诊断脚本的错误处理缺陷，不能据此声称 Windows 明确拒绝了哪一步操作，也不能声称 ACL 假设已经验证。
+
+后续只读核对：三个路径均没有新增 Users ACE，原有 OWNER RIGHTS、SYSTEM、Administrators 权限条目保持一致；父目录 DACL 字符串与原始值完全相同。诊断工作树和文件的 DACL 增加了自动继承标记 `AI`，因此不应描述为所有安全描述符逐字恢复。备份保存在本机临时目录 `aiw-cwd-diagnostic/acl-original.json`。另一次纯内存 ACL 构造成功，但没有写入权限、运行 Codex 或调用模型。未重试权限修改，业务任务和 Git 提交仍未验证。
+
+## 原生计划最终审查后的自动完成
+
+用户要求停止 ACL 诊断、继续原计划后，平台 API 核对原 Plan 仍为 `CONFIRMED`、version 7；需求、架构和规划已通过，四轮编码及审查均为 `REPAIR_REQUIRED`，未产生实际文件变更。没有重复提交已知受文件访问问题阻塞的编码尝试，也没有把原计划标为完成。
+
+独立修复原生多步骤流程的状态缺陷：`WorkflowStepCompletedHandler` 在最后审查通过时调用 `WorkflowPlanService.completeReviewed`，基于数据库已记录的当前最终审查和所有已接受步骤结果，以版本条件更新为 `COMPLETED`。旧轮次、被替代的审查、未持久化的通过声明、仍要求修正的执行、非终态任务、归档或待停止的计划均不能触发完成。沿用托管计划准入检查及原事务，没有新增 HTTP 接口、数据库迁移或人工强制完成操作。
+
+执行了离线 Maven compile，随后执行 `mvn -o -Dtest=WorkflowReviewedCompletionTest test`：12 项定向回归测试全部通过，包括最终审查自动完成、重复回调幂等、错误通过防护、上游未接受、旧审查、任务仍运行及并发版本冲突。该结果仅覆盖状态转换逻辑，不代表 sudoku2.htm 的实现、模型执行或实际 Git 提交已经通过端到端验收。本轮未重启平台服务，修复尚未加载到运行中的 JVM。
+
+## 2026-10-26：加载修复并完成原计划
+
+用户明确要求加载修复、解决 Windows 沙箱访问阻塞并继续验收后，已在没有活动任务时重启本机 Control Plane。诊断脚本修正错误保存后，确认 PowerShell `Set-Acl` 要求 `SeSecurityPrivilege`；没有请求该特权。改用只修改 DACL 的 Windows API，在三个限定诊断路径上临时补充读取/遍历后，原先失败的 Codex `readOnly` 文件检查返回 `sudoku2.htm`、退出码 0，随后恢复原访问条目。
+
+产品修复位于 `windows_workspace_acl.py`，由原生 Codex 的 Git 工作树创建路径调用。它逐一检查原仓库目录及对应文件已有的访问范围，再给工作树容器增加 Users 遍历权限、给本次工作树增加 Users 读取/执行权限。编码工作树还要求原仓库及每个对应条目已允许 Authenticated Users 修改，才保留同等修改范围。只读角色不增加这项修改权限。没有修改原仓库 ACL、私有证据目录、guarded broker 路径或 Codex 全局权限配置；不符合条件的私有来源明确失败。仅补读权限的首次产品探针能读取但不能写入；补齐已存在于原仓库的编码修改范围后，修正探针的读取、临时写入/读取/删除全部成功，工作树保持干净并已清理。权限策略离线测试 7 项通过。
+
+通过原有 `repair-authorizations` API 创建一次本轮编码授权 `RA-9ab64029-bd19-4033-a790-eb24a7367db5`，只运行原计划的 `implement~work-5` 及独立审查，没有重跑已接受的需求、架构和规划。Worker 完成编码后自动提交到隔离任务分支。首次审查在调用模型前触发 `UPSTREAM_REVISION_MISMATCH`，原因是 Worker 将所有历史上下文的旧 revision 都与最新编码结果比较。修复后只要求本轮对应 `~work-N` 输入的仓库与 revision 精确匹配，仍拒绝缺失或错误的当前产物；旧分析、规划结果可以作为上下文。相关离线回归 8 项通过。新 Worker 只重试该失败审查，审查能够正常读取实际编码提交。
+
+该审查要求补足动态验收证据。宿主对实际 Git 提交中的页面脚本执行 Node VM/DOM 事件夹具，9 项全部通过：空历史禁用、输入与替换逆序撤销、删除恢复、无效或未改变输入不入历史、校验标记恢复、整盘清除作为一步恢复且保留固定线索、空盘清除无历史、新局成功清历史、生成失败保留历史。夹具和结果位于本机临时目录 `aiw-goal-execution/verify-undo.cjs`、`verify-undo-result.json`；文件摘要及命令上下文保存在重新审查的认证请求原因中。没有进行完整浏览器渲染或原生浏览器 InputEvent 验证。
+
+另修复恢复原因没有传给新审查任务的问题：`resume-review` 将认证的原因作为 `Human review recovery context`，保持旧报告和依赖不变。离线 Maven compile 通过；`mvn -o -Dtest=WorkflowReviewedCompletionTest,WorkflowReviewRecoveryTest#resumedReviewReceivesTheAuthenticatedRecoveryReasonAsContext test` 共 13 项通过。无活动任务时再次重启服务加载此修复，然后使用原 `resume-review` API 仅重新审查现有产物。独立复审返回 `PASS`，平台自动持久化原计划 `COMPLETED`、version 12，详情的 `displayState` 同为 `COMPLETED`。没有通过手工数据库更新或人工强制完成设置状态。
+
+最终 Git 对象及数据库回执核对：
+
+- 原计划：`FP-bdad1ef7-eac5-47c3-8d85-eee36eebcf45`。
+- 实际编码提交：`00b7bddcc1047f2dd9f0fdaef6cdc0be8cbc2e44`。
+- 父提交/原基线：`c47f02712153227d1c9b5114c8b3f49e121d9c55`。
+- 结果分支：`aidev/FP-bdad1ef7-eac5-47c3-8d85-eee36eebcf45--e57bfa3892563897/a1`。
+- `git cat-file` 确认为 commit，分支指向与回执一致，父提交与基线一致，`git diff-tree` 确认仅修改 `sudoku2.htm`，新增 47 行。
+- 原 checkout HEAD 及 `sudoku2.htm` 与原基线保持一致；任务提交尚未合并或推送。本次没有提交 aiw-de 开发仓库中的修改。
+
+本次启动的编码和审查 Worker 已通过人类管理接口排空、停止并设为 offline；Control Plane 保持运行并已加载上述平台修复。最终摘要保存于本机临时目录 `aiw-goal-execution/final-flow-receipt.json`。此案例证明自动创建后续任务、编码产生真实本地提交、独立审查及最终完成状态落库；原生多步骤路径的 Worker 仍由本次验证流程启动，不能据此宣称 AgentFactory 自动创建所有角色进程已实现。
+
+## Git 合并交付（FD-053，已审查和启用）
+
+编码提交及独立审查通过，说明执行完成；尚未合并回原分支时，不能据此声称原文件已更新。FD-053 实现独立的交付状态：计划列表和详情显示本地交付进度，详情顶部展示仓库、结果提交、文件及受阻原因，并提供中文、英文和日文文案。
+
+用户明确决定：本地合并提交无须单独授权。平台在新计划确认时记录本机登记的原仓库和分支，完成编码和审查后自动排队本地交付。合并前检查仓库、分支、HEAD、原任务基线及结果提交；请求绑定这些坐标和当前计划版本。支持快进和无冲突的本地合并提交，不自动 stash、reset 或推送。重叠的本地变更、暂存内容、冲突、文件过滤器或自定义合并驱动等条件会阻止合并；无关的未暂存修改会保留并在合并后核对。Git hooks 和自动维护在该操作中禁用。
+
+新的交付表先持久化合并意图，再执行 Git；成功后记录前后版本。进程中断或结果未知时保留记录，不自动重试。原始计划执行状态和旧报告保持不变，总体展示状态在交付完成前优先显示待合并或结果待核对；仍待交付的计划不能归档。旧完成计划从已接受的任务回执生成待交付提示，不自动排队或修改其原工作区。历史或受阻结果可由所有者点击“本地合并”处理，不再要求额外确认。远端推送和跨机器交付暂未增加。
+
+离线编译、23 项定向测试及独立静态审查通过。最后固定的 ort/禁签名参数经过静态审查及最终编译，未声称已执行新增参数测试。已备份数据库并重启本机服务，V21 迁移成功。Sudoku 已实际交付：原仓库 `D:\playground\ai-playground\project\sudoku` 的 `master` 包含合并提交 `f9962dc584739f4e87fa47bca483c785fda14b8b`，保留原 master 的 `c8eded0` 和编码结果 `00b7bdd`；相对原 master 仅 `sudoku2.htm` 增加 47 行，`sudoku.htm`、已有工作区改动和 `.aiw/` 保留，未推送远端。平台通过正式 API 记录该已合并结果的交付回执，没有重复执行 Git 合并；原计划 state/displayState 均为 COMPLETED，交付为 DELIVERED，列表目标行和详情页已核对。完整浏览器效果和真实中断恢复尚未验证。

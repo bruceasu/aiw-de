@@ -28,6 +28,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkflowPlanService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<WorkflowGitDeliveryService> gitDelivery;
+
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.guard.TaskLineage lineage;
     public List<WorkTask> effectiveSteps(String id) {var history=steps(id);return lineage==null?history:lineage.effective(history);}
     private me.asu.aidev.authority.AuthorityBoundary delegation;
@@ -203,7 +206,7 @@ public class WorkflowPlanService {
                 actor, audit.substring(0, Math.min(2000, audit.length())), now)) {
             throw new IllegalStateException("Plan changed. Reload before requesting a new review.");
         }
-        createReview(plan, step, round, next);
+        createReview(plan, step, round, next, reason.strip());
         tasks.linkCorrection(previous, next, actor, reason.strip(), now);
         tasks.recordControlEvent(UUID.randomUUID().toString(), next, null, "RESUME_REVIEW", actor, reason.strip(), true, now);
         return get(id);
@@ -371,6 +374,37 @@ public class WorkflowPlanService {
     public WorkflowPlan complete(String id, long version, String actor, String reason) {
         humanChange(id);
         return control(id, version, null, actor, reason, true);
+    }
+
+    /** Records automatic completion from persisted independent reviews, never from a caller's claim. */
+    @Transactional
+    public void completeReviewed(String id, TaskId reviewId) {
+        managedSerialization(id);
+        managedAdmission(id);
+        WorkflowPlan plan = get(id);
+        if (plan.state() != WorkflowPlan.State.CONFIRMED || archives.archived(id)
+                || controls.pending(id).isPresent() || outcomes.find(id).isPresent()) return;
+        var position = WorkflowTaskPosition.parse(plan, reviewId).orElse(null);
+        int last = plan.spec().steps().size() - 1;
+        if (position == null || !position.review() || position.step() != last) return;
+        var rounds = rounds(plan, last);
+        if (rounds.isEmpty() || rounds.getLast() != position.round()
+                || !effectiveReviewId(plan, last, position.round()).equals(reviewId)
+                || !attempts.findCompletionReport(reviewId)
+                        .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false)) return;
+        var current = effectiveSteps(id);
+        if (current.stream().anyMatch(task -> !Set.of(TaskState.COMPLETED, TaskState.FAILED,
+                TaskState.CANCELLED, TaskState.CONTINUED).contains(task.state()))) return;
+        var accepted = acceptedInputs(plan, last);
+        if (accepted.stream().anyMatch(taskId -> tasks.find(taskId)
+                .map(task -> task.state() != TaskState.COMPLETED).orElse(true)
+                || !attempts.findCompletionReport(taskId)
+                        .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false))) return;
+        if (!plans.transition(id, plan.version(), WorkflowPlan.State.CONFIRMED, WorkflowPlan.State.COMPLETED,
+                "workflow", "All workflow steps accepted; final independent review: " + reviewId.value(), Instant.now())) {
+            throw new IllegalStateException("Plan changed during reviewed completion");
+        }
+        if (gitDelivery!=null) gitDelivery.getObject().enqueue(id);
     }
 
     private WorkflowPlan control(String id, long version, Integer targetStep, String actor, String reason,
@@ -543,6 +577,7 @@ public class WorkflowPlanService {
                 actor, "Manager confirmed selected steps", Instant.now())) {
             throw new IllegalStateException("plan changed concurrently; reload before confirming");
         }
+        if (gitDelivery!=null) gitDelivery.getObject().capture(get(id));
         createExecution(plan, 0, 1, Set.of());
         return get(id);
     }
@@ -630,6 +665,10 @@ public class WorkflowPlanService {
     }
 
     private void createReview(WorkflowPlan plan, int stepIndex, int attempt, TaskId id) {
+        createReview(plan, stepIndex, attempt, id, "");
+    }
+
+    private void createReview(WorkflowPlan plan, int stepIndex, int attempt, TaskId id, String recoveryContext) {
         managedAdmission(plan.id());
         var step = plan.spec().steps().get(stepIndex);
         TaskId execution = executionId(plan, stepIndex, attempt);
@@ -654,6 +693,7 @@ public class WorkflowPlanService {
                 Set.copyOf(reviewSkills), "workflow-stage-reviewer",
                 "Independently review the authoritative output of step '" + step.key() + "' against this goal and step instruction. "
                         + "Goal: " + plan.spec().goal() + "\nStep instruction and acceptance criteria: " + questionContext(step.instruction(), plan.id()) + authorization
+                        + (recoveryContext.isBlank() ? "" : "\nHuman review recovery context:\n" + recoveryContext)
                         + "\nReturn concrete findings when correction is needed. End with exactly one line: "
                         + "AIW_VERDICT: PASS or AIW_VERDICT: REPAIR_REQUIRED.",
                 step.repositoryRef(), output.resultRevision() == null ? step.baseRevision() : output.resultRevision(),

@@ -294,6 +294,31 @@ class StdioSession:
                 self.job.close()
 
 
+def skill_file_output(reader, args):
+    try:
+        return json.dumps(reader.read(**args))
+    except RuntimeError as error:
+        if str(error) != "SKILL_FILE_NOT_DECLARED":
+            raise
+        # Deliver a lookup miss, never a filesystem fallback or a fabricated read.
+        return json.dumps({"error": "SKILL_FILE_NOT_DECLARED", "read": False,
+            "hint": "Choose the exact ref and path from the Declared files in the supplied Skill context."})
+
+
+def check_tool_result(item, attempt):
+    status, exit_code = item.get("status"), item.get("exitCode")
+    if status not in {"failed", "declined", "cancelled"} and exit_code in {None, 0}:
+        return
+    attempt.evidence.record("tool-terminal", tool=item.get("type"), status=status, code=str(exit_code))
+    # The server already returned this command's result to the model. A concrete
+    # nonzero exit can be handled in the same turn (for example a search miss).
+    # Approval denials, cancellations and unknown failures remain terminal.
+    if (item.get("type") == "commandExecution" and type(exit_code) is int and exit_code != 0
+            and status not in {"declined", "cancelled"}):
+        return
+    raise RuntimeError("CODEX_TOOL_FAILED")
+
+
 class CodexAppServerRuntime:
     type = "codex-app-server"
 
@@ -325,7 +350,7 @@ class CodexAppServerRuntime:
             attempt.check()
             args = params.get("arguments")
             if not isinstance(args, dict) or set(args) != {"ref", "path", "offset", "limit"} or not getattr(attempt, "skill_files", None): raise RuntimeError("SKILL_FILES_UNAVAILABLE")
-            output = json.dumps(attempt.skill_files.read(**args))
+            output = skill_file_output(attempt.skill_files, args)
             return {"id": message["id"], "result": {"success": True, "contentItems": [{"type": "inputText", "text": output}]}}
         model_only = getattr(request, "model_only", False)
         environment = None
@@ -407,8 +432,7 @@ class CodexAppServerRuntime:
                     item = p.get("item", {})
                     if model_only and item.get("type") not in {"agentMessage", "reasoning", "userMessage", "plan"}:
                         raise RuntimeError("CODEX_MODEL_ONLY_NATIVE_ITEM_DENIED")
-                    if item.get("status") in {"failed", "declined", "cancelled"} or item.get("exitCode") not in {None, 0}:
-                        raise RuntimeError("CODEX_TOOL_FAILED")
+                    check_tool_result(item, attempt)
                     if item.get("type") == "agentMessage":
                         key, text = item.get("id"), item.get("text")
                         if not isinstance(key, str) or not isinstance(text, str) or len(messages) >= 512:
@@ -430,6 +454,8 @@ class CodexAppServerRuntime:
                     for item in turn.get("items", []) or []:
                         if model_only and isinstance(item, dict) and item.get("type") not in {"agentMessage", "reasoning", "userMessage", "plan"}:
                             raise RuntimeError("CODEX_MODEL_ONLY_NATIVE_ITEM_DENIED")
+                        if isinstance(item, dict):
+                            check_tool_result(item, attempt)
                         if not isinstance(item, dict) or item.get("type") != "agentMessage":
                             continue
                         key, text = item.get("id"), item.get("text")

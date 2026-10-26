@@ -10,7 +10,7 @@ tracker or duplicate Issue/FD lifecycle rules.
    needs problem clarification or approval. Use `aiw issue` for durable Issue
    records; check CLI help before an unfamiliar or mutating command.
 2. Use `fd-workflow` to create or refine the engineering plan. A new FD is the
-   numbered file `docs/features/FD-XXX_SLUG.md`, created through `aiw fd new`.
+   numbered file `docs/features/FD-XXX/FD-XXX_SLUG.md`, created through `aiw fd new`.
    It owns engineering decisions, ordered Work Items, status, Verification,
    and unresolved `%% NEEDS_INPUT` notes. `docs/features/FEATURE_INDEX.md` is
    only its index.

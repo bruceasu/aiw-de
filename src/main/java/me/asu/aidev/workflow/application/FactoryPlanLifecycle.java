@@ -16,6 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 /** Owns confirmation and completion of factory execution inside the original Plan aggregate. */
 @Service
 public class FactoryPlanLifecycle {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<WorkflowGitDeliveryService> gitDelivery;
+
     public record Draft(WorkflowPlanSpec spec, String state, long version, String reason) {}
     public record View(Draft originalDraft, String confirmedBy, long confirmedAt) {}
     public record BoundTask(WorkTask task, String stepKey) {}
@@ -94,6 +97,7 @@ public class FactoryPlanLifecycle {
         if (!managed.isEmpty() && repo.jdbc().update("UPDATE authority_managed_plan SET spec_digest=?,version=? WHERE plan_id=? AND spec_digest=?",
                 AuthorityRepository.hash(repo.encode(spec)),plan.version()+1,plan.id(),AuthorityRepository.hash(repo.encode(plan.spec())))!=1)
             throw new IllegalStateException("Managed draft changed during confirmation");
+        if (gitDelivery!=null) gitDelivery.getObject().capture(plans.find(plan.id()).orElseThrow());
         repo.audit("PLAN:"+plan.id(),null,null,actor,"FACTORY_PLAN_CONFIRMED",intent.intentId()+":"+intent.intentVersion()+"; config="+config.digest());
     }
 
@@ -131,6 +135,7 @@ public class FactoryPlanLifecycle {
                 "factory","Recorded factory work completed: "+task.id().value(),Instant.now()))
             throw new IllegalStateException("Plan changed during completion");
         repo.jdbc().update("UPDATE authority_managed_plan SET version=? WHERE plan_id=?",plan.version()+1,plan.id());
+        if (gitDelivery!=null) gitDelivery.getObject().enqueue(plan.id());
         repo.audit("PLAN:"+plan.id(),null,null,"factory","FACTORY_PLAN_COMPLETED",task.id().value());
     }
 

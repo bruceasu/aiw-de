@@ -18,7 +18,7 @@ limits prevail; the selection does not itself approve arbitrary commands.
 Resolve the FD, acceptance/public contracts, test scope, requested cases/code/
 execution and command authorization. Write assigned test code under root
 `tests/`, respecting ownership and repository conventions. Write Chinese
-Markdown and same-name JSON under `docs/features/reports/` using
+Markdown and same-name JSON under `docs/features/<FD-ID>/reports/` using
 `docs/templates/FD_TEST_REPORT_TEMPLATE.md` and
 `docs/templates/FD_TEST_REPORT_DATA_TEMPLATE.json`. Standalone missing
 material inputs produce INCOMPLETE/BLOCKED, not guessed policies.

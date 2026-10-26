@@ -259,6 +259,9 @@ class GitWorkspace:
         safe_directories(candidate.parent)
         cwd = str(candidate)
         _git(repository_root, "worktree", "add", "-b", assignment["branchName"], cwd, assignment["baseRevision"])
+        if os.name == "nt" and config.runtime == "codex-app-server":
+            from windows_workspace_acl import permit_workspace_read
+            permit_workspace_read(root, candidate, repository_root, writable=config.process_role == "coder")
         return GitWorkspace(config, cwd, assignment, repository_root)
 
     def finalize(self, task: dict[str, Any], read_only=False) -> dict[str, Any] | None:
@@ -447,8 +450,8 @@ class ProcessSlot:
                 revision = assignment.get("baseRevision") or ""
                 if profile.result_kind == "WORKSPACE" and (len(revision) not in {40, 64} or any(c not in "0123456789abcdefABCDEF" for c in revision)):
                     raise RuntimeError("WRITABLE_WORKSPACE_REQUIRED")
-                if profile.result_kind == "VERDICT" and any(item.get("resultRevision") and item["resultRevision"] != revision for item in task.get("inputs") or []):
-                    raise RuntimeError("UPSTREAM_REVISION_MISMATCH")
+                if profile.result_kind == "VERDICT":
+                    _validate_review_revision(task, revision)
                 # Read and freeze trusted skills before workspace side effects.
                 instruction = prepared.prompt(task, skill_reader) if prepared else _prompt(task, self.config, skill_reader)
                 if task.get("workspace"):
@@ -461,6 +464,9 @@ class ProcessSlot:
                     finally: repository_gate.release()
                 else:
                     workspace = GitWorkspace.materialize(self.config, task)
+                if task.get("workspace"):
+                    instruction += _workspace_context(task, workspace.cwd)
+                    attempt.evidence.record("workspace-assigned", path=workspace.cwd)
                 gate = workspace_lock(workspace.cwd, attempt)
                 baseline = snapshot(workspace.cwd, attempt) if not profile.writable and not broker else None
                 selected = effective_selection["profile"] if effective_selection else None
@@ -485,6 +491,7 @@ class ProcessSlot:
                     network_access=self.config.network_access,
                     service_tier="default" if selected and task.get("aiGuidance") and self.config.runtime == "codex-app-server" else None,
                     sandbox=self.config.sandbox, approval_mode=self.config.approval_mode, broker=broker,
+                    model_only=self.config.process_role == "goal-discussion",
                 )
                 def set_session(runtime_session_id, handle=None):
                     nonlocal session_id
@@ -514,12 +521,10 @@ class ProcessSlot:
                         final_response = self.runtime.run(runtime_client, request, set_session)
                 except RuntimeError as error:
                     if broker and broker.pending_question:
-                        from formal_questions import YieldRequested
                         raise YieldRequested("QUESTION_WAITING") from error
                     if str(error) == "UNRESOLVED_TOOL_FAILURE": phase = "OUTPUT_INVALID"
                     raise
                 if broker and broker.pending_question:
-                    from formal_questions import YieldRequested
                     raise YieldRequested("QUESTION_WAITING")
                 if heartbeat.ownership_lost.is_set(): raise RuntimeError("LEASE_LOST")
                 phase = "OUTPUT_INVALID"
@@ -623,6 +628,37 @@ def _skill_context(config: WorkerConfig, task_type=None) -> str:
     if profile.primary_skill != "engineering-artifact-protocol":
         parts.append(_read_skill_package(config.skills_root, profile.primary_skill))
     return "\n\n".join(parts)
+
+
+def _validate_review_revision(task: dict[str, Any], revision: str) -> None:
+    inputs = task.get("inputs") or []
+    native = None
+    if task.get("subjectType") == "flexible-plan":
+        native = __import__("re").fullmatch(r"(.+~[^~]+)~review-([1-9][0-9]*)(?:-resume-[1-9][0-9]*)?", task["taskId"])
+    if native and revision:
+        expected = native[1] + "~work-" + native[2]
+        def input_id(item):
+            value = item.get("taskId")
+            return value.get("value") if isinstance(value, dict) else value
+        reviewed = [item for item in inputs if input_id(item) == expected]
+        repository = (task.get("workspace") or {}).get("repositoryRef")
+        if (len(reviewed) != 1 or reviewed[0].get("resultRevision") != revision
+                or repository and reviewed[0].get("repositoryRef") != repository):
+            raise RuntimeError("UPSTREAM_REVISION_MISMATCH")
+        return
+    if any(item.get("resultRevision") and item["resultRevision"] != revision for item in inputs):
+        raise RuntimeError("UPSTREAM_REVISION_MISMATCH")
+
+
+def _workspace_context(task: dict[str, Any], cwd: str) -> str:
+    assignment = task["workspace"]
+    return ("\n\n=== Worker-verified workspace for this attempt ===\n"
+        + json.dumps({"cwd": cwd, "repositoryRef": assignment.get("repositoryRef"),
+                      "baseRevision": assignment.get("baseRevision")})
+        + "\nUse this exact current directory and relative target file paths. "
+        + "The Worker has materialized this directory for the current attempt. "
+        + "Absolute source-checkout paths and worktree paths in older reports are historical context. "
+        + "Do not guess a worktree directory or write to the original source checkout.")
 
 
 def _prompt(task: dict[str, Any], config: WorkerConfig, skill_reader=None) -> str:

@@ -3,61 +3,67 @@
   "skills": {
     "ask-asu": {
       "mode": "copy",
-      "sha256": "01d8ab52be3a7299f9ab167f5cb53caa3c799c1aa1fb206f0e9f3eb2b099e62e",
+      "sha256": "aeda4da292450c4f8b872c3a6caabce6ca9136da1ba738897b020471d80178e4",
       "source_identity": "D:\\green\\aiw\\skills\\ask-asu",
       "source_revision": null
     },
     "code-review": {
       "mode": "copy",
-      "sha256": "a292e1b4bf742b09aadba1ea34b1fdad4d70305bd44b84861a10971d734ca568",
+      "sha256": "b94048ebf8123257dd214d6e643b845c009f92dd8d40af8af07a0ea36f481a1d",
       "source_identity": "D:\\green\\aiw\\skills\\code-review",
       "source_revision": null
     },
     "codebase-design": {
       "mode": "copy",
-      "sha256": "b65acca43c3cf87ea5742556ef8986053433e9a782df05e6c46296dad78370a8",
+      "sha256": "3a776598f50091aa5daf082a6bbe9ae3480722a6bf71c2593ce75f6a217ef653",
       "source_identity": "D:\\green\\aiw\\skills\\codebase-design",
       "source_revision": null
     },
     "diagnosing-bugs": {
       "mode": "copy",
-      "sha256": "7d357a7b120b81fa569126efb605ca377e0a319bd872bac19766f77935abaf04",
+      "sha256": "1f4495596e081ccaab987d60fb42726223fb9fa6944995b9908f42ed5b06d599",
       "source_identity": "D:\\green\\aiw\\skills\\diagnosing-bugs",
       "source_revision": null
     },
     "domain-modeling": {
       "mode": "copy",
-      "sha256": "b1887872122701869ef4719e642336ea82eb8d445f95d02b9a4a3ec7f20ae5be",
+      "sha256": "eca13f6cafb125083d9bfd435ad75a2254afd63f623d2949b8d9bdffabd37026",
       "source_identity": "D:\\green\\aiw\\skills\\domain-modeling",
       "source_revision": null
     },
     "edit-article": {
       "mode": "copy",
-      "sha256": "7fb5d99138a22f3688e0cc852dc79a994b5d07495023f00fb3d1d2fb697a21bb",
+      "sha256": "270b12f0809b891741a97855b04089c46bb5da77359d9a6cdb951a71e5a43ff2",
       "source_identity": "D:\\green\\aiw\\skills\\edit-article",
+      "source_revision": null
+    },
+    "fd-package": {
+      "mode": "copy",
+      "sha256": "51f9b2865ce7ed809b55d4574ace17007b24d023f653a9dcbcfe51892eee4119",
+      "source_identity": "D:\\green\\aiw\\skills\\fd-package",
       "source_revision": null
     },
     "fd-release-gate": {
       "mode": "copy",
-      "sha256": "8eaeb55035ebd171092668b1182b194e6c271ea5f71383aca915ebe6b1b5b877",
+      "sha256": "0fd5ba437f2cd7d831e3118961b28ed5896b7dd550cf3da2a82766c0ceecf08a",
       "source_identity": "D:\\green\\aiw\\skills\\fd-release-gate",
       "source_revision": null
     },
     "fd-review": {
       "mode": "copy",
-      "sha256": "c875c77130befd91761fe1272e2a1b58422135a6acc2a000a38596c7e9c55a50",
+      "sha256": "e02c8896cac59a539ee256ad7bd7fc4783f75f1232815d4823d97d7a9b5365f0",
       "source_identity": "D:\\green\\aiw\\skills\\fd-review",
       "source_revision": null
     },
     "fd-test": {
       "mode": "copy",
-      "sha256": "17f5bcb32f7501fa8b8f8e3e0c8739912dc4dd740d8d97d32c6c973cf8591d6d",
+      "sha256": "36eeadf08875dc221a2645a9c5672168a9ae7da5ebe9f0d80a71653a7c0ac629",
       "source_identity": "D:\\green\\aiw\\skills\\fd-test",
       "source_revision": null
     },
     "fd-workflow": {
       "mode": "copy",
-      "sha256": "ff7eba1c3c534122572eb1daf76c937d8e6e5c39419bdb096c33abe38536d451",
+      "sha256": "9a9f9540ec0a748e9aa10bd69e966e45392638806ecf41ca2ef6fa781df32dc4",
       "source_identity": "D:\\green\\aiw\\skills\\fd-workflow",
       "source_revision": null
     },
@@ -69,7 +75,7 @@
     },
     "grill-me": {
       "mode": "copy",
-      "sha256": "8e81302b933275974760607334a0a1ad9e7d71b9d4dcdecaa4ce86ba57ca8354",
+      "sha256": "b44cfd868ca5aab7deee708f7520a2c77c1998703a3f8a43e6900155672adaf8",
       "source_identity": "D:\\green\\aiw\\skills\\grill-me",
       "source_revision": null
     },
@@ -87,79 +93,79 @@
     },
     "handoff": {
       "mode": "copy",
-      "sha256": "a57414bded0e5d743f39756c0f0a20177a75f030d03529cf5ec71b42641ce813",
+      "sha256": "826bc28311eeb5846e61782401ba4e585d386d55d9fdb4987c265e1d3db8ce46",
       "source_identity": "D:\\green\\aiw\\skills\\handoff",
       "source_revision": null
     },
     "improve-codebase-architecture": {
       "mode": "copy",
-      "sha256": "b327f8898c998c678c8671ade392cb9f6cbb231b2c5f2d0293b1ce894d3da2cf",
+      "sha256": "da2726f257dbf681fdb492e3eb8aa423d6c1274c6301a51861e51620817d012b",
       "source_identity": "D:\\green\\aiw\\skills\\improve-codebase-architecture",
       "source_revision": null
     },
     "issue-management": {
       "mode": "copy",
-      "sha256": "b8c9d2fba276c92b76ed19e6892b3f3a979d231648fbd6dec1eb1855fca90267",
+      "sha256": "5c1a151d5da55f1dd2928b41faa5a586fda8d15594695a3de9b834d360ead714",
       "source_identity": "D:\\green\\aiw\\skills\\issue-management",
       "source_revision": null
     },
     "prototype": {
       "mode": "copy",
-      "sha256": "f088e2896629687b74df2b2a2c69bb728561755af16ec23405f8b658c2934cc2",
+      "sha256": "e644a69898428f2486c61ec40f7a77f17d566f5a1ff23bcb1addfdc2923fff94",
       "source_identity": "D:\\green\\aiw\\skills\\prototype",
       "source_revision": null
     },
     "publish-github-issue": {
       "mode": "copy",
-      "sha256": "63db44cf6f82e5a893898d36cba457aefba2b441ae93d676dd693ef52f9602e9",
+      "sha256": "28b4c2938195014e3fa87dd8acf5d7646776d4f54cf4f5314f7c20fc6393f2b4",
       "source_identity": "D:\\green\\aiw\\skills\\publish-github-issue",
       "source_revision": null
     },
     "research": {
       "mode": "copy",
-      "sha256": "6fc98ddf85b19e09b725761171a8bce64c1b3e86504e0e79fe9fb1f5724574bb",
+      "sha256": "2483f775ee6155944e00e023065ee5d311edb86336396fb2e9c685a99a836401",
       "source_identity": "D:\\green\\aiw\\skills\\research",
       "source_revision": null
     },
     "resolving-merge-conflicts": {
       "mode": "copy",
-      "sha256": "a762861b67a3a38fe54cb2ff26de782bdde409ae7fdde40e3db94c6d904ef007",
+      "sha256": "d4f8a383b09d344d1565d33cc97be027ce40871a75520d1a26dca58514ffa013",
       "source_identity": "D:\\green\\aiw\\skills\\resolving-merge-conflicts",
       "source_revision": null
     },
     "setup-project": {
       "mode": "copy",
-      "sha256": "a103613f26f3a4556196c29da7706f2942e7e1ac388d57bb7ee94453c8b52b91",
+      "sha256": "e7a23fac0c40d8ffa1106969d6f8cec9f9c70598baa48d51e4ba0222857c9f94",
       "source_identity": "D:\\green\\aiw\\skills\\setup-project",
       "source_revision": null
     },
     "tdd": {
       "mode": "copy",
-      "sha256": "1559cd98a023b50daa92a21e5ba4f7e028109385faec82619dfd88814268dc30",
+      "sha256": "c3b863c5b5686601e374aa67c2060d795eb8a62ce5b683b016cf3cf74470c93e",
       "source_identity": "D:\\green\\aiw\\skills\\tdd",
       "source_revision": null
     },
     "teach": {
       "mode": "copy",
-      "sha256": "7488c6a66e31a736195b78b007ccaa6d448b4c6a26298a69d97b7139b5499c74",
+      "sha256": "8f547faf705af63b2f52744d43802b2dd140214af7af69ef2bb7e4f16c732752",
       "source_identity": "D:\\green\\aiw\\skills\\teach",
       "source_revision": null
     },
     "to-spec": {
       "mode": "copy",
-      "sha256": "e9e66014a1bd3b98f56f128b38e8b02ccfd468f77f157e349b31998b2bd8f8c2",
+      "sha256": "cf511c0fa5fd4ae1629a9643af788905de1c0369e7e8ca851416c2c5b8af9567",
       "source_identity": "D:\\green\\aiw\\skills\\to-spec",
       "source_revision": null
     },
     "triage": {
       "mode": "copy",
-      "sha256": "ca3d621445f6a93d6df821169f50d6122a7cda759994a845bf55a8ee0e114121",
+      "sha256": "fa84ee43cce9d50e5be250cc7c2b49e7503f15c0b455707f4b6f6f3fb6e75541",
       "source_identity": "D:\\green\\aiw\\skills\\triage",
       "source_revision": null
     },
     "writing-great-skills": {
       "mode": "copy",
-      "sha256": "57d24de3bc8a6abb98a6a94f14bcdbfaa11a9d21c51ff602cd52b40f07bee8ca",
+      "sha256": "2365ae63f56237ce9df579c566c6828c5d7a07c50dabb2169fce64f167bea154",
       "source_identity": "D:\\green\\aiw\\skills\\writing-great-skills",
       "source_revision": null
     }

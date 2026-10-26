@@ -1,5 +1,7 @@
 # Platform compatibility
 
+Shared `skills/...` resources resolve via [dependencies](dependencies.md), not this directory.
+
 ## Common recommendation
 
 Install the repository-level skill at:
@@ -44,7 +46,7 @@ If explicit `$name` invocation is unavailable in a particular frontend/version, 
 
 Copilot CLI supports repository skills under `.github/skills`, `.claude/skills`, or `.agents/skills`; `.agents/skills` is preferred here because it can be shared with Codex.
 
-Copilot CLI also reads `AGENTS.md` as repository instructions. It can use custom agents and subagents, but this skill must not require them. Delegate when useful and available; otherwise execute sequentially.
+Copilot CLI also reads `AGENTS.md` as repository instructions. Check the installed host capabilities before running a lifecycle. Independent Reviewer requires a separate subagent/session. If unavailable, stop that review and preserve its pending handoff; never substitute sequential self-review. Non-review work may continue only within its existing scope.
 
 Suggested user prompts:
 

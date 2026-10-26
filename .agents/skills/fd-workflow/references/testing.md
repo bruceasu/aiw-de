@@ -1,8 +1,10 @@
 # Opted-in test support
 
+Shared `skills/...` resources resolve via [dependencies](dependencies.md), not this directory.
+
 Load only when the user requests test support. This is host orchestration, not
 a new CLI mode, FD state or legacy Tester route. Read the needed sections of
-`../skills/testing-methods.md`. Ordinary auto remains without tests.
+`skills/testing-methods.md`. Ordinary auto remains without tests.
 
 ## Select and plan
 
@@ -98,9 +100,10 @@ waived; record the incomplete requested scope and any needed decision.
 ## Review and delivery
 
 When whole-FD readiness is supported, Worker links actual test evidence and
-remaining limits in its report and emits the normal implementation-ready event
-only within user stage limits. CLI still routes directly to independent
-Reviewer. Reviewer can inspect relevant scenario oracles, assertions, version
+remaining limits in FD Verification or the required managed report. Emit
+implementation-ready only for an actual handoff within user stage limits.
+The review policy selects Self completion or an independent Reviewer.
+A required Reviewer can inspect relevant scenario oracles, assertions, version
 coverage, cause classification and diagnosis. It owns the implementation
 verdict; fd-test supplies facts, not status/thresholds or a delivery verdict.
 Review requires no second test-review agent. A test report completed in

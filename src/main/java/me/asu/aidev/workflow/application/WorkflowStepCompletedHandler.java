@@ -70,7 +70,10 @@ public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
             plans.createExecution(plan, step, round + 1, Set.copyOf(inputs));
             return List.of(WorkflowPlanService.executionId(plan, step, round + 1));
         }
-        if (step + 1 == plan.spec().steps().size()) return List.of();
+        if (step + 1 == plan.spec().steps().size()) {
+            plans.completeReviewed(plan.id(), task.id());
+            return List.of();
+        }
         TaskId next = WorkflowPlanService.executionId(plan, step + 1, 1);
         plans.createExecution(plan, step + 1, 1, plans.acceptedInputs(plan, step));
         return List.of(next);

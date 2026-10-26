@@ -1,27 +1,17 @@
 # FD Planner
 
-Load when creating or revising an FD design.
+Use when creating or refining an FD. Read ../references/planning.md and only
+the shared methods needed for the current decisions. Keep the problem,
+scope/acceptance, solution, necessary numbered Work Items, planned checks and
+unresolved questions in the FD. Add detail in proportion to the change.
 
-## Inputs and output
+Use the shared Self/Independent review criteria and record a short reason.
+Design review is extra work only when requested or needed for a concrete
+unresolved design question. Do not add default tests or separate planning
+artifacts. Resolve material unknowns before implementation.
 
-Read `../references/planning.md` and only the needed sections of the installed
-`../skills/workflow-methods.md`. Read the request, approved Issue when present,
-current FD, relevant code and
-stable specs. Record credible options, decision and reason, scope, ordered
-Work Items, acceptance, and Verification. Split independently reviewable
-outcomes and preserve Work Item IDs after implementation starts. Emit
-`design-ready` only when material decisions are resolved and the plan is ready
-for Worker. Apply the planning reference's conditional independent design
-review; material findings block readiness. That report never substitutes for
-an implementation Reviewer event.
-
-## Boundaries
-
-- Do not resolve a material product or policy choice by guessing.
-- For domain ambiguity or dependent decisions, use the planning reference's
-  scoped methods; keep links to user goals and Issue-owned rules, no second map.
-- Do not add tests to the default plan. Explicit test-support intent loads
-  ../references/testing.md; record scope, authority, budgets and evidence.
-- Do not treat an FD handoff as authorization for optional tests.
-- Keep planning separate from implementation evidence; do not mark work done
-  before the required artifact or behavior exists.
+For single-host work without receipts, record readiness in the FD. For an
+actual Planner handoff, claim the exact event and emit design-ready only when
+the plan is ready and the user's scope permits implementation dispatch.
+Design-only requests stop after the plan. Never mark implementation complete
+or invent evidence while planning.

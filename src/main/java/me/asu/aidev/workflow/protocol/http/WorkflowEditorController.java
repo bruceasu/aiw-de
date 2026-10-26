@@ -30,6 +30,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class WorkflowEditorController {
+    @org.springframework.beans.factory.annotation.Autowired
+    private me.asu.aidev.workflow.application.WorkflowGitDeliveryService gitDelivery;
     @Value("${aidev.worker.attempt-warning-ms:${AIW_WORKER_ATTEMPT_TIMEOUT_MS:${AIW_AGENT_TASK_TIMEOUT_MS:900000}}}")
     private long attemptWarningMs = 900000;
     private final WorkflowEditorService editor;
@@ -80,6 +82,10 @@ public class WorkflowEditorController {
             if (state != null && plans.steps(plan.id()).isEmpty()) executionStates.put(plan.id(),
                     me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.displayState(state));
         }
+        for (WorkflowPlan plan : rows) {
+            var delivery=gitDelivery.view(plan.id());
+            if (!java.util.Set.of("NOT_REQUIRED","DELIVERED").contains(delivery.state())) executionStates.put(plan.id(),delivery.state());
+        }
         model.addAttribute("configuredExecutionStates", executionStates);
         model.addAttribute("archivablePlans", rows.stream().filter(p -> archives.archivable(p.id()))
                 .map(WorkflowPlan::id).collect(java.util.stream.Collectors.toSet()));
@@ -103,8 +109,11 @@ public class WorkflowEditorController {
         var saved = plans.get(id);
         String executionState = configuredHistory == null || !plans.steps(id).isEmpty() ? null
                 : me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.displayState(configuredHistory.stateForList(id));
+        var delivery=gitDelivery.view(id);
+        if (!java.util.Set.of("NOT_REQUIRED","DELIVERED").contains(delivery.state())) executionState=delivery.state();
         model.addAttribute("planDisplayState", executionState == null ? saved.state().name() : executionState);
-        model.addAttribute("configuredOnly", executionState != null && factoryPlans.getObject().view(id)==null);
+        model.addAttribute("configuredOnly", configuredHistory != null && plans.steps(id).isEmpty()
+                && factoryPlans.getObject().view(id)==null);
         model.addAttribute("planGoal", saved.spec().goal());
         model.addAttribute("page", "plans");
         model.addAttribute("planId", id);
@@ -331,6 +340,24 @@ public class WorkflowEditorController {
 
     private void requireEnabled() {
         // Plans are the only supported execution flow.
+    }
+
+    @GetMapping("/api/r1/plan-editor/plans/{id}/git-delivery/preview")
+    @ResponseBody
+    public me.asu.aidev.workflow.application.WorkflowGitDeliveryService.Preview gitDeliveryPreview(
+            @PathVariable String id, @RequestParam String repositoryRef, HttpSession session) {
+        requireWrite(session);
+        return gitDelivery.preview(id,repositoryRef);
+    }
+
+    @PostMapping("/api/r1/plan-editor/plans/{id}/git-delivery/merge")
+    @ResponseBody
+    public me.asu.aidev.workflow.application.WorkflowGitDeliveryService.View mergeGitDelivery(
+            @PathVariable String id,
+            @RequestBody me.asu.aidev.workflow.application.WorkflowGitDeliveryService.MergeRequest request,
+            HttpSession session) {
+        requireWrite(session);
+        return gitDelivery.merge(id,request,security.actor(session));
     }
 
     private void requireWrite(HttpSession session) {

@@ -3,6 +3,9 @@
 Load only for a claimed Reviewer handoff. Review in a session separate from
 Worker.
 
+Use the FD's selected workspace for inspection, CLI claims, FD updates and
+reports. For explicit auto in Git, all Reviewer work stays in that worktree.
+
 ## Inputs and output
 
 Read the current FD, exact claimed event, actual diff, and implementation

@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkflowPlanArchiveService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<WorkflowGitDeliveryService> gitDelivery;
     private me.asu.aidev.authority.AuthorityBoundary delegation;
     @org.springframework.beans.factory.annotation.Autowired
     public void setAuthorityBoundary(me.asu.aidev.authority.AuthorityBoundary boundary) { this.delegation=boundary; }
@@ -41,6 +43,7 @@ public class WorkflowPlanArchiveService {
 
     public boolean archivable(String id) {
         WorkflowPlan plan = plans.get(id);
+        if (gitDelivery != null && gitDelivery.getObject().pending(id)) return false;
         if (outcomes.find(id).filter(outcome -> outcome.status().equals("PENDING")).isPresent()) return false;
         if (plan.state() != WorkflowPlan.State.STOPPED && plan.state() != WorkflowPlan.State.WITHDRAWN
                 && plan.state() != WorkflowPlan.State.COMPLETED) {
