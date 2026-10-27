@@ -709,6 +709,18 @@
             : exhausted ? 'WAITING_APPROVAL' : activeWork ? 'RUNNING' : plan.state;
         }
         const guidance = detail.querySelector('[data-manager-guidance]');
+        const preparation = detail.querySelector('[data-worker-preparation]');
+        if (preparation) {
+          const rows = data.workerPreparation || [];
+          preparation.hidden = rows.length === 0;
+          const items = preparation.querySelector('[data-worker-preparation-items]');
+          items.replaceChildren();
+          for (const row of rows) {
+            const item = line(items, 'div');
+            line(item, 'span', row.taskId, 'mono').setAttribute('data-i18n-skip', '');
+            line(item, 'p', row.message);
+          }
+        }
         if (guidance) guidance.textContent = data.gitDelivery?.state === 'AWAITING_MERGE'
           ? 'Execution passed; local delivery is pending.' : formalFactory
           ? 'This confirmed plan is executed by AgentFactory. Follow its task results below.'

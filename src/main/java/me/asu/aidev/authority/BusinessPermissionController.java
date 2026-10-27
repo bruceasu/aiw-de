@@ -58,7 +58,7 @@ public class BusinessPermissionController {
             try {String id=String.valueOf(row.get("id")),plan=targets.task(owner,id);taskChoices.add(Map.of("id",id,"planId",plan,"title",title((String)row.get("instruction"))));}
             catch(SecurityException ignored) { /* Never export another owner's task title. */ }
         }
-        var workers=repo.jdbc().queryForList("SELECT w.id,w.runtime_type,w.status,t.owner_id FROM worker w LEFT JOIN authority_target t ON t.target_key='WORKER:'||w.id WHERE w.id NOT IN (SELECT worker_id FROM authority_identity) AND NOT EXISTS (SELECT 1 FROM factory_worker_registration f WHERE f.worker_id=w.id AND f.retired_at_epoch_ms IS NOT NULL) AND (t.owner_id IS NULL OR t.owner_id=?) ORDER BY w.id",owner);
+        var workers=repo.jdbc().queryForList("SELECT w.id,w.runtime_type,w.status,t.owner_id FROM worker w LEFT JOIN authority_target t ON t.target_key='WORKER:'||w.id WHERE w.id NOT IN (SELECT worker_id FROM authority_identity) AND NOT EXISTS (SELECT 1 FROM factory_worker_registration f WHERE f.worker_id=w.id AND f.retired_at_epoch_ms IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM worker_registration_retirement r WHERE r.worker_id=w.id) AND (t.owner_id IS NULL OR t.owner_id=?) ORDER BY w.id",owner);
         return Map.of("ownerId",owner,"permissions",permissions.list(owner).stream().map(permissions::view).toList(),
                 "plans",choices.entrySet().stream().map(e->Map.of("id",e.getKey(),"title",e.getValue())).toList(),"tasks",taskChoices,"workers",workers,"catalogue",catalogue(actor));
     }

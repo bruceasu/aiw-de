@@ -1,6 +1,10 @@
 // UI copy only. Rows are English, Chinese and Japanese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["Worker preparation","执行 Worker 准备情况","実行Workerの準備状況"],
+  ["Worker preparation failed; check the Agent factory status.","执行 Worker 准备失败，请查看 Agent 工厂状态。","実行Workerの準備に失敗しました。Agent工場の状態を確認してください。"],
+  ["An unused Worker is draining to make room for this role; preparation will continue.","正在关闭没有待办或执行任务的旧角色 Worker，随后将自动准备所需角色。","処理待ちや実行中タスクのない旧ロールのWorkerを停止しています。必要なロールの準備を自動で続行します。"],
+  ["Idle Worker shutdown did not complete; inspect the process before retrying","空闲 Worker 未完成关闭，请检查该进程后再重试。","アイドル状態のWorkerの停止が完了していません。プロセスを確認してから再試行してください。"],
   ["The previous Worker still has an active lease; wait for recovery before restarting it.","该 Worker 仍有未恢复的任务租约，恢复后才可重新启动。","このWorkerには未回復のタスク実行枠があります。回復後に再起動できます。"],
   ["A compatible local Worker is already running; its registration is being checked.","兼容的本机 Worker 已在运行，将复用该 Worker。","互換性のあるローカルWorkerは起動済みです。同じWorkerを再利用します。"],
   ["AI Steps requested.","步骤分析已提交，分析 Worker 将按需自动启动。","ステップ分析を送信しました。必要に応じて分析Workerを自動起動します。"],

@@ -43,6 +43,20 @@ public class FactoryWorkerRegistry {
         return jdbc.queryForObject("SELECT COUNT(*) FROM worker WHERE id=? AND status='ACTIVE' AND last_heartbeat_at_epoch_ms>=?",
                 Long.class,id,Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW).toEpochMilli())>0;
     }
+    public boolean drainIdle(String id,String skill,String repository) {
+        return Boolean.TRUE.equals(transaction.execute(status -> jdbc.update("""
+                UPDATE worker SET status='DRAINING' WHERE id=? AND status='ACTIVE' AND active_leases=0
+                 AND EXISTS (SELECT 1 FROM factory_worker_registration f WHERE f.worker_id=worker.id)
+                 AND NOT EXISTS (SELECT 1 FROM work_task t WHERE t.current_worker_id=worker.id AND t.state IN ('CLAIMED','RUNNING'))
+                 AND NOT EXISTS (SELECT 1 FROM execution_attempt a WHERE a.worker_id=worker.id AND a.state IN ('CLAIMED','RUNNING'))
+                 AND NOT EXISTS (SELECT 1 FROM work_task t WHERE t.state='READY' AND t.skill_ref=?
+                      AND (t.repository_ref=? OR t.repository_ref IS NULL))
+                """,id,skill,repository)==1));
+    }
+    public void stopped(String id) {
+        jdbc.update("UPDATE worker SET status='OFFLINE' WHERE id=? AND status='DRAINING' AND active_leases=0",id);
+        retireUnavailable();
+    }
     /** Import prior factory status receipts; a name prefix alone does not prove ownership. */
     @jakarta.annotation.PostConstruct
     public void importLegacy() {

@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkerService {
+    @Autowired private WorkerRegistrationService registrations;
     @Autowired private me.asu.aidev.execution.config.FactoryWorkerRegistry factoryRegistrations;
     private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
     @Autowired public void setExecutionConfigurations(me.asu.aidev.execution.config.ExecutionConfigurations configurations) { this.configurations=configurations; }
@@ -39,6 +40,7 @@ public class WorkerService {
         Worker worker = new Worker(command.workerId(), command.runtimeType(), command.capabilities(),
                 command.maxConcurrency(), 0, WorkerStatus.ACTIVE, now, now, now);
         workers.register(worker);
+        if(registrations!=null) registrations.registered(worker.id().value());
         if(factoryRegistrations!=null) factoryRegistrations.registered(worker.id().value());
         if(configurations!=null) configurations.invalidateWorker(worker.id().value());
         return workers.find(command.workerId()).orElseThrow();

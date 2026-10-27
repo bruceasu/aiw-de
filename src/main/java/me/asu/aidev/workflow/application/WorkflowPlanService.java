@@ -29,6 +29,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class WorkflowPlanService {
     @org.springframework.beans.factory.annotation.Autowired
+    private me.asu.aidev.workspace.application.ManagedWorkspaceService targetWorkspaces;
+    @Transactional public WorkflowPlan retargetDraft(String id,long version,String repository,String revision,String actor) {
+        humanChange(id);actor=actor(actor);
+        var plan=get(id);
+        if(!plan.createdBy().equals(actor) || delegation!=null && delegation.delegated()) throw new SecurityException("The human draft owner is required");
+        if(plan.state()!=WorkflowPlan.State.DRAFT || plan.version()!=version || !steps(id).isEmpty() || archives.archived(id))
+            throw new IllegalStateException("Only an unchanged, unstarted draft can change its execution target");
+        if(managedPlans!=null && managedPlans.managed(id)) throw new IllegalStateException("Use the managed Plan scope settings to change its execution target");
+        targetWorkspaces.findTarget(repository).orElseThrow(() -> new IllegalArgumentException("Registered repository required"));
+        if(revision==null || !revision.matches("[0-9a-f]{40}|[0-9a-f]{64}")) throw new IllegalArgumentException("Immutable Git baseline required");
+        var selected=plan.spec().steps().stream().map(s -> new WorkflowPlanSpec.Step(s.key(),s.requiredSkills(),s.preferredSkills(),
+                s.skillRef(),s.instruction(),repository,revision,s.dependsOn(),s.model(),s.effort())).toList();
+        var spec=new WorkflowPlanSpec(plan.spec().goal(),plan.spec().source(),selected);
+        WorkflowEditorService.validateSpec(spec,false);
+        if(!plans.retargetDraft(id,version,spec,actor,Instant.now())) throw new IllegalStateException("Draft changed; reload");
+        return get(id);
+    }
+    @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<WorkflowGitDeliveryService> gitDelivery;
 
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.guard.TaskLineage lineage;

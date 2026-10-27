@@ -73,6 +73,14 @@ public class JdbcWorkflowPlanRepository implements WorkflowPlanRepository {
                 """,
                 task.value(), CapabilitySetCodec.encode(skills));
     }
+    @Override public boolean retargetDraft(String id,long version,WorkflowPlanSpec spec,String actor,Instant now) {
+        String encoded;
+        try {encoded=json.writeValueAsString(spec);} catch(Exception error) {throw new IllegalArgumentException("Invalid plan specification",error);}
+        return jdbc.update("""
+                UPDATE flexible_workflow_plan SET spec_json=?,version=version+1,updated_by=?,reason=?,updated_at_epoch_ms=?
+                 WHERE id=? AND state='DRAFT' AND version=?
+                """,encoded,actor,"Bound draft to the explicitly selected repository and baseline",now.toEpochMilli(),id,version)==1;
+    }
 
     @Override
     public Map<TaskId, Set<String>> preferences() {

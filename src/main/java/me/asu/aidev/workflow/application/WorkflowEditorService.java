@@ -31,7 +31,10 @@ public class WorkflowEditorService {
                          List<me.asu.aidev.workflow.jdbc.JdbcWorkflowRepairAuthorizationRepository.Authorization> repairAuthorizations,
                          List<String> decisionWorkers, java.util.Map<String, String> repairDecisionReports,
                          me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.History configuredExecution,
-                         String displayState, FactoryPlanLifecycle.View factoryPlan, WorkflowGitDeliveryService.View gitDelivery) {}
+                         String displayState, FactoryPlanLifecycle.View factoryPlan, WorkflowGitDeliveryService.View gitDelivery,
+                         List<WorkflowWorkerProvisioning.Preparation> workerPreparation) {}
+    @org.springframework.beans.factory.annotation.Autowired
+    private WorkflowWorkerProvisioning workerProvisioning;
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<WorkflowGitDeliveryService> gitDelivery;
     public record TaskDetail(WorkTask task, List<JdbcWorkflowTaskReadRepository.Attempt> attempts,
@@ -178,6 +181,6 @@ public class WorkflowEditorService {
         if (delivery != null && !Set.of("NOT_REQUIRED", "DELIVERED").contains(delivery.state())) displayState=delivery.state();
         return new Detail(plan, rows, plans.controlHistory(id), outcomes.find(id).orElse(null), plans.reviewRecovery(id),
                 repairs.list(id), repairs.decisionWorkers(id), repairs.decisionReports(id),
-                configured, displayState, factoryPlan, delivery);
+                configured, displayState, factoryPlan, delivery, workerProvisioning==null?List.of():workerProvisioning.pending(id));
     }
 }

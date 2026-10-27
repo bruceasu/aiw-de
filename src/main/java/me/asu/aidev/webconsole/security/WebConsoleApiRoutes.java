@@ -4,7 +4,7 @@ import java.util.List;
 
 /** Console JSON/file APIs keep their session boundary after moving out of /ui. */
 public final class WebConsoleApiRoutes {
-    private static final List<String> ROOTS = List.of("/api/r1/goals", "/api/r1/task-outputs", "/api/r1/workflow-plans", "/api/r1/plan-editor");
+    private static final List<String> ROOTS = List.of("/api/r1/goals", "/api/r1/task-outputs", "/api/r1/workflow-plans", "/api/r1/plan-editor", "/api/r1/worker-registrations");
     private WebConsoleApiRoutes() {}
     public static boolean matches(String path) {
         return ROOTS.stream().anyMatch(root -> path.equals(root) || path.startsWith(root + "/"));

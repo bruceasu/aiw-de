@@ -231,6 +231,12 @@ public class WorkflowEditorController {
         requireWrite(session);
         return editor.confirm(id, request.version(), security.actor(session));
     }
+    public record DraftTarget(long version,String repositoryRef,String baseRevision) {}
+    @PostMapping("/api/r1/plan-editor/plans/{id}/execution-target") @ResponseBody
+    public WorkflowPlan target(@PathVariable String id,@RequestBody DraftTarget request,HttpSession session) {
+        requireWrite(session);
+        return plans.retargetDraft(id,request.version(),request.repositoryRef(),request.baseRevision(),security.actor(session));
+    }
 
     @PostMapping("/api/r1/plan-editor/plans/{id}/withdraw")
     @ResponseBody

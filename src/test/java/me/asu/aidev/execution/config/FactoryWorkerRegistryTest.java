@@ -15,7 +15,7 @@ class FactoryWorkerRegistryTest {
         var source=new DriverManagerDataSource("jdbc:sqlite:"+temp.resolve("registry.db"));
         db=new JdbcTemplate(source);
         db.execute("CREATE TABLE worker(id TEXT PRIMARY KEY,status TEXT,active_leases INTEGER,last_heartbeat_at_epoch_ms BIGINT,updated_at_epoch_ms BIGINT DEFAULT 0)");
-        db.execute("CREATE TABLE work_task(id TEXT PRIMARY KEY,current_worker_id TEXT,state TEXT)");
+        db.execute("CREATE TABLE work_task(id TEXT PRIMARY KEY,current_worker_id TEXT,state TEXT,skill_ref TEXT,repository_ref TEXT)");
         db.execute("CREATE TABLE execution_attempt(id TEXT PRIMARY KEY,worker_id TEXT,state TEXT)");
         db.execute(Files.readString(Path.of("src/main/resources/db/migration/V22__factory_worker_registration.sql")));
         registry=new FactoryWorkerRegistry(db,new DataSourceTransactionManager(source));
@@ -55,7 +55,7 @@ class FactoryWorkerRegistryTest {
     }
     @Test void activeLeaseAndTaskAndAttemptEachProtectRegistration() {
         worker("lease","OFFLINE",1,0,true);worker("task","OFFLINE",0,0,true);worker("attempt","OFFLINE",0,0,true);
-        db.update("INSERT INTO work_task VALUES('task1','task','RUNNING')");
+        db.update("INSERT INTO work_task(id,current_worker_id,state) VALUES('task1','task','RUNNING')");
         db.update("INSERT INTO execution_attempt VALUES('attempt1','attempt','CLAIMED')");
         registry.retireUnavailable();
         for(String id:new String[]{"lease","task","attempt"}) {
@@ -76,5 +76,23 @@ class FactoryWorkerRegistryTest {
                 .isEqualTo(ManagedWorkerProvisioner.compatibilityKey("planner",null,same))
                 .isNotEqualTo(ManagedWorkerProvisioner.compatibilityKey("goal-discussion",null,one))
                 .isNotEqualTo(ManagedWorkerProvisioner.compatibilityKey("planner","repo",one));
+    }
+    @Test void idleOwnedWorkerDrainsBeforeRetirement() {
+        worker("idle","ACTIVE",0,System.currentTimeMillis(),true);
+        assertThat(registry.drainIdle("idle","planner","repo")).isTrue();
+        assertThat(registry.online("idle")).isFalse();
+        registry.stopped("idle");
+        assertThat(retired("idle")).isTrue();
+        assertThat(db.queryForObject("SELECT status FROM worker WHERE id='idle'",String.class)).isEqualTo("OFFLINE");
+    }
+    @Test void leaseTaskAttemptAndMatchingReadyEachPreventDrain() {
+        worker("lease","ACTIVE",1,0,true);worker("task","ACTIVE",0,0,true);worker("attempt","ACTIVE",0,0,true);
+        db.update("INSERT INTO work_task(id,current_worker_id,state) VALUES('active','task','RUNNING')");
+        db.update("INSERT INTO execution_attempt VALUES('active','attempt','CLAIMED')");
+        for(String id:new String[]{"lease","task","attempt"}) assertThat(registry.drainIdle(id,"planner","repo")).isFalse();
+        worker("ready","ACTIVE",0,0,true);
+        db.update("INSERT INTO work_task(id,state,skill_ref,repository_ref) VALUES('queued','READY','planner','repo')");
+        assertThat(registry.drainIdle("ready","planner","repo")).isFalse();
+        assertThat(registry.drainIdle("ready","planner","other")).isTrue();
     }
 }

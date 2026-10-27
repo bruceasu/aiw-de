@@ -1,5 +1,6 @@
 <!DOCTYPE html><html lang="en" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Plan Detail · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script></head><body><div class="app"><nav th:replace="~{ui/fragments :: nav('plans')}"></nav><main class="main"><header th:replace="~{ui/fragments :: topbar('Plan','Saved selection, actual tasks and recorded audit')}"></header><div class="content workflow-page" data-workflow-detail th:attr="data-id=${planId},data-csrf=${csrfToken},data-can-operate=${canOperate}">
 <p><a th:href="@{/ui/secretary-setup(planId=${planId})}">View this Plan's delegated permissions and human requests</a></p>
+<section class="card" data-worker-preparation hidden aria-live="polite"><h2>Worker preparation</h2><div data-worker-preparation-items></div></section>
 <section class="card" data-git-delivery hidden aria-labelledby="git-delivery-title">
   <h2 id="git-delivery-title">Git delivery</h2>
   <p>Execution and review are complete. Merge the reviewed result into the original branch to finish delivery.</p>
