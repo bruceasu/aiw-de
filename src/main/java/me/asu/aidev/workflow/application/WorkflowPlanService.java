@@ -30,13 +30,36 @@ import org.springframework.transaction.annotation.Transactional;
 public class WorkflowPlanService {
     @org.springframework.beans.factory.annotation.Autowired
     private me.asu.aidev.workspace.application.ManagedWorkspaceService targetWorkspaces;
+    public WorkflowPlan editableDraft(String id,String actor) {
+        actor=actor(actor);
+        var plan=get(id);
+        if(!plan.createdBy().equals(actor) || delegation!=null && delegation.delegated())
+            throw new SecurityException("The human draft owner is required");
+        if(plan.state()!=WorkflowPlan.State.DRAFT || !steps(id).isEmpty() || archives.archived(id))
+            throw new IllegalStateException("Only an unstarted draft can be edited");
+        if(managedPlans!=null && managedPlans.managed(id))
+            throw new IllegalStateException("Use the managed Plan scope settings to change its execution target");
+        return plan;
+    }
+    @Transactional public WorkflowPlan editDraft(String id,long version,WorkflowPlanSpec selected,String actor) {
+        humanChange(id);actor=actor(actor);
+        var original=editableDraft(id,actor);
+        if(original.version()!=version) throw new IllegalStateException("Draft changed; reload before saving");
+        if(selected==null) throw new IllegalArgumentException("Plan specification required");
+        var spec=new WorkflowPlanSpec(selected.goal(),original.spec().source(),selected.steps());
+        WorkflowEditorService.validateSpec(spec,false);
+        for(var step:spec.steps()) {
+            if(step.repositoryRef()!=null) targetWorkspaces.findTarget(step.repositoryRef())
+                    .orElseThrow(() -> new IllegalArgumentException("Registered repository required"));
+        }
+        if(!plans.editDraft(id,version,spec,actor,Instant.now())) throw new IllegalStateException("Draft changed; reload before saving");
+        return get(id);
+    }
     @Transactional public WorkflowPlan retargetDraft(String id,long version,String repository,String revision,String actor) {
         humanChange(id);actor=actor(actor);
-        var plan=get(id);
-        if(!plan.createdBy().equals(actor) || delegation!=null && delegation.delegated()) throw new SecurityException("The human draft owner is required");
-        if(plan.state()!=WorkflowPlan.State.DRAFT || plan.version()!=version || !steps(id).isEmpty() || archives.archived(id))
+        var plan=editableDraft(id,actor);
+        if(plan.version()!=version)
             throw new IllegalStateException("Only an unchanged, unstarted draft can change its execution target");
-        if(managedPlans!=null && managedPlans.managed(id)) throw new IllegalStateException("Use the managed Plan scope settings to change its execution target");
         targetWorkspaces.findTarget(repository).orElseThrow(() -> new IllegalArgumentException("Registered repository required"));
         if(revision==null || !revision.matches("[0-9a-f]{40}|[0-9a-f]{64}")) throw new IllegalArgumentException("Immutable Git baseline required");
         var selected=plan.spec().steps().stream().map(s -> new WorkflowPlanSpec.Step(s.key(),s.requiredSkills(),s.preferredSkills(),

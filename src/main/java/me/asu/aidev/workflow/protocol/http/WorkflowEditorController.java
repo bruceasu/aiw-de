@@ -179,6 +179,11 @@ public class WorkflowEditorController {
     }
 
     public record RetryTaskRequest(long planVersion, long taskVersion, String reason, boolean warningConfirmed) {}
+    @GetMapping("/api/r1/plan-editor/plans/{id}/tasks/{taskId}") @ResponseBody
+    public WorkflowEditorService.TaskDetail taskDetail(@PathVariable String id,@PathVariable String taskId) {
+        requireEnabled();
+        return editor.taskDetail(id,taskId);
+    }
     public record ReviewRecoveryRequest(long planVersion, String taskId, long taskVersion, String reason, boolean warningConfirmed) {}
     public record RepairAuthorizationRequest(long planVersion, String taskId, long taskVersion, String reason,
                                              String scope, String delegateWorkerId, boolean warningConfirmed) {}
@@ -232,6 +237,17 @@ public class WorkflowEditorController {
         return editor.confirm(id, request.version(), security.actor(session));
     }
     public record DraftTarget(long version,String repositoryRef,String baseRevision) {}
+    public record DraftEdit(long version,WorkflowPlanSpec plan) {}
+    @GetMapping("/api/r1/plan-editor/plans/{id}/draft") @ResponseBody
+    public WorkflowPlan editableDraft(@PathVariable String id,HttpSession session) {
+        requireWrite(session);
+        return plans.editableDraft(id,security.actor(session));
+    }
+    @PostMapping("/api/r1/plan-editor/plans/{id}/draft") @ResponseBody
+    public WorkflowPlan editDraft(@PathVariable String id,@RequestBody DraftEdit request,HttpSession session) {
+        requireWrite(session);
+        return plans.editDraft(id,request.version(),request.plan(),security.actor(session));
+    }
     @PostMapping("/api/r1/plan-editor/plans/{id}/execution-target") @ResponseBody
     public WorkflowPlan target(@PathVariable String id,@RequestBody DraftTarget request,HttpSession session) {
         requireWrite(session);

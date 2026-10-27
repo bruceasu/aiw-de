@@ -17,19 +17,17 @@
     <dt>Updated</dt><dd th:text="${taskDetail.task.updatedAt}"></dd>
   </dl></section>
   <section class="card section" th:if="${taskDetail.task.state.name() == 'FAILED'}"><h2>What to do after failure</h2>
+    <p><a class="btn ghost small-btn" data-task-diagnostic-open th:href="@{/api/r1/plan-editor/plans/{id}/tasks/{taskId}(id=${planId},taskId=${taskDetail.task.id.value})}">View failure diagnosis</a></p>
     <div class="callout bad-callout">This task failed. Fix the cause, then retry this task to continue the plan.</div>
     <ol class="compact-list">
       <li>Check the latest attempt below for its Worker, failure category and error code.</li>
       <li>Inspect that Worker's logs and attempt evidence. Fix the failed command, tool, permissions or runtime configuration before trying again.</li>
-      <li>Check Fleet for the execution role and an independent workflow-review Worker. Start the roles required by later steps as well.</li>
+      <li>With automatic Workers enabled, AgentFactory prepares supported roles. Check factory status if preparation is blocked.</li>
       <li>After fixing the cause, enter a reason and retry the failed task below. Earlier accepted outputs and dependencies remain unchanged.</li>
     </ol>
     <p class="help">Retrying keeps the same plan and task IDs and adds a new execution attempt. Check local changes left by the failed attempt before confirming. No earlier step is restarted.</p>
     <details class="top-gap"><summary>Where to find diagnostics</summary>
-      <p class="help">Run these commands in the TypeScript Worker directory on the machine running the Worker. Replace &lt;role&gt; with requirements, coder or stage-reviewer as appropriate.</p>
-      <pre class="task-report">node scripts/manage-workers.mjs status
-node scripts/manage-workers.mjs logs &lt;role&gt;
-tail -n 80 .ai/worker-manager/&lt;role&gt;.log</pre>
+      <p class="help">Diagnostic JSON includes attempt IDs, Worker identity, failure codes, explanations and recovery guidance. An authenticated assistant can use this API to investigate.</p>
       <p class="help">Attempt evidence is stored outside the working directory, under AIW_WORKER_EVIDENCE_ROOT or the default .aidev-attempt-evidence directory. Match owner.json by Attempt ID. Historical records may not include command output.</p>
       <p class="help">New Codex failures log the tool type, call ID, exit code, diagnostic code and evidence directory. Only known error patterns are classified; unrecognized failures remain UNRESOLVED_TOOL_FAILURE. Raw command output is not retained.</p>
     </details>
@@ -53,6 +51,7 @@ tail -n 80 .ai/worker-manager/&lt;role&gt;.log</pre>
         <dt>Error code / termination reason</dt><dd class="mono" th:text="${attempt.failureCode ?: 'Not recorded'}"></dd>
         <dt>Verdict</dt><dd th:text="${attempt.verdict ?: 'Not recorded'}"></dd><dt>Result revision</dt><dd class="mono" th:text="${attempt.resultRevision ?: 'Not recorded'}"></dd>
       </dl>
+      <div class="callout" th:if="${attempt.failureCode != null}"><p th:text="${attempt.diagnostic().summary}"></p><p th:text="${attempt.diagnostic().nextAction}"></p></div>
       <p class="help" th:if="${attempt.state == 'FAILED' and attempt.failureCode == null}">This historical attempt has no stored error code. Check its Worker logs; the page cannot reconstruct missing diagnostics.</p>
       <p class="help" th:if="${attempt.failureCode == 'UNRESOLVED_TOOL_FAILURE' or attempt.failureCategory == 'OUTPUT_INVALID'}">Tool or output validation failed. Check the failed command and its output in Worker-side diagnostics. Restarting a Worker alone does not retry this task.</p>
       <p class="help" th:if="${attempt.failureCode == 'SANDBOX_NAMESPACE_UNAVAILABLE'}">Sandbox namespace creation failed. Check Linux user-namespace support and the host or container sandbox configuration before retrying.</p>

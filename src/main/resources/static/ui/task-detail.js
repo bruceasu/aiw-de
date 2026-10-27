@@ -1,4 +1,67 @@
 (() => {
+  const opener = document.querySelector('[data-task-diagnostic-open]')
+    || document.querySelector('a[href^="/api/r1/plan-editor/plans/"][href*="/tasks/"]');
+  if (!opener) return;
+  const el = (tag, text, className = '') => {
+    const node = document.createElement(tag); if (text !== undefined) node.textContent = text; node.className = className; return node;
+  };
+  const dialog = el('dialog', undefined, 'workspace-confirm console-confirm workflow-history-dialog');
+  dialog.setAttribute('aria-labelledby', 'task-diagnostic-title');
+  const top = el('div', 'Failure diagnosis', 'workspace-confirm__top');
+  const body = el('div', undefined, 'workspace-confirm__body');
+  const heading = el('h2', 'Failure diagnosis'); heading.id = 'task-diagnostic-title';
+  const status = el('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+  const content = el('div'); body.append(heading, status, content);
+  const footer = el('div', undefined, 'workspace-confirm__footer');
+  const copy = el('button', 'Copy diagnostic data', 'btn ghost'); copy.type = 'button'; copy.disabled = true;
+  const close = el('button', 'Close', 'btn primary'); close.type = 'button'; close.autofocus = true;
+  footer.append(copy, close); dialog.append(top, body, footer); document.body.append(dialog);
+  let request = null, raw = '';
+  close.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+  dialog.addEventListener('close', () => { request?.abort(); raw = ''; copy.disabled = true; opener.focus(); });
+  copy.addEventListener('click', async () => {
+    const current = request;
+    try { await navigator.clipboard.writeText(raw); if (dialog.open && request === current) status.textContent = 'Diagnostic data copied.'; }
+    catch (_) { if (dialog.open && request === current) status.textContent = 'Copy failed. Expand the raw data to select and copy it.'; }
+  });
+  opener.addEventListener('click', async event => {
+    event.preventDefault(); if (dialog.open) return;
+    content.replaceChildren(); raw = ''; copy.disabled = true; status.textContent = 'Loading diagnosis…';
+    dialog.showModal();
+    const current = new AbortController(); request = current;
+    try {
+      const response = await fetch(opener.href, { signal: current.signal, cache: 'no-store' });
+      if (!response.ok || response.redirected || !response.headers.get('content-type')?.includes('application/json'))
+        throw new Error('Diagnosis could not be loaded. Check your session and permissions, then reopen it.');
+      const data = await response.json();
+      if (current.signal.aborted || !dialog.open || request !== current) return;
+      if (!data.task || !Array.isArray(data.attempts)) throw new Error('Diagnostic data is incomplete.');
+      const attempt = data.attempts[0];
+      const section = (title, text) => { content.append(el('h3', title), el('p', text)); };
+      section('Failure reason', attempt?.diagnostic?.summary || 'No specific failure reason was recorded.');
+      const roles = { 'software-requirements-analyst': 'Requirement analysis', 'solution-architect': 'Solution design',
+        'implementation-planner': 'Implementation planning', 'coding-work-package-executor': 'Code implementation',
+        'workflow-stage-reviewer': 'Independent stage review' };
+      section('Affected step', roles[data.task.skillRef] || data.task.skillRef || data.task.type);
+      section('Recovery advice', attempt?.diagnostic?.nextAction || 'Check the current task state before retrying.');
+      const technical = el('details'); technical.append(el('summary', 'Technical details'));
+      const fields = el('dl', undefined, 'kv');
+      for (const [name, value] of [['Task ID', data.task.id?.value], ['State', data.task.state], ['Worker', attempt?.workerId],
+        ['Attempt ID', attempt?.id], ['Failure category', attempt?.failureCategory], ['Error code / termination reason', attempt?.failureCode],
+        ['Workspace', data.task.repositoryRef], ['Git baseline', data.task.baseRevision]]) {
+        const item = el('dd', value ?? 'Not recorded', 'mono'); item.dataset.i18nSkip = ''; fields.append(el('dt', name), item);
+      }
+      technical.append(fields);
+      const source = el('details'); source.append(el('summary', 'Raw diagnostic data'));
+      const json = el('pre', JSON.stringify(data, null, 2), 'task-report'); json.dataset.i18nSkip = ''; source.append(json);
+      technical.append(source); content.append(technical);
+      raw = JSON.stringify(data, null, 2); copy.disabled = false; status.textContent = '';
+    } catch (error) { if (!current.signal.aborted && dialog.open && request === current) status.textContent = error.message; }
+  });
+})();
+
+(() => {
   const notice = document.querySelector('[data-attempt-duration-warning]');
   if (!notice) return;
   const update = () => {

@@ -165,13 +165,12 @@ public class TaskOutputService {
         Instant now = clock.instant();
         try {
             Path root = workspaces.location(task.repositoryRef()).workspaceRoot().toRealPath();
-            Path parent = root.resolve(".aiw/plans").resolve(segment(task.subjectId()))
-                    .resolve("tasks").resolve(segment(taskId));
+            Path target = archiveDirectory(root,request.attemptId());
+            Path parent = target.getParent();
             directory(root, parent);
-            String datetime = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss.SSS'Z'")
-                    .withZone(java.time.ZoneOffset.UTC).format(now);
-            String name = datetime + "_" + segment(request.attemptId());
-            Path target = parent.resolve(name);
+            if (System.getProperty("os.name").startsWith("Windows") && metadata.stream().anyMatch(file ->
+                    target.resolve(file.path()).toString().length()>240))
+                throw new IllegalStateException("OUTPUT_PATH_TOO_LONG");
             Path staging = Files.createTempDirectory(parent, ".staging-");
             privateDirectory(staging);
             var bundle = new TaskOutputBundle(request.attemptId(), taskId, task.repositoryRef(), task.baseRevision(), request.resultRevision(),
@@ -323,11 +322,7 @@ public class TaskOutputService {
         }
     }
 
-    private static String segment(String value) {
-        if (value == null || value.isBlank()) value = "standalone";
-        String readable = value.replaceAll("[^A-Za-z0-9_~-]", "-");
-        return readable.substring(0, Math.min(readable.length(), 100)) + "_" + hash(value).substring(0, 12);
-    }
+    static Path archiveDirectory(Path root,String attemptId) { return root.resolve(".aiw/o").resolve(hash(attemptId)); }
 
     private static void directory(Path root, Path target) throws IOException {
         Path cursor = root;

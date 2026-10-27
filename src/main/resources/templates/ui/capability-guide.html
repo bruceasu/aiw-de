@@ -1,12 +1,16 @@
 <div th:fragment="guide" xmlns:th="http://www.thymeleaf.org">
-  <p class="help">A role describes the work performed; a technical capability describes the expertise or toolchain actually available. The Worker's implementation language does not grant a task capability. These names are suggested labels, not a list of installed tools.</p>
-  <div class="table-wrap"><table><thead><tr><th>Capability</th><th>Use for</th><th>Typical roles when qualified</th></tr></thead><tbody>
-    <tr><td><code>typescript</code>, <code>node</code></td><td>TypeScript source and Node tooling</td><td>coder, repairer, integrator, reviewer, verifier</td></tr>
-    <tr><td><code>go</code></td><td>Go source and its toolchain</td><td>coder, repairer, integrator, reviewer, verifier</td></tr>
-    <tr><td><code>python</code></td><td>Python source and its toolchain</td><td>coder, repairer, integrator, reviewer, verifier</td></tr>
-    <tr><td><code>java</code>, <code>spring</code></td><td>Java and Spring work</td><td>coder, repairer, integrator, reviewer, verifier</td></tr>
-    <tr><td><code>sql</code>, <code>postgresql</code></td><td>SQL work and PostgreSQL specifics</td><td>architect, coder, reviewer, verifier when qualified</td></tr>
-    <tr><td><code>database-design</code></td><td>Schema, constraints, indexes and migration design</td><td>architect and qualified reviewer</td></tr>
+  <h3>Roles and automatic preparation</h3>
+  <p>When automatic Workers are enabled, AgentFactory reuses compatible online Workers and prepares missing supported roles for confirmed execution tasks. External Workers can also register and participate.</p>
+  <div class="table-wrap"><table><thead><tr><th>Capability</th><th>Use for</th></tr></thead><tbody>
+    <tr><td><code>requirement-analysis</code></td><td>Clarify requirements and acceptance criteria</td></tr>
+    <tr><td><code>solution-architecture</code></td><td>Design solution boundaries and interfaces</td></tr>
+    <tr><td><code>implementation-planning</code></td><td>Plan repository work and verification</td></tr>
+    <tr><td><code>coding</code></td><td>Implement changes in the selected workspace</td></tr>
+    <tr><td><code>workflow-review</code></td><td>Independently review each step before advancing</td></tr>
   </tbody></table></div>
-  <p class="help">Use a role as required. Require a technical capability only when the step cannot be completed without it; otherwise prefer it. A requirements step need not require the later implementation language. Preferred skills give available specialists a 30-second claim window; required capabilities cannot be bypassed. Workers cannot run git push. Code handoff uses local result revisions in a shared repository.</p>
+  <p>Each native plan step is followed by an independent stage review. The next step starts after PASS. Saving a draft does not create execution tasks.</p>
+  <h3>Technical capabilities and workspace access</h3>
+  <p>Require a technical capability only when the task cannot proceed without it. Labels such as java, python or node are Worker declarations; they do not install tools or grant file and command access.</p>
+  <p>For native coding Workers, leave empty to pin the current Git HEAD automatically. Set a full commit to use that exact baseline.</p>
+  <p>A local result commit, independent review and delivery to the original branch are separate stages. This workflow does not push to a remote repository.</p>
 </div>

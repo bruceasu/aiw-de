@@ -3046,6 +3046,9 @@
   }
   const translateText = value => {
     if (consoleLookup.has(value)) return consoleLookup.get(value)[locale];
+    const filterPrefix = 'A changed file uses a Git filter and requires a manual merge:';
+    if (value.startsWith(filterPrefix + ' ') && consoleLookup.has(filterPrefix))
+      return consoleLookup.get(filterPrefix)[locale] + ' ' + value.slice(filterPrefix.length + 1);
     if (value.endsWith(' · AIW:DE')) return translateText(value.slice(0, -9)) + ' · AIW:DE';
     if (locale !== 'zh') {
       for (const [pattern, en, ja] of window.aiwConsolePatterns || []) {

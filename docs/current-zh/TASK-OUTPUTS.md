@@ -1,6 +1,6 @@
 # 工作区任务产出
 
-任务报告与声明的附件保存在持久工作区 `.aiw/plans/<plan>/tasks/<task>/<datetime>_<attempt>/`，
+新任务报告与声明的附件保存在持久工作区 `.aiw/o/<SHA256(attemptId)>/`，
 不放在任务结束后删除的临时 worktree。Control Plane 登记精确版本、SHA-256 和执行来源，
 任务状态仍由现有任务/执行表决定；登记文件不等于任务完成或评审通过。
 
@@ -20,8 +20,8 @@ TypeScript Worker 的 REPORT/WORKSPACE 最终回复可以只有一个非空 `aiw
 ## 文件与状态
 
 每个归档包含 `report.md`、`report.json`、`manifest.json`；灵活计划任务还包含 `plan.md`、
-`plan.json`，作为该执行使用计划的快照；声明的文件进入 `artifacts/`。目录名带 UTC 时间。
-路径段增加短摘要，避免不同 ID 清洗为同名。文件使用 SHA-256 和字节数登记，版本不可覆盖。
+`plan.json`，作为该执行使用计划的快照；声明的文件进入 `artifacts/`。完整计划、任务、执行 ID 和 UTC 时间保存在清单和数据库中，不再叠加到目录名。
+历史 `.aiw/plans/...` 目录保留，仍按数据库登记位置读取，不自动搬迁。Windows 新归档文件路径限制为240字符，超限明确拒绝；Worker 快照支持扩展路径，仍检查旧目录，不忽略不可读文件或目录联接。文件使用 SHA-256 和字节数登记，版本不可覆盖。
 
 磁盘 manifest 中 `REGISTERED` 只表示已登记候选；读取接口返回现有 execution_attempt 的状态，
 另用 reviewState 区分未完成候选、尚无独立 PASS 评审、已有独立 PASS 评审和评审报告。
@@ -35,6 +35,14 @@ TypeScript Worker 的 REPORT/WORKSPACE 最终回复可以只有一个非空 `aiw
 本版不自动删除交付物，磁盘与数据库容量由管理员管理。
 
 ## 接口
+
+任务页面“查看失败诊断”使用项目统一弹窗，分段显示原因、影响步骤及恢复建议；技术字段和格式化JSON折叠显示，可复制给AI分析。弹窗只读，不发起业务重试；关闭会取消未完成的读取。
+
+原生 Python 编码 Worker 在基线留空时，读取已分配仓库当前 `HEAD`，通过持有的运行租约请求 `POST /api/r1/worker-protocol/v1/tasks/{taskId}/workspace-baseline` 固定完整提交，再使用平台生成的 worktree/branch 创建隔离工作区。首次固定后重试保持该基线，明确指定版本不变；只包含已提交版本，不带入源目录未提交修改。非Git或无提交目录报 `GIT_HEAD_UNAVAILABLE`。该入口拒绝受控执行/动态配置任务，不替代其范围授权。
+
+本地 Git 合并按本次变更文件在当前工作区、目标提交和结果提交中的有效 `filter` 属性检查过滤器；仅安装/配置 Git LFS 不会阻止未使用过滤器的文件合并。实际应用过滤器时提示对应文件；无法读取属性（包括 Git 不支持 `check-attr --source`）时停止合并并明确说明。工作区差异、前后保留检查及实际合并在各自 Git 子进程中禁用已配置过滤器，不修改原仓库配置，不执行未修改文件的过滤器；状态名与同名过滤器配置存在歧义时保守拒绝。非 UTF-8 路径/输出明确报错，避免路径替换造成误判。原有评审、脏文件及自定义合并驱动保护保留。
+
+- `GET /api/r1/plan-editor/plans/{planId}/tasks/{taskId}`：使用控制台认证读取任务、执行历史及重试条件。每次失败的 `diagnostic` 含 `code`、`summary`、`nextAction`、`specific`，可由已认证 AI 助手分析，不返回租约凭证或原始异常文本。旧 `OPERATION_FAILED` 明确标记具体原因未记录，不推断为缺授权；新 Worker 会上报路径过长、文件缺失、访问拒绝等具体错误码。任务页面也提供该 JSON 链接。
 
 - `POST /api/r1/worker-protocol/v1/tasks/{taskId}/outputs`：登记报告和附件。
   请求含 workerId、leaseToken、attemptId、verdict、summary、resultRevision、files。

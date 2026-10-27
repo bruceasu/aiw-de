@@ -124,19 +124,17 @@ public class WorkflowGitDeliveryService {
         if (!result.equals(item.resultRevision())) throw new IllegalStateException("Recorded Git result is unavailable");
         boolean merged=git(path,"merge-base","--is-ancestor",result,head).code()==0;
         List<String> changed=merged?List.of():split(required(path,"diff","--no-ext-diff","--no-textconv","--name-only","-z",head,result,"--"));
-        String blocked=null;
+        String blocked=merged?null:filterBlock(path,head,result,changed);
         if (!Set.of("AWAITING_MERGE","READY","BLOCKED","DELIVERED").contains(item.state())) blocked="An earlier merge has an unresolved outcome. Inspect it before proceeding.";
         else if (!merged && (item.baseRevision()==null || git(path,"merge-base","--is-ancestor",item.baseRevision(),head).code()!=0))
             blocked="The target branch no longer contains the original task baseline. Review it manually.";
-        else if (!merged && git(path,"diff","--cached","--quiet","--").code()!=0) blocked="The original worktree has staged changes. Preserve them before merging.";
-        else if (!merged && split(required(path,"diff","--no-ext-diff","--no-textconv","--name-only","-z","HEAD","--")).stream().anyMatch(changed::contains))
+        else if (blocked==null && !merged && git(path,"diff","--cached","--quiet","--").code()!=0) blocked="The original worktree has staged changes. Preserve them before merging.";
+        else if (blocked==null && !merged && split(requiredWithoutFilters(path,"diff","--no-ext-diff","--no-textconv","--name-only","-z","HEAD","--")).stream().anyMatch(changed::contains))
             blocked="Local changes overlap the reviewed result. Preserve them before merging.";
-        else if (!merged && !changed.isEmpty()) {
+        else if (blocked==null && !merged && !changed.isEmpty()) {
             var args=new ArrayList<String>(List.of("ls-files","--others","-z","--"));args.addAll(changed);
             if (!required(path,args.toArray(String[]::new)).isEmpty()) blocked="Untracked files overlap the reviewed result. Preserve them before merging.";
         }
-        var filters=git(path,"config","--get-regexp","^filter\\..*\\.(process|smudge|clean)$");
-        if (!merged && filters.code()!=1) blocked="Repository filters require a manual merge.";
         if (!merged && git(path,"config","--get-regexp","^merge\\..*\\.driver$").code()!=1)
             blocked="Custom merge drivers require a manual merge.";
         return new Preview(plan.version(),ref,path.toString(),result,branch,head,changed,merged,blocked);
@@ -189,11 +187,11 @@ public class WorkflowGitDeliveryService {
             if (!required(path,"symbolic-ref","--quiet","--short","HEAD").strip().equals(input.targetBranch())
                     || !required(path,"rev-parse","HEAD").strip().equals(input.beforeRevision()))
                 throw new IllegalStateException("Merge target changed before delivery");
-            String dirty=digest(required(path,"diff","--no-ext-diff","--no-textconv","--binary","HEAD","--"));
+            String dirty=digest(requiredWithoutFilters(path,"diff","--no-ext-diff","--no-textconv","--binary","HEAD","--"));
             if (!preview.alreadyMerged()) {
                 boolean fastForward=git(path,"merge-base","--is-ancestor",input.beforeRevision(),input.resultRevision()).code()==0;
                 if (!fastForward) {
-                    var check=git(path,"merge-tree","--write-tree",input.beforeRevision(),input.resultRevision());
+                    var check=gitWithoutFilters(path,"merge-tree","--write-tree",input.beforeRevision(),input.resultRevision());
                     if (check.code()!=0) {
                         jdbc.update("UPDATE plan_git_delivery SET state='BLOCKED',message=?,updated_ms=? WHERE request_id=? AND state='MERGING'",
                                 "Merge conflicts or unsupported preflight require attention; the original worktree was not changed",Instant.now().toEpochMilli(),input.requestId());
@@ -201,13 +199,13 @@ public class WorkflowGitDeliveryService {
                     }
                     required(path,"var","GIT_AUTHOR_IDENT");
                 }
-                required(path,"-c","branch."+input.targetBranch()+".mergeOptions=","merge",fastForward?"--ff-only":"--no-ff",
+                requiredWithoutFilters(path,"-c","branch."+input.targetBranch()+".mergeOptions=","merge",fastForward?"--ff-only":"--no-ff",
                         "--strategy=ort","--no-verify-signatures","--no-edit","--no-autostash","--no-overwrite-ignore",input.resultRevision());
             }
             String after=required(path,"rev-parse","HEAD").strip();
             if (!required(path,"symbolic-ref","--quiet","--short","HEAD").strip().equals(input.targetBranch())
                     || git(path,"merge-base","--is-ancestor",input.resultRevision(),after).code()!=0
-                    || !dirty.equals(digest(required(path,"diff","--no-ext-diff","--no-textconv","--binary","HEAD","--"))))
+                    || !dirty.equals(digest(requiredWithoutFilters(path,"diff","--no-ext-diff","--no-textconv","--binary","HEAD","--"))))
                 throw new IllegalStateException("Merge outcome needs manual reconciliation");
             jdbc.update("UPDATE plan_git_delivery SET state='DELIVERED',after_revision=?,message=?,updated_ms=? WHERE request_id=? AND state='MERGING'",
                     after,"Reviewed result merged locally; no remote push",Instant.now().toEpochMilli(),input.requestId());
@@ -272,6 +270,68 @@ public class WorkflowGitDeliveryService {
                 message,Instant.now().toEpochMilli(),id,ref);
     }
 
+    private String filterBlock(Path path,String head,String result,List<String> files) {
+        if (files.isEmpty()) return null;
+        List<String> settings;
+        try { settings=filterSettings(path); }
+        catch (RuntimeException error) {
+            return "File filter attributes could not be checked. Check Git support and repository attributes before merging.";
+        }
+        String input=String.join("\u0000",files)+"\u0000";
+        for (String source:List.of("",head,result)) {
+            Git attributes;
+            try {
+                var args=new ArrayList<String>(List.of("check-attr","-z","--stdin"));
+                if (!source.isEmpty()) args.add("--source="+source);
+                args.add("filter");
+                attributes=gitWithInput(path,input,args.toArray(String[]::new));
+            } catch (RuntimeException error) {
+                return "File filter attributes could not be checked. Check Git support and repository attributes before merging.";
+            }
+            String[] fields=attributes.text().split("\u0000",-1);
+            if (attributes.code()!=0 || fields.length!=files.size()*3+1 || !fields[fields.length-1].isEmpty())
+                return "File filter attributes could not be checked. Check Git support and repository attributes before merging.";
+            for (int i=0;i<files.size();i++) {
+                int offset=i*3;
+                if (!fields[offset].equals(files.get(i)) || !fields[offset+1].equals("filter"))
+                    return "File filter attributes could not be checked. Check Git support and repository attributes before merging.";
+                String value=fields[offset+2];
+                // check-attr renders both -filter and filter=unset as "unset" (likewise unspecified).
+                boolean ambiguous=settings.stream().anyMatch(key -> key.startsWith("filter."+value+"."));
+                if (!Set.of("unspecified","unset").contains(value) || ambiguous)
+                    return "A changed file uses a Git filter and requires a manual merge: "+files.get(i);
+            }
+        }
+        return null;
+    }
+
+    private List<String> filterSettings(Path path) {
+        var config=git(path,"config","--null","--name-only","--get-regexp","^filter\\..*\\.(process|smudge|clean|required)$");
+        if (config.code()==1 && config.text().isEmpty()) return List.of();
+        var keys=split(config.text());
+        if (config.code()!=0 || keys.isEmpty() || !config.text().endsWith("\u0000")
+                || keys.stream().anyMatch(key -> !key.matches("filter\\.[^=\\r\\n\\u0000]+\\.(process|smudge|clean|required)")))
+            throw new IllegalStateException("Git filter configuration could not be checked safely; no merge was started.");
+        return keys;
+    }
+
+    private Git gitWithoutFilters(Path path,String... args) {
+        // Both worktree diffs and merge's index refresh can run unrelated clean filters.
+        // Changed paths were checked above; disable drivers only in each child process.
+        var command=new ArrayList<String>();
+        for (String key:filterSettings(path)) {
+            command.add("-c");command.add(key+"="+(key.endsWith(".required")?"false":""));
+        }
+        command.addAll(List.of(args));
+        return git(path,command.toArray(String[]::new));
+    }
+
+    private String requiredWithoutFilters(Path path,String... args) {
+        var result=gitWithoutFilters(path,args);
+        if (result.code()!=0) throw new IllegalStateException("Local Git operation failed; inspect the original worktree before retrying");
+        return result.text();
+    }
+
     private static List<String> split(String text) { return Arrays.stream(text.split("\u0000")).filter(s -> !s.isEmpty()).toList(); }
     private static String digest(String text) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8))); }
@@ -283,6 +343,9 @@ public class WorkflowGitDeliveryService {
         return result.text();
     }
     Git git(Path path,String... args) {
+        return gitWithInput(path,"",args);
+    }
+    Git gitWithInput(Path path,String input,String... args) {
         var command=new ArrayList<String>(List.of("git","--no-replace-objects","-c","core.fsmonitor=false","-c","gc.auto=0","-c","maintenance.auto=false",
                 "-c","commit.gpgsign=false","-c","core.hooksPath="+(System.getProperty("os.name").startsWith("Windows")?"NUL":"/dev/null"),"-C",path.toString()));
         command.addAll(List.of(args));
@@ -291,9 +354,13 @@ public class WorkflowGitDeliveryService {
             var builder=new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.DISCARD);
             builder.environment().keySet().removeIf(key -> key.startsWith("GIT_") || key.equals("LD_PRELOAD"));
             builder.environment().put("GIT_TERMINAL_PROMPT","0");
-            process=builder.start();process.getOutputStream().close();
+            process=builder.start();
             var output=new ByteArrayOutputStream();
             var child=process;
+            var writer=Thread.ofVirtual().start(() -> {
+                try (var stdin=child.getOutputStream()) { stdin.write(input.getBytes(StandardCharsets.UTF_8)); }
+                catch (java.io.IOException ignored) { child.destroyForcibly(); }
+            });
             var reader=Thread.ofVirtual().start(() -> {
                 try {
                     byte[] buffer=new byte[8192];int count;
@@ -305,8 +372,15 @@ public class WorkflowGitDeliveryService {
             });
             if (!process.waitFor(15,TimeUnit.SECONDS)) throw new IllegalStateException("Local Git operation timed out; its outcome must be inspected");
             reader.join(2000);
-            if (reader.isAlive()) throw new IllegalStateException("Local Git output is incomplete");
-            return new Git(process.exitValue(),output.toString(StandardCharsets.UTF_8));
+            writer.join(2000);
+            if (reader.isAlive() || writer.isAlive()) throw new IllegalStateException("Local Git output is incomplete");
+            String decoded=StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                    .decode(java.nio.ByteBuffer.wrap(output.toByteArray())).toString();
+            return new Git(process.exitValue(),decoded);
+        } catch (java.nio.charset.CharacterCodingException e) {
+            throw new IllegalStateException("Git returned a path or output that is not valid UTF-8; inspect the repository before merging.");
         } catch (java.io.IOException e) { throw new IllegalStateException("Local Git executable or repository is unavailable"); }
         catch (InterruptedException e) {Thread.currentThread().interrupt();throw new IllegalStateException("Local Git operation interrupted");}
         finally {if (process!=null && process.isAlive()) process.destroyForcibly();}

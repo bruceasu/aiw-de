@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from process_profiles import ProcessProfile, get_profile
-from worker_runtime import Attempt, attempt_scope, current_attempt, git as runtime_git, snapshot, skill_package, workspace_lock, setting, safe_directories
+from worker_runtime import Attempt, attempt_scope, current_attempt, git as runtime_git, snapshot, skill_package, workspace_lock, setting, safe_directories, failure_code as classify_failure
 from ai_preferences import step_selection
 from agent_runtime import AgentRunRequest, AgentRuntime
 from app_server_runtime import CodexAppServerRuntime, preflight as app_server_preflight
@@ -179,6 +179,9 @@ class ControlPlaneClient:
             payload.update(profileId=selection["id"], profileVersion=task["aiGuidance"]["version"], selectionReason=reason)
         self._post(f"/tasks/{_quote(task['taskId'])}/start", payload)
     def task_heartbeat(self, task: dict[str, Any], worker_id: str, session_id: str | None): return self._task_action(task, worker_id, "heartbeat", session_id)
+    def pin_baseline(self, task, worker_id, revision):
+        return self._post(f"/tasks/{_quote(task['taskId'])}/workspace-baseline", {
+            "workerId": worker_id, "leaseToken": task["leaseToken"], "baseRevision": revision})
     def fail(self, task: dict[str, Any], worker_id: str, session_id: str | None,
              reason: str | None = None, category: str = "UNKNOWN") -> None:
         self._post(f"/tasks/{_quote(task['taskId'])}/fail", {
@@ -293,6 +296,22 @@ class GitWorkspace:
         attempt = current_attempt()
         if attempt:
             attempt.evidence.record("workspace-cleanup", status=status)
+
+def _pin_current_revision(config, task, client, attempt):
+    assignment = task.get("workspace") or {}
+    if assignment.get("baseRevision"): return assignment
+    repository = assignment.get("repositoryPath") or config.repository_root
+    if not repository: raise RuntimeError("WRITABLE_WORKSPACE_REQUIRED")
+    try: chosen = _git(repository, "rev-parse", "--verify", "HEAD^{commit}").strip().lower()
+    except RuntimeError as error: raise RuntimeError("GIT_HEAD_UNAVAILABLE") from error
+    pinned = client.pin_baseline(task, config.worker_id, chosen)
+    if (pinned.get("baseRevision") != chosen or pinned.get("repositoryRef") != assignment.get("repositoryRef")
+            or not pinned.get("workspaceKey") or not pinned.get("branchName")):
+        raise RuntimeError("WORKSPACE_BASELINE_REJECTED")
+    task["workspace"] = {**assignment, **pinned}
+    attempt.evidence.record("workspace-baseline", resultRevision=chosen, reason="current-head")
+    return task["workspace"]
+
 
 def _fetch_inputs(repository_root: str, task: dict[str, Any]) -> None:
     if not repository_root:
@@ -447,6 +466,9 @@ class ProcessSlot:
                 if task.get("taskType") != "EXTERNAL_WORK" or task.get("skillRef") != profile.primary_skill:
                     raise RuntimeError("ROLE_SKILL_DENIED")
                 assignment = task.get("workspace") or {}
+                if (profile.result_kind == "WORKSPACE" and not assignment.get("baseRevision") and not broker
+                        and task.get("subjectType") == "flexible-plan"):
+                    assignment = _pin_current_revision(self.config, task, self.client, attempt)
                 revision = assignment.get("baseRevision") or ""
                 if profile.result_kind == "WORKSPACE" and (len(revision) not in {40, 64} or any(c not in "0123456789abcdefABCDEF" for c in revision)):
                     raise RuntimeError("WRITABLE_WORKSPACE_REQUIRED")
@@ -568,8 +590,7 @@ class ProcessSlot:
             status = "lease-lost" if lost else "report-unknown" if reporting else "failed"
             if attempt:
                 attempt.cancel("lease-lost" if lost else attempt.reason or "execution-failed")
-                failure_code = str(error).split(":", 1)[0]
-                if not __import__("re").fullmatch(r"[A-Z][A-Z0-9_]{2,100}", failure_code): failure_code = "OPERATION_FAILED"
+                failure_code = classify_failure(error)
                 try: attempt.evidence.record("attempt-failed", status=status, phase=phase, code=failure_code)
                 except Exception: pass
                 if attempt.reason in {"deadline", "lease-lost", "force-shutdown"}:
@@ -579,7 +600,7 @@ class ProcessSlot:
                 try:
                     if broker and attempt.reason == "stop-requested" and not attempt.resource_uncertain and not broker._active:
                         self.client._task_action(task, self.config.worker_id, "stop-acknowledgement", session_id)
-                    else: self.client.fail(task, self.config.worker_id, session_id, "OPERATION_FAILED", phase)
+                    else: self.client.fail(task, self.config.worker_id, session_id, classify_failure(error), phase)
                 except ProtocolError: pass
             print(f"attempt {task.get('attemptId')}: {status}", file=sys.stderr, flush=True)
         finally:

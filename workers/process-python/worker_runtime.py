@@ -295,19 +295,56 @@ def git(cwd, *args, cleanup=False):
         if not reader.is_alive():
             child.stdout.close()
 
+def failure_code(error):
+    import re
+    value = str(error).split(":", 1)[0]
+    if re.fullmatch(r"[A-Z][A-Z0-9_]{2,100}", value):
+        return value
+    if isinstance(error, OSError):
+        if getattr(error, "winerror", None) == 206 or (getattr(error, "winerror", None) in {2, 3} and not str(error.filename or "").startswith("\\\\?\\")
+                and len(str(error.filename or "")) >= 260):
+            return "FILESYSTEM_PATH_TOO_LONG"
+        if isinstance(error, PermissionError): return "FILE_ACCESS_DENIED"
+        if isinstance(error, FileNotFoundError): return "FILE_NOT_FOUND"
+        return "FILESYSTEM_OPERATION_FAILED"
+    if isinstance(error, UnicodeError): return "TEXT_DECODING_FAILED"
+    return "OPERATION_FAILED"
+
+
+def filesystem_path(path):
+    value = os.path.abspath(path)
+    if os.name != "nt" or value.startswith("\\\\?\\"):
+        return value
+    return "\\\\?\\UNC\\" + value[2:] if value.startswith("\\\\") else "\\\\?\\" + value
+
+
 def snapshot(cwd, attempt):
+    try:
+        return _snapshot(cwd, attempt)
+    except OSError as error:
+        codes = {"FILESYSTEM_PATH_TOO_LONG": "WORKSPACE_SNAPSHOT_PATH_TOO_LONG",
+                 "FILE_ACCESS_DENIED": "WORKSPACE_SNAPSHOT_ACCESS_DENIED", "FILE_NOT_FOUND": "WORKSPACE_SNAPSHOT_FILE_MISSING"}
+        raise RuntimeError(codes.get(failure_code(error), "WORKSPACE_SNAPSHOT_IO_FAILED")) from error
+
+
+def _snapshot(cwd, attempt):
     digest = hashlib.sha256()
     total = 0
     count = 0
-    for directory, dirs, names in os.walk(cwd, followlinks=False):
+    root = Path(filesystem_path(cwd))
+    def walk_error(error):
+        raise error
+    for directory, dirs, names in os.walk(root, followlinks=False, onerror=walk_error):
         dirs[:] = sorted(name for name in dirs if name.lower() != ".git")
         for name in sorted([*dirs, *names]):
             if name.lower() == ".git":
                 continue
             attempt.check()
             path = Path(directory) / name
-            relative = path.relative_to(cwd).as_posix()
+            relative = path.relative_to(root).as_posix()
             info = path.lstat()
+            if getattr(info, "st_reparse_tag", None) == 0xA0000003:  # IO_REPARSE_TAG_MOUNT_POINT; Python 3.11+.
+                raise RuntimeError("WORKSPACE_SNAPSHOT_JUNCTION_UNSAFE")
             count += 1
             digest.update(f"{relative}:{info.st_mode}\n".encode("utf-8"))
             if count > 50000:

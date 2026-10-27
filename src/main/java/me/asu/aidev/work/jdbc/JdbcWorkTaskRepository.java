@@ -278,6 +278,16 @@ public class JdbcWorkTaskRepository implements WorkTaskRepository {
     }
 
     @Override
+    public boolean pinBaselineOwned(TaskId taskId,WorkerId workerId,LeaseToken leaseToken,String revision,Instant updatedAt) {
+        return jdbc.update("""
+                UPDATE work_task SET base_revision=?,version=version+1,updated_at_epoch_ms=?
+                 WHERE id=? AND state='RUNNING' AND current_worker_id=? AND lease_token=? AND lease_expires_at_epoch_ms>?
+                   AND (base_revision IS NULL OR base_revision=?)
+                   AND instruction_revision=(SELECT instruction_revision FROM execution_attempt WHERE lease_token=? AND worker_id=? AND state='RUNNING')
+                """,revision,updatedAt.toEpochMilli(),taskId.value(),workerId.value(),leaseToken.value(),updatedAt.toEpochMilli(),revision,leaseToken.value(),workerId.value())==1;
+    }
+
+    @Override
     public boolean heartbeatLease(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                                   Instant heartbeatAt, Instant expiresAt) {
         return jdbc.update("""

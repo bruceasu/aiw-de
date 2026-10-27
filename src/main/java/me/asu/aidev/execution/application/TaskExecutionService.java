@@ -178,6 +178,24 @@ public class TaskExecutionService {
     }
 
     @Transactional
+    public WorkspaceAssignment pinWorkspaceBaseline(TaskId taskId,WorkerId workerId,LeaseToken leaseToken,String revision) {
+        if(revision==null || !revision.matches("[0-9a-f]{40}|[0-9a-f]{64}")) throw new IllegalArgumentException("Immutable Git revision required");
+        if(!tasks.lock(taskId)) throw new IllegalStateException("Task not found");
+        var task=tasks.find(taskId).orElseThrow();
+        assertExecutionAllowed(task);
+        if(!"flexible-plan".equals(task.subjectType()) || !"coding-work-package-executor".equals(task.skillRef())
+                || task.repositoryRef()==null || task.requiredCapabilities().contains("execution-guard-v1")
+                || configurations!=null && configurations.managed(taskId.value()))
+            throw new IllegalStateException("Automatic baseline is available only for native coding tasks");
+        boolean first=task.baseRevision()==null;
+        if(!tasks.pinBaselineOwned(taskId,workerId,leaseToken,revision,clock.instant()))
+            throw new IllegalStateException("Baseline conflicts or the running lease is no longer owned");
+        if(first) tasks.recordControlEvent(UUID.randomUUID().toString(),taskId,attempts.findAttemptId(leaseToken).orElseThrow().value(),
+                "PIN_BASELINE","worker:"+workerId.value(),"Pinned current HEAD: "+revision,false,clock.instant());
+        return WorkspaceAssignment.forTask(tasks.find(taskId).orElseThrow(),tasks.attemptNo(taskId));
+    }
+
+    @Transactional
     public boolean heartbeat(TaskId taskId, WorkerId workerId, LeaseToken leaseToken) {
         return heartbeat(taskId, workerId, leaseToken, null);
     }

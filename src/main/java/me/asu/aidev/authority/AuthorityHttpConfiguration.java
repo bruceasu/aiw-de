@@ -21,7 +21,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/configuration")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/questions/(source|open|ack|checkpoints|receipt)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/(begin|finish)|operations/[^/]+/receipt|yield/(prepare|ack)|delivery)")
-                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
+                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|workspace-baseline|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
     }
     private boolean personalMachine(String method,String path) {
         return method.equals("GET") && (Set.of("/professional-tasks/options","/professional-tasks/diagnostics","/connection-state","/identity","/state","/target-state","/grants","/management-state","/questions","/permission-questions","/action-permissions").contains(path) || path.matches("/professional-tasks/[0-9a-f-]{36}") || path.matches("/permission-actions/[0-9a-f-]{36}") || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))

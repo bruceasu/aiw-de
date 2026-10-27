@@ -40,6 +40,7 @@ public interface WorkTaskRepository {
                               Instant acquiredAt, Instant expiresAt, Instant heartbeatAt);
     Optional<TaskLease> findLease(TaskId taskId);
     boolean start(TaskId taskId, WorkerId workerId, LeaseToken leaseToken, Instant updatedAt);
+    boolean pinBaselineOwned(TaskId taskId,WorkerId workerId,LeaseToken leaseToken,String revision,Instant updatedAt);
     boolean heartbeatLease(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                            Instant heartbeatAt, Instant expiresAt);
     boolean completeOwned(TaskId taskId, WorkerId workerId, LeaseToken leaseToken, Instant updatedAt);

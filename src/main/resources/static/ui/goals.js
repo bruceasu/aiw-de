@@ -244,11 +244,11 @@
     clean();
     let confirmed=$('goal-accept').checked;
     if(current.content.missing.trim() && !confirmed) {
-      confirmed=await window.aiwConfirm(`${text('This goal still lists missing information. Save a formal version marked Not ready?')}\n\n${current.content.missing}`, {title:text('Create formal version')});
+      confirmed=await window.aiwConfirm(`${text('This goal still lists missing information. Save a formal version marked Not ready?')}\n\n${current.content.missing}`, {title:text('Save goal version (does not start execution)')});
       if(!confirmed){status('Formal version was not saved. Resolve the missing information or explicitly accept it.');return;}
     }
     const version=await api(`/${current.id}/formalize`,{revision:current.revision,confirmed});
-    let message=text('Formal version saved. It does not start work.');
+    let message=text('Goal version saved. Execution has not started.');
     if($('goal-plan-now').checked){try{await api(`/versions/${version.id}/analyze`,{revision:version.editorRevision,confirmed:false});message+=' '+text('AI Steps requested.');}catch(e){message+=' '+text('Plan editing draft retained:')+' '+e.message;}}
     await load(current.id);status(message);
     const saved=[...$('goal-versions').children].find(el=>el.dataset.versionId===version.id);
@@ -261,7 +261,7 @@
   function renderVersions(){
     $('goal-versions').replaceChildren();data.versions.forEach(v=>{
       const box=node('section',null,'goal-version');box.dataset.versionId=v.id;box.append(node('h3',`${v.snapshot.title} · Goal version ${v.sourceRevision}`),node('p',v.snapshot.ready?'Ready':'Not ready · Missing information accepted'),node('pre',v.snapshot.goal));
-      if(v.planId){const link=node('a','Review execution plan','btn primary');link.href=`/ui/plans/${encodeURIComponent(v.planId)}`;box.append(link);$('goal-versions').append(box);return;}
+      if(v.planId){const link=node('a','View or edit execution plan','btn primary');link.href=`/ui/plans/${encodeURIComponent(v.planId)}`;box.append(link,node('p','Open plan details to edit an unstarted draft or confirm and start execution.','help'));$('goal-versions').append(box);return;}
       const spec=structuredClone(v.editor);const steps=node('div');
       const changed=()=>editorDirty.add(v.id);
       function renderSteps(){steps.replaceChildren();spec.steps.forEach((s,index)=>{
@@ -281,7 +281,7 @@
       button('Save editing draft',async()=>{if(dirty||[...editorDirty].some(id=>id!==v.id))throw new Error('Save other goal or editing changes first.');await api(`/versions/${v.id}/editor`,{revision:v.editorRevision,editor:spec});editorDirty.delete(v.id);await load(current.id);status('Editing draft saved, including incomplete steps.');});
       button('Analyze Steps',async()=>{clean();await api(`/versions/${v.id}/analyze`,{revision:v.editorRevision,confirmed:false});await load(current.id);status('AI Steps requested. Your saved editing draft remains available.');});
       button('Check / apply AI Steps',async()=>{clean();const result=await api(`/versions/${v.id}/analysis`);if(result.state!=='READY_TO_APPLY'){status(`${result.state}: ${result.error||'Waiting for analysis; manual editing remains available.'}`);return;}await api(`/versions/${v.id}/apply`,{revision:v.editorRevision,confirmed:false});await load(current.id);status('AI Steps applied to the editing draft. Review before preparing execution.');});
-      button('Prepare execution plan',async()=>{clean();if(!await window.aiwConfirm('将此版本交给操作员可见的 Plans 控制台？缺少的工作区将被创建并保留。这里只保存执行草案，启动执行仍需单独确认。', {title:'准备执行计划'}))return;const saved=await api(`/versions/${v.id}/prepare`,{revision:v.editorRevision,confirmed:true});await load(current.id);status(`Execution draft ${saved.planId} saved. Review it before confirming execution.`);});
+      button('Generate execution draft',async()=>{clean();if(!await window.aiwConfirm(text('Generate an execution draft from these steps? This does not start work. Review its workspace and confirm execution on the plan page.'), {title:text('Generate execution draft')}))return;const saved=await api(`/versions/${v.id}/prepare`,{revision:v.editorRevision,confirmed:true});location.href=`/ui/plans/${encodeURIComponent(saved.planId)}`;});
       box.append(actions);$('goal-versions').append(box);
     });
   }

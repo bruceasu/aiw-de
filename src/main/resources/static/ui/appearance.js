@@ -209,8 +209,51 @@
     const brand = document.querySelector("#personal-app .brand-mark");
     if (brand) { brand.replaceChildren(icon("emblem")); brand.setAttribute("aria-label", "AIW"); }
   }
+  function mountConsoleTheme() {
+    const preferences = document.querySelector("[data-preferences-dialog]");
+    const body = preferences?.querySelector(".workspace-confirm__body");
+    if (!body) return;
+    const group = element("section", "preference-group");
+    group.dataset.preferenceTheme = "";
+    group.append(element("h3", "", "Theme"));
+    const label = element("label", "field"), select = element("select");
+    label.append(element("span", "", "Theme style"), select);
+    for (const [value, title] of [["hud", "HUD"], ["rpg", "RPG"], ["auto", "Automatic: daytime HUD, nighttime RPG"]]) select.add(new Option(title, value));
+    select.setAttribute("aria-label", "Theme style");
+    const times = element("div", "appearance-times");
+    const inputs = {};
+    for (const [name, title] of [["dayStart", "HUD starts at"], ["nightStart", "RPG starts at"]]) {
+      const field = element("label", "field"), input = element("input");
+      input.type = "time"; input.required = true;
+      field.append(element("span", "", title), input); times.append(field); inputs[name] = input;
+    }
+    const status = element("p", "help"); status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
+    group.append(label, times, element("p", "help", "Automatic switching uses this device's local time."), status);
+    body.insertBefore(group, body.querySelector(".preference-group"));
+    const sync = () => {
+      select.value = preference.mode;
+      for (const [name, input] of Object.entries(inputs)) { input.value = preference[name]; input.disabled = preference.mode !== "auto"; }
+    };
+    const save = value => {
+      try {
+        const state = setPreference(value); sync();
+        status.textContent = state.persistenceAvailable ? "Preferences saved in this browser." : "Applied for this page. Browser storage is unavailable.";
+      } catch (error) { status.textContent = error.message; }
+    };
+    select.addEventListener("change", () => save({ mode: select.value }));
+    for (const input of Object.values(inputs)) input.addEventListener("change", () => {
+      if (!Object.values(inputs).every(field => field.validity.valid)) return;
+      save({ dayStart: inputs.dayStart.value, nightStart: inputs.nightStart.value });
+    });
+    preferences.querySelector("[data-preferences-reset]")?.addEventListener("click", () => save(defaults));
+    window.addEventListener("storage", event => { if (event.key === key) sync(); });
+    sync();
+  }
   function mount() {
     mountIcons();
+    if (!document.getElementById("personal-app")) {
+      mountConsoleTheme(); mountAvatars(); apply(); return;
+    }
     const controls = element("div", "appearance-controls");
     controls.setAttribute("role", "group"); controls.setAttribute("aria-label", "界面风格");
     for (const [value, label] of [["hud", "HUD"], ["rpg", "RPG"], ["auto", "自动"]]) {

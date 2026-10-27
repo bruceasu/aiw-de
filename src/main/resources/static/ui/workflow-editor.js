@@ -42,6 +42,9 @@
     skillRef: 'software-requirements-analyst', instruction: '', repositoryRef: null, baseRevision: null, dependsOn: [] });
 
   if (editor && editor.dataset.enabled === 'true') {
+    const editId = new URLSearchParams(location.search).get('edit');
+    let editingPlan = null;
+    let saving = false;
     let catalog;
     let steps = [blank()];
     let source = 'MANAGER';
@@ -58,6 +61,26 @@
     const history = editor.querySelector('[data-recommend-history]');
     const result = editor.querySelector('[data-recommend-result]');
     const saveStatus = editor.querySelector('[data-save-status]');
+    const saveButton = editor.querySelector('[data-save]');
+    saveButton.disabled = true;
+    const loadingControls = editId ? [...editor.querySelectorAll('[data-goal], [data-template], [data-use-template], [data-add-step]')] : [];
+    loadingControls.forEach(control => { control.disabled = true; });
+    if (editId) {
+      document.title = 'Edit execution draft · AIW:DE';
+      document.querySelector('.topbar h1').textContent = 'Edit execution draft';
+      document.querySelector('.topbar p').textContent = 'Save changes to this draft, then confirm execution separately.';
+      editor.querySelector('[data-existing-draft]').hidden = false;
+      editor.querySelector('[data-edit-plan-id]').textContent = editId;
+      saveButton.textContent = 'Save changes to this draft';
+      editor.querySelector('[data-editor-cancel]').href = `/ui/plans/${encodeURIComponent(editId)}`;
+      editor.querySelector('[data-recommend]').hidden = true;
+      editor.querySelector('[data-recommend-help]').hidden = true;
+      editor.querySelector('[data-recovery-contexts]').closest('details').hidden = true;
+    }
+    const guide = editor.querySelector('[data-capability-dialog]');
+    editor.querySelector('[data-capability-open]').addEventListener('click', () => guide.showModal());
+    guide.querySelector('[data-capability-close]').addEventListener('click', () => guide.close());
+    guide.addEventListener('click', event => { if (event.target === guide) guide.close(); });
     const csrfError = 'If your session expired, reload this page and try again.';
     const workspaceOptions = [...editor.querySelectorAll('[data-workspace-options] option')]
       .map(option => ({ value: option.value, label: option.textContent }));
@@ -186,7 +209,7 @@
         workspaceField(grid, step, index);
         const revisionInput = field(grid, 'Base revision (optional full Git commit)', step.baseRevision,
           value => { step.baseRevision = value.trim() || null; });
-        line(revisionInput.parentElement, 'span', 'Leave empty to use the Workspace directory directly. Set a full Git commit to use an isolated Git worktree.', 'help');
+        line(revisionInput.parentElement, 'span', 'For native coding Workers, leave empty to pin the current Git HEAD automatically. Set a full commit to use that exact baseline.', 'help');
         field(grid, 'Declared earlier dependencies (comma separated)', step.dependsOn.join(', '), value => { step.dependsOn = skillNames(value); });
         field(grid, 'Instruction and acceptance criteria', step.instruction, value => { step.instruction = value; }, true);
         card.appendChild(grid);
@@ -251,15 +274,23 @@
       markEdit(); renderSteps();
     });
     editor.querySelector('[data-save]').addEventListener('click', async () => {
+      if (saving || saveButton.disabled) return;
       if (!catalog) { saveStatus.textContent = 'Editor data is still loading.'; return; }
       if (!renderPreview()) { notice.scrollIntoView({ block: 'center' }); return; }
       const payload = { goal: goal.value, source, steps };
       try {
+        saving = true; saveButton.disabled = true;
         saveStatus.textContent = 'Saving draft…';
-        if (!context) throw new Error('Editor recovery context is still loading.');
-        const plan = await api(`/recommendation-contexts/${encodeURIComponent(context.id)}/draft`, { revision: context.revision, plan: payload });
+        if (editId && !editingPlan) throw new Error('Editable draft is still loading.');
+        if (!editId && !context) throw new Error('Editor recovery context is still loading.');
+        const plan = editId
+          ? await api(`/plans/${encodeURIComponent(editId)}/draft`, { version: editingPlan.version, plan: payload })
+          : await api(`/recommendation-contexts/${encodeURIComponent(context.id)}/draft`, { revision: context.revision, plan: payload });
         location.href = `/ui/plans/${encodeURIComponent(plan.id)}`;
-      } catch (error) { saveStatus.textContent = `Draft was not saved: ${error.message}. ${csrfError} Your input is still here.`; }
+      } catch (error) {
+        saveStatus.textContent = `Draft was not saved: ${error.message}. ${csrfError} Your input is still here.`;
+        saving = false; saveButton.disabled = false;
+      }
     });
     const exposeRequest = snapshot => {
       const row = el('div', undefined, 'workflow-request');
@@ -369,6 +400,12 @@
         editor.querySelector('[data-recommend]').disabled = true;
         status.textContent = data.recommendationStatus.reason;
       }
+      if (editId) {
+        editingPlan = await api(`/plans/${encodeURIComponent(editId)}/draft`);
+        goal.value = editingPlan.spec.goal; source = editingPlan.spec.source;
+        steps = editingPlan.spec.steps.map(stepCopy);
+        renderSteps(); return;
+      }
       const recent = await api('/recommendation-contexts');
       const recoveryList = editor.querySelector('[data-recovery-contexts]');
       for (const item of recent.filter(item => item.goal)) {
@@ -404,7 +441,8 @@
         steps = data.plan.spec.steps.map(stepCopy); renderSteps();
       });
       renderSteps();
-    }).catch(error => { notice.textContent = `Editor data unavailable: ${error.message}`; });
+    }).then(() => { loadingControls.forEach(control => { control.disabled = false; }); saveButton.disabled = false; })
+      .catch(error => { notice.textContent = `Editor data unavailable: ${error.message}`; });
     const historyReplace = url => window.history.replaceState(null, '', url);
   }
 
@@ -574,10 +612,11 @@
           }).at(-1));
         const finalReview = latestReviews.at(-1);
         const activeWork = data.steps.some(row => ['READY', 'BLOCKED', 'CLAIMED', 'RUNNING'].includes(row.task.state));
+        const failedTasks = data.steps.filter(row => row.task.state === 'FAILED');
         const exhausted = !activeWork && latestReviews.some(row => row
           && Number(row.task.id.value.match(/~review-(\d+)/)?.[1]) >= 3
           && row.task.state === 'COMPLETED' && row.verdict === 'REPAIR_REQUIRED')
-          || data.steps.some(row => row.task.state === 'FAILED');
+          || failedTasks.length > 0;
         const pendingControl = data.controls.find(control => control.status === 'PENDING_STOP');
         const attention = detail.querySelector('[data-plan-attention]');
 
@@ -691,6 +730,10 @@
           if ([...target.options].some(option => option.value === selectedTarget)) target.value = selectedTarget;
         }
         const confirm = detail.querySelector('[data-confirm]'); if (confirm) confirm.hidden = plan.state !== 'DRAFT' || hasConfigured;
+        const draftToolbar = detail.querySelector('[data-draft-toolbar]');
+        if (draftToolbar) draftToolbar.hidden = plan.state !== 'DRAFT' || hasConfigured;
+        const editDraft = detail.querySelector('[data-edit-draft]');
+        if (editDraft) editDraft.href = `/ui/plans/new?edit=${encodeURIComponent(id)}`;
         const withdraw = detail.querySelector('[data-withdraw]'); if (withdraw) withdraw.hidden = formalFactory || plan.state !== 'CONFIRMED';
         const jump = detail.querySelector('[data-jump]'); if (jump) jump.hidden = formalFactory || plan.state !== 'CONFIRMED' || !!pendingControl || !target?.options.length;
         const stop = detail.querySelector('[data-stop-plan]'); if (stop) stop.hidden = formalFactory || plan.state !== 'CONFIRMED' || !!pendingControl || finalReview?.verdict === 'PASS';
@@ -706,9 +749,18 @@
           managerPhase.textContent = detail.querySelector('[data-detail-state]').textContent;
           managerPhase.dataset.status = data.gitDelivery && !['NOT_REQUIRED', 'DELIVERED'].includes(data.gitDelivery.state)
             ? data.gitDelivery.state : configuredOnly ? data.displayState || configured.state
-            : exhausted ? 'WAITING_APPROVAL' : activeWork ? 'RUNNING' : plan.state;
+            : failedTasks.length ? 'FAILED' : exhausted ? 'WAITING_APPROVAL' : activeWork ? 'RUNNING' : plan.state;
         }
         const guidance = detail.querySelector('[data-manager-guidance]');
+        const failures = detail.querySelector('[data-failed-task-recovery]');
+        if (failures) {
+          failures.hidden = !failedTasks.length;
+          const items = failures.querySelector('[data-failed-task-links]'); items.replaceChildren();
+          for (const row of failedTasks) {
+            const link = line(items, 'a', 'Open failed task diagnostics', 'btn ghost small-btn');
+            link.href = `/ui/plans/${encodeURIComponent(id)}/tasks/${encodeURIComponent(row.task.id.value)}`;
+          }
+        }
         const preparation = detail.querySelector('[data-worker-preparation]');
         if (preparation) {
           const rows = data.workerPreparation || [];
@@ -728,6 +780,7 @@
           ? 'Follow the factory execution history below. The original graph has not been started.'
           : pendingGrant
           ? 'A decision Worker is assessing the fixed repair scope.'
+          : failedTasks.length ? 'A task failed. Open its diagnostics, fix the cause, then retry that task.'
           : exhausted ? 'Review needs changes. Authorize a bounded repair or request another review.'
           : activeWork ? 'Workers are active. Follow task progress before choosing another action.'
           : plan.state === 'DRAFT' ? 'Review your selected steps, then confirm the draft to start.'
@@ -804,8 +857,11 @@
     detail.querySelector('[data-confirm]')?.addEventListener('click', async () => {
       if (!plan || !await window.aiwConfirm(`Confirm ${plan.spec.steps.length} selected steps at version ${plan.version}? This creates Worker tasks.`)) return;
       try { await api(`/plans/${encodeURIComponent(id)}/confirm`, { version: plan.version });
-        actionStatus.textContent = 'Confirmed selected graph.'; await load();
-      } catch (error) { actionStatus.textContent = `Confirmation failed: ${error.message}`; }
+        actionStatus.textContent = 'Execution confirmed. Worker tasks have been created.'; await load();
+      } catch (error) {
+        actionStatus.textContent = `Confirmation failed: ${error.message}`;
+        detail.querySelector('[data-draft-start-status]').textContent = actionStatus.textContent;
+      }
     });
     detail.querySelector('[data-withdraw]')?.addEventListener('click', async () => {
       const reason = detail.querySelector('[data-withdraw-reason]').value.trim();

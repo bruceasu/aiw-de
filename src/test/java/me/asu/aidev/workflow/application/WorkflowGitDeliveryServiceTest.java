@@ -31,6 +31,7 @@ class WorkflowGitDeliveryServiceTest {
     WorkflowPlanService workflow;
     ExecutionAttemptRepository attempts;
     boolean failMerge;
+    boolean failAttributes;
 
     @BeforeEach void setup() throws Exception {
         repo=Files.createDirectory(temp.resolve("repo"));
@@ -71,18 +72,26 @@ class WorkflowGitDeliveryServiceTest {
                 if (failMerge && List.of(args).contains("merge")) throw new IllegalStateException("injected merge failure");
                 try { return command(path,args); } catch (Exception error) { throw new IllegalStateException(error); }
             }
+            @Override Git gitWithInput(Path path,String input,String... args) {
+                if (failAttributes) return new Git(1,"");
+                try { return commandWithInput(path,input,args); } catch (Exception error) { throw new IllegalStateException(error); }
+            }
         };
     }
     @SuppressWarnings("unchecked") private static <T> ObjectProvider<T> provider(T value) {
         ObjectProvider<T> provider=mock(ObjectProvider.class);when(provider.getObject()).thenReturn(value);return provider;
     }
     private WorkflowGitDeliveryService.Git command(Path path,String... args) throws Exception {
+        return commandWithInput(path,"",args);
+    }
+    private WorkflowGitDeliveryService.Git commandWithInput(Path path,String input,String... args) throws Exception {
         var command=new ArrayList<>(List.of("git","-c","core.hooksPath=NUL","-c","commit.gpgsign=false","-C",path.toString()));
         command.addAll(List.of(args));
         var builder=new ProcessBuilder(command).redirectError(ProcessBuilder.Redirect.DISCARD);
         builder.environment().keySet().removeIf(key -> key.startsWith("GIT_"));
-        builder.environment().put("GIT_CONFIG_NOSYSTEM","1");builder.environment().put("GIT_CONFIG_GLOBAL","NUL");
-        var process=builder.start();process.getOutputStream().close();
+        builder.environment().put("GIT_CONFIG_NOSYSTEM","1");builder.environment().put("GIT_CONFIG_GLOBAL",temp.resolve("global.gitconfig").toString());
+        var process=builder.start();
+        try (var stdin=process.getOutputStream()) { stdin.write(input.getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
         var output=process.getInputStream().readAllBytes();
         return new WorkflowGitDeliveryService.Git(process.waitFor(),new String(output,java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -92,6 +101,92 @@ class WorkflowGitDeliveryServiceTest {
     private WorkflowGitDeliveryService.MergeRequest request() {
         var p=service.preview(plan.id(),"repo");
         return new WorkflowGitDeliveryService.MergeRequest(p.planVersion(),"repo",p.repositoryPath(),p.resultRevision(),p.targetBranch(),p.beforeRevision(),UUID.randomUUID().toString());
+    }
+    @Test void configuredButUnusedGlobalFilterDoesNotBlockDelivery() throws Exception {
+        Files.writeString(temp.resolve("global.gitconfig"),"[filter \"unused\"]\nclean = missing-filter-command\nsmudge = missing-filter-command\nrequired = true\n");
+        assertThat(service.preview(plan.id(),"repo").blockedReason()).isNull();
+        assertThat(service.merge(plan.id(),request(),"owner").state()).isEqualTo("DELIVERED");
+        assertThat(git("rev-parse","HEAD")).isEqualTo(result);
+    }
+    @Test void repositoryFilterForOtherFilesDoesNotBlockDelivery() throws Exception {
+        git("config","filter.unused.clean","missing-filter-command");
+        Files.writeString(repo.resolve(".git/info/attributes"),"*.bin filter=unused\n");
+        assertThat(service.preview(plan.id(),"repo").blockedReason()).isNull();
+    }
+    @Test void effectiveWorkingTreeFilterBlocksBeforeMerging() throws Exception {
+        Files.writeString(repo.resolve(".git/info/attributes"),"page.htm filter=guard\n");
+        assertThat(service.preview(plan.id(),"repo").blockedReason()).contains("uses a Git filter","page.htm");
+        assertThatThrownBy(() -> service.merge(plan.id(),request(),"owner")).isInstanceOf(IllegalStateException.class);
+        assertThat(git("rev-parse","HEAD")).isEqualTo(base);
+    }
+    @Test void resultCommitAttributesAreCheckedBeforeCheckout() throws Exception {
+        git("checkout","task");
+        Files.writeString(repo.resolve(".gitattributes"),"page.htm filter=guard\n");
+        git("add",".gitattributes");git("commit","-m","result attributes");result=git("rev-parse","HEAD");
+        git("checkout","master");updateResult(List.of("page.htm",".gitattributes"));
+        assertThat(service.preview(plan.id(),"repo").blockedReason()).contains("uses a Git filter","page.htm");
+        assertThat(Files.exists(repo.resolve(".gitattributes"))).isFalse();
+    }
+    @Test void targetCommitAttributesCannotBeHiddenByLocalOverrides() throws Exception {
+        git("checkout","task");
+        Files.writeString(repo.resolve(".gitattributes"),"page.htm filter=guard\n");
+        git("add",".gitattributes");git("commit","-m","result attributes");result=git("rev-parse","HEAD");
+        git("checkout","master");updateResult(List.of("page.htm",".gitattributes"));
+        Files.writeString(repo.resolve(".gitattributes"),"page.htm filter=guard\n");
+        git("add",".gitattributes");git("commit","-m","target attributes");
+        Files.writeString(repo.resolve(".gitattributes"),"page.htm -filter\n");
+        assertThat(service.preview(plan.id(),"repo").blockedReason()).contains("uses a Git filter","page.htm");
+    }
+    @Test void explicitlyDisabledFilterAndLiteralUnicodePathsAreSupported() throws Exception {
+        String file="name [1] \u65e5\u672c\u8a9e.htm";
+        git("checkout","task");Files.writeString(repo.resolve(file),"new page\n");
+        git("add","--",file);git("commit","-m","unicode file");result=git("rev-parse","HEAD");
+        git("checkout","master");updateResult(List.of("page.htm",file));
+        Files.writeString(repo.resolve(".git/info/attributes"),"*.htm -filter\n");
+        assertThat(service.preview(plan.id(),"repo").blockedReason()).isNull();
+        assertThat(service.merge(plan.id(),request(),"owner").state()).isEqualTo("DELIVERED");
+        assertThat(Files.readString(repo.resolve(file))).isEqualTo("new page\n");
+    }
+    @Test void unreadableAttributesFailClosedWithoutMerging() throws Exception {
+        failAttributes=true;
+        assertThat(service.preview(plan.id(),"repo").blockedReason()).contains("could not be checked");
+        assertThatThrownBy(() -> service.merge(plan.id(),request(),"owner")).isInstanceOf(IllegalStateException.class);
+        assertThat(git("rev-parse","HEAD")).isEqualTo(base);
+    }
+    @Test void reservedAttributeValuesWithConfiguredDriversAreNotTreatedAsDisabled() throws Exception {
+        for (String name:List.of("unset","unspecified")) {
+            git("config","filter."+name+".clean","missing-filter-command");
+            Files.writeString(repo.resolve(".git/info/attributes"),"page.htm filter="+name+"\n");
+            assertThat(service.preview(plan.id(),"repo").blockedReason()).contains("uses a Git filter","page.htm");
+            git("config","--unset","filter."+name+".clean");
+        }
+        git("config","filter.unset.required","true");
+        Files.writeString(repo.resolve(".git/info/attributes"),"page.htm -filter\n");
+        assertThat(service.preview(plan.id(),"repo").blockedReason()).contains("uses a Git filter");
+    }
+    @Test void dirtyUnrelatedFileDoesNotExecuteItsCleanFilterDuringPreviewOrMerge() throws Exception {
+        Files.writeString(repo.resolve(".git/info/attributes"),"notes.txt filter=marker\n");
+        git("config","filter.marker.clean","echo invoked >> ../filter-invoked; cat");
+        git("config","filter.marker.required","true");
+        Files.writeString(repo.resolve("notes.txt"),"private user notes\n");
+        assertThat(service.preview(plan.id(),"repo").blockedReason()).isNull();
+        assertThat(Files.exists(temp.resolve("filter-invoked"))).isFalse();
+        assertThat(service.merge(plan.id(),request(),"owner").state()).isEqualTo("DELIVERED");
+        assertThat(Files.readString(repo.resolve("notes.txt"))).isEqualTo("private user notes\n");
+        assertThat(Files.exists(temp.resolve("filter-invoked"))).isFalse();
+    }
+    @Test void realGitProcessAcceptsNullSeparatedStdin() throws Exception {
+        Files.writeString(repo.resolve(".git/info/attributes"),"page.htm -filter\n");
+        var real=new WorkflowGitDeliveryService(null,null,null,null,null,null,null,null,
+                new DataSourceTransactionManager(new DriverManagerDataSource("jdbc:sqlite:"+temp.resolve("unused.db"))));
+        var attributes=real.gitWithInput(repo,"page.htm\u0000","check-attr","-z","--stdin","filter");
+        assertThat(attributes.code()).isZero();
+        assertThat(attributes.text()).isEqualTo("page.htm\u0000filter\u0000unset\u0000");
+    }
+    private void updateResult(List<String> files) {
+        var taskId=new TaskId("FP-delivery~code~work-1");
+        when(attempts.findCompletedInput(taskId)).thenReturn(Optional.of(new TaskInput(taskId,TaskType.EXTERNAL_WORK,"repo",base,result,
+                null,files,CompletionVerdict.PASS,"done")));
     }
     @Test void fastForwardPreservesUnrelatedDirtyFilesAndIsIdempotent() throws Exception {
         Files.writeString(repo.resolve("notes.txt"),"user notes\n");

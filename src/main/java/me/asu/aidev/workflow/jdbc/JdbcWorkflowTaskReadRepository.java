@@ -14,7 +14,35 @@ public class JdbcWorkflowTaskReadRepository {
     public record Attempt(String id, int attemptNo, int instructionRevision, String workerId,
                           String state, Instant createdAt, Instant startedAt, Instant finishedAt,
                           String failureCategory, String failureCode, String verdict,
-                          String report, String resultRevision) {}
+                          String report, String resultRevision) {
+        @com.fasterxml.jackson.annotation.JsonProperty("diagnostic")
+        public Diagnostic diagnostic() { return explain(failureCode); }
+    }
+    public record Diagnostic(String code,String summary,String nextAction,boolean specific) {}
+    public static Diagnostic explain(String code) {
+        if(code==null) return null;
+        String summary=switch(code) {
+            case "WRITABLE_WORKSPACE_REQUIRED" -> "This coding Worker requires an isolated Git workspace, but no usable revision was assigned.";
+            case "GIT_HEAD_UNAVAILABLE" -> "The selected workspace has no readable current Git commit.";
+            case "WORKSPACE_SNAPSHOT_PATH_TOO_LONG", "FILESYSTEM_PATH_TOO_LONG", "OUTPUT_PATH_TOO_LONG" -> "A filesystem path is too long for the current Windows operation.";
+            case "WORKSPACE_SNAPSHOT_ACCESS_DENIED", "FILE_ACCESS_DENIED" -> "The Worker could not read a required file or directory.";
+            case "WORKSPACE_SNAPSHOT_FILE_MISSING", "FILE_NOT_FOUND" -> "A required file or directory disappeared or could not be found.";
+            case "WORKSPACE_SNAPSHOT_IO_FAILED", "FILESYSTEM_OPERATION_FAILED" -> "A filesystem operation failed while preparing or checking the workspace.";
+            case "WORKSPACE_SNAPSHOT_JUNCTION_UNSAFE" -> "The workspace contains a directory junction that cannot be safely scanned.";
+            case "TEXT_DECODING_FAILED" -> "A required text file could not be decoded.";
+            case "OPERATION_FAILED" -> "This older failure has no specific cause recorded. It is not evidence of a missing approval.";
+            default -> "The Worker reported an execution failure. Use the recorded code and attempt identity for diagnosis.";
+        };
+        String action=switch(code) {
+            case "WRITABLE_WORKSPACE_REQUIRED" -> "Use the updated Worker: when no revision is specified, it pins the selected repository's current HEAD before coding.";
+            case "GIT_HEAD_UNAVAILABLE" -> "Check that the selected directory is a Git repository with at least one commit, then retry.";
+            case "WORKSPACE_SNAPSHOT_PATH_TOO_LONG", "FILESYSTEM_PATH_TOO_LONG", "OUTPUT_PATH_TOO_LONG" -> "Use the updated short output paths and Windows-compatible Worker. Preserve historical files, then retry the failed task.";
+            case "WORKSPACE_SNAPSHOT_ACCESS_DENIED", "FILE_ACCESS_DENIED" -> "Check access to the assigned workspace under the Worker account before retrying.";
+            case "WORKSPACE_SNAPSHOT_FILE_MISSING", "FILE_NOT_FOUND" -> "Check that the assigned workspace and required files exist before retrying.";
+            default -> "Inspect the attempt evidence on the named Worker, fix the cause, then retry this task. Earlier steps are preserved.";
+        };
+        return new Diagnostic(code,summary,action,!"OPERATION_FAILED".equals(code));
+    }
     public record RetryEvent(String actor, String reason, Instant requestedAt) {}
 
     private final JdbcTemplate jdbc;

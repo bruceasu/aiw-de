@@ -124,6 +124,13 @@ public class WorkerProtocolV1Controller {
                 request.profileId(), request.profileVersion(), request.selectionReason());
     }
 
+    public record WorkspaceBaselineRequest(String workerId,String leaseToken,String baseRevision) {}
+    @PostMapping("/tasks/{taskId}/workspace-baseline")
+    public me.asu.aidev.execution.domain.WorkspaceAssignment pinBaseline(@PathVariable String taskId,@RequestBody WorkspaceBaselineRequest request) {
+        return executions.pinWorkspaceBaseline(new TaskId(taskId),new WorkerId(required(request.workerId(),"workerId")),
+                new LeaseToken(required(request.leaseToken(),"leaseToken")),request.baseRevision());
+    }
+
     @PostMapping("/tasks/{taskId}/heartbeat")
     public HeartbeatResponse taskHeartbeat(@PathVariable String taskId, @RequestBody LeaseActionRequest request) {
         return new HeartbeatResponse(executions.heartbeat(
