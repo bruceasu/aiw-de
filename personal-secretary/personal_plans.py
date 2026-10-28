@@ -23,8 +23,6 @@ class PersonalPlans:
                 "body": body, "platformInstanceId": identity["platformInstanceId"]}, 0)
         if row["platformInstanceId"] != identity["platformInstanceId"]:
             raise ValueError("Original platform instance changed")
-        if row["state"] == "CREATED":
-            return row
         if row["state"] == "PREPARED":
             row = self._save(row, "SENDING")
             try:

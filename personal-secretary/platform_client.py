@@ -10,9 +10,11 @@ from store import encode
 
 
 class PlatformError(RuntimeError):
-    def __init__(self, status):
+    def __init__(self, status, code=None, details=None):
         super().__init__(f"Platform request rejected or unconfirmed ({status}); query the original receipt")
         self.status = status
+        self.code = code
+        self.details = details or {}
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -72,6 +74,16 @@ class PlatformClient:
                     raise ValueError("Platform response too large")
                 return json.loads(raw)
         except urllib.error.HTTPError as error:
+            if error.code == 409:
+                try:
+                    raw = error.read(32769)
+                    result = json.loads(raw) if len(raw) <= 32768 else {}
+                except (ValueError, OSError):
+                    result = {}
+                if isinstance(result, dict) and result.get("code") == "PROFESSIONAL_PLAN_NOT_DRAFT":
+                    details = {key: value for key in ("planId", "planState")
+                               if isinstance((value := result.get(key)), str) and len(value) <= 128}
+                    raise PlatformError(409, result["code"], details) from None
             if error.code == 422:
                 raw = error.read(32769)
                 if len(raw) <= 32768:

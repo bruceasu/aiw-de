@@ -198,7 +198,7 @@ const detailLabels = {
   planId: "平台计划", taskId: "平台任务", requestId: "原请求标识", revision: "版本", kind: "类型",
   createdAt: "创建时间", updatedAt: "更新时间", dueMs: "安排时间", timeZone: "时区",
   reason: "原因", summary: "摘要", output: "输出", files: "文件", size: "大小", bytes: "字节数",
-  tool: "工具", arguments: "参数", success: "是否成功", excerpt: "摘录", exists: "是否存在"
+  tool: "工具", arguments: "参数", success: "是否成功", excerpt: "摘录", exists: "是否存在", result: "处理结果"
 };
 const actionLabels = {
   finish: "生成回复", search: "搜索资料", web_search: "搜索公开资料", fetch: "读取网页", read_url: "读取网页",
@@ -254,8 +254,11 @@ function showWorkDetails(id) {
   })), "detail-failure"));
   if (!jobs.length) content.append(workDetailSection("执行记录", "尚无本地日常处理步骤；平台工作请通过卡片中的平台入口查看。"));
   for (const [index, job] of [...jobs].reverse().entries()) {
-    const section = workDetailSection("执行记录 " + (jobs.length - index), { state: job.state,
-      ...(job.message ? { message: job.message } : {}) }, job.state === "FAILED" ? "detail-failure" : "");
+    const section = workDetailSection("秘书处理记录 " + (jobs.length - index), {
+      ...(job.state === "DONE" ? {} : { state: job.state }),
+      ...(job.message ? { message: job.message } : {}), ...(job.result ? { result: job.result } : {})
+    }, job.state === "FAILED" ? "detail-failure" : "");
+    if (job.state === "DONE") section.append(node("p", "muted", "本轮回复已结束，不代表工作已完成。"));
     if (job.steps?.length) section.append(workDetailSection("处理步骤", job.steps));
     if (job.written?.length) section.append(workDetailSection("已保存文件", job.written));
     if (job.sources?.length) section.append(workDetailSection("参考来源", job.sources));

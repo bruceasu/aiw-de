@@ -568,6 +568,35 @@
       }
       return record;
     };
+    const renderPlanReviews = data => {
+      const host = detail.querySelector('[data-plan-review-list]');
+      if (!host) return;
+      const reviews = data.steps.filter(row => row.task.id.value.includes('~review-'))
+        .sort((a, b) => (Date.parse(b.task.createdAt) || 0) - (Date.parse(a.task.createdAt) || 0));
+      host.replaceChildren();
+      if (reviews.length) {
+        for (const row of reviews) {
+          const card = el('article', undefined, 'form-card top-gap');
+          line(card, 'h3', row.stepKey ? `Review · ${row.stepKey}` : 'Independent review');
+          card.appendChild(taskRecord(row));
+          host.appendChild(card);
+        }
+        return;
+      }
+      const executions = data.steps.filter(row => !row.task.id.value.includes('~review-'));
+      if (!executions.length) {
+        line(host, 'p', 'No execution or independent review task has been recorded yet.', 'muted');
+        return;
+      }
+      line(host, 'p', 'No independent review task has been recorded for these executions. Open a task to inspect the Worker report and deliverables.', 'callout');
+      for (const row of executions) {
+        const card = el('article', undefined, 'form-card top-gap');
+        line(card, 'h3', row.stepKey ? `Review target · ${row.stepKey}` : 'Review target');
+        line(card, 'span', 'Independent review not recorded', 'badge');
+        card.appendChild(taskRecord(row));
+        host.appendChild(card);
+      }
+    };
     let loading = false;
     let request = null;
     const load = async () => {
@@ -577,10 +606,19 @@
       const timeout = setTimeout(() => request?.abort(), 10000);
       try {
         const data = await api(`/plans/${encodeURIComponent(id)}`, undefined, { signal: request.signal, cache: 'no-store' }); plan = data.plan;
+        detail.querySelector('[data-detail-id]').textContent = id;
+        renderPlanReviews(data);
         const configured = data.configuredExecution;
         const hasConfigured = !!configured && (configured.tasks.length > 0 || configured.preparations.length > 0);
         const formalFactory = !!data.factoryPlan;
         const configuredOnly = formalFactory || hasConfigured && !data.steps.length;
+        const startReview = detail.querySelector('[data-factory-review-start]');
+        const previousReview = data.steps.find(row => row.task.id.value === data.factoryReview?.reviewTaskId);
+        const canRequestReview = !data.factoryReview || ['WAITING', 'CHANGES_REQUIRED'].includes(data.factoryReview.state)
+          || data.factoryReview.state === 'PENDING' && ['FAILED', 'CANCELLED'].includes(previousReview?.task.state);
+        if (startReview) startReview.hidden = !formalFactory || !['CONFIRMED', 'COMPLETED'].includes(plan.state)
+          || !canRequestReview
+          || !data.steps.some(row => row.stepKey === 'execute' && row.task.state === 'COMPLETED' && row.verdict === 'PASS');
         const legacyDraft = !formalFactory && configuredOnly;
         renderConfiguredExecution(configured);
         const originalState = detail.querySelector('[data-original-graph-state]');
@@ -967,6 +1005,18 @@
         clearTimeout(timeout); repairSubmitting = false;
         button.disabled = false; button.removeAttribute('aria-busy'); button.textContent = 'Authorize continued repair';
       }
+    });
+    detail.querySelector('[data-factory-review-start]')?.addEventListener('click', async event => {
+      const button = event.currentTarget;
+      if (!await window.aiwConfirm('Request an independent review of the recorded result?')) return;
+      const status = detail.querySelector('[data-factory-review-status]');
+      button.disabled = true;
+      try {
+        await api(`/plans/${encodeURIComponent(id)}/factory-review`, { version: plan.version });
+        status.textContent = 'Independent review queued.';
+        await load();
+      } catch (error) { status.textContent = `Review request failed: ${error.message}`; }
+      finally { button.disabled = false; }
     });
     detail.querySelector('[data-resume-review]')?.addEventListener('click', async () => {
       if (!reviewRecovery?.allowed) return;

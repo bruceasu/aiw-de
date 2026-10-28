@@ -31,7 +31,7 @@ public class WorkflowEditorService {
                          List<me.asu.aidev.workflow.jdbc.JdbcWorkflowRepairAuthorizationRepository.Authorization> repairAuthorizations,
                          List<String> decisionWorkers, java.util.Map<String, String> repairDecisionReports,
                          me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.History configuredExecution,
-                         String displayState, FactoryPlanLifecycle.View factoryPlan, WorkflowGitDeliveryService.View gitDelivery,
+                         String displayState, FactoryPlanLifecycle.View factoryPlan, FactoryPlanLifecycle.Review factoryReview, WorkflowGitDeliveryService.View gitDelivery,
                          List<WorkflowWorkerProvisioning.Preparation> workerPreparation) {}
     @org.springframework.beans.factory.annotation.Autowired
     private WorkflowWorkerProvisioning workerProvisioning;
@@ -170,6 +170,7 @@ public class WorkflowEditorService {
         }
         var configured = configuredHistory == null ? null : configuredHistory.read(id);
         var factoryPlan = factoryPlans == null ? null : factoryPlans.getObject().view(id);
+        var factoryReview = factoryPlan == null ? null : factoryPlans.getObject().review(id);
         if (factoryPlan != null) for (var bound : factoryPlans.getObject().currentTasks(id)) {
             var report = attempts.findCompletionReport(bound.task().id());
             rows.add(new StepDetail(bound.task(),dependencies.findDependencies(bound.task().id()).stream().map(TaskId::value).toList(),
@@ -177,10 +178,12 @@ public class WorkflowEditorService {
         }
         String displayState = plan.state()==WorkflowPlan.State.COMPLETED ? "COMPLETED" : (factoryPlan!=null || rows.isEmpty()) && configured != null
                 ? me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.displayState(configured.state()) : null;
+        if (factoryReview != null && !"PASSED".equals(factoryReview.state()) && "COMPLETED".equals(displayState))
+            displayState="CHANGES_REQUIRED".equals(factoryReview.state()) ? "NEEDS_ATTENTION" : "AWAITING_REVIEW";
         var delivery = gitDelivery == null ? null : gitDelivery.getObject().view(id);
         if (delivery != null && !Set.of("NOT_REQUIRED", "DELIVERED").contains(delivery.state())) displayState=delivery.state();
-        return new Detail(plan, rows, plans.controlHistory(id), outcomes.find(id).orElse(null), plans.reviewRecovery(id),
+        return new Detail(plan, rows, plans.controlHistory(id), outcomes.find(id).orElse(null), factoryPlan == null ? plans.reviewRecovery(id) : null,
                 repairs.list(id), repairs.decisionWorkers(id), repairs.decisionReports(id),
-                configured, displayState, factoryPlan, delivery, workerProvisioning==null?List.of():workerProvisioning.pending(id));
+                configured, displayState, factoryPlan, factoryReview, delivery, workerProvisioning==null?List.of():workerProvisioning.pending(id));
     }
 }

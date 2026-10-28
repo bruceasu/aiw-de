@@ -82,6 +82,8 @@ class ProfessionalTasks:
 
     @staticmethod
     def _error(error):
+        if error.code == "PROFESSIONAL_PLAN_NOT_DRAFT":
+            return "所选计划已确认、完成或停止，不能用于另一项新工作。请为当前工作准备独立计划；原计划和结果保持不变。这不是连接或凭证问题。"
         return {
             "PLATFORM_NOT_CONNECTED": "尚未连接专业平台。请先配置一次秘书的平台连接；本机聊天和日常工具仍可使用。",
             401: "平台未接受当前连接或进程会话，请检查连接状态及当前秘书进程；这不一定是凭证无效。",
@@ -91,30 +93,49 @@ class ProfessionalTasks:
             422: "专业任务的计划、仓库基线、方法或模型不符合平台要求，请核对秘书报告。",
         }.get(error.status, "专业平台连接未获确认；秘书将查询原请求，不会自动重复提交。")
 
+    def needs_plan_recovery(self, work):
+        return (not any(work.get(key) for key in ("planId", "professionalDraftPlanId", "professionalPlanId"))
+                and any(row.get("kind") == "PROFESSIONAL_TASK" and row.get("workId") == work["id"]
+                        and row.get("state") == "REJECTED" for row in self.store.list("decision")))
+
+    def prepare_own_plan(self, work, job):
+        """Create/query only this work's inert draft; never copy another Plan's authority."""
+        current = self.store.get("work", work["id"])
+        if not current or current.get("state") in {"CANCELLED", "TRASHED"} or self.pending(work["id"]):
+            raise ValueError("工作已取消、移除或已有专业请求，尚未创建新计划。")
+        self._ready()
+        draft = self.runtime.personal_plans.ensure(work)
+        if draft.get("state") != "CREATED":
+            raise ValueError("本工作的计划草稿结果待核对，秘书不会重复创建。请查看原计划请求记录。")
+        receipt = draft["receipt"]
+        if receipt.get("state") != "DRAFT":
+            raise ValueError("本工作的原计划已确认、完成或停止，不能重复执行；请查看原计划结果。")
+        plan_id = receipt["planId"]
+        self.runtime.daily._report(work["id"], "NEEDS_HUMAN", "PROFESSIONAL_SCOPE_REQUIRED",
+                                   "已为这项工作准备独立计划，请确认它的仓库和文件范围。原任务和上下文已保留。",
+                                   professionalDraftPlanId=plan_id)
+        needed = AuthorizationRequired("已为这项工作准备独立计划。请确认此计划的仓库和文件执行范围；保存后会继续原任务，不会使用已完成的旧计划。", "PLAN_SCOPE_REQUIRED", plan_id)
+        needed.resume_action = {"action": "professional_options"}
+        raise needed
+
     def submit(self, work, job, action):
         if self.pending(work["id"]):
             raise ValueError("这项工作已有专业任务正在执行或核对，秘书会继续跟踪原任务，不会重复创建。")
         options = self.options()
         plans = options.get("plans", [])
-        plan_id = action.get("planId") or work.get("planId") or work.get("professionalDraftPlanId") or work.get("professionalPlanId")
-        choices = [plan for plan in plans if not plan_id or plan["id"] == plan_id]
+        plan_id = work.get("planId") or work.get("professionalDraftPlanId") or work.get("professionalPlanId")
+        if not plan_id:
+            self.prepare_own_plan(work, job)
+        if action.get("planId") and action["planId"] != plan_id:
+            raise ValueError("模型选择的计划不属于当前工作，尚未提交。请使用当前工作已关联的计划，不要套用其他计划。")
+        choices = [plan for plan in plans if plan["id"] == plan_id]
         if plan_id and not choices:
             raise AuthorizationRequired("此计划尚无可用的托管和文件执行范围。请打开“配置计划与文件范围”，核对仓库、文件和 Git 基线后保存。", "PLAN_SCOPE_REQUIRED", plan_id)
-        if not plans:
-            selected = action.get("instruction")
-            selected = selected if isinstance(selected, str) and 0 < len(selected) <= 16000 else job["userText"]
-            draft_work = {**work, "body": selected,
-                          "title": job["userText"].strip().splitlines()[0][:200] if work["title"] == "日常对话" else work["title"]}
-            draft = self.runtime.personal_plans.ensure(draft_work)
-            if draft.get("state") == "CREATED":
-                plan_id = draft["receipt"]["planId"]
-                self.runtime.daily._report(work["id"], "NEEDS_HUMAN", "PROFESSIONAL_SCOPE_REQUIRED",
-                                           "专业计划草稿已创建，需要确认执行范围。", professionalDraftPlanId=plan_id)
-                raise AuthorizationRequired("已准备好计划草稿，需要你确认此计划的仓库和工具范围；完成授权后将继续原任务。", "PLAN_SCOPE_REQUIRED", plan_id)
-            raise ValueError("自动创建的计划草稿结果待核对，秘书不会重复创建。请查看原计划请求记录。")
         if len(choices) != 1:
             raise ValueError("没有唯一可用的已授权计划。请说明使用哪个计划；没有计划时先让秘书创建计划草稿，并确认其专业执行范围。")
         plan = choices[0]
+        if plan.get("state") not in {None, "DRAFT"}:
+            raise ValueError("当前工作关联的计划已确认、完成或停止，不能用它提交另一项工作。请查看原计划结果。")
         repositories = [item for item in plan.get("repositories", []) if not action.get("repositoryRef") or item["ref"] == action["repositoryRef"]]
         if not repositories and isinstance(action.get("repositoryRef"), str):
             requested = action["repositoryRef"]
@@ -149,13 +170,14 @@ class ProfessionalTasks:
             result = self.runtime.platform.request("/professional-tasks", body)
         except PlatformError as error:
             if error.status in {400, 401, 403, 404, 409, 413, 422}:
-                self._save(row, state="REJECTED")
+                self._save(row, state="REJECTED", rejection={"status": error.status, "code": error.code,
+                                                           "details": error.details})
                 text = self._error(error)
                 if error.status in {401, 403}:
                     needed = AuthorizationRequired(text, "PLATFORM_PERMISSION_REQUIRED", plan["id"])
                     needed.resume_action = {"action": "professional_options"}
                     raise needed from None
-                self._publish(row, "NEEDS_HUMAN", "PROFESSIONAL_REJECTED", text)
+                self._publish(row, "NEEDS_HUMAN", error.code or "PROFESSIONAL_REJECTED", text)
                 self.runtime.daily._decision(job, state="BLOCKED", result=text)
                 return
             # Even a server error may occur after the transaction committed. Read the original request only.

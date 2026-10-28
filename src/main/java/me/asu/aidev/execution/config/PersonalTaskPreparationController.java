@@ -33,5 +33,10 @@ public class PersonalTaskPreparationController {
     @ExceptionHandler(SecurityException.class) public ResponseEntity<?> denied() { return ResponseEntity.status(403).body(Map.of("code","PROFESSIONAL_SCOPE_REQUIRED")); }
     @ExceptionHandler(NoSuchElementException.class) public ResponseEntity<?> missing() { return ResponseEntity.status(404).body(Map.of("code","PROFESSIONAL_REQUEST_NOT_FOUND")); }
     @ExceptionHandler(IllegalArgumentException.class) public ResponseEntity<?> invalid() { return ResponseEntity.unprocessableContent().body(Map.of("code","PROFESSIONAL_INPUT_INVALID")); }
+    @ExceptionHandler(PersonalTaskPreparations.PlanNotDraft.class)
+    public ResponseEntity<?> planNotDraft(PersonalTaskPreparations.PlanNotDraft failure) {
+        return ResponseEntity.status(409).body(Map.of("code","PROFESSIONAL_PLAN_NOT_DRAFT",
+                "planId",failure.planId(),"planState",failure.planState(),"message",failure.getMessage()));
+    }
     @ExceptionHandler(IllegalStateException.class) public ResponseEntity<?> changed() { return ResponseEntity.status(409).body(Map.of("code","PROFESSIONAL_SOURCE_CHANGED")); }
 }

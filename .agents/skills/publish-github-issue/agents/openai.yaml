@@ -1,5 +1,0 @@
-interface:
-  display_name: "Publish GitHub Issue"
-  short_description: "Publish a local Issue or FD summary to GitHub"
-policy:
-  allow_implicit_invocation: false

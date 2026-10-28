@@ -79,10 +79,13 @@ public class WorkflowEditorController {
         var executionStates = new java.util.HashMap<String, String>();
         if (configuredHistory != null) for (WorkflowPlan plan : rows) {
             var state = configuredHistory.stateForList(plan.id());
-            if (state != null && plans.steps(plan.id()).isEmpty()) executionStates.put(plan.id(),
+            if (state != null && (plans.steps(plan.id()).isEmpty() || factoryPlans.getObject().view(plan.id())!=null)) executionStates.put(plan.id(),
                     me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.displayState(state));
         }
         for (WorkflowPlan plan : rows) {
+            var review=factoryPlans.getObject().view(plan.id())==null ? null : factoryPlans.getObject().review(plan.id());
+            if (review!=null && !"PASSED".equals(review.state()) && "COMPLETED".equals(executionStates.get(plan.id())))
+                executionStates.put(plan.id(),"CHANGES_REQUIRED".equals(review.state())?"NEEDS_ATTENTION":"AWAITING_REVIEW");
             var delivery=gitDelivery.view(plan.id());
             if (!java.util.Set.of("NOT_REQUIRED","DELIVERED").contains(delivery.state())) executionStates.put(plan.id(),delivery.state());
         }
@@ -107,9 +110,12 @@ public class WorkflowEditorController {
     public String detailPage(@PathVariable String id, Model model) {
         requireEnabled();
         var saved = plans.get(id);
-        String executionState = configuredHistory == null || !plans.steps(id).isEmpty() ? null
+        String executionState = configuredHistory == null || (!plans.steps(id).isEmpty() && factoryPlans.getObject().view(id)==null) ? null
                 : me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository.displayState(configuredHistory.stateForList(id));
         var delivery=gitDelivery.view(id);
+        var review=factoryPlans.getObject().view(id)==null ? null : factoryPlans.getObject().review(id);
+        if (review!=null && !"PASSED".equals(review.state()) && "COMPLETED".equals(executionState))
+            executionState="CHANGES_REQUIRED".equals(review.state())?"NEEDS_ATTENTION":"AWAITING_REVIEW";
         if (!java.util.Set.of("NOT_REQUIRED","DELIVERED").contains(delivery.state())) executionState=delivery.state();
         model.addAttribute("planDisplayState", executionState == null ? saved.state().name() : executionState);
         model.addAttribute("configuredOnly", configuredHistory != null && plans.steps(id).isEmpty()
@@ -185,6 +191,13 @@ public class WorkflowEditorController {
         return editor.taskDetail(id,taskId);
     }
     public record ReviewRecoveryRequest(long planVersion, String taskId, long taskVersion, String reason, boolean warningConfirmed) {}
+    @PostMapping("/api/r1/plan-editor/plans/{id}/factory-review")
+    @ResponseBody
+    public me.asu.aidev.workflow.application.FactoryPlanLifecycle.Review requestFactoryReview(
+            @PathVariable String id, @RequestBody WorkflowPlanController.Version request, HttpSession session) {
+        requireWrite(session);
+        return factoryPlans.getObject().requestReview(id, request.version(), security.actor(session));
+    }
     public record RepairAuthorizationRequest(long planVersion, String taskId, long taskVersion, String reason,
                                              String scope, String delegateWorkerId, boolean warningConfirmed) {}
 

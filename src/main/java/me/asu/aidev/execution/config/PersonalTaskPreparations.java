@@ -14,6 +14,15 @@ import static me.asu.aidev.execution.guard.GuardContract.text;
 /** Machine preparation uses the current owner's existing policy and exact managed scope. */
 @Service
 public class PersonalTaskPreparations {
+    public static final class PlanNotDraft extends IllegalStateException {
+        private final String planId, planState;
+        public PlanNotDraft(String planId,String planState) {
+            super("A new professional request requires its own draft Plan; the selected Plan has already started or ended.");
+            this.planId=planId;this.planState=planState;
+        }
+        public String planId() { return planId; }
+        public String planState() { return planState; }
+    }
     public record Input(String requestId,String planId,String repositoryRef,String baseRevision,
                         String role,String aiProfileId,String instruction) {
         public Input {
@@ -63,7 +72,9 @@ public class PersonalTaskPreparations {
     @Transactional public Map<String,Object> options(AuthorityBoundary.Principal principal) {
         boundary.lock();admission.enabled(principal);
         var visible=choices(principal).stream().map(plan->Map.of("id",plan.id(),"title",plan.title(),"paused",plan.paused(),"revoked",plan.revoked(),
-                "expiresAt",plan.expiresAt(),"policyRevision",plan.policyRevision(),"url",plan.url(),"repositories",plan.repositories().stream().map(repository->{
+                "expiresAt",plan.expiresAt(),"policyRevision",plan.policyRevision(),"url",plan.url(),
+                "state",repo.jdbc().queryForObject("SELECT state FROM flexible_workflow_plan WHERE id=?",String.class,plan.id()),
+                "repositories",plan.repositories().stream().map(repository->{
                     var value=new LinkedHashMap<String,Object>();value.put("ref",repository.ref());value.put("baselines",repository.baselines());
                     try {value.put("path",workspaces.repositoryPath(repository.ref()).toString());}catch(IllegalArgumentException ignored){/* Registration must be repaired before execution. */}
                     return value;
@@ -106,6 +117,12 @@ public class PersonalTaskPreparations {
         boundary.lock();admission.enabled(principal);boundary.requireMigrationSafeInstallation();
         var plan=choices(principal).stream().filter(p->p.id().equals(input.planId())).findFirst()
                 .orElseThrow(()->new SecurityException("Explicit managed Plan and read scope required"));
+        String planState=repo.jdbc().queryForObject("SELECT state FROM flexible_workflow_plan WHERE id=?",String.class,plan.id());
+        String identity=intentId(principal,input.requestId());
+        if (!"DRAFT".equals(planState) && repo.jdbc().queryForObject(
+                "SELECT COUNT(*) FROM execution_preparation WHERE owner_id=? AND intent_id=? AND intent_version=1",
+                Long.class,principal.owner(),identity)==0)
+            throw new PlanNotDraft(plan.id(),planState);
         if(plan.paused() || plan.revoked() || plan.expiresAt()<=System.currentTimeMillis())
             throw new SecurityException("Current active execution policy required");
         String target="PLAN:"+plan.id();
@@ -118,7 +135,6 @@ public class PersonalTaskPreparations {
         if(!repository.baselines().contains(input.baseRevision())) throw new IllegalArgumentException("Choose an existing immutable repository baseline");
         var model=factory.supportedProfiles().stream().filter(p->p.id().equals(input.aiProfileId())).findFirst()
                 .orElseThrow(()->new IllegalArgumentException("Approved model required"));
-        String identity=intentId(principal,input.requestId());
         long generation=factory.preparations(principal.owner()).stream().filter(p->p.intentId().equals(identity)).mapToLong(Preparation::generation).findFirst().orElse(0);
         var intent=new Intent(identity,1,generation,plan.id(),plan.policyRevision(),repository.ref(),input.baseRevision(),
                 input.instruction(),List.of(),model.profile().runtime(),model.id(),input.role(),null,null);

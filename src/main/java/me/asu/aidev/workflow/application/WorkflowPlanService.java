@@ -29,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class WorkflowPlanService {
     @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<FactoryPlanLifecycle> factoryPlans;
+    @org.springframework.beans.factory.annotation.Autowired
     private me.asu.aidev.workspace.application.ManagedWorkspaceService targetWorkspaces;
     public WorkflowPlan editableDraft(String id,String actor) {
         actor=actor(actor);
@@ -414,6 +416,8 @@ public class WorkflowPlanService {
     @Transactional
     public WorkflowPlan complete(String id, long version, String actor, String reason) {
         humanChange(id);
+        if (factoryPlans != null && factoryPlans.getObject().view(id)!=null && factoryPlans.getObject().reviewRequired(id))
+            throw new IllegalStateException("Independent review must pass before completing this factory plan");
         return control(id, version, null, actor, reason, true);
     }
 
@@ -422,6 +426,7 @@ public class WorkflowPlanService {
     public void completeReviewed(String id, TaskId reviewId) {
         managedSerialization(id);
         managedAdmission(id);
+        if (factoryPlans != null && factoryPlans.getObject().view(id)!=null && factoryPlans.getObject().reviewRequired(id)) return;
         WorkflowPlan plan = get(id);
         if (plan.state() != WorkflowPlan.State.CONFIRMED || archives.archived(id)
                 || controls.pending(id).isPresent() || outcomes.find(id).isPresent()) return;

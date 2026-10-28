@@ -1,5 +1,0 @@
-interface:
-  display_name: "Grill with Docs"
-  short_description: "Sharpen Issue discussions and return confirmed conclusions"
-policy:
-  allow_implicit_invocation: false

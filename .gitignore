@@ -18,3 +18,4 @@ replay_pid*.log
 .aidev-attempt-evidence/
 __pycache__/
 .env
+.agents/

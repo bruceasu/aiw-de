@@ -82,7 +82,8 @@ public class WorkflowGitDeliveryService {
                     receipt.isEmpty()?"AWAITING_MERGE":String.valueOf(receipt.getFirst().get("state")),
                     receipt.isEmpty()?"Execution passed; local delivery is pending.":String.valueOf(receipt.getFirst().get("message"))));
         }
-        String state=items.isEmpty()?"NOT_REQUIRED":items.stream().allMatch(item -> item.state().equals("DELIVERED"))?"DELIVERED"
+        String state=factory.getObject().view(id)!=null && factory.getObject().reviewRequired(id)?"AWAITING_REVIEW"
+                :items.isEmpty()?"NOT_REQUIRED":items.stream().allMatch(item -> item.state().equals("DELIVERED"))?"DELIVERED"
                 :items.stream().anyMatch(item -> item.state().equals("UNKNOWN"))?"DELIVERY_UNKNOWN"
                 :items.stream().anyMatch(item -> item.state().equals("MERGING"))?"MERGING"
                 :items.stream().anyMatch(item -> item.state().equals("BLOCKED"))?"DELIVERY_BLOCKED":"AWAITING_MERGE";
@@ -115,6 +116,8 @@ public class WorkflowGitDeliveryService {
     }
 
     public Preview preview(String id,String ref) {
+        if (factory.getObject().view(id)!=null && factory.getObject().reviewRequired(id))
+            throw new IllegalStateException("Independent review must pass before delivery");
         var plan=plan(id); var item=candidate(id,ref);
         if (!item.resultRevision().matches("[0-9a-f]{40}|[0-9a-f]{64}")) throw new IllegalStateException("Immutable Git result required");
         Path path=repository(ref);
@@ -169,6 +172,8 @@ public class WorkflowGitDeliveryService {
         transaction.executeWithoutResult(status -> {
             authority.lock();
             if (plan(id).version()!=input.planVersion()) throw new IllegalStateException("Plan version changed");
+            if (factory.getObject().view(id)!=null && factory.getObject().reviewRequired(id))
+                throw new IllegalStateException("Independent review must pass before delivery");
             int reserved=jdbc.update("""
                     UPDATE plan_git_delivery SET request_id=?,state='MERGING',actor=?,repository_path=?,target_branch=?,before_revision=?,message=?,updated_ms=?
                      WHERE plan_id=? AND repository_ref=? AND result_revision=? AND state IN ('READY','BLOCKED')

@@ -705,6 +705,8 @@
   };
   // Chinese source strings used by the secretary and the shared companion UI.
   const workspaceCatalog = {
+    "本轮回复已结束，不代表工作已完成。": ["This reply has ended; the work is not necessarily complete.", "今回の返信は終了しました。作業の完了を意味するものではありません。"],
+    "处理结果": ["Processing result", "処理結果"],
   "我的秘书": [
     "My secretary",
     "マイ秘書"
@@ -3022,6 +3024,7 @@
     if (Object.hasOwn(workspaceCatalog, value)) return locale === 'zh' ? value : workspaceCatalog[value][locale === 'ja' ? 1 : 0];
     // Translate changing counts and timestamps without translating user content.
     const dynamic = [
+      [/^秘书处理记录 (\d+)$/, ['Secretary activity $1', '秘書の処理記録 $1']],
       [/^版本 (\d+)$/, ['Version $1', 'バージョン $1']],
       [/^待你确认（(\d+)）$/, ['Needs confirmation ($1)', '確認待ち（$1）']],
       [/^报告更新于 (.+)$/, ['Report updated at $1', 'レポート更新日時 $1']],

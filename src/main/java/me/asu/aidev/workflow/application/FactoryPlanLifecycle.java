@@ -5,6 +5,10 @@ import java.util.*;
 import me.asu.aidev.authority.*;
 import me.asu.aidev.execution.config.ConfigurationContract.*;
 import me.asu.aidev.execution.domain.CompletionReport;
+import me.asu.aidev.execution.domain.CompletionVerdict;
+import me.asu.aidev.execution.port.ExecutionAttemptRepository;
+import me.asu.aidev.work.application.CreateWorkTaskCommand;
+import me.asu.aidev.work.application.WorkTaskService;
 import me.asu.aidev.work.domain.*;
 import me.asu.aidev.work.port.WorkTaskRepository;
 import me.asu.aidev.workflow.domain.*;
@@ -31,6 +35,9 @@ public class FactoryPlanLifecycle {
     private final WorkflowPlanRepository plans;
     private final WorkTaskRepository tasks;
     private final JdbcConfiguredPlanHistoryRepository history;
+    @org.springframework.beans.factory.annotation.Autowired private WorkTaskService taskService;
+    @org.springframework.beans.factory.annotation.Autowired private ExecutionAttemptRepository attempts;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.output.jdbc.JdbcTaskOutputRepository taskOutputs;
 
     public FactoryPlanLifecycle(AuthorityRepository repo, AuthorityBoundary boundary, ManagedPlanAdmission manager,
             BusinessActionPermissions permissions, AuthorityGrantService grants, WorkflowPlanRepository plans,
@@ -76,6 +83,7 @@ public class FactoryPlanLifecycle {
             permissions.confirmFactoryPlan(principal,plan.id(),request);
         }
         persistConfirmation(plan,accepted,config,method,actor);
+        repo.jdbc().update("INSERT INTO factory_plan_review(plan_id,state,updated_at_epoch_ms) VALUES(?,'WAITING',?)",plan.id(),System.currentTimeMillis());
     }
 
     private void persistConfirmation(WorkflowPlan plan, Intent intent, PreparedConfigRef config, Method method, String actor) {
@@ -106,6 +114,9 @@ public class FactoryPlanLifecycle {
         boundary.lock();
         WorkflowPlan plan=plans.find(intent.planId()).orElseThrow();
         if (plan.state()!=WorkflowPlan.State.CONFIRMED || view(plan.id())==null) throw new IllegalStateException("Confirmed factory Plan required");
+        Review review=review(plan.id());
+        if (review!=null && "PENDING".equals(review.state()) && !Objects.equals(review.sourceTaskId(),taskId))
+            throw new IllegalStateException("A review is pending for the current factory task");
         for (var previous:currentTasks(plan.id())) {
             if (previous.task().id().value().equals(taskId)) return;
             if (!Set.of(TaskState.COMPLETED,TaskState.FAILED,TaskState.CANCELLED).contains(previous.task().state()))
@@ -131,12 +142,96 @@ public class FactoryPlanLifecycle {
             var result=recorded.tasks().stream().filter(t -> t.id().equals(binding.get("task_id"))).findFirst().orElseThrow();
             if (!successful(result,String.valueOf(binding.get("result_kind")))) return;
         }
+        if (reviewRequired(plan.id())) return;
         if (!plans.transition(plan.id(),plan.version(),WorkflowPlan.State.CONFIRMED,WorkflowPlan.State.COMPLETED,
                 "factory","Recorded factory work completed: "+task.id().value(),Instant.now()))
             throw new IllegalStateException("Plan changed during completion");
         repo.jdbc().update("UPDATE authority_managed_plan SET version=? WHERE plan_id=?",plan.version()+1,plan.id());
         if (gitDelivery!=null) gitDelivery.getObject().enqueue(plan.id());
         repo.audit("PLAN:"+plan.id(),null,null,"factory","FACTORY_PLAN_COMPLETED",task.id().value());
+    }
+
+    /** Historical plans have no row until their owner explicitly requests a review. */
+    public boolean reviewRequired(String planId) {
+        return repo.jdbc().queryForObject("SELECT COUNT(*) FROM factory_plan_review WHERE plan_id=? AND state<>'PASSED'",Long.class,planId)>0;
+    }
+
+    public record Review(String state, String sourceTaskId, String reviewTaskId) {}
+    public Review review(String planId) {
+        return repo.jdbc().query("SELECT state,source_task_id,review_task_id FROM factory_plan_review WHERE plan_id=?",
+                (r,n) -> new Review(r.getString(1),r.getString(2),r.getString(3)),planId).stream().findFirst().orElse(null);
+    }
+
+    @Transactional
+    public Review requestReview(String planId, long version, String actor) {
+        boundary.lock();
+        WorkflowPlan plan=plans.find(planId).orElseThrow();
+        if (!Objects.equals(actor,boundary.human()) || !Objects.equals(actor,plan.createdBy()))
+            throw new SecurityException("The authenticated Plan owner is required");
+        grants.human(actor,"A05");
+        if (plan.version()!=version || !Set.of(WorkflowPlan.State.CONFIRMED,WorkflowPlan.State.COMPLETED).contains(plan.state()) || view(planId)==null)
+            throw new IllegalStateException("Factory Plan state or version changed");
+        if (repo.jdbc().queryForObject("SELECT COUNT(*) FROM web_console_plan_archive WHERE plan_id=?",Long.class,planId)>0)
+            throw new IllegalStateException("Archived plans cannot start a review");
+        if (repo.jdbc().queryForObject("SELECT COUNT(*) FROM plan_git_delivery WHERE plan_id=? AND state='MERGING'",Long.class,planId)>0)
+            throw new IllegalStateException("A delivery is in progress; wait for its recorded outcome");
+        Review existing=review(planId);
+        if (existing!=null && "PASSED".equals(existing.state())) throw new IllegalStateException("Review already passed");
+        if (existing!=null && "PENDING".equals(existing.state())) {
+            var previous=tasks.find(new TaskId(existing.reviewTaskId())).orElseThrow();
+            if (!Set.of(TaskState.FAILED,TaskState.CANCELLED).contains(previous.state()))
+                throw new IllegalStateException("Review is already pending");
+        }
+        var bindings=repo.jdbc().queryForList("SELECT task_id,result_kind FROM workflow_factory_task WHERE plan_id=? AND current_task=TRUE",planId);
+        if (bindings.size()!=1) throw new IllegalStateException("One current factory task is required");
+        String source=String.valueOf(bindings.getFirst().get("task_id"));
+        var recorded=history.read(planId).tasks().stream().filter(t -> t.id().equals(source)).findFirst().orElseThrow();
+        if (!successful(recorded,String.valueOf(bindings.getFirst().get("result_kind")))) throw new IllegalStateException("A successful recorded result is required");
+        var input=attempts.findCompletedInput(new TaskId(source)).orElseThrow();
+        var step=plan.spec().steps().getFirst();
+        int next=tasks.findBySubject("flexible-plan",planId).stream()
+                .map(task -> WorkflowTaskPosition.parse(plan,task.id())).flatMap(Optional::stream)
+                .filter(WorkflowTaskPosition::review).mapToInt(WorkflowTaskPosition::round).max().orElse(0)+1;
+        String reviewId=planId+"~execute~review-"+next;
+        boundary.changing("PLAN:"+planId);
+        var capabilities=new LinkedHashSet<String>(); capabilities.add("workflow-review");
+        if (taskOutputs.completed(source).map(bundle -> bundle.files().stream()
+                .anyMatch(file -> Set.of("DOCUMENT","ATTACHMENT").contains(file.kind()))).orElse(false)) capabilities.add("task-outputs-v1");
+        taskService.createIfAbsent(new CreateWorkTaskCommand(new TaskId(reviewId),TaskType.EXTERNAL_WORK,"flexible-plan",planId,
+                Set.copyOf(capabilities),"workflow-stage-reviewer",
+                "Independently review the recorded output against the plan goal and instruction.\nGoal: "+plan.spec().goal()
+                        +"\nInstruction: "+step.instruction()+"\nEnd with AIW_VERDICT: PASS or AIW_VERDICT: REPAIR_REQUIRED.",
+                step.repositoryRef(),input.resultRevision()==null?step.baseRevision():input.resultRevision(),TaskPriority.NORMAL,Set.of(new TaskId(source))));
+        boundary.allowHumanTask(reviewId);
+        repo.jdbc().update("INSERT INTO factory_plan_review(plan_id,source_task_id,review_task_id,state,updated_at_epoch_ms) VALUES(?,?,?,'PENDING',?) ON CONFLICT(plan_id) DO UPDATE SET source_task_id=excluded.source_task_id,review_task_id=excluded.review_task_id,state=excluded.state,updated_at_epoch_ms=excluded.updated_at_epoch_ms",
+                planId,source,reviewId,System.currentTimeMillis());
+        repo.audit("PLAN:"+planId,null,null,actor,"FACTORY_REVIEW_REQUESTED",source+":"+reviewId);
+        return review(planId);
+    }
+
+    @Transactional
+    public boolean completeReview(WorkTask task, CompletionReport report) {
+        boundary.lock();
+        Review current=review(task.subjectId());
+        if (current==null || !Objects.equals(current.reviewTaskId(),task.id().value()) || !"PENDING".equals(current.state())) return false;
+        if (report==null) throw new IllegalStateException("Independent review requires a verdict");
+        var bindings=repo.jdbc().queryForList("SELECT task_id FROM workflow_factory_task WHERE plan_id=? AND current_task=TRUE",String.class,task.subjectId());
+        if (bindings.size()!=1 || !Objects.equals(bindings.getFirst(),current.sourceTaskId()))
+            throw new IllegalStateException("Reviewed factory result is no longer current");
+        String state=report.verdict()==CompletionVerdict.PASS?"PASSED":"CHANGES_REQUIRED";
+        repo.jdbc().update("UPDATE factory_plan_review SET state=?,updated_at_epoch_ms=? WHERE plan_id=? AND review_task_id=? AND state='PENDING'",
+                state,System.currentTimeMillis(),task.subjectId(),task.id().value());
+        if ("PASSED".equals(state)) {
+            WorkflowPlan plan=plans.find(task.subjectId()).orElseThrow();
+            if (plan.state()==WorkflowPlan.State.CONFIRMED) {
+                if (!plans.transition(plan.id(),plan.version(),WorkflowPlan.State.CONFIRMED,WorkflowPlan.State.COMPLETED,"factory","Independent review passed: "+task.id().value(),Instant.now()))
+                    throw new IllegalStateException("Plan changed during reviewed completion");
+                repo.jdbc().update("UPDATE authority_managed_plan SET version=? WHERE plan_id=?",plan.version()+1,plan.id());
+                if (gitDelivery!=null) gitDelivery.getObject().enqueue(plan.id());
+            }
+        }
+        repo.audit("PLAN:"+task.subjectId(),null,null,"factory","FACTORY_REVIEW_"+state,task.id().value());
+        return true;
     }
 
     private boolean successful(JdbcConfiguredPlanHistoryRepository.Task task, String kind) {

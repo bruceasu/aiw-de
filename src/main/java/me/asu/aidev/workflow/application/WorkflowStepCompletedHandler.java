@@ -43,6 +43,7 @@ public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
             factoryPlans.getObject().completed(context.completedTask(),context.completionReport());
             return List.of();
         }
+        if (factoryPlans.getObject().completeReview(context.completedTask(),context.completionReport())) return List.of();
         if(personal.managed(context.completedTask().subjectId())) return List.of(); // Record the real result; wait for private coordinator admission.
         if (repairDecisions.supports(context)) return repairDecisions.onCompleted(context);
         return advance(context.completedTask(),context.completionReport());

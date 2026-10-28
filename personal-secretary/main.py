@@ -26,7 +26,6 @@ from private_config import read_private, write_private, PrivateProcessLock
 from runtime import Runtime, PersonalChatError
 from store import SQLiteStore, encode
 from business_actions import BusinessActions
-from desktop_startup import launch_desktop_pet
 
 
 def desktop_session_available():
@@ -49,7 +48,8 @@ def loopback_host(host):
         return False
 
 
-def serve(runtime, host, port, public_origin=None, open_browser=True, open_desktop_pet=True):
+def serve(runtime, host, port, public_origin=None, open_browser=True, open_desktop_pet=False):
+    # Retain the old argument for callers; the service never launches the desktop.
     origin = public_origin or f"http://{'[' + host + ']' if ':' in host else host}:{port}"
     parsed = urllib.parse.urlsplit(origin)
     if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password or parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
@@ -435,12 +435,6 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
     thread = threading.Thread(target=tick, daemon=True)
     thread.start()
     try:
-        if open_desktop_pet and local_attach and desktop_session_available():
-            try:
-                if not launch_desktop_pet(origin):
-                    print("Desktop pet not started: no supported interactive desktop or GUI dependency. The service remains available.", flush=True)
-            except OSError:
-                print("Could not launch the desktop pet. The service and browser UI remain available.", flush=True)
         if open_browser and desktop_session_available():
             def launch_browser():
                 try:
@@ -483,7 +477,7 @@ def main():
     parser.add_argument("--public-origin")
     parser.add_argument("--allow-loopback-http", action="store_true")
     parser.add_argument("--no-browser", action="store_true", help="Do not automatically open the personal UI")
-    parser.add_argument("--no-desktop-pet", action="store_true", help="Do not automatically launch the desktop companion")
+    parser.add_argument("--no-desktop-pet", action="store_true", help=argparse.SUPPRESS)  # Kept for existing callers.
     args = parser.parse_args()
     profile_path = args.data_root.expanduser() / "connection.json"
     try:
@@ -534,7 +528,7 @@ def main():
     if not profile.get("ownerId") and not profile.get("workerId"):
         write_private(profile_path, {"ownerId": owner, "workerId": worker})
     try:
-        serve(runtime, args.host, args.port, args.public_origin, open_browser=not args.no_browser, open_desktop_pet=not args.no_desktop_pet)
+        serve(runtime, args.host, args.port, args.public_origin, open_browser=not args.no_browser)
     finally:
         instance.release()
 

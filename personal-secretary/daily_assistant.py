@@ -60,7 +60,11 @@ execute the work. If a requested technical answer exceeds what you can reliably
 provide, explain the limit and offer the formal specialist path. Do not ask the
 user to fill the advanced task form. Choose a suitable registered role and
 approved model. Use the exact plan, repository and immutable baseline from options.
-If there is one valid choice, select it. If several targets could match, ask
+Use only the Plan already linked to the current work. A single visible Plan
+may belong to older work; never select it just because it is the only choice.
+For unlinked work, delegate_task lets the host prepare its own draft and guide
+scope confirmation. Completed or stopped Plans cannot accept new work.
+If several repositories within the current Plan could match, ask
 which target the user means. Send only the selected task, necessary context and
 acceptance criteria to the platform. Do not send unrelated chat or secrets.
 Delegation is asynchronous. Stop after delegate_task; the service will track the
@@ -224,9 +228,11 @@ class DailyAssistant:
         try:
             if not self.settings.configured():
                 raise ValueError("还没有连接模型。请打开“设置”完成首次连接，然后重新安排这项工作。")
+            recovering_plan = not message_id and not continuation and self.runtime.professional.needs_plan_recovery(work)
             if job is None:
                 try:
-                    work = self.runtime.conversations.summarize(work, automatic=True)
+                    if not recovering_plan:
+                        work = self.runtime.conversations.summarize(work, automatic=True)
                 except Exception:
                     current = self.store.get("work", work["id"])
                     work = self.store.put("work", work["id"], {**{key: item for key, item in current.items() if key not in {"id", "revision"}},
@@ -240,6 +246,9 @@ class DailyAssistant:
             skills = PersonalSkills()
             tools.written = list(job.get("written", []))
             tools.sources = list(job.get("sources", []))
+            if recovering_plan:
+                action = {"action": "professional_options"}
+                self.runtime.professional.prepare_own_plan(self.store.get("work", work["id"]), job)
             resumed = job.get("resumePlatformAction")
             if resumed:
                 current = self.store.get("work", work["id"])
@@ -267,6 +276,7 @@ class DailyAssistant:
                 if self.runtime.cancelled.is_set() or not current or current.get("state") in {"CANCELLED", "TRASHED"} or self.settings.value.get("paused", False):
                     raise ValueError("处理已停止，已完成的文件操作不会回滚。请核对结果后再继续。")
                 context = {"currentDate": time.strftime("%Y-%m-%d %H:%M:%S %z"), "title": work["title"], "description": work.get("body", ""),
+                    "planId": current.get("planId") or current.get("professionalDraftPlanId") or current.get("professionalPlanId"),
                     "conversationOnly": work.get("conversationOnly", False),
                     **self.runtime.conversations.context(work, text),
                     "request": text, "outputPath": work.get("outputPath"),
@@ -321,7 +331,7 @@ class DailyAssistant:
                     self._decision(job, state="DONE", result=answer, written=tools.written, sources=tools.sources)
                     if message_id: self._message(message_id, answer)
                     else: self._report(work["id"], "DONE", "COMPLETED", answer[:4000], savedFiles=tools.written, sources=tools.sources)
-                    if message_id and not work.get("conversationOnly"):
+                    if message_id and not work.get("conversationOnly") and work.get("assistantMode") != "professional":
                         self._report(work["id"], "DONE", "COMPLETED", answer[:4000], savedFiles=tools.written, sources=tools.sources)
                     return
                 try:

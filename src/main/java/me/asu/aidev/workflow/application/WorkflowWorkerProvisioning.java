@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 /** Supplies role-specialized processes only for already-confirmed native workflow tasks. */
 @Service
 public class WorkflowWorkerProvisioning {
+    @org.springframework.beans.factory.annotation.Autowired private FactoryReviewClaimPolicy factoryReviewPolicy;
     public record Preparation(String taskId,String planId,String state,String message) {}
     private final Map<String,Preparation> pending=new java.util.concurrent.ConcurrentHashMap<>();
     private String after="";
@@ -33,7 +34,9 @@ public class WorkflowWorkerProvisioning {
         if(config==null || !config.automaticWorkers()) return;
         var ready=jdbc.queryForList("""
                 SELECT t.id FROM work_task t JOIN flexible_workflow_plan p ON p.id=t.subject_id
-                 WHERE t.subject_type='flexible-plan' AND t.state='READY' AND p.state='CONFIRMED'
+                 WHERE t.subject_type='flexible-plan' AND t.state='READY'
+                   AND (p.state='CONFIRMED' OR (p.state='COMPLETED' AND EXISTS
+                       (SELECT 1 FROM factory_plan_review r WHERE r.review_task_id=t.id AND r.state='PENDING')))
                    AND NOT EXISTS (SELECT 1 FROM web_console_plan_archive a WHERE a.plan_id=p.id) AND t.id>?
                  ORDER BY t.id LIMIT 5
                 """,String.class,after);
@@ -54,8 +57,10 @@ public class WorkflowWorkerProvisioning {
                 if(role==null) continue;
                 var required=new HashSet<>(task.requiredCapabilities());
                 if(task.repositoryRef()!=null) required.add("repo:"+task.repositoryRef());
+                var currentTask=task;
                 boolean online=workers.online(Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW)).stream()
-                        .anyMatch(w -> w.runtimeType().startsWith(config.runtime()+":") && w.supports(required));
+                        .anyMatch(w -> w.runtimeType().startsWith(config.runtime()+":") && w.supports(required)
+                                && (factoryReviewPolicy==null || factoryReviewPolicy.canClaim(currentTask,w)));
                 if(!online) {
                     var result=provisioner.requestNative(task.repositoryRef(),config.runtime(),role);
                     pending.put(id,new Preparation(id,task.subjectId(),result.starting()?"STARTING":"BLOCKED",result.message()));

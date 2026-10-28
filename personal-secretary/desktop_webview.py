@@ -49,7 +49,7 @@ def main():
     if not desktop_lease.acquire():
         return 0
     try:
-        from PySide6.QtCore import QObject, QRectF, Qt, QTimer, QUrl, Signal, QElapsedTimer, QSettings
+        from PySide6.QtCore import QObject, QRectF, Qt, QTimer, QUrl, Signal, Slot, QElapsedTimer, QSettings
         from PySide6.QtGui import QColor, QDesktopServices, QFont, QIcon, QPainter, QPainterPath, QPen, QPixmap
         from PySide6.QtWidgets import QApplication, QDialog, QHBoxLayout, QLabel, QMainWindow, QMenu, QMessageBox, QPushButton, QSystemTrayIcon, QVBoxLayout, QWidget
         from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings, QWebEngineUrlRequestInterceptor
@@ -147,6 +147,21 @@ def main():
     class Startup(QObject):
         ready = Signal(str)
         stopped = Signal(str)
+
+        def __init__(self):
+            super().__init__()
+            self.ready_callback = None
+            self.stopped_callback = None
+
+        @Slot(str)
+        def deliver_ready(self, error):
+            if self.ready_callback is not None:
+                self.ready_callback(error)
+
+        @Slot(str)
+        def deliver_stopped(self, error):
+            if self.stopped_callback is not None:
+                self.stopped_callback(error)
 
     class WindowSurface(QWidget):
         def paintEvent(self, event):
@@ -591,7 +606,8 @@ def main():
             workbench.view.setUrl(QUrl(origin + "/"))
             timer.start()
         if tray is None: workbench.show()
-    startup.ready.connect(ready)
+    startup.ready_callback = ready
+    startup.ready.connect(startup.deliver_ready, Qt.ConnectionType.QueuedConnection)
     def stopped(error):
         nonlocal service_busy, exit_after_stop
         if quitting: return
@@ -599,15 +615,27 @@ def main():
         exit_after_stop = False
         service_busy = False
         start_service_action.setEnabled(True); stop_service_action.setEnabled(bool(error))
+        # The desktop companion remains usable while the local service is
+        # stopped. Keep its animation and status polling alive in that state.
+        companion.animation.start()
+        timer.start()
         companion.summary = "停止本地服务未确认，请核对服务状态。" if error else "本地服务已停止"
         companion.state = "unknown"; companion.has_snapshot = False; companion.counts = (0, 0, 0)
         companion.setToolTip(t(companion.summary)); companion.update()
         if error:
-            QMessageBox.warning(companion, t("停止本地服务"), t(error))
+            warning = QMessageBox(QMessageBox.Icon.Warning, t("停止本地服务"), t(error),
+                                  QMessageBox.StandardButton.Ok, companion)
+            warning.setWindowModality(Qt.WindowModality.NonModal)
+            warning.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+            companion.stop_warning = warning
+            warning.show()
+            if tray is not None:
+                tray.showMessage(t("停止本地服务"), t(error))
         elif tray is not None:
             tray.showMessage(t("我的秘书"), t("本地服务已停止"))
         if should_exit: quit_desktop()
-    startup.stopped.connect(stopped)
+    startup.stopped_callback = stopped
+    startup.stopped.connect(startup.deliver_stopped, Qt.ConnectionType.QueuedConnection)
     def connect():
         try:
             service_client.auto_connect(cancelled=service_cancelled)
