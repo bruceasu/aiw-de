@@ -25,6 +25,7 @@ MESSAGES = {
     "HUD · 专注": ("HUD · Focus", "HUD · 集中"),
     "RPG · 伙伴": ("RPG · Companion", "RPG · パートナー"),
     "按时间自动切换": ("Switch automatically by time", "時刻で自動切替"),
+    "人物大小": ("Companion size", "パートナーのサイズ"),
     "显示秘书伙伴": ("Show companion", "パートナーを表示"),
     "隐藏秘书伙伴": ("Hide companion", "パートナーを非表示"),
     "退出桌面界面（服务继续运行）": ("Quit desktop (service keeps running)", "デスクトップを終了（サービスは継続）"),

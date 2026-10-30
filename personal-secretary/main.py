@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from env_config import load_program_env
+
+load_program_env(__file__)
+
 import argparse
 import atexit
 import getpass
@@ -468,9 +472,9 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
 
 def main():
     parser = argparse.ArgumentParser(description="Independent personal-secretary Worker")
-    parser.add_argument("--owner-id", help="Optional professional platform owner")
-    parser.add_argument("--worker-id", help="Optional professional platform Worker")
-    parser.add_argument("--platform", help="Optional professional platform origin")
+    parser.add_argument("--owner-id", default=os.environ.get("AIW_PERSONAL_OWNER_ID"), help="Optional professional platform owner")
+    parser.add_argument("--worker-id", default=os.environ.get("AIW_PERSONAL_WORKER_ID"), help="Optional professional platform Worker")
+    parser.add_argument("--platform", default=os.environ.get("AIW_PERSONAL_PLATFORM"), help="Optional professional platform origin")
     parser.add_argument("--data-root", type=Path, default=Path.home() / ".aiw-personal")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8766)

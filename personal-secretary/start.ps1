@@ -1,7 +1,7 @@
 param(
-    [string]$OwnerId = $env:AIW_PERSONAL_OWNER_ID,
-    [string]$WorkerId = $(if ($env:AIW_PERSONAL_WORKER_ID) { $env:AIW_PERSONAL_WORKER_ID } else { 'my-secretary' }),
-    [string]$Platform = $env:AIW_PERSONAL_PLATFORM,
+    [string]$OwnerId,
+    [string]$WorkerId,
+    [string]$Platform,
     [string]$DataRoot = (Join-Path $HOME '.aiw-personal'),
     [string]$HostAddress = '127.0.0.1',
     [int]$Port = 8766,
@@ -9,10 +9,25 @@ param(
     [switch]$AllowLoopbackHttp,
     [switch]$PromptCredential,
     [switch]$NoBrowser,
-    [string]$Python = 'python'
+    [string]$Python
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($Python)) {
+    $Python = Join-Path $PSScriptRoot '.venv\Scripts\python.exe'
+    if (-not (Test-Path -LiteralPath $Python)) { $Python = 'python' }
+}
+$dotenvJson = & $Python (Join-Path $PSScriptRoot 'env_config.py') --json
+if ($LASTEXITCODE -ne 0) { throw 'Could not load the program .env file.' }
+$dotenvValues = $dotenvJson | ConvertFrom-Json
+foreach ($property in $dotenvValues.PSObject.Properties) {
+    [Environment]::SetEnvironmentVariable($property.Name, [string]$property.Value, 'Process')
+}
+if ([string]::IsNullOrWhiteSpace($OwnerId)) { $OwnerId = $env:AIW_PERSONAL_OWNER_ID }
+if ([string]::IsNullOrWhiteSpace($WorkerId)) {
+    $WorkerId = if ($env:AIW_PERSONAL_WORKER_ID) { $env:AIW_PERSONAL_WORKER_ID } else { 'my-secretary' }
+}
+if ([string]::IsNullOrWhiteSpace($Platform)) { $Platform = $env:AIW_PERSONAL_PLATFORM }
 if ([string]::IsNullOrWhiteSpace($OwnerId) -and [string]::IsNullOrWhiteSpace($Platform) -and -not $PromptCredential) {
     $dailyArguments = @((Join-Path $PSScriptRoot 'main.py'), '--data-root', $DataRoot, '--host', $HostAddress, '--port', "$Port")
     if ($PublicOrigin) { $dailyArguments += @('--public-origin', $PublicOrigin) }

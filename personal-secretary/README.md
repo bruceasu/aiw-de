@@ -14,7 +14,7 @@
 
 ### 是否需要安装 Qt？
 
-**不需要单独安装 Qt Desktop、Qt Creator 或 Qt SDK。** 通过 pip 安装的 PySide6 预编译包已包含 Qt 运行库，详见 [Qt 官方安装说明](https://doc.qt.io/qtforpython-6/gettingstarted.html)。
+**不需要单独安装 Qt Desktop、Qt Creator 或 Qt SDK。** 通过 uv 安装的 PySide6 预编译包已包含 Qt 运行库，详见 [Qt 官方安装说明](https://doc.qt.io/qtforpython-6/gettingstarted.html)。
 
 | 使用方式 | Qt 依赖 | HUD / RPG 双主题 |
 | --- | --- | --- |
@@ -22,12 +22,21 @@
 | 新版桌面秘书 | 安装 `requirements-desktop.txt` | 支持 |
 | 原 Windows Tk 桌面秘书 | 不需要 Qt；Python 需包含 Tkinter | 使用原界面，不支持新版双主题 |
 
-在本目录执行以下命令安装新版桌面依赖并启动，安装和启动应使用同一 Python 环境：
+本目录提供 uv 初始化脚本。先安装 [uv](https://docs.astral.sh/uv/)，再按使用方式初始化虚拟环境。浏览器服务与日常助手只需基础依赖；新版桌面需额外同步 Qt 依赖：
 
 ```powershell
-python -m pip install -r requirements-desktop.txt
+# Browser/service only
+./setup-uv.ps1
+# Or include Qt dependencies for the desktop UI
+./setup-uv.ps1 -Desktop
 .\start-desktop.ps1
 ```
+
+Linux / WSL 可运行 `./setup-uv.sh`；需要桌面依赖时运行 `./setup-uv.sh --desktop`。启动脚本会优先使用本目录 `.venv` 中的 Python。编辑 `requirements.txt` 或 `requirements-desktop.txt` 后重跑初始化脚本，可同步虚拟环境。
+
+秘书启动时会读取程序目录的 `.env`。已在启动进程中设置的同名环境变量优先于 `.env`，命令行参数又优先于环境变量。文件使用 `KEY=value` 格式，可写 `export KEY=value`、单/双引号和行尾注释；文件只解析为配置，不会作为脚本执行。例如设置 `TZ=Asia/Tokyo` 后，重新启动桌面即可按东京本地时间切换主题。`.env` 已由仓库忽略规则排除，不要提交凭据。
+
+桌面人物尺寸可在托盘或人物右键菜单的“人物大小”滑块中调整，也可在桌面工作台网页的“外观设置”中使用 25%–125% 滑块调整；选择会保存在本机，重启后继续生效。
 
 暂时不安装 PySide6 时，可以运行 `.\start.ps1` 使用浏览器界面，或运行 `.\start-desktop.ps1 -LegacyTk` 使用原 Windows 桌面。缺少 PySide6 只影响新版桌面启动，不影响浏览器使用。Linux 的图形运行库要求与当前验证范围见 [双主题说明](../../docs/APPEARANCE.md)。
 
@@ -47,7 +56,7 @@ Qt PET 托盘菜单提供“启动本地服务”和“停止本地服务”：�
 
 升级后若国际化没有效果，需要重启**个人服务和 Qt 桌面**，不能只刷新页面或只重启桌面。旧 Python 服务可能读取新版页面，却无法提供新增的 `/i18n.js` 资源。页面会明确提示语言组件加载或初始化失败；详情见 [升级排查说明](../../docs/APPEARANCE.md#升级后语言没有变化)。
 
-Web 与新的 Qt 桌面工作台提供 **HUD / RPG / 自动** 双主题，页面顶部可随时切换。自动默认白天 08:00 使用 HUD、夜间 19:00 使用 RPG，“时间设置”可以调整。Windows 先在当前 Python 环境安装 `requirements-desktop.txt` 再运行 `start-desktop.ps1`；Linux 使用 `sh start-desktop.sh`。Qt 人物悬浮窗与工作台复用 Web 功能、提供托盘和真实工作计数。透明效果异常可使用 `-Opaque` / `--opaque`。原 Windows Tk 入口为 `start-desktop.ps1 -LegacyTk`。安装和平台限制见 [双主题说明](../../docs/APPEARANCE.md)。
+Web 与新的 Qt 桌面工作台提供 **HUD / RPG / 自动** 双主题，页面顶部可随时切换。自动默认白天 08:00 使用 HUD、夜间 19:00 使用 RPG，“时间设置”可以调整。Windows 运行 `./setup-uv.ps1 -Desktop` 后再运行 `start-desktop.ps1`；Linux 使用 `./setup-uv.sh --desktop` 后运行 `sh start-desktop.sh`。Qt 人物悬浮窗与工作台复用 Web 功能、提供托盘和真实工作计数。透明效果异常可使用 `-Opaque` / `--opaque`。原 Windows Tk 入口为 `start-desktop.ps1 -LegacyTk`。安装和平台限制见 [双主题说明](../../docs/APPEARANCE.md)。
 
 Web 与桌面聊天会将模型回复中的常用 Markdown 显示为格式化文本：标题、加粗、斜体、列表、引用与代码块；Web 还提供表格和 HTTP/HTTPS 链接，桌面表格以等宽文本展示，链接显示来源地址。用户输入仍按原文展示。不会解释原始 HTML、执行代码或自动加载图片。支持常用语法子集，不保证完整 CommonMark 或复杂嵌套。内容不变时自动刷新不会重建聊天；阅读旧消息时新回复不会强制滚到底部。
 

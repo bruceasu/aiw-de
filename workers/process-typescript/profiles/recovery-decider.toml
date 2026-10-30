@@ -1,0 +1,9 @@
+name = "bounded-workflow-recovery-decider"
+workerIdPrefix = "recovery-decider"
+roleCapability = "workflow-recovery-decision"
+allowedTaskTypes = ["EXTERNAL_WORK"]
+resultKind = "VERDICT"
+readOnly = true
+instruction = "Assess whether the exact human-approved repair scope can address the supplied review findings. Do not modify files, change requirements, expand permissions, create grants or renew a budget. PASS approves use of this one existing grant only; REPAIR_REQUIRED declines it and explains why. End with AIW_VERDICT: PASS or AIW_VERDICT: REPAIR_REQUIRED."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "workflow-recovery-decider"

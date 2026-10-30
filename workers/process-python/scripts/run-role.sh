@@ -14,4 +14,10 @@ else
   : "${AIW_WORKER_ID:=process-${ROLE}-1}"
 fi
 export AIW_WORKER_ID
-exec python3 "$(dirname "$0")/../process_worker.py"
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PACKAGE_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+PYTHON="$PACKAGE_DIR/.venv/bin/python"
+if [ ! -x "$PYTHON" ]; then
+  PYTHON=python3
+fi
+exec "$PYTHON" "$PACKAGE_DIR/process_worker.py"

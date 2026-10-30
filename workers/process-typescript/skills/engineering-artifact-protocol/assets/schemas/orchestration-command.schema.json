@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/software-engineering/orchestration-command.schema.json",
+  "title": "Orchestration Command Proposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["commandId", "commandType", "subjectId", "expectedVersion", "reasonArtifactIds"],
+  "properties": {
+    "commandId": {"type": "string", "pattern": "^CMD-[0-9]{3,}$"},
+    "commandType": {
+      "type": "string",
+      "enum": ["register_baseline_candidate", "request_state_transition", "route_work", "request_approval", "mark_blocked"]
+    },
+    "subjectId": {"type": "string", "minLength": 1},
+    "expectedVersion": {"type": "integer", "minimum": 1},
+    "from": {"type": "string"},
+    "to": {"type": "string"},
+    "reasonArtifactIds": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "payload": {"type": "object"}
+  }
+}

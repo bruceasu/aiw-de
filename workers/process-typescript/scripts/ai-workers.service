@@ -1,0 +1,18 @@
+[Unit]
+Description=AIW Process Worker fleet
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=aiw
+WorkingDirectory=/opt/aiw/process-typescript
+EnvironmentFile=/etc/aiw/process-worker.env
+ExecStart=/usr/bin/node /opt/aiw/process-typescript/start-all.mjs codex-app-server
+Restart=on-failure
+RestartSec=5s
+KillMode=mixed
+TimeoutStopSec=infinity
+
+[Install]
+WantedBy=multi-user.target

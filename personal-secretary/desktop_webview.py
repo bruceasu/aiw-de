@@ -1,6 +1,10 @@
 """Qt desktop companion and shared Web UI for Windows/Linux. No platform bridge."""
 from __future__ import annotations
 
+from env_config import load_program_env
+
+load_program_env(__file__)
+
 import argparse
 import datetime
 import hashlib
@@ -51,7 +55,7 @@ def main():
     try:
         from PySide6.QtCore import QObject, QRectF, Qt, QTimer, QUrl, Signal, Slot, QElapsedTimer, QSettings
         from PySide6.QtGui import QColor, QDesktopServices, QFont, QIcon, QPainter, QPainterPath, QPen, QPixmap
-        from PySide6.QtWidgets import QApplication, QDialog, QHBoxLayout, QLabel, QMainWindow, QMenu, QMessageBox, QPushButton, QSystemTrayIcon, QVBoxLayout, QWidget
+        from PySide6.QtWidgets import QApplication, QDialog, QHBoxLayout, QLabel, QMainWindow, QMenu, QMessageBox, QPushButton, QSlider, QSystemTrayIcon, QVBoxLayout, QWidget, QWidgetAction
         from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineSettings, QWebEngineUrlRequestInterceptor
         from PySide6.QtWebEngineWidgets import QWebEngineView
     except ImportError:
@@ -67,6 +71,13 @@ def main():
     app.setQuitOnLastWindowClosed(False)
     preferences = QSettings()
     settings_key = "appearance/" + hashlib.sha256(origin.encode()).hexdigest()[:16]
+    companion_size_key = "companion/sizePercent"
+    try:
+        companion_size_percent = int(preferences.value(companion_size_key, 100))
+    except (TypeError, ValueError):
+        companion_size_percent = 100
+    if not 25 <= companion_size_percent <= 125:
+        companion_size_percent = 100
     saved_language = preferences.value(settings_key + "/language", "")
     if saved_language in {"en", "zh", "ja"}: labels.language = saved_language
     image_path = Path(__file__).parent / "desktop-assets/secretary.png"
@@ -283,7 +294,8 @@ def main():
             super().__init__(None, Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnTopHint)
             self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, not args.opaque)
             self.setAutoFillBackground(False)
-            self.setFixedSize(310, 454)
+            self.scale = companion_size_percent / 100
+            self.setFixedSize(round(310 * self.scale), round(454 * self.scale))
             self.setWindowTitle(t("秘书伙伴"))
             self.theme = "hud"; self.summary = "正在连接个人服务"; self.counts = (0, 0, 0)
             self.motion = False; self.has_snapshot = False; self.state = "unknown"
@@ -308,6 +320,14 @@ def main():
             self.animation.timeout.connect(lambda: self.update() if self.isVisible() and self.motion else None)
             self.animation.start()
 
+        def set_scale(self, percent):
+            self.scale = percent / 100
+            self.setFixedSize(round(310 * self.scale), round(454 * self.scale))
+            screen = app.primaryScreen().availableGeometry()
+            self.move(max(screen.left(), screen.right() - self.width() - 20),
+                      max(screen.top(), screen.bottom() - self.height() - 12))
+            self.update()
+
         def update_theme(self):
             self.image = self.portraits[self.theme]
             colors = colors_for(self.theme)
@@ -327,13 +347,14 @@ def main():
             painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
             colors = colors_for(self.theme)
             if args.opaque: painter.fillRect(self.rect(), QColor(colors["background"]))
+            painter.scale(self.scale, self.scale)
             accent = QColor(colors["accent"])
             panel = QColor(colors["panel"])
             elapsed = self.clock.elapsed()
             wink = self.theme != "lady" and self.motion and (elapsed < self.greet_until or elapsed % 8500 < 230)
             image = self.expressions[self.theme] if wink else self.image
             bob = round(math.sin(elapsed / 750) * 3) if self.motion else 0
-            painter.drawPixmap((self.width() - image.width()) // 2, 28 + bob, image)
+            painter.drawPixmap((310 - image.width()) // 2, 28 + bob, image)
             # Only useful status is visible. Descriptions live in the tooltip.
             indicator = {"ready": "#85e5ba", "paused": "#ffd086"}.get(self.state, "#9aadbf")
             painter.setPen(Qt.PenStyle.NoPen); painter.setBrush(QColor(indicator))
@@ -378,6 +399,8 @@ def main():
     companion = Companion()
     menu = QMenu()
     pending_appearance = None
+    pending_companion_size = None
+    companion_size_seeded = False
     menu_labels = []
     def menu_action(source, callback):
         action = menu.addAction(t(source), callback); menu_labels.append((action, source)); return action
@@ -413,6 +436,46 @@ def main():
     for label, mode in (("HUD · 专注", "hud"), ("RPG · 伙伴", "rpg"), ("月夜 · Lady", "lady"), ("按时间自动切换", "auto")):
         menu_action(label, lambda _checked=False, value=mode: choose_theme(value))
     menu.addSeparator()
+    size_menu = QMenu(t("人物大小"), menu)
+    menu.addMenu(size_menu)
+    menu_labels.append((size_menu.menuAction(), "人物大小"))
+    size_controls = QWidget(size_menu)
+    size_layout = QHBoxLayout(size_controls)
+    size_layout.setContentsMargins(12, 8, 12, 8)
+    size_layout.setSpacing(10)
+    size_layout.addWidget(QLabel("25%"))
+    size_slider = QSlider(Qt.Orientation.Horizontal, size_controls)
+    size_slider.setRange(25, 125); size_slider.setSingleStep(1); size_slider.setPageStep(5)
+    size_slider.setFixedWidth(170); size_slider.setValue(companion_size_percent)
+    size_layout.addWidget(size_slider)
+    size_value = QLabel(f"{companion_size_percent}%")
+    size_value.setMinimumWidth(42); size_layout.addWidget(size_value)
+    size_layout.addWidget(QLabel("125%"))
+    size_slider_action = QWidgetAction(size_menu)
+    size_slider_action.setDefaultWidget(size_controls)
+    size_menu.addAction(size_slider_action)
+    def set_companion_size(percent):
+        nonlocal companion_size_percent, pending_companion_size, companion_size_seeded
+        companion_size_percent = percent
+        size_value.setText(f"{percent}%")
+        companion.set_scale(percent)
+        preferences.setValue(companion_size_key, percent)
+        pending_companion_size = percent
+        companion_size_seeded = True
+        size_sync_timer.start(100)
+
+    def send_pending_companion_size():
+        if quitting or pending_companion_size is None: return
+        expected = pending_companion_size
+        script = "(() => { try { if (!window.AiwAppearance) return false; window.AiwAppearance.setCompanionSize(" + str(expected) + "); return true; } catch (_) { return false; } })()"
+        def applied(ok):
+            nonlocal pending_companion_size
+            if ok is True and pending_companion_size == expected: pending_companion_size = None
+        workbench.page.runJavaScript(script, applied)
+
+    size_sync_timer = QTimer(app); size_sync_timer.setSingleShot(True)
+    size_sync_timer.timeout.connect(send_pending_companion_size)
+    size_slider.valueChanged.connect(set_companion_size)
     menu_action("显示秘书伙伴", companion.show)
     tray = None
     if QSystemTrayIcon.isSystemTrayAvailable():
@@ -502,7 +565,7 @@ def main():
     restored = False
     last_saved = None
     def synchronize(value):
-        nonlocal restored, last_saved
+        nonlocal restored, last_saved, companion_size_percent, companion_size_seeded
         if quitting or service_busy: return
         # Qt/PySide versions do not consistently convert a JavaScript object
         # returned by runJavaScript into a Python dict. Send JSON explicitly;
@@ -528,6 +591,22 @@ def main():
             if saved_locale in {"en", "zh", "ja"}:
                 return
         appearance = value["appearance"]
+        if pending_companion_size is not None:
+            send_pending_companion_size()
+        else:
+            web_size = appearance.get("companionSize")
+            if isinstance(web_size, int) and 25 <= web_size <= 125:
+                if web_size != companion_size_percent:
+                    companion_size_percent = web_size
+                    companion.set_scale(web_size)
+                    preferences.setValue(companion_size_key, web_size)
+                if size_slider.value() != web_size:
+                    size_slider.blockSignals(True); size_slider.setValue(web_size); size_slider.blockSignals(False)
+                size_value.setText(f"{web_size}%")
+                companion_size_seeded = True
+            elif not companion_size_seeded:
+                companion_size_seeded = True
+                workbench.page.runJavaScript("window.AiwAppearance.setCompanionSize(" + str(companion_size_percent) + ")")
         language = value.get("locale", "en")
         if language in {"en", "zh", "ja"} and labels.language != language:
             labels.language = language
@@ -587,6 +666,7 @@ def main():
         mode = "off" if args.opaque else "on"
         workbench.page.runJavaScript("document.documentElement.dataset.desktopTransparency = " + json.dumps(mode))
         send_pending_appearance()
+        send_pending_companion_size()
         poll()
     workbench.view.loadFinished.connect(page_loaded)
     startup = Startup()

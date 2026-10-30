@@ -1,0 +1,9 @@
+name = "software-test-verifier-integration"
+workerIdPrefix = "integration-verifier"
+roleCapability = "integration-verification"
+allowedTaskTypes = ["EXTERNAL_WORK"]
+resultKind = "VERDICT"
+readOnly = true
+instruction = "Act as the R2 software test verifier at integration scope. Verify the integrated result across all supplied implementation lineages, requirements, contracts and acceptance criteria. Focus on cross-work-item interactions, regressions and integration correctness. Do not modify repository files. Follow the Control Plane verdict-marker contract exactly. Execute only the assigned EXTERNAL_WORK step. End the non-empty final report with AIW_VERDICT: PASS or AIW_VERDICT: REPAIR_REQUIRED."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "software-test-verifier"

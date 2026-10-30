@@ -52,6 +52,7 @@
   "use strict";
   if (window.AiwAppearance) return;
   const key = "aiw.appearance.v1";
+  const companionSizeKey = "aiw.companion.size.v1";
   const defaults = { mode: "auto", dayStart: "08:00", nightStart: "19:00" };
   const source = document.currentScript.src;
   const fallbackPortrait = new URL("appearance-secretary.png", source).href;
@@ -139,9 +140,17 @@
   }
   function clean(value) { return { mode: value.mode, dayStart: value.dayStart, nightStart: value.nightStart }; }
   let preference = { ...defaults };
+  let companionSize = null;
+  let companionSizeControl = null;
+  let companionSizeReadout = null;
   let persistenceAvailable = true;
   try { const saved = JSON.parse(localStorage.getItem(key)); if (valid(saved)) preference = clean(saved); }
   catch (_) { persistenceAvailable = false; }
+  try {
+    const savedSize = localStorage.getItem(companionSizeKey);
+    const percent = Number(savedSize);
+    if (Number.isInteger(percent) && percent >= 25 && percent <= 125) companionSize = percent;
+  } catch (_) { persistenceAvailable = false; }
   const minutes = value => Number(value.slice(0, 2)) * 60 + Number(value.slice(3));
   function effective(now = new Date()) {
     if (preference.mode !== "auto") return preference.mode;
@@ -154,7 +163,7 @@
     if (current < night) return "lady";
     return current < day ? "rpg" : "hud";
   }
-  function getState() { return { preference: { ...preference }, effective: effective(), persistenceAvailable }; }
+  function getState() { return { preference: { ...preference }, effective: effective(), companionSize, persistenceAvailable }; }
   function apply() {
     const value = effective();
     const changed = document.documentElement.dataset.appearance !== value;
@@ -187,7 +196,18 @@
     apply();
     return getState();
   }
-  window.AiwAppearance = Object.freeze({ getState, setPreference, setSummary });
+  function setCompanionSize(value) {
+    const percent = Number(value);
+    if (!Number.isInteger(percent) || percent < 25 || percent > 125) throw new Error("请选择有效的桌面人物大小。");
+    companionSize = percent;
+    if (companionSizeControl) companionSizeControl.value = String(percent);
+    if (companionSizeReadout) companionSizeReadout.textContent = percent + "%";
+    try { localStorage.setItem(companionSizeKey, String(percent)); }
+    catch (_) { persistenceAvailable = false; }
+    window.dispatchEvent(new CustomEvent("aiw:appearance", { detail: getState() }));
+    return getState();
+  }
+  window.AiwAppearance = Object.freeze({ getState, setPreference, setCompanionSize, setSummary });
   apply();
   function element(tag, className, text) {
     const result = document.createElement(tag);
@@ -259,6 +279,7 @@
     dialog.append(title, element("p", "appearance-description", text("Lady 夜间陪伴，HUD 白天专注，RPG 夜晚冒险。")));
     const previews = element("div", "appearance-previews");
     const form = element("form", "appearance-form");
+    const personal = Boolean(document.getElementById("personal-app"));
     const modeLabel = element("label", "", "切换方式"), select = element("select");
     for (const [value, label] of [["auto", "按时间自动切换"], ["hud", "保持 HUD"], ["rpg", "保持 RPG"], ["lady", "保持月夜 · Lady"]]) select.add(new Option(text(label), value));
     modeLabel.append(select); select.name = "mode"; form.append(modeLabel);
@@ -279,6 +300,17 @@
       const field = element("label", "", label), input = element("input"); input.type = "time"; input.name = name; input.required = true;
       field.append(input); times.append(field);
     }
+    if (personal) {
+      const field = element("label", "", text("桌面人物大小"));
+      companionSizeControl = element("input"); companionSizeControl.type = "range";
+      companionSizeControl.name = "companionSize"; companionSizeControl.min = "25";
+      companionSizeControl.max = "125"; companionSizeControl.step = "1";
+      companionSizeReadout = element("output", "appearance-size-value", "100%");
+      companionSizeControl.addEventListener("input", () => { companionSizeReadout.textContent = companionSizeControl.value + "%"; });
+      field.append(companionSizeControl, companionSizeReadout,
+        element("span", "appearance-description", text("只影响桌面悬浮人物，不改变网页头像。")));
+      form.append(field);
+    }
     const schedule = element("p", "appearance-description", text("Lady 从午夜持续到 HUD 开始；HUD 持续到 RPG 开始；RPG 持续到午夜。"));
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Local";
     const notice = element("p", "appearance-description", "使用本机时区：" + zone + "。手动选择后将保持该风格，选择“自动”恢复定时切换。");
@@ -295,6 +327,10 @@
     select.addEventListener("change", updateFields);
     settings.addEventListener("click", () => {
       for (const [name, value] of Object.entries(preference)) form.elements[name].value = value;
+      if (companionSizeControl) {
+        companionSizeControl.value = String(companionSize ?? 100);
+        companionSizeReadout.textContent = companionSizeControl.value + "%";
+      }
       error.textContent = persistenceAvailable ? "" : "当前环境无法保存偏好，本次窗口内仍可切换。";
       updateFields(); dialog.showModal();
     });
@@ -302,6 +338,7 @@
       event.preventDefault();
       try {
         setPreference({ mode: select.value, dayStart: form.elements.dayStart.value, nightStart: form.elements.nightStart.value });
+        if (companionSizeControl) setCompanionSize(companionSizeControl.value);
         if (!persistenceAvailable) { error.textContent = "外观已应用，但当前环境无法保存偏好。"; return; }
         dialog.close();
       } catch (problem) { error.textContent = problem.message; }
@@ -404,6 +441,16 @@
   window.addEventListener("focus", apply);
   window.addEventListener("aiw:locale-changed", () => { apply(); setSummary(summary); });
   window.addEventListener("storage", event => {
+    if (event.key === companionSizeKey) {
+      const percent = Number(event.newValue);
+      companionSize = Number.isInteger(percent) && percent >= 25 && percent <= 125 ? percent : null;
+      if (companionSizeControl) {
+        companionSizeControl.value = String(companionSize ?? 100);
+        companionSizeReadout.textContent = companionSizeControl.value + "%";
+      }
+      window.dispatchEvent(new CustomEvent("aiw:appearance", { detail: getState() }));
+      return;
+    }
     if (event.key !== key) return;
     try { const value = JSON.parse(event.newValue); preference = valid(value) ? clean(value) : { ...defaults }; apply(); } catch (_) { /* Ignore corrupt data. */ }
   });

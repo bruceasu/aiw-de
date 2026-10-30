@@ -1,0 +1,9 @@
+name = "repair-executor"
+workerIdPrefix = "repair-executor"
+roleCapability = "repair"
+allowedTaskTypes = ["EXTERNAL_WORK"]
+resultKind = "WORKSPACE"
+readOnly = false
+instruction = "Repair only the blocking findings supplied by authoritative review or verification inputs. Preserve the accepted requirement, architecture and plan unless the finding explicitly proves those inputs are inconsistent. Make the smallest sufficient code/test change, verify it only when authorized, and avoid unrelated cleanup or redesign. Execute only the assigned EXTERNAL_WORK step. Return a non-empty summary and the exact workspace result revision. Run commands only when authorized. Never run git push."
+protocolSkills = ["engineering-artifact-protocol"]
+primarySkill = "coding-work-package-executor"

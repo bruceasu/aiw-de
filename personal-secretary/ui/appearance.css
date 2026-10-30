@@ -86,6 +86,8 @@
 .appearance-form { display:grid; gap:18px; }
 .appearance-form label { display:grid; gap:8px; color:var(--muted); font-size:12px; }
 .appearance-form :is(input,select) { width:100%; min-width:0; border:1px solid var(--line); border-radius:4px; background:var(--nav); color:var(--text); padding:10px; font:inherit; }
+.appearance-form input[type="range"] { padding:0; border:0; background:transparent; accent-color:var(--accent); }
+.appearance-size-value { color:var(--accent); font:600 13px Consolas,monospace; }
 .appearance-form input:disabled { opacity:.5; }
 .appearance-times { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .appearance-actions { display:flex; justify-content:flex-end; gap:10px; }

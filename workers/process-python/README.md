@@ -63,9 +63,37 @@ At execution time the worker composes:
 
 ## Install
 
+Install [uv](https://docs.astral.sh/uv/) first, then initialize the local
+virtual environment and install the dependencies listed in `requirements.txt`.
+The setup scripts create `.venv/` inside this package; role launchers use that
+interpreter automatically when it exists.
+
+Linux / WSL:
+
 ```bash
 cd workers/process-python
-python -m pip install -r requirements.txt
+./scripts/setup-uv.sh
+```
+
+Windows PowerShell:
+
+```powershell
+cd workers/process-python
+.\scripts\setup-uv.ps1
+```
+
+To add or remove dependencies, edit `requirements.txt` and rerun the setup
+script. To synchronize the environment with the dependency list, run
+`uv pip sync --python .venv/bin/python requirements.txt` on Linux / WSL,
+or `uv pip sync --python .venv/Scripts/python.exe requirements.txt` on
+Windows. You can also run a role without initializing `.venv`; the launcher
+then uses `python3` (Linux / WSL) or `python` (Windows) from `PATH`.
+
+The equivalent manual setup is:
+
+```bash
+uv venv .venv
+uv pip sync --python .venv/bin/python requirements.txt
 ```
 
 Codex authentication is the same as the existing `workers/codex-python` reference worker.

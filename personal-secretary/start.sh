@@ -3,6 +3,12 @@
 set +x
 set -euo pipefail
 
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+dotenv_python=python3
+[[ ! -x "$script_dir/.venv/bin/python" ]] || dotenv_python="$script_dir/.venv/bin/python"
+dotenv_exports=$("$dotenv_python" "$script_dir/env_config.py" --shell)
+eval "$dotenv_exports"
+
 owner_id=${AIW_PERSONAL_OWNER_ID:-}
 worker_id=${AIW_PERSONAL_WORKER_ID:-my-secretary}
 platform=${AIW_PERSONAL_PLATFORM:-}
@@ -13,7 +19,7 @@ public_origin=
 allow_loopback_http=false
 prompt_credential=false
 no_browser=false
-python_command=python3
+python_command=
 
 usage() {
     cat <<'USAGE'
@@ -60,7 +66,10 @@ while (($#)); do
 done
 
 if [[ -z $owner_id && -z $platform && $prompt_credential == false ]]; then
-    script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+    if [[ -z $python_command ]]; then
+        python_command=python3
+        [[ ! -x "$script_dir/.venv/bin/python" ]] || python_command="$script_dir/.venv/bin/python"
+    fi
     launch_arguments=("$script_dir/main.py" --data-root "$data_root" --host "$host_address" --port "$port")
     if [[ -n $public_origin ]]; then launch_arguments+=(--public-origin "$public_origin"); fi
     if [[ $no_browser == true ]]; then launch_arguments+=(--no-browser); fi
@@ -96,6 +105,10 @@ fi
 export AIW_PERSONAL_CREDENTIAL
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+if [[ -z $python_command ]]; then
+    python_command=python3
+    [[ ! -x "$script_dir/.venv/bin/python" ]] || python_command="$script_dir/.venv/bin/python"
+fi
 launch_arguments=(
     "$script_dir/main.py"
     --owner-id "$owner_id" --worker-id "$worker_id" --platform "$platform"

@@ -1,0 +1,8 @@
+{
+  "name": "@goldenway/aidev-codex-worker-javascript",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"start": "node worker.mjs", "check": "node --check worker.mjs"},
+  "dependencies": {"@openai/codex-sdk": "0.155.1"}
+}

@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from env_config import load_program_env
+
+load_program_env(__file__)
+
 import argparse
 from collections import Counter
 from datetime import datetime

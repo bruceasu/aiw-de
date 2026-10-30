@@ -1,0 +1,3 @@
+interface:
+  display_name: "Engineering Artifact Protocol"
+  short_description: "Canonical schemas and contracts for software engineering agent artifacts"

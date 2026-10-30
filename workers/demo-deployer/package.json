@@ -1,0 +1,17 @@
+{
+  "name": "@aiw/demo-deployer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node dist/java-deployment.test.js",
+    "start:acceptor": "node dist/acceptor.js",
+    "start:packager": "node dist/packager.js",
+    "start:uploader": "node dist/uploader.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
+}
