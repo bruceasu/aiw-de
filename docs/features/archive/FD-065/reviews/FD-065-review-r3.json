@@ -1,0 +1,50 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-065",
+  "kind": "reviewer-report",
+  "source_event": "FD-065-000010-implementation-ready",
+  "human_report": "FD-065-review-r3.md",
+  "data": {
+    "reviewer_session": "reviewer-FD065-20261031-r3",
+    "reviewed_fd_revision": 10,
+    "reviewed_fd_digest": "df02208a9ff78453e4e18a1ad48e2a7884a7426d74b3210a3e907d83398962ba",
+    "review_base": "aee3f7f4f9d4329493fb9ed491e7338e6bbdebb0",
+    "reviewed_commit": "c5c0b50a1745511481608f2fc17d74dd0b0eeef8",
+    "outcome": "verification-passed",
+    "failed_review_count": 0,
+    "resolved_findings": {
+      "R2-F1": "Resolved: non-empty string requestId is validated on response envelopes; read diagnostics entries are type-checked objects with string code and message before consumer access.",
+      "R2-F2": "Resolved: Worker r3 Markdown is readable; no literal ASCII question marks or Unicode replacement characters in reviewed reports."
+    },
+    "r1_findings": {
+      "F1": "resolved",
+      "F2": "resolved",
+      "F3": "resolved",
+      "F4": "resolved",
+      "F5": "resolved",
+      "F6": "resolved",
+      "F7": "resolved",
+      "F8": "unverified; tests and fixtures not run under authorization boundary"
+    },
+    "commands": [
+      "aiw fd show FD-065",
+      "aiw fd claim --session reviewer-FD065-20261031-r3 FD-065 FD-065-000010-implementation-ready",
+      "git rev-parse HEAD",
+      "git merge-base develop HEAD",
+      "targeted git diff and source inspection",
+      "Python UTF-8 checks for question marks and replacement characters in reports",
+      "read Worker r3 JSON sidecar"
+    ],
+    "skipped_checks": [
+      "tests",
+      "fixture validation",
+      "compile",
+      "browser validation",
+      "API/network requests",
+      "service/runtime checks",
+      "builds",
+      "verification scripts"
+    ],
+    "residual_risk": "Fixture coverage, actual API responses, and end-to-end runtime behavior remain unverified. Static review is not runtime evidence."
+  }
+}

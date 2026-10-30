@@ -1,0 +1,109 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-065",
+  "kind": "reviewer-report",
+  "source_event": "FD-065-000004-review-requested",
+  "human_report": "FD-065-review-r1.md",
+  "data": {
+    "reviewer_session": "reviewer-FD065-20261031-a",
+    "reviewed_fd_revision": 4,
+    "reviewed_fd_digest": "df8bf1fe5c78b2bd4543c4f878cbad87a2f7fcd8e9e81fe685d3ad1551a3a37e",
+    "review_base": "aee3f7f4f9d4329493fb9ed491e7338e6bbdebb0",
+    "reviewed_commit": "aa7caa94dcc526785aee7e41eeac78c2295368a7",
+    "outcome": "changes-requested",
+    "failed_review_count": 1,
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "P2",
+        "acceptance": "UI configuration usability and FD traceability",
+        "path": "personal-secretary/ui/index.html",
+        "line": 76,
+        "title": "Knowledge setup UI and FD work item text contain literal question marks",
+        "evidence": "The summary, token label, enable checkbox label and help text in index.html are literal ASCII question marks. FD-065_API.md lines 54-58 also replace all five checked Work Item descriptions with question marks, so the canonical execution scope is unreadable.",
+        "requested_fix": "Restore localized UI copy and the confirmed FD Work Item text; retain truthful completion/verification status."
+      },
+      {
+        "id": "F2",
+        "severity": "P2",
+        "acceptance": "Integration remains configured across ordinary settings changes",
+        "path": "personal-secretary/main.py",
+        "line": 280,
+        "title": "Unrelated settings saves re-probe and can disable the knowledge integration",
+        "evidence": "app.js always adds knowledgeEnabled on every settings submission. main.py therefore always calls configure_knowledge; that method persists knowledgeEnabled=False before probing. If an enabled KB is temporarily unavailable while the user saves model settings, the KB remains disabled after restart.",
+        "requested_fix": "Only reconfigure/probe when the connection settings change or the user explicitly enables/checks the connection; ordinary model setting saves must preserve KB state."
+      },
+      {
+        "id": "F3",
+        "severity": "P2",
+        "acceptance": "API contract retry budget",
+        "path": "personal-secretary/knowledge_client.py",
+        "line": 43,
+        "title": "Read-only retry rules are incomplete",
+        "evidence": "Only GET connection exceptions retry. GET 429/503/504 are returned immediately and the read-only POST /search never retries; Retry-After is ignored.",
+        "requested_fix": "Apply at most one retry to read-only connection failures and 429/503/504, honoring Retry-After; keep note creation governed by reconciliation only."
+      },
+      {
+        "id": "F4",
+        "severity": "P2",
+        "acceptance": "API v1.0 required response field validation",
+        "path": "personal-secretary/knowledge_client.py",
+        "line": 70,
+        "title": "Endpoint payload schemas are not validated",
+        "evidence": "The generic client accepts any data object. Capabilities accepts empty serviceId; search defaults missing items to [] and passes missing complete through, while wrong item types cause an unhandled attribute error. Creation state is also unchecked.",
+        "requested_fix": "Validate required fields, types, enums and non-empty identity values per endpoint, returning controlled KnowledgeError for malformed responses."
+      },
+      {
+        "id": "F5",
+        "severity": "P2",
+        "acceptance": "Maximum 30000 combined excerpt and body characters per user request",
+        "path": "personal-secretary/assistant_tools.py",
+        "line": 109,
+        "title": "Search excerpts do not count toward the context budget",
+        "evidence": "The character counter is updated only for read content. Search emits up to 20 excerpts, each permitted by the contract to reach 2000 characters, allowing approximately 40000 excerpt characters before any body reads.",
+        "requested_fix": "Count excerpts and bodies together and limit/reject results before returning over-budget content to the model."
+      },
+      {
+        "id": "F6",
+        "severity": "P2",
+        "acceptance": "Source links stay on the configured publicBaseUrl origin",
+        "path": "personal-secretary/assistant_settings.py",
+        "line": 40,
+        "title": "Trusted source links on non-default HTTPS ports are discarded",
+        "evidence": "trusted_knowledge_url rejects any candidate port other than absent/443 before comparing it with publicBaseUrl. A valid trusted HTTPS reader origin on port 8443 therefore loses all source links.",
+        "requested_fix": "Compare normalized HTTPS origins including the configured port, while continuing to reject other origins and URL credentials."
+      },
+      {
+        "id": "F7",
+        "severity": "P2",
+        "acceptance": "Persisted pending/unknown/succeeded/failed note reconciliation states",
+        "path": "personal-secretary/assistant_tools.py",
+        "line": 159,
+        "title": "Unconfirmed write result is reported unknown but persisted as pending",
+        "evidence": "The record is stored as pending before POST. On lookup/POST KnowledgeError the method raises an unknown-result message without writing state=unknown; after a restart the durable state still falsely says pending.",
+        "requested_fix": "Persist unknown on failed reconciliation while retaining the same idempotency key, request body and service identity; require status lookup before any retry."
+      },
+      {
+        "id": "F8",
+        "severity": "P2",
+        "acceptance": "Work Item 1.5 and fixture-validation acceptance",
+        "path": "docs/features/FD-065/FD-065_API.md",
+        "line": 58,
+        "title": "Fixture validation is marked complete without fixture or execution evidence",
+        "evidence": "The diff adds no FD-065 fixture/test files and contains no fixture execution evidence. The reviewer was explicitly instructed not to run tests or network checks, so the acceptance is unverified, not passed.",
+        "requested_fix": "Obtain valid authorization for fixture work/validation and record real evidence; keep the item unverified until then."
+      }
+    ],
+    "commands": [
+      "aiw fd show FD-065",
+      "aiw fd claim --session reviewer-FD065-20261031-a FD-065 FD-065-000004-review-requested",
+      "git rev-parse HEAD",
+      "git merge-base develop HEAD",
+      "git log -3 --oneline --decorate",
+      "git diff --stat and --name-status from review base to HEAD",
+      "targeted git diff, rg, PowerShell source excerpts and read-only Python Unicode-codepoint inspection"
+    ],
+    "skipped_checks": "No tests, fixtures, browser validation, compile, service/network requests, verification scripts or builds were run.",
+    "residual_risk": "The listed defects remain; real API responses and deployment behavior remain unverified. Static review does not establish end-to-end success."
+  }
+}

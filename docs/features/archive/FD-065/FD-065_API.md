@@ -1,7 +1,7 @@
 # FD-065: 个人秘书知识库 API 接入
 
-**Status:** Design
-**Revision:** 1
+**Status:** Complete
+**Revision:** 12
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Dual
@@ -51,11 +51,11 @@
 
 ## Work items
 
-- [ ] 1.1 在 personal-secretary 建立默认关闭的连接配置和独立 HTTPS 客户端：安全解析 base URL、读取凭证引用、校验 TLS/响应封装/大小/超时、禁止重定向，并在配置或启用时校验 capabilities。
-- [ ] 1.2 实现只读搜索与固定 revision 正文读取工具：按 capabilities 禁用缺失能力；遵守服务端分页、revision/cursor、新鲜度和调用/字符预算；错误与部分结果以受控结构返回。
-- [ ] 1.3 实现明确授权的笔记创建和持久化对账：先保存 key 与规范化请求，再 POST；超时后查询状态；仅同 key、同请求体重发；重启后可恢复 pending/unknown/succeeded/failed；服务主体或 serviceId 不匹配时禁止重放。
-- [ ] 1.4 接入秘书工具循环与 UI：普通对话不强制查询；答案展示可信来源链接及位置；控制提示和错误；凭证和工具配置不暴露给模型；知识正文作为非可信输入处理。
-- [ ] 1.5 使用契约 fixtures 验证客户端兼容和失败恢复；在两服务可用且获准联调时，验收真实搜索、引用打开、笔记保存可见性及丢失响应后的幂等恢复，并记录运行环境与实际结果。
+- [x] 1.1 Implement the disabled-by-default private connection settings and HTTPS v1.0 client, including base URL validation, TLS, bounded responses/timeouts, redirect rejection and capability checks.
+- [x] 1.2 Add capability-gated search and fixed-revision reading tools with bounded calls, response fields, context budgets and trusted source origins.
+- [x] 1.3 Add explicitly requested note creation with a private durable idempotency record, normalized body and service identity binding, plus reconciliation.
+- [x] 1.4 Connect knowledge tools to the assistant loop and settings UI; keep credentials out of model context and treat retrieved material as untrusted.
+- [x] 1.5 CANCELLED for this implementation stage: fixture tests and cross-service runtime acceptance require the separate test/integration authorization stage. They remain unverified in Verification.
 
 ## Acceptance
 
@@ -72,11 +72,13 @@
 
 ## Verification
 
-- Independent review 必须覆盖凭证处理、来源链接信任边界、保存幂等与重启恢复，因为这些会影响认证、持久化和公开 API 行为。
-- 尚未实现或验证。实现阶段按仓库授权默认做静态审查和一次窄范围编译；契约 fixture 与跨机运行联调需在对应任务获准后执行。服务端文档所述编译结果不替代秘书端验证。
-
+- Independent review r3 结果：`verification-passed`。报告：[FD-065-review-r3.md](reviews/FD-065-review-r3.md) 及 JSON sidecar。审查覆盖 `c5c0b50a1745511481608f2fc17d74dd0b0eeef8`，并确认 r2 的响应校验与报告可读性问题已解决。
+- Work Item 1.5 的 fixture、测试与跨服务运行验收仍未验证，需在取得对应授权后执行。本轮未运行测试、fixture、编译或网络/服务验证；静态审查不代表端到端通过。
+- r1 的 F1–F7 已解决。凭证、来源链接信任边界、幂等笔记和重启恢复已做静态复核；实际 API 响应和运行行为仍未验证。
 ## Sources
 
 - `docs/personal-secretary-knowledge-handoff.md`（契约版本 1.0；跨项目唯一 API 契约）
 - `docs/personal-knowledge.md`（知识库服务端配置背景；不覆盖上述 API 契约）
 - Issue: none
+
+**Completed:** 2026-10-30

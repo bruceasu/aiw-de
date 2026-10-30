@@ -1,0 +1,25 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-065",
+  "kind": "worker-report",
+  "source_event": "FD-065-000006-changes-requested",
+  "human_report": "FD-065-worker-r2.md",
+  "data": {
+    "worker_session": "fd065-worker-20261031-b",
+    "repair_commit": "575857cec09fa9dbc3b1ff002609263aa47cf5e7",
+    "resolved_findings": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F6",
+      "F7"
+    ],
+    "static_check": "git diff --check passed",
+    "compile_check": "four Python files passed in-memory compile; no pyc written",
+    "tests": "not run; no authorization",
+    "fixtures": "not run; no authorization",
+    "network_validation": "not run; no authorization"
+  }
+}

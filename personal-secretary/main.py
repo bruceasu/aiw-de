@@ -277,8 +277,15 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                     elif self.path == "/api/settings":
                         try:
                             result = runtime.settings.save(data)
+                            if "knowledgeEnabled" in data or "knowledgeBaseUrl" in data or "knowledgeToken" in data:
+                                result = runtime.settings.configure_knowledge(data)
                         except ValueError as error:
                             raise PersonalChatError("SETTINGS_INVALID", str(error)) from None
+                    elif self.path == "/api/knowledge/check":
+                        try:
+                            result = runtime.settings.check_knowledge()
+                        except ValueError as error:
+                            raise PersonalChatError("KNOWLEDGE_CONNECTION_FAILED", str(error)) from None
                     elif self.path == "/api/settings/check":
                         try:
                             runtime.model("Reply with OK only. Do not use tools or perform any action.")

@@ -1,0 +1,21 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-065",
+  "kind": "worker-report",
+  "source_event": "FD-065-000009-changes-requested",
+  "human_report": "FD-065-worker-r3.md",
+  "data": {
+    "worker_session": "fd065-worker-20261031-b",
+    "resolved_findings": [
+      "R2-F1",
+      "R2-F2"
+    ],
+    "checks": [
+      "git diff --check",
+      "in-memory Python compile"
+    ],
+    "tests": "not run; no authorization",
+    "fixtures": "not run; no authorization",
+    "network_validation": "not run; no authorization"
+  }
+}

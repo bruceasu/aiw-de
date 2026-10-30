@@ -83,6 +83,7 @@ const byId = id => document.getElementById(id);
 const formFor = route => document.querySelector(`form[data-route="${route}"]`);
 const rows = key => Array.isArray(snapshot?.[key]) ? snapshot[key].filter(row => key !== "work" || row.state !== "TRASHED" && !row.conversationOnly) : [];
 let settingsLoaded = false;
+let knowledgeSettingsDirty = false;
 let platformSetupLoaded = false;
 let platformWindow = null;
 let platformSender = null;
@@ -791,6 +792,16 @@ function renderAssistant() {
     form.elements.executable.value = settings.executable || "";
     form.elements.effort.value = settings.effort || "";
     form.elements.roots.value = settings.roots.join("\n");
+    if (form.elements.knowledgeBaseUrl) {
+      form.elements.knowledgeBaseUrl.value = settings.knowledge?.baseUrl || "";
+      form.elements.knowledgeEnabled.checked = !!settings.knowledge?.enabled;
+      form.elements.knowledgeToken.placeholder = settings.knowledge?.hasCredential ? "凭证已保存；留空保持原值" : "粘贴独立知识库 Bearer token";
+      knowledgeSettingsDirty = false;
+      for (const name of ["knowledgeBaseUrl", "knowledgeToken", "knowledgeEnabled"]) {
+        if (name === "knowledgeEnabled") form.elements[name].onchange = () => { knowledgeSettingsDirty = true; };
+        else form.elements[name].oninput = () => { knowledgeSettingsDirty = true; };
+      }
+    }
     form.elements.key.placeholder = settings.hasKey ? "密钥已保存；留空保持原值" : "本机无认证模型可留空";
     settingsLoaded = true;
     if (!settings.configured) {
@@ -1128,12 +1139,16 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
     if (route === "record") data.data = parseInput(data.data, "私人内容");
     if (route === "settings") {
       data.roots = data.roots.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+      if (knowledgeSettingsDirty) data.knowledgeEnabled = !!form.elements.knowledgeEnabled?.checked;
+      else { delete data.knowledgeEnabled; delete data.knowledgeBaseUrl; delete data.knowledgeToken; }
       if (data.command.trim()) data.command = parseInput(data.command, "模型程序参数"); else delete data.command;
     }
     const { result, refreshed } = await post(requestRoute, data);
     if (route === "settings") {
       settingsLoaded = false;
+      knowledgeSettingsDirty = false;
       form.elements.key.value = "";
+      if (form.elements.knowledgeToken) form.elements.knowledgeToken.value = "";
       renderAssistant();
     }
     const current = applyResult(route, result, version);

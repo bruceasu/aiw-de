@@ -1,0 +1,66 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "fd_id": "FD-065",
+  "kind": "reviewer-report",
+  "source_event": "FD-065-000007-implementation-ready",
+  "human_report": "FD-065-review-r2.md",
+  "data": {
+    "reviewer_session": "reviewer-FD065-20261031-r2",
+    "reviewed_fd_revision": 7,
+    "reviewed_fd_digest": "773f68756db8a1dd988271e45a5fd5ff7f0707c6b0f925a015807d77389398e8",
+    "review_base": "aee3f7f4f9d4329493fb9ed491e7338e6bbdebb0",
+    "reviewed_commit": "4b74e1ee99550ac995d49724f8ad6bd68b556484",
+    "outcome": "changes-requested",
+    "failed_review_count": 1,
+    "findings": [
+      {
+        "id": "R2-F1",
+        "severity": "P2",
+        "acceptance": "API v1.0 envelope and endpoint response validation",
+        "path": "personal-secretary/knowledge_client.py",
+        "lines": [86, 98, 160, 166],
+        "title": "Envelope requestId and read diagnostics item schema are not validated",
+        "evidence": "The handoff contract requires requestId on success and error envelopes. request() validates apiVersion and data but not requestId. read() validates diagnostics only as a list; assistant_tools.py line 175 calls item.get() without a per-item type guard, allowing malformed data to escape as AttributeError.",
+        "requested_fix": "Validate a non-empty requestId in response envelopes; validate each read diagnostics item and required code/message types before returning."
+      },
+      {
+        "id": "R2-F2",
+        "severity": "P2",
+        "acceptance": "Dual evidence: readable human report plus JSON sidecar",
+        "path": "docs/features/FD-065/reports/FD-065-worker-r2.md",
+        "title": "Worker r2 human report is corrupted with literal question marks",
+        "evidence": "UTF-8 inspection found 281 literal ASCII question marks, including in the title and report body. The JSON sidecar does not replace the required readable human report.",
+        "requested_fix": "Regenerate the Markdown report as readable Chinese and keep its claims consistent with the JSON sidecar."
+      }
+    ],
+    "r1_findings": {
+      "F1": "resolved",
+      "F2": "resolved",
+      "F3": "resolved",
+      "F4": "partially resolved; R2-F1 remains",
+      "F5": "resolved",
+      "F6": "resolved",
+      "F7": "resolved",
+      "F8": "unverified; tests and fixtures were not run under the authorization boundary"
+    },
+    "commands": [
+      "aiw fd show FD-065",
+      "aiw fd claim --session reviewer-FD065-20261031-r2 FD-065 FD-065-000007-implementation-ready",
+      "git rev-parse HEAD",
+      "git merge-base develop HEAD",
+      "targeted git diff, rg and source reads",
+      "Python UTF-8 literal-question-mark count on worker report"
+    ],
+    "skipped_checks": [
+      "tests",
+      "fixture validation",
+      "compile",
+      "browser validation",
+      "API/network requests",
+      "service/runtime checks",
+      "builds",
+      "verification scripts"
+    ],
+    "residual_risk": "Static evidence does not establish end-to-end behavior. Contract fixtures and actual API responses remain unverified."
+  }
+}
