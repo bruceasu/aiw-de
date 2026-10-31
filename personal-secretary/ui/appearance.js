@@ -53,6 +53,7 @@
   if (window.AiwAppearance) return;
   const key = "aiw.appearance.v1";
   const companionSizeKey = "aiw.companion.size.v1";
+  const sidebarKey = "aiw.sidebar.collapsed.v1";
   const defaults = { mode: "auto", dayStart: "08:00", nightStart: "19:00" };
   const source = document.currentScript.src;
   const fallbackPortrait = new URL("appearance-secretary.png", source).href;
@@ -246,6 +247,7 @@
       let slot = button.querySelector(".nav-icon");
       if (!slot) { slot = element("span", "nav-icon"); button.prepend(slot); }
       slot.setAttribute("aria-hidden", "true"); slot.replaceChildren(icon(button.dataset.viewTarget));
+      button.title = button.textContent.trim();
     }
     for (const [id, name] of [["refresh", "refresh"], ["enable", "play"], ["pause", "pause"]]) {
       document.querySelector("#personal-app #" + id)?.prepend(icon(name));
@@ -352,12 +354,23 @@
   }
   function mountAvatars() {
     document.documentElement.dataset.workspaceAvatar = "on";
-    const brand = document.querySelector(".sidebar .brand .brand-mark");
+    let brand = document.querySelector(".sidebar .brand .brand-mark");
     if (brand) {
+      const toggle = element("button", "brand-mark"); toggle.type = "button";
+      toggle.id = "sidebar-toggle";
+      const sidebar = brand.closest(".sidebar");
+      if (sidebar) { sidebar.id = "personal-sidebar"; toggle.setAttribute("aria-controls", sidebar.id); }
+      brand.replaceWith(toggle); brand = toggle;
       const avatar = element("img", "secretary-avatar"); avatar.dataset.secretaryAvatar = "";
       setAvatar(avatar, effective());
       brand.classList.add("secretary-brand-avatar");
-      brand.removeAttribute("aria-label"); brand.replaceChildren(avatar);
+      brand.replaceChildren(avatar);
+      const toggleSidebar = () => setSidebarCollapsed(document.documentElement.dataset.sidebarCollapsed !== "on");
+      brand.addEventListener("dblclick", event => { event.preventDefault(); toggleSidebar(); });
+      brand.addEventListener("click", event => { if (event.detail === 0) toggleSidebar(); });
+      let collapsed = false;
+      try { collapsed = localStorage.getItem(sidebarKey) === "1"; } catch (_) { /* Keep the default expanded state. */ }
+      setSidebarCollapsed(collapsed, false);
     }
     // Replies are inserted asynchronously. Bind only their new avatar nodes;
     // do not inspect or rewrite private message text.
@@ -369,6 +382,27 @@
         node.querySelectorAll("img[data-secretary-avatar]").forEach(image => setAvatar(image, effective()));
       }
     }).observe(thread, { childList: true, subtree: true });
+  }
+  function setSidebarCollapsed(collapsed, persist = true) {
+    if (collapsed) document.documentElement.dataset.sidebarCollapsed = "on";
+    else delete document.documentElement.dataset.sidebarCollapsed;
+    const toggle = document.getElementById("sidebar-toggle");
+    if (toggle) {
+      const label = text("双击人物头像切换侧栏");
+      toggle.setAttribute("aria-expanded", String(!collapsed));
+      toggle.setAttribute("aria-label", label); toggle.title = label;
+    }
+    if (persist) {
+      try { localStorage.setItem(sidebarKey, collapsed ? "1" : "0"); } catch (_) { /* Keep the current page state. */ }
+    }
+  }
+  function updateSidebarTooltips() {
+    for (const button of document.querySelectorAll("#personal-app [data-view-target]")) button.title = button.textContent.trim();
+    const toggle = document.getElementById("sidebar-toggle");
+    if (toggle) {
+      const label = text("双击人物头像切换侧栏");
+      toggle.setAttribute("aria-label", label); toggle.title = label;
+    }
   }
   function mountCompanion() {
     const personal = Boolean(document.getElementById("personal-app"));
@@ -439,7 +473,7 @@
   setInterval(() => { if (!document.hidden) apply(); }, 30000);
   document.addEventListener("visibilitychange", apply);
   window.addEventListener("focus", apply);
-  window.addEventListener("aiw:locale-changed", () => { apply(); setSummary(summary); });
+  window.addEventListener("aiw:locale-changed", () => { apply(); setSummary(summary); updateSidebarTooltips(); });
   window.addEventListener("storage", event => {
     if (event.key === companionSizeKey) {
       const percent = Number(event.newValue);

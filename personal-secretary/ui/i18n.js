@@ -3013,6 +3013,7 @@
     'Lady 从午夜持续到 HUD 开始；HUD 持续到 RPG 开始；RPG 持续到午夜。': ['Lady runs from midnight to HUD start, HUD runs to RPG start, and RPG runs to midnight.', 'Ladyは深夜からHUD開始まで、HUDはRPG開始まで、RPGは深夜までです。'],
     '月夜助手': ['Moonlit companion', '月夜のパートナー'],
     '月光下安静相伴，陪你整理思绪。': ['A quiet companion under moonlight as you gather your thoughts.', '月明かりの下で静かに寄り添い、思いを整理します。'],
+    '双击人物头像切换侧栏': ['Double-click the secretary avatar to toggle the sidebar', '秘書アバターをダブルクリックしてサイドバーを切り替え'],
   });
   const translateText = value => {
     if (consoleLookup.has(value)) return consoleLookup.get(value)[locale];

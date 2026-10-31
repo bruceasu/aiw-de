@@ -306,7 +306,7 @@ def main():
             self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, not args.opaque)
             self.setAutoFillBackground(False)
             self.scale = companion_size_percent / 100
-            self.setFixedSize(round(310 * self.scale), round(454 * self.scale))
+            self._update_frame_size()
             self.setWindowTitle(t("秘书伙伴"))
             self.theme = "hud"; self.summary = "正在连接个人服务"; self.counts = (0, 0, 0)
             self.motion = False; self.has_snapshot = False; self.state = "unknown"
@@ -331,9 +331,12 @@ def main():
             self.animation.timeout.connect(lambda: self.update() if self.isVisible() and self.motion else None)
             self.animation.start()
 
+        def _update_frame_size(self):
+            self.setFixedSize(max(140, round(310 * self.scale)), max(170, round(454 * self.scale)))
+
         def set_scale(self, percent):
             self.scale = percent / 100
-            self.setFixedSize(round(310 * self.scale), round(454 * self.scale))
+            self._update_frame_size()
             screen = app.primaryScreen().availableGeometry()
             self.move(max(screen.left(), screen.right() - self.width() - 20),
                       max(screen.top(), screen.bottom() - self.height() - 12))
@@ -358,21 +361,26 @@ def main():
             painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
             colors = colors_for(self.theme)
             if args.opaque: painter.fillRect(self.rect(), QColor(colors["background"]))
-            painter.scale(self.scale, self.scale)
             accent = QColor(colors["accent"])
             panel = QColor(colors["panel"])
             elapsed = self.clock.elapsed()
             wink = self.theme != "lady" and self.motion and (elapsed < self.greet_until or elapsed % 8500 < 230)
             image = self.expressions[self.theme] if wink else self.image
             bob = round(math.sin(elapsed / 750) * 3) if self.motion else 0
+            painter.save()
+            painter.translate((self.width() - 310 * self.scale) / 2, (self.height() - 454 * self.scale) / 2)
+            painter.scale(self.scale, self.scale)
             painter.drawPixmap((310 - image.width()) // 2, 28 + bob, image)
+            painter.restore()
             # Only useful status is visible. Descriptions live in the tooltip.
             indicator = {"ready": "#85e5ba", "paused": "#ffd086"}.get(self.state, "#9aadbf")
             painter.setPen(Qt.PenStyle.NoPen); painter.setBrush(QColor(indicator))
-            painter.drawEllipse(QRectF(278, 18, 10, 10))
+            painter.drawEllipse(QRectF(self.width() - 22, max(8, round(18 * self.scale)), 10, 10))
             if self.has_snapshot:
+                counter_top = min(round(185 * self.scale), self.height() - 128)
+                counter_x = self.width() - 60
                 for index, (count, color) in enumerate(zip(self.counts, (accent, QColor("#ffd086"), QColor("#85e5ba")))):
-                    rect = QRectF(250, 185 + index * 43, 54, 34)
+                    rect = QRectF(counter_x, counter_top + index * 42, 54, 34)
                     painter.setPen(QPen(color, 1)); painter.setBrush(panel); painter.drawRoundedRect(rect, 16, 16)
                     painter.drawPixmap(int(rect.left()) + 6, int(rect.top()) + 8, self.count_icons[index])
                     painter.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))

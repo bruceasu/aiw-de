@@ -304,6 +304,20 @@
 .companion-actions .aiw-icon { width:24px; height:24px; }
 .companion-count .aiw-icon { width:14px; height:14px; }
 .companion-stage[data-size="compact"] .companion-count .aiw-icon { width:10px; height:10px; }
+#personal-sidebar .secretary-brand-avatar { padding:0; cursor:pointer; overflow:hidden; }
+:root[data-sidebar-collapsed="on"] #personal-app.personal-app #personal-sidebar > .brand > :not(.brand-mark) { display:none; }
+:root[data-sidebar-collapsed="on"] #personal-app.personal-app #personal-sidebar > .brand { justify-content:center; padding:0; }
+:root[data-sidebar-collapsed="on"] #personal-app.personal-app #personal-sidebar .sidebar-nav button {
+  justify-content:center; gap:0; padding:11px 4px; font-size:0;
+}
+:root[data-sidebar-collapsed="on"] #personal-app.personal-app #personal-sidebar .sidebar-nav .nav-icon { flex:0 0 20px; width:20px; height:20px; }
+:root[data-sidebar-collapsed="on"] #personal-app.personal-app #personal-sidebar .sidebar-footer { display:none; }
+@media (min-width:801px) {
+  :root[data-sidebar-collapsed="on"] #personal-app.personal-app { grid-template-columns:72px minmax(0,1fr); }
+  :root[data-sidebar-collapsed="on"] #personal-app.personal-app #personal-sidebar.sidebar { align-items:stretch; padding:20px 8px 16px; gap:24px; }
+  :root[data-sidebar-collapsed="on"] #personal-app.personal-app #personal-sidebar .sidebar-nav,
+  :root[data-sidebar-collapsed="on"] #personal-app.personal-app #personal-sidebar .nav-scroll-region { width:100%; }
+}
 :root[data-appearance] .personal-app {
   border:1px solid var(--theme-edge);
   box-shadow:inset 0 0 0 3px var(--bg),inset 0 0 0 4px var(--theme-edge);
