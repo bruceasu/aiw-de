@@ -138,7 +138,9 @@ class PersonalClient:
             raise PersonalError("个人服务尚未运行。HTTPS 服务请先在已配置的反向代理后启动。")
         try:
             check_cancelled()
-            subprocess.Popen([sys.executable, str(Path(__file__).with_name("main.py")), "--host", parsed.hostname,
+            service_command = ([sys.executable, "--service"] if getattr(sys, "frozen", False)
+                               else [sys.executable, str(Path(__file__).resolve().parent.parent / "main.py")])
+            subprocess.Popen(service_command + ["--host", parsed.hostname,
                 "--port", str(parsed.port), "--no-browser", "--no-desktop-pet"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         except OSError:

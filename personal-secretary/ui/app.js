@@ -796,6 +796,13 @@ function renderAssistant() {
       form.elements.knowledgeBaseUrl.value = settings.knowledge?.baseUrl || "";
       form.elements.knowledgeEnabled.checked = !!settings.knowledge?.enabled;
       form.elements.knowledgeToken.placeholder = settings.knowledge?.hasCredential ? "凭证已保存；留空保持原值" : "粘贴独立知识库 Bearer token";
+      const knowledgeAvailable = settings.knowledge?.available !== false;
+      for (const name of ["knowledgeBaseUrl", "knowledgeToken", "knowledgeEnabled"]) form.elements[name].disabled = !knowledgeAvailable;
+      const knowledgeStatus = byId("knowledge-availability");
+      if (knowledgeStatus) {
+        knowledgeStatus.hidden = knowledgeAvailable;
+        knowledgeStatus.textContent = knowledgeAvailable ? "" : "知识库功能包未安装；秘书其余功能可正常使用。";
+      }
       knowledgeSettingsDirty = false;
       for (const name of ["knowledgeBaseUrl", "knowledgeToken", "knowledgeEnabled"]) {
         if (name === "knowledgeEnabled") form.elements[name].onchange = () => { knowledgeSettingsDirty = true; };

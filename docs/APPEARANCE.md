@@ -81,11 +81,11 @@ Qt 工作台默认使用透明顶层窗口和透明 WebEngine 背景。页面收
 
 Windows / Linux 使用 Python + PySide6 Qt WebEngine，共用秘书 Web 功能，不另建模型、授权、文件或平台业务入口。原 Tk 界面保留为 Windows 的显式 `-LegacyTk` 入口；三种主题的主要桌面实现为 Qt。
 
-先在启动桌面的同一 Python 环境安装 `personal-secretary/requirements-desktop.txt`，然后：
+先在启动桌面的同一 Python 环境安装 `personal-secretary/pet/requirements-desktop.txt`，然后：
 
 ```powershell
 cd personal-secretary
-python -m pip install -r requirements-desktop.txt
+python -m pip install -r pet/requirements-desktop.txt
 ./start-desktop.ps1
 ```
 
@@ -93,7 +93,7 @@ Linux：
 
 ```sh
 cd personal-secretary
-python3 -m pip install -r requirements-desktop.txt
+python3 -m pip install -r pet/requirements-desktop.txt
 sh ./start-desktop.sh
 ```
 
@@ -111,7 +111,7 @@ Control Plane 的公共导航加载 `preferences.js`、`console-translations.js`
 
 动态计数和系统字段前缀使用明确模式，编号、用户输入、原始 JSON、代码和凭证不送去模型翻译。执行记录与 Worker 工作台的数字、日期及授权到期显示使用当前语言。主题和语言仍分别按各自服务地址保存；控制台与秘书不自动共享不同端口的偏好。控制台静态资源随 Java 应用分发，已有运行实例可能需要重新启动才能加载新增资源；这里没有执行重启或浏览器验收。
 
-秘书服务从自己的 `ui/` 和 `ui/assets/` 目录提供外观脚本、样式、语言脚本与人物图片，不再读取 `src/main/resources/static/ui/`。Control Plane 保留自己的外观资源。既有 `desktop-assets/secretary.png` 保留给旧 Tk 界面，并作为 Qt 人物素材缺失时的回退。
+秘书服务从自己的 `ui/` 和 `ui/assets/` 目录提供外观脚本、样式、语言脚本与人物图片，不再读取 `src/main/resources/static/ui/`。Control Plane 保留自己的外观资源。既有 `pet/desktop-assets/secretary.png` 保留给旧 Tk 界面，并作为 Qt 人物素材缺失时的回退。
 
 `scripts/compile-secretary-runtime.ps1` 包含 Python 源码和主题/秘书 JavaScript 的离线语法编译，不导入 Qt、不启动 GUI、不下载依赖、不调用模型。主题视觉、Windows WebEngine/透明窗、Qt 依赖版本和 Linux 不同合成器仍需单独运行验收；编译结果不代表这些行为已验证。
 

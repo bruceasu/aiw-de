@@ -4,8 +4,7 @@ from pathlib import Path
 import urllib.parse
 
 from private_config import read_private, write_private
-from knowledge_client import KnowledgeClient, KnowledgeError, base_url
-import uuid
+from knowledge_client import KNOWLEDGE_AVAILABLE, KnowledgeError, KnowledgeSettings
 
 
 class AssistantSettings:
@@ -15,8 +14,7 @@ class AssistantSettings:
         self.value = read_private(self.path, {})
         self.legacy_command = legacy_command
         self.value.setdefault("provider", "command" if legacy_command else "codex-app-server")
-        self.knowledge_path = self.directory / "knowledge-credentials.json"
-        self.knowledge_secret = read_private(self.knowledge_path, {})
+        self.knowledge = KnowledgeSettings(self.directory, self.value)
 
     def public(self):
         return {"configured": self.configured(), "paused": self.value.get("paused", False),
@@ -24,74 +22,34 @@ class AssistantSettings:
                 "model": self.value.get("model", ""), "hasKey": bool(self.value.get("key")),
                 "executable": self.value.get("executable", ""), "effort": self.value.get("effort", ""),
                 "roots": self.value.get("roots", []), "scope": "daily-assistant-v1",
-                "knowledge": {"enabled": bool(self.value.get("knowledgeEnabled", False)),
-                    "baseUrl": self.value.get("knowledgeBaseUrl", ""),
-                    "hasCredential": bool(self.knowledge_secret.get(self.value.get("knowledgeCredentialRef", "")))}}
+                "knowledge": self.knowledge.public()}
+
+    def knowledge_available(self):
+        return KNOWLEDGE_AVAILABLE
 
     def knowledge_client(self):
-        if not self.value.get("knowledgeEnabled"):
-            raise KnowledgeError("知识库连接尚未启用。")
-        ref = self.value.get("knowledgeCredentialRef", "")
-        token = self.knowledge_secret.get(ref)
-        if not token:
-            raise KnowledgeError("知识库凭证缺失，请重新保存连接设置。")
-        return KnowledgeClient(self.value.get("knowledgeBaseUrl", ""), token)
+        if not KNOWLEDGE_AVAILABLE:
+            raise KnowledgeError("Knowledge Base package is unavailable.")
+        return self.knowledge.client()
 
     def trusted_knowledge_url(self, value):
-        from urllib.parse import urlsplit
-        trusted = urlsplit(self.value.get("knowledgePublicBaseUrl", ""))
-        candidate = urlsplit(value if isinstance(value, str) else "")
-        try:
-            candidate_port = candidate.port or 443
-            trusted_port = trusted.port or 443
-        except ValueError:
+        if not KNOWLEDGE_AVAILABLE:
             return None
-        if (candidate.scheme != "https" or not candidate.hostname or candidate.username or candidate.password
-                or candidate.hostname.lower() != (trusted.hostname or "").lower() or candidate_port != trusted_port):
-            return None
-        return value
+        return self.knowledge.trusted_url(value)
 
     def configure_knowledge(self, data):
-        enabled = data.get("knowledgeEnabled", False)
-        if type(enabled) is not bool:
-            raise ValueError("知识库启用状态无效。")
-        url = str(data.get("knowledgeBaseUrl", "")).strip()
-        token = data.get("knowledgeToken", "")
-        if not isinstance(token, str) or len(token) > 4096 or any(c in token for c in "\r\n\x00"):
-            raise ValueError("知识库凭证格式无效。")
-        old_url = self.value.get("knowledgeBaseUrl", "")
-        ref = self.value.get("knowledgeCredentialRef")
-        if url:
-            base_url(url)
-        elif enabled:
-            raise ValueError("启用知识库前请填写 HTTPS 地址。")
-        if enabled and not (token or self.knowledge_secret.get(ref, "")):
-            raise ValueError("启用知识库前请填写凭证。")
-        if token:
-            ref = uuid.uuid4().hex
-            self.knowledge_secret[ref] = token
-            write_private(self.knowledge_path, self.knowledge_secret)
-        elif url != old_url:
-            ref = None
-        self.value.update(knowledgeEnabled=False, knowledgeBaseUrl=url, knowledgeCredentialRef=ref)
-        # Persist the disabled state before capability probing so a failed
-        # reconfiguration cannot leave the prior endpoint enabled after restart.
-        write_private(self.path, self.value)
-        if enabled:
-            client = KnowledgeClient(url, self.knowledge_secret.get(ref, ""))
-            caps = client.capabilities()
-            self.value.update(knowledgeEnabled=True, knowledgeCapabilities=[item for item in caps.get("capabilities", []) if item in {"search", "read", "create_note", "creation_status"}], knowledgeServiceId=caps["serviceId"], knowledgePublicBaseUrl=caps["publicBaseUrl"])
-        write_private(self.path, self.value)
+        if not KNOWLEDGE_AVAILABLE:
+            self.value["knowledgeEnabled"] = False
+            write_private(self.path, self.value)
+            self.knowledge.bind(self.value)
+            return self.public()
+        self.knowledge.configure(data)
         return self.public()
 
     def check_knowledge(self):
-        client = self.knowledge_client()
-        data = client.capabilities()
-        self.value["knowledgeCapabilities"] = [item for item in data["capabilities"] if item in {"search", "read", "create_note", "creation_status"}]
-        self.value["knowledgeServiceId"] = data["serviceId"]
-        self.value["knowledgePublicBaseUrl"] = data["publicBaseUrl"]
-        write_private(self.path, self.value)
-        return {"serviceId": data["serviceId"], "capabilities": data["capabilities"], "limits": data.get("limits", {})}
+        if not KNOWLEDGE_AVAILABLE:
+            return {"available": False, "enabled": False}
+        return self.knowledge.check()
 
     def configured(self):
         if self.value.get("provider") == "codex-app-server":
@@ -153,6 +111,7 @@ class AssistantSettings:
             value["roots"].append(str(resolved))
         write_private(self.path, value)
         self.value = value
+        self.knowledge.bind(self.value)
         return self.public()
 
     def pause(self, paused):
@@ -161,4 +120,5 @@ class AssistantSettings:
         value = {**self.value, "paused": paused}
         write_private(self.path, value)
         self.value = value
+        self.knowledge.bind(self.value)
         return self.public()

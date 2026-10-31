@@ -283,7 +283,7 @@ class DailyAssistant:
                     "request": text, "outputPath": work.get("outputPath"),
                     "planId": work.get("planId") or work.get("professionalDraftPlanId") or work.get("professionalPlanId"),
                     "timeZone": work.get("timeZone", time.tzname[0]), "history": job.get("history", []), "steps": job["steps"]}
-                if self.settings.value.get("knowledgeEnabled"):
+                if self.settings.value.get("knowledgeEnabled") and self.settings.knowledge_available():
                     context["knowledgeTools"] = [
                         {"action":"knowledge_search", "query":"search terms", "limit":10},
                         {"action":"knowledge_read", "documentId":"from search", "revision":"from search", "cursor":"optional"},

@@ -2,7 +2,7 @@
 
 在有图形桌面的本机环境启动个人秘书服务时，同时请求启动 desktop pet，默认隐藏在系统托盘。原浏览器自动打开行为保留。SSH、无显示会话、Windows 非交互 window station、非本机服务 origin 不自动启动人物。
 
-自动选择已安装的 PySide6 Qt GUI；Windows 未安装 Qt 时使用原 Tk 人物。Linux 没有 Qt 时保留浏览器/服务入口，不安装或下载依赖。Qt 手工安装依赖见 `personal-secretary/requirements-desktop.txt`，此文件只供用户自行安装。
+自动选择已安装的 PySide6 Qt GUI；Windows 未安装 Qt 时使用原 Tk 人物。Linux 没有 Qt 时保留浏览器/服务入口，不安装或下载依赖。Qt 手工安装依赖见 `personal-secretary/pet/requirements-desktop.txt`，此文件只供用户自行安装。桌面实现和素材位于 `personal-secretary/pet/`；根目录保留原启动入口以兼容现有命令。
 
 GUI 自动连接成功不会弹出人物、工作台、对话或模型设置。点击托盘图标可打开对话，托盘右键可显示人物或打开工作与安排、待确认和设置。托盘不可用时显示可见窗口，防止入口丢失；Tk 隐藏时暂停人物动画。新纳入的 Qt 伙伴也不显示人物下方文字/按钮底板，沿用既有简洁人物偏好。
 

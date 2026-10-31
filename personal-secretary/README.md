@@ -19,20 +19,20 @@
 | 使用方式 | Qt 依赖 | HUD / RPG 双主题 |
 | --- | --- | --- |
 | 浏览器中的 Web 控制台与秘书 | 不需要 Qt | 支持 |
-| 新版桌面秘书 | 安装 `requirements-desktop.txt` | 支持 |
+| 新版桌面秘书 | 安装 `pet/requirements-desktop.txt` | 支持 |
 | 原 Windows Tk 桌面秘书 | 不需要 Qt；Python 需包含 Tkinter | 使用原界面，不支持新版双主题 |
 
 本目录提供 uv 初始化脚本。先安装 [uv](https://docs.astral.sh/uv/)，再按使用方式初始化虚拟环境。浏览器服务与日常助手只需基础依赖；新版桌面需额外同步 Qt 依赖：
 
 ```powershell
 # Browser/service only
-./setup-uv.ps1
+./scripts/setup-uv.ps1
 # Or include Qt dependencies for the desktop UI
-./setup-uv.ps1 -Desktop
+./scripts/setup-uv.ps1 -Desktop
 .\start-desktop.ps1
 ```
 
-Linux / WSL 可运行 `./setup-uv.sh`；需要桌面依赖时运行 `./setup-uv.sh --desktop`。启动脚本会优先使用本目录 `.venv` 中的 Python。编辑 `requirements.txt` 或 `requirements-desktop.txt` 后重跑初始化脚本，可同步虚拟环境。
+Linux / WSL 可运行 `./scripts/setup-uv.sh`；需要桌面依赖时运行 `./scripts/setup-uv.sh --desktop`。启动脚本会优先使用本目录 `.venv` 中的 Python。编辑 `requirements.txt` 或 `pet/requirements-desktop.txt` 后重跑初始化脚本，可同步虚拟环境。
 
 秘书启动时会读取程序目录的 `.env`。已在启动进程中设置的同名环境变量优先于 `.env`，命令行参数又优先于环境变量。文件使用 `KEY=value` 格式，可写 `export KEY=value`、单/双引号和行尾注释；文件只解析为配置，不会作为脚本执行。例如设置 `TZ=Asia/Tokyo` 后，重新启动桌面即可按东京本地时间切换主题。`.env` 已由仓库忽略规则排除，不要提交凭据。
 
@@ -56,7 +56,7 @@ Qt PET 托盘菜单提供“启动本地服务”和“停止本地服务”：�
 
 升级后若国际化没有效果，需要重启**个人服务和 Qt 桌面**，不能只刷新页面或只重启桌面。旧 Python 服务可能读取新版页面，却无法提供新增的 `/i18n.js` 资源。页面会明确提示语言组件加载或初始化失败；详情见 [升级排查说明](../../docs/APPEARANCE.md#升级后语言没有变化)。
 
-Web 与新的 Qt 桌面工作台提供 **HUD / RPG / 自动** 双主题，页面顶部可随时切换。自动默认白天 08:00 使用 HUD、夜间 19:00 使用 RPG，“时间设置”可以调整。Windows 运行 `./setup-uv.ps1 -Desktop` 后再运行 `start-desktop.ps1`；Linux 使用 `./setup-uv.sh --desktop` 后运行 `sh start-desktop.sh`。Qt 人物悬浮窗与工作台复用 Web 功能、提供托盘和真实工作计数。透明效果异常可使用 `-Opaque` / `--opaque`。原 Windows Tk 入口为 `start-desktop.ps1 -LegacyTk`。安装和平台限制见 [双主题说明](../../docs/APPEARANCE.md)。
+Web 与新的 Qt 桌面工作台提供 **HUD / RPG / 自动** 双主题，页面顶部可随时切换。自动默认白天 08:00 使用 HUD、夜间 19:00 使用 RPG，“时间设置”可以调整。Windows 运行 `./scripts/setup-uv.ps1 -Desktop` 后再运行 `start-desktop.ps1`；Linux 使用 `./scripts/setup-uv.sh --desktop` 后运行 `sh start-desktop.sh`。Qt 人物悬浮窗与工作台复用 Web 功能、提供托盘和真实工作计数。透明效果异常可使用 `-Opaque` / `--opaque`。原 Windows Tk 入口为 `start-desktop.ps1 -LegacyTk`。安装和平台限制见 [双主题说明](../../docs/APPEARANCE.md)。
 
 Web 与桌面聊天会将模型回复中的常用 Markdown 显示为格式化文本：标题、加粗、斜体、列表、引用与代码块；Web 还提供表格和 HTTP/HTTPS 链接，桌面表格以等宽文本展示，链接显示来源地址。用户输入仍按原文展示。不会解释原始 HTML、执行代码或自动加载图片。支持常用语法子集，不保证完整 CommonMark 或复杂嵌套。内容不变时自动刷新不会重建聊天；阅读旧消息时新回复不会强制滚到底部。
 
@@ -90,7 +90,7 @@ Codex 负责决定下一步，秘书执行宿主搜索与文件工具，并把�
 
 联网与文件操作由秘书的宿主工具执行：模型返回 `search`、`read_url`、`read_file`、`write_file` 或 `delete_file` JSON 动作，秘书按既有范围与确认规则执行，再把结果放入下一轮 `steps`。这不要求安装额外插件，也不依赖 Codex 原生工具。Codex 与 Agents SDK 共用该宿主动作说明；不会因原生工具列表为空而禁用宿主工具。连接失败会显示对应步骤、固定错误码及可用的 JSON-RPC 数字错误码，不显示原始协议正文、私人上下文或凭证。
 
-需要 Python 3.11+；个人服务与浏览器界面不需要第三方 Python 包，Qt 桌面另需 `requirements-desktop.txt`。Windows 用户在秘书目录运行 `./start-desktop.ps1`，GUI 会自动连接本机个人服务；尚未运行时会尝试在后台启动。Linux Qt 桌面使用 `sh ./start-desktop.sh`。Web 用户运行 `./start.ps1`，Linux/macOS 使用 `bash ./start.sh`。无参数即可使用日常模式，不需要 Owner ID、Worker ID、平台凭证或手工创建 Plan。现有用户首次升级可先使用原来的启动命令启动一次，记住原私库身份，以后直接无参数启动；旧数据库不会被搬移、合并或删除。
+需要 Python 3.11+；个人服务与浏览器界面不需要第三方 Python 包，Qt 桌面另需 `pet/requirements-desktop.txt`。Windows 用户在秘书目录运行 `./start-desktop.ps1`，GUI 会自动连接本机个人服务；尚未运行时会尝试在后台启动。Linux Qt 桌面使用 `sh ./start-desktop.sh`。Web 用户运行 `./start.ps1`，Linux/macOS 使用 `bash ./start.sh`。无参数即可使用日常模式，不需要 Owner ID、Worker ID、平台凭证或手工创建 Plan。现有用户首次升级可先使用原来的启动命令启动一次，记住原私库身份，以后直接无参数启动；旧数据库不会被搬移、合并或删除。
 
 单独启动个人服务不会启动桌面客户端；需要桌面时请运行上述桌面启动命令。旧脚本传入的 `--no-desktop-pet` 仍可接受。
 
@@ -120,7 +120,7 @@ Windows 设置和连接凭据使用当前系统账号的 DPAPI 保护；其他�
 
 新模块为 `assistant_settings`、`assistant_model`、`assistant_tools`、`daily_assistant` 和 `private_config`。业务记录、版本历史和确认记录仍在原 SQLite 私库，不变更表结构。新设置及会话文件单独保存；回退前应先暂停日常处理并核对在途工作和已保存文件，再恢复旧程序，保留私库及文件备份，不自动恢复旧的待执行安排。
 
-使用 `scripts/compile-secretary-desktop.ps1` 可进行本子目录 Python 内存编译、JavaScript 语法编译及 PowerShell 解析，不调用模型、网页、服务、桌面窗口或测试。编译不能证明真实模型、网页访问、DPAPI、桌面自动连接或文件操作已在运行中验证。
+使用 `scripts/compile-secretary-desktop.ps1` 可进行本子目录 Python 内存编译、JavaScript 语法编译及 PowerShell 解析，不调用模型、网页、服务、桌面窗口或测试。`scripts/package-windows.ps1` 使用本机已安装的 PyInstaller 生成包含服务和 Qt 桌面的 Windows 一目录包，不会安装或下载依赖。编译不能证明真实模型、网页访问、DPAPI、桌面自动连接或文件操作已在运行中验证。
 
 ## 专业平台连接（高级，可选）
 
@@ -216,7 +216,7 @@ python personal-secretary/main.py --owner-id O-EXPLICIT-ID --worker-id my-secret
 
 Web 再次配对使用原有的 `ui/app.js` 和 `ui/console.css`，避免旧进程不认识新增静态资源路由而导致按钮未绑定。配对处理在其它页面初始化前绑定；仅在用户显式生成时读取当前会话 CSRF 并请求新码。点击后立即显示等待信息，十五秒未完成会报告超时，不自动重试。旧进程缺少 `/api/pairing` 时明确提示更新并重启；脚本未加载时保留“配对组件尚未就绪”的提示。更新后先强制刷新页面；若提示接口尚不支持，需重启个人服务并重新配对。独立的 `pairing.js`/`pairing.css` 保留兼容旧页面引用，按钮绑定标记防止重复请求。
 
-桌面代码分为 `desktop.py`（Tk 窗口与用户操作）、`desktop_client.py`（私人服务会话/请求）和 `desktop_win32.py`（窗口位置/托盘）。人物素材及生成提示词见 [desktop-assets](desktop-assets/README.md)。窗口工作在主线程，单次服务请求在后台线程执行，结果通过队列返回；关闭 UI 不调用 `Runtime.cancel()`。
+桌面代码分为 `pet/desktop.py`（Tk 窗口与用户操作）、`pet/desktop_client.py`（私人服务会话/请求）和 `pet/desktop_win32.py`（窗口位置/托盘）。人物素材及生成提示词见 [desktop-assets](pet/desktop-assets/README.md)。窗口工作在主线程，单次服务请求在后台线程执行，结果通过队列返回；关闭 UI 不调用 `Runtime.cancel()`。
 
 `scripts/compile-secretary-desktop.ps1` 仅做这次变化的 Python 内存编译、JavaScript 语法编译和启动脚本语法解析；不导入 Tk/Win32 模块、不打开窗口或启动服务，不运行测试、模型、网络、下载或打包。编译通过不代表透明窗口、托盘、多显示器或多界面配对已在桌面验收。
 
