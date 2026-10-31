@@ -820,7 +820,11 @@ function renderAssistant() {
   const connection = snapshot.platformConnection;
   if (connection) {
     if (!platformSetupLoaded) { byId("platform-origin").value = connection.platform; platformSetupLoaded = true; }
-    byId("platform-connection-status").textContent = !connection.connected ? "尚未连接专业平台" : connection.enabled ? "平台连接与进程授权已确认" : "已连接，等待确认代理范围";
+    byId("platform-connection-status").textContent = !connection.connected ? "尚未连接 Control Plane"
+      : connection.approvalState === "PENDING" ? "Agent 已配对，等待在 Control Plane 一次确认身份、初始授权并启用当前进程"
+      : connection.approvalState === "APPROVED" && connection.enabled ? "Control Plane 已批准 Agent 并启用当前进程"
+      : connection.approvalState === "APPROVED" ? "Agent 已批准；当前进程尚未启用，请在 Control Plane 启用"
+      : "已连接 Control Plane，请在 Agent 页面检查配对状态";
       if (snapshot.backgroundError) byId("platform-connection-status").textContent = window.aiwI18n?.t("后台处理发生异常，已停止本地平台操作；这不表示平台撤销了进程授权。") || "后台处理发生异常，已停止本地平台操作；这不表示平台撤销了进程授权。";
     byId("platform-next").hidden = !connection.connected;
     if (connection.connected) byId("platform-next").href = connection.setupUrl;
@@ -1068,12 +1072,17 @@ byId("platform-connect-form").addEventListener("submit", async event => {
   if (control.disabled) return;
   control.disabled = true;
   try {
-    const { result, refreshed } = await post("platform/connect", { code: byId("platform-code").value });
+    const { result } = await post("platform/connect", { code: byId("platform-code").value });
     platformNeedsRepair = false;
     byId("platform-code").value = "";
     if (platformSender) platformSender.source.postMessage({ type: "aiw:agent:connected", ownerId: result.ownerId, agentId: result.agentId }, platformSender.origin);
     byId("platform-next").href = result.nextUrl; byId("platform-next").hidden = false;
-    feedback(refreshed ? "平台已连接，请回到向导确认代理范围。" : "连接已保存，请刷新状态后继续配置代理范围。", refreshed ? "ok" : "warn");
+    const message = result.approvalState === "PENDING"
+      ? "Agent 已配对但仍处于禁用状态。请在 Control Plane 一次确认 Agent 身份、精确初始授权并启用当前进程。"
+      : result.approvalState === "APPROVED"
+        ? "Agent 已连接。若当前进程尚未启用，请在 Control Plane 明确启用。"
+        : "Agent 已连接，请在 Control Plane 的 Agent 页面检查配对状态。";
+    feedback(message, result.approvalState === "APPROVED" ? "ok" : "warn");
   } catch (error) { feedback(errorMessage(error), "error"); }
   finally { control.disabled = false; }
 });

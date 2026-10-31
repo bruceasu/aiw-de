@@ -150,6 +150,8 @@ class PlatformSetup:
             current.bound = True
             runtime.platform.backend = client
             runtime.enabled = False
+            runtime.platform_observed = {"enabled": identity.get("enabled") is True, "approvalState": identity.get("approvalState"),
+                                         "agentBoot": client.boot, "generation": identity.get("generation")}
             self.legacy_connection = False
             return self.connected(value, client, identity)
 
@@ -169,13 +171,14 @@ class PlatformSetup:
             if not runtime.platform.session_started:
                 session = runtime.platform.request("/sessions", {"agentBoot": runtime.platform.boot})
                 if session.get("ownerId") != runtime.store.owner or session.get("agentId") != runtime.store.worker:
-                    raise ValueError("平台身份不一致，请重新连接原秘书。")
+                    raise ValueError("平台身份不一致，请重新连接已配对的 Agent。")
                 runtime.platform.session_started = True
             state = runtime.platform.request("/connection-state")
             if state.get("ownerId") != runtime.store.owner or state.get("agentId") != runtime.store.worker:
                 raise ValueError("平台身份不一致，请重新连接原秘书。")
             runtime.enabled = state.get("enabled") is True
-            runtime.platform_observed = {"enabled": runtime.enabled, "agentBoot": runtime.platform.boot, "generation": state.get("generation")}
+            runtime.platform_observed = {"enabled": runtime.enabled, "approvalState": state.get("approvalState"),
+                                         "agentBoot": runtime.platform.boot, "generation": state.get("generation")}
             if state.get("approvalState") == "PENDING":
                 return {"missing": [{"code": "AGENT_APPROVAL_PENDING", "message": "请在 Control Plane 一次确认 Agent 身份和精确授权范围。"}]}
             notice = state.get("authorization") or {}
@@ -209,8 +212,9 @@ class PlatformSetup:
             return {"missing": [{"code": "PROCESS_SESSION_REQUIRED", "message": "当前秘书尚未完成进程连接，请检查连接后再确认当前进程。"}]}
         state = runtime.platform.request("/connection-state")
         if state.get("ownerId") != runtime.store.owner or state.get("agentId") != runtime.store.worker:
-            raise ValueError("平台身份与原秘书不一致，请重新连接原秘书。")
-        runtime.platform_observed = {"enabled": state.get("enabled") is True, "agentBoot": runtime.platform.boot, "generation": state.get("generation")}
+            raise ValueError("平台身份与已配对 Agent 不一致，请重新连接原 Agent。")
+        runtime.platform_observed = {"enabled": state.get("enabled") is True, "approvalState": state.get("approvalState"),
+                                     "agentBoot": runtime.platform.boot, "generation": state.get("generation")}
         result = {"processEnabled": state.get("enabled") is True, "localProcessingEnabled": runtime.enabled,
                   "backgroundError": runtime.background_error, "missing": []}
         if plan_id:
@@ -226,7 +230,9 @@ class PlatformSetup:
         connected = isinstance(backend, PlatformClient)
         origin = backend.base.removesuffix("/api/r1/authority") if connected else "http://127.0.0.1:8080"
         observed = self.runtime.platform_observed
+        approval_state = observed.get("approvalState") if observed else None
+        setup_path = "/ui/authority" if approval_state == "APPROVED" else "/ui/agents"
         return {"connected": connected, "platform": origin, "enabled": observed["enabled"] if observed else self.runtime.enabled,
                 "localProcessingEnabled": self.runtime.enabled,
                 "profile": backend.profile if connected else None,
-                "setupUrl": origin + "/ui/authority"}
+                "approvalState": approval_state, "setupUrl": origin + setup_path}

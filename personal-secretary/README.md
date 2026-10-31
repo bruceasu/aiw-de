@@ -124,19 +124,19 @@ Windows 设置和连接凭据使用当前系统账号的 DPAPI 保护；其他�
 
 ## 专业平台连接（高级，可选）
 
-平台导航中的“秘书平台授权（高级）”管理秘书访问专业平台的身份和权限；“专业 Worker 任务配置（高级）”供人手动配置或排查准备记录。秘书已接入专业任务准备接口：直接交代软件实现、需求分析或代码评审等工作，秘书从平台读取自己获准管理的计划、仓库基线、默认工作方法和已批准模型，自动准备任务，交给在线兼容 Worker 领取，并在原工作及对话中跟踪结果。日常聊天、资料查询和文件保存无需配置这两个页面。
+Agent 配对通过秘书设置中的 **Control Plane Agent 连接** 与 Control Plane 的 `/ui/agents` 完成；不要使用旧的“登记新秘书”页面或个人凭证流程。`/ui/authority` 管理人类授权的 Agent 身份、Grant、动作范围和进程启停。秘书已接入专业任务准备接口：直接交代软件实现、需求分析或代码评审等工作，Agent 从平台读取当前已授权的计划、仓库基线、默认工作方法和已批准模型，准备任务并交给在线兼容 Worker 领取，再跟踪真实结果。日常聊天、资料查询和文件保存无需连接 Control Plane。
 
 专业任务需要已有的秘书平台连接及当前进程授权、计划托管和读取范围、有效执行策略、明确的仓库提交基线、已批准模型及在线兼容 Worker。只有一个可用目标时自动选择；多个目标含糊时询问具体目标。没有可用授权计划时，秘书会用当前工作内容自动创建计划草稿，记住草稿 ID 并报告需要确认的执行范围；创建草稿不会授予权限或启动任务。确认该范围后重新安排即可，无需手填任务配置表。
 
-新增机器接口为 `GET /api/r1/authority/professional-tasks/options`、`POST /api/r1/authority/professional-tasks` 和 `GET /api/r1/authority/professional-tasks/{原请求ID}`。机器身份来自现有独立凭证及进程会话；不能由请求指定 owner，也不能通过此接口授予权限、扩大仓库范围、修改方法或增加预算。执行使用原 AgentFactory、执行策略和 Worker 领取协议，不创建新的 Worker 进程。秘书只发送选定任务及必要上下文，不发送整个私人对话历史。
+新增机器接口为 `GET /api/r1/authority/professional-tasks/options`、`POST /api/r1/authority/professional-tasks` 和 `GET /api/r1/authority/professional-tasks/{原请求ID}`。机器身份来自已配对 Agent 凭据和当前进程会话；不能由请求指定 owner，也不能通过此接口授予权限、扩大仓库范围、修改方法或增加预算。执行使用原 AgentFactory、执行策略和 Worker 领取协议，不创建新的 Worker 进程。Agent 只发送选定任务及必要上下文，不发送整个私人对话历史。
 
 提交前先在私库保存固定请求 ID。未确认的提交及重启后的在途任务只查询原准备记录，不自动重发或重复创建；缺 Worker、模型、授权或执行预算时报告具体缺项，不把任务创建标记成完成。收到 Worker 的 PASS 报告才标记完成，REPAIR_REQUIRED、失败、取消及等待输入均分别报告。平台等待输入的问题在“工作问题与人工控制”处理。移除工作或暂停秘书会停止本地跟踪和后续工具操作，已经提交的平台任务不会因此撤销；停止专业任务需要在平台操作。
 
 升级需同时重启平台和秘书；Web 刷新，GUI 退出后重开。新增委派记录使用现有私库 decision/work/message 记录，不修改数据库表结构。回退前先核对并停止或等待已提交的平台任务，保留原请求记录；回退代码不会撤销已创建的专业任务。
 
-需要 Python 3.11+，默认 Codex 后端无第三方 Python 依赖；openai-agents 后端按需安装本目录 requirements.txt。登录平台后，在 `/ui/authority` 选择“登记新秘书”，生成凭证并确认读取范围。平台自动关联当前账号并生成唯一短标识；在页面选择秘书和终端后复制启动命令，无需记忆或填写 Owner ID、Worker ID。命令不含凭证，启动脚本会隐藏询问已登记的凭证。已有标识继续有效，轮换凭证时直接选择已有秘书。再启动个人进程建立禁用状态的进程会话，随后在平台确认最小能力及有效期并明确启用，最后在私人 UI 明确启用本地处理。普通 Worker 注册、共享 bearer 或 capability 不代表个人身份。
+需要 Python 3.11+，默认 Codex 后端无第三方 Python 依赖；openai-agents 后端按需安装本目录 requirements.txt。新 Agent 在 Control Plane 的 `/ui/agents` 创建一次性配对邀请，再从秘书设置连接；首次授权由 Control Plane 的一次确认绑定 Agent、精确初始 Grant 并启用当前进程。现有个人身份、凭证和 Grant 不会自动迁移，需重新配对和授权。普通 Worker 注册、共享 bearer 或 capability 不代表 Agent 身份。
 
-在用户自己的终端配置 `AIW_PERSONAL_CREDENTIAL`。它不能出现在参数、URL、提示词、导出包或日志中。可选 `AIW_PERSONAL_MODEL_COMMAND` 是用户选择的模型程序 argv JSON 数组；程序从 stdin 读取私人上下文，将最多 16000 字符的答复写到 stdout。不会启用 shell，子进程不继承 `AIW_PERSONAL_*` 环境变量。未配置模型时仍能维护私人记录和手动提交固定能力，但不会伪称已调用模型。
+`AIW_PERSONAL_CREDENTIAL` 已退役；启动脚本会从秘书进程环境中移除它。正常配对凭据保存在本机专属设置中；高级预配置 Agent 可使用 `AIW_AGENT_CREDENTIAL`，REMOTE 证书使用 `AIW_AGENT_CLIENT_CERT`、`AIW_AGENT_CLIENT_KEY` 及可选的 `AIW_AGENT_SERVER_CA`。可选 `AIW_PERSONAL_MODEL_COMMAND` 是用户选择的模型程序 argv JSON 数组；程序从 stdin 读取私人上下文，将最多 16000 字符的答复写到 stdout。不会启用 shell，模型子进程不继承 Agent 凭据。未配置模型时仍能维护私人记录和提交已有固定能力，但不会伪称已调用模型。
 
 在 `personal-secretary` 目录中可直接使用交互启动脚本：
 
@@ -153,21 +153,21 @@ bash ./scripts/start.sh
 Bash 版本使用相同的交互流程、默认值和 `AIW_PERSONAL_*` 配置变量，参数采用 `main.py` 的长选项名称，另有 `--python` 指定解释器（默认 `python3`）。运行 `bash ./scripts/start.sh --help` 查看完整选项。请作为独立脚本运行，不要用 `source` 加载。
 
 ```bash
-bash ./scripts/start.sh --owner-id O-EXPLICIT-ID --worker-id my-secretary --platform https://platform.example --data-root "$HOME/private/aiw"
+bash ./scripts/start.sh --owner-id O-EXPLICIT-ID --worker-id agent-123 --platform https://platform.example --data-root "$HOME/private/aiw"
 ```
 
-高级启动仍可传入平台登记的 owner ID 和平台地址。默认 Worker ID 为 `my-secretary`，应与平台登记一致。即使传入这些参数，启动也不再强制询问 `Dedicated platform credential`：优先使用环境变量或已保存的凭证，没有凭证仍可使用本机日常秘书。需要首次输入或更换专业平台凭证时，PowerShell 显式加 `-PromptCredential`，Bash 加 `--prompt-credential`；明文平台连接仍遵循原有回环 HTTP 确认规则。私人数据目录默认 `$HOME/.aiw-personal`，UI 默认 `127.0.0.1:8766`。退出后恢复原有凭证环境变量。
+高级启动可传入已配对 Agent 所属的 owner ID、Agent ID（参数名仍为 `--worker-id`）和 Control Plane 地址；它们必须与配对设置一致。凭据从已保存 Agent 设置或 `AIW_AGENT_CREDENTIAL` 读取，启动脚本不再提示输入旧的个人凭证。对 loopback 使用明文 HTTP 时需显式允许；REMOTE 连接只允许 HTTPS/mTLS。私人数据目录默认 `$HOME/.aiw-personal`，UI 默认 `127.0.0.1:8766`。
 
-可预设 `AIW_PERSONAL_OWNER_ID`、`AIW_PERSONAL_WORKER_ID`、`AIW_PERSONAL_PLATFORM` 和 `AIW_PERSONAL_CREDENTIAL`，避免重复输入。脚本参数优先于对应环境变量；支持 `-OwnerId`、`-WorkerId`、`-Platform`、`-DataRoot`、`-HostAddress`、`-Port`、`-PublicOrigin`、`-AllowLoopbackHttp` 和 `-Python`。凭证只通过环境变量或隐藏输入提供。
+可预设 `AIW_PERSONAL_OWNER_ID`、`AIW_PERSONAL_WORKER_ID` 和 `AIW_PERSONAL_PLATFORM`，用于高级预配置连接；这些身份值必须与 Agent 配对一致。脚本参数优先于对应环境变量；支持 `-OwnerId`、`-WorkerId`、`-Platform`、`-DataRoot`、`-HostAddress`、`-Port`、`-PublicOrigin`、`-AllowLoopbackHttp` 和 `-Python`。不要通过命令参数输入 Agent 凭据或私钥。
 
 ```powershell
-.\scripts\start.ps1 -OwnerId O-EXPLICIT-ID -WorkerId my-secretary -Platform https://platform.example -DataRoot D:/private/aiw
+.\scripts\start.ps1 -OwnerId O-EXPLICIT-ID -WorkerId agent-123 -Platform https://platform.example -DataRoot D:/private/aiw
 ```
 
 原有 Python 命令行继续要求显式身份和平台参数：
 
 ```powershell
-python personal-secretary/main.py --owner-id O-EXPLICIT-ID --worker-id my-secretary --platform https://platform.example --data-root D:/private/aiw
+python personal-secretary/main.py --owner-id O-EXPLICIT-ID --worker-id agent-123 --platform https://platform.example --data-root D:/private/aiw
 ```
 
 默认个人 UI 监听 `127.0.0.1:8766`，监听成功后自动尝试在默认浏览器打开 UI 地址，本机访问直接进入工作空间。浏览器打开失败不影响服务，可手动访问控制台显示的地址。远程模式在终端打印五分钟有效、最多五次尝试、使用后失效的一次性配对码，码不放入 URL。无桌面或远程部署可通过 Python/Bash 的 `--no-browser` 或 PowerShell 的 `-NoBrowser` 关闭自动打开。每个服务有独立 HttpOnly/SameSite 会话与 CSRF token，严格验证 Host/Origin，不接收平台 cookie、不开放 CORS 或 iframe。远程监听必须明确配置 HTTPS 反向代理的 `--public-origin`。平台的明文 HTTP 仅在用户明确使用 `--allow-loopback-http` 且 URL 为回环地址时接受；禁止凭证随重定向转发。
@@ -180,9 +180,9 @@ python personal-secretary/main.py --owner-id O-EXPLICIT-ID --worker-id my-secret
 
 日常模式优先使用界面中保存的模型连接。自定义程序可在 Web 设置中选择高级方式，或在启动前设置 `AIW_PERSONAL_MODEL_COMMAND` argv JSON 数组，首项为程序路径；程序从 stdin 读取 UTF-8 上下文，将答复写入 stdout。程序自身的权限由用户管理，不能将其视为受限日常工具沙箱。Web 和 GUI 会显示未配置模型、程序启动失败、调用失败、超时或回复格式错误等明确提示；错误响应只含固定诊断，不回传私人上下文、原始模型输出或子进程 stderr。
 
-## 平台启动认证失败
+## Agent 配对与连接故障
 
-高级连接出现 `/sessions` 的 401 表示平台未接受当前 Worker ID 与独立凭证的组合；不会阻止本机日常助理启动。需要专业功能时，再核对平台地址、Worker 登记及凭证是否提交保存。点击“生成并复制”仅填充及复制，不执行登记或轮换；轮换后旧凭证失效。凭证丢失时在平台选择“轮换已有秘书的凭证”，提交后用新值启动。此阶段不要求先启用专业秘书，也不使用个人服务的一次性配对码。不要将凭证发送到聊天或日志中。
+连接 Control Plane 使用专属 Agent 配对邀请，不再使用旧 Worker ID/Secretary 凭证作为 Agent 授权。收到 `/sessions` 的 401 时，检查 Control Plane 地址、配对的 Agent 身份、凭证状态和证书配置；被撤销的身份不能恢复，需重新配对。`PENDING` 表示身份已配对但仍禁用：请在 Control Plane 的 Agent 页面一次确认身份、精确初始授权并启用当前进程。此确认不由秘书本地页面代替。LOCAL 仅限 loopback；REMOTE 必须使用 HTTPS/mTLS，并检查 Agent 客户端证书、私钥和服务端 CA。不要把配对邀请、证书私钥放进聊天、命令参数、URL 或日志。
 
 ## Windows 桌面秘书（高级及旧版兼容）
 
@@ -244,17 +244,17 @@ Web 再次配对使用原有的 `ui/app.js` 和 `ui/console.css`，避免旧进�
 
 决定与 outbox 同一私库事务提交。请求 ID 和原信封保持不变；响应丢失先查原回执，仅在确认不存在时重发原信封。UNKNOWN 只查询，不重放、不退款、不换 ID。平台人工对账需固定 attempt 和明确证据；不会自动启动重试。私人数据库/平台实例标识不匹配时停止处理。备份包含私人记录、outbox 与回执副本，包含业务参数但不包含平台凭证或登录会话；恢复后仍须人工重新启用。
 
-## 引导连接与代理授权
+## Control Plane Agent 配对与计划授权
 
 确认操作统一使用项目的 `workspace-confirm` 布局：秘书和 Control Plane 共用网页确认组件，显示说明、操作对象、取消和确认按钮，删除操作使用危险色；布局跟随 HUD/RPG 主题和当前语言。Qt 托盘停止服务的确认使用同样的分区和主题色，不使用系统原生确认框。默认聚焦取消，按 Esc 取消，不提交操作。尚未进行浏览器和 Qt 视觉运行检查。
 
-入口为秘书的 **设置 → 专业平台连接与代理 → 打开连接与授权向导**。在平台登录后，选择连接本机秘书；在打开的秘书页面确认连接，再回到平台选择计划、允许代理的动作、期限和每种动作的累计次数。身份和连接凭证由向导处理，不需要填写内部 ID 或复制启动命令。浏览器窗口被拦截时，可使用折叠区域的备用连接码；连接码应当作为凭证保密。
+从秘书 **设置 → Control Plane Agent 连接 → 打开 Agent 配对页面** 进入 Control Plane 的 `/ui/agents`，创建一次性邀请后连接秘书。秘书确认连接只会提交配对邀请，不会授予业务权限。Control Plane 页面随后由有权用户执行一次组合确认：绑定 Agent、批准精确的初始 Grant，并启用当前进程。之后可在 Control Plane 的 `/ui/authority` 管理额外动作范围、期限和累计次数。浏览器窗口被拦截时，可复制一次性邀请到秘书表单；邀请应按凭证保密。
 
-Qt 桌面通过系统浏览器完成平台登录和连接确认；浏览器中的秘书设置与桌面共用同一本地服务。跨窗口连接只接受对应窗口及来源的消息，并需要本地显式确认。凭证不放入 URL、浏览器 Storage 或模型提示；连接文件使用既有私有配置保护（Windows DPAPI）。连接过程不移动原 SQLite 私库，也不改动其物理目录身份；已绑定私库只能重新连接原平台身份，不能混用另一位秘书。备份仍不包含连接凭证。
+Qt 桌面通过系统浏览器完成 Control Plane 登录；浏览器中的秘书设置与桌面共用同一本地服务。跨窗口传递只接受对应窗口及来源的配对邀请，秘书侧点击连接仅确认配对目标，不启用 Agent 或批准 Grant。Control Plane 不回调秘书服务。凭证不放入 URL、浏览器 Storage 或模型提示；连接文件使用既有私有配置保护（Windows DPAPI）。连接过程不移动原 SQLite 私库，也不改动其物理目录身份；已绑定私库只能重新连接原 Agent 身份。备份仍不包含连接凭证。
 
-初次可以只确认当前秘书进程，允许建立计划草稿。已有计划可配置范围内的计划推进、失败任务重试和工作问题答复；审批批准、拒绝和停止计划可单独选择。每项设置仍由平台检查当前登录人的角色、所属账号和原授权版本。确认新的代理设置会按原权限契约替换所选动作的上一期授权，应核对范围和次数。进程重启后需重新确认，可使用“确认当前秘书进程，保留原授权”，不会新增授权或重置累计次数。已有托管计划的期限和暂停状态不会由向导自动更新。
+首次配对必须在 Control Plane 一次确认 Agent 身份、精确初始 Grant 与当前进程启用；之后的额外动作、计划范围、期限和累计次数也由 Control Plane 按当前登录人的角色和所有者校验。每个 Agent 进程启动都有新的 boot 会话，重启后保持禁用，必须由用户在 Control Plane 明确启用；已有 Grant 和累计用量保留，不会因重启新增权限或重置次数。证书轮换须由 Control Plane 人工核对并批准新指纹，之后仍需建立新会话并重新启用。已有托管计划的期限和暂停状态不会由配对流程自动更新。
 
-秘书发现连接或代理范围缺失时，会在 **待你确认** 保留申请、原任务和上下文。平台保存授权时在同一事务中持久记录通知；仅存在等待授权的申请时，秘书后台才约每 5 秒读取当前授权并继续，申请全部继续或被拒绝后停止授权轮询；没有申请时不为授权检查发出请求。已受理操作的回执和工作问题按实际跟进需要单独处理。不要求浏览器打开或再次点击按钮。“重新检查授权”仅用于手动重试。离线秘书上线后，如存在等待授权的申请，会自动恢复检查并读取通知：同一身份、同一凭证、同一代次且仍有效的人类确认，可承接一次新进程会话；承接、手动停用、轮换凭证会改变代次，不能重复使用旧确认。该承接不扩大计划、文件或动作范围，也不延长授权期限。普通连接检查保留现有凭证与会话，修复连接时才明确轮换。拒绝申请则停止等待。已受理任务继续跟踪原回执；结果未知或继续过程中断时要求核对，不会换新标识自动重复提交。
+秘书发现当前进程未启用或授权范围不足时，会保留原工作和回执供核对；需要增加 Grant 时，在 Control Plane 人工处理。Agent 收到的状态变化消息只包含资源类型、ID 和版本，随后通过已授权 API 拉取权威状态；通知本身不授予权限，也不执行工作。Control Plane 离线恢复或通知重投不会绕过人工确认。进程重启、证书轮换或撤销后均需遵循 Control Plane 显示的状态；新进程不会继承旧进程启用状态。已提交工作的回执仍按原请求 ID 核对，不会生成新标识自动重放。
 
 跟进专业任务时，秘书可以使用有效范围内的 `A19_ANSWER` 回答原任务已经明确说明的问题；每个问题版本最多追加一次模型判断。原请求没有的信息、需要人类判断的问题或权限不足，会显示“工作需要你补充信息”，链接到平台的原问题。当前通知在秘书界面内显示，没有发送邮件或外部消息。
 
@@ -270,21 +270,21 @@ Qt 桌面通过系统浏览器完成平台登录和连接确认；浏览器中�
 
 “已完成授权，检查并继续”分别显示缺少进程启用、计划托管/文件范围、Git 基线、模型、执行暂停/到期、原请求未核对或工作忙碌，不再统一显示“授权条件尚未满足或秘书正在忙碌”。自动检查也会更新申请卡片中的具体原因。
 
-计划检查会一次列出当前进程启用、计划托管、计划读取范围、文件执行政策和模型的缺项；托管不存在、由其他秘书管理、暂停/到期分别提示。后台异常导致的本地停止与平台实际启用状态分开显示，不将本地缓存的 `enabled=false` 当作平台撤权。启动时已有相同身份和凭证的客户端会保留原进程会话，不再额外替换客户端。私有 `GET /api/platform/diagnostics?planId=...` 经本地会话认证，只使用已有进程会话执行 GET，不启用、不创建会话、不授予权限、不提交任务；输出缺项及最近后台异常类型，不输出凭证。平台端对应 `GET /api/r1/authority/professional-tasks/diagnostics` 只允许当前秘书读取所属账号创建的计划。平台版本未更新返回 404 时，明确提示重启平台后端。
+计划检查会一次列出当前进程启用、计划托管、计划读取范围、文件执行政策和模型的缺项；托管不存在、由其他 Agent 管理、暂停/到期分别提示。后台异常导致的本地停止与平台实际状态分开显示。每次服务启动都会建立新的 Agent boot 会话；待批准身份只能建立禁用会话并读取连接状态，已批准身份在新进程启用前不能执行其它平台操作。私有 `GET /api/platform/diagnostics?planId=...` 经本地会话认证，只使用已有进程会话执行 GET，不启用、不创建会话、不授予权限、不提交任务；输出缺项及最近后台异常类型，不输出凭证。
 
 **当前边界：**项目必须先在平台登记并有 Git 提交；向导不会初始化仓库、创建首次提交、解除暂停或撤销、启动专业 Worker、添加模型，也不会授权任意命令。既有执行预算及用量保留；强制预算模式缺少预算/定价时明确阻止保存并指向高级设置。更新文件范围会替换此计划的旧工具和命令范围，确认框会提示；高级命令配置仍在原入口。模型与专业 Worker 实际可用性继续由平台在准备任务时检查。创建草稿或完成代理授权不代表文件执行已经完成。
 
-上述为静态实现。更新后需重启平台和秘书服务才能加载；尚未进行真实登录、浏览器跨窗口、授权续接、故障恢复或模型代答的端到端验证。`scripts/compile-Agent-pairing.ps1` 仅离线编译 Java、Python 和 JavaScript，不执行这些流程。
+更新秘书代码后需重启本地个人服务并刷新页面；本次不改变 Control Plane 服务端代码。该配对流程的浏览器交互、证书签发/轮换及远程 mTLS 尚未在真实环境进行端到端验证。
 
 ## English operations
 
-Platform setup confirmations are durable. Only pending authorization requests trigger background approval checks, about every five seconds. Checks stop when all requests resume or are rejected, and restart after an offline period only if a pending request exists. No browser or second confirmation click is needed. Receipt tracking and task questions run only when relevant work exists. A valid, unused confirmation can reach one returning process with the same identity, credential and generation. Disablement, credential rotation, expiry or earlier delivery prevents reuse. Task and file permissions remain independently enforced.
+The Control Plane manages the Secretary as a generic Agent. A one-time pairing invite creates a disabled pending identity; one Control Plane confirmation binds that Agent to its exact initial Grant and enables the current process. LOCAL is loopback-only. REMOTE requires HTTPS and mutual TLS. Process restart or certificate rotation leaves the new process disabled until a human explicitly enables it in the Control Plane. The Agent initiates requests and pulls state-change references; notifications do not grant authority or carry work instructions.
 
 Web 的“查看工作详情”以独立窗口展示工作说明、最新结果或失败原因、安排、已保存文件及本地处理步骤；原始 JSON 收在“原始数据（排查时使用）”中。打开详情后后台仍读取最新状态，但不会替换正在阅读的内容；有变化时提示“有新记录”，点击“更新详情”后才切换。关闭详情后列表显示当前状态。失败原因在工作卡片中也会单独突出显示。
 
-Run this Worker in the user's own environment. Use Python 3.11 or newer. No extra package is needed. For the guided flow, open **Platform connection and delegation** in secretary settings. Connect through the platform page, confirm locally, then choose a plan, actions, expiry and usage limits. You can confirm repository, file access and a fixed Git baseline in the same form without JSON. Existing IDs stay valid. Reconnecting an existing secretary rotates its credential. Advanced startup scripts still accept `AIW_PERSONAL_CREDENTIAL` or a hidden prompt; never put credentials in commands, URLs or model prompts. Arbitrary commands and mandatory budget settings still use advanced configuration.
+Run this Agent in the user's own environment. Use Python 3.11 or newer. For the guided flow, open **Control Plane Agent connection** in Secretary settings, create a one-time invite at `/ui/agents`, and connect the invite in Secretary. Then approve the Agent and exact initial Grant once in the Control Plane. Configure later plan/action scopes in `/ui/authority`. LOCAL uses loopback; REMOTE requires HTTPS and mutual TLS. After a service restart or certificate rotation, explicitly enable the new process in the Control Plane. Never place credentials or private keys in commands, URLs, logs or model prompts. `AIW_PERSONAL_CREDENTIAL` is retired; advanced preconfigured connections use `AIW_AGENT_CREDENTIAL` and the `AIW_AGENT_*` certificate settings.
 
-Run `.\scripts\start.ps1` from this directory for interactive setup, or `bash ./scripts/start.sh` on Linux, macOS or Git Bash. Both scripts default to Worker ID `my-secretary`, offer the local platform at `http://127.0.0.1:8080`, ask for explicit loopback HTTP consent, and read missing credentials with hidden input. The Bash script defaults to `python3`; use `--python` to select another interpreter and `--help` to list options. Run it as a separate script, not with `source`. Set `AIW_PERSONAL_OWNER_ID`, `AIW_PERSONAL_WORKER_ID`, `AIW_PERSONAL_PLATFORM` and `AIW_PERSONAL_CREDENTIAL` to reuse your settings. Script parameters override the matching environment variables. The owner and Worker must match the enrolled platform identity. You can also start `main.py` with explicit owner, Worker, platform origin and private data root. A model command is optional and must be an explicit argv JSON array in `AIW_PERSONAL_MODEL_COMMAND`. It reads private context from stdin. Its output is advice, never platform authority. Dedicated credentials are removed from the model process environment.
+Run `./scripts/start.ps1` for Windows or `bash ./scripts/start.sh` on Linux, macOS or Git Bash. Normal startup does not require Control Plane IDs or credentials; pair the Agent through Secretary settings. For advanced preconfigured connections, the scripts accept `AIW_PERSONAL_OWNER_ID`, `AIW_PERSONAL_WORKER_ID` (historical name; value is the Agent ID), `AIW_PERSONAL_PLATFORM`, and `AIW_AGENT_CREDENTIAL`; REMOTE additionally uses the `AIW_AGENT_*` certificate settings. Parameters override matching identity/address values. A loopback HTTP Control Plane requires explicit consent. Do not use `AIW_PERSONAL_CREDENTIAL` or the removed `--prompt-credential` option.
 
 The Worker attempts to open the private UI in the default browser after binding its listener. It skips this in detected SSH sessions, Windows service sessions, and Linux/other Unix sessions without DISPLAY or WAYLAND_DISPLAY. Desktop detection uses environment hints and cannot guarantee browser availability. If no browser opens, use the printed address. Use `--no-browser` with Python/Bash or `-NoBrowser` with PowerShell to disable this behavior. Direct loopback access from localhost, 127.0.0.0/8 or ::1 connects automatically without a pairing code. Remote access still requires the one-time pairing code from the terminal. Host, Origin, session cookies and CSRF checks remain enforced. The code is never included in the browser URL. Restart always leaves processing paused. Remote access needs an explicit HTTPS reverse proxy. The private UI has its own session and never imports the platform session database.
 
@@ -318,8 +318,6 @@ Qt 托盘的“退出秘书并停止本地服务”在监听端口关闭后退�
 
 The private UI can read platform questions within the exact PLAN read scope. Select the goal, necessary context and original answer, preview the projection locally, then explicitly queue it with a current A19_ANSWER or A18_BUDGET grant. The platform verifies the original projection digest and exact envelope; private chats, policies, templates and credentials stay local. The private outbox retains the original wrapper and request ID for receipt reconciliation. See [the formal question contract](../../docs/FORMAL-QUESTIONS.md). Ordinary answers do not grant execution or extra budget.
 
-## Control Plane Agent connection
+## Agent mTLS deployment reference
 
-Control Plane communication is Agent-initiated; it does not call back into this process. Create a one-time pairing invitation at `/ui/agents`. Local profiles are restricted to loopback. Remote profiles require HTTPS and mutual TLS with an Agent-specific client certificate and key. Configure `AIW_AGENT_CLIENT_CERT`, `AIW_AGENT_CLIENT_KEY`, and, for a private Control Plane CA, `AIW_AGENT_SERVER_CA` before pairing. Pairing creates a disabled pending identity; it can only establish a disabled session and read connection state. In Control Plane, one human confirmation binds the Agent identity to an exact initial Grant and enables the current process. After restart or certificate rotation, a human must enable the new process session again.
-
-Certificate rotation requires a new CA-issued client certificate, an Agent rotation request, human approval of the displayed fingerprint, a fresh session, and explicit re-enablement. Revoked credentials cannot be reactivated; pair a new Agent and approve new Grants. See [remote mTLS deployment](../docs/features/FD-072/AGENT_MTLS_DEPLOYMENT.md) for server configuration and rotation details.
+For Control Plane certificate configuration and rotation procedures, see [remote mTLS deployment](../docs/features/archive/FD-072/AGENT_MTLS_DEPLOYMENT.md). A revoked Agent credential cannot be reactivated; create a new pairing and approve a new Grant.
