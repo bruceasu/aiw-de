@@ -6,11 +6,11 @@ import java.util.*;
 public final class ActionPermissionContract {
     private ActionPermissionContract() {}
     public enum Scope { ALL, PLAN, TASK, WORKER }
-    public record Issue(String requestId,String ownerId,String workerId,ActionScope.Action action,Scope scopeKind,
+    public record Issue(String requestId,String ownerId,String agentId,ActionScope.Action action,Scope scopeKind,
                         String scopeId,long maximumUses,long expiresAt,String expectedPriorId) {
         public Issue {
             uuid(requestId);Objects.requireNonNull(action);Objects.requireNonNull(scopeKind);
-            text(ownerId,64);text(workerId,128);
+            text(ownerId,64);text(agentId,128);
             if(maximumUses<1||maximumUses>Integer.MAX_VALUE)throw new IllegalArgumentException("Bounded action count required");
             if(scopeKind==Scope.ALL&&scopeId!=null||scopeKind!=Scope.ALL&&(scopeId==null||scopeId.isBlank()))
                 throw new IllegalArgumentException("Optional scope must be explicit");

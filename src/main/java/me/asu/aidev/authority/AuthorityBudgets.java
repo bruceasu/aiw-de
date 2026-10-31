@@ -43,7 +43,7 @@ public class AuthorityBudgets {
         if (jdbc.update("UPDATE authority_budget SET used_value=used_value+1,reserved_value=reserved_value+? WHERE target_key=? AND action=? AND (? OR used_value<?)",
                 reserved ? 1 : 0, budget.target(), budget.action(), !enforced(), limit) != 1)
             throw new IllegalStateException("Cumulative budget changed");
-        repo.audit(budget.target(),grant.id(),request,"delegate:"+grant.workerId(),reserved ? "ROUND_RESERVED" : "BUDGET_CONSUMED",
+        repo.audit(budget.target(),grant.id(),request,"agent:"+grant.workerId(),reserved ? "ROUND_RESERVED" : "BUDGET_CONSUMED",
                 "One recorded unit; mode " + accounting.mode() + "; action " + budget.action() + "; grant revision " + grant.revision());
     }
     @Transactional public void supplement(String target, String action, long amount, String actor) {

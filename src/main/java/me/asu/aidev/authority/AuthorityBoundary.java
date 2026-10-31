@@ -31,9 +31,7 @@ public class AuthorityBoundary {
     }
     public boolean humanAuthRequired() { return Boolean.TRUE.equals(repo.jdbc().queryForObject("SELECT human_auth_required FROM authority_metadata WHERE id=1",Boolean.class)); }
     public void requireMigrationSafeInstallation() {
-        // This release cannot migrate/cut over an existing installation. No escape flag.
-        if(Boolean.TRUE.equals(repo.jdbc().queryForObject("SELECT retired_data_present FROM authority_metadata WHERE id=1",Boolean.class)))
-            throw new IllegalStateException("Existing private records are sealed; actual migration and cutover are disabled");
+        // Legacy private records remain sealed. They do not authorize or block a new Agent.
     }
     public String instance() {
         lock();
@@ -41,16 +39,20 @@ public class AuthorityBoundary {
         return repo.jdbc().queryForObject("SELECT instance_id FROM authority_metadata WHERE id=1",String.class);
     }
     public Principal authenticate(String worker,String credential) {
-        if(worker==null || credential==null) throw new SecurityException("Dedicated personal Worker credential required");
-        var rows=repo.jdbc().queryForList("SELECT owner_id,key_hash,generation,enabled_boot FROM authority_identity WHERE worker_id=?",worker);
+        if(worker==null || credential==null) throw new SecurityException("Dedicated Agent credential required");
+        var rows=repo.jdbc().queryForList("SELECT owner_id,key_hash,generation,enabled_boot FROM authority_identity WHERE worker_id=? AND identity_kind='AGENT'",worker);
         if(rows.size()!=1 || !MessageDigest.isEqual(AuthorityRepository.hash(credential).getBytes(StandardCharsets.US_ASCII),
                 String.valueOf(rows.getFirst().get("key_hash")).getBytes(StandardCharsets.US_ASCII)))
-            throw new SecurityException("Invalid personal Worker identity");
+            throw new SecurityException("Invalid Agent identity");
         var row=rows.getFirst();
         return new Principal(String.valueOf(row.get("owner_id")),worker,((Number)row.get("generation")).longValue(),boot.equals(row.get("enabled_boot")));
     }
     public boolean processBoot(String worker,String boot) {
-        return boot!=null && repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE worker_id=? AND worker_boot=?",Long.class,worker,boot)==1;
+        return boot!=null && repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE worker_id=? AND identity_kind='AGENT' AND worker_boot=?",Long.class,worker,boot)==1;
+    }
+    public String agentApprovalState(String worker) {
+        var states=repo.jdbc().queryForList("SELECT approval_state FROM authority_identity WHERE worker_id=? AND identity_kind='AGENT'",String.class,worker);
+        return states.size()==1?states.getFirst():"UNKNOWN";
     }
     public void changing(String target) {
         lock();
@@ -66,7 +68,7 @@ public class AuthorityBoundary {
     public void registered(String worker) {
         lock();
         if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE worker_id=?",Long.class,worker)>0)
-            throw new SecurityException("Personal identity cannot register as a lease Worker");
+            throw new SecurityException("Agent identity cannot register as a lease Worker");
         repo.jdbc().update("UPDATE authority_target SET generation=generation+1,paused=TRUE WHERE target_key=?","WORKER:"+worker);
     }
     public <T> T completionScope(Supplier<T> operation) {

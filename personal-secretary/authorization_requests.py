@@ -78,12 +78,12 @@ class AuthorizationRequests:
             return blocked("ORIGINAL_REQUEST_PENDING", "这项工作已有专业任务正在执行或核对，请查看原回执，不要重新提交。")
         try:
             if not runtime.platform.session_started:
-                session = runtime.platform.request("/sessions", {"workerBoot": runtime.platform.boot})
-                if session.get("ownerId") != self.store.owner or session.get("workerId") != self.store.worker:
+                session = runtime.platform.request("/sessions", {"agentBoot": runtime.platform.boot})
+                if session.get("ownerId") != self.store.owner or session.get("agentId") != self.store.worker:
                     raise AuthorizationRequired("平台身份与原秘书不一致，请重新连接原秘书。", "PLATFORM_IDENTITY_MISMATCH")
                 runtime.platform.session_started = True
             identity = runtime.platform.request("/connection-state")
-            runtime.platform_observed = {"enabled": identity.get("enabled") is True, "workerBoot": runtime.platform.boot, "generation": identity.get("generation")}
+            runtime.platform_observed = {"enabled": identity.get("enabled") is True, "agentBoot": runtime.platform.boot, "generation": identity.get("generation")}
             if row.get("planId") and row["action"].get("action") in {"professional_options", "delegate_task"}:
                 details = runtime.platform_setup.diagnostics(row["planId"])
                 if details.get("missing"):

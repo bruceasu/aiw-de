@@ -4,7 +4,7 @@
   const scopes={ALL:'当前账号全部适用目标',PLAN:'指定计划',TASK:'指定任务',WORKER:'指定普通 Worker（同时确认归属）'};
   const states={ENABLED:'有效',EXHAUSTED:'次数已用尽',EXPIRED:'已到期',REVOKED:'已撤销',REPLACED:'已被新授权期替代',ROLE_CHANGED:'当前角色已变化'};
   let data=null,ready=false,reading=false,busy=false,pending=null,confirmation=null,recent=null,sequence=0,initialized=false;
-  const fields=$('permission-fields'),worker=()=>form.elements.namedItem('workerId').value;
+  const fields=$('permission-fields'),agent=()=>form.elements.namedItem('agentId').value;
   const action=()=>data?.catalogue.find(a=>a.action===$('permission-action').value);
   const safe=value=>Number.isSafeInteger(value)&&value>=0;
   const node=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
@@ -33,14 +33,14 @@
   }
   function selectedFields(){
     const maximum=Number($('permission-maximum').value),expiry=new Date($('permission-expiry').value).getTime(),a=action(),kind=$('permission-scope-kind').value;
-    if(!data?.ownerId||!worker()||!a?.allowed)throw new Error('请明确选择秘书、功能分组及当前角色可授予的动作。');
+    if(!data?.ownerId||!agent()||!a?.allowed)throw new Error('请明确选择 Agent、功能分组及当前角色可授予的动作。');
     if(!Number.isSafeInteger(maximum)||maximum<1||maximum>2147483647||!Number.isSafeInteger(expiry)||expiry<=Date.now())throw new Error('请设置未来的到期时间和有效的正整数累计次数。');
     if(!a.scopes.includes(kind))throw new Error('原范围已不适用于此动作，请重新核对选择。');
     const id=kind==='ALL'?null:$('permission-scope-id').value;
     if(kind!=='ALL'&&!choices(kind).some(item=>item.id===id))throw new Error('请选择当前可用的范围；原范围不可用时不会改为全部目标。');
     const boundOwner=form.elements.namedItem('ownerId').value;
-    if(boundOwner&&boundOwner!==data.ownerId)throw new Error('登录身份已变化，请重新打开页面后核对秘书。');
-    return {ownerId:data.ownerId,workerId:worker(),action:a.action,scopeKind:kind,scopeId:id,maximumUses:maximum,expiresAt:expiry};
+    if(boundOwner&&boundOwner!==data.ownerId)throw new Error('登录身份已变化，请重新打开页面后核对Agent。');
+    return {ownerId:data.ownerId,agentId:agent(),action:a.action,scopeKind:kind,scopeId:id,maximumUses:maximum,expiresAt:expiry};
   }
   function choices(kind){return kind==='PLAN'?data?.plans||[]:kind==='TASK'?data?.tasks||[]:kind==='WORKER'?(data?.workers||[]).map(w=>({id:w.id,title:w.id+' · '+w.runtime_type+(w.owner_id?'':' · 尚未确认归属')})):[];}
   function populateActions(keep=false){
@@ -77,16 +77,16 @@
         host.append(node('h3',group,'permission-list-label'));const cards=node('div',undefined,'permission-group-records');
         for(const p of rows.filter(p=>(data.catalogue.find(a=>a.action===p.action)?.group||'其它动作')===group)){
           const card=node('article',undefined,'permission-record'),a=data.catalogue.find(a=>a.action===p.action),badge=node('span',states[p.effectiveState]||'状态待核对','pill '+(p.effectiveState==='ENABLED'?'ok':'neutral'));
-          card.append(badge,node('h4',a?.label||'原动作授权'),node('p','秘书：'+p.workerId),node('p',scopeLabel(p)));
+          card.append(badge,node('h4',a?.label||'原动作授权'),node('p','Agent：'+p.agentId),node('p',scopeLabel(p)));
           const metrics=node('div',undefined,'permission-metrics');for(const [value,label] of [[safe(p.usedUses)&&safe(p.maximumUses)?p.usedUses+' / '+p.maximumUses:'待核对','已受理 / 总次数'],[safe(p.remaining)?String(p.remaining):'待核对','剩余次数']]){const item=node('div');item.append(node('strong',value),node('span',label));metrics.append(item);}card.append(metrics,node('p','到期：'+new Date(p.expiresAt).toLocaleString('zh-CN',{hour12:false})));
-          if(p.state==='ENABLED'){const revoke=node('button','撤销这条授权','btn ghost');revoke.type='button';revoke.dataset.revokePermission=p.id;revoke.addEventListener('click',()=>{if(canWrite())ask({kind:'revoke',id:p.id,ownerId:data.ownerId},'撤销动作授权','停止这条授权的新操作和后续准入，保留历史次数和原回执；在途按现有停止规则处理。',(a?.label||p.action)+' · '+p.workerId+'\n'+scopeLabel(p));});card.append(revoke);}
+          if(p.state==='ENABLED'){const revoke=node('button','撤销这条授权','btn ghost');revoke.type='button';revoke.dataset.revokePermission=p.id;revoke.addEventListener('click',()=>{if(canWrite())ask({kind:'revoke',id:p.id,ownerId:data.ownerId},'撤销动作授权','停止这条授权的新操作和后续准入，保留历史次数和原回执；在途按现有停止规则处理。',(a?.label||p.action)+' · '+p.agentId+'\n'+scopeLabel(p));});card.append(revoke);}
           const technical=node('details');technical.append(node('summary','查看授权引用'),node('p',p.id));card.append(technical);cards.append(card);
         }host.append(cards);
       }
       if(!rows.length)host.append(node('p',historical?'尚无历史授权期。':'尚无当前业务动作授权。先在上方选择一种动作。','authority-empty'));
     }
   }
-  function samePermission(p,body){return ['ownerId','workerId','action','scopeKind','scopeId','maximumUses','expiresAt'].every(field=>p[field]===body[field]);}
+  function samePermission(p,body){return ['ownerId','agentId','action','scopeKind','scopeId','maximumUses','expiresAt'].every(field=>p[field]===body[field]);}
   async function load(){
     const token=++sequence;reading=true;ready=false;sync();
     try{const current=await call('/action-permissions/state');if(token!==sequence)return;data=current;
@@ -111,9 +111,9 @@
   }
   form.addEventListener('submit',event=>{event.preventDefault();if(!canWrite()||!form.reportValidity())return;
     try{const values=selectedFields(),fingerprint=JSON.stringify(values);if(recent===fingerprint){message('此内容已经登记。若需要新的授权期，请明确点击“另建一个授权期”后再核对。','warn');return;}
-      const prior=data.permissions.find(p=>p.workerId===values.workerId&&p.action===values.action&&p.state==='ENABLED');
+      const prior=data.permissions.find(p=>p.agentId===values.agentId&&p.action===values.action&&p.state==='ENABLED');
       const body={requestId:crypto.randomUUID(),...values,expectedPriorId:prior?.id||null};
-      ask({kind:'issue',body,ownerId:data.ownerId},'确认授予一种动作','仅授予选中的动作，所有适用目标共用次数。创建新授权期将替代这位秘书同动作的旧授权；新期从零计数，历史保留，旧在途按现有撤销规则处理。'+(values.scopeKind==='WORKER'?'同时为本账号确认所选普通 Worker 的归属。':''),action().label+' · '+worker()+'\n'+scopeLabel(body)+'\n累计 '+values.maximumUses+' 次 · 至 '+new Date(values.expiresAt).toLocaleString('zh-CN',{hour12:false}));
+      ask({kind:'issue',body,ownerId:data.ownerId},'确认授予一种动作','仅授予选中的动作，所有适用目标共用次数。创建新授权期将替代这位Agent同动作的旧授权；新期从零计数，历史保留，旧在途按现有撤销规则处理。'+(values.scopeKind==='WORKER'?'同时为本账号确认所选普通 Worker 的归属。':''),action().label+' · '+agent()+'\n'+scopeLabel(body)+'\n累计 '+values.maximumUses+' 次 · 至 '+new Date(values.expiresAt).toLocaleString('zh-CN',{hour12:false}));
     }catch(error){message(error.message,'error');}
   });
   $('permission-confirm-dismiss').addEventListener('click',()=>$('permission-confirm').close());

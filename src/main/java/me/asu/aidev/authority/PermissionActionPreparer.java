@@ -131,7 +131,7 @@ public class PermissionActionPreparer {
         repo.jdbc().update("INSERT INTO authority_grant VALUES(?,?,?,1,'ENABLED',?,?,?,?,?)",id,p.ownerId(),p.workerId(),repo.encode(scope),p.authority(),System.currentTimeMillis(),p.expiresMs(),key);
         repo.jdbc().update("INSERT INTO authority_budget VALUES(?,?,?,0,0) ON CONFLICT(target_key,action) DO NOTHING",key,p.action().name(),p.maximumUses());
         repo.jdbc().update("INSERT INTO authority_permission_child VALUES(?,?,?,?,?,?)",id,p.id(),request,resolved.planId(),resolved.sourceTask(),questionId);
-        repo.audit(key,p.id(),request,"personal:"+p.workerId(),"ACTION_SELECTION_FIXED","Inert exact child; no action or count consumed");return repo.get(id);
+        repo.audit(key,p.id(),request,"agent:"+p.workerId(),"ACTION_SELECTION_FIXED","Inert exact child; no action or count consumed");return repo.get(id);
     }
     public void validateEnvelope(AuthorityBoundary.Principal principal,ActionAdmissionService.Envelope envelope) {
         if(permissions.child(envelope.grantId()).isEmpty())return;

@@ -27,7 +27,8 @@ public class BusinessPermissionController {
     @PostMapping("/action-permissions") public Object issue(@RequestBody String raw) {return permissions.view(permissions.issue(read(raw,Issue.class),boundary.human()));}
     @PostMapping("/action-permissions/{id}/revoke") public Object revoke(@PathVariable String id) {permissions.revoke(id,boundary.human());return Map.of("state","REVOKED");}
     @GetMapping("/action-permissions") public Object list(HttpServletRequest request) {
-        var p=principal(request);admission.getObject().enabled(p);return permissions.list(p.owner()).stream().filter(v->v.workerId().equals(p.worker())).map(permissions::view).toList();
+        // This is a read-only pull of this Agent's own authority, also available while execution is disabled.
+        var p=principal(request);return permissions.list(p.owner()).stream().filter(v->v.workerId().equals(p.worker())).map(permissions::view).toList();
     }
     @PostMapping("/permission-actions/prepare") public Object prepare(HttpServletRequest request,@RequestBody String raw) {return preparer.prepare(principal(request),read(raw,Selection.class));}
     @GetMapping("/permission-actions/{requestId}") public Object preparation(HttpServletRequest request,@PathVariable String requestId) {return preparer.read(principal(request),requestId);}

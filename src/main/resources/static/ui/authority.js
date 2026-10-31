@@ -3,100 +3,60 @@ const result = document.getElementById("authority-result");
 const identities = new Map([...document.querySelectorAll("[data-authority-identity]")].map(node => {
   let readScope = null;
   try { const scope = JSON.parse(node.dataset.readScope); if (Array.isArray(scope)) readScope = scope; } catch (_) { /* Keep unknown scope distinct from an empty scope. */ }
-  const identity = { workerId: node.dataset.worker, ownerId: node.dataset.owner, generation: Number(node.dataset.generation), workerBoot: node.dataset.boot || null, enabled: node.dataset.enabled === "true", readScope };
-  return [identity.workerId, identity];
+  const identity = { agentId: node.dataset.agent, ownerId: node.dataset.owner, generation: Number(node.dataset.generation), agentBoot: node.dataset.boot || null, enabled: node.dataset.enabled === "true", readScope };
+  return [identity.agentId, identity];
 }));
-const workerLabel = identity => identity.workerId.length > 20 ? `${identity.workerId.slice(0, 8)}…${identity.workerId.slice(-4)}` : identity.workerId;
+const agentLabel = identity => identity.agentId.length > 20 ? `${identity.agentId.slice(0, 8)}...${identity.agentId.slice(-4)}` : identity.agentId;
 
-function startupCommand(identity) {
-  const platform = window.location.origin;
-  if (document.getElementById("authority-startup-shell").value === "powershell") {
-    const quote = value => "'" + value.replace(/'/g, "''") + "'";
-    return `& '.\\personal-secretary\\scripts\\start.ps1' -OwnerId ${quote(identity.ownerId)} -WorkerId ${quote(identity.workerId)} -Platform ${quote(platform)}`;
-  }
-  const quote = value => "'" + value.replace(/'/g, "'\"'\"'") + "'";
-  return `bash './personal-secretary/scripts/start.sh' --owner-id ${quote(identity.ownerId)} --worker-id ${quote(identity.workerId)} --platform ${quote(platform)}`;
-}
-function updateStartupCommand() {
-  const identity = identities.get(document.getElementById("authority-startup-worker").value);
-  document.getElementById("authority-startup-command").value = identity ? startupCommand(identity) : "";
-  document.getElementById("authority-copy-startup").disabled = !identity;
-}
-function syncWorkerSelection(select) {
+function syncAgentSelection(select) {
   const identity = identities.get(select.value);
   const current = select.form;
   const owner = current?.elements.namedItem("ownerId");
   if (owner) owner.value = identity?.ownerId || "";
-  if (current?.id === "control-worker") {
+  if (current?.id === "control-agent") {
     current.elements.namedItem("generation").value = identity?.generation || "";
-    current.elements.namedItem("workerBoot").value = identity?.workerBoot || "";
+    current.elements.namedItem("agentBoot").value = identity?.agentBoot || "";
   }
-  if (select.id === "authority-rotation-worker" && document.getElementById("authority-enrollment-mode").value === "rotate") {
-    current.elements.namedItem("readScope").value = identity?.readScope?.join("\n") || "";
-    if (identity && identity.readScope === null) feedback("无法读取这位秘书的原读取范围，请刷新后核对，再轮换凭证。", "error");
-  }
-  if (select.id === "authority-startup-worker") updateStartupCommand();
-}
-function updateEnrollmentMode() {
-  const rotating = document.getElementById("authority-enrollment-mode").value === "rotate";
-  const selector = document.getElementById("authority-rotation-worker");
-  document.getElementById("authority-rotation-worker-field").hidden = !rotating;
-  selector.disabled = !rotating;
-  selector.required = rotating;
-  document.getElementById("authority-enrollment-submit").textContent = rotating ? "轮换所选秘书的凭证" : "登记新秘书";
-  if (rotating) syncWorkerSelection(selector);
-  else document.getElementById("enroll-worker").elements.namedItem("readScope").value = "";
 }
 function renderIdentities(preferred = "") {
-  for (const select of document.querySelectorAll("[data-authority-worker-select]")) {
+  for (const select of document.querySelectorAll("[data-authority-agent-select]")) {
     const previous = select.value;
-    select.replaceChildren(new Option(identities.size ? "请选择秘书" : "请先登记秘书", ""));
+    select.replaceChildren(new Option(identities.size ? "Select Agent" : "No paired Agent", ""));
     for (const identity of identities.values()) {
-      const option = new Option(workerLabel(identity), identity.workerId);
-      option.title = identity.workerId;
+      const option = new Option(agentLabel(identity), identity.agentId);
+      option.title = identity.agentId;
       select.append(option);
     }
     select.value = identities.has(previous) ? previous : identities.has(preferred) ? preferred : identities.size === 1 ? identities.keys().next().value : "";
-    syncWorkerSelection(select);
+    syncAgentSelection(select);
   }
-  const workerCount = document.querySelector("[data-authority-worker-count]");
-  if (workerCount) workerCount.textContent = String(identities.size);
-  if (identities.size) {
-    const owners = [...new Set([...identities.values()].map(identity => identity.ownerId))];
-    const ownerCount = document.querySelector("[data-authority-owner-count]");
-    if (ownerCount) ownerCount.textContent = String(owners.length);
-    const ownerList = document.querySelector(".authority-owner-list");
-    ownerList.replaceChildren(...owners.map(owner => { const code = document.createElement("code"); code.textContent = owner; return code; }));
-  }
-  document.getElementById("authority-startup").hidden = !identities.size;
-  const host = document.getElementById("authority-worker-list");
+  const count = document.querySelector("[data-authority-agent-count]");
+  if (count) count.textContent = String(identities.size);
+  const host = document.getElementById("authority-agent-list");
+  if (!host) return;
   host.replaceChildren();
   if (!identities.size) {
     host.className = "authority-empty";
-    host.textContent = "尚未登记秘书。选择“登记新秘书”并提交，系统会生成唯一标识并关联当前账号。";
+    host.textContent = "No paired Agents. Create a one-time pairing invitation on the Agents page.";
     return;
   }
   host.className = "table-wrap";
   const table = document.createElement("table");
   table.className = "authority-table";
-  table.setAttribute("aria-label", "已登记的个人秘书");
+  table.setAttribute("aria-label", "Paired Agents");
   const heading = table.createTHead().insertRow();
-  for (const label of ["秘书", "平台状态", "进程会话", "连接详情"]) {
+  for (const label of ["Agent", "Control Plane status", "Process session"]) {
     const cell = document.createElement("th"); cell.scope = "col"; cell.textContent = label; heading.append(cell);
   }
   const body = table.createTBody();
   for (const identity of identities.values()) {
     const row = body.insertRow();
-    row.insertCell().textContent = workerLabel(identity);
+    row.insertCell().textContent = agentLabel(identity);
     const badge = document.createElement("span");
     badge.className = "authority-state " + (identity.enabled ? "authority-state--ok" : "authority-state--muted");
-    badge.textContent = identity.enabled ? "已启用" : "未启用";
+    badge.textContent = identity.enabled ? "Enabled" : "Disabled";
     row.insertCell().append(badge);
-    row.insertCell().textContent = identity.workerBoot ? "已建立会话" : "等待启动";
-    const details = document.createElement("details");
-    const summary = document.createElement("summary"); summary.textContent = "查看标识与范围";
-    const content = document.createElement("pre"); content.textContent = JSON.stringify(identity, null, 2);
-    details.append(summary, content); row.insertCell().append(details);
+    row.insertCell().textContent = identity.agentBoot ? "Session established" : "Waiting for Agent";
   }
   host.append(table);
 }
@@ -167,7 +127,7 @@ actionLabels.A18_BUDGET = "限定预算追加";
 actionLabels.A19_ANSWER = "回答工作问题";
 const dimensionLabels = { TIME_MS: "时间（毫秒）", TASKS: "任务数量", COST_MICROS: "费用（微单位）", LOOP_BACKJUMPS: "循环回跳次数" };
 const recordTables = {
-  grants: { title: "授权记录", empty: "尚无授权记录。先确认动作、精确目标和有效期，再授予最小能力。", columns: [["id", "授权 ID"], ["workerId", "秘书", "worker"], ["rule.action", "动作", "action"], ["rule.targetId", "精确目标"], ["state", "记录状态", "state"], ["expiresMs", "到期时间", "date"]] },
+  grants: { title: "授权记录", empty: "尚无授权记录。先确认动作、精确目标和有效期，再授予最小能力。", columns: [["id", "授权 ID"], ["workerId", "历史身份"], ["rule.action", "动作", "action"], ["rule.targetId", "精确目标"], ["state", "记录状态", "state"], ["expiresMs", "到期时间", "date"]] },
   targets: { title: "目标控制", empty: "尚无已登记的控制目标。", columns: [["target_key", "目标键"], ["generation", "当前世代"], ["paused", "已暂停", "boolean"], ["restriction_revision", "禁止规则版本"]] },
   drafts: { title: "当前登录人的草稿", empty: "当前登录人暂无可供确认的 Plan 草稿。", columns: [["planId", "Plan ID"], ["version", "当前版本"], ["specDigest", "内容摘要"]] },
   policies: { title: "执行政策", empty: "尚无执行政策。确认执行范围后可申请受控执行；预算按当前模式处理。", columns: [["plan_id", "Plan ID"], ["revision", "政策版本"], ["generation", "当前世代"], ["paused", "已暂停", "boolean"], ["revoked", "已撤销", "boolean"]] },
@@ -203,7 +163,7 @@ function recordCell(row, column) {
     cell.textContent = (format === "action" ? actionLabels : dimensionLabels)[value] || String(value);
     cell.title = String(value);
   } else if (format === "worker") {
-    cell.textContent = workerLabel(identities.get(value) || { workerId: String(value) });
+    cell.textContent = agentLabel(identities.get(value) || { agentId: String(value) });
     cell.title = String(value);
   } else {
     cell.textContent = typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -306,93 +266,14 @@ function form(id, submit) {
   });
 }
 async function hash(value) { return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))), byte => byte.toString(16).padStart(2, "0")).join(""); }
-document.querySelectorAll("[data-authority-worker-select]").forEach(select => select.addEventListener("change", () => syncWorkerSelection(select)));
-document.getElementById("bind-owner").addEventListener("click", async event => {
-  const button = event.currentTarget;
-  button.disabled = true;
-  try {
-    const identity = await post("/owners/bind");
-    const code = document.createElement("code"); code.textContent = identity.ownerId;
-    document.querySelector(".authority-owner-list").replaceChildren(code);
-    document.querySelector("[data-authority-owner-count]").textContent = "1";
-    feedback("当前账号已关联。身份标识由系统保管，无需手动填写；此操作未登记或启用秘书。");
-  } catch (error) { feedback(error.message, "error", error.needsLogin); }
-  finally { button.disabled = false; }
-});
-document.getElementById("authority-enrollment-mode").addEventListener("change", updateEnrollmentMode);
-document.getElementById("authority-startup-shell").addEventListener("change", updateStartupCommand);
-document.getElementById("authority-copy-startup").addEventListener("click", async () => {
-  const input = document.getElementById("authority-startup-command");
-  if (!input.value) return;
-  try { await navigator.clipboard.writeText(input.value); feedback("启动命令已复制。请在项目根目录运行，脚本会单独提示输入已登记的凭证。"); }
-  catch (_) { input.focus(); input.select(); feedback("无法访问剪贴板，已选中启动命令，请手动复制。", "error"); }
-});
-const credentialInput = document.getElementById("personal-credential");
-const copyCredential = document.getElementById("copy-personal-credential");
-credentialInput.addEventListener("input", () => { copyCredential.disabled = !credentialInput.value; });
-copyCredential.addEventListener("click", async () => {
-  if (!credentialInput.reportValidity()) return;
-  try { await navigator.clipboard.writeText(credentialInput.value); feedback("当前凭证已复制，未重新生成或变更登记。"); }
-  catch (_) {
-    credentialInput.type = "text"; credentialInput.focus(); credentialInput.select();
-    credentialInput.addEventListener("blur", () => { credentialInput.type = "password"; }, { once: true });
-    feedback("无法访问剪贴板，已选中当前凭证，请手动复制。", "error");
-  }
-});
+document.querySelectorAll("[data-authority-agent-select]").forEach(select => select.addEventListener("change", () => syncAgentSelection(select)));
 renderIdentities();
-updateEnrollmentMode();
-document.getElementById("generate-credential").addEventListener("click", async event => {
-  const button = event.currentTarget;
-  const input = document.getElementById("personal-credential");
-  button.disabled = true;
-  input.readOnly = true;
-  try {
-    const bytes = crypto.getRandomValues(new Uint8Array(32));
-    input.type = "password";
-    input.value = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    try {
-      await navigator.clipboard.writeText(input.value);
-      feedback("凭证已生成、填入并复制到剪贴板。请保存供秘书启动使用，再提交登记或轮换。");
-    } catch (_) {
-      input.type = "text";
-      input.focus();
-      input.select();
-      feedback("凭证已生成并填入，但无法访问剪贴板。已显示并选中，请手动复制保存，再提交登记或轮换。", "error");
-      input.addEventListener("blur", () => { input.type = "password"; }, { once: true });
-    }
-  } catch (_) {
-    feedback("无法生成安全随机凭证，请使用支持加密随机数的浏览器。", "error");
-  } finally {
-    input.readOnly = false;
-    button.disabled = false;
-  }
-});
-form("enroll-worker", async value => {
-  const readScope = value.readScope.split(/\r?\n/).map(row => row.trim()).filter(Boolean);
-  const invalid = (field, message) => Object.assign(new Error(message), { field });
-  if (!/^[A-Za-z0-9_-]{43,128}$/.test(value.credential)) throw invalid("credential", "独立凭证必须为 43–128 位英文字母、数字、下划线或短横线。请使用“生成并复制”重新生成。");
-  if (readScope.length > 128) throw invalid("readScope", "读取范围最多包含 128 个目标，请减少目标数量。");
-  if (readScope.some(target => target.length > 1024)) throw invalid("readScope", "读取范围每个目标不得超过 1024 个字符。");
-  const registering = value.mode === "new";
-  if (!registering && value.mode !== "rotate") throw new Error("请选择登记新秘书或轮换已有秘书。");
-  if (!registering && !identities.has(value.workerId)) throw invalid("workerId", "请先选择已有秘书。");
-  if (!registering && identities.get(value.workerId).readScope === null) throw invalid("workerId", "原读取范围未知，请刷新后核对再轮换凭证。");
-  const identity = await post(registering ? "/workers/new" : "/workers/" + encodeURIComponent(value.workerId) + "/credential", { credential: value.credential, readScope });
-  identities.set(identity.workerId, { ...identity, workerBoot: null, enabled: false });
-  renderIdentities(identity.workerId);
-  document.getElementById("authority-startup-worker").value = identity.workerId;
-  updateStartupCommand();
-  const notice = document.getElementById("authority-registration-result");
-  notice.hidden = false;
-  notice.textContent = (registering ? "秘书已登记：" : "凭证已轮换：") + workerLabel(identity) + "。当前保持未启用，可在下方复制启动命令。";
-  feedback(registering ? "登记成功，身份标识已由系统生成。请复制启动命令，无需填写 Owner ID 或 Worker ID。" : "凭证已轮换，原身份标识保持不变。请使用当前凭证启动并重新明确启用。");
-});
-form("control-worker", value => {
-  const identity = identities.get(value.workerId);
-  if (!identity) throw new Error("请选择已登记的秘书。");
-  if (value.operation === "enable" && !identity.workerBoot) throw new Error("请先复制命令启动这位秘书建立进程会话，再刷新状态并明确启用。");
-  return post("/workers/" + encodeURIComponent(value.workerId) + "/" + value.operation, { generation: Number(value.generation), workerBoot: value.workerBoot || null });
+form("control-agent", value => {
+  const identity = identities.get(value.agentId);
+  if (!identity) throw new Error("Select a paired Agent.");
+  if (value.operation === "enable" && !identity.agentBoot) throw new Error("The Agent must establish a process session before it can be enabled.");
+  return post("/agents/" + encodeURIComponent(value.agentId) + "/" + value.operation,
+    { generation: Number(value.generation), agentBoot: value.agentBoot || null });
 });
 form("revoke-grant", value => post("/grants/" + encodeURIComponent(value.id) + "/revoke"));
 form("target-control", async value => post("/targets/" + await hash(value.target) + "/" + value.operation, { target: value.target, generation: Number(value.generation) }));

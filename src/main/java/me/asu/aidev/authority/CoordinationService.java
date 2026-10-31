@@ -30,7 +30,7 @@ public class CoordinationService {
         boolean ownedPublication=repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_publication_plan p JOIN authority_target t ON t.target_key=p.target_key WHERE p.plan_id=? AND t.owner_id=?",Long.class,plan,owner)>0;
         if(expires<=System.currentTimeMillis() || plans.get(plan).version()!=version || !plans.get(plan).createdBy().equals(actor) && !ownedPublication
                 || !AuthorityRepository.hash(repo.encode(plans.get(plan).spec())).equals(specDigest)
-                || repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=?",Long.class,owner,worker)!=1)
+                || repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=? AND identity_kind='AGENT'",Long.class,owner,worker)!=1)
             throw new IllegalStateException("Explicit owned clean draft, manager and confirmed spec required");
         grants.bindTarget("PLAN:"+plan,owner);manager.adopt(plan,owner,worker,expires,security.currentOperatorAuthority(actor));
         repo.jdbc().update("INSERT INTO authority_participant VALUES(?,?,'COORDINATOR')",plan,worker);

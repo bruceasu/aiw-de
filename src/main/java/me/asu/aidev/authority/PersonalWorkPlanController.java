@@ -21,11 +21,11 @@ public class PersonalWorkPlanController {
         if (raw.getBytes(StandardCharsets.UTF_8).length > 32768) throw new IllegalArgumentException("Personal work envelope limit");
         var input = repo.decode(raw, PersonalWorkPlans.Input.class);
         if (input == null) throw new IllegalArgumentException("Personal work required");
-        return plans.create(principal(request), request.getHeader("X-AIW-Personal-Boot"), input);
+        return plans.create(principal(request), request.getHeader("X-AIW-Agent-Boot"), input);
     }
     @GetMapping("/{id}")
     public Object read(HttpServletRequest request, @PathVariable String id) {
-        return plans.read(principal(request), request.getHeader("X-AIW-Personal-Boot"), id);
+        return plans.read(principal(request), request.getHeader("X-AIW-Agent-Boot"), id);
     }
     @ExceptionHandler(SecurityException.class)
     public ResponseEntity<?> denied() { return ResponseEntity.status(403).body(Map.of("code", "PERSONAL_PLAN_DENIED")); }

@@ -65,8 +65,21 @@ addresses SHALL NOT be registered as compatibility aliases or redirects.
 - WHEN a client calls an old API address
 - THEN no old controller mapping or compatibility redirect handles that request
 
-### Requirement: Personal authority route separation
-Platform authority APIs SHALL live under /api/r1/authority. Human routes require configured session authentication, CSRF and the current action role. Machine routes use a dedicated credential, claimed process boot and explicit owner/target scope; they SHALL NOT accept a browser cookie or shared lease token instead. Unknown method/path combinations are rejected. Action bodies are bounded to 32 KiB and strict closed DTOs. The human page is /ui/authority. Old secretary/delegation APIs are removed, not aliased.
+### Requirement: Agent authority route separation
+Platform authority APIs SHALL live under /api/r1/authority. Human routes require configured session authentication, CSRF and the current action role. Agent routes use a dedicated credential, claimed process boot and explicit owner/target scope; they SHALL NOT accept a browser cookie or shared lease token instead. Unknown method/path combinations are rejected. Action bodies are bounded to 32 KiB and strict closed DTOs. The human page is /ui/authority. Old secretary/delegation APIs are removed, not aliased. Existing personal identities, credential hashes, grants, receipts and audit records remain sealed historical evidence; they are not credentials or authority for a newly paired Agent. A new Agent identity and newly approved Grant are required.
+
+### Requirement: Agent state-change inbox
+The Control Plane SHALL persist state-change notifications in its own database and deliver them through authenticated Agent-initiated HTTPS pull requests. The Control Plane SHALL NOT store an Agent callback address or initiate network connections to an Agent. The first-release closed message envelope SHALL contain only a fixed event type, resource ID, resource version and delivery metadata. Agents SHALL fetch authoritative state using the ordinary API and current authorization. Messages SHALL NOT contain executable work requests, conversation content, full prompts, secrets or resource snapshots.
+
+Delivery SHALL be at least once with a stable message ID and deduplication key. Acknowledge, retry, expiry and dead-letter reconciliation state SHALL be durable. Business state and its outbox row SHALL commit in the same Control Plane database transaction. Receipt and unknown-effect rules SHALL remain authoritative; delivery SHALL NOT grant authority, acknowledge business completion or replay side effects. Professional Worker Pull/Lease remains an independent protocol.
+
+#### Scenario: Agent receives a repeated state-change notification
+- WHEN the same stable message is delivered more than once
+- THEN the Agent can deduplicate it and fetch the current resource version through its authorized API without repeating a business side effect
+
+#### Scenario: A state change commits with an outbox notification
+- WHEN a supported resource transition commits
+- THEN its state and state-change outbox record are visible together, or neither is visible
 
 ### Requirement: Owned read-only execution observations
 `POST /api/r1/authority/execution-configurations/state?kind=observations` SHALL accept the closed empty request and return `aiw.execution.observations.v1` for the server-resolved current Owner only. Existing session, CSRF and operator checks SHALL apply. Default method and role state behavior SHALL remain compatible. The protected `/ui/configurations?view=observations` view SHALL show readable records and explicit manual refresh without running tasks or dumping raw JSON.
@@ -105,3 +118,30 @@ Machine workbench operations on the existing execution-context read path SHALL r
 #### Scenario: A user chooses an exploration alternative
 - WHEN the node or its source belongs to another Owner/task or invents a result version
 - THEN it is rejected, and existing nodes/choices remain unchanged
+
+## Agent protocol additions
+
+### Requirement: Remote Agent mutual TLS
+For a `REMOTE` Agent profile, the Control Plane SHALL require HTTPS and a client certificate chaining to the configured Agent truststore for pairing and machine requests. It SHALL pin the SHA-256 fingerprint at pairing and require that pin for normal requests. A newly paired Agent SHALL remain pending and may only establish a disabled session and read connection state until a human approves its exact initial Grant. That single Control Plane confirmation SHALL atomically approve the identity, issue the scoped Grant, and enable the current process session; the Agent identity SHALL NOT be authenticated for any other API operation while pending, and any approval failure SHALL leave it pending and disabled. Existing identities SHALL NOT become approved through migration. A CA-trusted replacement certificate may only establish a disabled process session or request certificate rotation; it gains no authority until a human approves its fingerprint and explicitly enables the Agent. The Agent SHALL validate the Control Plane server certificate and SHALL reject HTTP downgrade. Local profiles SHALL be limited to explicit loopback and SHALL not inherit remote credentials.
+
+#### Scenario: Untrusted or unpinned client certificate
+- **WHEN** a remote Agent request has no client certificate, an untrusted chain, or an unapproved fingerprint
+- **THEN** the Control Plane rejects the request before business authorization
+
+#### Scenario: Human-approved certificate rotation
+- **WHEN** a CA-trusted Agent requests a certificate rotation and a human approves the exact fingerprint
+- **THEN** the Control Plane pins that certificate, invalidates the previous process session, and requires a fresh session and human enablement
+
+### Requirement: Revocable Agent credential
+The Control Plane SHALL allow an authorized human to revoke an Agent credential. Revocation SHALL invalidate the credential and active process session, prevent further Agent authentication, and preserve the identity, Grant and permission records, receipts, consumption, and audit history while marking active authority revoked. A revoked identity SHALL NOT be reactivated; reconnecting requires a new pairing and a newly approved Grant.
+
+#### Scenario: Revoke credential
+- **WHEN** an authorized human revokes a paired Agent credential
+- **THEN** requests using the old credential are rejected and the historical identity remains available for audit
+
+### Requirement: Agent state-change inbox references
+The first release SHALL enqueue only `GRANT_CHANGED` and `PERMISSION_CHANGED` references containing a resource ID and monotonically increasing resource version plus delivery metadata. It SHALL commit each outbox entry in the same transaction as the corresponding authorization change. The Agent SHALL pull the current resource through its own authenticated read API before acknowledging the notification. A notification SHALL never itself authorize or execute an action.
+
+#### Scenario: Pull current authorization state
+- **WHEN** an Agent receives an authorization state-change reference
+- **THEN** it reads its own current Grant or permission state through the authenticated API and then acknowledges the delivery

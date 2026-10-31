@@ -304,12 +304,14 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                             raise PersonalChatError("CONFIRMATION_INVALID", str(error)) from None
                     elif self.path == "/api/work":
                         result = runtime.create_work(data["title"], data["body"], data.get("planId") or None, data.get("outputPath") or None)
-                    elif self.path in {"/api/platform/connect", "/api/platform/check", "/api/authorization/decide"}:
+                    elif self.path in {"/api/platform/connect", "/api/platform/check", "/api/platform/certificate-rotation", "/api/authorization/decide"}:
                         try:
                             if self.path.endswith("/connect"):
                                 result = runtime.platform_setup.connect(data.get("code"))
                             elif self.path.endswith("/check"):
                                 result = runtime.platform_setup.check()
+                            elif self.path.endswith("/certificate-rotation"):
+                                result = runtime.platform_setup.request_certificate_rotation()
                             else:
                                 result = runtime.authorizations.decide(data.get("id"), data.get("revision"), data.get("accepted"))
                         except ValueError as error:
@@ -497,9 +499,9 @@ def main():
         raise SystemExit("无法读取已保存的连接设置。请检查个人数据目录的访问权限，不要删除私人数据库。") from None
     local_identity = hashlib.sha256((getpass.getuser() + "\n" + socket.gethostname()).encode()).hexdigest()[:16]
     owner = args.owner_id or profile.get("ownerId") or "local-" + local_identity
-    worker = args.worker_id or profile.get("workerId") or "personal-secretary"
-    platform_url = args.platform or profile.get("platform")
-    credential = os.environ.get("AIW_PERSONAL_CREDENTIAL") or profile.get("credential", "")
+    worker = args.worker_id or profile.get("agentId") or "personal-agent"
+    platform_url = args.platform or (profile.get("platform") if profile.get("agentId") else None)
+    credential = os.environ.get("AIW_AGENT_CREDENTIAL") or (profile.get("credential", "") if profile.get("agentId") else "")
     command = json.loads(os.environ["AIW_PERSONAL_MODEL_COMMAND"]) if os.environ.get("AIW_PERSONAL_MODEL_COMMAND") else None
     if command is not None and (not isinstance(command, list) or not command or any(not isinstance(item, str) or not item for item in command)):
         raise ValueError("Model command must be an explicit nonempty argv JSON array")
@@ -513,17 +515,21 @@ def main():
     atexit.register(instance.release)
     platform = LocalPlatform()
     if platform_url and credential:
-        allow_http = args.allow_loopback_http or profile.get("allowLoopbackHttp", False) and platform_url == profile.get("platform")
+        connection_profile = profile.get("profile", "LOCAL")
+        client_cert = os.environ.get("AIW_AGENT_CLIENT_CERT") or profile.get("clientCert")
+        client_key = os.environ.get("AIW_AGENT_CLIENT_KEY") or profile.get("clientKey")
+        server_ca = os.environ.get("AIW_AGENT_SERVER_CA") or profile.get("serverCa")
+        allow_http = connection_profile == "LOCAL" and (args.allow_loopback_http or profile.get("allowLoopbackHttp", False) and platform_url == profile.get("platform"))
         try:
-            connected = PlatformClient(platform_url, worker, credential, allow_http)
+            connected = PlatformClient(platform_url, worker, credential, allow_http, client_cert, client_key, server_ca)
             platform = connected
             if args.platform or args.owner_id or args.worker_id:
-                identity = connected.request("/sessions", {"workerBoot": connected.boot})
-                if identity.get("ownerId") != owner or identity.get("workerId") != worker:
+                identity = connected.request("/sessions", {"agentBoot": connected.boot})
+                if identity.get("ownerId") != owner or identity.get("agentId") != worker:
                     raise SystemExit("平台返回的身份与所选个人数据身份不一致，已停止启动。请使用平台提供的正确连接信息。")
                 connected.session_started = True
-                write_private(profile_path, {"ownerId": owner, "workerId": worker, "platform": platform_url,
-                    "credential": credential, "allowLoopbackHttp": bool(allow_http)})
+                write_private(profile_path, {"ownerId": owner, "agentId": worker, "platform": platform_url,
+                    "credential": credential, "profile": connection_profile, "clientCert": client_cert, "clientKey": client_key, "serverCa": server_ca})
         except PlatformError as error:
             platform = LocalPlatform()
             print(f"专业平台暂未连接（{error.status}）。本机日常助理仍可使用；专业功能请检查平台身份和凭证。", flush=True)

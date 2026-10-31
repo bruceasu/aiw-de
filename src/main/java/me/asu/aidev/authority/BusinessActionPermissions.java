@@ -16,20 +16,21 @@ public class BusinessActionPermissions {
     private final AuthorityGrantService grants;
     private final WebConsoleSecurityService security;
     private final ObjectProvider<PermissionTargetResolver> targets;
+    private final AgentMessageService agentMessages;
     private final ThreadLocal<String> request=new ThreadLocal<>();
     public BusinessActionPermissions(AuthorityRepository repo,AuthorityBoundary boundary,AuthorityGrantService grants,
-            WebConsoleSecurityService security,ObjectProvider<PermissionTargetResolver> targets) {
-        this.repo=repo;this.boundary=boundary;this.grants=grants;this.security=security;this.targets=targets;
+            WebConsoleSecurityService security,ObjectProvider<PermissionTargetResolver> targets,AgentMessageService agentMessages) {
+        this.repo=repo;this.boundary=boundary;this.grants=grants;this.security=security;this.targets=targets;this.agentMessages=agentMessages;
     }
     public record Permission(String id,String ownerId,String workerId,ActionScope.Action action,Scope scopeKind,String scopeId,
                              long maximumUses,long usedUses,String state,String authority,long effectiveMs,long expiresMs,
-                             String creationRequest,String creationDigest) {}
+                             String creationRequest,String creationDigest,long revision) {}
     public record Child(String grantId,String permissionId,String requestId,String sourcePlan,String sourceTask,String questionId) {}
     public List<Permission> list(String owner) {
         return repo.jdbc().query("SELECT * FROM authority_action_permission WHERE owner_id=? ORDER BY effective_ms DESC,id",(r,n)->new Permission(
                 r.getString("id"),r.getString("owner_id"),r.getString("worker_id"),ActionScope.Action.valueOf(r.getString("action")),
                 Scope.valueOf(r.getString("scope_kind")),r.getString("scope_id"),r.getLong("maximum_uses"),r.getLong("used_uses"),
-                r.getString("state"),r.getString("authority"),r.getLong("effective_ms"),r.getLong("expires_ms"),r.getString("creation_request"),r.getString("creation_digest")),owner);
+                r.getString("state"),r.getString("authority"),r.getLong("effective_ms"),r.getLong("expires_ms"),r.getString("creation_request"),r.getString("creation_digest"),r.getLong("revision")),owner);
     }
     public Permission get(String id) {
         String owner=repo.jdbc().queryForObject("SELECT owner_id FROM authority_action_permission WHERE id=?",String.class,id);
@@ -65,6 +66,8 @@ public class BusinessActionPermissions {
     }
     @Transactional public Permission issue(Issue input,String actor) {
         boundary.lock();human(input.ownerId(),input.action(),actor);boundary.requireMigrationSafeInstallation();
+        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=? AND identity_kind='AGENT' AND approval_state='APPROVED'",Long.class,input.ownerId(),input.agentId())!=1)
+            throw new SecurityException("Approved owner/Agent binding required");
         String digest=AuthorityRepository.hash(repo.encode(input));
         var previous=list(input.ownerId()).stream().filter(p->p.creationRequest().equals(input.requestId())).findFirst();
         if(previous.isPresent()) {
@@ -72,27 +75,32 @@ public class BusinessActionPermissions {
             return previous.get();
         }
         if(input.expiresAt()<=System.currentTimeMillis()||!scopes(input.action()).contains(input.scopeKind()))throw new IllegalArgumentException("Future expiry and compatible scope required");
-        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=?",Long.class,input.ownerId(),input.workerId())!=1)
-            throw new SecurityException("Existing owner/secretary binding required");
         targets.getObject().validateScope(input.ownerId(),input.action(),input.scopeKind(),input.scopeId());
-        var current=list(input.ownerId()).stream().filter(p->p.workerId().equals(input.workerId())&&p.action()==input.action()&&p.state().equals("ENABLED")).findFirst();
+        var current=list(input.ownerId()).stream().filter(p->p.workerId().equals(input.agentId())&&p.action()==input.action()&&p.state().equals("ENABLED")).findFirst();
         if(!Objects.equals(current.map(Permission::id).orElse(null),input.expectedPriorId()))throw new IllegalStateException("Previous permission changed");
         // Only this explicit human confirmation may first establish a global/ordinary-Worker binding.
         if(input.action()==ActionScope.Action.A13)grants.bindTarget("GLOBAL:FLEET",input.ownerId());
         if(input.scopeKind()==Scope.WORKER)grants.bindTarget("WORKER:"+input.scopeId(),input.ownerId());
-        repo.jdbc().update("UPDATE authority_action_permission SET state='REPLACED' WHERE owner_id=? AND worker_id=? AND action=? AND state='ENABLED'",input.ownerId(),input.workerId(),input.action().name());
-        for(var old:repo.grants())if(old.owner().equals(input.ownerId())&&old.workerId().equals(input.workerId())&&old.rule().action()==input.action()&&old.state().equals("ENABLED"))
-            repo.jdbc().update("UPDATE authority_grant SET state='REVOKED',revision=revision+1 WHERE id=?",old.id());
+        if(current.isPresent()) {
+            var old=current.get();
+            if(repo.jdbc().update("UPDATE authority_action_permission SET state='REPLACED',revision=revision+1 WHERE id=? AND state='ENABLED'",old.id())!=1) throw new IllegalStateException("Previous permission changed");
+            agentMessages.stateChanged(input.agentId(),"PERMISSION_CHANGED",old.id(),old.revision()+1);
+        }
+        for(var old:repo.grants())if(old.owner().equals(input.ownerId())&&old.workerId().equals(input.agentId())&&old.rule().action()==input.action()&&old.state().equals("ENABLED"))
+            if(repo.jdbc().update("UPDATE authority_grant SET state='REVOKED',revision=revision+1 WHERE id=? AND state='ENABLED'",old.id())==1)
+                agentMessages.stateChanged(input.agentId(),"GRANT_CHANGED",old.id(),old.revision()+1);
         String id="AP-"+UUID.randomUUID();long now=System.currentTimeMillis();
-        repo.jdbc().update("INSERT INTO authority_action_permission VALUES(?,?,?,?,?,?,?,0,'ENABLED',?,?,?,?,?)",id,input.ownerId(),input.workerId(),input.action().name(),input.scopeKind().name(),input.scopeId(),input.maximumUses(),
+        repo.jdbc().update("INSERT INTO authority_action_permission(id,owner_id,worker_id,action,scope_kind,scope_id,maximum_uses,used_uses,state,authority,effective_ms,expires_ms,creation_request,creation_digest) VALUES(?,?,?,?,?,?,?,0,'ENABLED',?,?,?,?,?)",id,input.ownerId(),input.agentId(),input.action().name(),input.scopeKind().name(),input.scopeId(),input.maximumUses(),
                 security.currentDelegationAuthority(actor,input.action().name()),now,input.expiresAt(),input.requestId(),digest);
         repo.audit(null,id,input.requestId(),actor,"ACTION_PERMISSION_ISSUED","New explicit period; scope="+input.scopeKind()+"; count="+input.maximumUses()+"; prior records retained");
+        agentMessages.stateChanged(input.agentId(),"PERMISSION_CHANGED",id,1);
         return get(id);
     }
     @Transactional public void revoke(String id,String actor) {
         boundary.lock();var p=get(id);human(p.ownerId(),p.action(),actor);
-        repo.jdbc().update("UPDATE authority_action_permission SET state='REVOKED' WHERE id=? AND state='ENABLED'",id);
+        if(repo.jdbc().update("UPDATE authority_action_permission SET state='REVOKED',revision=revision+1 WHERE id=? AND state='ENABLED'",id)!=1) throw new IllegalStateException("Permission already changed");
         repo.audit(null,id,null,actor,"ACTION_PERMISSION_REVOKED","Past consumption, candidates and receipts retained");
+        agentMessages.stateChanged(p.workerId(),"PERMISSION_CHANGED",id,p.revision()+1);
     }
     public <T> T inRequest(String id,Supplier<T> work) {
         String prior=request.get();request.set(id);
@@ -113,7 +121,7 @@ public class BusinessActionPermissions {
                 grant.id(), permission.id(), requestId, plan);
         consume(grant, requestId);
     }
-    public void consume(AuthorityRepository.Grant grant,String originalRequest) {
+    @Transactional public void consume(AuthorityRepository.Grant grant,String originalRequest) {
         var linked=child(grant.id());
         if(linked.isEmpty()) {
             if(regime(grant.owner(),grant.workerId(),grant.rule().action()))throw new SecurityException("Old parallel permission is superseded");
@@ -123,17 +131,18 @@ public class BusinessActionPermissions {
         if(!grantActive(grant)||!Objects.equals(id,c.requestId()))throw new SecurityException("Current parent and exact original request required");
         targets.getObject().check(p,grant.rule(),c.sourceTask(),c.questionId());
         if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_permission_use WHERE permission_id=? AND request_id=?",Long.class,p.id(),id)>0)return;
-        if(repo.jdbc().update("UPDATE authority_action_permission SET used_uses=used_uses+1 WHERE id=? AND state='ENABLED' AND used_uses<maximum_uses",p.id())!=1)
+        if(repo.jdbc().update("UPDATE authority_action_permission SET used_uses=used_uses+1,revision=revision+1 WHERE id=? AND state='ENABLED' AND used_uses<maximum_uses",p.id())!=1)
             throw new IllegalStateException("Action permission count exhausted");
         repo.jdbc().update("INSERT INTO authority_permission_use VALUES(?,?,?,?)",p.id(),id,grant.id(),System.currentTimeMillis());
-        repo.audit(grant.targetKey(),p.id(),id,"personal:"+grant.workerId(),"ACTION_PERMISSION_CONSUMED","One accepted operation across all targets; no accounting-mode bypass");
+        agentMessages.stateChanged(p.workerId(),"PERMISSION_CHANGED",p.id(),p.revision()+1);
+        repo.audit(grant.targetKey(),p.id(),id,"agent:"+grant.workerId(),"ACTION_PERMISSION_CONSUMED","One accepted operation across all targets; no accounting-mode bypass");
     }
     public Map<String,Object> view(Permission p) {
         var result=new LinkedHashMap<String,Object>();
-        result.put("id",p.id());result.put("ownerId",p.ownerId());result.put("workerId",p.workerId());result.put("action",p.action());
+        result.put("id",p.id());result.put("ownerId",p.ownerId());result.put("agentId",p.workerId());result.put("action",p.action());
         result.put("scopeKind",p.scopeKind());result.put("scopeId",p.scopeId());result.put("maximumUses",p.maximumUses());result.put("usedUses",p.usedUses());
         result.put("remaining",p.maximumUses()-p.usedUses());result.put("state",p.state());result.put("expiresAt",p.expiresMs());
         result.put("effectiveState",!p.state().equals("ENABLED")?p.state():p.expiresMs()<=System.currentTimeMillis()?"EXPIRED":!active(p)?"ROLE_CHANGED":p.usedUses()>=p.maximumUses()?"EXHAUSTED":"ENABLED");
-        result.put("creationRequestId",p.creationRequest());return result;
+        result.put("creationRequestId",p.creationRequest());result.put("revision",p.revision());return result;
     }
 }

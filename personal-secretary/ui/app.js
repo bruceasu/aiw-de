@@ -824,6 +824,7 @@ function renderAssistant() {
       if (snapshot.backgroundError) byId("platform-connection-status").textContent = window.aiwI18n?.t("后台处理发生异常，已停止本地平台操作；这不表示平台撤销了进程授权。") || "后台处理发生异常，已停止本地平台操作；这不表示平台撤销了进程授权。";
     byId("platform-next").hidden = !connection.connected;
     if (connection.connected) byId("platform-next").href = connection.setupUrl;
+    byId("platform-rotate-certificate").hidden = !connection.connected || connection.profile !== "REMOTE";
     if (connection.connected && !platformInitialChecked) {
       platformInitialChecked = true;
       byId("platform-wizard").disabled = true;
@@ -1034,10 +1035,7 @@ byId("platform-wizard").addEventListener("click", () => {
     const origin = new URL(byId("platform-origin").value);
     if (origin.username || origin.password || origin.search || origin.hash || origin.pathname !== "/" || !["http:", "https:"].includes(origin.protocol)) throw new Error("请输入完整的平台地址。");
     if (origin.protocol === "http:" && !["127.0.0.1", "localhost", "[::1]"].includes(origin.hostname)) throw new Error("远程平台请使用 HTTPS，HTTP 仅支持本机地址。");
-    const url = new URL("/ui/secretary-setup", origin.origin);
-    url.searchParams.set("secretarySetup", snapshot.platformConnection?.connected ? snapshot.workerId : "new");
-    url.searchParams.set("secretaryOrigin", location.origin);
-    if (platformNeedsRepair) url.searchParams.set("connectionNeedsRepair", "1");
+    const url = new URL("/ui/agents", origin.origin);
     platformWindow = window.open(url.href, "_blank");
     if (!platformWindow) feedback("浏览器拦截了向导窗口，请允许打开后再试。", "warn");
   } catch (error) { feedback(errorMessage(error), "error"); }
@@ -1046,10 +1044,10 @@ byId("platform-check").addEventListener("click", () => assistantOperation("platf
 window.addEventListener("message", event => {
   if (event.source !== platformWindow && event.source !== window.opener) return;
   if (!event.source) return;
-  if (event.data?.type === "aiw:secretary:connect") {
+  if (event.data?.type === "aiw:agent:connect") {
     const code = event.data.code;
     try {
-      if (typeof code !== "string" || code.length > 4096 || !code.startsWith("aiw-secretary-v1.")) return;
+      if (typeof code !== "string" || code.length > 4096 || !code.startsWith("aiw-agent-v1.")) return;
       const raw = code.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
       const value = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(raw), char => char.charCodeAt(0))));
       if (new URL(value.platform).origin !== event.origin) return;
@@ -1059,11 +1057,11 @@ window.addEventListener("message", event => {
       switchView("setup", true); byId("platform-setup-card").scrollIntoView({ block: "start" });
       feedback("已收到平台连接请求，请核对平台地址，再点击确认连接。", "ok");
     } catch (_) { feedback("平台连接信息无法读取，请在向导重新发送。", "error"); }
-  } else if (event.data?.type === "aiw:secretary:authorized" && event.origin === snapshot?.platformConnection?.platform) {
+  } else if (event.data?.type === "aiw:agent:authorized" && event.origin === snapshot?.platformConnection?.platform) {
     assistantOperation("platform/check", {}, "代理设置已确认，等待中的任务将继续。");
   }
 });
-if (window.opener) window.opener.postMessage({ type: "aiw:secretary:ready" }, "*");
+if (window.opener) window.opener.postMessage({ type: "aiw:agent:ready" }, "*");
 byId("platform-connect-form").addEventListener("submit", async event => {
   event.preventDefault();
   const form = event.currentTarget, control = form.querySelector('[type="submit"]');
@@ -1073,7 +1071,7 @@ byId("platform-connect-form").addEventListener("submit", async event => {
     const { result, refreshed } = await post("platform/connect", { code: byId("platform-code").value });
     platformNeedsRepair = false;
     byId("platform-code").value = "";
-    if (platformSender) platformSender.source.postMessage({ type: "aiw:secretary:connected", ownerId: result.ownerId, workerId: result.workerId }, platformSender.origin);
+    if (platformSender) platformSender.source.postMessage({ type: "aiw:agent:connected", ownerId: result.ownerId, agentId: result.agentId }, platformSender.origin);
     byId("platform-next").href = result.nextUrl; byId("platform-next").hidden = false;
     feedback(refreshed ? "平台已连接，请回到向导确认代理范围。" : "连接已保存，请刷新状态后继续配置代理范围。", refreshed ? "ok" : "warn");
   } catch (error) { feedback(errorMessage(error), "error"); }

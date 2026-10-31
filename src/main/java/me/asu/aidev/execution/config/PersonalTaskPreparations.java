@@ -79,7 +79,7 @@ public class PersonalTaskPreparations {
                     try {value.put("path",workspaces.repositoryPath(repository.ref()).toString());}catch(IllegalArgumentException ignored){/* Registration must be repaired before execution. */}
                     return value;
                 }).toList())).toList();
-        return Map.of("platformInstanceId",boundary.instance(),"ownerId",principal.owner(),"workerId",principal.worker(),
+        return Map.of("platformInstanceId",boundary.instance(),"ownerId",principal.owner(),"agentId",principal.worker(),
                 "plans",visible,"models",factory.supportedProfiles(),"methods",configurations.catalogue().methods());
     }
     /** Read-only explanation for one owned Plan, including a disabled current process. */
@@ -163,7 +163,7 @@ public class PersonalTaskPreparations {
         if(!visible(principal,intent.planId())) throw new SecurityException("Plan no longer readable by this secretary");
         var result=new LinkedHashMap<String,Object>();
         result.put("requestId",requestId);result.put("platformInstanceId",boundary.instance());
-        result.put("ownerId",principal.owner());result.put("workerId",principal.worker());result.put("planId",intent.planId());
+        result.put("ownerId",principal.owner());result.put("agentId",principal.worker());result.put("planId",intent.planId());
         result.put("preparation",preparation);
         if(preparation.taskId()!=null) {
             var task=tasks.find(new TaskId(preparation.taskId())).orElseThrow();

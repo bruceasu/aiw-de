@@ -39,26 +39,17 @@ public class AuthorityPageController {
     private final me.asu.aidev.workflow.application.WorkflowPlanService plans;
     private final ExecutionAccounting accounting;
     public AuthorityPageController(AuthorityRepository repo,AuthorityBoundary boundary,me.asu.aidev.workflow.application.WorkflowPlanService plans,ExecutionAccounting accounting) { this.repo=repo;this.boundary=boundary;this.plans=plans;this.accounting=accounting; }
-    @GetMapping("/ui/secretary-setup") public String secretarySetup() {
-        Objects.requireNonNull(boundary.human(),"Authenticated human required");
-        return "ui/secretary-setup";
-    }
     @GetMapping("/ui/agent-factory") public String agentFactory() {
         Objects.requireNonNull(boundary.human(),"Authenticated human required");
         return "ui/agent-factory";
     }
-    @GetMapping("/ui/authority") public String authorityPage(Model model,jakarta.servlet.http.HttpServletRequest request) {
-        if(request.getParameter("secretarySetup")!=null||request.getParameter("planId")!=null)
-            return "redirect:/ui/secretary-setup?"+request.getQueryString();
+    @GetMapping("/ui/authority") public String authorityPage(Model model) {
         return page(model);
     }
-    /** Preserve bookmarked delegation links after separating the setup and advanced pages. */
-    @GetMapping("/ui/delegation") public String delegation(jakarta.servlet.http.HttpServletRequest request) {
+    /** Keep the existing plan-management bookmark. */
+    @GetMapping("/ui/delegation") public String delegation() {
         Objects.requireNonNull(boundary.human(),"Authenticated human required");
-        String target=request.getParameter("planId")!=null||request.getParameter("secretarySetup")!=null
-                ?"/ui/secretary-setup":"/ui/authority";
-        String query=request.getQueryString();
-        return "redirect:"+target+(query==null||query.isBlank()?"":"?"+query);
+        return "redirect:/ui/authority#authority-plans";
     }
     public String page(Model model) {
         String actor=Objects.requireNonNull(boundary.human(),"Authenticated human required");
@@ -68,7 +59,7 @@ public class AuthorityPageController {
         model.addAttribute("accountingEnforced",accounting.enforced());
         model.addAttribute("drafts",repo.encode(plans.list().stream().filter(p->p.state()==me.asu.aidev.workflow.domain.WorkflowPlan.State.DRAFT && p.createdBy().equals(actor))
                 .map(p->Map.of("planId",p.id(),"version",p.version(),"specDigest",AuthorityRepository.hash(repo.encode(p.spec())),"businessSpec",p.spec())).toList()));
-        model.addAttribute("workers",repo.jdbc().queryForList("SELECT worker_id,owner_id,generation,worker_boot,enabled_boot,read_scope FROM authority_identity WHERE owner_id IN (SELECT id FROM authority_owner WHERE actor=?)",actor).stream().map(row->{
+        model.addAttribute("workers",repo.jdbc().queryForList("SELECT worker_id,owner_id,generation,worker_boot,enabled_boot,read_scope FROM authority_identity WHERE identity_kind='AGENT' AND approval_state='APPROVED' AND owner_id IN (SELECT id FROM authority_owner WHERE actor=?)",actor).stream().map(row->{
             var result=new LinkedHashMap<>(row);result.put("enabled",boundary.boot().equals(result.remove("enabled_boot")));return result;
         }).toList());
         model.addAttribute("grants",repo.encode(repo.grants().stream().filter(g->owners.contains(g.owner())).toList()));

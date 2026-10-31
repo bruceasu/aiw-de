@@ -10,7 +10,7 @@ class PersonalPlans:
 
     def ensure(self, work):
         identity = self.platform.request("/identity")
-        if identity.get("ownerId") != self.store.owner or identity.get("workerId") != self.store.worker:
+        if identity.get("ownerId") != self.store.owner or identity.get("agentId") != self.store.worker:
             raise ValueError("Personal platform identity changed")
         self.store.bind_platform(identity["platformInstanceId"])
         key = "plan:" + work["id"]
@@ -35,7 +35,7 @@ class PersonalPlans:
                 receipt = self.platform.request("/personal-plans/" + work["id"])
             except PlatformError:
                 return self._save(row, "UNKNOWN")
-        expected = {"requestId": work["id"], "ownerId": self.store.owner, "workerId": self.store.worker,
+        expected = {"requestId": work["id"], "ownerId": self.store.owner, "agentId": self.store.worker,
                     "platformInstanceId": row["platformInstanceId"]}
         if not isinstance(receipt, dict) or any(receipt.get(key) != value for key, value in expected.items()) or not isinstance(receipt.get("planId"), str) or not receipt["planId"].startswith("FP-"):
             return self._save(row, "UNKNOWN")

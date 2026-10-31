@@ -37,7 +37,7 @@ Database mutation, cumulative debit and receipt SHALL commit atomically behind t
 The platform SHALL persist intent and occupied budget before external work starts and SHALL not hold a database transaction across external IO. Accepted/admitted, running and completed are different facts. An unconfirmed external effect SHALL remain UNKNOWN, keep consumption and never replay, refund or create a replacement request automatically. Human reconciliation SHALL bind an exact attempt and explicit evidence, preserve history and create no effect. Any later retry still needs a new explicit capability/candidate, fixed attempt and independent debit.
 
 ### Requirement: No private schema or old mode
-The current engine SHALL use only platform authority tables and public business services. Private SQLite records are not permission evidence. Old in-platform secretary execution is retired by explicit user decision. V8/V9 records are sealed, not automatically copied, deleted, activated or assigned to a current login. Ordinary specialist lease protocols remain separate.
+The current engine SHALL use only platform authority tables and public business services. Private SQLite records are not permission evidence. Old in-platform secretary execution is retired by explicit user decision. V8/V9 records are sealed, not automatically copied, deleted, activated or assigned to a current login. Existing personal identity credentials and Grants SHALL NOT authorize a newly paired Agent; each Agent must be paired again and receive a newly approved Grant. Ordinary specialist lease protocols remain separate.
 
 ## Validation limit
 

@@ -77,6 +77,7 @@ class SQLiteStore:
             db.execute("CREATE TABLE IF NOT EXISTS personal_record(kind TEXT NOT NULL,id TEXT NOT NULL,revision INTEGER NOT NULL,data TEXT NOT NULL,PRIMARY KEY(kind,id))")
             db.execute("CREATE TABLE IF NOT EXISTS personal_history(kind TEXT NOT NULL,id TEXT NOT NULL,revision INTEGER NOT NULL,data TEXT NOT NULL,created_ms INTEGER NOT NULL,PRIMARY KEY(kind,id,revision))")
             db.execute("CREATE TABLE IF NOT EXISTS personal_outbox(request_id TEXT PRIMARY KEY,path TEXT NOT NULL,body TEXT NOT NULL,digest TEXT NOT NULL,state TEXT NOT NULL,receipt TEXT)")
+            db.execute("CREATE TABLE IF NOT EXISTS agent_inbox(id TEXT PRIMARY KEY,event_type TEXT NOT NULL,resource_id TEXT NOT NULL,resource_version INTEGER NOT NULL,received_ms INTEGER NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS personal_import_batch(batch_id TEXT PRIMARY KEY,package_digest TEXT NOT NULL,owner_id TEXT NOT NULL,worker_id TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS personal_receipt_history(request_id TEXT NOT NULL,sequence INTEGER NOT NULL,receipt TEXT NOT NULL,PRIMARY KEY(request_id,sequence))")
             db.execute("CREATE TABLE IF NOT EXISTS personal_legacy_record(batch_id TEXT NOT NULL,source_key TEXT NOT NULL,data TEXT NOT NULL,activation TEXT NOT NULL CHECK(activation='ARCHIVE_ONLY'),PRIMARY KEY(batch_id,source_key))")
@@ -102,6 +103,22 @@ class SQLiteStore:
         with self.lock:
             row = self.db.execute("SELECT revision,data FROM personal_record WHERE kind=? AND id=?", (kind, identity)).fetchone()
             return None if row is None else {"id": identity, "revision": row[0], **json.loads(row[1])}
+
+    def accept_agent_message(self, message):
+        allowed = {"GRANT_CHANGED", "PERMISSION_CHANGED"}
+        if (not isinstance(message, dict) or message.get("eventType") not in allowed
+                or not isinstance(message.get("id"), str) or len(message["id"]) > 64
+                or not isinstance(message.get("resourceId"), str) or not message["resourceId"] or len(message["resourceId"]) > 256
+                or type(message.get("resourceVersion")) is not int or message["resourceVersion"] < 1
+                or not isinstance(message.get("deliveryToken"), str) or len(message["deliveryToken"]) < 32):
+            raise ValueError("Invalid Agent state-change envelope")
+        with self.transaction() as db:
+            existing = db.execute("SELECT event_type,resource_id,resource_version FROM agent_inbox WHERE id=?", (message["id"],)).fetchone()
+            expected = (message["eventType"], message["resourceId"], message["resourceVersion"])
+            if existing is not None and tuple(existing) != expected:
+                raise ValueError("Agent message identity was reused with different content")
+            db.execute("INSERT OR IGNORE INTO agent_inbox VALUES(?,?,?,?,?)",
+                       (message["id"], *expected, int(time.time() * 1000)))
 
     def list(self, kind):
         with self.lock:

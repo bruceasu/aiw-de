@@ -37,8 +37,8 @@ public class ActionAdmissionService {
     public void enabled(AuthorityBoundary.Principal principal) {
         grants.identityHuman(repo.actor(principal.owner()));
         if(!principal.enabled()) throw new SecurityException("Personal identity needs current human enablement");
-        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=? AND generation=? AND enabled_boot=?",Long.class,
-                principal.owner(),principal.worker(),principal.generation(),boundary.boot())!=1) throw new SecurityException("Personal identity changed");
+        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=? AND identity_kind='AGENT' AND generation=? AND enabled_boot=?",Long.class,
+                principal.owner(),principal.worker(),principal.generation(),boundary.boot())!=1) throw new SecurityException("Agent identity changed");
     }
     public void readable(AuthorityBoundary.Principal principal,String target) {
         enabled(principal);

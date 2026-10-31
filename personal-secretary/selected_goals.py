@@ -36,7 +36,7 @@ class SelectedGoals:
         if not self.enabled():
             raise ValueError("Explicit local enablement required")
         identity = self.platform.request("/identity")
-        if identity.get("ownerId") != self.store.owner or identity.get("workerId") != self.store.worker:
+        if identity.get("ownerId") != self.store.owner or identity.get("agentId") != self.store.worker:
             raise ValueError("Authenticated private owner/Worker changed")
         self.store.bind_platform(identity["platformInstanceId"])
         return identity
@@ -47,7 +47,7 @@ class SelectedGoals:
 
     def _confirm(self, row, receipt):
         expected = {"requestId": row["requestId"], "digest": row["digest"], "ownerId": self.store.owner,
-                    "workerId": self.store.worker, "platformInstanceId": row["platformInstanceId"], "state": "RECORDED"}
+                    "agentId": self.store.worker, "platformInstanceId": row["platformInstanceId"], "state": "RECORDED"}
         if not isinstance(receipt, dict) or any(receipt.get(k) != v for k, v in expected.items()):
             raise ValueError("Selected goal receipt does not match the original source")
         return self._save(row, "RECORDED", receipt=receipt)

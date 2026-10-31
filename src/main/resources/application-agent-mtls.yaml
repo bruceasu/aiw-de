@@ -1,0 +1,17 @@
+server:
+  address: ${AIW_AGENT_BIND_ADDRESS:0.0.0.0}
+  port: ${AIW_AGENT_HTTPS_PORT:8443}
+  ssl:
+    enabled: true
+    key-store: ${AIW_TLS_KEYSTORE}
+    key-store-password: ${AIW_TLS_KEYSTORE_PASSWORD}
+    key-store-type: ${AIW_TLS_KEYSTORE_TYPE:PKCS12}
+    trust-store: ${AIW_AGENT_TRUSTSTORE}
+    trust-store-password: ${AIW_AGENT_TRUSTSTORE_PASSWORD}
+    trust-store-type: ${AIW_AGENT_TRUSTSTORE_TYPE:PKCS12}
+    client-auth: want
+
+aiw:
+  agent:
+    # A listener exposed for remote mTLS must not turn a loopback peer check into proxy trust.
+    local-profile-enabled: ${AIW_AGENT_LOCAL_PROFILE_ENABLED:false}

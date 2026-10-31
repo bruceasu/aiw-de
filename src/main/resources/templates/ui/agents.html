@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" th:content="${csrfToken}"><title>Agent 身份与证书 · AIW:DE</title>
+  <link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css">
+  <link rel="stylesheet" href="/ui/authority.css"><script src="/ui/appearance.js"></script>
+  <script src="/ui/agents.js" defer></script>
+</head>
+<body><div class="app authority-page"><nav th:replace="~{ui/fragments :: nav('agents')}"></nav><main class="main">
+  <header th:replace="~{ui/fragments :: topbar('Agent 身份与证书','配对独立 Agent，并管理远程客户端证书信任')} "></header>
+  <div class="content">
+    <p id="agent-feedback" class="authority-feedback" role="status" aria-live="polite" hidden></p>
+    <section class="card">
+      <h2>创建一次性配对邀请</h2>
+      <p>本机档案只接受回环连接和一次性邀请。远程档案要求 HTTPS、Control Plane TLS 服务端证书和 Agent 客户端 mTLS 证书；证书由部署的 CA 签发，Control Plane 固定配对时的客户端证书指纹。Agent 配对后先进入待批准状态；随后可在此页一次确认注册、精确 Grant 和当前进程启用。</p>
+      <form id="agent-invitation" class="form-grid authority-form">
+        <label class="field">连接档案<select name="profile" id="agent-profile"><option value="LOCAL">本机（loopback）</option><option value="REMOTE">远程（强制 mTLS）</option></select></label>
+        <label class="field full">Control Plane 来源<input name="serverOrigin" id="agent-origin" type="url" required></label>
+        <p class="help full">远程部署需启用 agent-mtls Spring 配置并装载服务端 PKCS#12 密钥库与仅信任 Agent CA 的 truststore。Agent 主动连接；Control Plane 不保存 Agent 地址。</p>
+        <button class="btn primary" type="submit">生成配对码</button>
+      </form>
+      <label class="field full" for="agent-pairing-code">一次性配对码（5 分钟有效）</label>
+      <textarea id="agent-pairing-code" readonly rows="4" autocomplete="off"></textarea>
+      <button class="btn ghost" id="agent-copy-code" type="button" disabled>复制配对码</button>
+    </section>
+    <section class="card">
+      <h2>Agent 配对与证书轮换</h2>
+      <p>批准初始 Grant 会同时启用当前进程。Agent 重启或证书轮换后，进程会话失效，需要在人类确认后重新启用。</p>
+      <div id="agent-list" class="record-list">
+        <article class="authority-record" th:each="agent : ${agents}" th:attr="data-agent-id=${agent['agent_id']},data-agent-active=${agent['identity_kind'] == 'AGENT' and agent['approval_state'] == 'APPROVED'}">
+          <h3 th:text="${agent['agent_id']}"></h3>
+          <p>档案：<code th:text="${agent['connection_profile']}"></code> · 状态：<span th:text="${agent['revoked'] ? '已撤销' : (agent['approval_state'] == 'PENDING' ? '等待授权确认' : (agent['enabled'] ? '已启用' : '已批准，进程未启用'))}"></span></p>
+          <p>当前客户端证书 SHA-256：<code th:text="${agent['client_cert_sha256'] != null ? agent['client_cert_sha256'] : '本机 loopback'}"></code></p>
+          <form data-approve-agent th:if="${agent['approval_state'] == 'PENDING' and !agent['revoked']}" class="form-grid authority-form">
+            <input type="hidden" name="generation" th:value="${agent['generation']}">
+            <input type="hidden" name="agentBoot" th:value="${agent['worker_boot']}">
+            <p class="help full" th:if="${agent['worker_boot'] == null}">等待 Agent 完成受限握手后，才能确认当前进程。</p>
+            <label class="field">首个允许动作<select name="action" required><option value="" disabled selected>选择最小动作</option><option th:each="action : ${actions}" th:value="${action}" th:text="${action}"></option></select></label>
+            <label class="field">精确目标 ID<input name="targetId" maxlength="128" required></label>
+            <label class="field">允许状态（逗号分隔）<input name="states" maxlength="512" value="DRAFT" required></label>
+            <label class="field">步骤（可选）<input name="step" type="number" min="0" max="31"></label>
+            <label class="field">最少轮次<input name="minimumRounds" type="number" min="0" value="0" required></label>
+            <label class="field">最多使用次数<input name="maximumUses" type="number" min="1" value="1" required></label>
+            <label class="field">Grant 到期时间<input name="expiresAt" type="datetime-local" required></label>
+            <label class="field full">动作参数 JSON<textarea name="parameters" rows="2">{}</textarea></label>
+            <button class="btn primary" type="submit" th:disabled="${agent['worker_boot'] == null}">确认注册、授权并启用当前进程</button>
+          </form>
+          <div data-agent-rotations></div>
+          <button class="btn danger" type="button" data-revoke-agent th:if="${agent['identity_kind'] == 'AGENT'}">撤销 Agent 凭据</button>
+          <p class="callout warn-callout" th:if="${agent['identity_kind'] == 'REVOKED_AGENT'}">此 Agent 凭据已撤销，必须重新配对。</p>
+        </article>
+        <p class="authority-empty" th:if="${agents.empty}">尚无已配对 Agent。</p>
+      </div>
+    </section>
+    <p class="help"><a href="/ui/authority">返回 Control Plane 授权管理</a></p>
+  </div>
+</main></div></body></html>

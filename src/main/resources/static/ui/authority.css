@@ -1,10 +1,6 @@
 /* Personal Worker authority uses the shared console shell and color tokens. */
 .authority-page .content{max-width:1400px;margin:0 auto;padding:28px 32px 48px}
 .authority-page [hidden]{display:none!important}
-.secretary-setup-actions{position:sticky;bottom:12px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px;border:1px solid var(--line);border-radius:var(--theme-radius,6px);background:var(--panel);box-shadow:var(--shadow)}
-.secretary-setup-actions .help{margin:0;flex:1 1 250px}
-.secretary-setup-actions .btn{min-height:44px;flex-shrink:0}
-.secretary-setup-actions .secretary-save-error{color:var(--bad);font-weight:600;white-space:pre-wrap}
 .authority-intro{display:flex;justify-content:space-between;gap:32px;padding:8px 0 26px}
 .authority-intro-copy{max-width:740px;min-width:0}
 .authority-eyebrow{color:var(--accent);font-size:11px;font-weight:650;letter-spacing:.08em}

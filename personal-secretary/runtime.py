@@ -45,6 +45,7 @@ class Runtime:
         self.enabled = False  # Every restart needs an explicit local enable as well as platform enable.
         self.platform_observed = None
         self.background_error = None
+        self.agent_inbox_last_poll = 0.0
         self.selected_goals = SelectedGoals(self.store, self.platform, lambda: self.enabled)
         self.personal_plans = PersonalPlans(self.store, self.platform)
         self.cancelled = threading.Event()
@@ -154,15 +155,15 @@ class Runtime:
         self.enabled = False
         if enabled:
             if not getattr(self.platform, "session_started", False):
-                session = self.platform.request("/sessions", {"workerBoot": self.platform.boot})
-                if session.get("ownerId") != self.store.owner or session.get("workerId") != self.store.worker:
+                session = self.platform.request("/sessions", {"agentBoot": self.platform.boot})
+                if session.get("ownerId") != self.store.owner or session.get("agentId") != self.store.worker:
                     raise ValueError("Configured private identity does not match the professional platform")
                 self.platform.session_started = True
-                return {"enabled": False, "workerBoot": self.platform.boot,
+                return {"enabled": False, "agentBoot": self.platform.boot,
                     "note": "专业平台会话已建立。请在平台确认当前进程后，再点击“连接已授权的专业平台”。本机日常工作可继续使用。"}
             # Invalid or disabled platform credentials cannot quietly become active locally.
             identity = self.platform.request("/identity")
-            if identity.get("ownerId") != self.store.owner or identity.get("workerId") != self.store.worker:
+            if identity.get("ownerId") != self.store.owner or identity.get("agentId") != self.store.worker:
                 raise ValueError("Configured private owner/Worker does not match the authenticated platform identity")
             self.store.bind_platform(identity["platformInstanceId"])
             self.enabled = True
@@ -313,7 +314,39 @@ class Runtime:
                         message = "平台请求被拒绝、结果未知或需要人工处理，请核对原回执及平台任务。"
                     self.report_work(work, state, "PLATFORM_" + receipt["state"], message)
 
+    def poll_agent_messages(self):
+        backend = self.platform.backend
+        now = time.monotonic()
+        if not getattr(backend, "session_started", False) or now - self.agent_inbox_last_poll < 30:
+            return
+        self.agent_inbox_last_poll = now
+        try:
+            messages = backend.request("/messages?limit=20")
+        except PlatformError:
+            return
+        if not isinstance(messages, list) or len(messages) > 50:
+            raise ValueError("Control Plane returned an invalid Agent inbox batch")
+        for message in messages:
+            self.store.accept_agent_message(message)
+            if message["eventType"] == "GRANT_CHANGED":
+                current = backend.request("/grants")
+            elif message["eventType"] == "PERMISSION_CHANGED":
+                current = backend.request("/action-permissions")
+            else:
+                raise ValueError("Control Plane returned an unsupported Agent event type")
+            if not isinstance(current, list):
+                raise ValueError("Control Plane returned an invalid authority snapshot")
+            resource = next((item for item in current if item.get("id") == message["resourceId"]), None)
+            if resource is None or type(resource.get("revision")) is not int or resource["revision"] < message["resourceVersion"]:
+                raise ValueError("Agent event is ahead of the authorized resource state")
+            try:
+                backend.request("/messages/" + message["id"] + "/ack", {"deliveryToken": message["deliveryToken"]})
+            except PlatformError:
+                # The durable local reference makes a later lease redelivery safe to acknowledge.
+                continue
+
     def tick(self):
+        self.poll_agent_messages()
         self.authorizations.tick()
         self.professional.tick()
         self.daily.tick()

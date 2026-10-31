@@ -38,8 +38,8 @@ class ProfessionalTasks:
     def _ready(self):
         platform = self.runtime.platform
         if not getattr(platform, "session_started", False):
-            identity = platform.request("/sessions", {"workerBoot": platform.boot})
-            if identity.get("ownerId") != self.store.owner or identity.get("workerId") != self.store.worker:
+            identity = platform.request("/sessions", {"agentBoot": platform.boot})
+            if identity.get("ownerId") != self.store.owner or identity.get("agentId") != self.store.worker:
                 raise ValueError("专业平台身份与当前秘书私库不一致，请核对原来的启动身份。")
             platform.session_started = True
 
@@ -62,7 +62,7 @@ class ProfessionalTasks:
 
     def _identity(self, result):
         if (not isinstance(result, dict) or result.get("ownerId") != self.store.owner
-                or result.get("workerId") != self.store.worker or not result.get("platformInstanceId")):
+                or result.get("agentId") != self.store.worker or not result.get("platformInstanceId")):
             raise ValueError("专业平台返回的身份无法核对，本次不会提交任务。")
         self.store.bind_platform(result["platformInstanceId"])
 

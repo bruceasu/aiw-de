@@ -13,8 +13,8 @@ import org.springframework.web.servlet.config.annotation.*;
 /** Closed routing: browser authority and machine authority never authenticate each other. */
 @Configuration
 public class AuthorityHttpConfiguration implements WebMvcConfigurer {
-    private final AuthorityBoundary boundary;private final WebConsoleSecurityService security;
-    public AuthorityHttpConfiguration(AuthorityBoundary boundary,WebConsoleSecurityService security) { this.boundary=boundary;this.security=security; }
+    private final AuthorityBoundary boundary;private final WebConsoleSecurityService security;private final AgentTransportSecurity agentTransport;
+    public AuthorityHttpConfiguration(AuthorityBoundary boundary,WebConsoleSecurityService security,AgentTransportSecurity agentTransport) { this.boundary=boundary;this.security=security;this.agentTransport=agentTransport; }
     private boolean leaseMachine(String path) {
         return path.equals("/api/r1/worker-protocol/v1/workers/register") || path.equals("/api/r1/worker-protocol/v1/tasks/claim")
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/heartbeat")
@@ -23,22 +23,25 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/(begin|finish)|operations/[^/]+/receipt|yield/(prepare|ack)|delivery)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|workspace-baseline|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
     }
-    private boolean personalMachine(String method,String path) {
-        return method.equals("GET") && (Set.of("/professional-tasks/options","/professional-tasks/diagnostics","/connection-state","/identity","/state","/target-state","/grants","/management-state","/questions","/permission-questions","/action-permissions").contains(path) || path.matches("/professional-tasks/[0-9a-f-]{36}") || path.matches("/permission-actions/[0-9a-f-]{36}") || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))
-                || method.equals("POST") && (Set.of("/professional-tasks","/sessions","/actions","/restrictions","/coordination","/question-replies","/goal-proposals","/personal-plans","/permission-actions/prepare").contains(path) || path.matches("/professional-tasks/[0-9a-f-]{36}/continue"));
+    private boolean agentMachine(String method,String path) {
+        return method.equals("GET") && (Set.of("/professional-tasks/options","/professional-tasks/diagnostics","/connection-state","/identity","/state","/target-state","/grants","/management-state","/questions","/permission-questions","/action-permissions","/messages").contains(path) || path.matches("/professional-tasks/[0-9a-f-]{36}") || path.matches("/permission-actions/[0-9a-f-]{36}") || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))
+                || method.equals("POST") && (Set.of("/professional-tasks","/sessions","/actions","/restrictions","/coordination","/question-replies","/goal-proposals","/personal-plans","/permission-actions/prepare","/agents/certificate-rotation/request").contains(path) || path.matches("/messages/[0-9a-f-]{36}/ack") || path.matches("/professional-tasks/[0-9a-f-]{36}/continue"));
     }
     private boolean humanRoute(String method,String path) {
-        return method.equals("POST") && (Set.of("/owners/bind","/workers","/workers/new","/grants","/managed-plans","/execution-policies","/execution-budgets/increment","/execution-effects/reconcile","/execution-meters/reconcile").contains(path)
+        if(method.equals("GET") && (path.matches("/agents/[^/]+/messages/dead") || path.matches("/agents/[^/]+/certificate-rotations"))) return true;
+        return method.equals("POST") && (Set.of("/owners/bind","/agents/invitations","/grants","/managed-plans","/execution-policies","/execution-budgets/increment","/execution-effects/reconcile","/execution-meters/reconcile").contains(path)
+                || path.equals("/agents/invitations")
                 || path.matches("/execution-policies/[^/]+/(pause|resume|revoke)") || path.matches("/execution-contexts/[^/]+/bind")
                 || path.matches("/execution-tasks/[^/]+/stopped")
                 || path.matches("/execution-configurations/(assets|candidates|propose|prepare|state|reconcile-plan)")
-                || path.equals("/action-permissions") || path.equals("/action-permissions/state") || Set.of("/secretary-setup/authorize","/secretary-setup/state","/secretary-setup/execution-preview","/agent-factory/state","/agent-factory/settings").contains(path) || path.matches("/action-permissions/[^/]+/revoke")
+                || path.equals("/action-permissions") || path.equals("/action-permissions/state") || Set.of("/agent-factory/state","/agent-factory/settings").contains(path) || path.matches("/action-permissions/[^/]+/revoke")
                 || path.matches("/questions/(read|reply|budget|control|progress|telegram)")
                 || path.matches("/workflow-graphs/(read|change|decide|recommend)")
                 || path.matches("/software-development/(proposals|adopt|read)")
-                || path.matches("/workers/[^/]+/(enable|disable|credential)") || path.matches("/grants/[^/]+/revoke")
+                || path.matches("/agents/[^/]+/(approve-pairing|enable|disable)") || path.matches("/agents/[^/]+/credential/revoke") || path.matches("/agents/[^/]+/certificate-rotations/[^/]+/(approve|reject)") || path.matches("/grants/[^/]+/revoke")
                 || path.matches("/targets/[^/]+/(takeover|return)") || path.matches("/restrictions/[^/]+/revoke")
-                || path.matches("/budgets/[^/]+/supplement") || path.matches("/effects/[^/]+/reconcile"));
+                || path.matches("/budgets/[^/]+/supplement") || path.matches("/effects/[^/]+/reconcile")
+                || path.matches("/agents/[^/]+/messages/[^/]+/retry"));
     }
     @Override public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new HandlerInterceptor() {
@@ -46,18 +49,30 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 String path=request.getRequestURI().substring(request.getContextPath().length());String method=request.getMethod();
                 if(path.startsWith("/api/r1/authority/")) {
                     String operation=path.substring("/api/r1/authority".length());
-                    if(personalMachine(method,operation)) {
-                        String authorization=request.getHeader("Authorization");String worker=request.getHeader("X-AIW-Personal-Worker");
-                        if(authorization==null || !authorization.startsWith("Bearer ")) { response.sendError(401,"Dedicated machine credential required");return false; }
-                        try { request.setAttribute("authorityPrincipal",boundary.authenticate(worker,authorization.substring(7))); }
-                        catch(SecurityException error) { response.sendError(401,"Invalid personal identity");return false; }
-                        if(!operation.equals("/sessions") && !boundary.processBoot(worker,request.getHeader("X-AIW-Personal-Boot"))) { response.sendError(401,"Current personal process session required");return false; }
+                    if(method.equals("POST") && operation.equals("/agents/pair")) return true;
+                    if(agentMachine(method,operation)) {
+                        String authorization=request.getHeader("Authorization");String agent=request.getHeader("X-AIW-Agent");
+                        if(authorization==null || !authorization.startsWith("Bearer ")) { response.sendError(401,"Dedicated Agent credential required");return false; }
+                        boolean rotationRequest=method.equals("POST") && operation.equals("/agents/certificate-rotation/request");
+                        try {
+                            request.setAttribute("authorityPrincipal",boundary.authenticate(agent,authorization.substring(7)));
+                            agentTransport.authenticate(request,agent,rotationRequest || operation.equals("/sessions"));
+                        }
+                        catch(SecurityException error) { response.sendError(401,"Invalid Agent identity");return false; }
+                        String approvalState=boundary.agentApprovalState(agent);
+                        if(!Set.of("PENDING","APPROVED").contains(approvalState)) {
+                            response.sendError(403,"Agent identity requires a fresh human-approved pairing");return false;
+                        }
+                        if("PENDING".equals(approvalState) && !Set.of("/sessions","/connection-state").contains(operation)) {
+                            response.sendError(403,"Agent pairing approval pending");return false;
+                        }
+                        if(!operation.equals("/sessions") && !boundary.processBoot(agent,request.getHeader("X-AIW-Agent-Boot"))) { response.sendError(401,"Current Agent process session required");return false; }
                         return true;
                     }
                     if(!humanRoute(method,operation)) { response.sendError(403,"Authority route not allowed");return false; }
                 } else {
                     if(leaseMachine(path)) return true;
-                    if(!Set.of("/ui/authority","/ui/delegation","/ui/secretary-setup","/ui/agent-factory","/ui/configurations","/ui/questions","/ui/workflow-graphs","/ui/software-development").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
+                    if(!Set.of("/ui/authority","/ui/agents","/ui/delegation","/ui/agent-factory","/ui/configurations","/ui/questions","/ui/workflow-graphs","/ui/software-development").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
                     // The earlier console interceptor already checks local-session CSRF and the persistent auth requirement.
                     if(WebConsoleApiRoutes.matches(path) && !security.enabled() && !security.signedIn(request.getSession(false)) && !boundary.humanAuthRequired()) return true;
                 }
@@ -83,6 +98,6 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 boundary.human(security.actor(session));return true;
             }
             @Override public void afterCompletion(HttpServletRequest request,HttpServletResponse response,Object handler,Exception error) { boundary.human(null); }
-        }).addPathPatterns("/api/r1/**","/ui/authority","/ui/secretary-setup","/ui/configurations","/ui/questions","/ui/workflow-graphs","/ui/software-development").order(10);
+        }).addPathPatterns("/api/r1/**","/ui/authority","/ui/agents","/ui/delegation","/ui/configurations","/ui/questions","/ui/workflow-graphs","/ui/software-development").order(10);
     }
 }

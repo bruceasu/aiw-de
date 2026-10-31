@@ -398,7 +398,7 @@ public class AuthorityActions implements AuthorityTargets {
                 .orElseThrow(()->new IllegalStateException("Separate publication execution authority is required"));
         verifyPublicationRule(allowed.rule());
         budgets.getObject().consume(allowed,null,false);
-        repo.audit(key,allowed.id(),null,"delegate:"+owner.workerId(),"PUBLICATION_EXECUTION_AUTHORIZED","Through "+rule.action()+"; on behalf of "+owner.owner());
+        repo.audit(key,allowed.id(),null,"agent:"+owner.workerId(),"PUBLICATION_EXECUTION_AUTHORIZED","Through "+rule.action()+"; on behalf of "+owner.owner());
         return allowed;
     }
     private List<WorkTask> publicationCandidates(String plan) {
@@ -426,7 +426,7 @@ public class AuthorityActions implements AuthorityTargets {
                 grant.targetKey(),grant.owner(),target.get("generation"),target.get("restriction_revision"));
         jdbc.update("INSERT INTO authority_task(task_id,target_key,allowed_attempt,reserved,started,settled) VALUES(?,?,?,FALSE,FALSE,FALSE) ON CONFLICT(task_id) DO UPDATE SET allowed_attempt=excluded.allowed_attempt",
                 task.id().value(),key(grant.rule()),next);
-        repo.audit(key(grant.rule()),grant.id(),null,"delegate:"+grant.workerId(),"PUBLICATION_ATTEMPT_ADMITTED",task.id().value()+"; attempt "+next+"; grant revision "+grant.revision());
+        repo.audit(key(grant.rule()),grant.id(),null,"agent:"+grant.workerId(),"PUBLICATION_ATTEMPT_ADMITTED",task.id().value()+"; attempt "+next+"; grant revision "+grant.revision());
     }
     private void verifyPublicationRule(ActionScope rule) {
         outputs.requirePublication(rule.targetId());

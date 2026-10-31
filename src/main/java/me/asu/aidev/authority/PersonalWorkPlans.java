@@ -59,7 +59,7 @@ public class PersonalWorkPlans {
         return receipt(principal, requestId, plans.get(id));
     }
     private Map<String, Object> receipt(AuthorityBoundary.Principal principal, String requestId, WorkflowPlan plan) {
-        return Map.of("requestId", requestId, "ownerId", principal.owner(), "workerId", principal.worker(),
+        return Map.of("requestId", requestId, "ownerId", principal.owner(), "agentId", principal.worker(),
                 "platformInstanceId", boundary.instance(), "planId", plan.id(), "state", plan.state().name(),
                 "version", plan.version(), "creationGrantsExecution", false);
     }

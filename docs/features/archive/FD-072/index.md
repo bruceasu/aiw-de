@@ -3,5 +3,7 @@
 <!-- aiw: feature-folder-index -->
 
 - [Design: FD-072_AGENT_CONTROL_PLANE.md](FD-072_AGENT_CONTROL_PLANE.md)
+- [Reports](reports/)
+- [Reviews](reviews/)
 
 Run `aiw fd show FD-072` for current status and handoff.

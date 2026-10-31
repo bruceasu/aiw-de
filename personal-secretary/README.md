@@ -264,7 +264,7 @@ Qt 桌面通过系统浏览器完成平台登录和连接确认；浏览器中�
 
 新建计划的版本号 `0` 是有效版本，保存时必须原样传递；缺少计划时才发送 `null`。前端不会将 `0` 按空值处理，避免平台以“请先读取并核对计划内容”拒绝并回滚整次授权。
 
-日常连接和授权使用独立页面 `/ui/secretary-setup`；`/ui/authority` 保留身份、执行控制和审计等高级管理。原来带 `secretarySetup` 或 `planId` 参数的高级页面链接会转到新页面并保留参数。两个页面的桌面布局均由整个内容区域滚动，滚动条覆盖设置表单与高级面板，不再只滚动标签页内部。保存失败原因保留在保存按钮旁，不会被请求结束后的状态刷新覆盖；失败不代表已授权。
+日常连接和授权使用独立页面 `/ui/agents`；`/ui/authority` 保留身份、执行控制和审计等高级管理。原来带 `secretarySetup` 或 `planId` 参数的高级页面链接会转到新页面并保留参数。两个页面的桌面布局均由整个内容区域滚动，滚动条覆盖设置表单与高级面板，不再只滚动标签页内部。保存失败原因保留在保存按钮旁，不会被请求结束后的状态刷新覆盖；失败不代表已授权。
 
 执行政策的规则增加可选 `baseRevision`，记录经人工确认的不可变 Git 提交（40 或 64 位）；缺省时沿用旧规则，序列化不输出该空字段。原计划业务说明和草稿内容摘要不变。专业准备目录从政策读取该基线，AgentFactory 和工具操作同时核对基线。仓库路径只用于匹配已登记的真实引用，不将任意本地路径当成有效仓库标识。授权通过后重新读取当前模型、方法和仓库选择，继续原工作，不沿用授权前缺少依据的模型选择。准备基线时检查所选路径是否存在于提交、是否有已跟踪文件的未提交修改；不自动提交。专业任务使用已提交内容，不包含未跟踪文件。
 
@@ -274,7 +274,7 @@ Qt 桌面通过系统浏览器完成平台登录和连接确认；浏览器中�
 
 **当前边界：**项目必须先在平台登记并有 Git 提交；向导不会初始化仓库、创建首次提交、解除暂停或撤销、启动专业 Worker、添加模型，也不会授权任意命令。既有执行预算及用量保留；强制预算模式缺少预算/定价时明确阻止保存并指向高级设置。更新文件范围会替换此计划的旧工具和命令范围，确认框会提示；高级命令配置仍在原入口。模型与专业 Worker 实际可用性继续由平台在准备任务时检查。创建草稿或完成代理授权不代表文件执行已经完成。
 
-上述为静态实现。更新后需重启平台和秘书服务才能加载；尚未进行真实登录、浏览器跨窗口、授权续接、故障恢复或模型代答的端到端验证。`scripts/compile-secretary-setup.ps1` 仅离线编译 Java、Python 和 JavaScript，不执行这些流程。
+上述为静态实现。更新后需重启平台和秘书服务才能加载；尚未进行真实登录、浏览器跨窗口、授权续接、故障恢复或模型代答的端到端验证。`scripts/compile-Agent-pairing.ps1` 仅离线编译 Java、Python 和 JavaScript，不执行这些流程。
 
 ## English operations
 
@@ -317,3 +317,9 @@ Qt 托盘的“退出秘书并停止本地服务”在监听端口关闭后退�
 ## Formal work questions (FD-028)
 
 The private UI can read platform questions within the exact PLAN read scope. Select the goal, necessary context and original answer, preview the projection locally, then explicitly queue it with a current A19_ANSWER or A18_BUDGET grant. The platform verifies the original projection digest and exact envelope; private chats, policies, templates and credentials stay local. The private outbox retains the original wrapper and request ID for receipt reconciliation. See [the formal question contract](../../docs/FORMAL-QUESTIONS.md). Ordinary answers do not grant execution or extra budget.
+
+## Control Plane Agent connection
+
+Control Plane communication is Agent-initiated; it does not call back into this process. Create a one-time pairing invitation at `/ui/agents`. Local profiles are restricted to loopback. Remote profiles require HTTPS and mutual TLS with an Agent-specific client certificate and key. Configure `AIW_AGENT_CLIENT_CERT`, `AIW_AGENT_CLIENT_KEY`, and, for a private Control Plane CA, `AIW_AGENT_SERVER_CA` before pairing. Pairing creates a disabled pending identity; it can only establish a disabled session and read connection state. In Control Plane, one human confirmation binds the Agent identity to an exact initial Grant and enables the current process. After restart or certificate rotation, a human must enable the new process session again.
+
+Certificate rotation requires a new CA-issued client certificate, an Agent rotation request, human approval of the displayed fingerprint, a fresh session, and explicit re-enablement. Revoked credentials cannot be reactivated; pair a new Agent and approve new Grants. See [remote mTLS deployment](../docs/features/FD-072/AGENT_MTLS_DEPLOYMENT.md) for server configuration and rotation details.

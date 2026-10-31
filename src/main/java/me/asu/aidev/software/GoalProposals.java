@@ -28,7 +28,7 @@ public class GoalProposals {
         boundary.lock();machine(principal,boot);String digest=AuthorityRepository.hash(input.projectionJson());if(!digest.equals(input.digest()))throw new IllegalArgumentException("Exact raw selected projection required");repo.decode(input.projectionJson(),Projection.class);
         var old=repo.jdbc().queryForList("SELECT * FROM selected_goal_proposal WHERE owner_id=? AND request_id=?",principal.owner(),input.requestId());
         if(!old.isEmpty()){var row=old.getFirst();if(!principal.worker().equals(row.get("worker_id"))||!input.projectionJson().equals(row.get("projection_json"))||!digest.equals(row.get("digest")))throw new IllegalStateException("GOAL_PROPOSAL_CONFLICT");return repo.decode((String)row.get("receipt_json"),Map.class);}
-        var receipt=Map.of("requestId",input.requestId(),"state","RECORDED","ownerId",principal.owner(),"workerId",principal.worker(),"digest",digest,"platformInstanceId",boundary.instance());
+        var receipt=Map.of("requestId",input.requestId(),"state","RECORDED","ownerId",principal.owner(),"agentId",principal.worker(),"digest",digest,"platformInstanceId",boundary.instance());
         repo.jdbc().update("INSERT INTO selected_goal_proposal(owner_id,request_id,worker_id,projection_json,digest,instance_id,generation,worker_boot,platform_boot,receipt_json) VALUES(?,?,?,?,?,?,?,?,?,?)",principal.owner(),input.requestId(),principal.worker(),input.projectionJson(),digest,boundary.instance(),principal.generation(),boot,boundary.boot(),repo.encode(receipt));return receipt;
     }
     @Transactional public Object receipt(AuthorityBoundary.Principal principal,String boot,String id){
