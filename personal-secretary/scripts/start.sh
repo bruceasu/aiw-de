@@ -4,9 +4,10 @@ set +x
 set -euo pipefail
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+secretary_root=$(cd -- "$script_dir/.." && pwd)
 dotenv_python=python3
-[[ ! -x "$script_dir/.venv/bin/python" ]] || dotenv_python="$script_dir/.venv/bin/python"
-dotenv_exports=$("$dotenv_python" "$script_dir/env_config.py" --shell)
+[[ ! -x "$secretary_root/.venv/bin/python" ]] || dotenv_python="$secretary_root/.venv/bin/python"
+dotenv_exports=$("$dotenv_python" "$secretary_root/env_config.py" --shell)
 eval "$dotenv_exports"
 
 owner_id=${AIW_PERSONAL_OWNER_ID:-}
@@ -23,7 +24,7 @@ python_command=
 
 usage() {
     cat <<'USAGE'
-Usage: bash start.sh [options]
+Usage: bash scripts/start.sh [options]
   --owner-id ID          Enrolled owner (AIW_PERSONAL_OWNER_ID or prompt)
   --worker-id ID         Enrolled Worker (AIW_PERSONAL_WORKER_ID or my-secretary)
   --platform ORIGIN      Platform (AIW_PERSONAL_PLATFORM or prompt)
@@ -68,9 +69,9 @@ done
 if [[ -z $owner_id && -z $platform && $prompt_credential == false ]]; then
     if [[ -z $python_command ]]; then
         python_command=python3
-        [[ ! -x "$script_dir/.venv/bin/python" ]] || python_command="$script_dir/.venv/bin/python"
+        [[ ! -x "$secretary_root/.venv/bin/python" ]] || python_command="$secretary_root/.venv/bin/python"
     fi
-    launch_arguments=("$script_dir/main.py" --data-root "$data_root" --host "$host_address" --port "$port")
+    launch_arguments=("$secretary_root/main.py" --data-root "$data_root" --host "$host_address" --port "$port")
     if [[ -n $public_origin ]]; then launch_arguments+=(--public-origin "$public_origin"); fi
     if [[ $no_browser == true ]]; then launch_arguments+=(--no-browser); fi
     exec "$python_command" "${launch_arguments[@]}"
@@ -107,10 +108,10 @@ export AIW_PERSONAL_CREDENTIAL
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 if [[ -z $python_command ]]; then
     python_command=python3
-    [[ ! -x "$script_dir/.venv/bin/python" ]] || python_command="$script_dir/.venv/bin/python"
+    [[ ! -x "$secretary_root/.venv/bin/python" ]] || python_command="$secretary_root/.venv/bin/python"
 fi
 launch_arguments=(
-    "$script_dir/main.py"
+    "$secretary_root/main.py"
     --owner-id "$owner_id" --worker-id "$worker_id" --platform "$platform"
     --data-root "$data_root" --host "$host_address" --port "$port"
 )

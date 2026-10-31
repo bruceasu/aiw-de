@@ -10,10 +10,10 @@ foreach ($sourcePath in @('personal-secretary/ui/app.js')) {
     & node --check (Join-Path $taskRoot $sourcePath)
     if ($LASTEXITCODE -ne 0) { throw 'Secretary/theme JavaScript syntax compile failed.' }
 }
-foreach ($scriptPath in @('personal-secretary/stop.ps1', 'scripts/configure-local-worker-token.ps1')) {
+foreach ($scriptPath in @('personal-secretary/scripts/stop.ps1', 'scripts/configure-local-worker-token.ps1')) {
     $parseTokens = $null
     $parseErrors = $null
     [void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $taskRoot $scriptPath), [ref]$parseTokens, [ref]$parseErrors)
     if ($parseErrors.Count -gt 0) { throw ('Secretary PowerShell syntax failed: ' + ($parseErrors -join '; ')) }
 }
-Write-Output 'Secretary Runtime compile-only passed (Python, JavaScript, stop.ps1). No Worker source, SDK imports, tests, services, models, network or retained artifacts.'
+Write-Output 'Secretary Runtime compile-only passed (Python, JavaScript, scripts/stop.ps1). No Worker source, SDK imports, tests, services, models, network or retained artifacts.'

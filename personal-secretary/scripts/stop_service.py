@@ -11,7 +11,7 @@ _secretary_root = Path(__file__).resolve().parent.parent
 if str(_secretary_root) not in sys.path:
     sys.path.insert(1, str(_secretary_root))
 
-from desktop_client import PersonalClient, PersonalError, personal_origin
+from pet.desktop_client import PersonalClient, PersonalError, personal_origin
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
         return 0
     except (PersonalError, OSError) as error:
         print(str(error))
-        print("未确认停止。旧版本或无响应的服务可使用 stop.ps1 -Force；强制停止会中断当前操作。")
+        print("未确认停止。旧版本或无响应的服务可使用 scripts/stop.ps1 -Force；强制停止会中断当前操作。")
         return 1
 
 

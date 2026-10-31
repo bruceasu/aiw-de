@@ -144,7 +144,7 @@ class PersonalClient:
                 "--port", str(parsed.port), "--no-browser", "--no-desktop-pet"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         except OSError:
-            raise PersonalError("无法启动个人服务。请在秘书目录运行 start.ps1 后再连接。") from None
+            raise PersonalError("无法启动个人服务。请运行 scripts/start.ps1 后再连接。") from None
         for _ in range(50):
             check_cancelled()
             time.sleep(0.2)
@@ -157,7 +157,7 @@ class PersonalClient:
                         if attach_error.status not in {0, 401}: raise
             else:
                 return {}, state, ""
-        raise PersonalError("个人服务没有完成启动。请运行 start.ps1 查看终端中的具体原因，再重新连接。")
+        raise PersonalError("个人服务没有完成启动。请运行 scripts/start.ps1 查看终端中的具体原因，再重新连接。")
 
     def shutdown_service(self):
         """Request authenticated graceful shutdown; never kill a process."""

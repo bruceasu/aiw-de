@@ -23,7 +23,8 @@ if ([string]::IsNullOrWhiteSpace($Python)) {
     if ([string]::IsNullOrWhiteSpace($Python)) { $Python = Join-Path $secretaryRoot '.venv\Scripts\pythonw.exe' }
     if (-not (Test-Path -LiteralPath $Python)) { $Python = 'pythonw' }
 }
-$desktopScript = Join-Path $PSScriptRoot $(if ($LegacyTk) { 'desktop.py' } else { 'desktop_webview.py' })
+$petDirectory = Join-Path $secretaryRoot 'pet'
+$desktopScript = Join-Path $petDirectory $(if ($LegacyTk) { 'desktop.py' } else { 'desktop_webview.py' })
 $desktopArguments = @(
     ('"' + $desktopScript + '"')
     '--service'

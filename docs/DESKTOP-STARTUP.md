@@ -6,7 +6,7 @@
 
 GUI 自动连接成功不会弹出人物、工作台、对话或模型设置。点击托盘图标可打开对话，托盘右键可显示人物或打开工作与安排、待确认和设置。托盘不可用时显示可见窗口，防止入口丢失；Tk 隐藏时暂停人物动画。新纳入的 Qt 伙伴也不显示人物下方文字/按钮底板，沿用既有简洁人物偏好。
 
-Windows 手动运行 `personal-secretary/start-desktop.ps1` 默认托盘启动；`-ShowPet` 显示人物，`-LegacyTk` 使用 Tk，`-Opaque` 供 Qt 使用实色背景。Linux 用 `start-desktop.sh`，可传 `--show-pet`。直接运行 `desktop.py` 或 `desktop_webview.py` 同样默认托盘，可传 `--service <本机地址>` 和 `--show-pet`。显示选项仅对新实例生效；已有实例请从原托盘找回。
+Windows 手动运行 `personal-secretary/scripts/start-desktop.ps1` 默认托盘启动；`-ShowPet` 显示人物，`-LegacyTk` 使用 Tk，`-Opaque` 供 Qt 使用实色背景。Linux 用 `scripts/start-desktop.sh`，可传 `--show-pet`。直接运行 `pet/desktop.py` 或 `pet/desktop_webview.py` 同样默认托盘，可传 `--service <本机地址>` 和 `--show-pet`。显示选项仅对新实例生效；已有实例请从原托盘找回。
 
 服务命令 `main.py --no-browser` 只关闭浏览器自动打开，`main.py --no-desktop-pet` 单独关闭自动人物。GUI 自动启动服务时会传两个参数，防止服务再启动一份 GUI。同一 origin 的 Tk 与 Qt 共用 OS 单实例；重复启动不创建新窗口或新服务。Windows 锁为会话内 named mutex，POSIX 锁由存活进程持有；正常退出或进程崩溃后 OS 释放，无需删除锁文件。
 

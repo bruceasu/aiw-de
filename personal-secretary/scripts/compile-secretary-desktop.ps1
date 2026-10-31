@@ -34,7 +34,7 @@ for name in ("ui/app.js", "ui/pairing.js"):
     finally:
         temporary.close()
         temporary_path.unlink(missing_ok=True)
-launchers = (prefix + "start-desktop.ps1", prefix + "pet/start-desktop.ps1")
+launchers = (prefix + "scripts/start-desktop.ps1",)
 for launcher in launchers:
     if revision and source(launcher) != (root / launcher).read_bytes():
         raise SystemExit("A working launcher differs from the selected revision; stop before parsing another version.")
@@ -48,13 +48,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Desktop Python/JavaScript syntax compile faile
 $parseTokens = $null
 $parseErrors = $null
 $desktopLaunchers = @(
-    'personal-secretary/start-desktop.ps1',
-    'personal-secretary/pet/start-desktop.ps1',
-    'personal-secretary/setup-uv.ps1',
+    'personal-secretary/scripts/start.ps1',
+    'personal-secretary/scripts/start-desktop.ps1',
+    'personal-secretary/scripts/stop.ps1',
     'personal-secretary/scripts/setup-uv.ps1',
     'personal-secretary/scripts/package-windows.ps1',
-    'personal-secretary/scripts/compile-secretary-desktop.ps1',
-    'scripts/compile-secretary-desktop.ps1'
+    'personal-secretary/scripts/compile-secretary-desktop.ps1'
 )
 foreach ($launcher in $desktopLaunchers) {
     $parseTokens = $null
@@ -63,9 +62,13 @@ foreach ($launcher in $desktopLaunchers) {
     if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
 }
 if (-not $Revision) {
-    $parseTokens = $null
-    $parseErrors = $null
-    $null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $taskRoot 'personal-secretary/start.ps1'), [ref]$parseTokens, [ref]$parseErrors)
-    if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
+    if (Get-Command bash -ErrorAction SilentlyContinue) {
+        foreach ($script in @('start.sh', 'start-desktop.sh', 'setup-uv.sh', 'package-linux.sh')) {
+            & bash -n (Join-Path $taskRoot "personal-secretary/scripts/$script")
+            if ($LASTEXITCODE -ne 0) { throw "Bash syntax compilation failed for $script." }
+        }
+    } else {
+        Write-Output 'Bash syntax compilation skipped: bash is unavailable.'
+    }
 }
 Write-Output 'Desktop compile-only passed. No application imports, windows, services, tests, network, downloads or packages.'

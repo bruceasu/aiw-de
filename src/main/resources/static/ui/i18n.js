@@ -2327,9 +2327,9 @@
     "Private policy",
     "個人ポリシー"
   ],
-  "在秘书目录运行 start-desktop.ps1，在桌面窗口中填写本服务地址和新配对码。两种界面共用私人记录。": [
-    "Run start-desktop.ps1 from the secretary folder. Local desktop access connects automatically. Both interfaces share private records.",
-    "秘書フォルダーで start-desktop.ps1 を実行します。ローカルのデスクトップ接続は自動です。両方の画面で個人記録を共有します。"
+  "运行 scripts/start-desktop.ps1，在桌面窗口中填写本服务地址和新配对码。两种界面共用私人记录。": [
+    "Run scripts/start-desktop.ps1. Local desktop access connects automatically. Both interfaces share private records.",
+    "scripts/start-desktop.ps1 を実行します。ローカルのデスクトップ接続は自動です。両方の画面で個人記録を共有します。"
   ],
   "。新码五分钟有效、只能使用一次；生成新码会替换上一枚尚未使用的配对码。": [
     ". Codes expire in five minutes and can be used once. A new code replaces the previous unused code.",

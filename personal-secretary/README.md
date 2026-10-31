@@ -29,7 +29,7 @@
 ./scripts/setup-uv.ps1
 # Or include Qt dependencies for the desktop UI
 ./scripts/setup-uv.ps1 -Desktop
-.\start-desktop.ps1
+.\scripts\start-desktop.ps1
 ```
 
 Linux / WSL 可运行 `./scripts/setup-uv.sh`；需要桌面依赖时运行 `./scripts/setup-uv.sh --desktop`。启动脚本会优先使用本目录 `.venv` 中的 Python。编辑 `requirements.txt` 或 `pet/requirements-desktop.txt` 后重跑初始化脚本，可同步虚拟环境。
@@ -38,7 +38,7 @@ Linux / WSL 可运行 `./scripts/setup-uv.sh`；需要桌面依赖时运行 `./s
 
 桌面人物尺寸可在托盘或人物右键菜单的“人物大小”滑块中调整，也可在桌面工作台网页的“外观设置”中使用 25%–125% 滑块调整；选择会保存在本机，重启后继续生效。
 
-暂时不安装 PySide6 时，可以运行 `.\start.ps1` 使用浏览器界面，或运行 `.\start-desktop.ps1 -LegacyTk` 使用原 Windows 桌面。缺少 PySide6 只影响新版桌面启动，不影响浏览器使用。Linux 的图形运行库要求与当前验证范围见 [双主题说明](../../docs/APPEARANCE.md)。
+暂时不安装 PySide6 时，可以运行 `.\scripts\start.ps1` 使用浏览器界面，或运行 `.\scripts\start-desktop.ps1 -LegacyTk` 使用原 Windows 桌面。缺少 PySide6 只影响新版桌面启动，不影响浏览器使用。Linux 的图形运行库要求与当前验证范围见 [双主题说明](../../docs/APPEARANCE.md)。
 
 ### 界面与工作方式
 
@@ -56,7 +56,7 @@ Qt PET 托盘菜单提供“启动本地服务”和“停止本地服务”：�
 
 升级后若国际化没有效果，需要重启**个人服务和 Qt 桌面**，不能只刷新页面或只重启桌面。旧 Python 服务可能读取新版页面，却无法提供新增的 `/i18n.js` 资源。页面会明确提示语言组件加载或初始化失败；详情见 [升级排查说明](../../docs/APPEARANCE.md#升级后语言没有变化)。
 
-Web 与新的 Qt 桌面工作台提供 **HUD / RPG / 自动** 双主题，页面顶部可随时切换。自动默认白天 08:00 使用 HUD、夜间 19:00 使用 RPG，“时间设置”可以调整。Windows 运行 `./scripts/setup-uv.ps1 -Desktop` 后再运行 `start-desktop.ps1`；Linux 使用 `./scripts/setup-uv.sh --desktop` 后运行 `sh start-desktop.sh`。Qt 人物悬浮窗与工作台复用 Web 功能、提供托盘和真实工作计数。透明效果异常可使用 `-Opaque` / `--opaque`。原 Windows Tk 入口为 `start-desktop.ps1 -LegacyTk`。安装和平台限制见 [双主题说明](../../docs/APPEARANCE.md)。
+Web 与新的 Qt 桌面工作台提供 **HUD / RPG / 自动** 双主题，页面顶部可随时切换。自动默认白天 08:00 使用 HUD、夜间 19:00 使用 RPG，“时间设置”可以调整。Windows 运行 `./scripts/setup-uv.ps1 -Desktop` 后再运行 `./scripts/start-desktop.ps1`；Linux 使用 `./scripts/setup-uv.sh --desktop` 后运行 `bash ./scripts/start-desktop.sh`。Qt 人物悬浮窗与工作台复用 Web 功能、提供托盘和真实工作计数。透明效果异常可使用 `-Opaque` / `--opaque`。原 Windows Tk 入口为 `./scripts/start-desktop.ps1 -LegacyTk`。安装和平台限制见 [双主题说明](../../docs/APPEARANCE.md)。
 
 Web 与桌面聊天会将模型回复中的常用 Markdown 显示为格式化文本：标题、加粗、斜体、列表、引用与代码块；Web 还提供表格和 HTTP/HTTPS 链接，桌面表格以等宽文本展示，链接显示来源地址。用户输入仍按原文展示。不会解释原始 HTML、执行代码或自动加载图片。支持常用语法子集，不保证完整 CommonMark 或复杂嵌套。内容不变时自动刷新不会重建聊天；阅读旧消息时新回复不会强制滚到底部。
 
@@ -90,7 +90,7 @@ Codex 负责决定下一步，秘书执行宿主搜索与文件工具，并把�
 
 联网与文件操作由秘书的宿主工具执行：模型返回 `search`、`read_url`、`read_file`、`write_file` 或 `delete_file` JSON 动作，秘书按既有范围与确认规则执行，再把结果放入下一轮 `steps`。这不要求安装额外插件，也不依赖 Codex 原生工具。Codex 与 Agents SDK 共用该宿主动作说明；不会因原生工具列表为空而禁用宿主工具。连接失败会显示对应步骤、固定错误码及可用的 JSON-RPC 数字错误码，不显示原始协议正文、私人上下文或凭证。
 
-需要 Python 3.11+；个人服务与浏览器界面不需要第三方 Python 包，Qt 桌面另需 `pet/requirements-desktop.txt`。Windows 用户在秘书目录运行 `./start-desktop.ps1`，GUI 会自动连接本机个人服务；尚未运行时会尝试在后台启动。Linux Qt 桌面使用 `sh ./start-desktop.sh`。Web 用户运行 `./start.ps1`，Linux/macOS 使用 `bash ./start.sh`。无参数即可使用日常模式，不需要 Owner ID、Worker ID、平台凭证或手工创建 Plan。现有用户首次升级可先使用原来的启动命令启动一次，记住原私库身份，以后直接无参数启动；旧数据库不会被搬移、合并或删除。
+需要 Python 3.11+；个人服务与浏览器界面不需要第三方 Python 包，Qt 桌面另需 `pet/requirements-desktop.txt`。Windows 用户在秘书目录运行 `./scripts/start-desktop.ps1`，GUI 会自动连接本机个人服务；尚未运行时会尝试在后台启动。Linux Qt 桌面使用 `bash ./scripts/start-desktop.sh`。Web 用户运行 `./scripts/start.ps1`，Linux/macOS 使用 `bash ./scripts/start.sh`。无参数即可使用日常模式，不需要 Owner ID、Worker ID、平台凭证或手工创建 Plan。现有用户首次升级可先使用新的 `scripts/start.ps1` 或 `bash scripts/start.sh` 命令启动一次，记住原私库身份，以后直接无参数启动；旧数据库不会被搬移、合并或删除。
 
 单独启动个人服务不会启动桌面客户端；需要桌面时请运行上述桌面启动命令。旧脚本传入的 `--no-desktop-pet` 仍可接受。
 
@@ -120,7 +120,7 @@ Windows 设置和连接凭据使用当前系统账号的 DPAPI 保护；其他�
 
 新模块为 `assistant_settings`、`assistant_model`、`assistant_tools`、`daily_assistant` 和 `private_config`。业务记录、版本历史和确认记录仍在原 SQLite 私库，不变更表结构。新设置及会话文件单独保存；回退前应先暂停日常处理并核对在途工作和已保存文件，再恢复旧程序，保留私库及文件备份，不自动恢复旧的待执行安排。
 
-使用 `scripts/compile-secretary-desktop.ps1` 可进行本子目录 Python 内存编译、JavaScript 语法编译及 PowerShell 解析，不调用模型、网页、服务、桌面窗口或测试。`scripts/package-windows.ps1` 使用本机已安装的 PyInstaller 生成包含服务和 Qt 桌面的 Windows 一目录包，不会安装或下载依赖。编译不能证明真实模型、网页访问、DPAPI、桌面自动连接或文件操作已在运行中验证。
+使用 `scripts/compile-secretary-desktop.ps1` 可进行本子目录 Python 内存编译、JavaScript 语法编译、PowerShell 解析及可用时的 Bash 语法编译，不调用模型、网页、服务、桌面窗口或测试。Windows 用 `./scripts/package-windows.ps1`、Linux 用 `bash ./scripts/package-linux.sh` 调用本机已安装的 PyInstaller，生成包含服务和 Qt 桌面的一目录包；不会安装或下载依赖。编译不能证明真实模型、网页访问、DPAPI、桌面自动连接或文件操作已在运行中验证。
 
 ## 专业平台连接（高级，可选）
 
@@ -141,19 +141,19 @@ Windows 设置和连接凭据使用当前系统账号的 DPAPI 保护；其他�
 在 `personal-secretary` 目录中可直接使用交互启动脚本：
 
 ```powershell
-.\start.ps1
+.\scripts\start.ps1
 ```
 
 Linux、macOS 或 Git Bash 使用 Bash 脚本（需要 Bash 和 Python 3.11+）：
 
 ```bash
-bash ./start.sh
+bash ./scripts/start.sh
 ```
 
-Bash 版本使用相同的交互流程、默认值和 `AIW_PERSONAL_*` 配置变量，参数采用 `main.py` 的长选项名称，另有 `--python` 指定解释器（默认 `python3`）。运行 `bash ./start.sh --help` 查看完整选项。请作为独立脚本运行，不要用 `source` 加载。
+Bash 版本使用相同的交互流程、默认值和 `AIW_PERSONAL_*` 配置变量，参数采用 `main.py` 的长选项名称，另有 `--python` 指定解释器（默认 `python3`）。运行 `bash ./scripts/start.sh --help` 查看完整选项。请作为独立脚本运行，不要用 `source` 加载。
 
 ```bash
-bash ./start.sh --owner-id O-EXPLICIT-ID --worker-id my-secretary --platform https://platform.example --data-root "$HOME/private/aiw"
+bash ./scripts/start.sh --owner-id O-EXPLICIT-ID --worker-id my-secretary --platform https://platform.example --data-root "$HOME/private/aiw"
 ```
 
 高级启动仍可传入平台登记的 owner ID 和平台地址。默认 Worker ID 为 `my-secretary`，应与平台登记一致。即使传入这些参数，启动也不再强制询问 `Dedicated platform credential`：优先使用环境变量或已保存的凭证，没有凭证仍可使用本机日常秘书。需要首次输入或更换专业平台凭证时，PowerShell 显式加 `-PromptCredential`，Bash 加 `--prompt-credential`；明文平台连接仍遵循原有回环 HTTP 确认规则。私人数据目录默认 `$HOME/.aiw-personal`，UI 默认 `127.0.0.1:8766`。退出后恢复原有凭证环境变量。
@@ -161,7 +161,7 @@ bash ./start.sh --owner-id O-EXPLICIT-ID --worker-id my-secretary --platform htt
 可预设 `AIW_PERSONAL_OWNER_ID`、`AIW_PERSONAL_WORKER_ID`、`AIW_PERSONAL_PLATFORM` 和 `AIW_PERSONAL_CREDENTIAL`，避免重复输入。脚本参数优先于对应环境变量；支持 `-OwnerId`、`-WorkerId`、`-Platform`、`-DataRoot`、`-HostAddress`、`-Port`、`-PublicOrigin`、`-AllowLoopbackHttp` 和 `-Python`。凭证只通过环境变量或隐藏输入提供。
 
 ```powershell
-.\start.ps1 -OwnerId O-EXPLICIT-ID -WorkerId my-secretary -Platform https://platform.example -DataRoot D:/private/aiw
+.\scripts\start.ps1 -OwnerId O-EXPLICIT-ID -WorkerId my-secretary -Platform https://platform.example -DataRoot D:/private/aiw
 ```
 
 原有 Python 命令行继续要求显式身份和平台参数：
@@ -194,7 +194,7 @@ python personal-secretary/main.py --owner-id O-EXPLICIT-ID --worker-id my-secret
 2. 在 `personal-secretary` 目录的另一个 PowerShell 终端运行：
 
    ```powershell
-   .\start-desktop.ps1
+   .\scripts\start-desktop.ps1
    ```
 
 3. 在桌面连接窗口填写与服务启动终端一致的地址（默认 `http://127.0.0.1:8766`），粘贴新配对码。桌面端不填写平台凭证、Owner ID 或 Worker ID。
@@ -203,7 +203,7 @@ python personal-secretary/main.py --owner-id O-EXPLICIT-ID --worker-id my-secret
 使用不同端口或解释器时：
 
 ```powershell
-.\start-desktop.ps1 -Service http://127.0.0.1:8877 -Python C:/Python312/pythonw.exe
+.\scripts\start-desktop.ps1 -Service http://127.0.0.1:8877 -Python C:/Python312/pythonw.exe
 ```
 
 桌面端仅连接带显式端口的本机 HTTP/HTTPS 服务，不使用环境代理，不跟随重定向；HTTPS 使用系统默认的证书验证。首次也可先用尚未使用的服务启动配对码连接桌面，再在桌面“连接与设置”生成新码，供 Web 登录。每个界面有独立的内存会话；配对码五分钟有效、最多五次尝试且只能使用一次。生成新码会替换前一枚未使用码，现有登录会话保持有效。Cookie、CSRF token、配对码不会保存到桌面配置文件或放入启动参数/URL。
@@ -218,7 +218,7 @@ Web 再次配对使用原有的 `ui/app.js` 和 `ui/console.css`，避免旧进�
 
 桌面代码分为 `pet/desktop.py`（Tk 窗口与用户操作）、`pet/desktop_client.py`（私人服务会话/请求）和 `pet/desktop_win32.py`（窗口位置/托盘）。人物素材及生成提示词见 [desktop-assets](pet/desktop-assets/README.md)。窗口工作在主线程，单次服务请求在后台线程执行，结果通过队列返回；关闭 UI 不调用 `Runtime.cancel()`。
 
-`scripts/compile-secretary-desktop.ps1` 仅做这次变化的 Python 内存编译、JavaScript 语法编译和启动脚本语法解析；不导入 Tk/Win32 模块、不打开窗口或启动服务，不运行测试、模型、网络、下载或打包。编译通过不代表透明窗口、托盘、多显示器或多界面配对已在桌面验收。
+`scripts/compile-secretary-desktop.ps1` 仅做 Python 内存编译、JavaScript 语法编译、PowerShell 解析和可用时的 Bash 语法编译；不导入 Tk/Win32 模块、不打开窗口或启动服务，不运行测试、模型、网络、下载或打包。编译通过不代表透明窗口、托盘、多显示器或多界面配对已在桌面验收。
 
 在包含其他未提交工作的目录中，可用 `-Revision HEAD` 编译实际提交版本中的 Python 和独立配对脚本。启动脚本必须与该版本逐字节一致，才继续做 PowerShell 语法解析。临时 JavaScript 源文件编译后删除，不保留可分发产物。
 
@@ -284,7 +284,7 @@ Web 的“查看工作详情”以独立窗口展示工作说明、最新结果�
 
 Run this Worker in the user's own environment. Use Python 3.11 or newer. No extra package is needed. For the guided flow, open **Platform connection and delegation** in secretary settings. Connect through the platform page, confirm locally, then choose a plan, actions, expiry and usage limits. You can confirm repository, file access and a fixed Git baseline in the same form without JSON. Existing IDs stay valid. Reconnecting an existing secretary rotates its credential. Advanced startup scripts still accept `AIW_PERSONAL_CREDENTIAL` or a hidden prompt; never put credentials in commands, URLs or model prompts. Arbitrary commands and mandatory budget settings still use advanced configuration.
 
-Run `.\start.ps1` from this directory for interactive setup, or `bash ./start.sh` on Linux, macOS or Git Bash. Both scripts default to Worker ID `my-secretary`, offer the local platform at `http://127.0.0.1:8080`, ask for explicit loopback HTTP consent, and read missing credentials with hidden input. The Bash script defaults to `python3`; use `--python` to select another interpreter and `--help` to list options. Run it as a separate script, not with `source`. Set `AIW_PERSONAL_OWNER_ID`, `AIW_PERSONAL_WORKER_ID`, `AIW_PERSONAL_PLATFORM` and `AIW_PERSONAL_CREDENTIAL` to reuse your settings. Script parameters override the matching environment variables. The owner and Worker must match the enrolled platform identity. You can also start `main.py` with explicit owner, Worker, platform origin and private data root. A model command is optional and must be an explicit argv JSON array in `AIW_PERSONAL_MODEL_COMMAND`. It reads private context from stdin. Its output is advice, never platform authority. Dedicated credentials are removed from the model process environment.
+Run `.\scripts\start.ps1` from this directory for interactive setup, or `bash ./scripts/start.sh` on Linux, macOS or Git Bash. Both scripts default to Worker ID `my-secretary`, offer the local platform at `http://127.0.0.1:8080`, ask for explicit loopback HTTP consent, and read missing credentials with hidden input. The Bash script defaults to `python3`; use `--python` to select another interpreter and `--help` to list options. Run it as a separate script, not with `source`. Set `AIW_PERSONAL_OWNER_ID`, `AIW_PERSONAL_WORKER_ID`, `AIW_PERSONAL_PLATFORM` and `AIW_PERSONAL_CREDENTIAL` to reuse your settings. Script parameters override the matching environment variables. The owner and Worker must match the enrolled platform identity. You can also start `main.py` with explicit owner, Worker, platform origin and private data root. A model command is optional and must be an explicit argv JSON array in `AIW_PERSONAL_MODEL_COMMAND`. It reads private context from stdin. Its output is advice, never platform authority. Dedicated credentials are removed from the model process environment.
 
 The Worker attempts to open the private UI in the default browser after binding its listener. It skips this in detected SSH sessions, Windows service sessions, and Linux/other Unix sessions without DISPLAY or WAYLAND_DISPLAY. Desktop detection uses environment hints and cannot guarantee browser availability. If no browser opens, use the printed address. Use `--no-browser` with Python/Bash or `-NoBrowser` with PowerShell to disable this behavior. Direct loopback access from localhost, 127.0.0.0/8 or ::1 connects automatically without a pairing code. Remote access still requires the one-time pairing code from the terminal. Host, Origin, session cookies and CSRF checks remain enforced. The code is never included in the browser URL. Restart always leaves processing paused. Remote access needs an explicit HTTPS reverse proxy. The private UI has its own session and never imports the platform session database.
 
@@ -299,16 +299,16 @@ Migration planning is documented in [the offline tool](../../scripts/secretary_m
 在仓库根目录运行：
 
 ```powershell
-.\personal-secretary\stop.ps1
+.\personal-secretary\scripts\stop.ps1
 ```
 
 如运行的是尚不支持停止接口的旧服务，或正常停止无法完成，可显式强制停止：
 
 ```powershell
-.\personal-secretary\stop.ps1 -Force
+.\personal-secretary\scripts\stop.ps1 -Force
 ```
 
-自定义端口或 Python：`stop.ps1 -Port 8766 -Python 'C:\green\python312\python.exe'`。默认正常停止，控制会话不读取私人记录，也不会自动启动服务。`-Force` 只在正常停止未确认时，核对指定端口对应的本仓库 Python 秘书进程和当前 Windows 用户，然后终止它；不批量停止其他 Python 或 Qt，不删除私库和设置。强制停止会中断当前操作，重新启动后请核对已有结果，避免重复执行。
+自定义端口或 Python：`scripts/stop.ps1 -Port 8766 -Python 'C:\green\python312\python.exe'`。默认正常停止，控制会话不读取私人记录，也不会自动启动服务。`-Force` 只在正常停止未确认时，核对指定端口对应的本仓库 Python 秘书进程和当前 Windows 用户，然后终止它；不批量停止其他 Python 或 Qt，不删除私库和设置。强制停止会中断当前操作，重新启动后请核对已有结果，避免重复执行。
 
 Qt 托盘的“退出秘书并停止本地服务”在监听端口关闭后退出桌面；“退出桌面界面（服务继续运行）”继续保留后台服务。正常停止先关闭 HTTP 监听，再做后台清理（可能约 25 秒），端口关闭不代表后台清理已经全部结束。已运行的旧代码须先停止，再启动才能加载修复。以上为静态实现，尚未实际运行退出验证。
 

@@ -45,7 +45,7 @@ Qt PET 菜单提供启动、停止本地 HTTP 服务，以及“退出秘书并�
 
 `GET /api/service/control` 仅对直接本机请求提供控制会话，不读取私人工作或对话，也不等待业务锁。桌面停止前刷新控制会话，避免旧 CSRF 或业务处理阻塞停止入口。`POST /api/service/shutdown` 只接受直接本机连接、有效个人会话和 CSRF 校验，反向代理或远程会话不能停止服务。该操作不向模型暴露工具，也不通过进程名或 PID 强制结束服务。返回 `STOPPING` 表示已接受停止请求，桌面随后等待监听端口关闭（最多 30 秒）；无法确认时明确报告，不假定停止成功。服务先关闭监听，再取消并等待后台清理，清理可能继续约 25 秒；端口关闭不等于所有后台清理已结束。尚未完成的请求应在下次启动后核对已有结果。
 
-手工入口为 `personal-secretary/stop.ps1`：默认使用当前 Python 调用 `stop_service.py` 正常停止；`-Port` 指定端口，`-Python` 指定解释器。脚本不会自动启动服务。只有显式使用 `-Force` 且正常停止未确认时，才核对监听 PID、Python 进程名、本仓库 `main.py` 完整路径、进程创建时间和当前 Windows 用户，再强制结束这一进程并检查端口。它不会批量结束 Python、Qt 或其他端口进程，也不删除私人数据。强制停止可能中断写入，之后应核对结果；运行中的旧代码不会因磁盘更新自动获得新停止路由，可使用此手工入口完成一次停止。
+手工入口为 `personal-secretary/scripts/stop.ps1`：默认使用当前 Python 调用 `scripts/stop_service.py` 正常停止；`-Port` 指定端口，`-Python` 指定解释器。脚本不会自动启动服务。只有显式使用 `-Force` 且正常停止未确认时，才核对监听 PID、Python 进程名、本仓库 `main.py` 完整路径、进程创建时间和当前 Windows 用户，再强制结束这一进程并检查端口。它不会批量结束 Python、Qt 或其他端口进程，也不删除私人数据。强制停止可能中断写入，之后应核对结果；运行中的旧代码不会因磁盘更新自动获得新停止路由，可使用此手工入口完成一次停止。
 
 桌面显式退出统一设置退出状态，停止轮询、动画与未完成的启动意图，隐藏托盘，允许窗口关闭后结束事件循环。启动／停止菜单操作期间禁用重复操作，后台返回的旧回调不能重新显示已经退出的窗口。
 
@@ -86,7 +86,7 @@ Windows / Linux 使用 Python + PySide6 Qt WebEngine，共用秘书 Web 功能�
 ```powershell
 cd personal-secretary
 python -m pip install -r pet/requirements-desktop.txt
-./start-desktop.ps1
+./scripts/start-desktop.ps1
 ```
 
 Linux：
@@ -94,12 +94,12 @@ Linux：
 ```sh
 cd personal-secretary
 python3 -m pip install -r pet/requirements-desktop.txt
-sh ./start-desktop.sh
+bash ./scripts/start-desktop.sh
 ```
 
 安装命令由用户在需要时执行；代码不会自动下载依赖。Linux 还需要发行版所需的 Qt/X11/Wayland 图形运行库及中文字体。桌面启动器复用或按已有机制启动本机个人服务，使用原有会话/CSRF 认证。关闭工作台保留人物入口；退出桌面不会停止后台服务。
 
-人物窗口提供对话、任务、待确认入口和真实工作计数，右键菜单可切换主题与打开设置。系统支持时显示托盘，缺少托盘时仍能从人物打开工作台。透明背景或合成器显示异常时，可使用 `./start-desktop.ps1 -Opaque` 或 `sh ./start-desktop.sh --opaque`。Wayland 的窗口定位、置顶和托盘行为由桌面环境决定，代码不提升权限或禁用 WebEngine 沙箱来绕过限制。
+人物窗口提供对话、任务、待确认入口和真实工作计数，右键菜单可切换主题与打开设置。系统支持时显示托盘，缺少托盘时仍能从人物打开工作台。透明背景或合成器显示异常时，可使用 `./scripts/start-desktop.ps1 -Opaque` 或 `bash ./scripts/start-desktop.sh --opaque`。Wayland 的窗口定位、置顶和托盘行为由桌面环境决定，代码不提升权限或禁用 WebEngine 沙箱来绕过限制。
 
 主 WebView 仅加载所选本机个人服务；外部 HTTP/HTTPS 链接交系统浏览器。没有向网页暴露 Python 方法、文件系统或命令执行桥。正文仍在个人服务，不进入外观偏好。
 

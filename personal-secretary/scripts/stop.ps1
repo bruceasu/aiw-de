@@ -7,6 +7,7 @@ param(
 
 # Default: authenticated graceful shutdown. Force is an explicit manual fallback.
 $ErrorActionPreference = 'Stop'
+$secretaryRoot = Split-Path -Parent $PSScriptRoot
 & $Python (Join-Path $PSScriptRoot 'stop_service.py') --service "http://127.0.0.1:$Port"
 if ($LASTEXITCODE -eq 0) { exit 0 }
 if (-not $Force) {
@@ -25,7 +26,7 @@ $serviceProcessIds = @($listeners | Select-Object -ExpandProperty OwningProcess 
 if ($serviceProcessIds.Count -ne 1) { throw 'Multiple processes own this port. Refusing to force stop.' }
 $serviceProcessId = [int]$serviceProcessIds[0]
 $serviceProcess = Get-CimInstance Win32_Process -Filter "ProcessId=$serviceProcessId"
-$expectedMain = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot 'main.py')).Path
+$expectedMain = (Resolve-Path -LiteralPath (Join-Path $secretaryRoot 'main.py')).Path
 $mainPattern = '(?:^|[\s"])' + [regex]::Escape($expectedMain) + '(?=[\s"]|$)'
 if (-not $serviceProcess -or $serviceProcess.Name -notmatch '^python(?:w|[0-9]+(?:\.[0-9]+)*)?\.exe$' -or
     -not $serviceProcess.CommandLine -or $serviceProcess.CommandLine -notmatch $mainPattern) {

@@ -87,7 +87,7 @@
 <section class="card"><div class="section-heading"><div><h2>私人备份</h2><p>包含私人记录、待发送请求与回执副本；不包含平台凭证或登录会话。</p></div><a class="btn ghost" href="/api/backup" download="personal-backup.json">下载私人备份</a></div></section>
 <section class="card"><h2>取消安排或撤销私人策略</h2><p class="muted">停止本地新请求，保留已发送请求的对账。已在平台生效或运行的动作不回滚；停止平台工作需在平台接管或停止 Plan。</p><form class="form-grid" data-route="cancel"><label class="field">类型<select name="kind"><option value="work">私人工作</option><option value="policy">私人策略</option></select></label><label class="field">选择记录<select name="id" id="cancel-record" required><option value="">请选择记录</option></select></label><label class="field">当前版本<input name="revision" readonly type="number" min="1" required></label><button class="btn danger" type="submit">确认本地取消或撤销</button></form></section>
 <section class="card" id="desktop-pairing-card">
-<div class="section-heading"><div><h2>连接桌面秘书</h2><p>在秘书目录运行 start-desktop.ps1，在桌面窗口中填写本服务地址和新配对码。两种界面共用私人记录。</p></div></div>
+<div class="section-heading"><div><h2>连接桌面秘书</h2><p>运行 scripts/start-desktop.ps1，在桌面窗口中填写本服务地址和新配对码。两种界面共用私人记录。</p></div></div>
 <p class="help">本服务地址：<code id="desktop-service-origin"></code>。新码五分钟有效、只能使用一次；生成新码会替换上一枚尚未使用的配对码。</p>
 <div class="inline-controls"><button class="btn ghost" type="button" id="create-desktop-pairing">生成桌面配对码</button></div>
 <div id="desktop-pairing-result" class="form-grid" hidden>

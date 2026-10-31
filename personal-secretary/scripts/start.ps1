@@ -13,11 +13,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$secretaryRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($Python)) {
-    $Python = Join-Path $PSScriptRoot '.venv\Scripts\python.exe'
+    $Python = Join-Path $secretaryRoot '.venv\Scripts\python.exe'
     if (-not (Test-Path -LiteralPath $Python)) { $Python = 'python' }
 }
-$dotenvJson = & $Python (Join-Path $PSScriptRoot 'env_config.py') --json
+$dotenvJson = & $Python (Join-Path $secretaryRoot 'env_config.py') --json
 if ($LASTEXITCODE -ne 0) { throw 'Could not load the program .env file.' }
 $dotenvValues = $dotenvJson | ConvertFrom-Json
 foreach ($property in $dotenvValues.PSObject.Properties) {
@@ -29,7 +30,7 @@ if ([string]::IsNullOrWhiteSpace($WorkerId)) {
 }
 if ([string]::IsNullOrWhiteSpace($Platform)) { $Platform = $env:AIW_PERSONAL_PLATFORM }
 if ([string]::IsNullOrWhiteSpace($OwnerId) -and [string]::IsNullOrWhiteSpace($Platform) -and -not $PromptCredential) {
-    $dailyArguments = @((Join-Path $PSScriptRoot 'main.py'), '--data-root', $DataRoot, '--host', $HostAddress, '--port', "$Port")
+    $dailyArguments = @((Join-Path $secretaryRoot 'main.py'), '--data-root', $DataRoot, '--host', $HostAddress, '--port', "$Port")
     if ($PublicOrigin) { $dailyArguments += @('--public-origin', $PublicOrigin) }
     if ($NoBrowser) { $dailyArguments += '--no-browser' }
     & $Python @dailyArguments
@@ -56,7 +57,7 @@ if (($PromptCredential -or -not [string]::IsNullOrWhiteSpace($env:AIW_PERSONAL_C
 }
 
 $launchArguments = @(
-    (Join-Path $PSScriptRoot 'main.py'),
+    (Join-Path $secretaryRoot 'main.py'),
     '--owner-id', $OwnerId, '--worker-id', $WorkerId, '--platform', $Platform,
     '--data-root', $DataRoot, '--host', $HostAddress, '--port', "$Port"
 )
