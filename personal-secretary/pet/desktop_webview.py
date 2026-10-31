@@ -266,13 +266,15 @@ def main():
             accent, panel = colors["accent"], colors["panel"]
             background, hover = colors["background"], colors["hover"]
             self.surface.theme = theme
-            def surface_color(value):
+            def surface_color(value, alpha=240):
                 color = QColor(value)
-                return value if args.opaque else f"rgba({color.red()},{color.green()},{color.blue()},240)"
+                return value if args.opaque else f"rgba({color.red()},{color.green()},{color.blue()},{alpha})"
             panel_fill, background_fill = surface_color(panel), surface_color(background)
+            titlebar_panel_fill = surface_color(panel, 200)
+            titlebar_background_fill = surface_color(background, 200)
             self.page.setBackgroundColor(QColor(background) if args.opaque else QColor(0, 0, 0, 0))
             window_fill = background if args.opaque else "transparent"
-            self.setStyleSheet(f"QMainWindow {{background:{window_fill};}} QWidget#windowBar {{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 {panel_fill},stop:1 {background_fill});border-bottom:1px solid {accent};}} QLabel {{color:{accent};font:600 14px 'Microsoft YaHei UI';background:transparent;}} QPushButton {{background:transparent;color:{accent};border:1px solid transparent;border-radius:4px;}} QPushButton:hover {{background:{hover};border-color:{accent};}} QPushButton#windowClose:hover {{background:#702e3b;border-color:#ffa1a4;}}")
+            self.setStyleSheet(f"QMainWindow {{background:{window_fill};}} QWidget#windowBar {{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 {titlebar_panel_fill},stop:1 {titlebar_background_fill});border-bottom:1px solid {accent};}} QLabel {{color:{accent};font:600 14px 'Microsoft YaHei UI';background:transparent;}} QPushButton {{background:transparent;color:{accent};border:1px solid transparent;border-radius:4px;}} QPushButton:hover {{background:{hover};border-color:{accent};}} QPushButton#windowClose:hover {{background:#702e3b;border-color:#ffa1a4;}}")
             self.statusBar().setStyleSheet(f"background:{panel_fill};color:{accent};border-top:1px solid {accent};max-height:14px;")
             app.setStyleSheet(f"QMenu {{background:{panel};color:#e2edf8;border:1px solid {accent};padding:6px;}} QMenu::item {{padding:8px 24px 8px 12px;}} QMenu::item:selected {{background:{hover};color:{accent};}} QMenu::item:disabled {{color:#738091;}} QMenu::separator {{height:1px;background:{accent};margin:5px 8px;}}")
             theme_icon = line_icon(theme, accent)
