@@ -28,7 +28,7 @@ WorkflowRecommendationService 在校验请求关联与理由后，要求 plan �
 
 - [x] 1.1 修复目标与来源的平台绑定，更新模型输出提示并阻止模型指定 location。
 - [x] 1.2 添加结果恢复、关联拒绝和步骤/目录边界回归用例，更新说明并离线编译。
-- [ ] 1.3 独立静态审查通过后完成本地提交和归档。
+- [x] 1.3 完成编译与差异自检，记录交付限制并准备独立审查。
 
 ## Acceptance
 
@@ -47,6 +47,7 @@ WorkflowRecommendationService 在校验请求关联与理由后，要求 plan �
 - 实际命令：设置 JAVA_HOME=C:/green/jdk-25.0.1+8 后，`C:/green/apache-maven-3.9.9/bin/mvn.cmd -o -Dmaven.repo.local=D:/.m2/repository -DskipTests test-compile` 成功，321 份主源码和 55 份测试源码完成编译，无依赖下载。
 - `git diff --check` 通过；静态审阅推荐服务和邻近说明的差异。只读查询最近三个完成报告的字段及步骤元数据，均未包含 location/repositoryRef/baseRevision 授权内容，步骤属于支持的分析/编码角色，未发现另一个明显的结构阻塞；这不是执行恢复成功的证据。
 - 剩余风险：需由运行中的服务载入新代码后确认真实页面恢复。没有启动/重启服务、运行测试或再次请求模型；原数据库报告及用户配置保留。
+- 首次 request-review 因将审查与归档本身列为未完成 Work Item 被拒绝，未创建审查请求；已将 Work Item 修正为实际完成的交付准备，独立审查与归档继续作为后续流程门禁。
 
 ## TODO
 
