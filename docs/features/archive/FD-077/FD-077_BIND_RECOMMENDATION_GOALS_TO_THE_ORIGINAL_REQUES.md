@@ -1,7 +1,7 @@
 # FD-077: Bind recommendation goals to the original request
 
-**Status:** In Progress
-**Revision:** 1
+**Status:** Complete
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -48,13 +48,16 @@ WorkflowRecommendationService 在校验请求关联与理由后，要求 plan �
 - `git diff --check` 通过；静态审阅推荐服务和邻近说明的差异。只读查询最近三个完成报告的字段及步骤元数据，均未包含 location/repositoryRef/baseRevision 授权内容，步骤属于支持的分析/编码角色，未发现另一个明显的结构阻塞；这不是执行恢复成功的证据。
 - 剩余风险：需由运行中的服务载入新代码后确认真实页面恢复。没有启动/重启服务、运行测试或再次请求模型；原数据库报告及用户配置保留。
 - 首次 request-review 因将审查与归档本身列为未完成 Work Item 被拒绝，未创建审查请求；已将 Work Item 修正为实际完成的交付准备，独立审查与归档继续作为后续流程门禁。
+- 独立静态审查 PASS：Reviewer `fd077-reviewer-20261107-01`，源事件 `FD-077-000002-review-requested`，审查范围 `40c38fd..551fd4b`。报告：[20261107-independent-static-review.md](reviews/20261107-independent-static-review.md)。未执行测试或服务运行验证，剩余限制见报告。
 
 ## TODO
 
-- 实现、编译和自检已完成；等待独立静态审查，随后完成归档和本地提交。
+- 实现、编译、自检及独立静态审查已完成；由主代理完成归档和本地提交。真实服务载入新代码后的页面恢复尚未验证。
 
 ## Sources
 
 - 用户本轮推荐失败报告及“我现在无法继续处理”的修复请求。
 - 前轮只读诊断：三个 WR 请求关联均匹配，原目标 340 字符、模型回传 327 字符。
 - docs/current-zh/FLEXIBLE-WORKFLOW-PLANS.md
+
+**Completed:** 2026-11-06
