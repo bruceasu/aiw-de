@@ -16,8 +16,6 @@ public record TaskCompletionContext(
         if (completedTask.state() != TaskState.COMPLETED) {
             throw new IllegalArgumentException("completion handler requires COMPLETED task");
         }
-        if (completedTask.baseRevision() != null && workspaceResult == null) {
-            throw new IllegalArgumentException("repository task completion requires workspace result");
-        }
+
     }
 }

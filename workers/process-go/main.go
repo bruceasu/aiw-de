@@ -92,6 +92,8 @@ type WorkspaceResult struct {
 }
 
 type TaskInput struct {
+    AttemptID string `json:"attemptId"`
+    Handoff *HandoffInput `json:"handoff"`
 	TaskID            string   `json:"taskId"`
 	TaskType          string   `json:"taskType"`
 	RepositoryRef     string   `json:"repositoryRef"`
@@ -109,6 +111,9 @@ type CompletionReport struct {
 }
 
 type ClaimedTask struct {
+    PlanID string `json:"planId"`
+    Location string `json:"location"`
+    Handoff *HandoffReference `json:"-"`
     SkillFiles json.RawMessage `json:"skillFiles"`
     RequiredCapabilities []string `json:"requiredCapabilities"`
     skillResources *SkillResources
@@ -170,6 +175,9 @@ func chooseAIProfile(g *AIGuidance, runtime string) (*NamedAIProfile, string, er
 }
 
 type GitWorkspace struct {
+    handoffInputs []PlanManifest
+    planRoot string
+    planRelease func()
     ctx context.Context
     recorder *AttemptEvidence
     owned bool
@@ -351,10 +359,6 @@ func executeTask(parent context.Context, slot int, client *Client, task ClaimedT
         }()
         if !taskTypeAllowed(cfg.Profile, task.TaskType) { return errors.New("ROLE_TASK_TYPE_DENIED") }
         if task.TaskType != "EXTERNAL_WORK" || task.SkillRef != cfg.Profile.PrimarySkill { return errors.New("ROLE_SKILL_DENIED") }
-        if cfg.Profile.ResultKind == "WORKSPACE" && (task.Workspace == nil || !validResultRevision(task.Workspace.BaseRevision)) { return errors.New("WRITABLE_WORKSPACE_REQUIRED") }
-        if cfg.Profile.ResultKind == "VERDICT" { for _, input := range task.Inputs {
-            if input.ResultRevision != "" && (task.Workspace == nil || input.ResultRevision != task.Workspace.BaseRevision) { return errors.New("UPSTREAM_REVISION_MISMATCH") }
-        } }
         // Freeze trusted skill input before preparing a workspace.
         reader, e := loadGoSkillFiles(task,cfg.Profile); if e!=nil { return e }; task.skillResources=reader
         var frozenSkills []string
@@ -368,9 +372,13 @@ func executeTask(parent context.Context, slot int, client *Client, task ClaimedT
         release, e := lockWorkspace(runCtx, workspace.cwd); if e != nil { return e }; releaseWorkspace = release
         baseline := ""
         if cfg.Profile.ReadOnly { baseline, e = workspaceDigest(runCtx, workspace.cwd); if e != nil { return e } }
+        cfg.FallbackWorkspace = workspace.cwd
         instruction, e := assembleGoContextWithSkills(runCtx, cfg, task, evidence, frozenSkills); if e != nil { return e }
 		phase = "MODEL_ERROR"
-		runRequest := AgentRunRequest{Task: task, Workspace: workspace.cwd, ReadOnly: cfg.Profile.ReadOnly,
+		verified, marshalErr := json.Marshal(workspace.handoffInputs); if marshalErr != nil { return marshalErr }
+        instruction += "\nShared Plan location: "+task.Location+"\nActual working directory: "+workspace.cwd+"\nVerified handoff manifests:\n"+string(verified)
+        if len([]byte(instruction)) > positiveInt("AIW_WORKER_MAX_INPUT_BYTES", 1024*1024) { return errors.New("CONTEXT_BUDGET_EXCEEDED") }
+        runRequest := AgentRunRequest{Task: task, Workspace: workspace.cwd, ReadOnly: cfg.Profile.ReadOnly,
 			Instruction: instruction, Selection: effectiveSelection, Evidence: evidence,
 			OnSession: func(id string) { mu.Lock(); sessionID = id; mu.Unlock() }}
         runResult, e := client.runtime.Run(runCtx, runRequest)
@@ -393,11 +401,12 @@ func executeTask(parent context.Context, slot int, client *Client, task ClaimedT
         phase = "TOOL_ERROR"
         publicationStarted = true
         result, e := workspace.finalize(task); if e != nil { return e }
-        if cfg.Profile.ResultKind == "WORKSPACE" && (result == nil || !validResultRevision(result.ResultRevision)) { return errors.New("WORKSPACE_RESULT_INVALID") }
+        if result != nil && !validResultRevision(result.ResultRevision) { return errors.New("GIT_RESULT_INVALID") }
         close(stopHeartbeat); <-heartbeatDone; heartbeatStarted = false
         mu.RLock(); leaseLost = lost; mu.RUnlock()
         if leaseLost || runCtx.Err() != nil { return errors.New("ATTEMPT_CANCELLED") }
         if e = evidence.record("report-posting", map[string]any{"reportStatus": "pending"}); e != nil { return e }
+        task.Handoff, e = workspace.handoff(task, report, result); if e != nil { return e }
         if e = workspace.cleanup(); e != nil { return e }; cleaned = true
         if e = evidence.finish("ready-to-report"); e != nil { return e }; finished = true
         if runCtx.Err() != nil { return runCtx.Err() }
@@ -543,7 +552,7 @@ func (c *Client) register(ctx context.Context) error {
 func completionReport(resultKind string, finalMessage string) (*CompletionReport, error) {
     summary := strings.TrimSpace(finalMessage)
     if summary == "" { return nil, errors.New("COMPLETION_REPORT_EMPTY") }
-    if resultKind == "REPORT" || resultKind == "WORKSPACE" { return &CompletionReport{Verdict: "PASS", Summary: summary}, nil }
+    if resultKind == "REPORT" || resultKind == "DELIVERY" { return &CompletionReport{Verdict: "PASS", Summary: summary}, nil }
     if resultKind != "VERDICT" { return nil, errors.New("RESULT_KIND_INVALID") }
     lines := strings.Split(summary, "\n")
     marker := strings.TrimSpace(lines[len(lines)-1])
@@ -591,7 +600,7 @@ func (c *Client) fail(ctx context.Context, task ClaimedTask, sessionID, failureR
 }
 
 func (c *Client) complete(ctx context.Context, task ClaimedTask, sessionID string, workspaceResult *WorkspaceResult, report *CompletionReport) error {
-	payload := map[string]any{"workerId": c.cfg.WorkerID, "leaseToken": task.LeaseToken, "externalSessionId": nullable(sessionID), "workspaceResult": workspaceResult, "report": report}
+	payload := map[string]any{"workerId": c.cfg.WorkerID, "leaseToken": task.LeaseToken, "externalSessionId": nullable(sessionID), "gitResult": workspaceResult, "handoff": task.Handoff, "report": report}
 	return c.post(ctx, "/tasks/"+url.PathEscape(task.TaskID)+"/complete", payload, nil)
 }
 
@@ -639,53 +648,8 @@ func (c *Client) postStatus(ctx context.Context, path string, payload any, out a
 	return resp.StatusCode, nil
 }
 
-func materializeWorkspace(ctx context.Context, cfg Config, task ClaimedTask, recorder *AttemptEvidence) (*GitWorkspace, error) {
-    if cfg.Profile.PrimarySkill == "goal-discussion" || task.SubjectType == "goal-discussion" {
-        if task.Workspace != nil { return nil, errors.New("GOAL_WORKSPACE_ASSIGNMENT_DENIED") }
-        directory, err := os.MkdirTemp("", "aiw-goal-")
-        if err != nil { return nil, err }
-        return &GitWorkspace{cfg: cfg, cwd: directory, ctx: ctx, recorder: recorder}, nil
-    }
-	if task.Workspace == nil {
-		return &GitWorkspace{cfg: cfg, cwd: cfg.FallbackWorkspace, ctx: ctx, recorder: recorder}, nil
-	}
-	repositoryRoot := task.Workspace.RepositoryPath
-	if repositoryRoot == "" && (cfg.RepositoryRef == "" || cfg.RepositoryRoot == "") {
-		return nil, errors.New("repository task claimed without AIW_REPOSITORY_REF/AIW_REPOSITORY_ROOT")
-	}
-	if repositoryRoot == "" && task.Workspace.RepositoryRef != cfg.RepositoryRef {
-		return nil, fmt.Errorf("repository mismatch: task=%s worker=%s", task.Workspace.RepositoryRef, cfg.RepositoryRef)
-	}
-	if repositoryRoot == "" { repositoryRoot = cfg.RepositoryRoot }
-	repositoryRoot, err := filepath.Abs(repositoryRoot)
-	if err != nil { return nil, err }
-	info, err := os.Stat(repositoryRoot)
-	if err != nil || !info.IsDir() { return nil, errors.New("WORKSPACE_DIRECTORY_INVALID") }
-	if task.Workspace.BaseRevision == "" {
-		return &GitWorkspace{cfg: cfg, cwd: repositoryRoot, repositoryRoot: repositoryRoot,
-			assignment: task.Workspace, ctx: ctx, recorder: recorder}, nil
-	}
-	release, lockErr := lockWorkspace(ctx, repositoryRoot); if lockErr != nil { return nil, lockErr }; defer release()
-    if err := fetchPublishedInputs(ctx, repositoryRoot, task); err != nil {
-		return nil, err
-	}
-	resolved, err := gitTextContext(ctx, repositoryRoot, "rev-parse", "--verify", task.Workspace.BaseRevision+"^{commit}")
-	if err != nil {
-		return nil, err
-	}
-	if strings.ToLower(strings.TrimSpace(resolved)) != strings.ToLower(task.Workspace.BaseRevision) {
-		return nil, fmt.Errorf("base revision mismatch: expected %s resolved %s", task.Workspace.BaseRevision, strings.TrimSpace(resolved))
-	}
-	if err := os.MkdirAll(cfg.WorktreeRoot, 0o755); err != nil {
-		return nil, err
-	}
-	cwd, err := filepath.Abs(filepath.Join(cfg.WorktreeRoot, task.Workspace.WorkspaceKey))
-    if err != nil || !childPath(cfg.WorktreeRoot, cwd) { return nil, errors.New("WORKSPACE_KEY_INVALID") }
-    if err = safeDirectories(filepath.Dir(cwd)); err != nil { return nil, err }
-	if _, err := gitTextContext(ctx, repositoryRoot, "worktree", "add", "-b", task.Workspace.BranchName, cwd, task.Workspace.BaseRevision); err != nil {
-		return nil, err
-	}
-	return &GitWorkspace{cfg: cfg, cwd: cwd, repositoryRoot: repositoryRoot, assignment: task.Workspace, ctx: ctx, recorder: recorder, owned: true}, nil
+func materializeWorkspace(ctx context.Context,cfg Config,task ClaimedTask,recorder *AttemptEvidence)(*GitWorkspace,error){
+    return preparePlanWorkspace(ctx,cfg,task,recorder)
 }
 
 func (w *GitWorkspace) finalize(task ClaimedTask) (*WorkspaceResult, error) {
@@ -693,7 +657,7 @@ func (w *GitWorkspace) finalize(task ClaimedTask) (*WorkspaceResult, error) {
 		return nil, nil
 	}
     if !w.cfg.Profile.ReadOnly {
-	if _, err := gitTextContext(w.ctx, w.cwd, "add", "-A"); err != nil {
+	if _, err := gitTextContext(w.ctx, w.cwd, "add", "-A", "--", ".", ":(exclude).ai", ":(exclude).ai/**"); err != nil {
 		return nil, err
 	}
 	raw, err := gitBytesContext(w.ctx, w.cwd, "diff", "--cached", "--name-only", "-z")
@@ -713,6 +677,7 @@ func (w *GitWorkspace) finalize(task ClaimedTask) (*WorkspaceResult, error) {
 		return nil, err
 	}
 	resultRevision := strings.ToLower(strings.TrimSpace(revision))
+    if w.cfg.Profile.ReadOnly && resultRevision != strings.ToLower(w.assignment.BaseRevision) { return nil, errors.New("READ_ONLY_REVISION_CHANGED") }
 	diffRaw, err := gitBytesContext(w.ctx, w.cwd, "diff", "--name-only", "-z", w.assignment.BaseRevision, resultRevision)
 	if err != nil {
 		return nil, err
@@ -742,11 +707,8 @@ func fetchPublishedInputs(ctx context.Context, repositoryRoot string, task Claim
 }
 
 func (w *GitWorkspace) cleanup() error {
-    if w == nil || w.assignment == nil || !w.owned { return nil }
-    ctx, cancel := context.WithTimeout(context.Background(), time.Duration(positiveInt("AIW_WORKER_CLEANUP_TIMEOUT_MS", 10000))*time.Millisecond); defer cancel()
-    _, err := gitTextContext(ctx, w.repositoryRoot, "worktree", "remove", "--force", w.cwd)
-    status := "completed"; if err != nil { status = "preserved" }
-    return w.recorder.record("workspace-cleanup", map[string]any{"status": status})
+    if w!=nil && w.planRelease!=nil { w.planRelease() }
+    return nil
 }
 func gitText(cwd string, args ...string) (string, error) {
 	b, err := gitBytes(cwd, args...)
@@ -866,10 +828,10 @@ func loadRoleProfile(path string) RoleProfile {
 	if len(p.AllowedTaskTypes) != 1 || p.AllowedTaskTypes[0] != "EXTERNAL_WORK" {
 		panic("invalid AIW_PROCESS_PROFILE: allowedTaskTypes must be [EXTERNAL_WORK]")
 	}
-	if p.ResultKind != "REPORT" && p.ResultKind != "VERDICT" && p.ResultKind != "WORKSPACE" {
+	if p.ResultKind != "REPORT" && p.ResultKind != "VERDICT" && p.ResultKind != "DELIVERY" {
 		panic("invalid AIW_PROCESS_PROFILE: unknown resultKind")
 	}
-	if (p.ResultKind == "WORKSPACE") != !p.ReadOnly {
+	if (p.ResultKind == "DELIVERY") != !p.ReadOnly {
 		panic("invalid AIW_PROCESS_PROFILE: resultKind conflicts with readOnly")
 	}
 	return p

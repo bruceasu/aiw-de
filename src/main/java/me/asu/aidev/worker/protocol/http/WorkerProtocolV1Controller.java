@@ -34,6 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/r1/worker-protocol/v1")
 public class WorkerProtocolV1Controller {
+    @Autowired private me.asu.aidev.workflow.application.PlanLocations locations;
+    @Autowired private me.asu.aidev.execution.application.TaskHandoffs handoffs;
     private me.asu.aidev.execution.skills.SkillFiles skillFiles;
     @Autowired public void setSkillFiles(me.asu.aidev.execution.skills.SkillFiles value) { skillFiles=value; }
     private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
@@ -125,7 +127,7 @@ public class WorkerProtocolV1Controller {
     }
 
     public record WorkspaceBaselineRequest(String workerId,String leaseToken,String baseRevision) {}
-    @PostMapping("/tasks/{taskId}/workspace-baseline")
+    // Baseline pinning is Worker-local; no public endpoint.
     public me.asu.aidev.execution.domain.WorkspaceAssignment pinBaseline(@PathVariable String taskId,@RequestBody WorkspaceBaselineRequest request) {
         return executions.pinWorkspaceBaseline(new TaskId(taskId),new WorkerId(required(request.workerId(),"workerId")),
                 new LeaseToken(required(request.leaseToken(),"leaseToken")),request.baseRevision());
@@ -144,22 +146,24 @@ public class WorkerProtocolV1Controller {
                 new LeaseToken(required(request.leaseToken(), "leaseToken")));
     }
 
+    @org.springframework.transaction.annotation.Transactional
     @PostMapping("/tasks/{taskId}/complete")
     public CompletionResponse complete(@PathVariable String taskId, @RequestBody CompleteTaskRequest request) {
-        WorkspaceResult workspaceResult = request.workspaceResult() == null ? null : new WorkspaceResult(
-                request.workspaceResult().resultRevision(), request.workspaceResult().changedFiles(),
-                request.workspaceResult().publicationRef());
+        WorkspaceResult workspaceResult = request.gitResult() == null ? null : new WorkspaceResult(
+                request.gitResult().resultRevision(), request.gitResult().changedFiles(),
+                request.gitResult().publicationRef());
         CompletionReport report = request.report() == null ? null : new CompletionReport(
                 CompletionVerdict.valueOf(required(request.report().verdict(), "report.verdict")),
                 required(request.report().summary(), "report.summary"));
+        if(request.report()==null) throw new IllegalArgumentException("Completion report required");
         if(executions.replayedGuardedCompletion(new TaskId(taskId),new WorkerId(required(request.workerId(),"workerId")),new LeaseToken(required(request.leaseToken(),"leaseToken")),workspaceResult,report))
-            return new CompletionResponse(taskId,List.of(),List.of());
-        if (outputs != null) outputs.ensureReport(taskId, request.workerId(), request.leaseToken(), report, workspaceResult);
+        { handoffs.verifyReplay(request.leaseToken(),request.handoff()); return new CompletionResponse(taskId,List.of(),List.of()); }
+        handoffs.record(taskId,request.workerId(),request.leaseToken(),request.handoff());
         TaskCompletionResult result = executions.complete(
                 new TaskId(taskId), new WorkerId(required(request.workerId(), "workerId")),
                 new LeaseToken(required(request.leaseToken(), "leaseToken")),
                 request.externalSessionId(), workspaceResult, report);
-        if (outputs != null) outputs.observe(request.leaseToken());
+
         return new CompletionResponse(
                 result.completedTaskId().value(),
                 result.newlyReadyTaskIds().stream().map(TaskId::value).toList(),
@@ -171,39 +175,22 @@ public class WorkerProtocolV1Controller {
         executions.fail(new TaskId(taskId), new WorkerId(required(request.workerId(), "workerId")),
                 new LeaseToken(required(request.leaseToken(), "leaseToken")),
                 request.externalSessionId(), request.failureReason(), request.failureCategory());
-        if (outputs != null) outputs.observe(request.leaseToken());
+
     }
 
-    private ClaimedTaskResponse toResponse(ClaimedTask claimed, String runtimeType) {
-        var task = claimed.task();
-        var lease = claimed.lease();
-        return new ClaimedTaskResponse(
-                task.id().value(),
-                task.type().name(),
-                task.subjectType(),
-                task.subjectId(),
-                task.requiredCapabilities(),
-                task.skillRef(),
-                task.instruction(),
-                task.instructionRevision(),
-                task.priority().value(),
-                claimed.attemptId().value(),
-                claimed.attemptNo(),
-                lease.token().value(),
-                lease.acquiredAt(),
-                lease.expiresAt(),
-                workspaceResponse(claimed),
-                claimed.inputs().stream().map(input -> new TaskInputResponse(
-                        input.taskId().value(), input.taskType().name(), input.repositoryRef(), input.baseRevision(),
-                        input.resultRevision(), input.publicationRef(), input.changedFiles(),
-                        input.completionVerdict() == null ? null : input.completionVerdict().name(),
-                        input.completionSummary(), input.attemptId())).toList(),
-                configurations!=null && configurations.managed(task.id().value()) ? configurations.binding(task.id().value()).guidance()
-                    : goalPolicy != null && goalPolicy.managed(task) ? goalPolicy.guidance(task, runtimeType)
-                    : recommendationPolicy != null && recommendationPolicy.managed(task) ? recommendationPolicy.guidance(task, runtimeType)
-                        : delegatedGuidance(task,runtimeType,claimed.attemptNo()),
-                outputs == null ? null : outputs.store(task, claimed.attemptId().value(), claimed.inputs()),
-                configurations!=null && configurations.managed(task.id().value()) ? null : workflowAiPreferences == null ? null : workflowAiPreferences.forTask(task),
+    private ClaimedTaskResponse toResponse(ClaimedTask claimed,String runtimeType) {
+        var task=claimed.task();var lease=claimed.lease();
+        return new ClaimedTaskResponse(task.id().value(),task.type().name(),task.subjectType(),task.subjectId(),
+                task.requiredCapabilities(),task.skillRef(),task.instruction(),task.instructionRevision(),task.priority().value(),
+                claimed.attemptId().value(),claimed.attemptNo(),lease.token().value(),lease.acquiredAt(),lease.expiresAt(),
+                task.subjectId(),locations.forTask(task),"aiw.handoff.v1",
+                claimed.inputs().stream().map(input->new TaskInputResponse(input.taskId().value(),input.taskType().name(),
+                    input.completionVerdict()==null?null:input.completionVerdict().name(),input.completionSummary(),input.attemptId(),handoffs.input(input.attemptId()))).toList(),
+                configurations!=null && configurations.managed(task.id().value())?configurations.binding(task.id().value()).guidance()
+                    :goalPolicy!=null && goalPolicy.managed(task)?goalPolicy.guidance(task,runtimeType)
+                    :recommendationPolicy!=null && recommendationPolicy.managed(task)?recommendationPolicy.guidance(task,runtimeType)
+                    :delegatedGuidance(task,runtimeType,claimed.attemptNo()),
+                configurations!=null && configurations.managed(task.id().value())?null:workflowAiPreferences==null?null:workflowAiPreferences.forTask(task),
                 configurations==null?null:configurations.payload(task.id().value(),claimed.attemptId().value()),
                 skillFiles==null?null:skillFiles.payload(task.id().value(),claimed.attemptId().value()));
     }
@@ -213,18 +200,7 @@ public class WorkerProtocolV1Controller {
         return delegationPolicy==null?normal:delegationPolicy.guidance(task,runtime,normal);
     }
 
-    private WorkspaceResponse workspaceResponse(ClaimedTask claimed) {
-        var assignment = claimed.workspace();
-        if (assignment == null) return null;
-        var location = workspaceRegistry == null ? null : workspaceRegistry.location(assignment.repositoryRef());
-        return new WorkspaceResponse(assignment.repositoryRef(), assignment.baseRevision(),
-                assignment.workspaceKey(), assignment.branchName(),
-                location == null ? null : location.workspaceId(),
-                location == null ? null : location.workspaceName(),
-                location == null ? null : location.workspaceRoot().toString(),
-                location == null ? null : location.repositoryPath().toString(),
-                assignment.baseRevision() == null ? "DIRECT" : "GIT_WORKTREE");
-    }
+
 
     private static WorkerId workerId(LeaseActionRequest request) {
         return new WorkerId(required(request.workerId(), "workerId"));
@@ -253,83 +229,20 @@ public class WorkerProtocolV1Controller {
             this(workerId, leaseToken, externalSessionId, failureReason, null);
         }
     }
-    public record CompleteTaskRequest(
-            String workerId, String leaseToken, String externalSessionId,
-            WorkspaceResultRequest workspaceResult, CompletionReportRequest report) {
-        public CompleteTaskRequest(String workerId, String leaseToken, String externalSessionId,
-                                   WorkspaceResultRequest workspaceResult) {
-            this(workerId, leaseToken, externalSessionId, workspaceResult, null);
-        }
-    }
-    public record CompletionReportRequest(String verdict, String summary) {}
-    public record WorkspaceResultRequest(String resultRevision, List<String> changedFiles, String publicationRef) {
-        public WorkspaceResultRequest(String resultRevision, List<String> changedFiles) {
-            this(resultRevision, changedFiles, null);
-        }
-    }
-    public record WorkspaceResponse(String repositoryRef, String baseRevision, String workspaceKey, String branchName,
-                                    String workspaceId, String workspaceName, String workspaceRoot,
-                                    String repositoryPath, String mode) {
-        public WorkspaceResponse(String repositoryRef, String baseRevision, String workspaceKey, String branchName) {
-            this(repositoryRef, baseRevision, workspaceKey, branchName, null, null, null, null,
-                    baseRevision == null ? "DIRECT" : "GIT_WORKTREE");
-        }
-    }
-    public record TaskInputResponse(String taskId, String taskType, String repositoryRef, String baseRevision,
-                                    String resultRevision, String publicationRef, List<String> changedFiles,
-                                    String completionVerdict, String completionSummary, String attemptId) {
-        public TaskInputResponse(String taskId, String taskType, String repositoryRef, String baseRevision,
-                String resultRevision, String publicationRef, List<String> changedFiles,
-                String completionVerdict, String completionSummary) {
-            this(taskId, taskType, repositoryRef, baseRevision, resultRevision, publicationRef,
-                    changedFiles, completionVerdict, completionSummary, null);
-        }
-    }
-    public record CompletionResponse(String taskId, List<String> newlyReadyTaskIds, List<String> generatedTaskIds) {}
-    public record ClaimedTaskResponse(
-            String taskId,
-            String taskType,
-            String subjectType,
-            String subjectId,
-            Set<String> requiredCapabilities,
-            String skillRef,
-            String instruction,
-            int instructionRevision,
-            int priority,
-            String attemptId,
-            int attemptNo,
-            String leaseToken,
-            Instant leaseAcquiredAt,
-            Instant leaseExpiresAt,
-            WorkspaceResponse workspace,
-            List<TaskInputResponse> inputs,
+    public record CompleteTaskRequest(String workerId,String leaseToken,String externalSessionId,
+            GitResultRequest gitResult,CompletionReportRequest report,
+            me.asu.aidev.execution.application.TaskHandoffs.Reference handoff) {}
+    public record CompletionReportRequest(String verdict,String summary) {}
+    public record GitResultRequest(String resultRevision,List<String> changedFiles,String publicationRef) {}
+    public record TaskInputResponse(String taskId,String taskType,String completionVerdict,String completionSummary,
+            String attemptId,me.asu.aidev.execution.application.TaskHandoffs.Input handoff) {}
+    public record CompletionResponse(String taskId,List<String> newlyReadyTaskIds,List<String> generatedTaskIds) {}
+    public record ClaimedTaskResponse(String taskId,String taskType,String subjectType,String subjectId,
+            Set<String> requiredCapabilities,String skillRef,String instruction,int instructionRevision,int priority,
+            String attemptId,int attemptNo,String leaseToken,Instant leaseAcquiredAt,Instant leaseExpiresAt,
+            String planId,String location,String handoffProtocol,List<TaskInputResponse> inputs,
             AiProfileCatalog.Guidance aiGuidance,
-            me.asu.aidev.output.application.TaskOutputService.Store outputStore,
             me.asu.aidev.workflow.application.WorkflowAiPreferences.Preferences aiPreferences,
             me.asu.aidev.execution.config.ConfigurationContract.Payload executionConfiguration,
-            me.asu.aidev.execution.skills.SkillFileContract.Payload skillFiles) {
-        public ClaimedTaskResponse(String taskId,String taskType,String subjectType,String subjectId,Set<String> requiredCapabilities,String skillRef,String instruction,int instructionRevision,
-                int priority,String attemptId,int attemptNo,String leaseToken,Instant leaseAcquiredAt,Instant leaseExpiresAt,WorkspaceResponse workspace,List<TaskInputResponse> inputs,
-                AiProfileCatalog.Guidance aiGuidance,me.asu.aidev.output.application.TaskOutputService.Store outputStore,me.asu.aidev.workflow.application.WorkflowAiPreferences.Preferences aiPreferences) {
-            this(taskId,taskType,subjectType,subjectId,requiredCapabilities,skillRef,instruction,instructionRevision,priority,attemptId,attemptNo,leaseToken,leaseAcquiredAt,leaseExpiresAt,workspace,inputs,aiGuidance,outputStore,aiPreferences,null,null);
-        }
-        public ClaimedTaskResponse(String taskId, String taskType, String subjectType, String subjectId,
-                Set<String> requiredCapabilities, String skillRef, String instruction, int instructionRevision,
-                int priority, String attemptId, int attemptNo, String leaseToken, Instant leaseAcquiredAt,
-                Instant leaseExpiresAt, WorkspaceResponse workspace, List<TaskInputResponse> inputs,
-                AiProfileCatalog.Guidance aiGuidance, me.asu.aidev.output.application.TaskOutputService.Store outputStore) {
-            this(taskId, taskType, subjectType, subjectId, requiredCapabilities, skillRef, instruction,
-                    instructionRevision, priority, attemptId, attemptNo, leaseToken, leaseAcquiredAt,
-                    leaseExpiresAt, workspace, inputs, aiGuidance, outputStore, null);
-        }
-        public ClaimedTaskResponse(String taskId, String taskType, String subjectType, String subjectId,
-                Set<String> requiredCapabilities, String skillRef, String instruction, int instructionRevision,
-                int priority, String attemptId, int attemptNo, String leaseToken, Instant leaseAcquiredAt,
-                Instant leaseExpiresAt, WorkspaceResponse workspace, List<TaskInputResponse> inputs,
-                AiProfileCatalog.Guidance aiGuidance) {
-            this(taskId, taskType, subjectType, subjectId, requiredCapabilities, skillRef, instruction,
-                    instructionRevision, priority, attemptId, attemptNo, leaseToken, leaseAcquiredAt,
-                    leaseExpiresAt, workspace, inputs, aiGuidance, null);
-        }
-    }
+            me.asu.aidev.execution.skills.SkillFileContract.Payload skillFiles) {}
 }

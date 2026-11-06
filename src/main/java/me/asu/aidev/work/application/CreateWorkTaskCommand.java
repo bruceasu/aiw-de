@@ -32,7 +32,7 @@ public record CreateWorkTaskCommand(
         if (repositoryRef == null && baseRevision != null) {
             throw new IllegalArgumentException("baseRevision requires repositoryRef");
         }
-        if (repositoryRef != null && !repositoryRef.contains("/")) capabilities.add("repo:" + repositoryRef);
+        // Repository hints do not imply machine-local scheduling capabilities.
         requiredCapabilities = Set.copyOf(capabilities);
         dependencies = dependencies == null ? Set.of() : Set.copyOf(dependencies);
         instruction = instruction == null ? "" : instruction.strip();

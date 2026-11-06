@@ -102,7 +102,7 @@ public class WorkflowEditorController {
     public String newPage(HttpSession session, Model model) {
         security.requireOperator(session);
         model.addAttribute("page", "plans");
-        model.addAttribute("workspaceTargets", workspaces.targets());
+        model.addAttribute("workspaceTargets", java.util.List.of());
         return "ui/plan-editor";
     }
 
@@ -261,10 +261,18 @@ public class WorkflowEditorController {
         requireWrite(session);
         return plans.editDraft(id,request.version(),request.plan(),security.actor(session));
     }
-    @PostMapping("/api/r1/plan-editor/plans/{id}/execution-target") @ResponseBody
-    public WorkflowPlan target(@PathVariable String id,@RequestBody DraftTarget request,HttpSession session) {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.workflow.application.PlanLocations planLocations;
+    @GetMapping("/api/r1/plan-editor/plans/{id}/location") @ResponseBody
+    public me.asu.aidev.workflow.application.PlanLocations.View location(@PathVariable String id) {
+        requireEnabled(); plans.get(id);
+        return planLocations.view(id);
+    }
+    @PostMapping("/api/r1/plan-editor/plans/{id}/location/cleanup") @ResponseBody
+    public java.util.Map<String,String> cleanupLocation(@PathVariable String id,HttpSession session) {
         requireWrite(session);
-        return plans.retargetDraft(id,request.version(),request.repositoryRef(),request.baseRevision(),security.actor(session));
+        if(!plans.get(id).createdBy().equals(security.actor(session))) throw new SecurityException("Plan owner required");
+        planLocations.cleanup(id);
+        return java.util.Map.of("state","CLEANED");
     }
 
     @PostMapping("/api/r1/plan-editor/plans/{id}/withdraw")
@@ -377,23 +385,9 @@ public class WorkflowEditorController {
         // Plans are the only supported execution flow.
     }
 
-    @GetMapping("/api/r1/plan-editor/plans/{id}/git-delivery/preview")
-    @ResponseBody
-    public me.asu.aidev.workflow.application.WorkflowGitDeliveryService.Preview gitDeliveryPreview(
-            @PathVariable String id, @RequestParam String repositoryRef, HttpSession session) {
-        requireWrite(session);
-        return gitDelivery.preview(id,repositoryRef);
-    }
 
-    @PostMapping("/api/r1/plan-editor/plans/{id}/git-delivery/merge")
-    @ResponseBody
-    public me.asu.aidev.workflow.application.WorkflowGitDeliveryService.View mergeGitDelivery(
-            @PathVariable String id,
-            @RequestBody me.asu.aidev.workflow.application.WorkflowGitDeliveryService.MergeRequest request,
-            HttpSession session) {
-        requireWrite(session);
-        return gitDelivery.merge(id,request,security.actor(session));
-    }
+
+
 
     private void requireWrite(HttpSession session) {
         requireEnabled();

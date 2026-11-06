@@ -161,7 +161,7 @@ public class ExecutionConfigurations {
         var m=catalogue.methods().stream().filter(method->method.role().equals(role)).findFirst().orElseThrow(()->new IllegalArgumentException("Unknown default software method"));
         var ids=new LinkedHashSet<>(m.method().protocolSkills());ids.add(m.method().primarySkill());
         var refs=ids.stream().map(name->catalogue.assets().stream().filter(a->a.ref().equals(name)).findFirst().orElseThrow().reference()).toList();
-        var tools=new HashSet<>(Set.of(GuardContract.Tool.MODEL,GuardContract.Tool.READ,GuardContract.Tool.SEARCH,GuardContract.Tool.GIT,GuardContract.Tool.QUESTION));
+        var tools=new HashSet<>(Set.of(GuardContract.Tool.MODEL,GuardContract.Tool.READ,GuardContract.Tool.SEARCH));
         if(!m.method().readOnly()) tools.add(GuardContract.Tool.WRITE);
         if(Set.of("verifier","integration-verifier").contains(role)) tools.add(GuardContract.Tool.COMMAND);
         return new Candidate("default-"+role+"-"+AuthorityRepository.hash(repository).substring(0,12),1,owner,repository,m.category(),m.method(),refs,List.of(),tools,

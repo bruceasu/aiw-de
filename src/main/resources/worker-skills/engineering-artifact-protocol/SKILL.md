@@ -31,7 +31,7 @@ Treat the Java domain model as runtime authority. Do not create a second artifac
 5. Preserve exact upstream artifact and repository revision references used to reach a result.
 6. Never use conversation/session history as handoff authority. Persist structured artifacts and handoffs.
 7. Requirement scope is business scope. Repository scope belongs to executable engineering work.
-8. One implementation WorkItem has one writable primary repository in R2 v1. Reference repositories are read-only unless Java policy explicitly says otherwise.
+8. Follow the assigned task scope at the Plan location. Git is optional. The location may contain zero, one or several repositories; read-only references remain read-only.
 9. Skills never grant permissions. Permission is owned by Java policy, ExecutionContract, and runtime sandbox.
 10. Do not rely on the agent being able to read `.agent/skills` or another Skill directory. Java delivers resolved Skill context.
 
@@ -60,8 +60,8 @@ Record exact references used by the result:
 
 - Artifact `RevisionRef`
 - accepted baseline ID/hash when supplied by Java
-- primary repository ID and exact Git revision
-- reference repository IDs and exact Git revisions when actually read
+- Plan location and any explicit repository/version requirements
+- reference inputs and versions when actually used
 - WorkItem / WorkPackage / ExecutionSnapshot identifiers supplied by Java
 
 Never replace an exact ref with `latest`, a filename, a branch name, or conversational recency.

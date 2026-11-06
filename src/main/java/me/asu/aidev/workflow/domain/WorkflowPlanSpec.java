@@ -12,10 +12,13 @@ import me.asu.aidev.work.domain.TaskType;
 import me.asu.aidev.work.domain.WorkTask;
 
 /** A bounded, explicitly selected delegation graph; a proposal never grants execution authority. */
-public record WorkflowPlanSpec(String goal, Source source, List<Step> steps) {
+public record WorkflowPlanSpec(String goal, Source source, List<Step> steps, String location) {
+    public WorkflowPlanSpec(String goal,Source source,List<Step> steps) { this(goal,source,steps,null); }
     public enum Source { MANAGER, AI }
 
     public WorkflowPlanSpec {
+        location=location==null || location.isBlank()?null:location.strip();
+        if(location!=null && (location.length()>4096 || location.indexOf(0)>=0)) throw new IllegalArgumentException("Invalid location");
         if (goal == null || goal.isBlank() || goal.length() > 16_384) {
             throw new IllegalArgumentException("goal must contain 1 to 16384 characters");
         }

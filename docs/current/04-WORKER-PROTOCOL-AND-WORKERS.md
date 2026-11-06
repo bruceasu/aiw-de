@@ -193,24 +193,13 @@ UI-managed Workspace targets are assigned by the Control Plane and do not requir
 
 The Java and Go workers are useful when minimal runtime dependencies are desired. The Java reference worker uses only JDK facilities plus external `git` and `codex` executables.
 
-## 7. Workspace contract
+## 7. Plan location and handoff contract
 
-When the claim contains `workspace`, it includes `workspaceId`, `workspaceName`, `workspaceRoot`, `repositoryPath`, and `mode` alongside `repositoryRef`, `baseRevision`, `workspaceKey`, and `branchName`. UI-managed targets send an absolute local path. `mode=DIRECT` has null `baseRevision` and `branchName`; the worker executes in `repositoryPath` and reports null `workspaceResult`. Directory permissions decide whether writes succeed.
+Claims supply planId, location and handoffProtocol=aiw.handoff.v1. The Control Plane passes declared locations without filesystem/Git checks, or creates a Plan temporary directory. Workers prepare the environment, coordinate directory access and normally create isolated worktrees for a single repository. Multi-repository directories run directly and serially; different locations may run concurrently.
 
-For `mode=GIT_WORKTREE`:
+Workers write report.md and manifest.json under `.ai/handoffs/<task-hash>/<attempt-hash>/` and complete with a manifest path and SHA-256. Optional Git metadata uses gitResult. Changed source files are not uploaded. Dependent tasks receive the exact producing attempt's handoff reference, and the receiving Worker validates it.
 
-1. verify the assigned `repositoryRef`;
-2. fetch compatible upstream publication refs when supplied;
-3. verify the immutable `baseRevision` exists;
-4. create an attempt-specific Git worktree/branch;
-5. run the AI runtime inside that worktree;
-6. commit remaining changes;
-7. compute the complete `baseRevision..resultRevision` changed-file set;
-8. optionally publish the result branch;
-9. report the `WorkspaceResult`;
-10. remove the local worktree.
-
-The Control Plane stores paths for UI-managed local Workspaces because version 1 runs workers on the same machine. Legacy YAML targets remain supported.
+See [the full contract](../PLAN-LOCATIONS-AND-HANDOFFS.md) for ownership, retention and cleanup rules.
 
 ## 8. Important environment variables for workers
 

@@ -187,7 +187,7 @@ public class TaskClaimService {
                     .toList();
             return Optional.of(new ClaimedTask(
                     claimedTask, lease.orElseThrow(), attemptId, attemptNo,
-                    WorkspaceAssignment.forTask(claimedTask, attemptNo), inputs));
+                    null, inputs));
         }
         return Optional.empty();
     }

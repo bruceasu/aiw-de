@@ -31,7 +31,7 @@ The system SHALL create immutable formal goal snapshots. Missing information SHA
 - **AND** no execution is started
 
 ### Requirement: Explicit execution preparation
-The system SHALL require explicit handoff confirmation before saving an operator-visible execution plan. Missing coding workspaces SHALL be created under a managed root during execution preparation, initialized with Git when available and retained afterward. The saved WorkflowPlan SHALL satisfy existing validation and require a separate execution confirmation.
+The system SHALL require explicit handoff confirmation before saving an operator-visible execution plan. A Plan location SHALL be optional; when omitted, the Control Plane SHALL allocate a temporary directory for the whole Plan without initializing Git or registering a Workspace. Workers SHALL prepare the execution environment and report shared handoff references. The saved WorkflowPlan SHALL require a separate execution confirmation.
 
 #### Scenario: Repeated preparation
 - **WHEN** the same formal version is prepared again

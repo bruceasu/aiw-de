@@ -52,9 +52,9 @@ def load_profile(path: Path) -> ProcessProfile:
         raise ValueError(f"invalid profile {path}: readOnly must be a boolean")
     if data["allowedTaskTypes"] != ["EXTERNAL_WORK"]:
         raise ValueError(f"invalid profile {path}: allowedTaskTypes must be [EXTERNAL_WORK]")
-    if data["resultKind"] not in {"REPORT", "VERDICT", "WORKSPACE"}:
+    if data["resultKind"] not in {"REPORT", "VERDICT", "DELIVERY"}:
         raise ValueError(f"invalid profile {path}: unknown resultKind")
-    if (data["resultKind"] == "WORKSPACE") != (not data["readOnly"]):
+    if (data["resultKind"] == "DELIVERY") != (not data["readOnly"]):
         raise ValueError(f"invalid profile {path}: resultKind conflicts with readOnly")
     return ProcessProfile(
         name=data["name"], worker_id_prefix=data["workerIdPrefix"],

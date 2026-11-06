@@ -24,7 +24,7 @@ def metadata(config):
     if CAPABILITY not in config.capabilities or "execution-guard-v1" not in config.capabilities:
         raise RuntimeError("CONFIGURATION_ADAPTER_NOT_VERIFIED")
     root = Path(__file__).resolve().parent
-    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_text_runtime.py", "guarded_openai_tools.py", "process_worker.py", "worker_runtime.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py")
+    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_text_runtime.py", "guarded_openai_tools.py", "process_worker.py", "worker_runtime.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py", "plan_workspace.py")
     versions = {"broker": _digest({name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names})}
     if config.runtime == "openai-agents":
         versions.update({name: importlib.metadata.version(name) for name in ("openai-agents", "openai")})
@@ -59,6 +59,7 @@ class Prepared:
     profile: ProcessProfile
 
     def verify_context(self, context):
+        if self.candidate["repositoryRef"] != context["snapshot"]["task"].get("repositoryRef"): raise RuntimeError("CONFIGURATION_SCOPE_MISMATCH")
         if context.get("configurationDigest") != self.reference["digest"]: raise RuntimeError("FIXED_CONFIGURATION_CHANGED")
         expected = {(a["kind"], a["ref"], a["version"], a["digest"]) for a in self.assets}
         expected.add(("configuration", self.reference["id"], str(self.reference["revision"]), self.reference["digest"]))
@@ -104,10 +105,10 @@ def load(config, task):
     _keys(candidate, ("id", "revision", "ownerId", "repositoryRef", "category", "method", "skills", "knowledge", "toolRequirements", "outputContract", "source"))
     if content["protocol"] != PROTOCOL or any(candidate[key] != ref[key] for key in ("id", "revision", "skills", "knowledge")) or set(candidate["toolRequirements"]) != set(ref["toolRequirements"]):
         raise RuntimeError("PREPARED_CONFIGURATION_REFERENCE_MISMATCH")
-    if candidate["repositoryRef"] != (task.get("workspace") or {}).get("repositoryRef"): raise RuntimeError("CONFIGURATION_REPOSITORY_SCOPE_MISMATCH")
+    # Scope identity is verified against the frozen execution context by GuardBroker.
     method = candidate["method"]
     _keys(method, ("name", "workerIdPrefix", "roleCapability", "allowedTaskTypes", "protocolSkills", "primarySkill", "instruction", "readOnly", "resultKind"))
-    if type(method["readOnly"]) is not bool or method["allowedTaskTypes"] != ["EXTERNAL_WORK"] or method["resultKind"] not in {"REPORT", "VERDICT", "WORKSPACE"} or method["readOnly"] == (method["resultKind"] == "WORKSPACE") or ref["resultKind"] != method["resultKind"]:
+    if type(method["readOnly"]) is not bool or method["allowedTaskTypes"] != ["EXTERNAL_WORK"] or method["resultKind"] not in {"REPORT", "VERDICT", "DELIVERY"} or method["readOnly"] == (method["resultKind"] == "DELIVERY") or ref["resultKind"] != method["resultKind"]:
         raise RuntimeError("CONFIGURATION_OUTPUT_CONTRACT_INVALID")
     if task.get("taskType") != "EXTERNAL_WORK" or task.get("skillRef") != method["primarySkill"]: raise RuntimeError("CONFIGURATION_TASK_MISMATCH")
     expected = {("skill", a["ref"], a["version"], a["digest"]) for a in ref["skills"]}
@@ -123,7 +124,7 @@ def load(config, task):
         actual.add(identity)
     if actual != expected or set(a["ref"] for a in ref["skills"]) != set([*method["protocolSkills"], method["primarySkill"]]): raise RuntimeError("CONFIGURATION_SKILL_BINDING_INVALID")
     tools = set(ref["toolRequirements"])
-    if tools - {"READ", "SEARCH", "WRITE", "GIT", "COMMAND", "MODEL", "QUESTION"} or not {"GIT", "MODEL"}.issubset(tools) or ("WRITE" in tools) == method["readOnly"]:
+    if tools - {"READ", "SEARCH", "WRITE", "GIT", "COMMAND", "MODEL", "QUESTION"} or "MODEL" not in tools or ("WRITE" in tools) == method["readOnly"]:
         raise RuntimeError("CONFIGURATION_TOOL_REQUIREMENT_INVALID")
     if "COMMAND" in tools and "guarded-command-linux-v1" not in config.capabilities: raise RuntimeError("CONFIGURATION_COMMAND_ADAPTER_REQUIRED")
     if task.get("aiPreferences"): raise RuntimeError("PREPARED_AI_PROFILE_CANNOT_BE_OVERRIDDEN")

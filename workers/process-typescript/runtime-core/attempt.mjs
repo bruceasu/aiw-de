@@ -1,3 +1,4 @@
+import { writeHandoff } from "./plan.mjs";
 import path from "node:path";
 import { EvidenceRecorder } from "./evidence.mjs";
 import { ContextAssembler } from "./context.mjs";
@@ -99,7 +100,7 @@ export class ControlPlaneClient {
   async acknowledgeStop(task) { return await this.action(task, "stop-acknowledgement", {}); }
   async fail(task, externalSessionId, failureReason = null, category = "UNKNOWN") { return await this.action(task, "fail", { externalSessionId, failureReason, failureCategory: category }); }
   async complete(task, externalSessionId, workspaceResult, report, signal) {
-    return await this.action(task, "complete", { externalSessionId, workspaceResult,
+    return await this.action(task, "complete", { externalSessionId, gitResult: workspaceResult, handoff: task.handoff,
       report: report ? { verdict: report.verdict, summary: report.summary } : report }, signal);
   }
   async registerOutputs(task, report, files, resultRevision, signal) {
@@ -175,15 +176,6 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
       heartbeatPromise.catch(() => attempt.cancel("critical-evidence"));
     }, cfg.heartbeatMs);
     const profile = adapter.profile(task);
-    if (profile.resultKind === "WORKSPACE" && (!task.workspace || (task.workspace.baseRevision != null && !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(task.workspace.baseRevision)))) {
-      throw new RuntimeFault("WRITABLE_WORKSPACE_REQUIRED", "CONFIGURATION");
-    }
-    if (profile.resultKind === "VERDICT") {
-      const revisions = new Set((task.inputs ?? []).map(input => input.resultRevision).filter(Boolean));
-      if (revisions.size && (revisions.size !== 1 || !revisions.has(task.workspace?.baseRevision))) {
-        throw new RuntimeFault("UPSTREAM_REVISION_MISMATCH", "CONFIGURATION");
-      }
-    }
     const context = new ContextAssembler({ maxInputBytes: cfg.maxInputBytes ?? 1024 * 1024, recorder: attempt.recorder, signal: attempt.signal });
     context.source(`cp-inputs:${task.taskId}`, JSON.stringify({ taskType: task.taskType, instruction: task.instruction, skillRef: task.skillRef, inputs: task.inputs }), "control-plane-inputs");
     await attempt.step("prepare", async () => {
@@ -193,7 +185,9 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
     const { collectOutputFiles, readOutputInputs, publicationSnapshot, validatePublication } = await import("./outputs.mjs");
     const outputInputs = await attempt.step("prepare-output-inputs", () => readOutputInputs(client, task, context, attempt.signal));
     const publicationBefore = await attempt.step("prepare-publication", () => publicationSnapshot(task, workspace.cwd, attempt.signal));
-    const prompt = adapter.prompt({ ...task, outputInputs }, context);
+    const prompt = adapter.prompt({ ...task, outputInputs }, context)
+      + `\nShared Plan location: ${workspace.plan.root}\nActual working directory: ${workspace.cwd}\nVerified handoff manifests:\n${JSON.stringify(task.handoffInputs)}`;
+    if (Buffer.byteLength(prompt, "utf8") > (cfg.maxInputBytes ?? 1024 * 1024)) throw new RuntimeFault("CONTEXT_BUDGET_EXCEEDED");
     phase = "MODEL_ERROR";
     const result = await attempt.step("execute", () => adapter.execute({ task, workspace, profile, prompt, context, attempt, selection: selection?.profile,
       onSession: id => { sessionId = id; } }));
@@ -202,7 +196,7 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
     adapter.assertSuccessful?.();
     phase = "OUTPUT_INVALID";
     const report = await attempt.step("validate-report", async () => {
-      const value = adapter.report(profile.resultKind, result, Boolean(task.outputStore));
+      const value = adapter.report(profile.resultKind, result, true);
       await workspace.validateReadOnly(profile.readOnly);
       if (!profile.readOnly) await validatePublication(task, outputInputs, publicationBefore, workspace.cwd, attempt.signal);
       await attempt.recorder.record("report-validated", { verdict: value?.verdict ?? "not-required", digest: adapter.digest?.(result), status: "valid" });
@@ -219,31 +213,7 @@ export async function runClaimedAttempt(cfg, client, task, adapter) {
         }
       });
     }
-    if (profile.resultKind === "WORKSPACE") {
-      if (task.workspace.baseRevision == null) {
-        if (workspaceResult !== null) throw new RuntimeFault("DIRECT_WORKSPACE_RESULT_INVALID", "OUTPUT_INVALID");
-      } else if (!workspaceResult || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(workspaceResult.resultRevision) || !Array.isArray(workspaceResult.changedFiles)) {
-        throw new RuntimeFault("WORKSPACE_RESULT_INVALID", "OUTPUT_INVALID");
-      }
-    }
-    if (task.outputStore) {
-      await attempt.step("archive-outputs", async () => {
-        let declarations = report.outputFiles ?? [];
-        const publication = task.outputStore.publication;
-        if (publication && !profile.readOnly) {
-          declarations = [...declarations.filter(file => file?.path !== publication.targetPath),
-            { path: publication.targetPath, kind: "DOCUMENT", sourcePath: publication.targetPath }];
-        }
-        const files = await collectOutputFiles({ ...report, outputFiles: declarations }, workspace.cwd, attempt.signal);
-        const bundle = await client.registerOutputs(task, report, files, workspaceResult?.resultRevision ?? null, attempt.signal);
-        await attempt.recorder.record("outputs-registered", { path: bundle.directory, count: bundle.files.length,
-          status: "registered", revision: bundle.attemptId });
-      });
-    }
-    clearInterval(heartbeat);
-    if (heartbeatPromise) await attempt.step("heartbeat-settlement", () => heartbeatPromise);
-    checkSignal(attempt.signal);
-    attempt.recorder.assertHealthy();
+    task.handoff = await attempt.step("write-handoff", () => writeHandoff(task, workspace, report, workspaceResult));
     await attempt.step("prepare-report", () => attempt.recorder.record("report-posting", { reportStatus: "pending", resultRevision: workspaceResult?.resultRevision, publicationRef: workspaceResult?.publicationRef }));
     // Save required terminal/cleanup evidence before the non-idempotent success request.
     await attempt.step("cleanup-before-report", async () => {

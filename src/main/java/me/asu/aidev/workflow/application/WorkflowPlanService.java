@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkflowPlanService {
+    @org.springframework.beans.factory.annotation.Autowired private PlanLocations planLocations;
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<FactoryPlanLifecycle> factoryPlans;
     @org.springframework.beans.factory.annotation.Autowired
@@ -48,27 +49,9 @@ public class WorkflowPlanService {
         var original=editableDraft(id,actor);
         if(original.version()!=version) throw new IllegalStateException("Draft changed; reload before saving");
         if(selected==null) throw new IllegalArgumentException("Plan specification required");
-        var spec=new WorkflowPlanSpec(selected.goal(),original.spec().source(),selected.steps());
+        var spec=new WorkflowPlanSpec(selected.goal(),original.spec().source(),selected.steps(),selected.location());
         WorkflowEditorService.validateSpec(spec,false);
-        for(var step:spec.steps()) {
-            if(step.repositoryRef()!=null) targetWorkspaces.findTarget(step.repositoryRef())
-                    .orElseThrow(() -> new IllegalArgumentException("Registered repository required"));
-        }
         if(!plans.editDraft(id,version,spec,actor,Instant.now())) throw new IllegalStateException("Draft changed; reload before saving");
-        return get(id);
-    }
-    @Transactional public WorkflowPlan retargetDraft(String id,long version,String repository,String revision,String actor) {
-        humanChange(id);actor=actor(actor);
-        var plan=editableDraft(id,actor);
-        if(plan.version()!=version)
-            throw new IllegalStateException("Only an unchanged, unstarted draft can change its execution target");
-        targetWorkspaces.findTarget(repository).orElseThrow(() -> new IllegalArgumentException("Registered repository required"));
-        if(revision==null || !revision.matches("[0-9a-f]{40}|[0-9a-f]{64}")) throw new IllegalArgumentException("Immutable Git baseline required");
-        var selected=plan.spec().steps().stream().map(s -> new WorkflowPlanSpec.Step(s.key(),s.requiredSkills(),s.preferredSkills(),
-                s.skillRef(),s.instruction(),repository,revision,s.dependsOn(),s.model(),s.effort())).toList();
-        var spec=new WorkflowPlanSpec(plan.spec().goal(),plan.spec().source(),selected);
-        WorkflowEditorService.validateSpec(spec,false);
-        if(!plans.retargetDraft(id,version,spec,actor,Instant.now())) throw new IllegalStateException("Draft changed; reload");
         return get(id);
     }
     @org.springframework.beans.factory.annotation.Autowired
@@ -450,7 +433,7 @@ public class WorkflowPlanService {
                 "workflow", "All workflow steps accepted; final independent review: " + reviewId.value(), Instant.now())) {
             throw new IllegalStateException("Plan changed during reviewed completion");
         }
-        if (gitDelivery!=null) gitDelivery.getObject().enqueue(id);
+
     }
 
     private WorkflowPlan control(String id, long version, Integer targetStep, String actor, String reason,
@@ -623,7 +606,7 @@ public class WorkflowPlanService {
                 actor, "Manager confirmed selected steps", Instant.now())) {
             throw new IllegalStateException("plan changed concurrently; reload before confirming");
         }
-        if (gitDelivery!=null) gitDelivery.getObject().capture(get(id));
+        planLocations.allocate(id,plan.spec().location());
         createExecution(plan, 0, 1, Set.of());
         return get(id);
     }
@@ -683,27 +666,8 @@ public class WorkflowPlanService {
         if(delegation!=null) delegation.allowHumanTask(id.value());
     }
 
-    private String revisionFor(WorkflowPlan plan, int stepIndex, int attempt) {
-        var step = plan.spec().steps().get(stepIndex);
-        if (!"coding-work-package-executor".equals(step.skillRef())) return step.baseRevision();
-        if (attempt > 1) {
-            var prior = attempts.findCompletedInput(executionId(plan, stepIndex, attempt - 1));
-            if (prior.isPresent() && prior.orElseThrow().resultRevision() != null) {
-                return prior.orElseThrow().resultRevision();
-            }
-        }
-        for (int priorStep = stepIndex - 1; priorStep >= 0; priorStep--) {
-            for (int priorAttempt : rounds(plan, priorStep).reversed()) {
-                TaskId priorReview = effectiveReviewId(plan, priorStep, priorAttempt);
-                if (!attempts.findCompletionReport(priorReview)
-                        .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false)) continue;
-                var input = attempts.findCompletedInput(executionId(plan, priorStep, priorAttempt));
-                if (input.isPresent() && step.repositoryRef() != null
-                        && step.repositoryRef().equals(input.orElseThrow().repositoryRef())
-                        && input.orElseThrow().resultRevision() != null) return input.orElseThrow().resultRevision();
-            }
-        }
-        return step.baseRevision();
+    private String revisionFor(WorkflowPlan plan,int stepIndex,int attempt) {
+        return plan.spec().steps().get(stepIndex).baseRevision();
     }
 
     void createReview(WorkflowPlan plan, int stepIndex, int attempt) {

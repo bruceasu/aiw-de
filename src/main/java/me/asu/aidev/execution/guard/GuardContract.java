@@ -13,7 +13,7 @@ public final class GuardContract {
                        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) String baseRevision) {
         public Rule(Tool tool, String repositoryRef, String pathPrefix) { this(tool,repositoryRef,pathPrefix,null); }
         public Rule {
-            Objects.requireNonNull(tool); text(repositoryRef,120); path(pathPrefix);
+            repositoryRef=repositoryRef==null||repositoryRef.isBlank()?"default":repositoryRef; Objects.requireNonNull(tool); text(repositoryRef,120); path(pathPrefix);
             if(baseRevision!=null && !baseRevision.matches("([0-9a-f]{40}|[0-9a-f]{64})"))
                 throw new IllegalArgumentException("Immutable repository commit required");
         }

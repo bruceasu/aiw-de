@@ -80,19 +80,7 @@ public class GoalPlans {
         try { spec = repo.json().treeToValue(v.editor(), WorkflowPlanSpec.class); }
         catch (Exception e) { throw new IllegalArgumentException("Complete the steps before preparing an execution plan", e); }
         editor.validateCandidate(spec);
-        final String versionId = v.id();
-        String[] temporary = {null};
-        var steps = spec.steps().stream().map(s -> {
-            boolean needs = editor.roles().stream().anyMatch(r -> r.skillRef().equals(s.skillRef()) && r.needsWorkspace());
-            String target = s.repositoryRef();
-            if (needs && target == null) {
-                if (temporary[0] == null) temporary[0] = workspace.ensure(versionId);
-                target = temporary[0];
-            }
-            return new WorkflowPlanSpec.Step(s.key(), s.requiredSkills(), s.preferredSkills(), s.skillRef(), s.instruction(), target,
-                s.baseRevision(), s.dependsOn(), s.model(), s.effort());
-        }).toList();
-        WorkflowPlan saved = editor.draft(new WorkflowPlanSpec(spec.goal(), spec.source(), steps), actor);
+        WorkflowPlan saved = editor.draft(spec, actor);
         repo.jdbc().update("UPDATE goal_version SET plan_id=?,editor_revision=editor_revision+1 WHERE id=? AND plan_id IS NULL", saved.id(), id);
         return repo.version(id, actor);
     }

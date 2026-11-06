@@ -1,3 +1,5 @@
+> FD-074：执行位置与交接以 [Plan location 契约](../docs/PLAN-LOCATIONS-AND-HANDOFFS.md)为准。领取响应提供 location，可写结果为 DELIVERY，Git 结果可为空。新执行协议不使用 Workspace assignment、平台固定基线或修改文件上传。
+
 # Worker 公共执行契约
 
 ## FD-030 平台Skill资源
@@ -6,7 +8,7 @@
 
 ## FD-016 统一执行契约
 
-三语言九字段 Profile：name、workerIdPrefix、roleCapability、allowedTaskTypes、readOnly、instruction、protocolSkills、primarySkill、resultKind。allowedTaskTypes 只能为 [EXTERNAL_WORK]；WORKSPACE 要求 readOnly=false，REPORT/VERDICT 要求 readOnly=true。不兼容旧任务或八字段配置。
+三语言九字段 Profile：name、workerIdPrefix、roleCapability、allowedTaskTypes、readOnly、instruction、protocolSkills、primarySkill、resultKind。allowedTaskTypes 只能为 [EXTERNAL_WORK]；DELIVERY 要求 readOnly=false，REPORT/VERDICT 要求 readOnly=true。不兼容旧任务或八字段配置。
 
 | 启动角色 | TaskType | 注册能力 | primarySkill / skillRef | resultKind |
 |---|---|---|---|---|
@@ -14,16 +16,16 @@
 | requirements | EXTERNAL_WORK | requirement-analysis | software-requirements-analyst | REPORT |
 | architect | EXTERNAL_WORK | solution-architecture | solution-architect | REPORT |
 | planner | EXTERNAL_WORK | implementation-planning | implementation-planner | REPORT |
-| coder | EXTERNAL_WORK | coding | coding-work-package-executor | WORKSPACE |
-| integrator | EXTERNAL_WORK | integration | coding-work-package-executor | WORKSPACE |
-| repairer | EXTERNAL_WORK | repair | coding-work-package-executor | WORKSPACE |
+| coder | EXTERNAL_WORK | coding | coding-work-package-executor | DELIVERY |
+| integrator | EXTERNAL_WORK | integration | coding-work-package-executor | DELIVERY |
+| repairer | EXTERNAL_WORK | repair | coding-work-package-executor | DELIVERY |
 | reviewer | EXTERNAL_WORK | code-review | software-code-reviewer | VERDICT |
 | verifier | EXTERNAL_WORK | verification | software-test-verifier | VERDICT |
 | integration-verifier | EXTERNAL_WORK | integration-verification | software-test-verifier | VERDICT |
 
 skillRef 必须精确匹配启动角色的 primarySkill；技能在模型与工作区动作前从可信 skills 根读取冻结。verifier 与 integration-verifier 独立启动、单独能力；附加技术能力不能冒充其他执行角色。release-readiness/orchestrator 仍不可执行。
 
-REPORT 返回非空 PASS summary；VERDICT 返回非空报告且末行 AIW_VERDICT: PASS/REPAIR_REQUIRED；WORKSPACE 返回有效 resultRevision、changedFiles、适用 publicationRef 和非空 PASS summary。写角色必须有固定 Git baseRevision；审查与输入结果 revision 一致，不自行选择新 HEAD。只读角色不 stage/commit/push。
+REPORT 返回非空 PASS summary；VERDICT 返回非空报告且末行 AIW_VERDICT: PASS/REPAIR_REQUIRED；DELIVERY 返回非空 PASS summary 和交接引用。实际产生 Git 结果时才提供 resultRevision 和 changedFiles，不要求固定 Git baseRevision。仓库和版本要求由任务内容表达，Worker 自行准备执行环境。只读角色不 stage/commit/push。
 
 TypeScript 明确选择 codex-cli、codex-app-server 或 openai-agents；两 Codex 模式使用系统已安装 CLI，不限制精确版本，无 SDK/CLI/平台包依赖，无下载或自动回退。Exec 为独立 attempt 进程；App Server 是受管 stdio 服务，每 slot 独立 thread/turn。Go 保留 codex-cli/codex-app-server/openai-api。FD-020 将 Python 替换为 codex-app-server/openai-agents，删除 codex-sdk；Python 每 attempt 独立 App Server 进程与 ephemeral thread，正常及异常返回前核对进程组终态，不明时停止 slot并保留资源。详见 [源码支持矩阵](README.md#角色--语言--后端支持矩阵)。
 
@@ -52,7 +54,7 @@ TaskExecutionService 的 complete/fail 要求 RUNNING 且租约未过期、属�
 
 现有 failureCategory 仅有 UNKNOWN、RATE_LIMIT、MODEL_ERROR、OUTPUT_INVALID、TOOL_ERROR、CONFIGURATION。内部取消、权限、证据和资源错误映射到这些值，不新增公开枚举。TS RuntimeFault 的 TIMEOUT 只用于内部取消与工具终态，向控制平面上报时映射为 TOOL_ERROR。
 
-代码任务保持 WorkspaceResult 的 resultRevision、changedFiles、publicationRef。审查/验证必须给出 report；所有 WORKSPACE/REPORT 角色必须给出非空 PASS report。发布与报告校验必须遵循这一既有契约。
+代码任务保持 WorkspaceResult 的 resultRevision、changedFiles、publicationRef。审查/验证必须给出 report；所有 DELIVERY/REPORT 角色必须给出非空 PASS report。发布与报告校验必须遵循这一既有契约。
 
 ## 并行与工具结果
 

@@ -335,7 +335,7 @@ def _snapshot(cwd, attempt):
     def walk_error(error):
         raise error
     for directory, dirs, names in os.walk(root, followlinks=False, onerror=walk_error):
-        dirs[:] = sorted(name for name in dirs if name.lower() != ".git")
+        dirs[:] = sorted(name for name in dirs if name.lower() not in {".git", ".ai"})
         for name in sorted([*dirs, *names]):
             if name.lower() == ".git":
                 continue

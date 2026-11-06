@@ -71,6 +71,8 @@ public class JdbcWorkflowPlanArchiveRepository {
     @Transactional
     public boolean purge(String id, Instant now) {
         if(managedPlans!=null) managedPlans.serializePlan(id);
+        if(jdbc.queryForObject("SELECT COUNT(*) FROM plan_execution_location WHERE scope_id=? AND temporary=1 AND cleaned_at_epoch_ms IS NULL",Long.class,id)>0)
+            throw new IllegalStateException("Retain Plan history until its owned temporary directory has been released");
         if (jdbc.update("""
                 UPDATE web_console_plan_archive SET delete_after_epoch_ms=delete_after_epoch_ms
                  WHERE plan_id=? AND delete_after_epoch_ms<=?

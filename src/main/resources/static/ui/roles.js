@@ -103,7 +103,7 @@
     try{
       const pack=packs.find(p=>key(p.reference)===$('role-pack-select').value&&p.definition.repositoryRef===draft.repositoryRef);
       if(!pack)throw new Error('请选择当前仓库的能力包。');if(draft.steps.length>=8)throw new Error(reasons.ROLE_LIMIT_EXCEEDED);
-      if(pack.definition.toolRequirements.includes('WRITE')&&draft.resultKind!=='WORKSPACE')throw new Error('这个能力包需要写入。请先将最终产出设为代码与工作区成果，或选其他包。');
+      if(pack.definition.toolRequirements.includes('WRITE')&&draft.resultKind!=='DELIVERY')throw new Error('这个能力包需要写入。请先将最终产出设为代码与工作区成果，或选其他包。');
       if(pack.definition.skills.some(r=>!available('skill').some(a=>key(a)===key(r))))throw new Error('能力包中的原技能引用当前不可用，请核对仓库与版本。');
       draft.steps.push({...newStep(),title:pack.definition.name,skills:clone(pack.definition.skills),instruction:pack.definition.work,completion:'满足所选技能的输入、产出约束，并交付本步骤的实际结果与证据。'});
       if(pack.definition.toolRequirements.includes('COMMAND'))$('role-command').checked=true;
@@ -123,7 +123,7 @@
     if(d.steps.some(s=>!s.skills.length))throw new Error('每个步骤至少选择一种技能。');
     if(selected.size>6||d.knowledge.length>8)throw new Error(reasons.ROLE_LIMIT_EXCEEDED);
     if(d.knowledge.some(r=>!available('knowledge').some(a=>key(a)===key(r))))throw new Error('存在当前仓库不可用的参考资料，请重新选择。');
-    d.toolRequirements=['READ','SEARCH','GIT','MODEL','QUESTION'];if(d.resultKind==='WORKSPACE')d.toolRequirements.push('WRITE');if($('role-command').checked)d.toolRequirements.push('COMMAND');return d;
+    d.toolRequirements=['READ','SEARCH','GIT','MODEL','QUESTION'];if(d.resultKind==='DELIVERY')d.toolRequirements.push('WRITE');if($('role-command').checked)d.toolRequirements.push('COMMAND');return d;
   }
   function summary(p){
     const d=p.definition,host=$('role-preview-result');host.replaceChildren(node('span',p.reference?'已保存，可选用':'待你核对','pill '+(p.reference?'ok':'info')),node('h3',d.name));

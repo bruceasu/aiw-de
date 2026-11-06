@@ -56,7 +56,7 @@ public class WorkflowWorkerProvisioning {
                 };
                 if(role==null) continue;
                 var required=new HashSet<>(task.requiredCapabilities());
-                if(task.repositoryRef()!=null) required.add("repo:"+task.repositoryRef());
+
                 var currentTask=task;
                 boolean online=workers.online(Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW)).stream()
                         .anyMatch(w -> w.runtimeType().startsWith(config.runtime()+":") && w.supports(required)

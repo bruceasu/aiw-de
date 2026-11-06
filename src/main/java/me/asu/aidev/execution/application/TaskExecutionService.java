@@ -519,28 +519,11 @@ public class TaskExecutionService {
         }
     }
 
-    private void attachWorkspaceResult(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
-                                       WorkspaceResult workspaceResult) {
-        var task = tasks.find(taskId).orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
-        WorkspaceAssignment assignment = WorkspaceAssignment.forTask(task, tasks.attemptNo(taskId));
-        if (assignment == null) {
-            if (workspaceResult != null) {
-                throw new IllegalStateException("workspace result provided for task without repository assignment");
-            }
-            return;
-        }
-        if (assignment.baseRevision() == null) {
-            if (workspaceResult != null) {
-                throw new IllegalStateException("direct directory task must not report a Git workspace result");
-            }
-            return;
-        }
-        if (workspaceResult == null) {
-            throw new IllegalStateException("workspace result required for repository task");
-        }
-        if (!attempts.attachWorkspaceResult(leaseToken, workerId, assignment, workspaceResult)) {
-            throw new IllegalStateException("cannot attach workspace result; execution attempt is not RUNNING or not owned by worker");
-        }
+    private void attachWorkspaceResult(TaskId taskId,WorkerId workerId,LeaseToken leaseToken,WorkspaceResult result) {
+        if(result==null) return;
+        var task=tasks.find(taskId).orElseThrow();
+        var metadata=new WorkspaceAssignment(task.repositoryRef()==null?task.subjectId():task.repositoryRef(),task.baseRevision(),taskId.value(),null);
+        if(!attempts.attachWorkspaceResult(leaseToken,workerId,metadata,result)) throw new IllegalStateException("Cannot attach Worker result to running owned attempt");
     }
 
     private void attachExternalSession(WorkerId workerId, LeaseToken leaseToken, String externalSessionId) {

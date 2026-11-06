@@ -54,6 +54,7 @@
     let timer = null;
     let context = null;
     const goal = editor.querySelector('[data-goal]');
+    editor.querySelector("[data-location]").addEventListener("input", () => markEdit());
     const rows = editor.querySelector('[data-steps]');
     const notice = editor.querySelector('[data-validation]');
     const preview = editor.querySelector('[data-preview]');
@@ -138,42 +139,6 @@
       label.appendChild(input); container.appendChild(label);
       return input;
     };
-    const workspaceField = (container, step, index) => {
-      const group = el('div', undefined, 'field');
-      const label = el('label', 'Workspace reference');
-      const select = el('select');
-      select.id = `step-${index + 1}-workspace`;
-      label.htmlFor = select.id;
-      const filter = el('input');
-      filter.type = 'search'; filter.placeholder = 'Filter Workspaces by name or reference';
-      filter.setAttribute('aria-label', `Filter Workspaces for step ${index + 1}`);
-      const options = () => {
-        select.replaceChildren();
-        const empty = el('option', 'No Workspace selected'); empty.value = ''; select.appendChild(empty);
-        if (step.repositoryRef && !workspaceRefs.has(step.repositoryRef)) {
-          const unavailable = el('option', `Unavailable: ${step.repositoryRef}`);
-          unavailable.value = step.repositoryRef; unavailable.disabled = true; select.appendChild(unavailable);
-        }
-        const query = filter.value.trim().toLowerCase();
-        const matches = workspaceOptions.filter(option => option.label.toLowerCase().includes(query));
-        for (const entry of workspaceOptions) {
-          if (!matches.includes(entry) && entry.value !== step.repositoryRef) continue;
-          const option = el('option', entry.label); option.value = entry.value; select.appendChild(option);
-        }
-        if (!matches.length) {
-          const none = el('option', 'No matching Workspaces'); none.disabled = true; select.appendChild(none);
-        }
-        select.value = step.repositoryRef || '';
-      };
-      filter.addEventListener('input', options);
-      select.addEventListener('change', () => { step.repositoryRef = select.value || null; markEdit(); options(); });
-      group.append(label, filter, select);
-      line(group, 'span', workspaceOptions.length
-        ? 'Type to filter, then select a registered Workspace target. The current selection stays visible.'
-        : 'No enabled Workspace targets. Register one in Workspaces, then reload this page.', 'help');
-      const manage = el('a', 'Manage Workspaces'); manage.href = '/ui/workspaces'; group.appendChild(manage);
-      container.appendChild(group); options();
-    };
     const renderSteps = () => {
       rows.replaceChildren();
       steps.forEach((step, index) => {
@@ -206,10 +171,6 @@
         const effort = field(grid, 'Reasoning effort (optional)', step.effort, value => { step.effort = value.trim() || null; });
         effort.maxLength = 160;
         line(effort.parentElement, 'span', 'Leave empty to let the Worker decide. Invalid or unavailable settings fall back to the Worker configuration.', 'help');
-        workspaceField(grid, step, index);
-        const revisionInput = field(grid, 'Base revision (optional full Git commit)', step.baseRevision,
-          value => { step.baseRevision = value.trim() || null; });
-        line(revisionInput.parentElement, 'span', 'For native coding Workers, leave empty to pin the current Git HEAD automatically. Set a full commit to use that exact baseline.', 'help');
         field(grid, 'Declared earlier dependencies (comma separated)', step.dependsOn.join(', '), value => { step.dependsOn = skillNames(value); });
         field(grid, 'Instruction and acceptance criteria', step.instruction, value => { step.instruction = value; }, true);
         card.appendChild(grid);
@@ -237,10 +198,7 @@
         if (step.dependsOn.some(key => !seen.has(key))) problems.push('dependencies on earlier keys');
         const role = catalog.roles.find(r => r.skillRef === step.skillRef && step.requiredSkills.includes(r.capability));
         if (!role) problems.push('trusted role and skill');
-        if (role?.needsWorkspace && !step.repositoryRef) problems.push('workspace');
-        if (step.repositoryRef && !workspaceRefs.has(step.repositoryRef)) problems.push('an available registered Workspace (reload if changed)');
         if (step.baseRevision && !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(step.baseRevision)) problems.push('full Git revision');
-        if (step.baseRevision && !step.repositoryRef) problems.push('workspace for Git revision');
         if (role?.resultKind === 'VERDICT' && (!step.dependsOn.length || step.baseRevision)) problems.push('upstream dependency and empty revision');
         if (problems.length && !notice.textContent) notice.textContent = `Step ${index + 1} (${step.key || 'unnamed'}): check ${problems.join(', ')}.`;
         seen.add(step.key);
@@ -253,7 +211,7 @@
           worker.capabilities.includes('workflow-review'));
         const reviewMatch = reviewers.length ? `${reviewers.length} independent reviewer(s)` : 'No independent reviewer';
         [step.key || '?', `${step.requiredSkills.join(', ')} / ${step.skillRef}`, step.dependsOn.join(', ') || '—',
-          `${step.repositoryRef || 'No workspace'} / ${step.baseRevision || 'upstream or none'}`, `${match}; ${reviewMatch}`]
+          editor.querySelector('[data-location]').value || 'Worker uses a Plan temporary directory', `${match}; ${reviewMatch}`]
           .forEach(text => line(tr, 'td', text));
         preview.appendChild(tr);
       }
@@ -277,7 +235,7 @@
       if (saving || saveButton.disabled) return;
       if (!catalog) { saveStatus.textContent = 'Editor data is still loading.'; return; }
       if (!renderPreview()) { notice.scrollIntoView({ block: 'center' }); return; }
-      const payload = { goal: goal.value, source, steps };
+      const payload = { goal: goal.value, source, steps, location: editor.querySelector("[data-location]").value.trim() || null };
       try {
         saving = true; saveButton.disabled = true;
         saveStatus.textContent = 'Saving draft…';
@@ -388,7 +346,7 @@
         status.textContent = 'Suggestion is stale; request again for the current goal.'; return;
       }
       steps = recommendation.plan.steps.map(stepCopy); source = 'AI';
-      result.hidden = true; status.textContent = 'Suggestion applied. Add required workspace details, review and save a draft.';
+      result.hidden = true; status.textContent = 'Suggestion applied. Review the task instructions and optional Plan location, then save a draft.';
       renderSteps();
     });
     api('/catalog').then(async data => {
@@ -402,6 +360,7 @@
       }
       if (editId) {
         editingPlan = await api(`/plans/${encodeURIComponent(editId)}/draft`);
+        editor.querySelector("[data-location]").value = editingPlan.spec.location || "";
         goal.value = editingPlan.spec.goal; source = editingPlan.spec.source;
         steps = editingPlan.spec.steps.map(stepCopy);
         renderSteps(); return;
@@ -437,6 +396,7 @@
       }
       const copy = new URLSearchParams(location.search).get('copy');
       if (copy && !context.goal) return api(`/plans/${encodeURIComponent(copy)}`).then(data => {
+        editor.querySelector("[data-location]").value = data.plan.spec.location || "";
         goal.value = data.plan.spec.goal; source = data.plan.spec.source;
         steps = data.plan.spec.steps.map(stepCopy); renderSteps();
       });
@@ -726,7 +686,7 @@
               || b.task.id.value.localeCompare(a.task.id.value));
           const tr = el('tr');
           [ `${step.key} / ${step.skillRef}`, `${step.instruction}\nModel: ${step.model || 'Worker choice'} · Effort: ${step.effort || 'Worker choice'}`,  step.dependsOn.join(', ') || 'Listed order',
-            `${step.repositoryRef || 'No workspace'} / ${step.baseRevision || 'No fixed revision'}`
+            plan.spec.location || 'Plan temporary directory'
           ].forEach(value => line(tr, 'td', value));
           const resultCell = el('td');
           const skipped = data.controls.some(control => control.status === 'APPLIED' && control.action === 'JUMP'

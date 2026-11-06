@@ -33,15 +33,15 @@ public final class ComposedRoles {
             ConfigurationContract.id(id);ConfigurationContract.id(category);text(repositoryRef,120);
             text(name,120);text(goal,4000);text(delivery,2000);name=name.strip();
             if(name.contains("\n") || name.contains("\r")) throw new Invalid("ROLE_NAME_INVALID");
-            if(revision<1 || !Set.of("REPORT","VERDICT","WORKSPACE").contains(resultKind)) throw new Invalid("ROLE_OUTPUT_INVALID");
+            if(revision<1 || !Set.of("REPORT","VERDICT","DELIVERY").contains(resultKind)) throw new Invalid("ROLE_OUTPUT_INVALID");
             if(protocolSkill==null || !ENGINEERING.equals(protocolSkill.ref())) throw new Invalid("ROLE_PROTOCOL_INVALID");
             steps=List.copyOf(steps);knowledge=List.copyOf(knowledge);
             if(steps.isEmpty() || steps.size()>8 || steps.stream().map(Step::key).distinct().count()!=steps.size()
                     || knowledge.size()>8 || knowledge.stream().map(AssetRef::ref).distinct().count()!=knowledge.size())
                 throw new Invalid("ROLE_LIMIT_EXCEEDED");
             toolRequirements=Collections.unmodifiableSet(EnumSet.copyOf(toolRequirements));
-            if(!toolRequirements.containsAll(Set.of(Tool.MODEL,Tool.GIT))
-                    || toolRequirements.contains(Tool.WRITE)!=resultKind.equals("WORKSPACE")) throw new Invalid("ROLE_TOOLS_INVALID");
+            if(!toolRequirements.contains(Tool.MODEL)
+                    || toolRequirements.contains(Tool.WRITE)!=resultKind.equals("DELIVERY")) throw new Invalid("ROLE_TOOLS_INVALID");
         }
     }
     public record Compiled(Definition definition,Asset asset,Candidate candidate) {}
@@ -61,7 +61,7 @@ public final class ComposedRoles {
             if(prior!=null && !prior.equals(skill)) throw new Invalid("SKILL_VERSION_CONFLICT");
             // Legacy role entry points keep their output and input restrictions.
             if(catalogue.methods().stream().filter(m->m.method().primarySkill().equals(skill.ref()))
-                    .anyMatch(m->!m.method().resultKind().equals(d.resultKind()) || m.method().readOnly()==d.resultKind().equals("WORKSPACE")))
+                    .anyMatch(m->!m.method().resultKind().equals(d.resultKind()) || m.method().readOnly()==d.resultKind().equals("DELIVERY")))
                 throw new Invalid("INCOMPATIBLE_OUTPUT");
         }
         if(selected.size()>6) throw new Invalid("ROLE_LIMIT_EXCEEDED");
@@ -76,7 +76,7 @@ public final class ComposedRoles {
         var protocols=references.stream().map(AssetRef::ref).toList();references.add(asset.reference());
         var method=new Method(ref+"-r"+d.revision(),"composed",CAPABILITY,List.of("EXTERNAL_WORK"),protocols,ref,
                 "Follow the fixed role entry and its ordered Skill steps. Preserve the assigned task, tools and output contract.",
-                !d.resultKind().equals("WORKSPACE"),d.resultKind());
+                !d.resultKind().equals("DELIVERY"),d.resultKind());
         var candidate=new Candidate(d.id(),d.revision(),owner,d.repositoryRef(),d.category(),method,references,d.knowledge(),d.toolRequirements(),
                 "Use the registered engineering-artifact-protocol and return "+d.resultKind()+". Keep its outer schema unchanged.\nRole delivery requirements:\n"+d.delivery(),
                 "factory:role-composition");

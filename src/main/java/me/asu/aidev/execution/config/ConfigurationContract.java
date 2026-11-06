@@ -9,7 +9,7 @@ import static me.asu.aidev.execution.guard.GuardContract.*;
 public final class ConfigurationContract {
     public static final String PROTOCOL="aiw.execution.config.v1", CAPABILITY="execution-config-v1";
     public static final Set<String> OWNED_REFERENCE_KINDS=Set.of("configuration","skill","knowledge");
-    public static Set<String> requiredCapabilities(String repository) { return Set.of(CAPABILITY,GuardContract.CAPABILITY,me.asu.aidev.execution.skills.SkillFileContract.CAPABILITY,"repo:"+repository); }
+    public static Set<String> requiredCapabilities(String repository) { return Set.of(CAPABILITY,GuardContract.CAPABILITY,me.asu.aidev.execution.skills.SkillFileContract.CAPABILITY); }
     private ConfigurationContract() {}
     public enum State { NEEDS_CONFIGURATION, PREPARING, READY, BLOCKED }
     public enum Error { INVALID_CONFIGURATION, UNSUPPORTED_RUNTIME, PREPARATION_FAILED, NO_COMPATIBLE_WORKER, WORKER_STARTING, AUTHORIZATION_REQUIRED, BUDGET_CONFIGURATION_REQUIRED, SOURCE_CHANGED }
@@ -30,8 +30,8 @@ public final class ConfigurationContract {
                          List<String> protocolSkills,String primarySkill,String instruction,boolean readOnly,String resultKind) {
         public Method { id(name);id(workerIdPrefix);id(roleCapability);id(primarySkill);text(instruction,8192);
             allowedTaskTypes=List.copyOf(allowedTaskTypes);protocolSkills=List.copyOf(protocolSkills);
-            if(!allowedTaskTypes.equals(List.of("EXTERNAL_WORK")) || !Set.of("REPORT","VERDICT","WORKSPACE").contains(resultKind)
-                    || readOnly==resultKind.equals("WORKSPACE") || protocolSkills.isEmpty() || protocolSkills.size()>8 || new HashSet<>(protocolSkills).size()!=protocolSkills.size())
+            if(!allowedTaskTypes.equals(List.of("EXTERNAL_WORK")) || !Set.of("REPORT","VERDICT","DELIVERY").contains(resultKind)
+                    || readOnly==resultKind.equals("DELIVERY") || protocolSkills.isEmpty() || protocolSkills.size()>8 || new HashSet<>(protocolSkills).size()!=protocolSkills.size())
                 throw new IllegalArgumentException("Invalid software method/output contract");
             protocolSkills.forEach(ConfigurationContract::id);
         }
@@ -40,9 +40,9 @@ public final class ConfigurationContract {
     public record Catalogue(String protocol,List<DefaultMethod> methods,List<Asset> assets) {}
     public record Candidate(String id,long revision,String ownerId,String repositoryRef,String category,Method method,
                             List<AssetRef> skills,List<AssetRef> knowledge,Set<Tool> toolRequirements,String outputContract,String source) {
-        public Candidate { ConfigurationContract.id(id);text(ownerId,128);text(repositoryRef,120);ConfigurationContract.id(category);
+        public Candidate { repositoryRef=repositoryRef==null||repositoryRef.isBlank()?"default":repositoryRef; ConfigurationContract.id(id);text(ownerId,128);text(repositoryRef,120);ConfigurationContract.id(category);
             Objects.requireNonNull(method);skills=List.copyOf(skills);knowledge=List.copyOf(knowledge);toolRequirements=Set.copyOf(toolRequirements);
-            if(revision<1 || skills.isEmpty() || skills.size()>16 || knowledge.size()>8 || !toolRequirements.containsAll(Set.of(Tool.MODEL,Tool.GIT))
+            if(revision<1 || skills.isEmpty() || skills.size()>16 || knowledge.size()>8 || !toolRequirements.contains(Tool.MODEL)
                     || method.readOnly() && toolRequirements.contains(Tool.WRITE) || !method.readOnly() && !toolRequirements.contains(Tool.WRITE))
                 throw new IllegalArgumentException("Invalid declarative requirements");
             if(skills.stream().map(AssetRef::ref).distinct().count()!=skills.size() || knowledge.stream().map(AssetRef::ref).distinct().count()!=knowledge.size())
@@ -66,8 +66,8 @@ public final class ConfigurationContract {
     public record Intent(String intentId,long intentVersion,long expectedGeneration,String planId,long policyRevision,String repositoryRef,
                          String baseRevision,String instruction,List<String> dependencies,String runtime,String aiProfileId,
                          String defaultRole,PreparedConfigRef configRef,Candidate candidate) {
-        public Intent { id(intentId);text(planId,128);text(repositoryRef,120);text(instruction,16384);id(aiProfileId);
-            if(intentVersion<1 || expectedGeneration<0 || policyRevision<1 || baseRevision==null || !baseRevision.matches("[0-9a-f]{40}|[0-9a-f]{64}"))
+        public Intent { baseRevision=baseRevision==null||baseRevision.isBlank()?null:baseRevision.strip(); repositoryRef=repositoryRef==null||repositoryRef.isBlank()?"default":repositoryRef; id(intentId);text(planId,128);text(repositoryRef,120);text(instruction,16384);id(aiProfileId);
+            if(intentVersion<1 || expectedGeneration<0 || policyRevision<1 || baseRevision!=null && !baseRevision.matches("[0-9a-f]{40}|[0-9a-f]{64}"))
                 throw new IllegalArgumentException("Fixed intent version and repository base required");
             dependencies=List.copyOf(dependencies);if(dependencies.size()>128 || new HashSet<>(dependencies).size()!=dependencies.size()) throw new IllegalArgumentException("Invalid dependencies");
             dependencies.forEach(v->text(v,128));
@@ -79,7 +79,7 @@ public final class ConfigurationContract {
                               String taskId,List<String> missing,List<String> recoveryActions) {}
     public record Assembly(String id,long revision,String repositoryRef,String category,String defaultRole,List<AssetRef> additionalSkills,
                            List<AssetRef> knowledge,Set<Tool> toolRequirements,String methodInstruction) {
-        public Assembly { ConfigurationContract.id(id);text(repositoryRef,120);ConfigurationContract.id(category);ConfigurationContract.id(defaultRole);
+        public Assembly { repositoryRef=repositoryRef==null||repositoryRef.isBlank()?"default":repositoryRef; ConfigurationContract.id(id);text(repositoryRef,120);ConfigurationContract.id(category);ConfigurationContract.id(defaultRole);
             additionalSkills=List.copyOf(additionalSkills);knowledge=List.copyOf(knowledge);toolRequirements=Set.copyOf(toolRequirements);
             if(revision<1 || additionalSkills.size()>6 || knowledge.size()>8) throw new IllegalArgumentException("Bounded declaration required");
             if(methodInstruction!=null) text(methodInstruction,4096);

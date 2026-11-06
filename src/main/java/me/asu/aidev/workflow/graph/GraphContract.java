@@ -26,8 +26,8 @@ public final class GraphContract {
     public record Task(String repositoryRef,String baseRevision,String baseFrom,String runtime,String aiProfileId,
                        String defaultRole,ConfigurationContract.PreparedConfigRef configRef,
                        ConfigurationContract.Candidate candidate,String instruction,List<String> failureNext) {
-        public Task {text(repositoryRef,120);text(instruction,12000);ConfigurationContract.id(aiProfileId);
-            if(baseRevision==null||!baseRevision.matches("[0-9a-f]{40}|[0-9a-f]{64}")) throw new IllegalArgumentException("Immutable initial base required");
+        public Task {repositoryRef=repositoryRef==null||repositoryRef.isBlank()?"default":repositoryRef;baseRevision=baseRevision==null||baseRevision.isBlank()?null:baseRevision.strip();text(repositoryRef,120);text(instruction,12000);ConfigurationContract.id(aiProfileId);
+            if(baseRevision!=null&&!baseRevision.matches("[0-9a-f]{40}|[0-9a-f]{64}")) throw new IllegalArgumentException("Immutable initial base required");
             if(baseFrom!=null) id(baseFrom);if(!Set.of("openai-agents","codex-app-server").contains(runtime)) throw new IllegalArgumentException("Unsupported runtime");
             if((defaultRole==null?0:1)+(configRef==null?0:1)+(candidate==null?0:1)!=1) throw new IllegalArgumentException("Choose one configuration source");
             failureNext=failureNext==null?List.of():List.copyOf(failureNext); }

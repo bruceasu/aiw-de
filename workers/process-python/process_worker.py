@@ -120,7 +120,7 @@ class WorkerConfig:
             if not _bool_env("AIW_EXECUTION_GUARD", False): raise ValueError("DYNAMIC_CONFIGURATION_REQUIRES_GUARDED_ADAPTER")
             capabilities.add("execution-config-v1")
         if repository_ref:
-            capabilities.add(f"repo:{repository_ref}")
+            pass  # Locations do not bind Worker scheduling to repository registrations.
         max_concurrency = int(os.getenv("AIW_WORKER_MAX_CONCURRENCY", "1"))
         if max_concurrency < 1:
             raise ValueError("AIW_WORKER_MAX_CONCURRENCY must be >= 1")
@@ -195,7 +195,8 @@ class ControlPlaneClient:
             "workerId": worker_id,
             "leaseToken": task["leaseToken"],
             "externalSessionId": session_id,
-            "workspaceResult": workspace_result,
+            "gitResult": workspace_result,
+            "handoff": task["_handoff"],
             "report": report,
         }) or {}
 
@@ -335,8 +336,8 @@ def _completion_report(result_kind: str, final_response: str) -> dict[str, str]:
     summary = final_response.strip()
     if not summary:
         raise RuntimeError("COMPLETION_REPORT_EMPTY")
-    if result_kind in {"REPORT", "WORKSPACE"}:
-        if result_kind == "WORKSPACE":
+    if result_kind in {"REPORT", "DELIVERY"}:
+        if result_kind == "DELIVERY":
             try: detail = json.loads(summary)
             except json.JSONDecodeError: detail = None
             if isinstance(detail, dict) and (str(detail.get("outcome", "")).upper().startswith(("BLOCKED", "FAILED", "INCOMPLETE")) or detail.get("completed") is False):
@@ -465,30 +466,17 @@ class ProcessSlot:
                     raise RuntimeError("ROLE_TASK_TYPE_DENIED")
                 if task.get("taskType") != "EXTERNAL_WORK" or task.get("skillRef") != profile.primary_skill:
                     raise RuntimeError("ROLE_SKILL_DENIED")
-                assignment = task.get("workspace") or {}
-                if (profile.result_kind == "WORKSPACE" and not assignment.get("baseRevision") and not broker
-                        and task.get("subjectType") == "flexible-plan"):
-                    assignment = _pin_current_revision(self.config, task, self.client, attempt)
-                revision = assignment.get("baseRevision") or ""
-                if profile.result_kind == "WORKSPACE" and (len(revision) not in {40, 64} or any(c not in "0123456789abcdefABCDEF" for c in revision)):
-                    raise RuntimeError("WRITABLE_WORKSPACE_REQUIRED")
-                if profile.result_kind == "VERDICT":
-                    _validate_review_revision(task, revision)
-                # Read and freeze trusted skills before workspace side effects.
+                # Location preparation is a Worker decision; no Control Plane Git assignment.
                 instruction = prepared.prompt(task, skill_reader) if prepared else _prompt(task, self.config, skill_reader)
-                if task.get("workspace"):
-                    repository_gate = workspace_lock(task["workspace"].get("repositoryPath") or self.config.repository_root, attempt)
-                    try:
-                        if broker:
-                            from guarded_workspace import GuardedWorkspace
-                            workspace = GuardedWorkspace.materialize(self.config, task, broker)
-                        else: workspace = GitWorkspace.materialize(self.config, task)
-                    finally: repository_gate.release()
-                else:
-                    workspace = GitWorkspace.materialize(self.config, task)
-                if task.get("workspace"):
-                    instruction += _workspace_context(task, workspace.cwd)
-                    attempt.evidence.record("workspace-assigned", path=workspace.cwd)
+                from plan_workspace import PlanWorkspace
+                workspace = PlanWorkspace.materialize(self.config, task, broker)
+                if broker:
+                    broker.source_root = workspace.root
+                    broker.attach(Path(workspace.cwd).resolve())
+                    broker.checkpoint = lambda: workspace.finalize(task, read_only=not profile.writable)
+                instruction += "\nShared Plan location: " + str(workspace.root) + "\nActual working directory: " + workspace.cwd
+                instruction += "\nVerified handoff manifests:\n" + json.dumps(task.get("handoffInputs", []), ensure_ascii=False)
+                if len(instruction.encode("utf-8")) > setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024): raise RuntimeError("CONTEXT_BUDGET_EXCEEDED")
                 gate = workspace_lock(workspace.cwd, attempt)
                 baseline = snapshot(workspace.cwd, attempt) if not profile.writable and not broker else None
                 selected = effective_selection["profile"] if effective_selection else None
@@ -556,11 +544,8 @@ class ProcessSlot:
                 attempt.evidence.record("report-validated", status="valid", digest=hashlib.sha256(final_response.encode("utf-8")).hexdigest())
                 phase = "TOOL_ERROR"
                 workspace_result = workspace.finalize(task, read_only=not profile.writable)
-                if profile.writable and not (workspace_result or {}).get("changedFiles") and report.get("verdict") == "PASS":
-                    report = {"verdict": "REPAIR_REQUIRED", "summary": "No implementation changes were produced relative to the assigned baseline. The requested file work is not confirmed complete.\n" + report["summary"]}
                 if broker: broker.record_delivery(workspace_result, report)
-                if profile.result_kind == "WORKSPACE" and (not workspace_result or not workspace_result.get("resultRevision") or not isinstance(workspace_result.get("changedFiles"), list)):
-                    raise RuntimeError("WORKSPACE_RESULT_INVALID")
+                task["_handoff"] = workspace.handoff(task, report, workspace_result)
                 heartbeat.close()
                 attempt.check()
                 if heartbeat.ownership_lost.is_set(): raise RuntimeError("LEASE_LOST")

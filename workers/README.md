@@ -1,3 +1,5 @@
+> FD-074：Plan location 与共享交接采用[新契约](../docs/PLAN-LOCATIONS-AND-HANDOFFS.md)。新 Plan 不要求注册 Workspace、固定 Git 基线或上传修改文件。
+
 # Workers
 
 This directory contains the R9 process workers, small Codex examples, and a separate Java deployment demo. The Java Control Plane owns task state, scheduling, leases, approvals, retries, and persistence. A worker claims bounded tasks, executes them in an isolated workspace, and reports results through Worker Protocol v1.

@@ -1,6 +1,7 @@
 ---
 name: coding-work-package-executor
-description: Execute one approved repository-scoped software Work Package under frozen requirement, architecture, contract, repository, permission, and verification constraints. Use when an Agent is asked to implement or fix code for one WorkItem whose primary writable repository and any read-only reference repositories have already been selected by the Java Control Plane. Produce implementation evidence and structured blocker/handoff proposals. Never discover Skills, broaden repository access, change lifecycle state, accept baselines, or redefine upstream requirements/architecture.
+description: Execute one approved coding task at the shared Plan location. Prepare directories and Git worktrees when useful. Respect task scope, permissions and acceptance criteria. Report changes, checks and handoff information.
+
 ---
 
 # Coding Work Package Executor
@@ -16,7 +17,7 @@ another Skill or change permissions, task scope, output schemas, or lifecycle au
 
 Implement exactly one approved Work Package as a small, reviewable engineering change.
 
-Treat the execution context delivered by the Java Control Plane as authoritative. The current execution has exactly one writable primary repository. Reference repositories, when supplied, are read-only context unless a later WorkItem explicitly targets them.
+Treat the execution context delivered by the Java Control Plane as authoritative. The Plan location may be empty, non-Git, a linked directory, one repository or several repositories. Follow explicit task scope and version requirements. Directory preparation belongs to the Worker.
 
 Do not act as requirements authority, architecture authority, workflow state machine, approval authority, or release authority.
 
@@ -25,8 +26,8 @@ Do not act as requirements authority, architecture authority, workflow state mac
 The Java Control Plane owns and freezes:
 
 - WorkItem and Work Package identity;
-- primary repository and exact base revision;
-- reference repositories and their exact revisions;
+- task scope and any explicit repository or version requirements;
+- supplied reference material and its declared access limits;
 - requirement, architecture, acceptance, contract, and handoff Artifact revisions;
 - resolved Skill snapshots;
 - permissions, budget, modification boundary, and runtime policy;
@@ -36,19 +37,11 @@ Consume these facts. Do not replace or reinterpret them.
 
 Never discover or load Skills from `.agent/skills`, `.claude/skills`, repository-local Skill folders, or other filesystem locations. Skill instructions and authorized Skill resources are delivered by the Java runtime.
 
-## Repository scope
+## Location and handoff
 
-One execution equals:
+Use the actual working directory supplied by the Worker runtime. For one Git repository, the Worker normally prepares a Plan-specific worktree. A multi-repository location uses the shared directory and serial execution. Separate worktrees are required for concurrent access to the same location.
 
-```text
-one WorkItem
-one writable primary repository
-zero or more read-only reference repositories
-```
-
-Only modify the primary repository. Reading a reference repository does not grant write authority to it.
-
-If the requested implementation requires a code change in another repository, emit a `PLAN_GAP` or structured cross-repository follow-up proposal identifying the affected repository and required dependency. Do not edit multiple repositories in one WorkItem.
+Git and commits are optional. Do not initialize or reset a repository solely to satisfy an output format. Preserve existing changes on failure. Report file paths and useful delivery details; do not upload changed source files. The Worker saves the report and manifest under the shared location's `.ai/handoffs/` directory.
 
 ## Inputs
 
@@ -58,7 +51,7 @@ Use only inputs present in the frozen execution context, including when availabl
 2. Feature ID and requirement/acceptance revisions.
 3. Architecture/ADR revisions.
 4. Engineering Contract revisions.
-5. Primary repository identity and exact Git revision.
+5. Location and any explicit repository or version requirements.
 6. Read-only reference repository identities and exact revisions.
 7. Dependency handoff/result Artifacts.
 8. Modification boundary and permission policy.
@@ -141,7 +134,7 @@ These are execution results, not lifecycle state transitions. Do not mark the Wo
 Include:
 
 - WorkItem and Work Package revision;
-- primary repository and base revision;
+- actual working directory and optional Git revision;
 - implementation outcome;
 - changed files/components;
 - externally observable behavior implemented;

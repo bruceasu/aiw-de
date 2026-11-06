@@ -1,3 +1,4 @@
+import { preparePlan } from "./plan.mjs";
 import path from "node:path";
 import { mkdir, mkdtemp, realpath, lstat, readdir, readFile, readlink } from "node:fs/promises";
 import os from "node:os";
@@ -16,7 +17,7 @@ export async function workspaceSnapshot(cwd, signal, publicationTarget = null) {
   const visit = async directory => {
     checkSignal(signal);
     for (const entry of (await readdir(directory, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
-      if (entry.name.toLowerCase() === ".git" || (directory === cwd && entry.name.toLowerCase() === ".aiw")) continue;
+      if ([".git", ".ai"].includes(entry.name.toLowerCase()) || (directory === cwd && entry.name.toLowerCase() === ".aiw")) continue;
       const file = path.join(directory, entry.name);
       const relative = path.relative(cwd, file);
       const portable = relative.split(path.sep).join("/").normalize("NFC");
@@ -44,61 +45,13 @@ export class WorkspaceSession {
     Object.assign(this, { cwd, assignment, cfg, attempt, ownsWorkspace: false });
   }
   static async materialize(cfg, task, attempt) {
-    checkSignal(attempt.signal);
-    if ((task.subjectType === "goal-discussion" || cfg.role === "goal-discussion") && task.workspace) {
-      throw new RuntimeFault("GOAL_WORKSPACE_ASSIGNMENT_DENIED", "CONFIGURATION");
-    }
-    if (!task.workspace) {
-      if (task.subjectType === "goal-discussion" || cfg.role === "goal-discussion") {
-        const cwd = await mkdtemp(path.join(os.tmpdir(), "aiw-goal-"));
-        const session = new WorkspaceSession(await realpath(cwd), null, cfg, attempt);
-        session.coordinator = await ResourceCoordinator.forWorkspace(session.cwd);
-        return session;
-      }
-      const session = new WorkspaceSession(await realpath(cfg.fallbackWorkspace), null, cfg, attempt);
-      session.coordinator = await ResourceCoordinator.forWorkspace(session.cwd);
-      return session;
-    }
-    const repositoryRoot = task.workspace.repositoryPath || cfg.repositoryRoot;
-    if (!repositoryRoot || (!task.workspace.repositoryPath && task.workspace.repositoryRef !== cfg.repositoryRef)) throw new RuntimeFault("REPOSITORY_CONFIGURATION_MISMATCH", "CONFIGURATION");
-    if (task.workspace.baseRevision == null) {
-      const cwd = await realpath(repositoryRoot);
-      const session = new WorkspaceSession(cwd, task.workspace, cfg, attempt);
-      session.repositoryRoot = cwd;
-      session.coordinator = await ResourceCoordinator.forWorkspace(cwd);
-      await attempt.recorder.record("workspace-ready", { mode: "DIRECT", repositoryRef: task.workspace.repositoryRef });
-      return session;
-    }
-    if (!validRevision(task.workspace.baseRevision)) throw new RuntimeFault("BASE_REVISION_INVALID", "CONFIGURATION");
-    await mkdir(cfg.worktreeRoot, { recursive: true });
-    const root = await realpath(cfg.worktreeRoot);
-    const cwd = await safePath(root, task.workspace.workspaceKey, true);
-    if (!isInside(root, cwd)) throw new RuntimeFault("WORKSPACE_KEY_INVALID", "CONFIGURATION");
-    const session = new WorkspaceSession(cwd, task.workspace, cfg, attempt);
-    session.repositoryRoot = await realpath(repositoryRoot);
-    const repository = await ResourceCoordinator.forWorkspace(session.repositoryRoot);
-    try {
-      await repository.run({ mode: "X" }, attempt.signal, async () => {
-        for (const input of task.inputs ?? []) {
-          if (!(input.publicationRef ?? "").startsWith("git:")) continue;
-          const parts = input.publicationRef.split(":");
-          if (parts.length !== 3) throw new RuntimeFault("PUBLICATION_REFERENCE_INVALID", "CONFIGURATION");
-          await session.gitAt(session.repositoryRoot, ["fetch", argument(parts[1]), argument(parts[2])]);
-        }
-        const resolved = (await session.gitAt(session.repositoryRoot, ["rev-parse", "--verify", `${task.workspace.baseRevision}^{commit}`])).trim().toLowerCase();
-        if (resolved !== task.workspace.baseRevision.toLowerCase()) throw new RuntimeFault("BASE_REVISION_MISMATCH", "CONFIGURATION");
-        await session.gitAt(session.repositoryRoot, ["check-ref-format", "--branch", argument(task.workspace.branchName)]);
-        await session.gitAt(session.repositoryRoot, ["worktree", "add", "-b", task.workspace.branchName, cwd, task.workspace.baseRevision]);
-        session.ownsWorkspace = true;
-      });
-      session.coordinator = await ResourceCoordinator.forWorkspace(cwd);
-      await attempt.recorder.record("workspace-ready", { baseRevision: task.workspace.baseRevision, workspaceKey: task.workspace.workspaceKey });
-      return session;
-    } catch (error) {
-      // Creation may have partially finished. Keep that path for reconciliation instead of deleting an unowned directory.
-      error.workspace = session;
-      throw error;
-    }
+    const plan = await preparePlan(cfg, task, attempt);
+    const assignment = plan.base ? { baseRevision: plan.base } : null;
+    const session = new WorkspaceSession(plan.cwd, assignment, cfg, attempt);
+    session.plan = plan;
+    session.repositoryRoot = plan.source;
+    session.coordinator = await ResourceCoordinator.forWorkspace(plan.cwd);
+    return session;
   }
   async gitAt(cwd, args, signal = this.attempt.signal) {
     if (args.includes("push")) throw new RuntimeFault("GIT_PUSH_FORBIDDEN", "CONFIGURATION");
@@ -126,7 +79,7 @@ export class WorkspaceSession {
     return await this.coordinator.run({ mode: "X" }, this.attempt.signal, async () => {
       await this.validateReadOnly(readOnly);
       if (!readOnly) {
-        await this.gitAt(this.cwd, ["add", "-A", "--", ".", ":(exclude).aiw", ":(exclude).aiw/**"]);
+        await this.gitAt(this.cwd, ["add", "-A", "--", ".", ":(exclude).ai", ":(exclude).ai/**", ":(exclude).aiw", ":(exclude).aiw/**"]);
         const staged = await this.gitAt(this.cwd, ["diff", "--cached", "--name-only", "-z"]);
         if (staged.length) await this.gitAt(this.cwd, ["-c", "user.name=AI Dev Worker", "-c", "user.email=aidev-worker@localhost", "commit", "--no-gpg-sign", "-m", `aidev: ${task.taskId} attempt ${task.attemptNo}`]);
       }
@@ -138,19 +91,7 @@ export class WorkspaceSession {
     });
   }
   async cleanup() {
-    if (!this.assignment || !this.ownsWorkspace || this.attempt.resourceUncertain) {
-      await this.attempt.recorder.record("workspace-cleanup", { status: this.assignment ? "preserved" : "not-owned" });
-      return;
-    }
-    const signal = AbortSignal.timeout(this.cfg.cleanupTimeoutMs ?? 10000);
-    try {
-      await this.coordinator.run({ mode: "X" }, signal, () => this.gitAt(this.repositoryRoot, ["worktree", "remove", "--force", this.cwd], signal));
-    } catch (error) {
-      const code = errorCode(error);
-      if (["PROCESS_TREE_UNCERTAIN", "RESOURCE_TERMINATION_UNCERTAIN"].includes(code)) this.attempt.resourceUncertain = true;
-      await this.attempt.recorder.record("workspace-cleanup", { status: "preserved", code });
-      throw error;
-    }
-    await this.attempt.recorder.record("workspace-cleanup", { status: "completed" });
+    if (!this.attempt.resourceUncertain) await this.plan.release();
+    await this.attempt.recorder.record("workspace-cleanup", { status: "preserved" });
   }
 }

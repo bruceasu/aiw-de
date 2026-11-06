@@ -144,7 +144,7 @@ public class ExecutionGuard {
         if(number(row,"revision")!=input.policyRevision() || !active(row) || !ledger.configurationAllowed(policy(row))) throw new IllegalStateException("Policy changed, inactive or missing required budget configuration");
         tasks.lock(new TaskId(taskId));var task=tasks.find(new TaskId(taskId)).orElseThrow();
         if(tasks.attemptNo(task.id())!=0 || !Set.of(TaskState.BLOCKED,TaskState.READY).contains(task.state())
-                || !task.requiredCapabilities().contains(CAPABILITY) || task.repositoryRef()==null || task.baseRevision()==null)
+                || !task.requiredCapabilities().contains(CAPABILITY))
             throw new IllegalStateException("Unclaimed guard-capable task with immutable repository base required");
         if(!task.subjectId().equals(input.planId())) throw new SecurityException("Task and execution policy must identify the same Plan");
         var inputs=dependencies.findDependencies(task.id()).stream().map(id->attempts.findCompletedInput(id)

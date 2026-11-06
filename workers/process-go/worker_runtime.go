@@ -117,7 +117,7 @@ func workspaceDigest(ctx context.Context, cwd string) (string, error) {
     hash := sha256.New(); count := 0; var total int64
     err := filepath.WalkDir(cwd, func(file string, entry fs.DirEntry, err error) error {
         if err != nil { return err }; if ctx.Err() != nil { return ctx.Err() }
-        if strings.EqualFold(entry.Name(), ".git") { if entry.IsDir() { return filepath.SkipDir }; return nil }
+        if strings.EqualFold(entry.Name(), ".git") || strings.EqualFold(entry.Name(), ".ai") { if entry.IsDir() { return filepath.SkipDir }; return nil }
         count++; if count > 50000 { return errors.New("SNAPSHOT_CAPACITY_EXCEEDED") }
         rel, _ := filepath.Rel(cwd, file); info, e := entry.Info(); if e != nil { return e }; fmt.Fprintf(hash, "%s:%d\n", rel, info.Mode())
         if entry.Type()&os.ModeSymlink != 0 { link, e := os.Readlink(file); if e != nil { return e }; fmt.Fprintln(hash, link) }

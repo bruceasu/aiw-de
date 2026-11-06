@@ -1,5 +1,5 @@
 // Compile production sources only. No tests, SDK execution, model calls or retained distribution.
-import { createRequire } from "node:module";
+import { stripTypeScriptTypes } from "node:module";
 import { readdir, readFile, mkdtemp, rm, rmdir } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -7,19 +7,15 @@ import os from "node:os";
 import path from "node:path";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const require = createRequire(new URL("../extern-workers/process-typescript/package.json", import.meta.url));
-const ts = require("typescript");
 let failed = false;
 for (const worker of ["process-typescript"]) {
   const directory = path.join(root, "workers", worker, "src");
   for (const file of (await readdir(directory)).filter(file => file.endsWith(".ts") && !file.endsWith(".test.ts"))) {
-    const result = ts.transpileModule(await readFile(path.join(directory, file), "utf8"), {
-      fileName: file, reportDiagnostics: true,
-      compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.NodeNext, isolatedModules: true },
-    });
-    for (const diagnostic of result.diagnostics ?? []) {
-      if (diagnostic.category === ts.DiagnosticCategory.Error) failed = true;
-      console.error(`${worker}/${file}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`);
+    try {
+      stripTypeScriptTypes(await readFile(path.join(directory, file), "utf8"), { mode: "transform", sourceUrl: file });
+    } catch (error) {
+      failed = true;
+      console.error(`${worker}/${file}: ${error.message}`);
     }
   }
 }
@@ -28,8 +24,11 @@ function compile(executable, args, cwd = root, env = process.env) {
   if (result.error || result.status !== 0) { failed = true; console.error(result.error?.message ?? result.stderr ?? "compile failed"); }
   return result;
 }
-for (const directory of [path.join(root, "extern-workers/process-typescript/runtime-core"), path.join(root, "extern-workers/process-typescript/scripts")]) {
+for (const directory of [path.join(root, "workers/process-typescript/runtime-core"), path.join(root, "extern-workers/process-typescript/scripts")]) {
   for (const file of (await readdir(directory)).filter(file => file.endsWith(".mjs"))) compile(process.execPath, ["--check", path.join(directory, file)]);
+}
+for (const file of ["workflow-editor.js", "workflow-graphs.js", "configurations.js", "configuration-methods.js", "agent-factory.js"]) {
+  compile(process.execPath, ["--check", path.join(root, "src/main/resources/static/ui", file)]);
 }
 const pyDirectory = path.join(root, "workers/process-python");
 const pythonFiles = (await readdir(pyDirectory)).filter(file => file.endsWith(".py") && !file.startsWith("test_"));

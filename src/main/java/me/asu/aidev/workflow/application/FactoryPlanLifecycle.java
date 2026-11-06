@@ -92,7 +92,7 @@ public class FactoryPlanLifecycle {
         if (goal.length()>16384) goal=title;
         var step=new WorkflowPlanSpec.Step("execute",Set.of(method.roleCapability()),Set.of(),method.primarySkill(),
                 intent.instruction(),intent.repositoryRef(),intent.baseRevision(),Set.of());
-        var spec=new WorkflowPlanSpec(goal,plan.spec().source(),List.of(step));
+        var spec=new WorkflowPlanSpec(goal,plan.spec().source(),List.of(step),plan.spec().location());
         long now=System.currentTimeMillis();
         repo.jdbc().update("INSERT INTO workflow_factory_plan VALUES(?,?,?,?,?)",plan.id(),
                 repo.encode(new Draft(plan.spec(),plan.state().name(),plan.version(),plan.reason())),repo.encode(intent),actor,now);
@@ -105,7 +105,6 @@ public class FactoryPlanLifecycle {
         if (!managed.isEmpty() && repo.jdbc().update("UPDATE authority_managed_plan SET spec_digest=?,version=? WHERE plan_id=? AND spec_digest=?",
                 AuthorityRepository.hash(repo.encode(spec)),plan.version()+1,plan.id(),AuthorityRepository.hash(repo.encode(plan.spec())))!=1)
             throw new IllegalStateException("Managed draft changed during confirmation");
-        if (gitDelivery!=null) gitDelivery.getObject().capture(plans.find(plan.id()).orElseThrow());
         repo.audit("PLAN:"+plan.id(),null,null,actor,"FACTORY_PLAN_CONFIRMED",intent.intentId()+":"+intent.intentVersion()+"; config="+config.digest());
     }
 
@@ -147,7 +146,6 @@ public class FactoryPlanLifecycle {
                 "factory","Recorded factory work completed: "+task.id().value(),Instant.now()))
             throw new IllegalStateException("Plan changed during completion");
         repo.jdbc().update("UPDATE authority_managed_plan SET version=? WHERE plan_id=?",plan.version()+1,plan.id());
-        if (gitDelivery!=null) gitDelivery.getObject().enqueue(plan.id());
         repo.audit("PLAN:"+plan.id(),null,null,"factory","FACTORY_PLAN_COMPLETED",task.id().value());
     }
 
@@ -227,20 +225,13 @@ public class FactoryPlanLifecycle {
                 if (!plans.transition(plan.id(),plan.version(),WorkflowPlan.State.CONFIRMED,WorkflowPlan.State.COMPLETED,"factory","Independent review passed: "+task.id().value(),Instant.now()))
                     throw new IllegalStateException("Plan changed during reviewed completion");
                 repo.jdbc().update("UPDATE authority_managed_plan SET version=? WHERE plan_id=?",plan.version()+1,plan.id());
-                if (gitDelivery!=null) gitDelivery.getObject().enqueue(plan.id());
             }
         }
         repo.audit("PLAN:"+task.subjectId(),null,null,"factory","FACTORY_REVIEW_"+state,task.id().value());
         return true;
     }
 
-    private boolean successful(JdbcConfiguredPlanHistoryRepository.Task task, String kind) {
-        if (!history.successful(task)) return false;
-        var result=task.attempts().getFirst();
-        return !"WORKSPACE".equals(kind) || result.resultRevision()!=null
-                && !result.resultRevision().equals(result.baseRevision())
-                && result.changedFiles()!=null && !result.changedFiles().isBlank();
-    }
+    private boolean successful(JdbcConfiguredPlanHistoryRepository.Task task,String kind) { return history.successful(task); }
 
     /** Explicit owner recovery adopts a real completed result; never prepares or replays a task. */
     @Transactional
@@ -280,7 +271,7 @@ public class FactoryPlanLifecycle {
                 i.instruction(),i.dependencies(),i.runtime(),i.aiProfileId(),null,config,null);
     }
     private boolean sameWork(Intent a,Intent b) {
-        return a.planId().equals(b.planId()) && a.repositoryRef().equals(b.repositoryRef()) && a.baseRevision().equals(b.baseRevision())
+        return a.planId().equals(b.planId()) && Objects.equals(a.repositoryRef(),b.repositoryRef()) && Objects.equals(a.baseRevision(),b.baseRevision())
                 && a.instruction().equals(b.instruction()) && a.dependencies().equals(b.dependencies()) && a.runtime().equals(b.runtime())
                 && a.aiProfileId().equals(b.aiProfileId()) && a.configRef().equals(b.configRef());
     }

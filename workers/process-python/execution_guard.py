@@ -52,8 +52,9 @@ class GuardBroker:
         self.lease = {"workerId": worker_id, "attemptId": task["attemptId"], "leaseToken": task["leaseToken"]}
         self.context = client._post(self.base + "/execution-context/read", self.lease)
         if self.context.get("protocol") != PROTOCOL: raise RuntimeError("GUARD_PROTOCOL_UNSUPPORTED")
-        task["inputs"] = [{**item, "taskId": item["taskId"].get("value") if isinstance(item["taskId"], dict) else item["taskId"]} for item in self.context["snapshot"]["inputs"]]
-        self.repository = (task.get("workspace") or {}).get("repositoryRef")
+        supplied = {item.get("attemptId"): item.get("handoff") for item in task.get("inputs", [])}
+        task["inputs"] = [{"handoff": supplied.get(item.get("attemptId")), **item, "taskId": item["taskId"].get("value") if isinstance(item["taskId"], dict) else item["taskId"]} for item in self.context["snapshot"]["inputs"]]
+        self.repository = self.context["snapshot"]["task"].get("repositoryRef")
         frozen = self.context["snapshot"]["task"]
         if frozen["instruction"] != task.get("instruction") or frozen["instructionRevision"] != task.get("instructionRevision") or frozen.get("repositoryRef") != self.repository:
             raise RuntimeError("FIXED_TASK_CONTEXT_CHANGED")
@@ -74,7 +75,7 @@ class GuardBroker:
             info = parent.lstat()
             if stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400: raise RuntimeError("GUARD_WORKSPACE_UNSAFE")
         self.root = root.resolve(strict=True)
-        self.git = ControlledGit(self.root, self.attempt)
+        self.git = LazyControlledGit(self.root, self.attempt)
 
     def begin(self, tool, resource, arguments, call_id=None):
         self.attempt.check()
@@ -244,13 +245,20 @@ class GuardBroker:
 
     def record_delivery(self, result, report):
         delivery = {"scope": self.context["snapshot"]["task"]["instruction"],
-                    "baseline": (self.task.get("workspace") or {}).get("baseRevision"),
+                    "baseline": self.context["snapshot"]["task"].get("baseRevision"),
                     "resultRevision": (result or {}).get("resultRevision"), "changes": (result or {}).get("changedFiles", []),
                     "commandsRun": [json.dumps(c, sort_keys=True) for c in self.commands_run],
                     "checksNotRun": [] if self.commands_run else ["No verification command was authorized and run"],
                     "unresolved": [] if report.get("verdict") == "PASS" else [report.get("summary", "Review required")],
                     "sources": self.context["snapshot"]["references"]}
         self.client._post(self.base + "/delivery", {"lease": self.lease, "delivery": delivery})
+
+
+class LazyControlledGit:
+    def __init__(self, root, attempt): self.root, self.attempt, self.value = root, attempt, None
+    def __getattr__(self, name):
+        if self.value is None: self.value = ControlledGit(self.root, self.attempt)
+        return getattr(self.value, name)
 
 
 class ControlledGit:

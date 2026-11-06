@@ -33,7 +33,15 @@ When a Worker Protocol token is configured, the system SHALL require the matchin
 - **THEN** the request is rejected before performing the requested protocol operation
 
 ### Requirement: Worker-owned repository workspace
-For repository work, the Worker SHALL prepare and operate on its local workspace using the assigned immutable base revision and return a result revision with changed-file information. The Control Plane SHALL NOT rely on the Worker machine's local filesystem path as shared state.
+The Control Plane SHALL supply a Plan location, preserving a declared location without filesystem or Git checks, or allocating a Plan temporary directory when omitted. The Worker SHALL decide how to prepare and use it. Git and repository registration SHALL NOT be prerequisites for generic task execution. Repository and version requirements MAY be expressed in task content.
+
+The Worker SHOULD isolate a single repository in a Plan-specific worktree. A multi-repository directory SHALL NOT cause automatic worktree creation for each repository. Concurrent execution against the same location SHALL require independent Git worktrees; otherwise Workers SHALL serialize access. Plans with different directories MAY execute concurrently.
+
+### Requirement: Worker-reported shared handoffs
+Before completion, the Worker SHALL retain its code and write a report and manifest under the shared location's `.ai/handoffs/<task-hash>/<attempt-hash>/` directory. Completion SHALL report the manifest path and SHA-256 with an owned active lease. The Control Plane SHALL record the exact producing attempt and forward its immutable reference to dependent tasks without uploading changed source files or reading the Worker filesystem. The consuming Worker SHALL verify the manifest digest and producer identity.
+
+### Requirement: Plan location retention
+Workers SHALL preserve files and worktrees across task completion, failure and retry. Unknown process termination SHALL retain exclusion locks. The Control Plane SHALL NOT reset or delete user-declared locations. Only a completed Plan with confirmed stopped execution SHALL permit cleanup of its platform-owned temporary directory; cleanup SHALL preserve execution summaries while local handoff files may be removed.
 
 #### Scenario: Submit repository result
 - **WHEN** a Worker completes repository work

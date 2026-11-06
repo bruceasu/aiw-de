@@ -111,11 +111,11 @@ export function completionReport(resultKind: string, finalResponse: string, outp
     if (!Array.isArray(outputFiles) || outputFiles.length > 16) throw new RuntimeFault("OUTPUT_FILE_DECLARATIONS_INVALID", "OUTPUT_INVALID");
   }
   let summary = (blocks.length ? finalResponse.replace(blocks[0][0], "") : finalResponse).trim();
-  if (!summary && outputFiles?.length && (resultKind === "REPORT" || resultKind === "WORKSPACE")) {
+  if (!summary && outputFiles?.length && (resultKind === "REPORT" || resultKind === "DELIVERY")) {
     summary = reportFromOutputFiles(outputFiles);
   }
   if (!summary) throw new RuntimeFault("COMPLETION_REPORT_EMPTY", "OUTPUT_INVALID");
-  if (resultKind === "REPORT" || resultKind === "WORKSPACE") return { verdict: "PASS", summary, ...(outputFiles ? { outputFiles } : {}) };
+  if (resultKind === "REPORT" || resultKind === "DELIVERY") return { verdict: "PASS", summary, ...(outputFiles ? { outputFiles } : {}) };
   if (resultKind !== "VERDICT") throw new RuntimeFault("RESULT_KIND_INVALID", "CONFIGURATION");
   const marker = summary.split(/\r?\n/).at(-1)?.trim();
   const verdict = marker?.startsWith("AIW_VERDICT:") ? marker.slice("AIW_VERDICT:".length).trim() : null;

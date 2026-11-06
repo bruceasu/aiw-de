@@ -45,9 +45,9 @@ public class WorkflowEditorService {
             new Role("requirement-analysis", "software-requirements-analyst", "REPORT", false),
             new Role("solution-architecture", "solution-architect", "REPORT", false),
             new Role("implementation-planning", "implementation-planner", "REPORT", false),
-            new Role("coding", "coding-work-package-executor", "WORKSPACE", true),
-            new Role("integration", "coding-work-package-executor", "WORKSPACE", true),
-            new Role("repair", "coding-work-package-executor", "WORKSPACE", true));
+            new Role("coding", "coding-work-package-executor", "DELIVERY", false),
+            new Role("integration", "coding-work-package-executor", "DELIVERY", false),
+            new Role("repair", "coding-work-package-executor", "DELIVERY", false));
     private static final Set<String> ROLE_CAPABILITIES = Set.of("requirement-analysis", "solution-architecture",
             "implementation-planning", "coding", "integration", "repair", "code-review", "verification",
             "integration-verification", "workflow-review", "workflow-recovery-decision");
@@ -100,7 +100,7 @@ public class WorkflowEditorService {
                                 step("analysis", "requirement-analysis", "software-requirements-analyst", Set.of(), "Analyze the stated goal."),
                                 step("architecture", "solution-architecture", "solution-architect", Set.of("analysis"), "Design a bounded solution from the upstream report."),
                                 step("plan", "implementation-planning", "implementation-planner", Set.of("architecture"), "Plan independently reviewable work from the upstream reports.")))),
-                new Template("delivery", "Code with independent review", "Requires a workspace; Git revision is optional",
+                new Template("delivery", "Code with independent review", "Worker prepares the Plan location; Git is optional",
                         plan(List.of(
                                 step("code", "coding", "coding-work-package-executor", Set.of(), "Implement the approved change in the selected workspace.")))));
     }
@@ -129,9 +129,6 @@ public class WorkflowEditorService {
                     && step.requiredSkills().contains(r.capability())).filter(r -> step.requiredSkills().stream()
                     .noneMatch(skill -> ROLE_CAPABILITIES.contains(skill) && !skill.equals(r.capability()))).findFirst()
                     .orElseThrow(() -> new IllegalArgumentException(step.key() + ": unsupported role, skillRef or capabilities"));
-            if (!candidate && role.needsWorkspace() && step.repositoryRef() == null) {
-                throw new IllegalArgumentException(step.key() + ": workspace is required for this role");
-            }
         }
     }
 

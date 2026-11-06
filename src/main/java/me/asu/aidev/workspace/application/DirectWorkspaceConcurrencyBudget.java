@@ -11,7 +11,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /** Serializes direct-directory claims for one target across Runs. */
-@Component
 @Order(150)
 public class DirectWorkspaceConcurrencyBudget implements TaskConcurrencyBudget {
     private static final String CLAIM_MUTEX = "__direct_workspace_claim__";

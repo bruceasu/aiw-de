@@ -228,7 +228,7 @@
     if(!plan.repositories.some(item=>item.ref===repository)||source.repositoryRef&&source.repositoryRef!==repository) throw new Error('原仓库或工作方法已不在当前范围，请明确重新选择。');
     const dependencyIds=[...$('prepare-dependencies').querySelectorAll('input:checked')].map(input=>input.value);
     if(dependencyIds.some(id=>!options.upstream.some(item=>item.id===id&&item.repositoryRef===repository))) throw new Error('原上游已不在当前账号的同仓库可选范围，请取消或重新选择。');
-    const candidate={intentId:origin?.intent.intentId||sent?.intentId||unique('task'),intentVersion:1,expectedGeneration:0,planId:plan.id,policyRevision,repositoryRef:repository,baseRevision:$('prepare-baseline').value.trim(),instruction:$('prepare-instruction').value,dependencies:dependencyIds,runtime:profile.profile.runtime,aiProfileId:profile.id,defaultRole:source.defaultRole,configRef:clone(source.configRef),candidate:clone(source.candidate)};
+    const candidate={intentId:origin?.intent.intentId||sent?.intentId||unique('task'),intentVersion:1,expectedGeneration:0,planId:plan.id,policyRevision,repositoryRef:repository,baseRevision:$('prepare-baseline').value.trim()||null,instruction:$('prepare-instruction').value,dependencies:dependencyIds,runtime:profile.profile.runtime,aiProfileId:profile.id,defaultRole:source.defaultRole,configRef:clone(source.configRef),candidate:clone(source.candidate)};
     if(origin&&business(candidate)===business(origin.intent)) return {...clone(origin.intent),expectedGeneration:origin.preparation.generation};
     else if(origin) candidate.intentVersion=Math.max(...snapshot.preparations.filter(item=>item.intentId===candidate.intentId).map(item=>item.intentVersion),origin.intent.intentVersion)+1;
     return candidate;

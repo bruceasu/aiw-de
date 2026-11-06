@@ -81,7 +81,7 @@ public class ManagedWorkerProvisioner {
                 return new Result(true,"An unused Worker is draining to make room for this role; preparation will continue.");
             return new Result(false,"平台管理的本机 Worker 已达到数量限制，请等待现有任务完成或接入外部 Worker。");
         }
-        String directory=repository==null?"":workspaces.repositoryPath(repository).toAbsolutePath().toString();
+        String directory="";
         var slot=new Slot();slot.worker="factory-"+key.substring(0,24);slot.settingsVersion=settings.version();slot.role=role;slot.repository=repository;
         if(registrations.busy(slot.worker)) return new Result(false,"The previous Worker still has an active lease; wait for recovery before restarting it.");
         registrations.remember(slot.worker,key);slots.put(key,slot);
@@ -139,7 +139,7 @@ public class ManagedWorkerProvisioner {
             env.put("AIW_WORKER_TOKEN",token);env.put("AIW_CONTROL_PLANE_URL","http://127.0.0.1:"+port+contextPath);
             env.put("AIW_AGENT_RUNTIME",config.runtime());
             env.remove("AIW_REPOSITORY_REF");env.remove("AIW_REPOSITORY_ROOT");
-            if(repository!=null){env.put("AIW_REPOSITORY_REF",repository);env.put("AIW_REPOSITORY_ROOT",directory);}
+
             slot.worker="factory-"+key.substring(0,24);
             Path statuses=Path.of(System.getProperty("user.home"),".aiw","agent-factory","status");Files.createDirectories(statuses);
             slot.status=statuses.resolve(slot.worker+".json");

@@ -26,7 +26,7 @@ export interface ProcessProfile {
   workerIdPrefix: string;
   roleCapability: string;
   allowedTaskTypes: string[];
-  resultKind: "REPORT" | "VERDICT" | "WORKSPACE";
+  resultKind: "REPORT" | "VERDICT" | "DELIVERY";
   readOnly: boolean;
   instruction: string;
   protocolSkills: string[];
@@ -58,10 +58,10 @@ export function loadProfile(file: string): ProcessProfile {
   if (value.allowedTaskTypes instanceof Array && (value.allowedTaskTypes.length !== 1 || value.allowedTaskTypes[0] !== "EXTERNAL_WORK")) {
     throw new Error(`invalid profile ${file}: allowedTaskTypes must be [EXTERNAL_WORK]`);
   }
-  if (!["REPORT", "VERDICT", "WORKSPACE"].includes(String(value.resultKind))) {
+  if (!["REPORT", "VERDICT", "DELIVERY"].includes(String(value.resultKind))) {
     throw new Error(`invalid profile ${file}: resultKind must be REPORT, VERDICT or WORKSPACE`);
   }
-  if ((value.resultKind === "WORKSPACE") !== (value.readOnly === false)) {
+  if ((value.resultKind === "DELIVERY") !== (value.readOnly === false)) {
     throw new Error(`invalid profile ${file}: resultKind conflicts with readOnly`);
   }
   if (typeof value.readOnly !== "boolean") throw new Error(`invalid profile ${file}: readOnly must be a boolean`);
