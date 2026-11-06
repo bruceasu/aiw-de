@@ -356,7 +356,7 @@ Web 复用已有样式，显示阶段、最近联系、工具与控制粒度、�
 
 ## Scope
 
-在当前 Git 工作区先完成详细设计，再按用户新增指令直接实施。使用 fd-workflow 管理生命周期、codebase-design 明确职责和接口。无需 worktree；保留在途修改，后续只提交本 FD 范围。编译按仓库预算执行；测试、模型、依赖安装和部署仍未授权。
+在当前 Git 工作区先完成详细设计，再按用户新增指令直接实施。使用 fd-workflow 管理生命周期、codebase-design 明确职责和接口。无需 worktree；保留在途修改，后续只提交本 FD 范围。编译按仓库预算执行；定向测试按用户后续逐次授权执行，模型、依赖安装和部署仍未授权。
 
 未来以 Python Worker 为主，必要 Java 协议、授权、持久化与现有 Web 为支撑。Go/TypeScript 不要求本轮重写，按实际能力匹配。复制或改编 Pi 源码时固定来源并保留 MIT 归属。
 
@@ -375,7 +375,7 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - [ ] 3.2 软暂停/继续、失联闸门、真实停止与输入回执、能力受限展示。
 - [ ] 3.3 工作台展示运行、上下文、工具、消耗与回执，原文留 Worker 本机。
 - [ ] 4.1 根据账目收紧工作集；先批次串行，再受限只读并行和资源锁。
-- [ ] 4.2 版本化 UTF-8 文本读取，保持摘要/偏移及二进制契约。
+- [x] 4.2 版本化 UTF-8 文本读取，保持摘要/偏移及二进制契约。
 - [ ] 5.1 FD-078 合同就绪后对接正式阻塞、非 Git checkpoint、无新回答门禁与 successor 恢复。
 - [ ] 6.1 更新相邻说明、协议与 UI 文案，完成实施后适用编译和真实证据。
 - [ ] 6.2 按实际授权验证，独立实施审查并检查升级回滚；未授权检查明确保留。
@@ -421,6 +421,20 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - 新增四个元数据边界用例，覆盖原文不落日志、变化标识不等同缓存、库存去重与归因未知、UTF-8 字节；只有编译证据，不声称运行通过。
 
 ## TODO
+
+- 修复后重验已执行：六组 Python 定向测试 38 项全部通过（0.198 秒），覆盖新增普通原生任务不打开通道、要求新能力时不得降级，以及写入/读取互斥两向等待。最终 Worker 编译成功；Java 最近编译成功，新增清理/版本核对仍只有编译与静态证据。
+
+- P3 已加入 `AIW_SKILL_TEXT_PROTOCOL=v1` 的 UTF-8 字节分页与原二进制工具保留；`AIW_HOST_READ_PARALLEL=v1` 仅并行最多四个独立读取，整个工作区的效果操作与读取互斥，写者等待时阻止新增读取，混合批次保持串行。增量会话去除重复固定头与旧观察；全部新源码和开关进入冻结配置摘要。未做真实任务性能对照，不能宣称提速或降本比例。
+- v2 候选允许带 noChange.reason 与真实成功读取 callId 的无改动结果；REPAIR_REQUIRED 可以保持未修改，不伪造写入。实际业务验收仍由 CP 和独立阶段负责。
+- 系统内存不足曾导致 Node 子进程和 JVM 启动失败，非源码编译结论；未杀其他进程，清理两个本次生成的 JVM 崩溃文件。用户另行授权一次串行验证：限制 Node 堆 192 MiB、Maven 堆 256 MiB/Metaspace 128 MiB 后，Worker compile-only、离线 Java test-compile 均成功；六组 Python 测试合计 36 项通过（0.150 秒）。其后启动能力/原生普通任务回退的小修正已再次通过 Worker 编译；补充两个相关用例后按同一授权的修复后重验预算再检查一次。
+- V28 SQL 已由上述 Java 用例在临时 SQLite 加载；真实业务数据库 Flyway 升级未执行。后续加入 30 天终态事件清理、指令版本核对与历史过期提示，已经 Java test-compile；七项 Java 运行结果早于这批增补，不能用其声称增补的运行验证通过。控制审计和未决 UNKNOWN 不做观测清理。
+- 启动时只有已验证受控适配器且明确开启通道的 Worker 登记 worker-loop-v1；Codex 必须 host-action v2。普通原生任务不自动变成受控任务，仍 NONE；要求新能力却缺少受控上下文时明确拒绝。未完成的原生/动态工具细粒度控制不登记为已有能力。
+- %% NEEDS_INPUT: FD-078 正式问答、location/handoff checkpoint 与回答版本门禁尚未交付；5.1 等待该合同，不接管另一路在途角色，不由 CP 扫描 .ai 或把报告文本当确认答案。整个 FD 仍 In Progress，不能请求整体完成审查或归档。
+
+- P2 已接入显式 `AIW_WORKER_LOOP_CONTROL=true` 的受控 API / host-action v2 路径：V28 三张附加表、精确机器租约与人类 Owner/CSRF/Operator 路由、连续事件确认/冲突封闭、独立控制轮询与失联闸门、活动动作归零后暂停、同事务 Workbench DRAIN/run seal 和 complete 门禁。CANCEL 同事务调用既有 requestStop，平台 stop acknowledgement 后才显示 APPLIED；停止取代未生效的软控制。未实现的模式不宣称该控制能力，普通原生任务保持原路径。
+- P2 工作台加入元数据上下文、阶段、过期联系与真实命令收据；原文留 Worker。控件复用现有样式、只渲染纯文本，连接未知先查询原 requestId，不自动新建控制请求。
+- 用户另行授权并执行 `python -m unittest test_run_channel`：6 项通过（0.061 秒）；离线 `mvn -o -Dmaven.repo.local=D:/.m2/repository -Dtest=ExecutionRunsTest test`：7 项通过。范围为本地 mock/临时 SQLite，不涉及真实模型、服务、浏览器、PostgreSQL、多实例或网络。
+- 已执行 Worker compile-only 和 Java 离线 compile/test-compile，均成功。后续资源关闭、协议摘要等小修改将在下一批源码编译覆盖。P2 仍待最终独立审查、保留策略、其他后端和完整停止/完成联调，不标记整个工作项完成。
 
 - 用户新增授权设计完成后直接实施；从 P0 开始，顺序推进，未完成项保持未完成，不将局部进展视作整个 FD 交付。
 - 实施依赖为 FD-078 判定/问答合同；P4 前确认 location/handoff checkpoint 可用。

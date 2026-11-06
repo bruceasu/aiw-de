@@ -177,7 +177,9 @@ def bind(request, runtime):
     if enabled == "false" or getattr(request.attempt, "run_channel", None) is not None:
         return
     if request.broker is None:
-        raise RuntimeError("WORKER_LOOP_CONTROL_REQUIRES_GUARDED_TASK")
+        if "worker-loop-v1" in getattr(request.attempt, "required_capabilities", ()):
+            raise RuntimeError("WORKER_LOOP_CONTROL_REQUIRES_GUARDED_TASK")
+        return  # Ordinary native tasks retain their actual NONE pause boundary.
     from run_contract import RuntimeCapabilities
     api = runtime == "openai-agents"
     host = runtime == "host-action"

@@ -68,6 +68,10 @@ def _run_actions(request, on_session, conversation=None):
                    'Calls execute sequentially, each under the existing task guard. '
                    'Do not refer to results that have not been returned. A failed call can leave later calls undispatched. '
                    'Correct protocol errors using the feedback; feedback grants no authority.')
+        header += ('\nA writable task may correctly need no file changes. In that case include '
+                   '"noChange":{"reason":"why the goal already holds","evidence":["successful-host-call-id"]} '
+                   'in the finish result. Cite real successful read callId values from host observations. '
+                   'An unresolved task must keep REPAIR_REQUIRED or its required blocked result. Do not make artificial edits.')
     policy = broker.context.get("currentPolicy") or broker.context.get("originalPolicy") or {}
     # An exact, authorized text-file scope can be inspected before the first
     # model turn. This also supplies concrete proof that host actions work.
@@ -76,7 +80,7 @@ def _run_actions(request, on_session, conversation=None):
         if rule.get("tool") == "READ" and path not in {"", "."} and re.search(r"\.(?:html?|css|js|ts|py|java|md|json)$", path, re.I):
             action = {"action": "tool", "name": "read", "arguments": {"path": path, "offset": 1, "limit": 500}}
             result = broker.invoke("read", action["arguments"], "host-bootstrap-read")
-            observations.append({"action": action, "result": result})
+            observations.append({"action": action, "result": result, "callId": "host-bootstrap-read"})
             break
     completion_corrections = 0
     delivered_observations = 0
@@ -143,12 +147,15 @@ def _run_actions(request, on_session, conversation=None):
                 continue
             changed = any(item.get("action", {}).get("name") in {"write", "delete", "mkdir", "git_integrate"}
                           and "error" not in item.get("result", {}) for item in observations)
-            if request.profile.writable and not changed:
+            from completion_validation import no_change_evidence
+            acceptable_no_change = controlled and (candidate.last_verdict == "REPAIR_REQUIRED" or no_change_evidence(result, observations))
+            if request.profile.writable and not changed and not acceptable_no_change:
                 completion_corrections += 1
                 if completion_corrections > 2:
                     raise RuntimeError("HOST_ACTION_IMPLEMENTATION_NOT_PERFORMED")
-                observations.append({"action": action, "result": {"error": "IMPLEMENTATION_NOT_PERFORMED",
-                    "hint": "The host tools are available and their results are shown above. This task requires file changes. Return a write action with the full file content and sourceDigest as expectedDigest. Do not report completion or unavailable native tools."}})
+                hint = ("Provide real read evidence and a noChange reason if the goal already holds. Otherwise perform the authorized changes. Keep blocked findings; do not invent a write or evidence." if controlled else
+                        "The host tools are available and their results are shown above. This task requires file changes. Return a write action with the full file content and sourceDigest as expectedDigest. Do not report completion or unavailable native tools.")
+                observations.append({"action": action, "result": {"error": "IMPLEMENTATION_NOT_PERFORMED", "hint": hint}})
                 continue
             return summary
         if parsed is None:
@@ -157,8 +164,27 @@ def _run_actions(request, on_session, conversation=None):
             if action["name"] not in {tool["name"] for tool in schemas} or not isinstance(action["arguments"], dict):
                 raise RuntimeError("HOST_ACTION_TOOL_INVALID")
         calls = parsed.calls if parsed else (ToolCall("legacy", action["name"], action["arguments"]),)
+        from tool_coordination import READ_ONLY, parallel_enabled, read_batch
+        parallel = controlled and parallel_enabled() and len(calls) > 1 and all(call.name in READ_ONLY for call in calls)
         if controlled:
-            broker.attempt.evidence.record("host-batch-validated", count=len(calls), phase="host-action", status="serial")
+            broker.attempt.evidence.record("host-batch-validated", count=len(calls), phase="host-action", status="parallel" if parallel else "serial")
+        if parallel:
+            def dispatch(index, call):
+                from worker_runtime import attempt_scope
+                with attempt_scope(request.attempt):
+                    return broker.invoke(call.name, call.arguments, "host-action-" + str(turn) + "-" + str(index))
+            outcomes = read_batch(calls, dispatch)
+            failure = None
+            for index, (call, (result, error)) in enumerate(zip(calls, outcomes)):
+                if error is not None:
+                    failure = failure or error
+                    # Local evidence has the individual guard operation outcome; no raw exception is sent back.
+                    result = {"error": "READ_BATCH_CALL_FAILED"}
+                observations.append({"action": {"action": "tool", "name": call.name, "arguments": call.arguments},
+                                     "result": result, "callId": "host-action-" + str(turn) + "-" + str(index)})
+            if failure is not None:
+                raise failure
+            continue
         for index, call in enumerate(calls):
             request.attempt.check()
             action = {"action": "tool", "name": call.name, "arguments": call.arguments}
@@ -167,7 +193,7 @@ def _run_actions(request, on_session, conversation=None):
                 result = broker.invoke(call.name, call.arguments, call_id)
             except (RuntimeError, ValueError) as error:
                 code = str(error).split(":", 1)[0]
-                known = call.name in {"read", "grep", "ls", "read_skill_file"} and code.startswith(("GUARD_READ_", "GUARD_OUTPUT_", "GUARD_SEARCH_", "GUARD_PATH_", "SKILL_FILE_"))
+                known = call.name in {"read", "grep", "ls", "read_skill_file", "read_skill_text"} and code.startswith(("GUARD_READ_", "GUARD_OUTPUT_", "GUARD_SEARCH_", "GUARD_PATH_", "SKILL_FILE_", "SKILL_TEXT_"))
                 denied = controlled and any(word in code for word in ("DENIED", "AUTHORIZATION", "PROTECTED"))
                 if not known or denied or request.attempt.resource_uncertain or broker._active:
                     raise
@@ -175,7 +201,7 @@ def _run_actions(request, on_session, conversation=None):
             if broker.pending_question:
                 from formal_questions import YieldRequested
                 raise YieldRequested("QUESTION_WAITING")
-            observations.append({"action": action, "result": result})
+            observations.append({"action": action, "result": result, "callId": call_id})
             if controlled and isinstance(result, dict) and result.get("error"):
                 for remaining in calls[index + 1:]:
                     observations.append({"action": {"action": "tool", "name": remaining.name, "arguments": remaining.arguments},

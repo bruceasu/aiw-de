@@ -37,7 +37,7 @@ public final class RunContract {
             Map.entry("visibility",Set.of("WORKER_PROJECTION","BACKEND_OPAQUE")),
             Map.entry("requestScope",Set.of("REQUEST","BACKEND_TURN","UNKNOWN")),
             Map.entry("purpose",Set.of("task","host-action","history-summary")),
-            Map.entry("status",Set.of("running","pending","authorized","serial","correctable","valid","succeeded","failed","unknown")),
+            Map.entry("status",Set.of("running","pending","authorized","serial","parallel","correctable","valid","succeeded","failed","unknown")),
             Map.entry("phase",Set.of("host-action","candidate")),
             Map.entry("tool",Set.of("MODEL","READ","SEARCH","WRITE","GIT","COMMAND","QUESTION")));
         for(var e:payload.entrySet()) {

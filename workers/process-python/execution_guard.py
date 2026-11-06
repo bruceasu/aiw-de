@@ -68,6 +68,9 @@ class GuardBroker:
         self.accepting_tools = True
         self.pending_question = None
         self.checkpoint = None
+        from tool_coordination import ToolCoordinator, parallel_enabled
+        self.parallel_reads = parallel_enabled()
+        self.tool_coordinator = ToolCoordinator(attempt)
 
     def attach(self, workspace):
         root = Path(workspace).absolute()
@@ -121,7 +124,8 @@ class GuardBroker:
         self.attempt.evidence.record("guard-finished", operation=operation, status=state.lower())
 
     def operate(self, tool, resource, arguments, action, call_id=None):
-        with self.lock:
+        from contextlib import nullcontext
+        with nullcontext() if self.parallel_reads and tool in {"READ", "SEARCH"} else self.lock:
             operation = self.begin(tool, resource, arguments, call_id)
             try:
                 result = action()
@@ -138,23 +142,28 @@ class GuardBroker:
                 raise
 
     def invoke(self, name, args, call_id=None):
-        with self.lock:
-            if not self.accepting_tools:
-                from formal_questions import YieldRequested
-                raise YieldRequested("QUESTION_TOOLS_CLOSED")
-            if name == "read_skill_file":
-                self.attempt.check()
-                if not isinstance(args, dict) or set(args) != {"ref", "path", "offset", "limit"} or not getattr(self.attempt, "skill_files", None):
-                    raise RuntimeError("SKILL_FILES_UNAVAILABLE")
-                channel = getattr(self.attempt, "run_channel", None)
+        from tool_coordination import READ_ONLY
+        with self.tool_coordinator.access(self.parallel_reads and name in READ_ONLY):
+            return self._invoke_checked(name, args, call_id)
+
+    def _invoke_checked(self, name, args, call_id):
+        if not self.accepting_tools:
+            from formal_questions import YieldRequested
+            raise YieldRequested("QUESTION_TOOLS_CLOSED")
+        if name in {"read_skill_file", "read_skill_text"}:
+            self.attempt.check()
+            if not isinstance(args, dict) or set(args) != {"ref", "path", "offset", "limit"} or not getattr(self.attempt, "skill_files", None):
+                raise RuntimeError("SKILL_FILES_UNAVAILABLE")
+            channel = getattr(self.attempt, "run_channel", None)
+            if channel:
+                channel.enter()
+            try:
+                reader = self.attempt.skill_files.read_text if name == "read_skill_text" else self.attempt.skill_files.read
+                return reader(**args)
+            finally:
                 if channel:
-                    channel.enter()
-                try:
-                    return self.attempt.skill_files.read(**args)
-                finally:
-                    if channel:
-                        channel.leave()
-            return self._invoke(name, args, call_id)
+                    channel.leave()
+        return self._invoke(name, args, call_id)
 
     def _invoke(self, name, args, call_id=None):
         if self.root is None: raise RuntimeError("GUARD_WORKSPACE_NOT_ATTACHED")

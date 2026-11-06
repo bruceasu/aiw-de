@@ -53,6 +53,7 @@ public class ExecutionRuns {
         result.put("phase",phase);result.put("attemptState",attempt.get("state"));
         result.put("capabilities",repo.decode((String)run.get("capabilities_json"),Map.class));
         result.put("stale",System.currentTimeMillis()-number(run,"last_contact_ms")>5000);
+        result.put("eventHistoryAvailable",number(run,"ack_sequence")==0||repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_run_event WHERE attempt_id=?",Long.class,run.get("attempt_id"))>0);
         var commands=repo.jdbc().queryForList("SELECT request_id,sequence_no,action,status,created_ms,updated_ms FROM execution_run_command WHERE attempt_id=? ORDER BY sequence_no",run.get("attempt_id"));
         for(var command:commands)if("CANCEL".equals(command.get("action"))&&attempt.get("stop_acknowledged_at_epoch_ms")!=null)command.put("status","APPLIED");
         result.put("commands",commands);
@@ -134,7 +135,8 @@ public class ExecutionRuns {
         var run=session(input.taskId(),input.attemptId());owned(owner,run);
         if(number(run,"instruction_revision")!=input.instructionRevision()||number(run,"revision")!=input.expectedRunRevision())throw new IllegalStateException("Run revision changed");
         if(!Set.of("PAUSE","RESUME","CANCEL").contains(input.action()))throw new IllegalArgumentException("Unknown run command");
-        var actual=repo.jdbc().queryForMap("SELECT a.state,t.state AS task_state,a.lease_token,t.lease_token AS current_lease,t.lease_expires_at_epoch_ms,a.stop_requested_at_epoch_ms FROM execution_attempt a JOIN work_task t ON t.id=a.task_id WHERE a.id=?",input.attemptId());
+        var actual=repo.jdbc().queryForMap("SELECT a.state,t.state AS task_state,a.lease_token,t.lease_token AS current_lease,t.lease_expires_at_epoch_ms,a.stop_requested_at_epoch_ms,t.instruction_revision,a.instruction_revision AS attempt_revision FROM execution_attempt a JOIN work_task t ON t.id=a.task_id WHERE a.id=?",input.attemptId());
+        if(number(actual,"instruction_revision")!=input.instructionRevision()||number(actual,"attempt_revision")!=input.instructionRevision())throw new IllegalStateException("Task instruction revision changed");
         if(!"RUNNING".equals(actual.get("state"))||!"RUNNING".equals(actual.get("task_state"))||!Objects.equals(actual.get("lease_token"),actual.get("current_lease"))||number(actual,"lease_expires_at_epoch_ms")<=System.currentTimeMillis())throw new IllegalStateException("Original Attempt is no longer running");
         if(actual.get("stop_requested_at_epoch_ms")!=null||"BROKEN".equals(run.get("phase"))||"FINALIZING".equals(run.get("phase"))&&!"CANCEL".equals(input.action()))throw new IllegalStateException("Run is stopping or sealed");
         if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_run_command WHERE attempt_id=? AND status IN ('ACCEPTED','RECEIVED')",Long.class,input.attemptId())>0&&!"CANCEL".equals(input.action()))throw new IllegalStateException("Previous control still requires acknowledgement");
@@ -177,5 +179,18 @@ public class ExecutionRuns {
     @Transactional public Object receipt(ReceiptQuery input) {
         String owner=owner();text(input.requestId(),80);var rows=repo.jdbc().queryForList("SELECT task_id,attempt_id FROM execution_run_command WHERE owner_id=? AND request_id=?",owner,input.requestId());
         if(rows.isEmpty())return Map.of("found",false);var run=session((String)rows.getFirst().get("task_id"),(String)rows.getFirst().get("attempt_id"));owned(owner,run);return view(run);
+    }
+    @Transactional
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay=86400000,initialDelay=300000)
+    public void pruneMetadata() {
+        boundary.lock();
+        repo.jdbc().update("""
+                DELETE FROM execution_run_event WHERE attempt_id IN (
+                  SELECT a.id FROM execution_attempt a WHERE a.state NOT IN ('CLAIMED','RUNNING')
+                    AND a.finished_at_epoch_ms<?
+                    AND NOT EXISTS (SELECT 1 FROM execution_run_command c WHERE c.attempt_id=a.id AND c.status IN ('ACCEPTED','RECEIVED','UNKNOWN'))
+                    AND NOT EXISTS (SELECT 1 FROM execution_operation o WHERE o.attempt_id=a.id AND o.state IN ('STARTED','UNKNOWN'))
+                )
+                """,System.currentTimeMillis()-30L*86400000);
     }
 }

@@ -121,6 +121,7 @@ class Attempt:
         self.cancelled = threading.Event()
         self.closed = threading.Event()
         self.force_event = force_event
+        self.required_capabilities = frozenset(task.get("requiredCapabilities", []))
         self.turn = None
         self.reason = None
         self.interrupt_started = False
@@ -211,6 +212,13 @@ class Attempt:
         try:
             if channel is not None:
                 channel.close()
+        except Exception:
+            self.resource_uncertain = True
+            self.cancel("run-control-close-unconfirmed")
+            try:
+                self.evidence.record("resource-terminal", status="unknown", code="RUN_CHANNEL_CLOSE_UNCONFIRMED")
+            except Exception:
+                pass
         finally:
             self.closed.set()
             self.watcher.join(timeout=1)

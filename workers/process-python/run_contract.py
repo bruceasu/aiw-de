@@ -79,9 +79,10 @@ class ContextLedger:
             if previous is not None and previous != value:
                 raise RuntimeError("RUNTIME_CAPABILITIES_CHANGED_WITHIN_ATTEMPT")
             if previous is None:
+                controlled = value.pause_boundary != "NONE"
                 self.evidence.record("runtime-observed", runtime=runtime, capabilities=value.payload(),
-                                     phase="OBSERVATION_ONLY", complete=False,
-                                     unknown="no-live-control-or-worker-loop-registration")
+                                     phase="LEASE_CONTROLLED" if controlled else "OBSERVATION_ONLY", complete=False,
+                                     unknown="backend-inner-state-and-cancellation-not-guaranteed" if controlled else "no-live-control-or-worker-loop-registration")
                 self.capabilities[runtime] = value
 
     def material(self, kind, source_id, version, content):

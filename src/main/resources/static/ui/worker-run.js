@@ -22,14 +22,14 @@
   }
   function render() {
     const host=$('wr-state');host.replaceChildren();
-    if(!state){host.append(node('p','所选尝试尚无已打开的运行通道。原有执行记录和停止流程仍可使用。','help'));controls();return;}
+    if(!state){host.append(node('p','所选尝试尚无已打开的运行通道。原有执行记录和停止流程仍可使用。','help'));$('wr-context').replaceChildren();$('wr-receipts').replaceChildren();controls();return;}
     host.append(node('strong',labels[state.phase]||state.phase),node('p',(state.stale?'联系已过期；不能确认实时控制。':'最近联系：'+new Date(state.lastContact).toLocaleTimeString())+' · 指令版本 '+state.instructionRevision,'help'));
     const cap=state.capabilities;host.append(node('p','工具执行：'+(cap.toolExecutor==='HOST'?'Worker':'后端')+' · 暂停粒度：单个宿主动作结束后 · 上下文：Worker 提交投影','help'));
     const context=$('wr-context');context.replaceChildren();
     for(const event of events.filter(e=>e.event_type==='context-component').slice(-12)) {
       const item=JSON.parse(event.payload_json);context.append(node('p',(item.sourceKind||'输入组成')+'：'+item.bytes+' UTF-8 字节 · '+(item.changed?'内容有变化':'与上次相同')+' · '+item.digest.slice(0,12),'help'));
     }
-    if(!context.childElementCount)context.append(node('p','暂无本次通道的上下文组成记录。','help'));
+    if(!context.childElementCount)context.append(node('p',state.eventHistoryAvailable?'暂无本次通道的上下文组成记录。':'历史元数据已到期清理，控制审计与任务结果保留。','help'));
     const receipts=$('wr-receipts');receipts.replaceChildren();
     for(const command of state.commands.slice(-12))receipts.append(node('p',({PAUSE:'暂停',RESUME:'继续',CANCEL:'取消'})[command.action]+' · '+(statuses[command.status]||command.status)+' · '+command.request_id,'help'));
     if(!receipts.childElementCount)receipts.append(node('p','暂无控制请求。','help'));

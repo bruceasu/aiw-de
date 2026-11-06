@@ -5,7 +5,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from run_channel import RunChannel, encoded
+from run_channel import RunChannel, bind, encoded
 from run_contract import RuntimeCapabilities
 
 
@@ -81,6 +81,19 @@ class RunChannelTest(unittest.TestCase):
         channel._accept(self.view("STOPPING", [{"status": "ACCEPTED", "action": "CANCEL", "sequence_no": 1}]))
         channel.attempt.cancel.assert_called_with("stop-requested")
         self.assertNotIn({"sequence": 1, "status": "APPLIED"}, channel.pending_receipts)
+
+    def test_plain_native_task_does_not_gain_or_require_a_control_channel(self):
+        attempt = SimpleNamespace(required_capabilities=frozenset())
+        request = SimpleNamespace(attempt=attempt, broker=None)
+        with patch.dict("os.environ", {"AIW_WORKER_LOOP_CONTROL": "true"}):
+            bind(request, "codex-native")
+        self.assertFalse(hasattr(attempt, "run_channel"))
+
+    def test_task_requiring_loop_control_cannot_fall_back_to_native_execution(self):
+        request = SimpleNamespace(attempt=SimpleNamespace(required_capabilities={"worker-loop-v1"}), broker=None)
+        with patch.dict("os.environ", {"AIW_WORKER_LOOP_CONTROL": "true"}):
+            with self.assertRaisesRegex(RuntimeError, "REQUIRES_GUARDED_TASK"):
+                bind(request, "codex-native")
 
 
 if __name__ == "__main__":

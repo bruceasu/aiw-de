@@ -98,7 +98,7 @@ def definitions():
         return {"type": "function", "name": name, "description": description,
                 "inputSchema": {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}}
     string = {"type": "string"}
-    return [
+    result = [
         tool("read_skill_file", "Read declared task Skill data as base64; offsets and limits are bytes. No script execution.", {"ref": string, "path": string, "offset": {"type": "integer"}, "limit": {"type": "integer"}}),
         tool("read", "Read UTF-8 lines: offset is a 1-based line number, limit is 1 to 500 lines. Keep sourceDigest for writes.", {"path": string, "offset": {"type": "integer", "minimum": 1}, "limit": {"type": "integer", "minimum": 1, "maximum": 500}}),
         tool("ls", "List one visible folder.", {"path": string}),
@@ -112,6 +112,11 @@ def definitions():
         tool("run_command", "Run one explicitly authorized command profile.", {"commandId": string}),
         tool("ask_question", "Save one question and yield this task. Stop after the receipt. The answer will arrive in a new task.", {"question": string, "context": string, "options": {"type": "array", "items": string}, "answerRequirements": string}),
     ]
+    from skill_files import text_enabled
+    if text_enabled():
+        result.insert(1, tool("read_skill_text", "Read declared UTF-8 Skill data by byte offset and limit <=8192. Follow nextOffset; no script execution.",
+                              {"ref": string, "path": string, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 8192}}))
+    return result
 
 
 def run_guarded(request, on_session):

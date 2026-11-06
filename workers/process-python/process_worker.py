@@ -120,6 +120,17 @@ class WorkerConfig:
         if _bool_env("AIW_DYNAMIC_CONFIG", False):
             if not _bool_env("AIW_EXECUTION_GUARD", False): raise ValueError("DYNAMIC_CONFIGURATION_REQUIRES_GUARDED_ADAPTER")
             capabilities.add("execution-config-v1")
+        loop_control = os.environ.get("AIW_WORKER_LOOP_CONTROL", "false")
+        if loop_control not in {"true", "false"}:
+            raise ValueError("WORKER_LOOP_CONTROL_SETTING_INVALID")
+        if loop_control == "true":
+            if not _bool_env("AIW_EXECUTION_GUARD", False):
+                raise ValueError("WORKER_LOOP_CONTROL_REQUIRES_GUARDED_TASK")
+            if runtime == "codex-app-server" and (os.environ.get("AIW_CODEX_GUARD_MODE") != "host-actions" or os.environ.get("AIW_HOST_ACTION_PROTOCOL", "v1") != "v2"):
+                raise ValueError("WORKER_LOOP_CONTROL_REQUIRES_CODEX_HOST_V2")
+            capabilities.add("worker-loop-v1")
+        elif "worker-loop-v1" in capabilities:
+            raise ValueError("WORKER_LOOP_CAPABILITY_REQUIRES_CONTROL_CHANNEL")
         if repository_ref:
             pass  # Locations do not bind Worker scheduling to repository registrations.
         max_concurrency = int(os.getenv("AIW_WORKER_MAX_CONCURRENCY", "1"))
