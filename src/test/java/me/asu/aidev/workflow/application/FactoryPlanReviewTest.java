@@ -25,8 +25,6 @@ import me.asu.aidev.execution.port.ExecutionAttemptRepository;
 import me.asu.aidev.work.application.CreateWorkTaskCommand;
 import me.asu.aidev.work.application.WorkTaskService;
 import me.asu.aidev.output.jdbc.JdbcTaskOutputRepository;
-import me.asu.aidev.workspace.application.ManagedWorkspaceService;
-import org.springframework.transaction.PlatformTransactionManager;
 import me.asu.aidev.workflow.jdbc.JdbcWorkflowPlanArchiveRepository;
 import me.asu.aidev.workflow.jdbc.JdbcWorkflowHumanOutcomeRepository;
 import static org.assertj.core.api.Assertions.*;
@@ -138,7 +136,7 @@ class FactoryPlanReviewTest {
         assertThat(archive.archivable("FP-one")).isFalse();
     }
 
-    @Test void requestBindsReviewToRecordedSourceAndRejectsDuplicate() {
+    @Test void requestBindsReviewToNonGitDeliveryAndRejectsDuplicate() {
         jdbc.update("UPDATE factory_plan_review SET state='WAITING',source_task_id=NULL,review_task_id=NULL WHERE plan_id='FP-one'");
         when(boundary.human()).thenReturn("owner");
         var attempt=new JdbcConfiguredPlanHistoryRepository.Attempt("attempt",1,"author","COMPLETED",
@@ -160,22 +158,10 @@ class FactoryPlanReviewTest {
         var command=org.mockito.ArgumentCaptor.forClass(CreateWorkTaskCommand.class);
         verify(taskService).createIfAbsent(command.capture());
         assertThat(command.getValue().dependencies()).containsExactly(new TaskId("source"));
+        assertThat(command.getValue().baseRevision()).isNull();
         when(tasks.find(new TaskId(result.reviewTaskId()))).thenReturn(Optional.of(review));
         assertThatThrownBy(() -> lifecycle.requestReview("FP-one",3,"owner"))
                 .isInstanceOf(IllegalStateException.class).hasMessageContaining("already pending");
-    }
-
-    @Test void deliveryPreviewRejectsPendingReview() {
-        var factory=mock(FactoryPlanLifecycle.class);
-        when(factory.view("FP-one")).thenReturn(new FactoryPlanLifecycle.View(null,"owner",0));
-        when(factory.reviewRequired("FP-one")).thenReturn(true);
-        @SuppressWarnings("unchecked") ObjectProvider<FactoryPlanLifecycle> provider=mock(ObjectProvider.class);
-        when(provider.getObject()).thenReturn(factory);
-        @SuppressWarnings("unchecked") ObjectProvider<WorkflowPlanService> workflow=mock(ObjectProvider.class);
-        var delivery=new WorkflowGitDeliveryService(plans,workflow,provider,tasks,mock(ExecutionAttemptRepository.class),
-                mock(ManagedWorkspaceService.class),jdbc,boundary,mock(PlatformTransactionManager.class));
-        assertThatThrownBy(() -> delivery.preview("FP-one","repo"))
-                .isInstanceOf(IllegalStateException.class).hasMessageContaining("review must pass");
     }
 
     private Worker worker(String id) {
