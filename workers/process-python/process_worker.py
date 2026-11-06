@@ -502,6 +502,7 @@ class ProcessSlot:
                     service_tier="default" if selected and task.get("aiGuidance") and self.config.runtime == "codex-app-server" else None,
                     sandbox=self.config.sandbox, approval_mode=self.config.approval_mode, broker=broker,
                     model_only=self.config.process_role == "goal-discussion" or task.get("subjectType") == "workflow-recommendation",
+                    candidate_validator=lambda text: _completion_report(profile.result_kind, text),
                 )
                 def set_session(runtime_session_id, handle=None):
                     nonlocal session_id

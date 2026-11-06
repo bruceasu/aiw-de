@@ -43,6 +43,9 @@ def run(request, on_session):
     controlled = protocol == "v2"
     from automation_loop import ActionProtocolError, CorrectionBudget, ToolCall, parse_action
     corrections = CorrectionBudget()
+    from completion_validation import CompletionValidator
+    candidate = CompletionValidator(getattr(request, "candidate_validator", None) if controlled else None,
+                                    request.attempt.evidence)
     header = INSTRUCTIONS + "\nHost tool schemas:\n" + json.dumps(schemas) + "\nAssigned task:\n" + request.instruction
     if controlled:
         header += ('\nYou may request 1-16 independent tools in one JSON object: '
@@ -73,6 +76,7 @@ def run(request, on_session):
                 model_request = replace(request, broker=None, model_only=True, workspace=directory,
                                         instruction=prompt, sandbox="read-only", network_access=False,
                                         context_purpose="host-action",
+                                        candidate_validator=None,
                                         context_parts=(("fixed_header", header), ("observations", observations)))
                 output = CodexAppServerRuntime().run(None, model_request, on_session)
             broker.model_finished(operation, output, None)
@@ -105,6 +109,12 @@ def run(request, on_session):
             result = action.get("result")
             if not isinstance(result, dict):
                 raise RuntimeError("HOST_ACTION_RESULT_INVALID")
+            summary = json.dumps(result, ensure_ascii=False)
+            progress = digest([item for item in observations if item.get("action", {}).get("name")])
+            feedback = candidate.feedback(summary, progress)
+            if feedback:
+                observations.append({"action": {"action": "validation"}, "result": {"error": "CANDIDATE_INVALID", "hint": feedback}})
+                continue
             changed = any(item.get("action", {}).get("name") in {"write", "delete", "mkdir", "git_integrate"}
                           and "error" not in item.get("result", {}) for item in observations)
             if request.profile.writable and not changed:
@@ -114,7 +124,7 @@ def run(request, on_session):
                 observations.append({"action": action, "result": {"error": "IMPLEMENTATION_NOT_PERFORMED",
                     "hint": "The host tools are available and their results are shown above. This task requires file changes. Return a write action with the full file content and sourceDigest as expectedDigest. Do not report completion or unavailable native tools."}})
                 continue
-            return json.dumps(result, ensure_ascii=False)
+            return summary
         if parsed is None:
             if action.get("action") != "tool" or set(action) != {"action", "name", "arguments"}:
                 raise RuntimeError("HOST_ACTION_INVALID")

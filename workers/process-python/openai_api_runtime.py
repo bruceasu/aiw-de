@@ -146,6 +146,11 @@ class OpenAIApiRuntime:
         self._cancel_callback = cancel_run
         result = None
         try:
+            from completion_validation import CompletionValidator
+            from execution_guard import digest
+            correction_limit = _completion_corrections()
+            candidate = CompletionValidator(getattr(request, "candidate_validator", None) if correction_limit else None,
+                                            request.attempt.evidence, correction_limit)
             run_input = "Execute the assigned task and return its final report."
             while True:
                 result = Runner.run_streamed(agent, run_input, context=context, run_config=run_config,
@@ -160,9 +165,17 @@ class OpenAIApiRuntime:
                         await _record_runtime_event(request.attempt, getattr(event, "name", "unknown"))
                 request.attempt.check()
                 output = result.final_output
-                if not isinstance(output, str) or not output.strip(): raise RuntimeError("AGENT_OUTPUT_INVALID")
+                if not isinstance(output, str) or (not output.strip() and candidate.validate is None):
+                    raise RuntimeError("AGENT_OUTPUT_INVALID")
                 if len(output.encode("utf-8")) > self.config.max_output_bytes: raise RuntimeError("AGENT_OUTPUT_TOO_LARGE")
                 if context.failures: raise RuntimeError("UNRESOLVED_TOOL_FAILURE")
+                history = result.to_input_list() if candidate.validate is not None else None
+                progress = digest([item for item in _json_value(history) if isinstance(item, dict)
+                                   and item.get("type") in {"function_call_output", "function_call_result"}]) if history else ""
+                feedback = candidate.feedback(output, progress)
+                if feedback:
+                    run_input = [*history, {"role": "user", "content": feedback}]
+                    continue
                 if not guarded_model.inputs or not guarded_model.inputs.continue_or_seal(): break
                 # Continue this same Attempt, Agent, original instructions, deadline and total model-call count.
                 run_input = result.to_input_list()
@@ -684,6 +697,13 @@ def _json_value(value: Any) -> Any:
     if isinstance(value, (list, tuple)): return [_json_value(item) for item in value]
     if isinstance(value, dict): return {key: _json_value(item) for key, item in value.items()}
     return repr(value)
+
+
+def _completion_corrections():
+    value = os.environ.get("AIW_COMPLETION_CORRECTIONS", "0")
+    if value not in {"0", "1", "2"}:
+        raise RuntimeError("COMPLETION_CORRECTION_SETTING_INVALID")
+    return int(value)
 
 
 def _positive_setting(name: str, default: int) -> int:

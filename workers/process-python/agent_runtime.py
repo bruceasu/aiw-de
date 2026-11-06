@@ -40,6 +40,7 @@ class AgentRunRequest:
     # Host metadata only; never interpreted as model instructions or tool authority.
     context_purpose: str = "task"
     context_parts: tuple[tuple[str, Any], ...] = ()
+    candidate_validator: Any = None
 
 
 class AgentRuntime(Protocol):
