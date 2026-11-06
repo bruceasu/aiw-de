@@ -11,6 +11,7 @@ import static me.asu.aidev.execution.guard.GuardContract.*;
 public class ExecutionGuardController {
     private final AuthorityRepository repo;private final ExecutionGuard guard;private final ExecutionLedger ledger;private final ExecutionYieldService yields;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.ExecutionWorkbench workbench;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.run.ExecutionRuns runs;
     public ExecutionGuardController(AuthorityRepository repo,ExecutionGuard guard,ExecutionLedger ledger,ExecutionYieldService yields) {
         this.repo=repo;this.guard=guard;this.ledger=ledger;this.yields=yields;
     }
@@ -23,7 +24,7 @@ public class ExecutionGuardController {
     @PostMapping("/api/r1/authority/execution-budgets/increment") public Object increment(@RequestBody String raw) { return ledger.increment(read(raw,Increment.class),"human"); }
     @PostMapping("/api/r1/authority/execution-effects/reconcile") public Object reconcile(@RequestBody String raw) { return guard.reconcile(read(raw,Reconcile.class)); }
     @PostMapping("/api/r1/authority/execution-meters/reconcile") public Object meter(@RequestBody String raw) { return ledger.reconcileMeter(read(raw,MeterReconcile.class)); }
-    @PostMapping("/api/r1/authority/execution-tasks/{task}/stopped") public Object stopped(@PathVariable String task,@RequestBody String raw) { return yields.humanStopped(task,read(raw,StopEvidence.class)); }
+    @PostMapping("/api/r1/authority/execution-tasks/{task}/stopped") public Object stopped(@PathVariable String task,@RequestBody String raw) { var input=read(raw,StopEvidence.class);return guard.managed(task)?yields.humanStopped(task,input):runs.humanNativeStopped(task,input); }
     public Object context(String task,String raw) { return context(task,raw,"fixed"); }
     @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/execution-context/read") public Object context(@PathVariable String task,@RequestBody String raw,@RequestParam(defaultValue="fixed") String kind) {
         if("workbench".equals(kind))return workbench.machine(task,read(raw,me.asu.aidev.execution.config.WorkbenchContract.MachineCommand.class));

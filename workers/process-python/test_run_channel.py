@@ -95,6 +95,21 @@ class RunChannelTest(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "REQUIRES_GUARDED_TASK"):
                 bind(request, "codex-native")
 
+    def test_native_pause_waits_for_an_acknowledged_quiescence_event(self):
+        channel = self.channel()
+        channel.capabilities = RuntimeCapabilities("BACKEND", "BACKEND", "WORKER_PROJECTION", "TURN", "NONE", "NONE", "TURN", "BEST_EFFORT", "UNKNOWN", "BACKEND_TURN")
+        command = {"status": "RECEIVED", "action": "PAUSE", "sequence_no": 1}
+        channel._accept(self.view("PAUSING", [command]))
+        self.assertEqual(channel.pending_receipts, [])
+        channel.observe("execution-quiescent", {"complete": True, "count": 0})
+        channel._accept(self.view("PAUSING", [command]))
+        self.assertEqual(channel.pending_receipts, [])
+        channel._accept(self.view("PAUSING", [command], ack=1))
+        self.assertEqual(channel.pending_receipts, [{"sequence": 1, "status": "APPLIED"}])
+        channel.observe("native-turn-started", {"status": "running"})
+        channel._accept(self.view("PAUSING", [command], ack=1))
+        self.assertEqual(channel.pending_receipts, [])
+
 
 if __name__ == "__main__":
     unittest.main()

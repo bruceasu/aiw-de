@@ -14,7 +14,7 @@ public class AuthorityPageController {
         boolean operate=!consoleSecurity.currentDelegationAuthority(actor,"A19_ANSWER").isEmpty(),approve=!consoleSecurity.currentDelegationAuthority(actor,"A18_BUDGET").isEmpty();
         if(!operate&&!approve) throw new SecurityException("Current operation or approval role required");
         model.addAttribute("questionCanOperate",operate);model.addAttribute("questionCanApprove",approve);
-        var ids=repo.jdbc().queryForList("SELECT p.plan_id FROM execution_policy p JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY p.plan_id",String.class,actor);
+        var ids=repo.jdbc().queryForList("SELECT p.plan_id FROM execution_policy p JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? UNION SELECT p.plan_id FROM plan_run_owner p JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY plan_id",String.class,actor,actor);
         Map<String,String> titles=new HashMap<>();
         plans.list().stream().filter(p->actor.equals(p.createdBy())).forEach(p->{
             String goal=p.spec().goal().strip().split("\\R",2)[0];

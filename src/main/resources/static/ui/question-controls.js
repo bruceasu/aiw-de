@@ -16,9 +16,11 @@
   function binding(){return ui.telegram?.bindings.find(b=>flag(b.enabled));}
   function update() {
     const data=ui.data,telegram=ui.telegram,allowed=ui.writable(),revoked=flag(data?.policy.revoked),paused=flag(data?.policy.paused),expired=data?.policy.expires_ms!=null&&Number(data.policy.expires_ms)<=Date.now();
+    const native=data?.policy.kind==='NATIVE';
     $('question-policy-state').textContent=!data?'尚未读取':revoked?'执行范围已取消':expired?'执行范围已到期':paused?'已人工暂停':'允许按范围准入';
     $('question-policy-note').textContent=!data?'先读取计划，再决定是否需要人工控制。':revoked?'此执行范围已取消，不能直接恢复。在途任务的停止仍须实际确认。':expired?'执行范围已到期，请在授权页核对；不能仅靠恢复按钮延长期限。':paused?'新领取和推进已暂停，在途任务仍可能按原授权收尾。':'当前未人工暂停，实际领取和推进仍取决于执行范围、兼容 Worker 和前置条件。';
-    document.querySelectorAll('[data-control]').forEach(button=>{button.disabled=!allowed||!ui.canOperate||revoked||(button.dataset.control==='pause'&&paused)||(button.dataset.control==='resume'&&(!paused||expired));});
+    if(native){$('question-policy-state').textContent='原生计划 · '+data.policy.state;$('question-policy-note').textContent='可在此回答工作问题。单次执行的暂停、继续和取消请到 Worker 工作台；整个计划使用原计划页面的控制。';}
+    document.querySelectorAll('[data-control]').forEach(button=>{button.disabled=native||!allowed||!ui.canOperate||revoked||(button.dataset.control==='pause'&&paused)||(button.dataset.control==='resume'&&(!paused||expired));});
     table($('question-tasks'),['任务','执行状态','停止确认'],data?data.tasks.map(t=>[t.id,taskStates[t.state]||'状态待核对',t.stop_acknowledged_at_epoch_ms!=null?'已确认停止':t.stop_requested_at_epoch_ms!=null?'已请求停止 · 等待实际确认':'未请求停止']):[],data?'此计划暂无正式任务记录。':'尚未读取任务。');
     const columns=['记录维度','已使用','已预留',...(ui.enforced?['上限']:[]),'未知项'];
     table($('question-meters'),columns,data?data.budgets.map(b=>[ui.dimensions[b.dimension]||'其它记录',measured(b.used_value),measured(b.reserved_value),...(ui.enforced?[measured(b.limit_value)]:[]),measured(b.unknown_count)]):[],data?'尚无用量记录；缺少记录不代表零费用。':'尚未读取记录。');
@@ -35,7 +37,7 @@
       return [label,deliveryStates[d.state]||'状态待核对',d.state==='UNKNOWN'?'未知结果不会因过期自动重发':d.state==='INVALIDATED'?'不可用于回答':Number(d.expires_ms)<=Date.now()?'关联已过期':'仅对当前问题版本有效'];
     }),telegram?'暂无送达记录。请在具体问题上明确选择发送。':'尚未读取送达记录。');
     if(deliveries.length>=100)$('question-deliveries').prepend(node('p','仅返回最近 100 条，送达记录不完整；当前暂停新发送，避免遗漏旧未知结果后重复发送。','callout warn-callout'));
-    if($('question-budget-fields'))$('question-budget-fields').disabled=!allowed||!ui.canApprove||revoked;
+    if($('question-budget-fields'))$('question-budget-fields').disabled=native||!allowed||!ui.canApprove||revoked;
     if(budgetPlan!==$('question-plan').value){budgetPlan=$('question-plan').value;budgetDraft=null;$('question-budget')?.reset();}
   }
   document.querySelectorAll('[data-control]').forEach(button=>button.addEventListener('click',()=>{

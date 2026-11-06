@@ -338,7 +338,25 @@ Web 复用已有样式，显示阶段、最近联系、工具与控制粒度、�
 - CP 重启后恢复命令、游标和封闭状态；浏览器重连不发起新模型任务。
 - 记录回放只产生观察视图；会话回退不等于代码回退。
 
+### 12a. 用户追加确认：默认原生工厂路径
+
+用户在 P0/P3 局部实施后明确选择“覆盖默认工厂路径，继续设计并实现”。此处默认工厂包含由 Agent 工厂设置启动的普通 flexible Plan；不能只依赖 workflow_factory_task 这张配置工厂表。
+
+新增 Plan 运行 Owner 绑定：当前已认证人必须同时是 Plan 创建者和所选 Owner 的 actor，校验真实 Plan 版本和规范 spec 摘要。只在没有 CLAIMED/RUNNING/YIELDING 任务时受理显式绑定，不热切换活动 attempt。绑定记录独立于 execution_policy，不生成工具、命令、预算或外部访问权限；后续范围变化使绑定失效，需新计划，不能以绑定扩大历史授权。浏览/控制按当前 Owner 与真实任务位置校验，不以任意 subjectId 或 Worker 传入的 Owner 作为归属证据。
+
+新 Python 原生 Worker 登记 worker-loop-turn-v1，与单工具控制的 worker-loop-v1 区分。绑定计划的领取策略要求新能力，旧 Worker 不领取；未绑定普通计划保留原路径。原生通道的 toolExecutor=BACKEND、dispatchBoundary/pauseBoundary=TURN、supplementBoundary=NONE、usageScope=UNKNOWN。Python 在 turn/start 前准入，后端回合实际结束后归零；回合内可能继续产生工具动作，不能提前显示已暂停。CANCEL 复用已确认的进程终止和停止回执；原有 Plan 停止/跳转语义保留。
+
+正式问题增加 aiw.questions.v2 和 NATIVE_PLAN_TASK 来源，复用 formal_question、答案与 slot 表及现有问题页面；不另建问题库。v2 checkpoint 使用 CP 固定 location、当前运行配置摘要、TaskHandoffs.Reference 和已登记的 handoff-store 亲和能力；Git 信息可选，不要求 commit/clone。CP 只校验租约、Plan/任务/Owner、路径形状和摘要，不打开 .ai 或工作文件。
+
+Worker 在后端报告明确缺少输入时，提供结构化问题并写标准 .ai/handoffs 交接；先关闭实际模型/工具资源，再进行 yield/ack。未静止不释放目录锁/容量，资源未知不声称 WAITING_INPUT。问题打开后 source task 进入 YIELDING，真实确认后进入 WAITING_INPUT，不能走普通失败重试。原生暂停与正式问题都受原期限约束；等待答案不保留运行租约。
+
+原问题回答经现有 Owner/操作者确认后，按确切答案 revision 创建一次 successor；保留源任务类型、目标、工具/模型政策和 location，增加固定交接存储亲和要求。回答是任务数据，不是新的权限。APPLIED 答案不静默替换；同一输入重复投递只返回原后继任务。未有已确认新回答时不创建后继，普通重试/补充修复轮数不代替答案。Worker 本地核对 handoff 来源/摘要、可用路径与可选 Git 证据，再继续执行。
+
+新增绑定和原生问题的附加 schema、精确机器路由、人类 CSRF/Owner/角色边界、领取门禁和终态释放纳入同一 Independent 审查。工厂原生 UI 使用独立的 Plan/任务选择与绑定入口，避免把仅有 guarded meter 的旧选择器当作全部任务。
+
 ### 13. 实施顺序与发布
+
+用户追加提出官方 ChatGPT OAuth → Responses 路径。已按官方文档核实独立客户端入口、模型调用与串行刷新合同；详细评估见 [OAuth 与自主管理循环](OAUTH-RESPONSES-DESIGN.md)。认证与引擎解耦：Python 循环可使用 API Key 或 ChatGPT OAuth，app-server 保留。OAuth 不成为工具权限，不自动导入其他应用凭据，不以登录成功证明订阅资格；当前未执行真实登录/刷新/推理。此追加阶段先做评估和接口设计，不以尚未实现的 OAuth 替代正在完成的原生路径。
 
 | 阶段 | 交付 | 放行条件 |
 | --- | --- | --- |
@@ -377,6 +395,7 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - [ ] 4.1 根据账目收紧工作集；先批次串行，再受限只读并行和资源锁。
 - [x] 4.2 版本化 UTF-8 文本读取，保持摘要/偏移及二进制契约。
 - [ ] 5.1 FD-078 合同就绪后对接正式阻塞、非 Git checkpoint、无新回答门禁与 successor 恢复。
+- [x] 5.2 按用户追加确认，为默认原生 Plan 增加显式 Owner 绑定、TURN 粒度控制、正式问题 v2 和固定交接恢复；复用现有问题事实，保持权限隔离。
 - [ ] 6.1 更新相邻说明、协议与 UI 文案，完成实施后适用编译和真实证据。
 - [ ] 6.2 按实际授权验证，独立实施审查并检查升级回滚；未授权检查明确保留。
 
@@ -429,7 +448,7 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - 系统内存不足曾导致 Node 子进程和 JVM 启动失败，非源码编译结论；未杀其他进程，清理两个本次生成的 JVM 崩溃文件。用户另行授权一次串行验证：限制 Node 堆 192 MiB、Maven 堆 256 MiB/Metaspace 128 MiB 后，Worker compile-only、离线 Java test-compile 均成功；六组 Python 测试合计 36 项通过（0.150 秒）。其后启动能力/原生普通任务回退的小修正已再次通过 Worker 编译；补充两个相关用例后按同一授权的修复后重验预算再检查一次。
 - V28 SQL 已由上述 Java 用例在临时 SQLite 加载；真实业务数据库 Flyway 升级未执行。后续加入 30 天终态事件清理、指令版本核对与历史过期提示，已经 Java test-compile；七项 Java 运行结果早于这批增补，不能用其声称增补的运行验证通过。控制审计和未决 UNKNOWN 不做观测清理。
 - 启动时只有已验证受控适配器且明确开启通道的 Worker 登记 worker-loop-v1；Codex 必须 host-action v2。普通原生任务不自动变成受控任务，仍 NONE；要求新能力却缺少受控上下文时明确拒绝。未完成的原生/动态工具细粒度控制不登记为已有能力。
-- %% NEEDS_INPUT: FD-078 正式问答、location/handoff checkpoint 与回答版本门禁尚未交付；5.1 等待该合同，不接管另一路在途角色，不由 CP 扫描 .ai 或把报告文本当确认答案。整个 FD 仍 In Progress，不能请求整体完成审查或归档。
+- 用户已明确追加授权覆盖默认原生工厂任务，当前主对话继续设计并实现原生 Owner/控制/正式问题 v2 合同；解决原 FD-078 接续范围的依赖，不修改其已结束的侧对话角色收据。不能由 CP 扫描 .ai 或把报告文本当确认答案。整个 FD 仍 In Progress，待完整范围就绪再请求独立审查和归档。
 
 - P2 已接入显式 `AIW_WORKER_LOOP_CONTROL=true` 的受控 API / host-action v2 路径：V28 三张附加表、精确机器租约与人类 Owner/CSRF/Operator 路由、连续事件确认/冲突封闭、独立控制轮询与失联闸门、活动动作归零后暂停、同事务 Workbench DRAIN/run seal 和 complete 门禁。CANCEL 同事务调用既有 requestStop，平台 stop acknowledgement 后才显示 APPLIED；停止取代未生效的软控制。未实现的模式不宣称该控制能力，普通原生任务保持原路径。
 - P2 工作台加入元数据上下文、阶段、过期联系与真实命令收据；原文留 Worker。控件复用现有样式、只渲染纯文本，连接未知先查询原 requestId，不自动新建控制请求。
@@ -452,7 +471,19 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - 已加入 RuntimeCapabilities 的受限枚举、不可变观察快照和同 attempt 变化拒绝。当前 pauseBoundary=NONE，不登记尚未完成的 worker-loop-v1 控制能力；新增 AUTOMATION-LOOP.md 说明配置、可见范围和未交付部分。
 - 用户已授权并执行一次定向测试：`python -m unittest test_run_contract test_automation_loop test_completion_validation test_codex_model_session`（workers/process-python）；24 个用例通过，0.039 秒。均为本地 mock/规则测试，不启动真实模型或 Codex；不代表平台联调或性能验收通过。
 
+### 本轮补充证据（默认原生工厂与本地 Pi 源码）
+
+- 实施 V29 显式 Plan Owner 绑定、`worker-loop-turn-v1` 受限能力、原生事件与控制收据、静止后 seal/停止/yield 和到期不盲目重排；绑定范围变化、在途补绑与强制重放拒绝。保持既有 app-server 循环，不宣称能观察或暂停它的内部每个模型请求。
+- 实施正式问题 v2、location/handoff 与本机工作树摘要、确认答案唯一 successor、固定技能/存储/适配器和模型政策；非 Git 不要求 commit。恢复先核对 checkpoint，未知结果保留现场与容量，不将它变成普通自动 repair。UI 增加原生 Plan/attempt 选择、明确绑定和问答入口，显示 TURN 的真实粒度。
+- `node scripts/compile-worker-runtime.mjs` 成功，并在优先采用原 checkpoint 的恢复选择修正后再次成功；离线 `mvn -o -Dmaven.repo.local=D:/.m2/repository -DskipTests test-compile` 成功（328 个生产源、60 个测试源）。使用低内存 JVM，未运行真实模型、服务或数据库迁移。
+- 用户另行授权后，`python -m unittest test_native_run test_run_channel`：17 项通过（0.111 秒）。离线 `mvn -o -Dmaven.repo.local=D:/.m2/repository -Dtest=NativePlanOwnersTest,NativeQuestionsTest,NativeRunLifecycleTest,ExecutionRunsTest test` 首次 16 项通过、4 项在初始化测试数据时因 requiredSkills 为空失败；修正 requiredSkills 和 skillRef 为有效样例后，在一次修复重跑中 20 项全部通过（9.441 秒）。范围仅本地 mock/临时目录/SQLite，不证明真实模型、浏览器、并发多实例或网络故障联调通过；未扩大到全仓测试。
+- 测试后静态追踪发现单次 CANCEL 与整个 Plan 的 PENDING_STOP 同时存在时可能提前返回、遗漏既有 Plan 回调；已补充优先保留 Plan 控制回调的条件，离线 `-DskipTests compile` 成功（7.646 秒）。此最后分支未追加运行验证，不将此前 20 项测试视为它的运行证据；保留为后续定向控制竞态验证点。差异空白检查已通过（在此最后的小修正前），未再扩大检查或运行预算。
+- 用户提供的本地 Pi 已完成只读研究，未安装/运行/联网/读凭据。其公开 ChatGPT OAuth 与 legacy Codex 路由分离；刷新已有锁内重读，但我们的完整账户校验、原子存储和未知轮换恢复设计继续保留。OAuth 仍为评估，尚未实现登录、导入、刷新或模型传输。
+- 当前未进行整项 FD 的独立审查，FD 保持 In Progress。其余候选完成政策、所列能力覆盖与真实联调未完成，不以本轮增量替代全部 Acceptance。
+
 ## Sources
+
+- [用户提供的 Pi 本地源码核对](../../research/pi-local-source-worker-design-2026-11-07.md)：独立公开 ChatGPT OAuth 路径、loop/transport 分离、上下文投影、完整响应后工具调度与跨进程刷新；源码不是速度/成本收益的实证。
 
 - 用户本轮详细设计请求，以及此前 Python、机制移植、Codex 无 API Key、运行透明可控的决定。
 - [Pi 研究](../../research/pi-agent-loop-efficiency-2026-11-07.md)

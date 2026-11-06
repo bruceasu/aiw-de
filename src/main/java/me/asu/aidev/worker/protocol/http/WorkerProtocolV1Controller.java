@@ -47,6 +47,8 @@ public class WorkerProtocolV1Controller {
     @Autowired
     public void setGoalPolicy(me.asu.aidev.goal.application.GoalTaskPolicy policy) { this.goalPolicy = policy; }
     private final WorkerService workers;
+    @Autowired private me.asu.aidev.authority.AuthorityRepository authorityRepository;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.NativeQuestions> nativeQuestions;
     private final TaskClaimService claims;
     private final TaskExecutionService executions;
     private final ExecutionAttemptRepository attempts;
@@ -114,6 +116,11 @@ public class WorkerProtocolV1Controller {
     @PostMapping("/tasks/claim")
     public ResponseEntity<ClaimedTaskResponse> claim(@RequestBody ClaimRequest request) {
         var workerId = new WorkerId(required(request.workerId(), "workerId"));
+        var worker=workers.get(workerId);
+        if(worker.capabilities().contains(me.asu.aidev.execution.run.NativePlanOwners.CAPABILITY)) {
+            String expected=me.asu.aidev.authority.AuthorityRepository.hash(authorityRepository.encode(new java.util.TreeSet<>(worker.capabilities())));
+            if(!expected.equals(request.capabilitiesDigest()))throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"Worker capability snapshot changed; register a fresh compatible Worker");
+        }
         var claimed = claims.claimNext(workerId);
         return claimed.map(value -> ResponseEntity.ok(toResponse(value, workers.get(workerId).runtimeType())))
                 .orElseGet(() -> ResponseEntity.noContent().build());
@@ -197,7 +204,8 @@ public class WorkerProtocolV1Controller {
 
     private AiProfileCatalog.Guidance delegatedGuidance(me.asu.aidev.work.domain.WorkTask task,String runtime,int attempt) {
         var normal=aiProfiles.guidance(task.type(),runtime,attempts.findPreviousAiAttempt(task.id(),attempt).orElse(null));
-        return delegationPolicy==null?normal:delegationPolicy.guidance(task,runtime,normal);
+        var selected=delegationPolicy==null?normal:delegationPolicy.guidance(task,runtime,normal);
+        return nativeQuestions==null?selected:nativeQuestions.getObject().pinGuidance(task,runtime,selected);
     }
 
 
@@ -217,7 +225,9 @@ public class WorkerProtocolV1Controller {
 
     public record RegisterRequest(String workerId, String runtimeType, Set<String> capabilities, int maxConcurrency) {}
     public record WorkerResponse(String workerId, String status, int activeLeases, int maxConcurrency) {}
-    public record ClaimRequest(String workerId) {}
+    public record ClaimRequest(String workerId,String capabilitiesDigest) {
+        public ClaimRequest(String workerId) { this(workerId,null); }
+    }
     public record HeartbeatResponse(boolean stopRequested) {}
     public record StopAcknowledgementRequest(String workerId, String leaseToken) {}
     public record LeaseActionRequest(String workerId, String leaseToken, String externalSessionId) {}

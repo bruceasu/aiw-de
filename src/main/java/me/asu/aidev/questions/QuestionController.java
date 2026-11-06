@@ -10,6 +10,7 @@ import static me.asu.aidev.questions.QuestionContract.*;
 
 @RestController
 public class QuestionController {
+    @org.springframework.beans.factory.annotation.Autowired private NativeQuestions nativeQuestions;
     private final AuthorityRepository repo;private final FormalQuestions questions;private final PersonalQuestions personal;private final TelegramQuestions telegram;
     public QuestionController(AuthorityRepository repo,FormalQuestions questions,PersonalQuestions personal,TelegramQuestions telegram) {this.repo=repo;this.questions=questions;this.personal=personal;this.telegram=telegram;}
     private <T> T read(String raw,Class<T> type) {if(raw.length()>32768) throw new IllegalArgumentException("Question envelope limit");return repo.decode(raw,type);}
@@ -20,7 +21,12 @@ public class QuestionController {
     @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/questions/checkpoints") public Object checkpoints(@PathVariable String task,@RequestBody String raw) {return questions.checkpoints(task,read(raw,GuardContract.Lease.class));}
     @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/questions/receipt") public Object receipt(@PathVariable String task,@RequestBody String raw) {return questions.receipt(task,read(raw,QuestionReceipt.class));}
     @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/questions/open") public Object open(@PathVariable String task,@RequestBody String raw) {return questions.open(task,read(raw,Open.class));}
-    @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/questions/ack") public Object ack(@PathVariable String task,@RequestBody String raw) {return questions.acknowledge(task,read(raw,GuardContract.Yield.class));}
+    @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/questions/ack") public Object ack(@PathVariable String task,@RequestBody String raw,@RequestParam(defaultValue="v1") String version) {
+        if("v2".equals(version))return nativeQuestions.acknowledge(task,read(raw,NativeQuestions.Ack.class));
+        if(!"v1".equals(version))throw new IllegalArgumentException("Unsupported question acknowledgment protocol");
+        return questions.acknowledge(task,read(raw,GuardContract.Yield.class));
+    }
+    public Object ack(String task,String raw) { return ack(task,raw,"v1"); }
     @PostMapping("/api/r1/authority/questions/read") public Object list(@RequestBody String raw) {return questions.humanList(read(raw,Plan.class).planId());}
     @PostMapping("/api/r1/authority/questions/reply") public Object reply(@RequestBody String raw) {return questions.humanReply(read(raw,Reply.class));}
     @PostMapping("/api/r1/authority/questions/budget") public Object budget(@RequestBody String raw) {return questions.budget(read(raw,BudgetQuestion.class));}

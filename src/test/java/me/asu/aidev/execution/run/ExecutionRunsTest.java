@@ -113,4 +113,32 @@ class ExecutionRunsTest {
         assertThatThrownBy(()->runs.events("task",new Events(lease,List.of(event(2,20),event(1,10))))).isInstanceOf(IllegalArgumentException.class);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM execution_run_event",Long.class)).isZero();
     }
+    void nativeRun() {
+        when(guard.managed("task")).thenReturn(false);
+        var owners=mock(NativePlanOwners.class);
+        when(owners.task(eq("task"),anyBoolean())).thenReturn(new NativePlanOwners.Basis("owner","plan",1,"a".repeat(64),null));
+        var lifecycle=new NativeRunLifecycle(repo,boundary,guard,mock(me.asu.aidev.work.port.WorkTaskRepository.class),mock(me.asu.aidev.worker.port.WorkerRepository.class),List.of());
+        org.springframework.test.util.ReflectionTestUtils.setField(runs,"nativeOwners",owners);
+        org.springframework.test.util.ReflectionTestUtils.setField(runs,"nativeLifecycle",lifecycle);
+        jdbc.execute("CREATE TABLE execution_stop_evidence(attempt_id TEXT)");
+    }
+    void nativeEvent(long sequence,String event,Map<String,Object> payload) {
+        runs.events("task",new Events(lease,List.of(new Event(sequence,event,1000,payload,AuthorityRepository.hash(repo.encode(payload))))));
+    }
+    @Test void nativePauseNeedsRecordedQuiescenceAndANewTurnInvalidatesIt() {
+        nativeRun();runs.command(new Command("pause","task","attempt",1,1,"PAUSE"));
+        runs.poll("task",new Poll(lease,List.of(new Receipt(1,"RECEIVED"))));
+        assertThatThrownBy(()->runs.poll("task",new Poll(lease,List.of(new Receipt(1,"APPLIED"))))).isInstanceOf(IllegalStateException.class);
+        nativeEvent(1,"execution-quiescent",Map.of("count",0,"complete",true));
+        runs.poll("task",new Poll(lease,List.of(new Receipt(1,"APPLIED"))));assertThat(phase()).isEqualTo("PAUSED");
+        runs.command(new Command("resume","task","attempt",1,3,"RESUME"));
+        runs.poll("task",new Poll(lease,List.of(new Receipt(2,"RECEIVED"))));
+        nativeEvent(2,"native-turn-started",Map.of("status","running"));
+        assertThatThrownBy(()->runs.poll("task",new Poll(lease,List.of(new Receipt(2,"APPLIED"))))).isInstanceOf(IllegalStateException.class);
+    }
+    @Test void nativeFinalizationRequiresActualRecordedQuiescence() {
+        nativeRun();assertThatThrownBy(()->runs.seal("task",new Seal(lease,1,0,"boundary"))).isInstanceOf(IllegalStateException.class);
+        nativeEvent(1,"execution-quiescent",Map.of("count",0,"complete",true));
+        runs.seal("task",new Seal(lease,1,1,"boundary"));assertThat(phase()).isEqualTo("FINALIZING");
+    }
 }

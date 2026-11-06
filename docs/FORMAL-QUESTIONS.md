@@ -28,6 +28,14 @@ checkpoint 保留于指定本机 Git 对象库及隔离工作区。Worker 广告
 
 LEGACY_PLAN_TASK 是现有受控来源，封闭支持 configured-plan 和 flexible-plan。两者验证真实 policy/context/task/Attempt；configured-plan 验证注册配置，flexible-plan 另验证 WorkflowPlan 与逻辑槽。WORKFLOW_GRAPH_EXECUTION 只通过 FD-026 注册的 resolver；未注册明确拒绝，不接受自由 sourceRef。图 ask 的创建、推进由 FD-026 接入本服务，不创建另一份问题状态。
 
+## 原生工厂的 location checkpoint
+
+显式绑定 Plan Owner 的默认原生 Codex 工厂任务使用 `aiw.questions.v2`、`NATIVE_PLAN_TASK` 来源和 `questions-v2` 能力。入口是 Worker 工作台的“原生工厂计划”，绑定必须早于实际执行；绑定不等于授予工具权限。未绑定任务与 v1 Git checkpoint 保留各自协议。
+
+v2 checkpoint 包含固定 location、运行配置摘要、不可变 handoff 引用/摘要和 `handoff-store:<摘要>` 存储亲和性，Git 信息可选。CP 仅核对来源、Owner、租约、版本和摘要，不检查目录/文件。Worker 保留报告与工作树摘要，确认实际静止后调用原问题端点 `ack?version=v2`；只有平台确认后才释放容量、进入 `WAITING_INPUT`，不能把阻塞报告视作任务成功。
+
+确认答案由同一正式问题消费者推进一次，successor 保留原技能、目标、配置与模型政策。Worker 必须从固定 checkpoint 恢复；源目录改变、配置/存储不匹配或停止结果未知时暂停自动推进。没有新回答的旧任务不能通过普通重试继续猜测。原生单次执行的暂停/继续/取消在 Worker 工作台，整个 Plan 仍使用既有 Plan 控制；问答页不会伪造缺失的执行策略。实现与验证边界见 [Worker 说明](../workers/process-python/AUTOMATION-LOOP.md)。
+
 ## 秘书与隐私
 
 秘书的 `/questions?planId=...` 使用专属凭证、当前进程 boot、enablement 和明确 PLAN 读取范围。私人 UI 先显示本次选择的目标、必要上下文及原始回答；第二个明确提交动作才排入私人 outbox。私人聊天、策略、模板、凭证不自动投影。

@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import time
 
@@ -42,7 +43,7 @@ class DirectoryLock:
 
 def input_manifests(task):
     result = []
-    for item in task.get("inputs", []):
+    for item, checkpoint in [*((item, False) for item in task.get("inputs", [])), *((item, True) for item in task.get("checkpointInputs", []))]:
         ref = item.get("handoff")
         if not ref:
             continue
@@ -54,9 +55,9 @@ def input_manifests(task):
         for parent in [path, *path.parents]:
             if parent == root:
                 break
-            if parent.is_symlink():
+            if parent.is_symlink() or getattr(parent, "is_junction", lambda: False)():
                 raise RuntimeError("HANDOFF_PATH_UNSAFE")
-        if path.stat().st_size > 1024 * 1024:
+        if not path.is_file() or path.stat().st_size > 1024 * 1024:
             raise RuntimeError("HANDOFF_CAPACITY_EXCEEDED")
         raw = path.read_bytes()
         if len(raw) > 1024 * 1024 or hashlib.sha256(raw).hexdigest() != ref["sha256"]:
@@ -66,10 +67,20 @@ def input_manifests(task):
                 or manifest.get("attemptId") != item["attemptId"]):
             raise RuntimeError("HANDOFF_SOURCE_MISMATCH")
         report = path.parent / "report.md"
-        if manifest.get("report") != "report.md" or report.is_symlink() or report.stat().st_size > 1024 * 1024:
+        if manifest.get("report") != "report.md" or report.is_symlink() or not report.is_file() or report.stat().st_size > 1024 * 1024:
             raise RuntimeError("HANDOFF_REPORT_INVALID")
         if hashlib.sha256(report.read_bytes()).hexdigest() != manifest.get("reportSha256"):
             raise RuntimeError("HANDOFF_REPORT_HASH_MISMATCH")
+        candidate = Path(manifest.get("workingDirectory", "")).resolve(strict=True)
+        if not candidate.is_relative_to(root):
+            raise RuntimeError("HANDOFF_WORKING_DIRECTORY_UNSAFE")
+        if checkpoint:
+            from worker_runtime import current_attempt, snapshot
+            expected = manifest.get("checkpointTreeSha256")
+            attempt = current_attempt()
+            if attempt is None or not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected) or snapshot(str(candidate), attempt) != expected:
+                raise RuntimeError("HANDOFF_CHECKPOINT_TREE_CHANGED")
+            manifest["checkpoint"] = True
         manifest["location"] = str(root)
         result.append(manifest)
     return result
@@ -104,21 +115,26 @@ class PlanWorkspace:
         root = Path(task["location"])
         root.mkdir(parents=True, exist_ok=True)
         root = root.resolve(strict=True)
-        manifests = input_manifests(task)
-        task["handoffInputs"] = manifests
-        source = root
-        # Accepted inputs remain explicit in the prompt. A sole latest tree is a starting point,
-        # never an implicit merge of independent branches.
-        if manifests:
-            candidates = sorted(manifests, key=lambda m: m.get("completedAt", 0))
-            latest = candidates[-1]
-            candidate = Path(latest["workingDirectory"]).resolve(strict=True)
-            input_root = Path(latest["location"])
-            if not candidate.is_relative_to(input_root):
-                raise RuntimeError("HANDOFF_WORKING_DIRECTORY_UNSAFE")
-            if input_root == root:
-                source = candidate
         gate = DirectoryLock(root, attempt)
+        try:
+            manifests = input_manifests(task)
+            task["handoffInputs"] = manifests
+            source = root
+            # Check retained input while holding admission for this location.
+            # A sole latest tree is a starting point, not an implicit branch merge.
+            if manifests:
+                candidates = sorted(manifests, key=lambda m: (bool(m.get("checkpoint")), m.get("completedAt", 0)))
+                latest = candidates[-1]
+                candidate = Path(latest["workingDirectory"]).resolve(strict=True)
+                input_root = Path(latest["location"]).resolve(strict=True)
+                if not candidate.is_relative_to(input_root):
+                    raise RuntimeError("HANDOFF_WORKING_DIRECTORY_UNSAFE")
+                if input_root == root:
+                    source = candidate
+        except BaseException:
+            if not attempt.resource_uncertain:
+                gate.release()
+            raise
 
         def git(cwd, *args):
             if broker:
@@ -173,7 +189,7 @@ class PlanWorkspace:
         changed = self.git(self.cwd, "diff", "--name-only", "-z", self.base, revision)
         return {"resultRevision": revision, "changedFiles": sorted(filter(None, changed.split("\0")))}
 
-    def handoff(self, task, report, result):
+    def handoff(self, task, report, result, checkpoint_tree_digest=None):
         target = directory(self.root, ".ai", "handoffs", key(task["taskId"]), key(task["attemptId"]))
         with (target / "report.md").open("xb") as file:
             file.write(report["summary"].encode("utf-8"))
@@ -181,6 +197,8 @@ class PlanWorkspace:
                     "planId": task["planId"], "workingDirectory": self.cwd, "completedAt": time.time_ns() // 1000000,
                     "report": "report.md", "reportSha256": key(report["summary"]), "verdict": report["verdict"], "gitResult": result,
                     "deliverables": report.get("outputFiles", [])}
+        if checkpoint_tree_digest is not None:
+            manifest["checkpointTreeSha256"] = checkpoint_tree_digest
         raw = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
         with (target / "manifest.json").open("xb") as file:
             file.write(raw)

@@ -139,13 +139,17 @@ def observe_context(request, runtime, projection, *, request_scope, purpose=None
     api = runtime == "openai-agents"
     host = getattr(request, "context_purpose", "task") == "host-action"
     broker = getattr(request, "broker", None) is not None
-    observed.capabilities_observed(runtime, RuntimeCapabilities(
+    channel = getattr(request.attempt, "run_channel", None)
+    capabilities = RuntimeCapabilities(
         "HOST" if host else "BACKEND", "HOST" if api or host or broker or getattr(request, "model_only", False) else "BACKEND",
         "WORKER_PROJECTION", "TOOL" if api or host or broker else "TURN",
         "REQUEST" if api and broker else "NONE",
         "SAME_ATTEMPT" if runtime == "codex-app-server:host-session" else "NONE",
-        "TOOL" if getattr(request.attempt, "run_channel", None) is not None else "NONE",
-        "BEST_EFFORT", "REQUEST" if api else "UNKNOWN", request_scope))
+        channel.capabilities.pause_boundary if channel is not None else "NONE",
+        "BEST_EFFORT", "REQUEST" if api else "UNKNOWN", request_scope)
+    if channel is not None and channel.capabilities.pause_boundary == "TURN":
+        capabilities = channel.capabilities
+    observed.capabilities_observed(runtime, capabilities)
     return observed.observe(runtime, projection, request_scope=request_scope,
         purpose=purpose or getattr(request, "context_purpose", "task"),
         parts=dict(request.context_parts) if getattr(request, "context_parts", ()) else None)

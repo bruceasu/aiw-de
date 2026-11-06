@@ -25,7 +25,7 @@ def ask(broker, args):
         raise RuntimeError("QUESTION_CHECKPOINT_ADAPTER_REQUIRED")
     broker.accepting_tools = False
     result = broker.checkpoint()
-    checkpoint = {"repositoryRef": broker.repository, "baseRevision": broker.task["workspace"]["baseRevision"],
+    checkpoint = {"repositoryRef": broker.repository, "baseRevision": broker.context["snapshot"]["task"].get("baseRevision"),
                   "resultRevision": result["resultRevision"], "changedFiles": result["changedFiles"],
                   "configurationDigest": broker.context["configurationDigest"], "storageCapability": storage_capability(broker.source_root)}
     source = broker.client._post(broker.base + "/questions/source", broker.lease)

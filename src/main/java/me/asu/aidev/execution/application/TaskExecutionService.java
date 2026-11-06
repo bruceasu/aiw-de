@@ -32,6 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskExecutionService {
+    private me.asu.aidev.execution.run.NativeRunLifecycle nativeRuns;
+    @Autowired public void setNativeRuns(me.asu.aidev.execution.run.NativeRunLifecycle runs) { this.nativeRuns=runs; }
+    private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.NativeQuestions> nativeQuestions;
+    @Autowired public void setNativeQuestions(org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.NativeQuestions> questions) { this.nativeQuestions=questions; }
     private me.asu.aidev.execution.run.ExecutionRuns executionRuns;
     @Autowired public void setExecutionRuns(me.asu.aidev.execution.run.ExecutionRuns runs) { this.executionRuns=runs; }
     private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
@@ -135,6 +139,7 @@ public class TaskExecutionService {
     @Transactional
     public void start(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                       String profileId, String profileVersion, String selectionReason) {
+        if(nativeRuns!=null)nativeRuns.serialize(taskId.value());
         var task = tasks.find(taskId).orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
         if(authorityPolicy!=null) authorityPolicy.beforeStart(task);
         if(guard!=null) { guard.serialize(taskId.value());guard.starting(taskId.value(),guardLease(workerId,leaseToken)); }
@@ -143,6 +148,10 @@ public class TaskExecutionService {
         task = tasks.find(taskId).orElseThrow();
         if(authorityPolicy!=null) authorityPolicy.starting(task,workerId.value());
         if(authorityPolicy!=null) authorityPolicy.selection(task,profileId,profileVersion);
+        if(nativeQuestions!=null) {
+            var runtime=workers.find(workerId).orElseThrow().runtimeType();
+            nativeQuestions.getObject().validateSelection(task,runtime,profileId,profileVersion,aiProfiles.guidance(task.type(),runtime,null));
+        }
         if (task.state() == TaskState.CLAIMED && attempts.stopRequested(leaseToken, workerId)) {
             throw new IllegalStateException("Worker stop requested before task start; acknowledge stop instead");
         }
@@ -224,6 +233,7 @@ public class TaskExecutionService {
     public void reviseInstruction(TaskId taskId, long expectedTaskVersion, int expectedInstructionRevision,
                                   String instruction, String actor, String reason) {
         if(guard!=null && guard.managed(taskId.value())) throw new IllegalStateException("Fixed inputs require a new authorized task, never in-place revision");
+        if(nativeRuns!=null&&nativeRuns.boundTask(taskId.value()))throw new IllegalStateException("A bound native Plan keeps its original inputs; use a new Plan for a changed goal");
         managedMutation(taskId);
         requireAudit(actor, reason);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
@@ -253,11 +263,12 @@ public class TaskExecutionService {
 
     @Transactional
     public void requestStop(TaskId taskId, String actor, String reason) {
+        if(nativeRuns!=null)nativeRuns.serialize(taskId.value());
         managedSerialization(taskId);
         requireAudit(actor, reason);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow();
-        if (task.state() != TaskState.RUNNING) throw new IllegalStateException("only a RUNNING task can be asked to stop");
+        if (task.state() != TaskState.RUNNING && !(task.state()==TaskState.YIELDING&&nativeRuns!=null&&tasks.findLease(taskId).map(l->nativeRuns.managed(taskId.value(),guardLease(l.workerId(),l.token()).attemptId())).orElse(false))) throw new IllegalStateException("only an active task can be asked to stop");
         var lease = tasks.findLease(taskId).orElseThrow(() -> new IllegalStateException("running task has no lease"));
         var now = clock.instant();
         if (!attempts.requestStop(lease.token(), lease.workerId(), now)) {
@@ -268,13 +279,20 @@ public class TaskExecutionService {
 
     @Transactional
     public void acknowledgeStop(TaskId taskId, WorkerId workerId, LeaseToken leaseToken) {
+        if(nativeRuns!=null) {
+            nativeRuns.serialize(taskId.value());var lease=guardLease(workerId,leaseToken);
+            if(nativeRuns.cancellation(taskId.value(),lease.attemptId())) {
+                if(!attempts.stopAcknowledged(taskId,workerId,leaseToken))nativeRuns.cancelled(taskId.value(),lease);return;
+            }
+            nativeRuns.requireQuiescent(taskId.value(),lease);
+        }
         if(guard!=null && guard.managed(taskId.value())) { guardedYield.stopped(taskId.value(),guardLease(workerId,leaseToken));return; }
         if(guard!=null) { guard.serialize(taskId.value());guard.finishing(taskId.value(),guardLease(workerId,leaseToken),false); }
         managedSerialization(taskId);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         var task = tasks.find(taskId).orElseThrow();
         if (attempts.stopAcknowledged(taskId, workerId, leaseToken)) return;
-        if (task.state() != TaskState.CLAIMED && task.state() != TaskState.RUNNING) {
+        if (task.state() != TaskState.CLAIMED && task.state() != TaskState.RUNNING && !(task.state()==TaskState.YIELDING&&nativeRuns!=null&&nativeRuns.managed(taskId.value(),guardLease(workerId,leaseToken).attemptId()))) {
             throw new IllegalStateException("task is no longer active");
         }
         var now = clock.instant();
@@ -290,11 +308,13 @@ public class TaskExecutionService {
                 "worker:" + workerId.value(), "Worker acknowledged stop request", false, now);
         if (workspaceReplacements != null) workspaceReplacements.afterStopAcknowledged(taskId, workerId, leaseToken);
         if (workflowPlans != null) workflowPlans.afterStopAcknowledged(taskId, workerId.value(), leaseToken.value());
+        if(nativeRuns!=null&&nativeRuns.managed(taskId.value(),attemptId.value()))nativeRuns.settled(attemptId.value());
     }
 
     @Transactional
     public void forceRequeue(TaskId taskId, String actor, String reason, boolean warningConfirmed) {
         if(guard!=null && guard.managed(taskId.value())) throw new IllegalStateException("Guarded attempts require actual quiescence and explicit continuation; no force replay");
+        if(nativeRuns!=null&&nativeRuns.boundTask(taskId.value()))throw new IllegalStateException("Native controlled runs require actual stop evidence; no force replay");
         managedMutation(taskId);
         requireAudit(actor, reason);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
@@ -371,6 +391,7 @@ public class TaskExecutionService {
     public TaskCompletionResult complete(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                                          String externalSessionId, WorkspaceResult workspaceResult,
                                          CompletionReport completionReport) {
+        if(nativeRuns!=null) {nativeRuns.serialize(taskId.value());nativeRuns.requireQuiescent(taskId.value(),guardLease(workerId,leaseToken));}
         if(replayedGuardedCompletion(taskId,workerId,leaseToken,workspaceResult,completionReport)) return new TaskCompletionResult(taskId,List.of(),List.of());
         if(guard!=null) { guard.serialize(taskId.value());guard.finishing(taskId.value(),guardLease(workerId,leaseToken),true); }
         if(executionRuns!=null) executionRuns.completing(taskId.value(),guardLease(workerId,leaseToken));
@@ -413,6 +434,7 @@ public class TaskExecutionService {
         var completedTask = tasks.find(taskId)
                 .orElseThrow(() -> new IllegalStateException("completed task not found: " + taskId.value()));
         knowledge.record(completedTask, completionReport, workspaceResult, now);
+        if(nativeRuns!=null&&nativeRuns.managed(taskId.value(),guardLease(workerId,leaseToken).attemptId()))nativeRuns.settled(guardLease(workerId,leaseToken).attemptId());
         if(guard!=null && guard.managed(taskId.value())) {
             guard.deferCompletion(taskId.value(),guardLease(workerId,leaseToken).attemptId(),workspaceResult,completionReport);
             requestGuardedAdvance(guard.context(taskId.value()).planId());
@@ -443,6 +465,7 @@ public class TaskExecutionService {
     @Transactional
     public void fail(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                      String externalSessionId, String failureReason, String failureCategory) {
+        if(nativeRuns!=null) {nativeRuns.serialize(taskId.value());nativeRuns.requireQuiescent(taskId.value(),guardLease(workerId,leaseToken));}
         if(guard!=null) { guard.serialize(taskId.value());guard.finishing(taskId.value(),guardLease(workerId,leaseToken),false); }
         var task = tasks.find(taskId).orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
         assertExecutionAllowed(task);
@@ -470,6 +493,7 @@ public class TaskExecutionService {
         releaseConcurrency(task, now);
         var failedTask = tasks.find(taskId)
                 .orElseThrow(() -> new IllegalStateException("failed task not found: " + taskId.value()));
+        if(nativeRuns!=null&&nativeRuns.managed(taskId.value(),guardLease(workerId,leaseToken).attemptId()))nativeRuns.settled(guardLease(workerId,leaseToken).attemptId());
         if(guard!=null && guard.managed(taskId.value())) {
             guard.deferFailure(taskId.value(),guardLease(workerId,leaseToken).attemptId(),failureReason);
             requestGuardedAdvance(guard.context(taskId.value()).planId());return;
@@ -545,6 +569,7 @@ public class TaskExecutionService {
         var now = clock.instant();
         int recovered = 0;
         for (var lease : tasks.findExpiredLeases(now, limit)) {
+            if(nativeRuns!=null&&nativeRuns.managed(lease.taskId().value(),attempts.findAttemptId(lease.token()).orElseThrow().value()))continue;
             if(guard!=null && guard.retainExpired(lease.taskId().value(),attempts.findAttemptId(lease.token()).orElseThrow().value())) continue;
             if (!tasks.requeueExpired(lease.taskId(), lease.workerId(), lease.token(), now)) continue;
             boolean attemptExpired = attempts.transition(

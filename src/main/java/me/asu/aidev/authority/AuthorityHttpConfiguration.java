@@ -20,7 +20,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/heartbeat")
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/configuration")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/questions/(source|open|ack|checkpoints|receipt)")
-                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/execution-run/(open|events|control|seal)")
+                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/execution-run/(availability|open|events|control|seal)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/(begin|finish)|operations/[^/]+/receipt|yield/(prepare|ack)|delivery)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|workspace-baseline|heartbeat|complete|fail|stop-acknowledgement|outputs|outputs/read)");
     }
@@ -35,7 +35,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/execution-policies/[^/]+/(pause|resume|revoke)") || path.matches("/execution-contexts/[^/]+/bind")
                 || path.matches("/execution-tasks/[^/]+/stopped")
                 || path.matches("/execution-configurations/(assets|candidates|propose|prepare|state|reconcile-plan)")
-                || path.matches("/execution-runs/(read|command|receipt)")
+                || path.matches("/execution-runs/(bind|read|command|receipt)")
                 || path.equals("/action-permissions") || path.equals("/action-permissions/state") || Set.of("/agent-factory/state","/agent-factory/settings").contains(path) || path.matches("/action-permissions/[^/]+/revoke")
                 || path.matches("/questions/(read|reply|budget|control|progress|telegram)")
                 || path.matches("/workflow-graphs/(read|change|decide|recommend)")

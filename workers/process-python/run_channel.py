@@ -9,7 +9,7 @@ import threading
 import time
 
 PROTOCOL = "aiw.worker.loop.v1"
-EVENTS = {"context-projected", "context-component", "guard-intent", "guard-start", "guard-finished",
+EVENTS = {"context-projected", "context-component", "guard-intent", "guard-start", "guard-finished", "native-turn-started",
           "host-batch-validated", "validation-failed", "validation-passed", "execution-quiescent", "delivery-pending"}
 FIELDS = set("bytes inputBytes outputBytes count durationMs inputTokens outputTokens cachedTokens complete truncated changed usageKnown visibility requestScope purpose status phase tool digest operation callId parentCallId sourceKind code".split())
 SOURCE_KINDS = set("instructions messages tools fixed_header observations new_observations task knowledge upstream skill configuration".split())
@@ -20,8 +20,11 @@ def encoded(value):
 
 
 class RunChannel:
-    def __init__(self, broker, capabilities):
+    def __init__(self, broker, capabilities, configuration_capability=None):
         self.broker, self.attempt = broker, broker.attempt
+        self.capabilities = capabilities
+        self.configuration_digest = None
+        self.quiescent_sequence = None
         self.client = copy.copy(broker.client)
         self.client.timeout = min(self.client.timeout, 2)
         self.base = broker.base + "/execution-run"
@@ -36,19 +39,25 @@ class RunChannel:
         self.revision = 0
         self.phase = "OPENING"
         self.last_contact = 0
-        opened = self._post("open", {"protocol": PROTOCOL, "instructionRevision": broker.task["instructionRevision"],
-                                     "capabilities": capabilities.payload()})
+        opening = {"protocol": PROTOCOL, "instructionRevision": broker.task["instructionRevision"], "capabilities": capabilities.payload()}
+        if configuration_capability is not None:
+            opening["configurationCapability"] = configuration_capability
+        opened = self._post("open", opening)
         self._accept(opened)
         self.attempt.evidence.observers.append(self.observe)
         self.thread = threading.Thread(target=self._watch, name="worker-run-control", daemon=True)
         self.thread.start()
 
     def _post(self, action, value):
-        self.attempt.check()
+        if action not in {"events", "control"}:
+            self.attempt.check()
         payload = {"lease": self.broker.lease, **value}
         if len(encoded(payload)) > 65536:
             raise RuntimeError("RUN_ENVELOPE_LIMIT")
-        return self.client._post(self.base + "/" + action, payload)
+        from worker_runtime import attempt_scope
+        # Cleanup metadata may be confirmed after cancellation; no model/tool call uses this exception.
+        with attempt_scope(None):
+            return self.client._post(self.base + "/" + action, payload)
 
     def _accept(self, value):
         if value.get("protocol") != PROTOCOL or value.get("attemptId") != self.broker.lease["attemptId"]:
@@ -56,10 +65,11 @@ class RunChannel:
         with self.lock:
             self.revision = value["revision"]
             self.phase = value["phase"]
+            self.configuration_digest = value.get("configurationDigest", self.configuration_digest)
             self.last_contact = time.monotonic()
             if self.phase in {"BROKEN", "SETTLED"}:
                 self.failed = "RUN_SESSION_UNAVAILABLE"
-            self.paused = self.phase in {"PAUSING", "PAUSED", "STOPPING"}
+            self.paused = self.phase in {"PAUSING", "PAUSED", "STOPPING", "YIELDING"}
             if self.phase == "STOPPING":
                 self.attempt.cancel("stop-requested")
             ack = value["acknowledgedSequence"]
@@ -76,7 +86,7 @@ class RunChannel:
                     if action == "CANCEL":
                         self.attempt.cancel("stop-requested")
                     receipts.append({"sequence": sequence, "status": "RECEIVED"})
-                elif status == "RECEIVED" and action != "CANCEL" and self.active == 0 and not self.attempt.resource_uncertain:
+                elif status == "RECEIVED" and action != "CANCEL" and self.active == 0 and not self.attempt.resource_uncertain and (self.capabilities.pause_boundary != "TURN" or self.quiescent_sequence is not None and self.ack >= self.quiescent_sequence):
                     receipts.append({"sequence": sequence, "status": "APPLIED"})
             self.pending_receipts = receipts
 
@@ -94,10 +104,14 @@ class RunChannel:
                 self.failed = "RUN_SPOOL_LIMIT"
                 raise RuntimeError(self.failed)
             self.sequence += 1
+            if event == "native-turn-started":
+                self.quiescent_sequence = None
+            elif event == "execution-quiescent" and payload.get("complete") is True and payload.get("count") == 0:
+                self.quiescent_sequence = self.sequence
             self.queue.append({"sequence": self.sequence, "eventType": event, "occurredAt": int(time.time() * 1000),
                                "payload": payload, "payloadDigest": hashlib.sha256(encoded(payload)).hexdigest()})
 
-    def enter(self):
+    def _ready(self, admit):
         while True:
             self.attempt.check()
             with self.lock:
@@ -106,9 +120,13 @@ class RunChannel:
                 if self.phase == "FINALIZING":
                     raise RuntimeError("RUN_ALREADY_FINALIZING")
                 if not self.paused and time.monotonic() - self.last_contact <= 5:
-                    self.active += 1
+                    if admit:
+                        self.active += 1
                     return
             self.stopped.wait(0.05)
+
+    def enter(self):
+        self._ready(True)
 
     def leave(self):
         with self.lock:
@@ -146,8 +164,7 @@ class RunChannel:
 
     def seal(self, batch_id):
         while True:
-            self.enter()
-            self.leave()
+            self._ready(False)
             self._exchange()
             with self.io:
                 with self.lock:
@@ -160,6 +177,18 @@ class RunChannel:
                     return result["batch"]
                 if self.phase == "FINALIZING":
                     return result.get("batch")
+
+    def flush(self):
+        deadline = time.monotonic() + 10
+        while True:
+            with self.lock:
+                if not self.queue:
+                    return
+                if self.failed:
+                    raise RuntimeError(self.failed)
+            if time.monotonic() >= deadline:
+                raise RuntimeError("RUN_FINAL_EVIDENCE_UNCONFIRMED")
+            self._exchange()
 
     def close(self):
         self.stopped.set()

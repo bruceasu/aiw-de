@@ -18,6 +18,8 @@ import static me.asu.aidev.execution.guard.GuardContract.*;
 /** Durable question facts and a single transactional consumer; transports have no progression authority. */
 @Service
 public class FormalQuestions {
+    @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<NativeQuestions> nativeQuestions;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.run.NativePlanOwners nativeOwners;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.port.WorkerRepository workers;
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final ExecutionGuard guard;
     private final ExecutionYieldService yields;private final ExecutionLedger ledger;private final WorkTaskRepository tasks;
@@ -35,8 +37,15 @@ public class FormalQuestions {
                 r.get("answer_json")==null?null:repo.decode(String.valueOf(r.get("answer_json")),Answer.class),q.checkpoint(),q.authorization(),
                 (String)r.get("successor_task_id"),(String)r.get("blocked_reason"));
     }
-    public String owner(String plan) { return String.valueOf(guard.policyRow(plan).get("owner_id")); }
+    public String owner(String plan) {
+        var rows=repo.jdbc().queryForList("SELECT owner_id FROM execution_policy WHERE plan_id=?",String.class,plan);
+        if(rows.size()==1)return rows.getFirst();return nativeOwners.owner(plan);
+    }
     @Transactional public Source source(String task,Lease lease) {
+        if(!guard.managed(task)) {
+            boundary.lock();guard.verifyLease(task,lease,true,true);
+            return nativeQuestions.getObject().sourceFor(task,nativeOwners.task(task,true).ownerId());
+        }
         boundary.lock();guard.verifyLease(task,lease,true,true);var c=guard.context(task);var t=tasks.find(new TaskId(task)).orElseThrow();
         var graph=resolvers.orderedStream().map(r->r.sourceFor(task,c.ownerId())).filter(Objects::nonNull).toList();
         if(graph.size()>1) throw new IllegalStateException("Ambiguous graph task source");if(graph.size()==1) return graph.getFirst();
@@ -58,6 +67,7 @@ public class FormalQuestions {
         if(found.size()!=1) throw new IllegalStateException("Question source resolver unavailable or ambiguous");return found.getFirst();
     }
     private String validate(Source source,String owner,boolean opening) {
+        if(source.kind()==SourceKind.NATIVE_PLAN_TASK)return resolver(source).validate(source,owner,opening);
         if(!owner(source.planId()).equals(owner)) throw new SecurityException("Question source owner mismatch");
         if(AuthorityRepository.flag(guard.policyRow(source.planId()).get("revoked"))) throw new IllegalStateException("Question source cancelled");
         if(source.kind()==SourceKind.WORKFLOW_GRAPH_EXECUTION) return resolver(source).validate(source,owner,opening);
@@ -80,6 +90,11 @@ public class FormalQuestions {
         long now=System.currentTimeMillis();repo.jdbc().update("INSERT INTO formal_question(id,owner_id,plan_id,source_key,source_digest,request_digest,payload_json,state,request_version,created_ms,updated_ms) VALUES(?,?,?,?,?,?,?,'OPEN',1,?,?)",
                 q.questionId(),q.ownerId(),q.source().planId(),q.sourceQuestionKey(),sourceDigest,requestDigest,repo.encode(q),now,now);return q;
     }
+    @Transactional public Question registerNative(Question q,String sourceDigest,String requestDigest) {
+        boundary.lock();
+        if(!QuestionContract.LOCATION_PROTOCOL.equals(q.protocol())||q.source().kind()!=SourceKind.NATIVE_PLAN_TASK||q.kind()!=Kind.PROFESSIONAL||!validate(q.source(),q.ownerId(),true).equals(sourceDigest))throw new SecurityException("Exact validated native source required");
+        return insert(q,sourceDigest,requestDigest);
+    }
     /** Trusted graph ask port. FD-026 owns source validation and advancement, never the question store. */
     @Transactional public Question openGraph(Source source,String sourceKey,String question,String context,List<String> options,String requirements,String expectedOwner) {
         boundary.lock();if(source.kind()!=SourceKind.WORKFLOW_GRAPH_EXECUTION||source.taskId()!=null) throw new IllegalArgumentException("Exact graph ask execution required");
@@ -92,6 +107,7 @@ public class FormalQuestions {
         return insert(new Question(QuestionContract.PROTOCOL,"Q-"+UUID.randomUUID(),expectedOwner,source,null,sourceKey,Kind.PROFESSIONAL,question,context,options,requirements,1,State.OPEN,0,null,null,null,null,null),sourceDigest,digest);
     }
     @Transactional public Object open(String taskId,Open input) {
+        if(QuestionContract.LOCATION_PROTOCOL.equals(input.protocol()))return nativeQuestions.getObject().open(taskId,input);
         boundary.lock();if(!taskId.equals(input.source().taskId())) throw new IllegalArgumentException("Exact task source required");
         guard.verifyLease(taskId,input.lease(),true,true);var c=guard.context(taskId);String digest=AuthorityRepository.hash(repo.encode(input));
         var previous=repo.jdbc().queryForList("SELECT id,request_digest FROM formal_question WHERE owner_id=? AND plan_id=? AND source_key=?",c.ownerId(),c.planId(),input.sourceQuestionKey());
@@ -120,6 +136,7 @@ public class FormalQuestions {
         var rows=repo.jdbc().queryForList("SELECT q.id FROM formal_question q JOIN formal_question_slot s ON s.question_id=q.id WHERE s.source_task_id=? AND q.source_key=?",String.class,task,input.sourceQuestionKey());
         if(rows.size()!=1) throw new IllegalArgumentException("Question receipt not found");var q=get(rows.getFirst());
         if(!Objects.equals(q.sourceAttemptId(),lease.attemptId())) throw new SecurityException("Question belongs to another Attempt");
+        if(q.source().kind()==SourceKind.NATIVE_PLAN_TASK)return nativeQuestions.getObject().receipt(task,input);
         return Map.of("question",q,"yield",yieldInput(q,lease),"yieldState",repo.jdbc().queryForObject("SELECT state FROM execution_yield WHERE task_id=?",String.class,task));
     }
     @Transactional public Object acknowledge(String task,GuardContract.Yield input) { boundary.lock();var result=yields.acknowledge(task,input);var q=get(input.operationId());if(!Objects.equals(q.source().taskId(),task)) throw new IllegalArgumentException("Question yield mismatch");return result; }
@@ -179,8 +196,8 @@ public class FormalQuestions {
         boundary.lock();var q=get(id);if(q.state()!=State.ANSWERED||q.kind()!=Kind.PROFESSIONAL) return;
         String expected=repo.jdbc().queryForObject("SELECT source_digest FROM formal_question WHERE id=?",String.class,id);
         if(!expected.equals(validate(q.source(),q.ownerId(),false))) {block(id,"SOURCE_CHANGED");return;}
-        if(q.source().kind()==SourceKind.WORKFLOW_GRAPH_EXECUTION) {
-            var application=resolver(q.source()).apply(q);if(application==null) {block(id,"WAITING_GRAPH_CONTROL_OR_PREREQUISITES");return;}
+        if(q.source().kind()==SourceKind.WORKFLOW_GRAPH_EXECUTION||q.source().kind()==SourceKind.NATIVE_PLAN_TASK) {
+            var application=resolver(q.source()).apply(q);if(application==null) {block(id,"WAITING_SOURCE_CONTROL_OR_PREREQUISITES");return;}
             applied(id,q.answerRevision(),application.successorTaskId());return;
         }
         String successor=continueExisting(q);
@@ -207,6 +224,7 @@ public class FormalQuestions {
         validate(q.source(),q.ownerId(),false);return continueExisting(q);
     }
     @Transactional public Object checkpoints(String task,Lease lease) {
+        if(!guard.managed(task))return nativeQuestions.getObject().checkpoints(task,lease);
         boundary.lock();guard.verifyLease(task,lease,false,true);var refs=guard.context(task).snapshot().references();var result=new ArrayList<Map<String,Object>>();
         for(var ref:refs) if(ref.kind().equals("checkpoint")) {
             var row=repo.jdbc().queryForMap("SELECT s.checkpoint_json,y.state FROM formal_question_slot s JOIN execution_yield y ON y.task_id=s.source_task_id WHERE s.source_task_id=?",ref.id());
@@ -216,7 +234,9 @@ public class FormalQuestions {
         }return List.copyOf(result);
     }
     @Transactional public Object control(String plan,long revision,String action) {
-        boundary.lock();human(owner(plan),"A19_ANSWER");var result=guard.control(plan,revision,action.equals("cancel")?"revoke":action);
+        boundary.lock();human(owner(plan),"A19_ANSWER");
+        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_policy WHERE plan_id=?",Long.class,plan)==0)throw new IllegalStateException("Use the native Plan controls or the exact execution run controls");
+        var result=guard.control(plan,revision,action.equals("cancel")?"revoke":action);
         if(action.equals("cancel")) {
             long now=System.currentTimeMillis();
             repo.jdbc().update("UPDATE execution_attempt SET stop_requested_at_epoch_ms=COALESCE(stop_requested_at_epoch_ms,?) WHERE state IN ('CLAIMED','RUNNING') AND task_id IN (SELECT task_id FROM execution_context WHERE plan_id=?)",now,plan);
@@ -225,7 +245,14 @@ public class FormalQuestions {
         }resolvers.orderedStream().forEach(r->r.planControlled(plan,action));return result;
     }
     @Transactional public Object progress(String plan) {
-        boundary.lock();readHuman(owner(plan));var active=repo.jdbc().queryForList("SELECT t.id,t.state,a.stop_requested_at_epoch_ms,a.stop_acknowledged_at_epoch_ms FROM work_task t JOIN execution_context c ON c.task_id=t.id LEFT JOIN execution_attempt a ON a.task_id=t.id AND a.attempt_no=t.attempt_no WHERE c.plan_id=? ORDER BY t.id",plan);
+        boundary.lock();readHuman(owner(plan));
+        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_policy WHERE plan_id=?",Long.class,plan)==0) {
+            var bound=repo.jdbc().queryForMap("SELECT source_version FROM plan_run_owner WHERE plan_id=?",plan);
+            var policy=Map.of("kind","NATIVE","revision",bound.get("source_version"),"state",plans.get(plan).state());
+            var active=repo.jdbc().queryForList("SELECT t.id,t.state,a.stop_requested_at_epoch_ms,a.stop_acknowledged_at_epoch_ms FROM work_task t LEFT JOIN execution_attempt a ON a.task_id=t.id AND a.attempt_no=t.attempt_no WHERE t.subject_type='flexible-plan' AND t.subject_id=? ORDER BY t.id",plan);
+            return Map.of("policy",policy,"budgets",List.of(),"tasks",active,"questions",list(plan),"stopSemantics","Native turn boundary; exact run receipts and Plan controls remain separate");
+        }
+        var active=repo.jdbc().queryForList("SELECT t.id,t.state,a.stop_requested_at_epoch_ms,a.stop_acknowledged_at_epoch_ms FROM work_task t JOIN execution_context c ON c.task_id=t.id LEFT JOIN execution_attempt a ON a.task_id=t.id AND a.attempt_no=t.attempt_no WHERE c.plan_id=? ORDER BY t.id",plan);
         return Map.of("policy",guard.policyRow(plan),"budgets",ledger.snapshot(plan),"tasks",active,"questions",list(plan),"stopSemantics","WAITING_STOP_CONFIRMATION until actual acknowledgment; UNKNOWN effects require human reconciliation");
     }
 }

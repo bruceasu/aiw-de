@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkflowWorkerProvisioning {
     @org.springframework.beans.factory.annotation.Autowired private FactoryReviewClaimPolicy factoryReviewPolicy;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.run.NativeRunClaimPolicy nativeRuns;
     public record Preparation(String taskId,String planId,String state,String message) {}
     private final Map<String,Preparation> pending=new java.util.concurrent.ConcurrentHashMap<>();
     private String after="";
@@ -60,8 +61,14 @@ public class WorkflowWorkerProvisioning {
                 var currentTask=task;
                 boolean online=workers.online(Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW)).stream()
                         .anyMatch(w -> w.runtimeType().startsWith(config.runtime()+":") && w.supports(required)
-                                && (factoryReviewPolicy==null || factoryReviewPolicy.canClaim(currentTask,w)));
+                                && (factoryReviewPolicy==null || factoryReviewPolicy.canClaim(currentTask,w))
+                                && (nativeRuns==null || nativeRuns.canClaim(currentTask,w)));
                 if(!online) {
+                    boolean frozen=required.stream().anyMatch(c->c.startsWith("native-config:"));
+                    boolean incompatible=workers.online(Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW)).stream().anyMatch(w->w.runtimeType().startsWith(config.runtime()+":")&&w.capabilities().contains(roleCapability(role)));
+                    if(frozen&&incompatible) {
+                        pending.put(id,new Preparation(id,task.subjectId(),"BLOCKED","此后继任务固定到原生 Worker 配置和交接存储；当前在线配置不匹配。恢复相同 Worker 配置，或明确创建新计划；不会自动切换模型。"));continue;
+                    }
                     var result=provisioner.requestNative(task.repositoryRef(),config.runtime(),role);
                     pending.put(id,new Preparation(id,task.subjectId(),result.starting()?"STARTING":"BLOCKED",result.message()));
                 } else pending.remove(id);
@@ -70,5 +77,8 @@ public class WorkflowWorkerProvisioning {
                 System.getLogger(getClass().getName()).log(System.Logger.Level.WARNING,"Confirmed workflow Worker preparation remains pending");
             }
         }
+    }
+    private String roleCapability(String role) {
+        return switch(role) {case "requirements"->"requirement-analysis";case "architect"->"solution-architecture";case "planner"->"implementation-planning";case "coder"->"coding";default->"workflow-review";};
     }
 }

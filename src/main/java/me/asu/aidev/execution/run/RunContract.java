@@ -8,22 +8,26 @@ import static me.asu.aidev.execution.guard.GuardContract.text;
 public final class RunContract {
     private RunContract() {}
     public static final String PROTOCOL="aiw.worker.loop.v1";
-    public record Open(String protocol,Lease lease,int instructionRevision,Map<String,String> capabilities) {}
+    public record Open(String protocol,Lease lease,int instructionRevision,Map<String,String> capabilities,String configurationCapability) {
+        public Open(String protocol,Lease lease,int instructionRevision,Map<String,String> capabilities) { this(protocol,lease,instructionRevision,capabilities,null); }
+    }
     public record Event(long sequence,String eventType,long occurredAt,Map<String,Object> payload,String payloadDigest) {}
     public record Events(Lease lease,List<Event> events) {}
     public record Receipt(long sequence,String status) {}
     public record Poll(Lease lease,List<Receipt> receipts) {}
     public record Seal(Lease lease,long expectedRunRevision,long acknowledgedSequence,String batchId) {}
     public record Command(String requestId,String taskId,String attemptId,int instructionRevision,long expectedRunRevision,String action) {}
-    public record Query(String taskId,String attemptId,long afterSequence) {}
+    public record Query(String taskId,String attemptId,long afterSequence,String planId) {
+        public Query(String taskId,String attemptId,long afterSequence) { this(taskId,attemptId,afterSequence,null); }
+    }
     public record ReceiptQuery(String requestId) {}
 
     public static void capabilities(Map<String,String> value) {
         var choices=Map.ofEntries(
-            Map.entry("requestLoopOwner",Set.of("HOST","BACKEND")),Map.entry("toolExecutor",Set.of("HOST")),
+            Map.entry("requestLoopOwner",Set.of("HOST","BACKEND")),Map.entry("toolExecutor",Set.of("HOST","BACKEND")),
             Map.entry("contextVisibility",Set.of("WORKER_PROJECTION","BACKEND_OPAQUE")),
-            Map.entry("dispatchBoundary",Set.of("TOOL")),Map.entry("supplementBoundary",Set.of("REQUEST","NONE")),
-            Map.entry("sessionReuse",Set.of("SAME_ATTEMPT","NONE")),Map.entry("pauseBoundary",Set.of("TOOL")),
+            Map.entry("dispatchBoundary",Set.of("TOOL","TURN")),Map.entry("supplementBoundary",Set.of("REQUEST","NONE")),
+            Map.entry("sessionReuse",Set.of("SAME_ATTEMPT","NONE")),Map.entry("pauseBoundary",Set.of("TOOL","TURN")),
             Map.entry("cancelEvidence",Set.of("BEST_EFFORT")),Map.entry("usageScope",Set.of("REQUEST","UNKNOWN")),
             Map.entry("requestAccountingScope",Set.of("REQUEST","BACKEND_TURN","UNKNOWN")));
         if(value==null||!value.keySet().equals(choices.keySet())||value.entrySet().stream().anyMatch(e->!choices.get(e.getKey()).contains(e.getValue())))

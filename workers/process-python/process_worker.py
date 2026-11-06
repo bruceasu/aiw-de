@@ -104,7 +104,7 @@ class WorkerConfig:
         profile = get_profile(process_role)
         capabilities = {part.strip() for part in os.getenv("AIW_WORKER_CAPABILITIES", "").split(",") if part.strip()}
         role_capabilities = {"goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
-        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1"} or part.startswith("repo:") or part in role_capabilities for part in capabilities):
+        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "worker-loop-turn-v1", "questions-v2"} or part.startswith(("repo:", "native-config:", "handoff-store:")) or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
         from skill_files import CAPABILITY as skill_files_capability
@@ -138,7 +138,7 @@ class WorkerConfig:
             raise ValueError("AIW_WORKER_MAX_CONCURRENCY must be >= 1")
         fallback = str(Path(os.getenv("AIW_WORKSPACE", repository_root or ".")).resolve())
         default_worktrees = str((Path(repository_root or fallback).resolve().parent / ".aidev-worktrees").resolve())
-        return WorkerConfig(
+        result = WorkerConfig(
             runtime=runtime,
             control_plane_url=os.getenv("AIW_CONTROL_PLANE_URL", "http://127.0.0.1:8080").rstrip("/"),
             worker_id=os.getenv("AIW_WORKER_ID", "process-api-" + process_role + "-1" if runtime == "openai-agents" else "codex-python-1"),
@@ -160,6 +160,10 @@ class WorkerConfig:
             heartbeat_interval=float(os.getenv("AIW_WORKER_HEARTBEAT_SECONDS", "20")),
             http_timeout=float(os.getenv("AIW_WORKER_HTTP_TIMEOUT_SECONDS", "15")),
         )
+        if runtime == "codex-app-server" and not _bool_env("AIW_EXECUTION_GUARD", False):
+            from native_run import capabilities as native_capabilities
+            result = replace(result, capabilities=tuple(sorted(set(result.capabilities) | native_capabilities(result))))
+        return result
 
 
 class ControlPlaneClient:
@@ -167,6 +171,7 @@ class ControlPlaneClient:
         self.base = config.control_plane_url + "/api/r1/worker-protocol/v1"
         self.token = config.worker_token
         self.timeout = config.http_timeout
+        self.capabilities_digest = hashlib.sha256(json.dumps(sorted(config.capabilities), ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
 
     def register(self, config: WorkerConfig) -> dict[str, Any]:
         result = self._post("/workers/register", {
@@ -183,7 +188,7 @@ class ControlPlaneClient:
     def worker_heartbeat(self, worker_id: str) -> None: self._post(f"/workers/{_quote(worker_id)}/heartbeat", None)
     def drain(self, worker_id: str) -> None: self._post(f"/workers/{_quote(worker_id)}/drain", None)
     def offline(self, worker_id: str) -> None: self._post(f"/workers/{_quote(worker_id)}/offline", None)
-    def claim(self, worker_id: str) -> dict[str, Any] | None: return self._post("/tasks/claim", {"workerId": worker_id}, allow_no_content=True)
+    def claim(self, worker_id: str) -> dict[str, Any] | None: return self._post("/tasks/claim", {"workerId": worker_id, "capabilitiesDigest": self.capabilities_digest}, allow_no_content=True)
     def start(self, task: dict[str, Any], worker_id: str,
               selection: dict[str, Any] | None, reason: str | None) -> None:
         payload = {"workerId": worker_id, "leaseToken": task["leaseToken"]}
@@ -455,6 +460,7 @@ class ProcessSlot:
     def _execute_task(self, runtime_client: Any, task: dict[str, Any]) -> None:
         heartbeat = workspace = attempt = gate = None
         broker = None
+        native = None
         session_id = None
         started = reporting = finished = cleaned = False
         phase = "TOOL_ERROR"
@@ -496,8 +502,19 @@ class ProcessSlot:
                     raise RuntimeError("ROLE_SKILL_DENIED")
                 # Location preparation is a Worker decision; no Control Plane Git assignment.
                 instruction = prepared.prompt(task, skill_reader) if prepared else _prompt(task, self.config, skill_reader)
+                if broker is None:
+                    from native_run import open_run
+                    native = open_run(self.config, self.client, task, attempt)
+                    if native:
+                        native.begin()
+                        instruction += native.prompt()
                 from plan_workspace import PlanWorkspace
-                workspace = PlanWorkspace.materialize(self.config, task, broker)
+                try:
+                    workspace = PlanWorkspace.materialize(self.config, task, broker)
+                except Exception:
+                    if native and task.get("checkpointInputs"):
+                        attempt.resource_uncertain = True
+                    raise
                 if broker:
                     broker.source_root = workspace.root
                     broker.attach(Path(workspace.cwd).resolve())
@@ -547,7 +564,7 @@ class ProcessSlot:
                         final_response = self.runtime.run(runtime_client, request, set_session)
                     except RuntimeError as error:
                         fallback = fallback_selection["profile"] if fallback_selection else {}
-                        if (broker or str(error) != "AI_PREFERENCES_REJECTED" or not task.get("aiPreferences")
+                        if (broker or native or str(error) != "AI_PREFERENCES_REJECTED" or not task.get("aiPreferences")
                                 or (request.model == fallback.get("model", default_model)
                                     and request.reasoning_effort == fallback.get("effort", self.config.reasoning_effort))):
                             raise
@@ -568,13 +585,20 @@ class ProcessSlot:
                 if heartbeat.ownership_lost.is_set(): raise RuntimeError("LEASE_LOST")
                 phase = "OUTPUT_INVALID"
                 report = _completion_report(profile.result_kind, final_response)
+                if native:
+                    report = native.validate_report(report, final_response)
                 if not profile.writable and not broker and snapshot(workspace.cwd, attempt) != baseline:
                     raise RuntimeError("READ_ONLY_WORKSPACE_CHANGED")
                 attempt.evidence.record("report-validated", status="valid", digest=hashlib.sha256(final_response.encode("utf-8")).hexdigest())
+                if native:
+                    native.maybe_question(workspace, report, final_response)
                 phase = "TOOL_ERROR"
                 workspace_result = workspace.finalize(task, read_only=not profile.writable)
                 if broker: broker.record_delivery(workspace_result, report)
                 task["_handoff"] = workspace.handoff(task, report, workspace_result)
+                if native:
+                    native.end()
+                    native.channel.seal("native-final")
                 heartbeat.close()
                 attempt.check()
                 if heartbeat.ownership_lost.is_set(): raise RuntimeError("LEASE_LOST")
@@ -592,10 +616,14 @@ class ProcessSlot:
                     from formal_questions import acknowledge
                     reporting = True
                     heartbeat.close()
-                    acknowledge(broker)
+                    if native and native.pending:
+                        native.acknowledge()
+                    else:
+                        acknowledge(broker)
                     workspace.cleanup(); cleaned = True
                     attempt.evidence.finish("waiting-input"); finished = True
-                print(f"yielded {task['taskId']} question={broker.pending_question['question']['questionId']}", flush=True)
+                receipt = native.pending if native and native.pending else broker.pending_question
+                print(f"yielded {task['taskId']} question={receipt['question']['questionId']}", flush=True)
             except Exception:
                 if attempt: attempt.resource_uncertain = True
                 print("QUESTION_YIELD_OUTCOME_UNCONFIRMED", file=sys.stderr, flush=True)
@@ -604,15 +632,22 @@ class ProcessSlot:
             status = "lease-lost" if lost else "report-unknown" if reporting else "failed"
             if attempt:
                 attempt.cancel("lease-lost" if lost else attempt.reason or "execution-failed")
+                if str(error) == "NATIVE_ADAPTER_CHANGED_DRAIN_REQUIRED":
+                    self.stop_event.set()
+                if native:
+                    try:
+                        native.end()
+                    except Exception:
+                        attempt.resource_uncertain = True
                 failure_code = classify_failure(error)
                 try: attempt.evidence.record("attempt-failed", status=status, phase=phase, code=failure_code)
                 except Exception: pass
                 if attempt.reason in {"deadline", "lease-lost", "force-shutdown"}:
                     try: attempt.evidence.record("attempt-cancelled", reason=attempt.reason)
                     except Exception: pass
-            if started and not lost and not reporting:
+            if started and not lost and not reporting and not (native and attempt.resource_uncertain):
                 try:
-                    if broker and attempt.reason == "stop-requested" and not attempt.resource_uncertain and not broker._active:
+                    if (broker or native) and attempt.reason == "stop-requested" and not attempt.resource_uncertain and not (broker and broker._active):
                         self.client._task_action(task, self.config.worker_id, "stop-acknowledgement", session_id)
                     else: self.client.fail(task, self.config.worker_id, session_id, classify_failure(error), phase)
                 except ProtocolError: pass

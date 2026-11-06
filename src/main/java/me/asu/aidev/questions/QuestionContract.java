@@ -9,23 +9,43 @@ import static me.asu.aidev.execution.guard.GuardContract.text;
 public final class QuestionContract {
     public static final String PROTOCOL="aiw.questions.v1";
     public static final String CAPABILITY="questions-v1";
+    public static final String LOCATION_PROTOCOL="aiw.questions.v2";
+    public static final String LOCATION_CAPABILITY="questions-v2";
     private QuestionContract() {}
-    public enum SourceKind { LEGACY_PLAN_TASK, WORKFLOW_GRAPH_EXECUTION }
+    public enum SourceKind { LEGACY_PLAN_TASK, WORKFLOW_GRAPH_EXECUTION, NATIVE_PLAN_TASK }
     public enum Kind { PROFESSIONAL, AUTHORIZATION }
     public enum State { OPEN, ANSWERED, APPLIED, SUPERSEDED }
     public record Source(SourceKind kind,String planId,long planVersion,String taskId,String executionId) {
         public Source { Objects.requireNonNull(kind);text(planId,128);if(planVersion<1) throw new IllegalArgumentException("Source version required");
             if(taskId!=null) text(taskId,128);if(executionId!=null) text(executionId,128); }
     }
-    public record Checkpoint(String repositoryRef,String baseRevision,String resultRevision,List<String> changedFiles,String configurationDigest,String storageCapability) {
-        public Checkpoint { text(repositoryRef,120);commit(baseRevision);commit(resultRevision);changedFiles=List.copyOf(changedFiles);
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    public record Checkpoint(String repositoryRef,String baseRevision,String resultRevision,List<String> changedFiles,String configurationDigest,String storageCapability,
+                             String protocol,String location,me.asu.aidev.execution.application.TaskHandoffs.Reference handoff) {
+        public Checkpoint(String repositoryRef,String baseRevision,String resultRevision,List<String> changedFiles,String configurationDigest,String storageCapability) {
+            this(repositoryRef,baseRevision,resultRevision,changedFiles,configurationDigest,storageCapability,null,null,null);
+        }
+        public Checkpoint {
+            changedFiles=List.copyOf(changedFiles);
             if(changedFiles.size()>512) throw new IllegalArgumentException("Checkpoint file limit");changedFiles.forEach(me.asu.aidev.execution.guard.GuardContract::path);
             me.asu.aidev.execution.guard.GuardContract.hash(configurationDigest);
-            if(storageCapability==null||!storageCapability.matches("checkpoint-store:[0-9a-f]{64}")) throw new IllegalArgumentException("Registered persistent Git store required"); }
+            if(LOCATION_PROTOCOL.equals(protocol)) {
+                text(location,4096);Objects.requireNonNull(handoff,"Fixed handoff required");
+                if(repositoryRef!=null||baseRevision!=null||resultRevision!=null) {text(repositoryRef,120);commit(baseRevision);commit(resultRevision);}
+                if(storageCapability==null||!storageCapability.matches("handoff-store:[0-9a-f]{64}"))throw new IllegalArgumentException("Registered handoff store required");
+            } else {
+                if(protocol!=null||location!=null||handoff!=null)throw new IllegalArgumentException("Unsupported checkpoint protocol");
+                text(repositoryRef,120);commit(baseRevision);commit(resultRevision);
+                if(storageCapability==null||!storageCapability.matches("checkpoint-store:[0-9a-f]{64}"))throw new IllegalArgumentException("Registered persistent Git store required");
+            }
+        }
+        public boolean locationBased() { return LOCATION_PROTOCOL.equals(protocol); }
+        public String revision() { return locationBased()?handoff.sha256():resultRevision; }
     }
     public record Open(String protocol,String sourceQuestionKey,Source source,Lease lease,String question,String context,
                        List<String> options,String answerRequirements,Checkpoint checkpoint) {
         public Open { QuestionContract.protocol(protocol);text(sourceQuestionKey,128);Objects.requireNonNull(source);Objects.requireNonNull(lease);
+            if(LOCATION_PROTOCOL.equals(protocol)!=(source.kind()==SourceKind.NATIVE_PLAN_TASK)||checkpoint!=null&&LOCATION_PROTOCOL.equals(protocol)!=checkpoint.locationBased())throw new IllegalArgumentException("Question/checkpoint protocol mismatch");
             text(question,8000);context=context==null?"":context;answerRequirements=answerRequirements==null?"":answerRequirements;
             if(context.length()>8000||answerRequirements.length()>2000) throw new IllegalArgumentException("Question projection limit");
             options=options==null?List.of():List.copyOf(options);if(options.size()>12) throw new IllegalArgumentException("Option limit");options.forEach(s->text(s,1000)); }
@@ -64,7 +84,7 @@ public final class QuestionContract {
         /** Pure DB consumers may mirror a formal whole-plan control in the same transaction. */
         default void planControlled(String planId,String action) {}
     }
-    private static void protocol(String value) { if(!PROTOCOL.equals(value)) throw new IllegalArgumentException("Unsupported question protocol"); }
+    private static void protocol(String value) { if(!PROTOCOL.equals(value)&&!LOCATION_PROTOCOL.equals(value)) throw new IllegalArgumentException("Unsupported question protocol"); }
     private static void commit(String value) { if(value==null||!value.matches("(?i)[0-9a-f]{40}|[0-9a-f]{64}")) throw new IllegalArgumentException("Immutable Git checkpoint required"); }
     public static void uuid(String value) { if(value==null||!UUID.fromString(value).toString().equals(value)) throw new IllegalArgumentException("Canonical request UUID required"); }
     private static void positiveId(String value) { if(value==null||!value.matches("[1-9][0-9]{0,18}")) throw new IllegalArgumentException("Exact private Telegram identity required"); }
