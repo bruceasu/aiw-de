@@ -68,7 +68,7 @@ class HostLoopContractTest(unittest.TestCase):
     def test_bad_protocol_can_be_corrected_in_the_original_run(self):
         from guarded_text_runtime import run
         request = self.request()
-        with patch.dict(os.environ, {"AIW_HOST_ACTION_PROTOCOL": "v2"}), \
+        with patch.dict(os.environ, {"AIW_HOST_ACTION_PROTOCOL": "v2", "AIW_CODEX_HOST_SESSION_REUSE": "false"}), \
                 patch("app_server_runtime.CodexAppServerRuntime.run", side_effect=["invalid JSON", '{"action":"finish","result":{"verdict":"PASS"}}']) as model:
             result = run(request, Mock())
         self.assertEqual(json.loads(result)["verdict"], "PASS")
@@ -82,7 +82,7 @@ class HostLoopContractTest(unittest.TestCase):
         batch = {"action": "tools", "calls": [
             {"id": "a", "name": "read", "arguments": {"path": "a", "offset": 1, "limit": 10}},
             {"id": "b", "name": "read", "arguments": {"path": "b", "offset": 1, "limit": 10}}]}
-        with patch.dict(os.environ, {"AIW_HOST_ACTION_PROTOCOL": "v2"}), \
+        with patch.dict(os.environ, {"AIW_HOST_ACTION_PROTOCOL": "v2", "AIW_CODEX_HOST_SESSION_REUSE": "false"}), \
                 patch("app_server_runtime.CodexAppServerRuntime.run", side_effect=[json.dumps(batch), '{"action":"finish","result":{"verdict":"REPAIR_REQUIRED"}}']):
             run(request, Mock())
         self.assertEqual(request.broker.invoke.call_count, 1)
@@ -93,11 +93,29 @@ class HostLoopContractTest(unittest.TestCase):
         request = self.request()
         request.broker.invoke.side_effect = RuntimeError("GUARD_PATH_DENIED")
         output = '{"action":"tool","name":"read","arguments":{"path":"private","offset":1,"limit":10}}'
-        with patch.dict(os.environ, {"AIW_HOST_ACTION_PROTOCOL": "v2"}), \
+        with patch.dict(os.environ, {"AIW_HOST_ACTION_PROTOCOL": "v2", "AIW_CODEX_HOST_SESSION_REUSE": "false"}), \
                 patch("app_server_runtime.CodexAppServerRuntime.run", return_value=output) as model:
             with self.assertRaisesRegex(RuntimeError, "GUARD_PATH_DENIED"):
                 run(request, Mock())
         self.assertEqual(model.call_count, 1)
+
+    def test_reused_conversation_receives_only_new_observations_after_first_turn(self):
+        from guarded_text_runtime import run
+        request = self.request()
+        conversation = Mock()
+        conversation.run_turn.side_effect = [
+            '{"action":"tool","name":"read","arguments":{"path":"a","offset":1,"limit":10}}',
+            '{"action":"finish","result":{"verdict":"PASS"}}']
+        with patch.dict(os.environ, {"AIW_HOST_ACTION_PROTOCOL": "v2", "AIW_CODEX_HOST_SESSION_REUSE": "true"}), \
+                patch("codex_model_session.CodexModelSession") as factory:
+            factory.return_value.__enter__.return_value = conversation
+            run(request, Mock())
+        factory.assert_called_once()
+        first, second = [call.args[0] for call in conversation.run_turn.call_args_list]
+        self.assertIn("Assigned task:", first)
+        self.assertNotIn("Assigned task:", second)
+        self.assertIn("read result", second)
+        self.assertEqual(request.broker.invoke.call_count, 1)
 
 
 if __name__ == "__main__":

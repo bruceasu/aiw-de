@@ -370,7 +370,7 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - [x] 1.2 接入每轮上下文账目与已有 usage/证据，形成 P0 基线。
 - [ ] 2.1 实现 LoopPolicy、后端会话生命周期、资源静止和未知终态报告。
 - [ ] 2.2 候选校验放到输入封闭前，最多两次纠错，保留 FD-078 verdict 语义。
-- [ ] 2.3 同 attempt 文本通道会话复用、规范消息、model-only 预检和取消。
+- [x] 2.3 同 attempt 文本通道会话复用、规范消息、model-only 预检和取消。
 - [ ] 3.1 观测/控制合同、附加表、幂等游标、权限/Owner/Lease 隔离和完成门禁。
 - [ ] 3.2 软暂停/继续、失联闸门、真实停止与输入回执、能力受限展示。
 - [ ] 3.3 工作台展示运行、上下文、工具、消耗与回执，原文留 Worker 本机。
@@ -432,6 +432,9 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - 本批新增七个纯协议/预算用例与三个宿主循环合同用例；node scripts/compile-worker-runtime.mjs 和测试源码 compile 均成功，但测试未执行。差异静态检查通过。最终两个无副作用数值解析边界补强后将在下一次有新增源码的编译中一并确认。
 - 已接入 CompletionValidator：复用调用方的既有报告校验回调，不复制或改写 FD-078 判定函数；合法 REPAIR_REQUIRED 保持原义。API 路径在 Workbench 封闭前校验，AIW_COMPLETION_CORRECTIONS=1/2 时启用有限修正（默认 0 保持旧行为）；文本 v2 在返回 finish 前校验，内层 model-only 不重复校验宿主 action。
 - 新增五个完成校验边界用例，仍仅编译。最新 node scripts/compile-worker-runtime.mjs 与两份 P1 测试源码 compile 通过，已覆盖上条提及的数值解析补强；未执行测试或模型。process_worker.py 仅新增创建请求处的回调行，其余在途报告函数修改不属于本提交。
+- 已实现 codex_model_session.py：一个 attempt 一个临时、只读、无原生工具的 app-server 进程/thread，复用既有账户、临时线程、特性与资源终止检查，关闭时只删除空的自建临时目录。意外原生工具项标记资源不确定。后续回合仅追加新观察，不重复发送固定头与全部旧观察；操作记录散列实际提交的增量文本。
+- 会话复用显式配置 AIW_CODEX_HOST_SESSION_REUSE=true，要求 host-action v2；默认 false，并进入冻结配置摘要。无自动重连或跨 attempt 复用，后端内部累积上下文和 usage 仍标未知。完整 Python 观察记录继续受原输入大小约束，不能据增量发送宣称缓存命中或性能已提升。
+- 新增三项会话合同用例和一项增量投递用例；Worker 编译及测试源码编译成功，未运行测试、进程或模型。最后的实际提交摘要对齐修正随下一批新增源码再次编译确认。
 
 ## Sources
 

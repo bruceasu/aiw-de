@@ -33,6 +33,19 @@ error, correct the action within the existing scope or ask a task question.
 
 
 def run(request, on_session):
+    reuse = os.environ.get("AIW_CODEX_HOST_SESSION_REUSE", "false")
+    if reuse not in {"true", "false"}:
+        raise RuntimeError("HOST_SESSION_REUSE_SETTING_INVALID")
+    if reuse == "true":
+        if os.environ.get("AIW_HOST_ACTION_PROTOCOL", "v1") != "v2":
+            raise RuntimeError("HOST_SESSION_REUSE_REQUIRES_V2")
+        from codex_model_session import CodexModelSession
+        with CodexModelSession(request, on_session) as conversation:
+            return _run_actions(request, on_session, conversation)
+    return _run_actions(request, on_session)
+
+
+def _run_actions(request, on_session, conversation=None):
     from app_server_runtime import CodexAppServerRuntime
     broker = request.broker
     observations = []
@@ -64,21 +77,32 @@ def run(request, on_session):
             observations.append({"action": action, "result": result})
             break
     completion_corrections = 0
+    delivered_observations = 0
     for turn in range(setting("AIW_AGENT_MAX_TURNS", 40)):
         request.attempt.check()
         history = json.dumps(observations, ensure_ascii=False)
         prompt = header + "\nPrevious host actions and results:\n" + history
         if len(prompt.encode("utf-8")) > setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024):
             raise RuntimeError("CONTEXT_BUDGET_EXCEEDED")
-        operation = broker.model_started({"runtime": "codex-app-server", "model": request.model, "instructionDigest": digest(prompt)})
+        submitted, parts = prompt, ()
+        if conversation is not None:
+            pending = observations[delivered_observations:]
+            submitted = (header if turn == 0 else "Continue the same task using only the declared host JSON actions.")
+            submitted += "\nNew host observations:\n" + json.dumps(pending, ensure_ascii=False)
+            parts = (("fixed_header", header), ("observations", pending)) if turn == 0 else (("new_observations", pending),)
+        operation = broker.model_started({"runtime": "codex-app-server", "model": request.model, "instructionDigest": digest(submitted)})
         try:
-            with tempfile.TemporaryDirectory(prefix="aiw-host-model-") as directory:
-                model_request = replace(request, broker=None, model_only=True, workspace=directory,
-                                        instruction=prompt, sandbox="read-only", network_access=False,
-                                        context_purpose="host-action",
-                                        candidate_validator=None,
-                                        context_parts=(("fixed_header", header), ("observations", observations)))
-                output = CodexAppServerRuntime().run(None, model_request, on_session)
+            if conversation is not None:
+                output = conversation.run_turn(submitted, parts)
+                delivered_observations = len(observations)
+            else:
+                with tempfile.TemporaryDirectory(prefix="aiw-host-model-") as directory:
+                    model_request = replace(request, broker=None, model_only=True, workspace=directory,
+                                            instruction=prompt, sandbox="read-only", network_access=False,
+                                            context_purpose="host-action",
+                                            candidate_validator=None,
+                                            context_parts=(("fixed_header", header), ("observations", observations)))
+                    output = CodexAppServerRuntime().run(None, model_request, on_session)
             broker.model_finished(operation, output, None)
             operation = None
         finally:
