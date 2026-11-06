@@ -24,7 +24,7 @@ def metadata(config):
     if CAPABILITY not in config.capabilities or "execution-guard-v1" not in config.capabilities:
         raise RuntimeError("CONFIGURATION_ADAPTER_NOT_VERIFIED")
     root = Path(__file__).resolve().parent
-    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_text_runtime.py", "guarded_openai_tools.py", "process_worker.py", "worker_runtime.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py", "plan_workspace.py", "agent_runtime.py", "run_contract.py")
+    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_text_runtime.py", "guarded_openai_tools.py", "process_worker.py", "worker_runtime.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py", "plan_workspace.py", "agent_runtime.py", "run_contract.py", "automation_loop.py")
     versions = {"broker": _digest({name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names})}
     if config.runtime == "openai-agents":
         versions.update({name: importlib.metadata.version(name) for name in ("openai-agents", "openai")})
@@ -35,6 +35,9 @@ def metadata(config):
     resource = {key: os.environ.get(key) for key in ("AIW_CODEX_GUARD_HOME", "AIW_CODEX_GUARD_PROFILE", "AIW_GUARD_COMMAND_ENABLED", "AIW_COMMAND_CGROUP_ROOT", "AIW_COMMAND_TOOLCHAIN_ROOTS", "OPENAI_BASE_URL", "OPENAI_ORG_ID", "OPENAI_PROJECT_ID")}
     resource.update(runtime=config.runtime, platform=sys.platform, adapter=versions, guarded=True)
     resource["codexGuardMode"] = os.environ.get("AIW_CODEX_GUARD_MODE", "dynamic-tools")
+    resource["hostActionProtocol"] = os.environ.get("AIW_HOST_ACTION_PROTOCOL", "v1")
+    if resource["hostActionProtocol"] not in {"v1", "v2"}:
+        raise RuntimeError("HOST_ACTION_PROTOCOL_UNSUPPORTED")
     return {"protocolVersions": [PROTOCOL, GUARD_PROTOCOL, "aiw.questions.v1", "aiw.skill.files.v1"], "runtime": config.runtime, "adapterVersions": versions,
             "platform": sys.platform, "resourcePolicyDigest": _digest(resource)}
 

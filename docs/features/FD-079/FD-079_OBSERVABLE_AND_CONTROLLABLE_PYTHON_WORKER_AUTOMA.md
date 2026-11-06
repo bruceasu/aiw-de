@@ -427,6 +427,9 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - 实施时以预检和获授权的合同验证确认适配器支持，不以本文作运行证据。
 - 设计静态检查：`git diff --no-index --check -- docs/templates/TEMPLATE.md docs/features/FD-079/FD-079_OBSERVABLE_AND_CONTROLLABLE_PYTHON_WORKER_AUTOMA.md` 通过。现开始 P0，尚无实施完成项。
 - P0 基线已实现并通过编译，接续 P1 候选校验与有限纠错；全 FD 尚未交付，独立审查待最终实现就绪后执行。
+- P1 部分实现：新增 automation_loop.py 的严格 action 解析、批次结构/参数全量预检和最多两次纠错；同缺口无新观察时提前停止。host-action 的 v2 路径按调用串行进入既有 Broker，权限/未知副作用错误不转为普通纠错，失败后的剩余调用明确未派发。
+- v2 显式启用方式为 AIW_CODEX_GUARD_MODE=host-actions 且 AIW_HOST_ACTION_PROTOCOL=v2；默认仍 v1。协议选择及代码进入既有冻结适配器摘要。尚未声明 worker-loop-v1 的完整控制能力；候选业务校验、会话复用和 CP 侧通道未完成，不以这一开关代表整个 FD 已实现。
+- 本批新增七个纯协议/预算用例与三个宿主循环合同用例；node scripts/compile-worker-runtime.mjs 和测试源码 compile 均成功，但测试未执行。差异静态检查通过。最终两个无副作用数值解析边界补强后将在下一次有新增源码的编译中一并确认。
 
 ## Sources
 

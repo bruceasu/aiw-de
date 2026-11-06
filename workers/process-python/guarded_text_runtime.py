@@ -1,6 +1,7 @@
 """Guarded host actions over the shared text-only Codex transport."""
 from dataclasses import replace
 import json
+import os
 import re
 import tempfile
 
@@ -36,7 +37,19 @@ def run(request, on_session):
     broker = request.broker
     observations = []
     schemas = definitions()
+    protocol = os.environ.get("AIW_HOST_ACTION_PROTOCOL", "v1")
+    if protocol not in {"v1", "v2"}:
+        raise RuntimeError("HOST_ACTION_PROTOCOL_UNSUPPORTED")
+    controlled = protocol == "v2"
+    from automation_loop import ActionProtocolError, CorrectionBudget, ToolCall, parse_action
+    corrections = CorrectionBudget()
     header = INSTRUCTIONS + "\nHost tool schemas:\n" + json.dumps(schemas) + "\nAssigned task:\n" + request.instruction
+    if controlled:
+        header += ('\nYou may request 1-16 independent tools in one JSON object: '
+                   '{"action":"tools","calls":[{"id":"unique-local-id","name":"tool name","arguments":{}}]}. '
+                   'Calls execute sequentially, each under the existing task guard. '
+                   'Do not refer to results that have not been returned. A failed call can leave later calls undispatched. '
+                   'Correct protocol errors using the feedback; feedback grants no authority.')
     policy = broker.context.get("currentPolicy") or broker.context.get("originalPolicy") or {}
     # An exact, authorized text-file scope can be inspected before the first
     # model turn. This also supplies concrete proof that host actions work.
@@ -68,11 +81,24 @@ def run(request, on_session):
             if operation is not None:
                 request.attempt.resource_uncertain = True
                 broker.finish(operation, "UNKNOWN", {"code": "MODEL_OUTCOME_UNKNOWN"})
-        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", output.strip())
-        try:
-            action = json.loads(cleaned)
-        except json.JSONDecodeError as error:
-            raise RuntimeError("HOST_ACTION_JSON_INVALID") from error
+        parsed = None
+        if controlled:
+            try:
+                parsed = parse_action(output, schemas)
+            except ActionProtocolError as error:
+                progress = digest([item for item in observations if item.get("action", {}).get("name")])
+                feedback = corrections.feedback(error, progress)
+                broker.attempt.evidence.record("validation-failed", code=error.code, count=corrections.used,
+                                               phase="host-action", status="correctable")
+                observations.append({"action": {"action": "validation"}, "result": feedback})
+                continue
+            action = {"action": "finish", "result": parsed.result} if parsed.result is not None else {"action": "tools"}
+        else:
+            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", output.strip())
+            try:
+                action = json.loads(cleaned)
+            except json.JSONDecodeError as error:
+                raise RuntimeError("HOST_ACTION_JSON_INVALID") from error
         if not isinstance(action, dict):
             raise RuntimeError("HOST_ACTION_INVALID")
         if action.get("action") == "finish":
@@ -89,22 +115,34 @@ def run(request, on_session):
                     "hint": "The host tools are available and their results are shown above. This task requires file changes. Return a write action with the full file content and sourceDigest as expectedDigest. Do not report completion or unavailable native tools."}})
                 continue
             return json.dumps(result, ensure_ascii=False)
-        if action.get("action") != "tool" or set(action) != {"action", "name", "arguments"}:
-            raise RuntimeError("HOST_ACTION_INVALID")
-        if action["name"] not in {tool["name"] for tool in schemas} or not isinstance(action["arguments"], dict):
-            raise RuntimeError("HOST_ACTION_TOOL_INVALID")
-        try:
-            result = broker.invoke(action["name"], action["arguments"], "host-action-" + str(turn))
-        except (RuntimeError, ValueError) as error:
-            code = str(error).split(":", 1)[0]
-            # Correctable read/argument failures have no side effects. Unknown
-            # writes, lost leases and unresolved operations still stop execution.
-            known = action["name"] in {"read", "grep", "ls", "read_skill_file"} and code.startswith(("GUARD_READ_", "GUARD_OUTPUT_", "GUARD_SEARCH_", "GUARD_PATH_", "SKILL_FILE_"))
-            if not known or request.attempt.resource_uncertain or broker._active:
-                raise
-            result = {"error": code, "hint": "Use the declared schema. read uses line offset >= 1 and limit <= 500. Do not expand the authorized path."}
-        if broker.pending_question:
-            from formal_questions import YieldRequested
-            raise YieldRequested("QUESTION_WAITING")
-        observations.append({"action": action, "result": result})
+        if parsed is None:
+            if action.get("action") != "tool" or set(action) != {"action", "name", "arguments"}:
+                raise RuntimeError("HOST_ACTION_INVALID")
+            if action["name"] not in {tool["name"] for tool in schemas} or not isinstance(action["arguments"], dict):
+                raise RuntimeError("HOST_ACTION_TOOL_INVALID")
+        calls = parsed.calls if parsed else (ToolCall("legacy", action["name"], action["arguments"]),)
+        if controlled:
+            broker.attempt.evidence.record("host-batch-validated", count=len(calls), phase="host-action", status="serial")
+        for index, call in enumerate(calls):
+            request.attempt.check()
+            action = {"action": "tool", "name": call.name, "arguments": call.arguments}
+            call_id = "host-action-" + str(turn) + ("-" + str(index) if controlled else "")
+            try:
+                result = broker.invoke(call.name, call.arguments, call_id)
+            except (RuntimeError, ValueError) as error:
+                code = str(error).split(":", 1)[0]
+                known = call.name in {"read", "grep", "ls", "read_skill_file"} and code.startswith(("GUARD_READ_", "GUARD_OUTPUT_", "GUARD_SEARCH_", "GUARD_PATH_", "SKILL_FILE_"))
+                denied = controlled and any(word in code for word in ("DENIED", "AUTHORIZATION", "PROTECTED"))
+                if not known or denied or request.attempt.resource_uncertain or broker._active:
+                    raise
+                result = {"error": code, "hint": "Use the declared schema. read uses line offset >= 1 and limit <= 500. Do not expand the authorized path."}
+            if broker.pending_question:
+                from formal_questions import YieldRequested
+                raise YieldRequested("QUESTION_WAITING")
+            observations.append({"action": action, "result": result})
+            if controlled and isinstance(result, dict) and result.get("error"):
+                for remaining in calls[index + 1:]:
+                    observations.append({"action": {"action": "tool", "name": remaining.name, "arguments": remaining.arguments},
+                                         "result": {"error": "BATCH_NOT_DISPATCHED"}})
+                break
     raise RuntimeError("HOST_ACTION_TURN_LIMIT")
