@@ -409,6 +409,12 @@ class CodexAppServerRuntime:
                 "approvalPolicy": "never", "sandboxPolicy": turn_policy}
             if request.reasoning_effort:
                 turn_params["effort"] = request.reasoning_effort
+            from run_contract import observe_context
+            observe_context(request, "codex-app-server", {
+                "instructions": params.get("baseInstructions"),
+                "messages": turn_params["input"],
+                "tools": params.get("dynamicTools", []),
+            }, request_scope="BACKEND_TURN")
             started_turn = session.rpc("turn/start", turn_params)
             turn_id = started_turn.get("turn", {}).get("id")
             if not isinstance(turn_id, str) or not turn_id:

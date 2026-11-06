@@ -367,7 +367,7 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 ## Work items
 
 - [ ] 1.1 定义 RuntimeCapabilities、回合/工具事件、ContextProjection、候选结果，保留 AgentRuntime 外层入口。
-- [ ] 1.2 接入每轮上下文账目与已有 usage/证据，形成 P0 基线。
+- [x] 1.2 接入每轮上下文账目与已有 usage/证据，形成 P0 基线。
 - [ ] 2.1 实现 LoopPolicy、后端会话生命周期、资源静止和未知终态报告。
 - [ ] 2.2 候选校验放到输入封闭前，最多两次纠错，保留 FD-078 verdict 语义。
 - [ ] 2.3 同 attempt 文本通道会话复用、规范消息、model-only 预检和取消。
@@ -415,6 +415,10 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - questions-v1 的 Git 依赖及 FD-078 在途状态是具体接口阻碍，因而增加有界合同读取；猜测不存在的路径不作为证据。
 - 需要未来独立实施审查；本轮未自动增加设计审查代理。
 - 设计阶段未执行编译、测试、服务、模型、网络或性能基准；文档无需编译。实施后补充实际命令与结果。
+- P0 已实现：新增 run_contract.py 的元数据账目，记录投影和分组字节/摘要/变化；API 在历史变换之后记录 REQUEST，Codex 原生/受控在提交回合前记录 BACKEND_TURN；文本 action 分列固定头与 observations。能力仅标 WORKER_PROJECTION，不声称完整提供方请求或缓存命中。
+- 已加入冻结材料库存（任务、知识、上游、技能入口）并明确它不等于逐请求来源归因；新模块进入既有适配器摘要。原文不进入日志，沿用证据容量限制，额外元数据也计入该限制。完整 RuntimeCapabilities 与细分运行状态仍待后续实施，1.1 未完成。
+- 实际执行 `node scripts/compile-worker-runtime.mjs` 成功；新增测试源码以 Python compile 编译成功但未执行。针对本批跟踪代码的 `git diff --check` 通过。未运行测试、SDK、模型、服务或网络，未保留最终制品。
+- 新增四个元数据边界用例，覆盖原文不落日志、变化标识不等同缓存、库存去重与归因未知、UTF-8 字节；只有编译证据，不声称运行通过。
 
 ## TODO
 
@@ -422,6 +426,7 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - 实施依赖为 FD-078 判定/问答合同；P4 前确认 location/handoff checkpoint 可用。
 - 实施时以预检和获授权的合同验证确认适配器支持，不以本文作运行证据。
 - 设计静态检查：`git diff --no-index --check -- docs/templates/TEMPLATE.md docs/features/FD-079/FD-079_OBSERVABLE_AND_CONTROLLABLE_PYTHON_WORKER_AUTOMA.md` 通过。现开始 P0，尚无实施完成项。
+- P0 基线已实现并通过编译，接续 P1 候选校验与有限纠错；全 FD 尚未交付，独立审查待最终实现就绪后执行。
 
 ## Sources
 

@@ -50,14 +50,17 @@ def run(request, on_session):
     completion_corrections = 0
     for turn in range(setting("AIW_AGENT_MAX_TURNS", 40)):
         request.attempt.check()
-        prompt = header + "\nPrevious host actions and results:\n" + json.dumps(observations, ensure_ascii=False)
+        history = json.dumps(observations, ensure_ascii=False)
+        prompt = header + "\nPrevious host actions and results:\n" + history
         if len(prompt.encode("utf-8")) > setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024):
             raise RuntimeError("CONTEXT_BUDGET_EXCEEDED")
         operation = broker.model_started({"runtime": "codex-app-server", "model": request.model, "instructionDigest": digest(prompt)})
         try:
             with tempfile.TemporaryDirectory(prefix="aiw-host-model-") as directory:
                 model_request = replace(request, broker=None, model_only=True, workspace=directory,
-                                        instruction=prompt, sandbox="read-only", network_access=False)
+                                        instruction=prompt, sandbox="read-only", network_access=False,
+                                        context_purpose="host-action",
+                                        context_parts=(("fixed_header", header), ("observations", observations)))
                 output = CodexAppServerRuntime().run(None, model_request, on_session)
             broker.model_finished(operation, output, None)
             operation = None

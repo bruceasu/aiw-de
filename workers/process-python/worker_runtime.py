@@ -32,6 +32,7 @@ def _regular_parents(target):
             entry.mkdir(mode=0o700)
 
 class Evidence:
+    context_fields = frozenset("sourceKind version purpose visibility requestScope changed".split())
     fields = set("status runtime unknown usageKnown path digest bytes count inputBytes outputBytes durationMs complete truncated operation callId parentCallId tool inputTokens outputTokens cachedTokens publicationRef resultRevision sideEffect verdict code reportStatus reason model effort phase".split())
     def __init__(self, config, task):
         root = Path(os.getenv("AIW_WORKER_EVIDENCE_ROOT", str(Path(config.fallback_workspace).parent / ".aidev-attempt-evidence"))).absolute()
@@ -63,7 +64,7 @@ class Evidence:
             if self.failed:
                 raise RuntimeError("CRITICAL_EVIDENCE_FAILED")
             try:
-                if set(values) - self.fields:
+                if set(values) - self.fields - self.context_fields:
                     raise RuntimeError("EVIDENCE_FIELD_FORBIDDEN")
                 raw = (json.dumps({**self.identity, "event": event, "time": datetime.now(timezone.utc).isoformat(), **values}, ensure_ascii=False) + "\n").encode("utf-8")
                 if self.bytes + len(raw) > self.limit:

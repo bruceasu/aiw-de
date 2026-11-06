@@ -37,6 +37,9 @@ class AgentRunRequest:
     # Host owns tools and business state; this call must return text only.
     model_only: bool = False
     executable: str | None = None
+    # Host metadata only; never interpreted as model instructions or tool authority.
+    context_purpose: str = "task"
+    context_parts: tuple[tuple[str, Any], ...] = ()
 
 
 class AgentRuntime(Protocol):

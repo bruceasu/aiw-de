@@ -24,7 +24,7 @@ def metadata(config):
     if CAPABILITY not in config.capabilities or "execution-guard-v1" not in config.capabilities:
         raise RuntimeError("CONFIGURATION_ADAPTER_NOT_VERIFIED")
     root = Path(__file__).resolve().parent
-    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_text_runtime.py", "guarded_openai_tools.py", "process_worker.py", "worker_runtime.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py", "plan_workspace.py")
+    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_text_runtime.py", "guarded_openai_tools.py", "process_worker.py", "worker_runtime.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py", "plan_workspace.py", "agent_runtime.py", "run_contract.py")
     versions = {"broker": _digest({name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names})}
     if config.runtime == "openai-agents":
         versions.update({name: importlib.metadata.version(name) for name in ("openai-agents", "openai")})
@@ -70,6 +70,12 @@ class Prepared:
         if len(owned) != len(expected) or actual != expected: raise RuntimeError("FIXED_CONFIGURATION_REFERENCES_CHANGED")
 
     def prompt(self, task, skill_reader=None):
+        from run_contract import register_material
+        for asset in self.assets:
+            if not skill_reader or asset["kind"] != "skill":
+                register_material(asset["kind"], asset["ref"], asset["version"], asset["content"])
+        register_material("task", task["taskId"], task.get("instructionRevision", 1), task["instruction"])
+        register_material("upstream", "fixed-inputs", "snapshot", json.dumps(task.get("inputs", []), ensure_ascii=False))
         sources = "\n\n".join("=== Registered " + a["kind"] + ": " + a["ref"] + " @ " + a["version"] + " ===\n" + a["content"] for a in self.assets if not skill_reader or a["kind"] != "skill")
         if skill_reader: sources = skill_reader.prompt() + "\n\n" + sources
         return (
