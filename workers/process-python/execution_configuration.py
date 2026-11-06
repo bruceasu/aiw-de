@@ -24,7 +24,7 @@ def metadata(config):
     if CAPABILITY not in config.capabilities or "execution-guard-v1" not in config.capabilities:
         raise RuntimeError("CONFIGURATION_ADAPTER_NOT_VERIFIED")
     root = Path(__file__).resolve().parent
-    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_text_runtime.py", "guarded_openai_tools.py", "process_worker.py", "worker_runtime.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py", "plan_workspace.py", "agent_runtime.py", "run_contract.py", "automation_loop.py", "completion_validation.py", "codex_model_session.py")
+    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_text_runtime.py", "guarded_openai_tools.py", "process_worker.py", "worker_runtime.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py", "plan_workspace.py", "agent_runtime.py", "run_contract.py", "automation_loop.py", "completion_validation.py", "codex_model_session.py", "run_channel.py")
     versions = {"broker": _digest({name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names})}
     if config.runtime == "openai-agents":
         versions.update({name: importlib.metadata.version(name) for name in ("openai-agents", "openai")})
@@ -42,6 +42,9 @@ def metadata(config):
     if resource["completionCorrections"] not in {"0", "1", "2"}:
         raise RuntimeError("COMPLETION_CORRECTION_SETTING_INVALID")
     resource["hostSessionReuse"] = os.environ.get("AIW_CODEX_HOST_SESSION_REUSE", "false")
+    resource["workerLoopControl"] = os.environ.get("AIW_WORKER_LOOP_CONTROL", "false")
+    if resource["workerLoopControl"] not in {"false", "true"}:
+        raise RuntimeError("WORKER_LOOP_CONTROL_SETTING_INVALID")
     if resource["hostSessionReuse"] not in {"false", "true"}:
         raise RuntimeError("HOST_SESSION_REUSE_SETTING_INVALID")
     if resource["hostSessionReuse"] == "true" and resource["hostActionProtocol"] != "v2":

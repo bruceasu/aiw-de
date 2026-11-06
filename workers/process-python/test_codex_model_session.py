@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -65,6 +66,7 @@ class ModelConversationTest(unittest.TestCase):
                 patch("codex_model_session.verify_model_only_tools"):
             with self.assertRaisesRegex(RuntimeError, "MODEL_ONLY_NATIVE_ITEM_DENIED"):
                 with CodexModelSession(self.request(), Mock()) as conversation:
+                    self.addCleanup(Path(conversation.cwd).rmdir)
                     conversation.run_turn("first", ())
         session.close.assert_called_once()
 

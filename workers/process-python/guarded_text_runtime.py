@@ -47,6 +47,8 @@ def run(request, on_session):
 
 def _run_actions(request, on_session, conversation=None):
     from app_server_runtime import CodexAppServerRuntime
+    from run_channel import bind
+    bind(request, "host-action")
     broker = request.broker
     observations = []
     schemas = definitions()

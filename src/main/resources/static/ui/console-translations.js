@@ -1,6 +1,8 @@
 // UI copy only. Rows are English, Chinese and Japanese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["Set Plan location explicitly: the goal declares a workspace, but an empty location uses a temporary directory.","目标中声明了工作空间，请明确填写 Plan location；留空会使用临时目录。","目標に作業場所が指定されています。Plan locationを入力してください。空欄では一時ディレクトリを使用します。"],
+  ["A workspace path in the goal does not set Plan location. To work in an existing project, enter its folder here.","目标文字中的工作空间路径不会自动设置执行位置。要修改现有项目，请在这里填写项目目录。","目標文に書いたパスはPlan locationに反映されません。既存プロジェクトを変更する場合は、ここにフォルダーを入力してください。"],
   ["Code implementation","编码实现","コード実装"],
   ["Independent stage review","独立阶段评审","独立した段階審査"],
   ["Requirement analysis","需求分析","要件分析"],

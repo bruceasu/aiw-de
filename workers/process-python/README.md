@@ -12,6 +12,16 @@ It deliberately does **not** port R2 lifecycle authority into workers. The R9 Ja
 
 ## Runtime model
 
+For `REPORT` results, a top-level JSON `verdict` is authoritative when present:
+only `PASS` and `REPAIR_REQUIRED` are accepted. A whole-response Markdown JSON
+fence is supported, and the original summary is preserved. Plain-text reports
+without an explicit JSON verdict retain the existing `PASS` behavior. A
+successful task execution does not imply that unresolved requirements are ready
+for implementation; independent stage review remains required.
+An explicit JSON blocked/incomplete outcome or a standalone first-line status
+such as `Result: BLOCKED` also produces `REPAIR_REQUIRED` for REPORT and DELIVERY.
+Mentions of past failures or examples inside prose do not determine the verdict.
+
 Model execution is isolated behind the `AgentRuntime` protocol in
 `agent_runtime.py`. The worker owns task, lease, workspace, and report handling;
 the runtime owns SDK session creation, execution, and final output validation.

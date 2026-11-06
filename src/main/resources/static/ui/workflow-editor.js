@@ -190,6 +190,9 @@
       preview.replaceChildren(); notice.textContent = '';
       const seen = new Set();
       if (!goal.value.trim()) notice.textContent = 'Enter a goal before saving.';
+      else if (!editor.querySelector('[data-location]').value.trim() && /^[\t ]*(?:workspace|location|工作空间|工作目录)[\t ]*[:：][\t ]*\S/im.test(goal.value)) {
+        notice.textContent = 'Set Plan location explicitly: the goal declares a workspace, but an empty location uses a temporary directory.';
+      }
       else if (!steps.length || steps.length > 32) notice.textContent = 'Choose 1–32 steps.';
       else for (const [index, step] of steps.entries()) {
         const problems = [];

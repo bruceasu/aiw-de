@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import signal
 import subprocess
 import tempfile
@@ -337,11 +338,27 @@ def _completion_report(result_kind: str, final_response: str) -> dict[str, str]:
     if not summary:
         raise RuntimeError("COMPLETION_REPORT_EMPTY")
     if result_kind in {"REPORT", "DELIVERY"}:
-        if result_kind == "DELIVERY":
-            try: detail = json.loads(summary)
-            except json.JSONDecodeError: detail = None
-            if isinstance(detail, dict) and (str(detail.get("outcome", "")).upper().startswith(("BLOCKED", "FAILED", "INCOMPLETE")) or detail.get("completed") is False):
-                return {"verdict": "REPAIR_REQUIRED", "summary": summary}
+        encoded = summary
+        fenced = re.fullmatch(r"```(?:json)?[ \t]*\r?\n(.*?)\r?\n?```", summary, re.DOTALL | re.IGNORECASE)
+        if fenced:
+            encoded = fenced.group(1)
+        try: detail = json.loads(encoded)
+        except json.JSONDecodeError: detail = None
+        blocked = isinstance(detail, dict) and (
+            str(detail.get("outcome", "")).upper().startswith(("BLOCKED", "FAILED", "INCOMPLETE"))
+            or detail.get("completed") is False)
+        status_line = re.fullmatch(
+            r"(?:\*\*)?(?:result|outcome|status|结果|状态)(?:\*\*)?\s*[:：]\s*(?:\*\*)?\s*`?(?:BLOCKED|FAILED|INCOMPLETE)(?:_[A-Z0-9]+)?`?(?:\*\*)?",
+            summary.splitlines()[0].strip(), re.IGNORECASE)
+        if result_kind == "REPORT" and isinstance(detail, dict) and "verdict" in detail:
+            verdict = detail["verdict"]
+            if not isinstance(verdict, str) or verdict not in {"PASS", "REPAIR_REQUIRED"}:
+                raise RuntimeError("COMPLETION_VERDICT_INVALID")
+            if blocked and verdict == "PASS":
+                raise RuntimeError("COMPLETION_REPORT_CONFLICT")
+            return {"verdict": verdict, "summary": summary}
+        if blocked or status_line:
+            return {"verdict": "REPAIR_REQUIRED", "summary": summary}
         return {"verdict": "PASS", "summary": summary}
     if result_kind != "VERDICT":
         raise RuntimeError("RESULT_KIND_INVALID")

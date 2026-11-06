@@ -22,7 +22,7 @@ if defined startup_jvm_arguments set "startup_jvm_arguments=%startup_jvm_argumen
 set "startup_jvm_arguments=%startup_jvm_arguments%-agentlib:jdwp=transport=dt_socket,server=y,suspend=%DEBUG_SUSPEND%,address=%DEBUG_ADDRESS%"
 
 echo Starting Spring Boot with JDWP at %DEBUG_ADDRESS% ^(suspend=%DEBUG_SUSPEND%^)
-call mvn clean spring-boot:run "-Dspring-boot.run.jvmArguments=%startup_jvm_arguments%" %*
+call mvn clean -DskipTests spring-boot:run "-Dspring-boot.run.jvmArguments=%startup_jvm_arguments%" %*
 set "startup_exit_code=%ERRORLEVEL%"
 popd
 endlocal & exit /b %startup_exit_code%

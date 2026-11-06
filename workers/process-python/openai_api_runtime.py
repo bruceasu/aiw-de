@@ -94,6 +94,8 @@ class OpenAIApiRuntime:
             raise
 
     async def _run(self, request: AgentRunRequest, context: ToolContext, on_session: Any) -> str:
+        from run_channel import bind
+        bind(request, "openai-agents")
         from agents import Agent, ModelSettings, OpenAIProvider, RunConfig, Runner, set_tracing_disabled
         from openai import AsyncOpenAI
 
@@ -149,7 +151,7 @@ class OpenAIApiRuntime:
             from completion_validation import CompletionValidator
             from execution_guard import digest
             correction_limit = _completion_corrections()
-            candidate = CompletionValidator(getattr(request, "candidate_validator", None) if correction_limit else None,
+            candidate = CompletionValidator(getattr(request, "candidate_validator", None) if correction_limit or getattr(request.attempt, "run_channel", None) is not None else None,
                                             request.attempt.evidence, correction_limit)
             run_input = "Execute the assigned task and return its final report."
             while True:

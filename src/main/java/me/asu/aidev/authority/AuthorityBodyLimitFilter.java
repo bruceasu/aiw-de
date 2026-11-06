@@ -10,10 +10,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class AuthorityBodyLimitFilter extends OncePerRequestFilter {
     @Override protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain chain) throws ServletException,IOException {
         String path=request.getRequestURI().substring(request.getContextPath().length());
-        boolean machine=path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/.*|yield/.*|questions/.*|delivery)")
+        boolean run=path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/execution-run/(open|events|control|seal)");
+        boolean machine=run || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/.*|yield/.*|questions/.*|delivery)")
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/configuration");
         if((!path.startsWith("/api/r1/authority/") && !machine) || !request.getMethod().equals("POST")) { chain.doFilter(request,response);return; }
-        int limit=machine?131072:32768;
+        int limit=run?65536:machine?131072:32768;
         byte[] bytes=request.getInputStream().readNBytes(limit+1);
         if(bytes.length>limit) { response.sendError(413,"Platform action exceeds its body limit");return; }
         var wrapped=new HttpServletRequestWrapper(request) {

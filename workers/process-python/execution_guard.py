@@ -78,6 +78,17 @@ class GuardBroker:
         self.git = LazyControlledGit(self.root, self.attempt)
 
     def begin(self, tool, resource, arguments, call_id=None):
+        channel = getattr(self.attempt, "run_channel", None)
+        if channel:
+            channel.enter()
+        try:
+            return self._begin(tool, resource, arguments, call_id)
+        except BaseException:
+            if channel:
+                channel.leave()
+            raise
+
+    def _begin(self, tool, resource, arguments, call_id=None):
         self.attempt.check()
         if self.allowed_tools is not None and tool not in self.allowed_tools: raise RuntimeError("CONFIGURATION_TOOL_NOT_DECLARED")
         operation = "OP-" + (digest({"attempt": self.task["attemptId"], "call": call_id}) if call_id else uuid.uuid4().hex)
@@ -102,7 +113,12 @@ class GuardBroker:
             "lease": self.lease, "operationId": operation, "state": state,
             "resultDigest": digest(result), "evidenceRef": evidence, "usage": usage,
         })
+        was_active = operation in self._active
         self._active.discard(operation)
+        channel = getattr(self.attempt, "run_channel", None)
+        if channel and was_active:
+            channel.leave()
+        self.attempt.evidence.record("guard-finished", operation=operation, status=state.lower())
 
     def operate(self, tool, resource, arguments, action, call_id=None):
         with self.lock:
@@ -130,7 +146,14 @@ class GuardBroker:
                 self.attempt.check()
                 if not isinstance(args, dict) or set(args) != {"ref", "path", "offset", "limit"} or not getattr(self.attempt, "skill_files", None):
                     raise RuntimeError("SKILL_FILES_UNAVAILABLE")
-                return self.attempt.skill_files.read(**args)
+                channel = getattr(self.attempt, "run_channel", None)
+                if channel:
+                    channel.enter()
+                try:
+                    return self.attempt.skill_files.read(**args)
+                finally:
+                    if channel:
+                        channel.leave()
             return self._invoke(name, args, call_id)
 
     def _invoke(self, name, args, call_id=None):
@@ -244,6 +267,10 @@ class GuardBroker:
         self.finish(operation, "SUCCEEDED", {"outputDigest": digest(output)}, dict(self.usage) if usage is not None else None)
 
     def record_delivery(self, result, report):
+        channel = getattr(self.attempt, "run_channel", None)
+        if channel and channel.phase != "FINALIZING":
+            if channel.seal("final-delivery") is not None:
+                raise RuntimeError("RUN_UNCONSUMED_OPERATOR_INPUT")
         delivery = {"scope": self.context["snapshot"]["task"]["instruction"],
                     "baseline": self.context["snapshot"]["task"].get("baseRevision"),
                     "resultRevision": (result or {}).get("resultRevision"), "changes": (result or {}).get("changedFiles", []),

@@ -329,6 +329,8 @@ class CodexAppServerRuntime:
                 return run(request, on_session)
             from guarded_app_server import run_guarded
             return run_guarded(request, on_session)
+        from run_channel import bind
+        bind(request, "codex-native")
         attempt = request.attempt
         if request.approval_mode not in {"deny-all", "never"}:
             raise RuntimeError("CODEX_APPROVAL_MODE_UNSUPPORTED: use deny-all")

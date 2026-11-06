@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from run_contract import ContextLedger
+from run_contract import ContextLedger, RuntimeCapabilities
 
 
 class Evidence:
@@ -13,6 +13,20 @@ class Evidence:
 
 
 class ContextLedgerTest(unittest.TestCase):
+    def test_capabilities_are_frozen_and_do_not_claim_live_control(self):
+        evidence = Evidence()
+        ledger = ContextLedger(evidence)
+        caps = RuntimeCapabilities("HOST", "HOST", "WORKER_PROJECTION", "TOOL", "NONE", "NONE", "NONE",
+                                   "BEST_EFFORT", "UNKNOWN", "BACKEND_TURN")
+        ledger.capabilities_observed("codex", caps)
+        ledger.capabilities_observed("codex", caps)
+        self.assertEqual(len(evidence.events), 1)
+        self.assertEqual(evidence.events[0]["capabilities"]["pauseBoundary"], "NONE")
+        other = RuntimeCapabilities("HOST", "HOST", "WORKER_PROJECTION", "TOOL", "NONE", "SAME_ATTEMPT", "NONE",
+                                    "BEST_EFFORT", "UNKNOWN", "BACKEND_TURN")
+        with self.assertRaisesRegex(RuntimeError, "CAPABILITIES_CHANGED"):
+            ledger.capabilities_observed("codex", other)
+
     def test_observations_keep_metadata_without_prompt_or_tool_content(self):
         evidence = Evidence()
         ledger = ContextLedger(evidence)

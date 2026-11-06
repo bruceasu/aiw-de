@@ -32,7 +32,7 @@ def _regular_parents(target):
             entry.mkdir(mode=0o700)
 
 class Evidence:
-    context_fields = frozenset("sourceKind version purpose visibility requestScope changed".split())
+    context_fields = frozenset("sourceKind version purpose visibility requestScope changed capabilities".split())
     fields = set("status runtime unknown usageKnown path digest bytes count inputBytes outputBytes durationMs complete truncated operation callId parentCallId tool inputTokens outputTokens cachedTokens publicationRef resultRevision sideEffect verdict code reportStatus reason model effort phase".split())
     def __init__(self, config, task):
         root = Path(os.getenv("AIW_WORKER_EVIDENCE_ROOT", str(Path(config.fallback_workspace).parent / ".aidev-attempt-evidence"))).absolute()
@@ -44,6 +44,7 @@ class Evidence:
         self.directory = root / uuid.uuid4().hex
         self.directory.mkdir(mode=0o700)
         self.lock = threading.Lock()
+        self.observers = []
         self.failed = False
         self.limit = setting("AIW_WORKER_EVIDENCE_MAX_BYTES", 4 * 1024 * 1024)
         self.identity = {"taskId": task["taskId"], "attemptId": task["attemptId"], "role": config.process_role}
@@ -76,6 +77,9 @@ class Evidence:
             except Exception:
                 self.failed = True
                 raise
+
+        for observer in tuple(self.observers):
+            observer(event, values)
 
     def finish(self, status):
         self.record("attempt-terminal", status=status)
@@ -203,8 +207,13 @@ class Attempt:
         return result[0][1]
 
     def close(self):
-        self.closed.set()
-        self.watcher.join(timeout=1)
+        channel = getattr(self, "run_channel", None)
+        try:
+            if channel is not None:
+                channel.close()
+        finally:
+            self.closed.set()
+            self.watcher.join(timeout=1)
 
 def current_attempt():
     return getattr(_local, "attempt", None)

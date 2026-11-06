@@ -30,7 +30,13 @@ class OperatorInputs:
 
     def _reserve(self, action):
         self.sequence += 1
-        batch = self._post(action, "boundary-" + str(self.sequence), "STEER" if action == "RESERVE" else None)
+        channel = getattr(self.broker.attempt, "run_channel", None)
+        if action == "DRAIN" and channel:
+            batch = channel.seal("boundary-" + str(self.sequence))
+            if batch is None:
+                raise RuntimeError("RUN_WORKBENCH_SEAL_RECEIPT_MISSING")
+        else:
+            batch = self._post(action, "boundary-" + str(self.sequence), "STEER" if action == "RESERVE" else None)
         if batch.get("batchId"):
             if batch.get("state") != "RESERVED" or not batch.get("messages") or len(batch["messages"]) > 8:
                 raise RuntimeError("OPERATOR_BATCH_ALREADY_CONSUMED_OR_INVALID")

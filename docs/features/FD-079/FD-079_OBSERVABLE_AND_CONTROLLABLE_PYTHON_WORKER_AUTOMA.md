@@ -435,6 +435,8 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - 已实现 codex_model_session.py：一个 attempt 一个临时、只读、无原生工具的 app-server 进程/thread，复用既有账户、临时线程、特性与资源终止检查，关闭时只删除空的自建临时目录。意外原生工具项标记资源不确定。后续回合仅追加新观察，不重复发送固定头与全部旧观察；操作记录散列实际提交的增量文本。
 - 会话复用显式配置 AIW_CODEX_HOST_SESSION_REUSE=true，要求 host-action v2；默认 false，并进入冻结配置摘要。无自动重连或跨 attempt 复用，后端内部累积上下文和 usage 仍标未知。完整 Python 观察记录继续受原输入大小约束，不能据增量发送宣称缓存命中或性能已提升。
 - 新增三项会话合同用例和一项增量投递用例；Worker 编译及测试源码编译成功，未运行测试、进程或模型。最后的实际提交摘要对齐修正随下一批新增源码再次编译确认。
+- 已加入 RuntimeCapabilities 的受限枚举、不可变观察快照和同 attempt 变化拒绝。当前 pauseBoundary=NONE，不登记尚未完成的 worker-loop-v1 控制能力；新增 AUTOMATION-LOOP.md 说明配置、可见范围和未交付部分。
+- 用户已授权并执行一次定向测试：`python -m unittest test_run_contract test_automation_loop test_completion_validation test_codex_model_session`（workers/process-python）；24 个用例通过，0.039 秒。均为本地 mock/规则测试，不启动真实模型或 Codex；不代表平台联调或性能验收通过。
 
 ## Sources
 

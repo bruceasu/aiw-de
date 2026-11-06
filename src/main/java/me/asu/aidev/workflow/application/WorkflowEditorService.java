@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 /** The editor's trusted, executable subset of the general workflow-plan API. */
 @Service
 public class WorkflowEditorService {
+    private static final java.util.regex.Pattern DECLARED_LOCATION = java.util.regex.Pattern.compile(
+            "(?im)^[\\t ]*(?:workspace|location|工作空间|工作目录)[\\t ]*[:：][\\t ]*\\S");
     public record Role(String capability, String skillRef, String resultKind, boolean needsWorkspace) {}
     public record Template(String id, String title, String use, WorkflowPlanSpec plan) {}
     public record StepDetail(WorkTask task, List<String> dependencies, String report, String verdict, String stepKey) {
@@ -124,6 +126,9 @@ public class WorkflowEditorService {
 
     static void validateSpec(WorkflowPlanSpec spec, boolean candidate) {
         if (spec == null) throw new IllegalArgumentException("plan is required");
+        if (!candidate && spec.location() == null && DECLARED_LOCATION.matcher(spec.goal()).find()) {
+            throw new IllegalArgumentException("Set Plan location explicitly: the goal declares a workspace, but an empty location uses a temporary directory.");
+        }
         for (WorkflowPlanSpec.Step step : spec.steps()) {
             Role role = ROLES.stream().filter(r -> r.skillRef().equals(step.skillRef())
                     && step.requiredSkills().contains(r.capability())).filter(r -> step.requiredSkills().stream()

@@ -32,6 +32,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskExecutionService {
+    private me.asu.aidev.execution.run.ExecutionRuns executionRuns;
+    @Autowired public void setExecutionRuns(me.asu.aidev.execution.run.ExecutionRuns runs) { this.executionRuns=runs; }
     private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
     @Autowired public void setExecutionConfigurations(me.asu.aidev.execution.config.ExecutionConfigurations configurations) { this.configurations=configurations; }
     private me.asu.aidev.execution.guard.ExecutionGuard guard;
@@ -371,6 +373,7 @@ public class TaskExecutionService {
                                          CompletionReport completionReport) {
         if(replayedGuardedCompletion(taskId,workerId,leaseToken,workspaceResult,completionReport)) return new TaskCompletionResult(taskId,List.of(),List.of());
         if(guard!=null) { guard.serialize(taskId.value());guard.finishing(taskId.value(),guardLease(workerId,leaseToken),true); }
+        if(executionRuns!=null) executionRuns.completing(taskId.value(),guardLease(workerId,leaseToken));
         if(guard!=null) guard.validateResult(taskId.value(),guardLease(workerId,leaseToken),workspaceResult);
         var now = clock.instant();
         var taskBeforeCompletion = tasks.find(taskId)

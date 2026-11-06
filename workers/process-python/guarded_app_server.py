@@ -115,6 +115,8 @@ def definitions():
 
 
 def run_guarded(request, on_session):
+    from run_channel import bind
+    bind(request, "codex-dynamic-tools")
     home_value = os.environ.get("AIW_CODEX_GUARD_HOME")
     if not home_value: raise RuntimeError("DEDICATED_GUARDED_CODEX_HOME_REQUIRED")
     home = Path(home_value).resolve(strict=True)
