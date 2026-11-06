@@ -3,6 +3,7 @@ package me.asu.aidev.workflow.application;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
@@ -193,8 +194,9 @@ public class WorkflowRecommendationService {
         try { encoded = json.writeValueAsString(envelope); }
         catch (IOException e) { throw new IllegalStateException("cannot encode recommendation request", e); }
         String instruction = PREFIX + encoded + "\nReturn exactly one JSON object with requestKey, inputVersion, reason, and plan. "
-                + "The plan must be a WorkflowPlanSpec with source AI, the same goal, 1-32 ordered steps, and no workspace or revision. "
-                + "Use this exact plan shape: {\"goal\":\"the exact input goal\",\"source\":\"AI\",\"steps\":["
+                + "The plan must contain 1-32 ordered steps. The platform supplies the original goal and source AI. "
+                + "Do not return goal, source, location, workspace or revision in the plan. "
+                + "Use this exact plan shape: {\"steps\":["
                 + "{\"key\":\"code\",\"requiredSkills\":[\"coding\"],\"preferredSkills\":[],"
                 + "\"skillRef\":\"coding-work-package-executor\",\"instruction\":\"A concrete instruction for this step\","
                 + "\"repositoryRef\":null,\"baseRevision\":null,\"dependsOn\":[],\"model\":null,\"effort\":null}]}. "
@@ -242,11 +244,18 @@ public class WorkflowRecommendationService {
                     || node.path("reason").asText().length() > 2000) {
                 throw new IllegalArgumentException("invalid recommendation association or reason");
             }
-            WorkflowPlanSpec plan = json.treeToValue(node.path("plan"), WorkflowPlanSpec.class);
-            if (plan.source() != WorkflowPlanSpec.Source.AI || !plan.goal().equals(envelope.goal())) {
-                throw new IllegalArgumentException("recommendation goal or source changed");
+            if (!node.path("plan").isObject()) {
+                throw new IllegalArgumentException("recommendation plan must be an object");
             }
+            // Association was checked above. Metadata belongs to the frozen request, not the model.
+            ObjectNode candidate = ((ObjectNode) node.path("plan")).deepCopy();
+            candidate.put("goal", envelope.goal());
+            candidate.put("source", WorkflowPlanSpec.Source.AI.name());
+            WorkflowPlanSpec plan = json.treeToValue(candidate, WorkflowPlanSpec.class);
             // Candidates have no execution authority. Workspace context is added deliberately in the editor.
+            if (plan.location() != null) {
+                throw new IllegalArgumentException("recommendation supplied an unauthorized location");
+            }
             for (WorkflowPlanSpec.Step step : plan.steps()) {
                 if (step.repositoryRef() != null || step.baseRevision() != null) {
                     throw new IllegalArgumentException("recommendation supplied an unauthorized workspace");
