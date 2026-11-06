@@ -6,7 +6,7 @@
 <div class="content"><section class="card"><h2>Agent 工厂设置</h2><p>先复用兼容的在线 Worker，缺少时再启动本机 Worker。外部 Worker 仍可通过原协议接入。</p>
 <p id="factory-status" class="callout" role="status" aria-live="polite">正在读取…</p>
 <form id="factory-settings"><fieldset id="factory-fields" disabled><div class="form-grid">
-<label class="field">模型运行时<select name="runtime"><option value="codex-app-server">Codex App Server</option><option value="openai-agents">OpenAI Agents SDK</option></select></label>
+<label class="field">模型运行时<select name="runtime" required><option value="" disabled selected>请选择模型运行时</option><option value="codex-app-server">Codex App Server</option><option value="openai-agents">OpenAI Agents SDK</option></select></label>
 <label class="field">默认模型<input name="model" maxlength="120" required autocomplete="off" placeholder="填写已可用的模型名称"></label>
 <label class="field">推理强度<select name="effort"><option value="none">none</option><option value="minimal">minimal</option><option value="low">low</option><option value="medium" selected>medium</option><option value="high">high</option><option value="xhigh">xhigh</option></select></label>
 <label class="field"><span><input name="automaticWorkers" type="checkbox" checked>缺少兼容 Worker 时自动启动本机 Worker</span></label>

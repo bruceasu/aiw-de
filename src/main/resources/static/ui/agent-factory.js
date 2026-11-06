@@ -16,10 +16,10 @@
     const params = new URLSearchParams(location.search);
     for (const name of ["runtime", "model", "effort", "python", "executable", "guardHome"]) {
       const value = settings[name] ?? (name === "runtime" || name === "model" || name === "effort" ? params.get(name) : null);
-      if (value != null) form.elements[name].value = value;
+      if (value != null || name === "runtime" || name === "model") form.elements[name].value = value ?? "";
     }
     form.elements.automaticWorkers.checked = settings.automaticWorkers ?? true;
-    status.textContent = t(settings.model ? "工厂设置已载入。" : "请选择默认模型并保存一次，后续任务由工厂自动准备 Worker。");
+    status.textContent = t(settings.runtime && settings.model ? "工厂设置已载入。" : "工厂尚未配置。请明确选择模型运行时并填写默认模型，然后保存设置；页面中的选择在保存前不会生效。");
     fields.disabled = false; save.disabled = false;
     renderWorkers(result.managedWorkers || []);
   }

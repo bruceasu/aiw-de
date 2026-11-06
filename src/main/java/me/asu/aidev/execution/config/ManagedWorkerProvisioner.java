@@ -27,7 +27,9 @@ public class ManagedWorkerProvisioner {
     }
     public synchronized Result requestDiscussion(String backend) {
         var config=settings.current();
-        if(config==null || !me.asu.aidev.goal.application.GoalTaskPolicy.runtime(backend,config.runtime()+":"))
+        if(config==null)
+            return new Result(false,"Agent factory is not configured. Select a runtime and model and save the settings first, or connect a matching external discussion Worker.");
+        if(!me.asu.aidev.goal.application.GoalTaskPolicy.runtime(backend,config.runtime()+":"))
             return new Result(false,"The selected discussion backend does not match the Agent factory settings.");
         return request(null,config.runtime(),false,"goal-discussion");
     }
