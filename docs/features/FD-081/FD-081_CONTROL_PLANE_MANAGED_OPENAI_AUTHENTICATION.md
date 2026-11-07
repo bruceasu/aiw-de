@@ -108,6 +108,7 @@ Worker 的短期访问租约绑定当前注册 Worker、精确 Task/Attempt、�
 - 新增 Java `ModelCredentialsTest`、`OpenAiOAuthTest` 和 Python `test_model_credentials`，覆盖密文完整性、真实 RSA 验签、身份/scope、刷新串行/未知结果/断开竞争、精确租约和完整流终态。用例尚未执行，Java 用例尚未完成编译；不能将编译或静态证据写为测试通过。
 - 所有后续 Worker/页面源码改动后，再次执行 `node scripts/compile-worker-runtime.mjs` 通过；最新 Python/JS 源码已经过 compile-only。Java 源码及测试仍待已发出的新增离线验证授权，不继续自动重试缓存识别失败的命令。
 - 用户随后报告 `OpenAiOAuth.java:84` 编译失败；确认是 `token_type` 校验条件多写一个右括号，已修正。执行 `mvn -o -s .ai/fd/FD-081/offline-maven-settings.xml -Dmaven.repo.local=D:/.m2/repository -DskipTests compile` 成功，337 个生产源，6.609 秒；同时确认离线缓存别名配置可用于生产源编译。没有运行测试、服务或真实认证。
+- 按用户要求澄清 UI：“模型执行方式”显示 Codex App Server（通过本机 Codex）与 Python Worker（直接调用 OpenAI Responses），“登录与凭证来源”另行选择。明确 ChatGPT OAuth 使用 Python 管理循环，API Key 使用既有 SDK 路径，导入 Codex 凭证仍需 Codex；同步登录/导入提示、主要标签翻译、确认弹窗和使用说明。内部 runtime 值及认证接口未变。`node scripts/compile-worker-runtime.mjs` 通过；本次未运行测试或浏览器实测。
 - %% NEEDS_INPUT: 是否允许测试源码编译及已列出的 Java/Python 定向测试？先前的授权问题仍待回复。生产源编译已通过，测试源码编译及运行尚未完成，4.1/4.2 未完成，未请求正式 Reviewer 或标记 Complete。
 - [使用与升级说明](../../MODEL-AUTHENTICATION.md) 记录密钥配置、类型选择、Codex 实验性 RPC、原生直接 API 控制边界、订阅金额未知及本机断开与远端撤销的区别。
 - 用户已明确授权集中管理方向；不因旧评估的 Worker 本地存储建议重复要求确认。

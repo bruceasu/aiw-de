@@ -4,6 +4,7 @@
   if (!status || !select) return;
   const form = document.getElementById("factory-settings"), label = document.getElementById("model-auth-label");
   const cancel = document.getElementById("model-auth-cancel"), list = document.getElementById("model-auth-connections");
+  const t = text => window.aiwI18n?.t(text) || text;
   let connections = [], desired = "", login = null, polling = null, busy = false;
   const names = { READY: "认证就绪（实际额度尚未验证）", IDENTITY_ONLY: "已登录，尚未获得模型权限", REFRESHING: "正在刷新", REFRESH_OUTCOME_UNKNOWN: "刷新结果未知，需要重新登录", AUTH_REQUIRED: "需要重新登录", DISCONNECTED: "已在本机断开" };
   const errors = { MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED: "请先为 Plane 配置 AIW_MODEL_CREDENTIAL_KEY，再登录或导入。密钥配置方法见凭证管理说明。", MODEL_REFRESH_TOO_EARLY: "尚未到服务端允许的刷新时间。", MODEL_TOKEN_ALREADY_IMPORTED_OR_USED: "这组凭证已导入或已被使用，请使用当前连接或重新登录。", MODEL_AUTH_SCOPE_DENIED: "当前账户无权操作此连接，或凭证身份校验未通过。", MODEL_AUTH_INVALID_INPUT: "凭证格式、有效期或来源不符合要求。请使用正常登录入口。", MODEL_AUTH_REFRESH_OUTCOME_UNKNOWN: "刷新结果未知。为避免重复使用轮换令牌，请重新登录。" };
@@ -21,10 +22,10 @@
   function render(state) {
     connections = state.connections;
     const previous = desired || select.value;
-    select.replaceChildren(new Option("使用现有 Worker 本机登录或 API Key", ""));
+    select.replaceChildren(new Option(t("Worker 本机凭证（Codex 登录或 API Key）"), ""));
     list.replaceChildren();
     for (const item of connections) {
-      const text = item.label + " · " + (item.kind === "CHATGPT_RESPONSES" ? "ChatGPT Responses" : "Codex App Server") + " · " + (names[item.state] || item.state);
+      const text = item.label + " · " + t(item.kind === "CHATGPT_RESPONSES" ? "ChatGPT OAuth（用于 Python Worker）" : "Codex 登录凭证（用于 Codex App Server）") + " · " + (names[item.state] || item.state);
       select.add(new Option(text, item.id));
       const row = document.createElement("p"); row.textContent = text; list.append(row);
     }
@@ -44,7 +45,7 @@
   document.getElementById("model-auth-login").addEventListener("click", () => action(async () => {
     if (login) throw new Error("已有登录正在进行，请先完成或取消。");
     const current = selected();
-    if (current?.kind === "CODEX_APP_SERVER") throw new Error("所选连接属于 Codex 注册，请用新的 Codex 文件更新；或先选择本机登录选项，再创建独立 ChatGPT Responses 连接。");
+    if (current?.kind === "CODEX_APP_SERVER") throw new Error("所选连接是 Codex 登录凭证，只能通过导入新的 Codex 凭据文件更新。若要创建独立 ChatGPT OAuth 连接，请先取消选择此 Plane 连接，再点击 Continue with ChatGPT。");
     // Open synchronously so the explicit user gesture survives the API round trip.
     const browser = window.open("about:blank", "_blank");
     if (!browser) throw new Error("浏览器阻止了登录窗口，请允许本页弹出登录窗口。");
@@ -61,7 +62,7 @@
           clearInterval(polling); login = null; cancel.hidden = true;
           if (state.status !== "COMPLETED") throw new Error("登录未完成：" + state.status + "。可以重新发起登录。");
           desired = state.connectionId; await reload();
-          status.textContent = "登录完成。请选择 OpenAI 运行时及该账户可用的模型，然后保存工厂设置。";
+          status.textContent = "登录完成。请将模型执行方式设为“Python Worker（直接调用 OpenAI Responses）”，选择此 ChatGPT OAuth 连接及账户可用的模型，然后保存工厂设置。";
         } catch (error) { status.textContent = error.message; }
       }, 2000);
     } catch (error) { browser.close(); throw error; }
@@ -77,7 +78,9 @@
     const current = selected();
     const value = await call("import", { connectionId: current?.id ?? null, expectedVersion: current?.version ?? null, label: label.value, content: await file.text() });
     desired = value.id; document.getElementById("model-auth-file").value = ""; await reload();
-    status.textContent = "凭证已导入。核对匹配的运行时后保存工厂设置。";
+    status.textContent = value.kind === "CHATGPT_RESPONSES"
+      ? "凭证已导入。请选择“Python Worker（直接调用 OpenAI Responses）”及此 ChatGPT OAuth 连接，然后保存工厂设置。"
+      : "凭证已导入。请选择“Codex App Server（通过本机 Codex）”及此 Codex 登录凭证连接，然后保存工厂设置。";
   }));
   document.getElementById("model-auth-refresh").addEventListener("click", () => action(async () => {
     const current = selected(); if (!current) throw new Error("请先选择 Plane 管理的连接。");

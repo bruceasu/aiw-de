@@ -19,7 +19,7 @@
       if (value != null || name === "runtime" || name === "model") form.elements[name].value = value ?? "";
     }
     form.elements.automaticWorkers.checked = settings.automaticWorkers ?? true;
-    status.textContent = t(settings.runtime && settings.model ? "工厂设置已载入。" : "工厂尚未配置。请明确选择模型运行时并填写默认模型，然后保存设置；页面中的选择在保存前不会生效。");
+    status.textContent = t(settings.runtime && settings.model ? "工厂设置已载入。" : "工厂尚未配置。请选择模型执行方式、登录与凭证来源，并填写默认模型，然后保存设置。");
     fields.disabled = false; save.disabled = false;
     renderWorkers(result.managedWorkers || []);
     window.dispatchEvent(new CustomEvent("aiw-factory-loaded", { detail: settings }));
@@ -43,7 +43,8 @@
     input.credentialVersion = input.credentialRef ? Number(input.credentialVersion) : null;
     save.disabled = true; fields.disabled = true;
     try {
-      if (!await window.aiwConfirm(t("保存默认模型和本机 Worker 自动启动设置？") + "\n" + input.runtime + " / " + input.model)) return;
+      const runtimeLabel = form.elements.runtime.selectedOptions[0]?.textContent || input.runtime;
+      if (!await window.aiwConfirm(t("保存默认模型和本机 Worker 自动启动设置？") + "\n" + runtimeLabel + " / " + input.model)) return;
       await call("settings", input); status.textContent = t("工厂设置已保存，等待授权的任务会自动重新检查。");
     }
     catch (error) { status.textContent = error.message; }

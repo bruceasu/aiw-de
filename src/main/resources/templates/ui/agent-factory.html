@@ -6,20 +6,22 @@
 <div class="content"><section class="card"><h2>Agent 工厂设置</h2><p>先复用兼容的在线 Worker，缺少时再启动本机 Worker。外部 Worker 仍可通过原协议接入。</p>
 <p id="factory-status" class="callout" role="status" aria-live="polite">正在读取…</p>
 <form id="factory-settings"><fieldset id="factory-fields" disabled><div class="form-grid">
-<label class="field">模型运行时<select name="runtime" required><option value="" disabled selected>请选择模型运行时</option><option value="codex-app-server">Codex App Server</option><option value="openai-agents">OpenAI Agents SDK</option></select></label>
+<label class="field">模型执行方式<select name="runtime" required aria-describedby="factory-runtime-help"><option value="" disabled selected>请选择模型执行方式</option><option value="codex-app-server">Codex App Server（通过本机 Codex）</option><option value="openai-agents">Python Worker（直接调用 OpenAI Responses）</option></select></label>
 <label class="field">默认模型<input name="model" maxlength="120" required autocomplete="off" placeholder="填写已可用的模型名称"></label>
-<label class="field">模型凭证<select name="credentialRef" id="factory-credential"><option value="">使用现有 Worker 本机登录或 API Key</option></select><input name="credentialVersion" type="hidden"></label>
+<label class="field">登录与凭证来源<select name="credentialRef" id="factory-credential" aria-describedby="factory-runtime-help"><option value="">Worker 本机凭证（Codex 登录或 API Key）</option></select><input name="credentialVersion" type="hidden"></label>
 <label class="field">推理强度<select name="effort"><option value="none">none</option><option value="minimal">minimal</option><option value="low">low</option><option value="medium" selected>medium</option><option value="high">high</option><option value="xhigh">xhigh</option></select></label>
 <label class="field"><span><input name="automaticWorkers" type="checkbox" checked>缺少兼容 Worker 时自动启动本机 Worker</span></label>
-</div><details class="authority-disclosure"><summary>本机运行环境（高级）</summary><div class="form-grid">
+</div><p class="help" id="factory-runtime-help">执行方式与登录方式分开设置。Codex App Server 通过本机 Codex 调用模型；Python Worker 直接调用 OpenAI Responses。登录或导入凭证后，在“登录与凭证来源”中选择匹配的连接。</p><details class="authority-disclosure"><summary>本机运行环境（高级）</summary><div class="form-grid">
 <label class="field">Python 程序<input name="python" value="python" maxlength="2048" placeholder="python 或已安装程序的完整路径"></label>
-<label class="field">Codex 程序（可选）<input name="executable" maxlength="2048" placeholder="默认从 PATH 查找"></label>
-<label class="field authority-full">独立 Codex 环境（可选）<input name="guardHome" maxlength="2048" placeholder="默认复用已有 Codex 登录，无需另建目录"></label>
-</div><p class="help">本机 Worker 使用已安装的 Python。Codex 默认复用已有登录，由受控主机工具执行文件操作；只有需要独立账号环境时才指定目录。OpenAI API 使用平台进程已有的 API 凭证。工厂不复制凭证或自动安装依赖。</p></details>
+<label class="field">Codex 程序（Codex App Server 使用）<input name="executable" maxlength="2048" placeholder="默认从 PATH 查找"></label>
+<label class="field authority-full">Codex 登录目录（仅 Worker 本机凭证使用）<input name="guardHome" maxlength="2048" placeholder="留空使用 Worker 默认 Codex 环境"></label>
+</div><p class="help">选择 Worker 本机凭证时，Codex 使用该 Worker 已有的登录；Python Worker 从运行环境读取 OPENAI_API_KEY，并通过 OpenAI Agents SDK 执行。选择 Plane 管理的连接时，长期凭证由 Plane 保管，Worker 按任务领取短期访问令牌。工厂不会自动安装依赖。</p></details>
 <p class="help">这里只设置默认模型和启动方式。计划、文件、命令及预算权限仍由原授权决定。</p></fieldset>
 <button class="btn primary" id="factory-save" type="submit" disabled>保存工厂设置</button></form></section>
 <section class="card"><h2>模型登录与凭证</h2>
-<p>由本机 Control Plane 统一保管凭证和刷新。Worker 按任务领取短期访问令牌。ChatGPT Responses 连接使用 OpenAI 运行时；导入的 Codex 连接使用 Codex App Server。</p>
+<p>这里管理由本机 Control Plane 保管和刷新的连接。登录或导入后，在上方“登录与凭证来源”中选择连接，再保存工厂设置。</p>
+<ul class="help"><li>ChatGPT OAuth 连接：通过 Continue with ChatGPT 登录，搭配“Python Worker（直接调用 OpenAI Responses）”。执行循环和工具调用由 Python Worker 管理，无需 Codex 程序或 API Key。</li>
+<li>Codex 登录凭证连接：显式导入已有 Codex 凭证，搭配“Codex App Server（通过本机 Codex）”。仍需 Worker 本机安装支持外部凭证的 Codex。</li></ul>
 <p id="model-auth-status" class="callout" role="status" aria-live="polite">正在读取连接状态…</p>
 <label class="field">连接名称<input id="model-auth-label" maxlength="160" value="我的 ChatGPT" autocomplete="off"></label>
 <div class="actions"><button class="btn primary" id="model-auth-login" type="button">Continue with ChatGPT</button>
