@@ -85,6 +85,9 @@ class WorkflowReviewedCompletionTest {
     void finalReviewCompletionPersistsPlanStateAndIsIdempotent() {
         var handler = new WorkflowStepCompletedHandler(service, mock(WorkflowRepairDecisionHandler.class));
         ReflectionTestUtils.setField(handler, "personal", mock(ManagedPlanAdmission.class));
+        @SuppressWarnings("unchecked") org.springframework.beans.factory.ObjectProvider<FactoryPlanLifecycle> factory=mock(org.springframework.beans.factory.ObjectProvider.class);
+        when(factory.getObject()).thenReturn(mock(FactoryPlanLifecycle.class));
+        ReflectionTestUtils.setField(handler,"factoryPlans",factory);
         var completion = new TaskCompletionContext(current.get(review), null, reports.get(review));
         assertThat(handler.onCompleted(completion)).isEmpty();
         assertThat(plan.state()).isEqualTo(WorkflowPlan.State.COMPLETED);

@@ -71,7 +71,7 @@ public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
             // Every round beyond the initial automatic budget needs a separate explicit authorization.
             if (round >= WorkflowPlanService.MAX_ATTEMPTS_PER_STEP) return List.of();
             var inputs = new java.util.LinkedHashSet<TaskId>(plans.acceptedInputs(plan, step - 1));
-            inputs.add(WorkflowPlanService.executionId(plan, step, round));
+            inputs.add(plans.effectiveExecutionId(plan, step, round));
             inputs.add(task.id());
             plans.createExecution(plan, step, round + 1, Set.copyOf(inputs));
             return List.of(WorkflowPlanService.executionId(plan, step, round + 1));

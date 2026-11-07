@@ -22,11 +22,12 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class WorkflowReviewPolicyFlowTest {
+    @org.junit.jupiter.api.io.TempDir java.nio.file.Path temp;
     WorkflowPlan plan;WorkflowPlanRepository repository;WorkflowPlanService service;WorkTaskService creation;
-    ExecutionAttemptRepository attempts;
+    ExecutionAttemptRepository attempts;WorkTaskRepository tasks;
     WorkflowStepCompletedHandler handler;Map<TaskId,WorkTask> rows;Map<TaskId,CompletionReport> reports;
     @BeforeEach void setup() {
-        repository=mock(WorkflowPlanRepository.class);creation=mock(WorkTaskService.class);var tasks=mock(WorkTaskRepository.class);attempts=mock(ExecutionAttemptRepository.class);
+        repository=mock(WorkflowPlanRepository.class);creation=mock(WorkTaskService.class);tasks=mock(WorkTaskRepository.class);attempts=mock(ExecutionAttemptRepository.class);
         service=new WorkflowPlanService(repository,creation,tasks,attempts,mock(JdbcWorkflowControlRepository.class),mock(JdbcWorkflowHumanOutcomeRepository.class),mock(JdbcWorkflowPlanArchiveRepository.class));
         rows=new LinkedHashMap<>();reports=new HashMap<>();
         when(repository.find("FP-policy")).thenAnswer(call->Optional.of(plan));
@@ -96,6 +97,88 @@ class WorkflowReviewPolicyFlowTest {
         var command=ArgumentCaptor.forClass(CreateWorkTaskCommand.class);verify(creation).createIfAbsent(command.capture());
         assertThat(command.getValue().id()).isEqualTo(WorkflowPlanService.reviewId(plan,0,1));
         assertThat(command.getValue().skillRef()).isEqualTo("workflow-stage-reviewer");
+    }
+    @Test void independentAcceptanceCanCompleteAResultWhoseSelfCheckFailed() {
+        plan(ReviewMode.SELF);var work=completed(0,false,CompletionVerdict.REPAIR_REQUIRED);
+        service.resumeReview(plan.id(),work.id().value(),1,work.version(),"human","Inspect existing result",true);
+        var review=completed(0,true,CompletionVerdict.PASS);
+        handler.onCompleted(new TaskCompletionContext(review,null,reports.get(review.id())));
+        assertThat(plan.state()).isEqualTo(WorkflowPlan.State.COMPLETED);
+        assertThat(reports.get(work.id()).verdict()).isEqualTo(CompletionVerdict.REPAIR_REQUIRED);
+    }
+    @Test void earlierFailedSelfCheckDoesNotBlockCompletionAfterIndependentAcceptance() {
+        plan(ReviewMode.SELF,ReviewMode.SELF);completed(0,false,CompletionVerdict.REPAIR_REQUIRED);completed(0,true,CompletionVerdict.PASS);
+        var last=completed(1,false,CompletionVerdict.PASS);
+        handler.onCompleted(new TaskCompletionContext(last,null,reports.get(last.id())));
+        assertThat(plan.state()).isEqualTo(WorkflowPlan.State.COMPLETED);
+    }
+    /** Real SQL question facts, Owner validation and completed-input repository, without a Codex process. */
+    org.springframework.jdbc.core.JdbcTemplate nativeCompletion(ReviewMode mode) {
+        plan(mode);var root=completed(0,false,CompletionVerdict.PASS);reports.remove(root.id());
+        var source=new WorkTask(root.id(),root.type(),TaskState.CONTINUED,root.subjectType(),root.subjectId(),root.requiredCapabilities(),root.skillRef(),root.instruction(),1,null,null,root.priority(),1,Instant.EPOCH,Instant.EPOCH);
+        var next=new WorkTask(new TaskId(root.id().value()+"-resume-1"),root.type(),TaskState.COMPLETED,root.subjectType(),root.subjectId(),root.requiredCapabilities(),root.skillRef(),root.instruction(),1,null,null,root.priority(),1,Instant.EPOCH,Instant.EPOCH);
+        rows.put(source.id(),source);rows.put(next.id(),next);
+        var jdbc=new org.springframework.jdbc.core.JdbcTemplate(new org.springframework.jdbc.datasource.DriverManagerDataSource("jdbc:sqlite:"+temp.resolve("native.db")));
+        jdbc.execute("CREATE TABLE formal_question_slot(source_task_id TEXT,question_id TEXT,successor_task_id TEXT)");
+        jdbc.execute("CREATE TABLE formal_question(id TEXT,owner_id TEXT,plan_id TEXT,source_digest TEXT,payload_json TEXT,state TEXT,request_version INTEGER,answer_revision INTEGER,answer_json TEXT,successor_task_id TEXT,blocked_reason TEXT)");
+        jdbc.execute("CREATE TABLE authority_owner(id TEXT,actor TEXT)");jdbc.update("INSERT INTO authority_owner VALUES('owner','human')");
+        jdbc.execute("CREATE TABLE plan_run_owner(plan_id TEXT,owner_id TEXT,source_digest TEXT,source_version INTEGER)");
+        jdbc.execute("CREATE TABLE flexible_workflow_plan(id TEXT,spec_json TEXT)");jdbc.update("INSERT INTO flexible_workflow_plan VALUES(?,'frozen-spec')",plan.id());
+        jdbc.update("INSERT INTO plan_run_owner VALUES(?,'owner',?,1)",plan.id(),me.asu.aidev.authority.AuthorityRepository.hash("frozen-spec"));
+        jdbc.execute("CREATE TABLE execution_context(task_id TEXT,successor_task_id TEXT)");
+        jdbc.execute("CREATE TABLE work_task(id TEXT,task_type TEXT,repository_ref TEXT)");
+        jdbc.update("INSERT INTO work_task VALUES(?,?,NULL)",next.id().value(),next.type().name());
+        jdbc.execute("CREATE TABLE execution_attempt(id TEXT,task_id TEXT,state TEXT,attempt_no INTEGER,completion_verdict TEXT,completion_summary TEXT,base_revision TEXT,result_revision TEXT,publication_ref TEXT,changed_files TEXT)");
+        jdbc.update("INSERT INTO execution_attempt VALUES('source-attempt',?,'YIELDED',1,NULL,NULL,NULL,NULL,NULL,NULL)",source.id().value());
+        jdbc.update("INSERT INTO execution_attempt VALUES('next-attempt',?,'COMPLETED',1,'PASS','Done',NULL,NULL,NULL,NULL)",next.id().value());
+        var authority=new me.asu.aidev.authority.AuthorityRepository(jdbc);
+        var guard=mock(me.asu.aidev.execution.guard.ExecutionGuard.class);
+        var owners=new me.asu.aidev.execution.run.NativePlanOwners(authority,null,null,repository,tasks,guard);
+        var formal=new me.asu.aidev.questions.FormalQuestions(authority,null,null,null,null,tasks,service,null,null);
+        var nativeQuestions=new me.asu.aidev.questions.NativeQuestions(authority,null,guard,owners,null,tasks,null,null,null,null,provider(formal),null,null);
+        var questionSource=new me.asu.aidev.questions.QuestionContract.Source(me.asu.aidev.questions.QuestionContract.SourceKind.NATIVE_PLAN_TASK,plan.id(),1,source.id().value(),null);
+        var answer=new me.asu.aidev.questions.QuestionContract.Answer("Use target A","human","CONSOLE","message",1,false,null);
+        var question=new me.asu.aidev.questions.QuestionContract.Question("aiw.questions.v2","question","owner",questionSource,"source-attempt","gap",me.asu.aidev.questions.QuestionContract.Kind.PROFESSIONAL,"Which target?","",List.of(),"",1,me.asu.aidev.questions.QuestionContract.State.APPLIED,1,answer,null,null,next.id().value(),null);
+        jdbc.update("INSERT INTO formal_question VALUES('question','owner',?,?,?,'APPLIED',1,1,?,?,NULL)",plan.id(),nativeQuestions.validate(questionSource,"owner",false),authority.encode(question),authority.encode(answer),next.id().value());
+        jdbc.update("INSERT INTO formal_question_slot VALUES(?,'question',?)",source.id().value(),next.id().value());
+        ReflectionTestUtils.setField(service,"nativeQuestions",provider(nativeQuestions));
+        attempts=new me.asu.aidev.execution.jdbc.JdbcExecutionAttemptRepository(jdbc);
+        ReflectionTestUtils.setField(service,"attempts",attempts);
+        return jdbc;
+    }
+    static <T> ObjectProvider<T> provider(T value) {
+        @SuppressWarnings("unchecked") ObjectProvider<T> provider=mock(ObjectProvider.class);when(provider.getObject()).thenReturn(value);return provider;
+    }
+    @Test void actualNativeQuestionSqlAndRepositoryResolveFinalSelfAcceptance() {
+        nativeCompletion(ReviewMode.SELF);var next=rows.values().stream().filter(t->t.state()==TaskState.COMPLETED).findFirst().orElseThrow();
+        handler.onCompleted(new TaskCompletionContext(next,null,attempts.findCompletionReport(next.id()).orElseThrow()));
+        assertThat(plan.state()).isEqualTo(WorkflowPlan.State.COMPLETED);
+    }
+    @Test void questionResolutionRejectsUnappliedOrChangedOwnerAndSourceFacts() {
+        var jdbc=nativeCompletion(ReviewMode.SELF);
+        jdbc.update("UPDATE formal_question SET state='ANSWERED'");
+        assertThatThrownBy(()->service.effectiveExecutionId(plan,0,1)).isInstanceOf(SecurityException.class);
+        jdbc.update("UPDATE formal_question SET state='APPLIED',owner_id='other'");
+        assertThatThrownBy(()->service.effectiveExecutionId(plan,0,1)).isInstanceOf(SecurityException.class);
+        jdbc.update("UPDATE formal_question SET owner_id='owner',source_digest='changed'");
+        assertThatThrownBy(()->service.effectiveExecutionId(plan,0,1)).isInstanceOf(SecurityException.class);
+    }
+    @Test void correctionAfterNativeQuestionDependsOnCompletedSuccessor() {
+        var jdbc=nativeCompletion(ReviewMode.INDEPENDENT);var review=completed(0,true,CompletionVerdict.REPAIR_REQUIRED);
+        jdbc.update("INSERT INTO execution_attempt VALUES('review',?,'COMPLETED',1,'REPAIR_REQUIRED','Fix finding',NULL,NULL,NULL,NULL)",review.id().value());
+        handler.onCompleted(new TaskCompletionContext(review,null,attempts.findCompletionReport(review.id()).orElseThrow()));
+        var command=ArgumentCaptor.forClass(CreateWorkTaskCommand.class);verify(creation).createIfAbsent(command.capture());
+        assertThat(command.getValue().dependencies()).contains(new TaskId(WorkflowPlanService.executionId(plan,0,1).value()+"-resume-1"))
+                .doesNotContain(WorkflowPlanService.executionId(plan,0,1));
+    }
+    @Test void guardedV1QuestionKeepsItsExistingExecutionContextResolver() {
+        var jdbc=nativeCompletion(ReviewMode.SELF);var root=WorkflowPlanService.executionId(plan,0,1);
+        jdbc.update("UPDATE formal_question SET payload_json=replace(payload_json,'aiw.questions.v2','aiw.questions.v1')");
+        jdbc.update("INSERT INTO execution_context VALUES(?,?)",root.value(),root.value()+"-resume-1");
+        @SuppressWarnings("unchecked") var provider=(ObjectProvider<me.asu.aidev.questions.NativeQuestions>)ReflectionTestUtils.getField(service,"nativeQuestions");
+        var guard=(me.asu.aidev.execution.guard.ExecutionGuard)ReflectionTestUtils.getField(provider.getObject(),"guard");
+        when(guard.managed(root.value())).thenReturn(true);
+        assertThat(service.effectiveExecutionId(plan,0,1)).isEqualTo(new TaskId(root.value()+"-resume-1"));
     }
     @Test void selfAcceptanceUsesTheCompletedQuestionSuccessorInsteadOfTheYieldedSource() {
         plan(ReviewMode.SELF);var root=completed(0,false,CompletionVerdict.PASS);reports.remove(root.id());

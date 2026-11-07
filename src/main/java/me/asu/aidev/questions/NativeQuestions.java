@@ -38,6 +38,34 @@ public class NativeQuestions implements SourceResolver {
         this.handoffs=handoffs;this.locations=locations;this.dependencies=dependencies;this.questions=questions;this.taskService=taskService;this.execution=execution;
     }
     @Override public SourceKind kind() { return SourceKind.NATIVE_PLAN_TASK; }
+    /** Resolve only committed, authenticated native question replacements; never infer from an ID suffix. */
+    public TaskId currentTask(TaskId original) {
+        var visited=new HashSet<TaskId>();var current=original;
+        while(visited.add(current)) {
+            // Guarded v1 slots belong to execution_context/TaskLineage, not the native v2 resolver.
+            if(guard.managed(current.value()))return current;
+            var slots=repo.jdbc().queryForList("SELECT question_id,successor_task_id FROM formal_question_slot WHERE source_task_id=?",current.value());
+            if(slots.isEmpty()||slots.getFirst().get("successor_task_id")==null)return current;
+            var slot=slots.getFirst();var q=questions.getObject().get((String)slot.get("question_id"));
+            var row=repo.jdbc().queryForMap("SELECT owner_id,plan_id,source_digest FROM formal_question WHERE id=?",q.questionId());
+            if(!LOCATION_PROTOCOL.equals(q.protocol())||q.kind()!=Kind.PROFESSIONAL||q.state()!=State.APPLIED||q.answer()==null
+                    ||!current.value().equals(q.source().taskId())||!slot.get("successor_task_id").equals(q.successorTaskId())
+                    ||!q.ownerId().equals(row.get("owner_id"))||!q.source().planId().equals(row.get("plan_id"))
+                    ||!validate(q.source(),q.ownerId(),false).equals(row.get("source_digest")))
+                throw new SecurityException("Exact applied native question source required");
+            var source=tasks.find(current).orElseThrow();var next=new TaskId(q.successorTaskId());
+            var basis=owners.task(next.value(),false);
+            if(source.state()!=TaskState.CONTINUED||!basis.ownerId().equals(q.ownerId())||!basis.planId().equals(q.source().planId())
+                    ||!source.subjectType().equals(basis.task().subjectType())
+                    ||source.type()!=basis.task().type()
+                    ||!source.skillRef().equals(basis.task().skillRef())
+                    ||!next.value().matches(java.util.regex.Pattern.quote(current.value().replaceFirst("-resume-[1-9][0-9]*$",""))+"-resume-[1-9][0-9]{0,8}")
+                    ||repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_attempt WHERE id=? AND task_id=?",Long.class,q.sourceAttemptId(),current.value())!=1)
+                throw new SecurityException("Native question replacement scope changed");
+            current=next;if(visited.size()>1024)throw new IllegalStateException("Native question lineage limit exceeded");
+        }
+        throw new IllegalStateException("Native question continuation cycle detected");
+    }
     @Override public Source sourceFor(String task,String owner) {
         if(guard.managed(task))return null;
         var work=tasks.find(new TaskId(task)).orElseThrow();

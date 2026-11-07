@@ -28,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkflowPlanService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.NativeQuestions> nativeQuestions;
     @org.springframework.beans.factory.annotation.Autowired private PlanLocations planLocations;
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<FactoryPlanLifecycle> factoryPlans;
@@ -277,7 +279,7 @@ public class WorkflowPlanService {
         var position = WorkflowTaskPosition.parse(plan, previous).orElseThrow();
         if (position.round() >= 999_999_999) throw new IllegalStateException("workflow round limit reached");
         var inputs = new java.util.LinkedHashSet<TaskId>(acceptedInputs(plan, position.step() - 1));
-        inputs.add(executionId(plan, position.step(), position.round()));
+        inputs.add(effectiveExecutionId(plan, position.step(), position.round()));
         inputs.add(previous);
         Instant now = Instant.now();
         String audit = "Authorized repair: " + reason;
@@ -393,8 +395,9 @@ public class WorkflowPlanService {
         return requiresReview(plan,step,round)?effectiveReviewId(plan,step,round):effectiveExecutionId(plan,step,round);
     }
 
-    private TaskId effectiveExecutionId(WorkflowPlan plan,int step,int round) {
+    TaskId effectiveExecutionId(WorkflowPlan plan,int step,int round) {
         TaskId original=executionId(plan,step,round);
+        if(nativeQuestions!=null)original=nativeQuestions.getObject().currentTask(original);
         return attempts.findCompletedInput(original).map(me.asu.aidev.execution.domain.TaskInput::taskId).orElse(original);
     }
 
@@ -445,10 +448,18 @@ public class WorkflowPlanService {
         if (current.stream().anyMatch(task -> !Set.of(TaskState.COMPLETED, TaskState.FAILED,
                 TaskState.CANCELLED, TaskState.CONTINUED).contains(task.state()))) return;
         var accepted = acceptedInputs(plan, last);
-        if (accepted.stream().anyMatch(taskId -> tasks.find(taskId)
-                .map(task -> task.state() != TaskState.COMPLETED).orElse(true)
-                || !attempts.findCompletionReport(taskId)
-                        .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false))) return;
+        for(var taskId:accepted) {
+            if(tasks.find(taskId).map(task->task.state()!=TaskState.COMPLETED).orElse(true))return;
+            var report=attempts.findCompletionReport(taskId).orElse(null);
+            if(report==null)return;
+            if(report.verdict()!=CompletionVerdict.PASS) {
+                var slot=WorkflowTaskPosition.parse(plan,taskId).orElseThrow();
+                // Explicit SELF recovery permits the new review to accept the retained failed self-check.
+                // Other policies retain their existing requirement for a successful execution report.
+                if(slot.review()||plan.spec().steps().get(slot.step()).effectiveReviewMode()!=WorkflowPlanSpec.ReviewMode.SELF
+                        ||taskId.equals(acceptanceId(plan,slot.step(),slot.round())))return;
+            }
+        }
         if (!plans.transition(id, plan.version(), WorkflowPlan.State.CONFIRMED, WorkflowPlan.State.COMPLETED,
                 "workflow", (position.review()?"All workflow steps accepted; final independent review: ":"All workflow steps accepted under the confirmed self-check policy: ") + reviewId.value(), Instant.now())) {
             throw new IllegalStateException("Plan changed during reviewed completion");
@@ -674,7 +685,7 @@ public class WorkflowPlanService {
             if (review.verdict() != CompletionVerdict.REPAIR_REQUIRED) {
                 throw new IllegalStateException("prior review did not request repair");
             }
-            feedback = "\nPrevious independent review (attempt " + (attempt - 1) + "):\n"
+            feedback = "\nPrevious "+(requiresReview(plan,stepIndex,attempt-1)?"independent review":"self-check")+" (attempt " + (attempt - 1) + "):\n"
                     + review.summary() + "\nAddress these findings and affected behavior only. Preserve accepted outputs, explain the changes, and do not rerun unrelated work or the whole Plan.";
         }
         taskService.createIfAbsent(new CreateWorkTaskCommand(id, TaskType.EXTERNAL_WORK, SUBJECT, plan.id(),

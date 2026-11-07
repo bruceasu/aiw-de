@@ -27,6 +27,9 @@ import me.asu.aidev.workflow.jdbc.JdbcWorkflowHumanOutcomeRepository;
 import me.asu.aidev.workflow.jdbc.JdbcWorkflowPlanArchiveRepository;
 import me.asu.aidev.workflow.port.WorkflowPlanRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.test.util.ReflectionTestUtils;
+import me.asu.aidev.authority.ManagedPlanAdmission;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
@@ -45,6 +48,14 @@ class WorkflowReviewRecoveryTest {
     private final Map<TaskId, CompletionReport> reports = new LinkedHashMap<>();
     private final List<CreateWorkTaskCommand> created = new ArrayList<>();
     private WorkflowPlan plan;
+
+    private WorkflowStepCompletedHandler handler() {
+        var handler=new WorkflowStepCompletedHandler(service,mock(WorkflowRepairDecisionHandler.class));
+        ReflectionTestUtils.setField(handler,"personal",mock(ManagedPlanAdmission.class));
+        @SuppressWarnings("unchecked") ObjectProvider<FactoryPlanLifecycle> provider=mock(ObjectProvider.class);
+        when(provider.getObject()).thenReturn(mock(FactoryPlanLifecycle.class));
+        ReflectionTestUtils.setField(handler,"factoryPlans",provider);return handler;
+    }
 
     private void setup() {
         var spec = new WorkflowPlanSpec("Implement the accepted plan", WorkflowPlanSpec.Source.MANAGER, List.of(
@@ -100,7 +111,7 @@ class WorkflowReviewRecoveryTest {
         service.createReview(plan, 1, 3);
         assertThat(created.getFirst().dependencies()).containsExactlyInAnyOrder(
                 WorkflowPlanService.executionId(plan, 0, 1), WorkflowPlanService.reviewId(plan, 0, 1),
-                WorkflowPlanService.executionId(plan, 1, 3));
+                WorkflowPlanService.executionId(plan, 1, 3), WorkflowPlanService.reviewId(plan, 1, 2));
     }
 
     @Test
@@ -131,7 +142,7 @@ class WorkflowReviewRecoveryTest {
         verify(tasks).linkCorrection(eq(new TaskId(recovery.taskId())), eq(resumed), eq("operator"), eq("Upstream context fixed"), any(Instant.class));
 
         add(resumed, CompletionVerdict.REPAIR_REQUIRED);
-        var handler = new WorkflowStepCompletedHandler(service, mock(WorkflowRepairDecisionHandler.class));
+        var handler = handler();
         assertThat(handler.onCompleted(new TaskCompletionContext(current.get(resumed), null, reports.get(resumed)))).isEmpty();
         assertThat(service.reviewRecovery(plan.id()).allowed()).isTrue();
         var second = service.reviewRecovery(plan.id());
@@ -174,7 +185,7 @@ class WorkflowReviewRecoveryTest {
                 work.requiredCapabilities(), work.skillRef(), work.instruction(), work.repositoryRef(), work.baseRevision(),
                 work.priority(), 1, work.createdAt(), Instant.now()));
         reports.put(execution, new CompletionReport(CompletionVerdict.PASS, "Correction completed"));
-        var handler = new WorkflowStepCompletedHandler(service, mock(WorkflowRepairDecisionHandler.class));
+        var handler = handler();
         TaskId review = handler.onCompleted(new TaskCompletionContext(current.get(execution), null, reports.get(execution))).getFirst();
         assertThat(review.value()).endsWith("~code~review-4");
         assertThat(created.getLast().instruction()).contains(scope);

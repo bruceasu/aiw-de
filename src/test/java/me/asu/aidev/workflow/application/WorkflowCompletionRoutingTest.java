@@ -28,11 +28,11 @@ class WorkflowCompletionRoutingTest {
         var repair = new TaskId("FP-example~code~work-4");
         when(authorizations.decide(decision)).thenReturn(List.of(repair));
         try (var context = new AnnotationConfigApplicationContext()) {
-            context.registerBean(WorkflowQuestionService.class, () -> mock(WorkflowQuestionService.class));
-            context.registerBean(me.asu.aidev.output.jdbc.JdbcTaskOutputRepository.class,
-                    () -> mock(me.asu.aidev.output.jdbc.JdbcTaskOutputRepository.class));
-            context.registerBean(WorkflowPlanService.class, () -> plans);
-            context.registerBean(WorkflowRepairAuthorizationService.class, () -> authorizations);
+            // These are fixture dependencies, not Spring components whose internal fields need wiring.
+            context.getBeanFactory().registerSingleton("managedPlans",mock(me.asu.aidev.authority.ManagedPlanAdmission.class));
+            context.getBeanFactory().registerSingleton("factoryPlans",mock(FactoryPlanLifecycle.class));
+            context.getBeanFactory().registerSingleton("plans",plans);
+            context.getBeanFactory().registerSingleton("authorizations",authorizations);
             context.register(WorkflowStepCompletedHandler.class, WorkflowRepairDecisionHandler.class,
                     TaskCompletionDispatcher.class);
             context.refresh();
