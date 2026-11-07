@@ -1,7 +1,7 @@
 # FD-080: Risk based milestone review policy
 
-**Status:** In Progress
-**Revision:** 1
+**Status:** Pending Verification
+**Revision:** 2
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -67,14 +67,22 @@
 
 - 采用 fd-workflow，当前工作区直接实施，不创建 worktree。只读检查了 WorkflowStepCompletedHandler、WorkflowPlanService/Spec、工厂评审门禁、编辑器入口和既有回归。
 - Review policy 为 Independent：变更涉及持久化 JSON、公共接口、跨模块推进和验收门禁。实现工作项准备就绪后请求一次整项独立审查，不按每个 Worker 产出分别派审查代理。
-- 默认静态检查与 compile-only；尚未运行测试、服务、模型、网络、迁移或部署。
+- 默认静态检查与 compile-only；后续获授权的两轮定向测试实际结果见下方接续证据。未运行服务、模型、网络、迁移或部署。
 - 已实现三种固定方式与保守风险解释。旧字段保持缺失并在重新编码时省略，避免仅因升级插入默认字段而改变既有 managed Plan 冻结摘要。新字段在显式选择后保存于 spec_json，不新增 SQL 迁移。
 - 自检 PASS 直接推进、REPAIR_REQUIRED 停止自动派发；精确人工恢复可请求当前成果评审或一轮修正。已有评审失败或明确授权修正的后继轮次必须独立复查，不能退回 SELF。修正评审固定携带上一份发现，不重做整个 Plan。
 - 里程碑评审范围由确认规范中的评审边界确定，输入保留实际成果与原验收条件。新增 claim policy 排除参与覆盖阶段任一步执行的历史 Worker；检查只针对所覆盖阶段，不因更早已评审的背景阶段禁止复用独立身份。Factory configured-plan 的原有审查独立性规则继续生效，自动准备进程也检查这项准入。
 - 使用已完成的正式问答 successor 解析实际成果，避免把已 yield 的原任务当成 SELF 的完成记录。UI 显示风险/验收方式，普通阶段设置需明确确认；确认弹窗保存并核对原 Plan 版本，防止异步刷新悄悄替换确认内容。
-- `node scripts/compile-worker-runtime.mjs` 成功（包含 workflow-editor/i18n JavaScript 语法）；离线 `mvn -o -Dmaven.repo.local=D:/.m2/repository -DskipTests test-compile` 成功，330 个生产源、62 个测试源，10.905 秒。新增两组策略/流程用例已编译；尚未执行测试，已另行请求一次八组定向授权。
-- 用户另外要求 Plane 集中管理登录/导入/刷新，已记录为 FD-081 的独立设计；部署回调问题仍待用户回答，不属于本 FD 的实现/审查范围。没有读取、导入或刷新任何实际凭据。
+- `node scripts/compile-worker-runtime.mjs` 成功（包含 workflow-editor/i18n JavaScript 语法）；初始离线 `mvn -o -Dmaven.repo.local=D:/.m2/repository -DskipTests test-compile` 成功，330 个生产源、62 个测试源，10.905 秒。修复后的最新编译与测试状态见下方接续证据。
+- 用户另外要求 Plane 集中管理登录/导入/刷新，已记录为 FD-081 的独立设计，部署方式已回答为本机；不属于本 FD 的实现/审查范围。没有读取、导入或刷新任何实际凭据。
 - 独立审查仍待正式 Reviewer 回执；实现项的勾选不代表审查通过、真实联调或发布完成。部署、浏览器、真实模型与旧服务回滚未运行。
+
+### 独立静态复查与当前接续证据（2026-11-07）
+
+- Reviewer `fd080-reviewer-20261107-policy` 已领取真实来源事件 `FD-080-000002-review-requested`，对基线 `a2c77f4`、初始实现 `038e609` 与当前修复 `f0fcde428c5bb322a09f8b85134ca3bd10a8093d` 做独立静态复查。记录见 [FD-080_REVIEW_20261107.md](reviews/FD-080_REVIEW_20261107.md)。当前无剩余静态阻断，正式 Reviewer 事件仍保持在途，不冒充 runtime PASS/Complete。
+- R1：原生问答实际成果的解析假设与真实 Jdbc/TaskLineage 不符，已补严格 APPLIED/Owner/source/slot 解析，统一实际纠错依赖，并保留 guarded-v1 解析路径；真实 SQL 用例替代单纯 mock 假设。R2：SELF 人工评审接纳与最终门禁不一致，已修复且将例外收窄到 SELF，原 Independent/Milestone 执行 PASS 门槛保留。反馈来源标签也区分实际 self/independent 来源。
+- 用户授权的八组首跑 49 项：44 通过、1 failure、4 errors；前者为旧依赖预期未包含固定上轮发现，后者为测试夹具装配缺依赖，修复没有放松生产 DI。同范围一次修复重跑 54 项：53 通过、1 failure；native SQL 来源/Owner-source拒绝/纠错依赖用例通过，剩余有效旧 Independent 执行 REPAIR 守卫指出前次完成门修复过宽。
+- 最新 `f0fcde4` 已收窄 SELF 例外并增加 guarded-v1 兼容用例；当前 55 项 runtime 尚未获额外运行授权，未运行。最终离线 test-compile 成功（330 生产源、62 测试源，10.628 秒），不能将编译或 53/54 记为全通过，也不复用 FD-079 的结果证明新行为。
+- 按当前父流程要求保留 Pending Verification 和已领取的审查事件，不发未经完成的正式 PASS 或 Complete。额外同范围测试授权问题仍待回复，授权后以真实结果续接；未增加未经用户授权的真实服务、模型、浏览器、网络、部署或回滚检查。FD-081 仅为独立本机认证设计，不在本 FD 范围。
 
 ## Sources
 

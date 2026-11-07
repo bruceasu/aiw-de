@@ -102,4 +102,6 @@ Plane 在请求前按 expiry 和 `earliest_refresh_at` 决定是否刷新。“�
 
 本功能的设计、实际编译/测试与独立审查状态在 [FD-081](features/archive/FD-081/FD-081_CONTROL_PLANE_MANAGED_OPENAI_AUTHENTICATION.md)。开发期间没有读取或导入实际凭据，也没有执行真实登录、刷新或模型请求。
 
+Windows 自动密钥保护与丢失后重置的实现、30 项定向测试及独立审查见 [FD-083](features/archive/FD-083/FD-083_AUTOMATICALLY_PROTECT_LOCAL_MODEL_CREDENTIAL_KEY.md)。测试使用模拟系统保护和临时数据库，不代表真实 DPAPI、浏览器或正式数据库迁移已验证。
+
 实现合同来自官方[注册与登录](https://developers.openai.com/siwc/token-sharing-open-source/sign-in)、[令牌字段](https://developers.openai.com/siwc/token-sharing-open-source/token-reference)、[账户与刷新](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions)、[Responses 限制](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)及 [Codex 外部令牌 RPC](https://learn.chatgpt.com/docs/app-server)。

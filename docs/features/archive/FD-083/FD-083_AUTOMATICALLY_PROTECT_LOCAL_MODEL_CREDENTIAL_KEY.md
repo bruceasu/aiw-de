@@ -1,7 +1,7 @@
 ﻿# FD-083: Automatically protect local model credential keys and reset lost logins
 
-**Status:** In Progress
-**Revision:** 1
+**Status:** Complete
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -42,11 +42,21 @@ Windows DPAPI、本机 AES 密钥元数据、新增重置 API、工厂登录设�
 - 静态检查 CredentialVault、ModelConnections、OpenAiLogin、控制台/CSRF 边界和工厂页面；复用当前工作区，保留 FD-080 未提交审查文件。
 - 已执行离线 `mvn -o -s .ai/fd/FD-081/offline-maven-settings.xml -Dmaven.repo.local=D:/.m2/repository -DskipTests test-compile`：339 个生产源、66 个测试源，成功，11.666 秒。沿用低内存 JDK 25 配置，未下载依赖，未运行用例。
 - 已执行 `node scripts/compile-worker-runtime.mjs`：JavaScript/Python/TypeScript 语法及 Go compile-only 通过，无模型/网络调用或保留的分发产物。
-- 新增 LocalModelVaultTest，系统保护使用纯测试替身、文件与 SQLite 均在测试临时目录。已请求一次 LocalModelVaultTest,ModelCredentialsTest 离线运行授权，当前等待用户答复，不将编译当作测试通过。
+- 新增 LocalModelVaultTest，系统保护使用纯测试替身、文件与 SQLite 均在测试临时目录。最初请求 LocalModelVaultTest,ModelCredentialsTest 离线运行授权时暂停等待；用户随后明确允许一次，最终实际结果见下方，不将等待或编译当作运行许可/通过。
 - 真实 DPAPI、真实凭据、OAuth、服务、正式迁移及浏览器未执行。
 - 自检已核对创建/复用/缺失/损坏、显式覆盖与旧密文升级、事务内代次锁和指纹校验、受限辅助进程及重置 Owner/确认/代次检查；定向差异空白检查通过。重置 API 复用已有受保护控制台路由及 CSRF 参数要求。
+
+### 独立审查与最终证据
+
+- Reviewer `fd083-reviewer-20261107-local-vault` 精确领取 `FD-083-000002-review-requested`，对基线 `01f827f` 至初始实现 `ecdeeec` 做整项独立静态审查，再复查修复 `51374119010c566217c13b29439d555dfa7895f2` 及直接影响路径。结论：通过，无剩余阻断。报告：[FD-083_REVIEW_20261107.md](reviews/FD-083_REVIEW_20261107.md)。FD-080 未提交文件、审查事件与未授权测试保持不动。
+- 唯一 P2：辅助进程同步 stdin 写入发生在 waitFor 超时之前，可能连带占住事务/文件锁，executor.close 也可能无界等待读取。已改为写入/读取 Future 与进程等待共用单调截止时间，失败时有界终止等待、取消 I/O 和后台流关闭；两项阻塞输入/输出的 mock Process 回归已加入。没有为此运行真实 PowerShell/DPAPI。
+- 最终修复后离线 `test-compile` 成功：339 生产源、66 测试源，9.440 秒，2026-11-07 21:36:18 +09。此前 Worker compile-only 通过；修复后未改动其覆盖源码。
+- 用户明确允许的首次定向执行、无重跑：`mvn -o -s .ai/fd/FD-081/offline-maven-settings.xml -Dmaven.repo.local=D:/.m2/repository -Dtest=LocalModelVaultTest,ModelCredentialsTest test`，30 项全通过（14 + 16），failure/error/skip 均为 0，Maven 5.520 秒，21:36:32 +09。Reviewer 只读核对最终 Surefire XML 计数与关键断言，没有重复运行。
+- 真实 DPAPI、系统账户/文件权限/辅助进程实测、真实凭据/OAuth/远端撤销、服务、浏览器、正式迁移/升级回滚均未执行；测试替身、临时 SQLite、编译和独立静态结论不冒充这些真实集成证据。
 
 ## Sources
 
 - 用户确认：本机 Plane 自动保护密钥；忘记或丢失后允许删除再登录。
 - FD-081 与 FD-082 已归档的认证/引导合同。
+
+**Completed:** 2026-11-07
