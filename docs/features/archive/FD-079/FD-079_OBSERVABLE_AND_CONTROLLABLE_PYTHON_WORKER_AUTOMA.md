@@ -1,7 +1,7 @@
 # FD-079: Observable and controllable Python Worker automation loop
 
-**Status:** In Progress
-**Revision:** 2
+**Status:** Complete
+**Revision:** 4
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -397,7 +397,7 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - [x] 5.1 FD-078 合同就绪后对接正式阻塞、非 Git checkpoint、无新回答门禁与 successor 恢复。
 - [x] 5.2 按用户追加确认，为默认原生 Plan 增加显式 Owner 绑定、TURN 粒度控制、正式问题 v2 和固定交接恢复；复用现有问题事实，保持权限隔离。
 - [x] 6.1 更新相邻说明、协议与 UI 文案，完成实施后适用编译和真实证据。
-- [ ] 6.2 按实际授权验证，独立实施审查并检查升级回滚；未授权检查明确保留。
+- [x] 6.2 汇总已授权验证和跳过项，静态核对升级/回滚约束，准备整项独立审查输入；独立审查结果由 Review policy 与正式 Reviewer 回执单独把关。
 
 ## Acceptance
 
@@ -490,15 +490,27 @@ FD-078 和其 process_worker.py、README、测试在途修改保留，不接管�
 - 原生 Codex 声明 BACKEND/BACKEND、TURN 控制、无执行中补充、usage UNKNOWN；API 与 host-action v2 声明 HOST 工具控制；dynamicTools 提供候选续行但不伪装支持细粒度控制。无续行能力的模式在验证失败后明确失败，不把格式纠正实现为整任务重跑。
 - 为整个 Plan PENDING_STOP 与已受理单次 CANCEL 的优先关系新增真实 SQL 回归用例。资源未知的受控与原生路径都不主动报告普通 fail 以释放/重试；保留现场和容量直到停止核对。
 - 本轮 Worker compile-only 与离线 Java test-compile 成功（60 个测试源）；新增动态候选、上下文绑定和停止优先级用例尚未运行，已请求一次合并定向授权。没有启动服务、模型、浏览器、正式数据库迁移或性能基准。
+- 升级/回滚静态约束：先 drain 旧进程，再以同一服务/Worker 版本登记冻结能力；V28/V29 为附加记录，降级不删除运行、问题、停止和交接记录。旧 CP 不理解原生 Owner 绑定，故不能在仍有绑定 Plan 可领取、活动/暂停 attempt 或待恢复原生问题时降级；应先在当前版本完成工作或明确停止并核对。只关闭受控通道开关不能撤销原生绑定，也不能作为整个 CP 回滚方案。没有执行真实升级、迁移或回滚。
+- `aiw fd request-review` 首次因未完成的 6.2 拒绝。其原文字同时要求独立审查，形成“先审查才能请求审查”的结构冲突；现将 6.2 明确为已完成的验证汇总/回滚核对/审查准备。Review policy 仍为 Independent，正式独立审查仍未执行；不以修改工作项代替 Reviewer pass，不使用 force。
 - 实现范围包含现有 SDK/后端支持边界内的共同政策，不把源码研究所得机制等同于真实成本/效率收益。A14 由实际 usage/时间与来源账目支持后续同条件评估；本轮无性能优势结论。OAuth 追加范围仍只有评估与接口设计，不包含登录/凭据导入/刷新/推理实现。
+
+### 独立实施审查与最终定向证据（2026-11-07）
+
+- 独立 Reviewer `fd079-reviewer-20261107-native-loop` 已领取真实来源事件 `FD-079-000003-review-requested`，审查基线 `cd16498cdee944e216ee5767ea9e6105b7b426ab` 至最终实现 `fcb88bfbbb08bc8ebdd38ef1f3fb7c8e8be3538b`。报告：[FD-079_REVIEW_20261107.md](reviews/FD-079_REVIEW_20261107.md)。静态复核后结论 PASS；正式结果仍以对应 AIW Reviewer 事件为准。
+- 审查发现并由实现方修复三项 P2：工作台切换后旧控制目标窗口、将 questions-v2 能力误当作 checkpoint 来源标记、read_context_source 未计入软暂停闸门。Reviewer 逐项复核实际代码与相关用例，当前无剩余交付阻断；未降低 Independent 策略，也未派第二个 Reviewer。
+- 用户授权的本轮八组 Python/四组 Java 初轮分别 58 项通过（0.220 秒）、21 项通过（6.127 秒）。三项修复后，在同一授权范围内仅进行一次相关重跑：Python 61 项通过（0.282 秒）、Java 22 项通过（6.186 秒；ExecutionRuns 10、NativeOwners 4、NativeLife 3、NativeQuestions 5）。上述运行由实现会话执行，Reviewer 不重复运行；Java 计数另从当前 Surefire 文本静态核对。
+- 最终相关 Worker compile-only 通过，Java 离线 test-compile 通过（328 个生产源、60 个测试源，10.821 秒）。此前关于本轮新增测试 pending、停止优先级仅编译和整项尚无审查的文字为历史中间证据，以本段和正式结果事件为当前状态；没有将旧测试冒充在新代码上运行。
+- 未运行真实模型、服务、浏览器、网络、正式迁移/回滚、多实例故障联调或性能基准；OAuth 仍仅评估。PASS 为本地实现的独立审查，不是发布或性能收益证明，后续本地归档仍由父流程检查正式门禁。
 
 ## Sources
 
-- [用户提供的 Pi 本地源码核对](../../research/pi-local-source-worker-design-2026-11-07.md)：独立公开 ChatGPT OAuth 路径、loop/transport 分离、上下文投影、完整响应后工具调度与跨进程刷新；源码不是速度/成本收益的实证。
+- [用户提供的 Pi 本地源码核对](../../../research/pi-local-source-worker-design-2026-11-07.md)：独立公开 ChatGPT OAuth 路径、loop/transport 分离、上下文投影、完整响应后工具调度与跨进程刷新；源码不是速度/成本收益的实证。
 
 - 用户本轮详细设计请求，以及此前 Python、机制移植、Codex 无 API Key、运行透明可控的决定。
-- [Pi 研究](../../research/pi-agent-loop-efficiency-2026-11-07.md)
-- [FD-074：location 与共享交接](../archive/FD-074/FD-074_WORKER_OWNED_PLAN_LOCATIONS_AND_SHARED_HANDOFFS.md)
-- [FD-077：平台绑定目标](../archive/FD-077/FD-077_BIND_RECOMMENDATION_GOALS_TO_THE_ORIGINAL_REQUES.md)
-- [FD-078：在途判定与问答恢复](../FD-078/FD-078_RESPECT_BLOCKED_REPORT_VERDICTS_AND_REPAIR_CLARI.md)
+- [Pi 研究](../../../research/pi-agent-loop-efficiency-2026-11-07.md)
+- [FD-074：location 与共享交接](../FD-074/FD-074_WORKER_OWNED_PLAN_LOCATIONS_AND_SHARED_HANDOFFS.md)
+- [FD-077：平台绑定目标](../FD-077/FD-077_BIND_RECOMMENDATION_GOALS_TO_THE_ORIGINAL_REQUES.md)
+- [FD-078：在途判定与问答恢复](../../FD-078/FD-078_RESPECT_BLOCKED_REPORT_VERDICTS_AND_REPAIR_CLARI.md)
 - [Pi 执行机制](https://pi.dev/docs/latest/how-pi-works)、[请求钩子](https://pi.dev/docs/latest/extensions#before_provider_request)、[事件语义](https://pi.dev/docs/latest/sdk)
+
+**Completed:** 2026-11-07

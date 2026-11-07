@@ -56,7 +56,7 @@ Pi 已实现需要的基本模式：先乐观检查有效期；将 refresh 放�
 | 按请求取 OAuth 凭据 | CredentialProvider + Coordinator | 凭据置于工具根目录之外，跨进程刷新互斥、代次、崩溃恢复与账户连续性 |
 | 原始历史与恢复投影分离 | 本地完整证据与有界模型历史 | 模型流必须确认终态，不能执行截断或失败响应中的部分工具计划 |
 
-建议先保持现有 FD-079 默认原生 Codex 工厂控制/问答范围，保留 app-server。独立 Python loop + ChatGPT OAuth 是后续清晰的 transport/auth 切面；接入时以已核对的[本项目官方合同设计](../features/FD-079/OAUTH-RESPONSES-DESIGN.md)为准，不把 Pi 的 legacy 路由、固定客户端或简化安全校验当作必须兼容的合同。
+建议先保持现有 FD-079 默认原生 Codex 工厂控制/问答范围，保留 app-server。独立 Python loop + ChatGPT OAuth 是后续清晰的 transport/auth 切面；接入时以已核对的[本项目官方合同设计](../features/archive/FD-079/OAUTH-RESPONSES-DESIGN.md)为准，不把 Pi 的 legacy 路由、固定客户端或简化安全校验当作必须兼容的合同。
 
 ## 证据范围与未验证项
 
