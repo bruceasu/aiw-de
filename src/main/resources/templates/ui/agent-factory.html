@@ -8,6 +8,7 @@
 <form id="factory-settings"><fieldset id="factory-fields" disabled><div class="form-grid">
 <label class="field">模型运行时<select name="runtime" required><option value="" disabled selected>请选择模型运行时</option><option value="codex-app-server">Codex App Server</option><option value="openai-agents">OpenAI Agents SDK</option></select></label>
 <label class="field">默认模型<input name="model" maxlength="120" required autocomplete="off" placeholder="填写已可用的模型名称"></label>
+<label class="field">模型凭证<select name="credentialRef" id="factory-credential"><option value="">使用现有 Worker 本机登录或 API Key</option></select><input name="credentialVersion" type="hidden"></label>
 <label class="field">推理强度<select name="effort"><option value="none">none</option><option value="minimal">minimal</option><option value="low">low</option><option value="medium" selected>medium</option><option value="high">high</option><option value="xhigh">xhigh</option></select></label>
 <label class="field"><span><input name="automaticWorkers" type="checkbox" checked>缺少兼容 Worker 时自动启动本机 Worker</span></label>
 </div><details class="authority-disclosure"><summary>本机运行环境（高级）</summary><div class="form-grid">
@@ -17,6 +18,18 @@
 </div><p class="help">本机 Worker 使用已安装的 Python。Codex 默认复用已有登录，由受控主机工具执行文件操作；只有需要独立账号环境时才指定目录。OpenAI API 使用平台进程已有的 API 凭证。工厂不复制凭证或自动安装依赖。</p></details>
 <p class="help">这里只设置默认模型和启动方式。计划、文件、命令及预算权限仍由原授权决定。</p></fieldset>
 <button class="btn primary" id="factory-save" type="submit" disabled>保存工厂设置</button></form></section>
+<section class="card"><h2>模型登录与凭证</h2>
+<p>由本机 Control Plane 统一保管凭证和刷新。Worker 按任务领取短期访问令牌。ChatGPT Responses 连接使用 OpenAI 运行时；导入的 Codex 连接使用 Codex App Server。</p>
+<p id="model-auth-status" class="callout" role="status" aria-live="polite">正在读取连接状态…</p>
+<label class="field">连接名称<input id="model-auth-label" maxlength="160" value="我的 ChatGPT" autocomplete="off"></label>
+<div class="actions"><button class="btn primary" id="model-auth-login" type="button">Continue with ChatGPT</button>
+<button class="btn ghost" id="model-auth-cancel" type="button" hidden>取消登录</button>
+<button class="btn ghost" id="model-auth-refresh" type="button">更新所选凭证</button>
+<button class="btn ghost" id="model-auth-disconnect" type="button">断开所选连接</button></div>
+<details class="authority-disclosure"><summary>显式导入已有凭证</summary>
+<p class="help">选择 Codex auth.json 或独立 ChatGPT OAuth 凭据文件。仅在你提交后导入，不会扫描用户目录。过期、来源不匹配或无法验签的凭据会被拒绝。Codex 凭据不会转为公开 Responses 凭据。</p>
+<input id="model-auth-file" type="file" accept="application/json,.json"><button class="btn ghost" id="model-auth-import" type="button">导入所选文件</button></details>
+<div id="model-auth-connections"></div><p class="help">登录、导入或选择连接后，还需保存上方工厂设置。断开会立即停止本连接的新请求，并尝试远端撤销；未确认的远端状态会明确提示。</p></section>
 <section class="card"><h2>本机 Worker 状态</h2><div id="factory-workers" role="status"></div><button class="btn ghost" id="factory-refresh" type="button">刷新状态</button></section>
 <section class="card"><h2>接入外部 Worker</h2><p>外部 Worker 使用注册、心跳、领取任务和提交结果协议，无需由工厂启动。执行工厂任务时，还需声明匹配的运行时、仓库与配置执行能力。</p><a class="btn ghost" href="/ui/workers">查看 Worker</a></section>
-</div></main></div><script src="/ui/agent-factory.js" defer></script><script src="/ui/console.js"></script></body></html>
+</div></main></div><script src="/ui/model-auth.js" defer></script><script src="/ui/agent-factory.js" defer></script><script src="/ui/console.js"></script></body></html>

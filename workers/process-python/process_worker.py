@@ -95,7 +95,7 @@ class WorkerConfig:
                 raise ValueError("Python App Server requires AIW_CODEX_APPROVAL_MODE=deny-all (or never); migrate SDK auto-review explicitly")
             if os.getenv("AIW_CODEX_SANDBOX", "workspace-write") not in {"read-only", "workspace-write"}:
                 raise ValueError("Python App Server supports read-only or workspace-write sandbox only")
-        if runtime == "openai-agents" and not os.getenv("OPENAI_API_KEY", "").strip():
+        if runtime == "openai-agents" and not os.getenv("OPENAI_API_KEY", "").strip() and not os.getenv("AIW_MODEL_CREDENTIAL_REF"):
             raise ValueError("OPENAI_API_KEY is required for openai-agents runtime")
         if runtime == "openai-agents" and _bool_env("AIW_AGENT_ALLOW_SHELL", False):
             raise ValueError("AIW_AGENT_ALLOW_SHELL is not supported by the Python API runtime")
@@ -107,6 +107,9 @@ class WorkerConfig:
         if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "worker-loop-turn-v1", "questions-v2"} or part.startswith(("repo:", "native-config:", "handoff-store:")) or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
+        if os.getenv("AIW_MODEL_CREDENTIAL_REF"):
+            from model_credentials import capability
+            capabilities.add(capability())
         from skill_files import CAPABILITY as skill_files_capability
         capabilities.add(skill_files_capability)
         if _bool_env("AIW_EXECUTION_GUARD", False):
@@ -435,8 +438,12 @@ class ProcessSlot:
         if config.runtime == "codex-app-server":
             self.runtime: AgentRuntime = CodexAppServerRuntime()
         else:
-            from openai_api_runtime import OpenAIApiRuntime
-            self.runtime = OpenAIApiRuntime.from_env()
+            if os.getenv("AIW_MODEL_CREDENTIAL_REF"):
+                from chatgpt_responses_runtime import ChatGptResponsesRuntime
+                self.runtime = ChatGptResponsesRuntime()
+            else:
+                from openai_api_runtime import OpenAIApiRuntime
+                self.runtime = OpenAIApiRuntime.from_env()
         self.slot_no = slot_no; self.config = config; self.client = client; self.stop_event = stop_event
         self.thread = threading.Thread(target=self._run, name=f"process-slot-{slot_no}", daemon=False)
     def start(self) -> None: self.thread.start()
@@ -549,6 +556,10 @@ class ProcessSlot:
                     model_only=self.config.process_role == "goal-discussion" or task.get("subjectType") == "workflow-recommendation",
                     candidate_validator=lambda text: _completion_report(profile.result_kind, text),
                 )
+                if os.getenv("AIW_MODEL_CREDENTIAL_REF"):
+                    from model_credentials import ModelCredentialProvider
+                    from dataclasses import replace
+                    request = replace(request, credential_provider=ModelCredentialProvider(self.client, self.config, task, attempt, request.model))
                 def set_session(runtime_session_id, handle=None):
                     nonlocal session_id
                     session_id = runtime_session_id

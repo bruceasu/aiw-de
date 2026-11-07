@@ -38,13 +38,16 @@ class CodexModelSession:
             self.session = StdioSession(request.attempt, self.cwd,
                 argv=[preflight(request.executable), "app-server", "--listen", "stdio://",
                       "--config", "sandbox_read_only.network_access=false"],
-                environment=environment, request_handler=self._deny_tool)
+                environment=environment, request_handler=self._deny_tool,
+                **({"credential_provider": request.credential_provider} if request.credential_provider is not None else {}))
             request.attempt.add_cancel_callback(self.session.interrupt)
             initialized = self.session.rpc("initialize", {"clientInfo": {"name": "aiw_host_conversation", "version": "1"},
                                                           "capabilities": {"experimentalApi": True}})
             if not isinstance(initialized.get("userAgent"), str):
                 raise RuntimeError("CODEX_HANDSHAKE_INVALID")
             self.session.send({"method": "initialized", "params": {}}, time.monotonic() + min(30, request.attempt.remaining()))
+            if request.credential_provider is not None:
+                request.credential_provider.codex_login(self.session)
             account = self.session.rpc("account/read", {"refreshToken": False}).get("account")
             if not isinstance(account, dict) or account.get("type") not in {"apiKey", "chatgpt"}:
                 raise RuntimeError("CODEX_ACCOUNT_UNAVAILABLE")

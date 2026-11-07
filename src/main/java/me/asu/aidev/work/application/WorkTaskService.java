@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkTaskService {
+    @org.springframework.beans.factory.annotation.Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.modelauth.ModelConnections> modelConnections;
     private me.asu.aidev.execution.skills.SkillFiles skillFiles;
     @Autowired public void setSkillFiles(me.asu.aidev.execution.skills.SkillFiles value) { skillFiles=value; }
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.execution.guard.ExecutionGuard> executionGuard;
@@ -51,7 +52,9 @@ public class WorkTaskService {
     }
 
     @Transactional public WorkTask createReplacing(CreateWorkTaskCommand command,TaskId source) {
-        return createInternal(command,false,source);
+        var created=createInternal(command,false,source);
+        if(modelConnections!=null)modelConnections.getObject().replaced(source,created.id());
+        return created;
     }
 
     /**

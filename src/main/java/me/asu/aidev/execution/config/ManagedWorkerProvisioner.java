@@ -10,6 +10,7 @@ import org.springframework.transaction.support.*;
 /** Starts only the bundled worker. External workers never enter this process registry. */
 @Service
 public class ManagedWorkerProvisioner {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.modelauth.ModelConnections modelConnections;
     public record Result(boolean starting,String message) {}
     private static final class Slot {Process process;Path status;String worker;long since=System.nanoTime();String failure;String settingsVersion;String role;String repository;boolean stopping;}
     @org.springframework.beans.factory.annotation.Autowired private FactoryWorkerRegistry registrations;
@@ -97,7 +98,7 @@ public class ManagedWorkerProvisioner {
     }
     static String compatibilityKey(String role,String repository,AgentFactorySettings.Settings config) {
         return AuthorityRepository.hash(String.join("\n",role,Objects.toString(repository,""),config.runtime(),config.model(),
-                config.effort(),config.python(),config.executable(),config.guardHome()));
+                config.effort(),config.python(),config.executable(),config.guardHome(),Objects.toString(config.credentialRef(),""),Objects.toString(config.credentialVersion(),"")));
     }
     private boolean releaseIdle() {
         for(var entry:new ArrayList<>(slots.entrySet())) {
@@ -138,6 +139,17 @@ public class ManagedWorkerProvisioner {
         try {
             var builder=new ProcessBuilder(config.python(),root.resolve("managed_worker.py").toString()).directory(root.toFile());
             var env=builder.environment();env.keySet().removeIf(name->name.startsWith("AIW_PERSONAL_"));
+            env.remove("AIW_MODEL_CREDENTIAL_KEY");env.remove("AIDEV_MODEL_AUTH_KEY");env.remove("AIW_MODEL_CREDENTIAL_REF");env.remove("AIW_MODEL_CREDENTIAL_VERSION");
+            for(String name:List.of("SPRING_APPLICATION_JSON","JAVA_TOOL_OPTIONS","JDK_JAVA_OPTIONS","JAVA_OPTS","MAVEN_OPTS"))env.remove(name);
+            if(config.credentialRef()!=null) {
+                modelConnections.registerWorker(slot.worker,config.credentialRef(),config.credentialVersion(),config.runtime(),config.model());
+                env.put("AIW_MODEL_CREDENTIAL_REF",config.credentialRef());env.put("AIW_MODEL_CREDENTIAL_VERSION",config.credentialVersion().toString());
+                env.remove("OPENAI_API_KEY");env.remove("OPENAI_BASE_URL");
+                if(config.runtime().equals("codex-app-server")) {
+                    env.put("AIW_CODEX_GUARD_MODE","host-actions");env.put("AIW_HOST_ACTION_PROTOCOL","v2");
+                    env.put("AIW_CODEX_HOST_SESSION_REUSE","true");
+                }
+            }
             env.put("AIW_WORKER_TOKEN",token);env.put("AIW_CONTROL_PLANE_URL","http://127.0.0.1:"+port+contextPath);
             env.put("AIW_AGENT_RUNTIME",config.runtime());
             env.remove("AIW_REPOSITORY_REF");env.remove("AIW_REPOSITORY_ROOT");

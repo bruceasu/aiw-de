@@ -18,6 +18,7 @@ import subprocess
 import sys
 import threading
 import time
+import tempfile
 
 from ai_preferences import preference_rejected
 from agent_runtime import HOST_ACTION_INSTRUCTIONS
@@ -105,7 +106,16 @@ def preflight(path=None):
 class StdioSession:
     """One bounded RPC channel for one attempt; reader never logs wire bodies."""
 
-    def __init__(self, attempt, cwd, *, argv=None, environment=None, request_handler=None):
+    def __init__(self, attempt, cwd, *, argv=None, environment=None, request_handler=None, credential_provider=None):
+        self.credential_provider = credential_provider
+        self.auth_home = None
+        if credential_provider is not None:
+            self.auth_home = tempfile.mkdtemp(prefix="aiw-external-codex-")
+            environment = dict(os.environ if environment is None else environment)
+            for name in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "AIW_MODEL_CREDENTIAL_KEY", "AIW_WORKER_TOKEN",
+                         "SPRING_APPLICATION_JSON", "JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "JAVA_OPTS", "MAVEN_OPTS"):
+                environment.pop(name, None)
+            environment["CODEX_HOME"] = self.auth_home
         self.attempt = attempt
         self.limit = setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024)
         self.messages = queue.Queue(maxsize=1024)
@@ -202,6 +212,9 @@ class StdioSession:
                 raise RuntimeError("CODEX_APP_SERVER_DISCONNECTED")
             if "method" in message and "id" in message:
                 method = message["method"]
+                if method == "account/chatgptAuthTokens/refresh" and self.credential_provider is not None:
+                    self.send(self.credential_provider.codex_refresh(message), deadline)
+                    continue
                 if self.request_handler is not None:
                     response = self.request_handler(message)
                     self.send(response, deadline)
@@ -286,6 +299,11 @@ class StdioSession:
             for stream in (self.process.stdin, self.process.stdout):
                 stream.close()
             self.attempt.evidence.record("resource-terminal", status="confirmed", runtime="codex-app-server")
+            if self.auth_home:
+                try:
+                    Path(self.auth_home).rmdir()  # Only an empty directory; retain unexpected server-created files.
+                except OSError:
+                    self.attempt.evidence.record("resource-retained", runtime="codex-app-server", status="retained", reason="external-auth-home-not-empty")
         except Exception:
             self.attempt.resource_uncertain = True
             raise RuntimeError("PROCESS_TREE_UNCERTAIN") from None
@@ -361,7 +379,8 @@ class CodexAppServerRuntime:
             environment = {key: value for key, value in os.environ.items() if not key.startswith("AIW_PERSONAL_")}
             argv = [preflight(request.executable), "app-server", "--listen", "stdio://",
                     "--config", "sandbox_read_only.network_access=false"]
-        session = StdioSession(attempt, request.workspace, argv=argv, environment=environment, request_handler=resource_request)
+        external = {"credential_provider": request.credential_provider} if request.credential_provider is not None else {}
+        session = StdioSession(attempt, request.workspace, argv=argv, environment=environment, request_handler=resource_request, **external)
         cancel_callback = session.interrupt
         attempt.add_cancel_callback(cancel_callback)
         thread_id = turn_id = None
@@ -372,6 +391,8 @@ class CodexAppServerRuntime:
             if not isinstance(initialized.get("userAgent"), str):
                 raise RuntimeError("CODEX_HANDSHAKE_INVALID")
             session.send({"method": "initialized", "params": {}}, time.monotonic() + min(30, attempt.remaining()))
+            if request.credential_provider is not None:
+                request.credential_provider.codex_login(session)
             account = session.rpc("account/read", {"refreshToken": False}).get("account")
             if not isinstance(account, dict) or account.get("type") not in {"apiKey", "chatgpt"}:
                 raise RuntimeError("CODEX_ACCOUNT_UNAVAILABLE")

@@ -10,8 +10,15 @@ import org.springframework.transaction.annotation.Transactional;
 /** Operator-owned factory defaults. No model credentials or task authority are stored here. */
 @Service
 public class AgentFactorySettings {
-    public record Settings(String runtime,String model,String effort,boolean automaticWorkers,String python,String executable,String guardHome) {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.modelauth.ModelConnections modelConnections;
+    public record Settings(String runtime,String model,String effort,boolean automaticWorkers,String python,String executable,String guardHome,String credentialRef,Long credentialVersion) {
+        public Settings(String runtime,String model,String effort,boolean automaticWorkers,String python,String executable,String guardHome) {
+            this(runtime,model,effort,automaticWorkers,python,executable,guardHome,null,null);
+        }
         public Settings {
+            if(credentialRef!=null&&credentialRef.isBlank())credentialRef=null;
+            if(credentialRef==null)credentialVersion=null;
+            else if(!credentialRef.matches("MC-[0-9a-f-]{36}")||credentialVersion==null||credentialVersion<1)throw new IllegalArgumentException("MODEL_CONNECTION_REQUIRED");
             if(runtime==null||!Set.of("codex-app-server","openai-agents").contains(runtime))throw new IllegalArgumentException("请选择支持的模型运行时。");
             if(model==null||!model.matches("[A-Za-z0-9._-]{1,120}"))throw new IllegalArgumentException("请填写模型名称。");
             if(effort==null||!(runtime.equals("codex-app-server")?Set.of("none","minimal","low","medium","high","xhigh"):Set.of("none","minimal","low","medium","high")).contains(effort))throw new IllegalArgumentException("此运行时不支持所选推理强度。");
@@ -43,6 +50,7 @@ public class AgentFactorySettings {
     @Transactional public Map<String,Object> save(Settings input) {
         grants.human(boundary.human(),"A17_CONFIGURATION");boundary.lock();
         if(input==null)throw new IllegalArgumentException("请核对工厂设置。");
+        if(input.credentialRef()!=null)modelConnections.selection(new me.asu.aidev.modelauth.ModelAuthContract.Selection(input.credentialRef(),input.credentialVersion()),input.runtime());
         repo.audit("AGENT_FACTORY",null,null,boundary.human(),"AGENT_FACTORY_SETTINGS",repo.encode(input));
         return state();
     }

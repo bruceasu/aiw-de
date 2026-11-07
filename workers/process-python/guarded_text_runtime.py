@@ -96,7 +96,7 @@ def _run_actions(request, on_session, conversation=None):
             submitted = (header if turn == 0 else "Continue the same task using only the declared host JSON actions.")
             submitted += "\nNew host observations:\n" + json.dumps(pending, ensure_ascii=False)
             parts = (("fixed_header", header), ("observations", pending)) if turn == 0 else (("new_observations", pending),)
-        operation = broker.model_started({"runtime": "codex-app-server", "model": request.model, "instructionDigest": digest(submitted)})
+        operation = broker.model_started({"runtime": getattr(conversation, "runtime", "codex-app-server"), "model": request.model, "instructionDigest": digest(submitted)})
         try:
             if conversation is not None:
                 output = conversation.run_turn(submitted, parts)
@@ -109,7 +109,7 @@ def _run_actions(request, on_session, conversation=None):
                                             candidate_validator=None,
                                             context_parts=(("fixed_header", header), ("observations", observations)))
                     output = CodexAppServerRuntime().run(None, model_request, on_session)
-            broker.model_finished(operation, output, None)
+            broker.model_finished(operation, output, getattr(conversation, "last_usage", None))
             operation = None
         finally:
             if operation is not None:

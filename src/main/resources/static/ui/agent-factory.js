@@ -22,6 +22,7 @@
     status.textContent = t(settings.runtime && settings.model ? "工厂设置已载入。" : "工厂尚未配置。请明确选择模型运行时并填写默认模型，然后保存设置；页面中的选择在保存前不会生效。");
     fields.disabled = false; save.disabled = false;
     renderWorkers(result.managedWorkers || []);
+    window.dispatchEvent(new CustomEvent("aiw-factory-loaded", { detail: settings }));
   }
   function renderWorkers(workers) {
     const target = document.getElementById("factory-workers"); target.replaceChildren();
@@ -38,6 +39,8 @@
   form.addEventListener("submit", async event => {
     event.preventDefault(); if (save.disabled || !form.reportValidity()) return;
     const input = Object.fromEntries(new FormData(form)); input.automaticWorkers = form.elements.automaticWorkers.checked;
+    input.credentialRef = input.credentialRef || null;
+    input.credentialVersion = input.credentialRef ? Number(input.credentialVersion) : null;
     save.disabled = true; fields.disabled = true;
     try {
       if (!await window.aiwConfirm(t("保存默认模型和本机 Worker 自动启动设置？") + "\n" + input.runtime + " / " + input.model)) return;

@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskClaimService {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.modelauth.ModelConnections modelConnections;
     private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
     @Autowired public void setExecutionConfigurations(me.asu.aidev.execution.config.ExecutionConfigurations configurations) { this.configurations=configurations; }
     private me.asu.aidev.execution.guard.ExecutionGuard guard;
@@ -179,6 +180,7 @@ public class TaskClaimService {
             if(guard!=null) guard.claimed(claimedTask.id().value(),new me.asu.aidev.execution.guard.GuardContract.Lease(
                     workerId.value(),attemptId.value(),token.value()));
             if(configurations!=null) configurations.claimed(claimedTask.id().value(),attemptId.value(),workerId.value());
+            if(modelConnections!=null) modelConnections.claimed(claimedTask,worker);
 
             var inputs = guard!=null && guard.managed(claimedTask.id().value()) ? guard.context(claimedTask.id().value()).snapshot().inputs()
                     : dependencies.findDependencies(claimedTask.id()).stream()

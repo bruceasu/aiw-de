@@ -41,6 +41,8 @@ class AgentRunRequest:
     context_purpose: str = "task"
     context_parts: tuple[tuple[str, Any], ...] = ()
     candidate_validator: Any = None
+    # In-memory task-scoped accessor; never contains a renewable credential.
+    credential_provider: Any = None
 
 
 class AgentRuntime(Protocol):
