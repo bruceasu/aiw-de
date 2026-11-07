@@ -81,7 +81,7 @@ public class OpenAiOAuth {
     Issued validate(JsonNode response,Kind kind,String client,String nonce,String expectedSubject) {
         if(client==null||client.length()>256||client.equals("dynamic_agent_client")||client.isBlank())throw new IllegalArgumentException("ISSUED_CLIENT_REQUIRED");
         String access=required(response,"access_token"),refresh=required(response,"refresh_token"),id=required(response,"id_token");
-        if(!"Bearer".equalsIgnoreCase(required(response,"token_type"))))throw new IllegalArgumentException("MODEL_TOKEN_TYPE_INVALID");
+        if(!"Bearer".equalsIgnoreCase(required(response,"token_type")))throw new IllegalArgumentException("MODEL_TOKEN_TYPE_INVALID");
         var identity=signed(id,client);var bearer=signed(access,RESOURCE);
         if(nonce!=null&&!nonce.equals(identity.getClaim("nonce")))throw new SecurityException("MODEL_LOGIN_NONCE_MISMATCH");
         String subject=identity.getSubject();

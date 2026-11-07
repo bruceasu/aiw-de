@@ -107,7 +107,8 @@ Worker 的短期访问租约绑定当前注册 Worker、精确 Task/Attempt、�
 - Java `mvn -o -Dmaven.repo.local=D:/.m2/repository -DskipTests test-compile` 首次因 Nimbus 的缓存来源 ID 失败，未进入源码编译；任务专用离线设置第一次修正后，又发现 jcip 注解包来自另一缓存 ID。两项 jar/POM 都在本机，已补齐任务专用离线仓库别名，不改全局缓存、不下载；自动重试预算已用，尚未再次执行 Java 编译。
 - 新增 Java `ModelCredentialsTest`、`OpenAiOAuthTest` 和 Python `test_model_credentials`，覆盖密文完整性、真实 RSA 验签、身份/scope、刷新串行/未知结果/断开竞争、精确租约和完整流终态。用例尚未执行，Java 用例尚未完成编译；不能将编译或静态证据写为测试通过。
 - 所有后续 Worker/页面源码改动后，再次执行 `node scripts/compile-worker-runtime.mjs` 通过；最新 Python/JS 源码已经过 compile-only。Java 源码及测试仍待已发出的新增离线验证授权，不继续自动重试缓存识别失败的命令。
-- %% NEEDS_INPUT: 是否允许所列离线 Java 编译重试及 Java/Python 定向测试？已异步询问。当前依赖缓存来源的修正尚未验证，4.1/4.2 未完成，未请求正式 Reviewer 或标记 Complete。
+- 用户随后报告 `OpenAiOAuth.java:84` 编译失败；确认是 `token_type` 校验条件多写一个右括号，已修正。执行 `mvn -o -s .ai/fd/FD-081/offline-maven-settings.xml -Dmaven.repo.local=D:/.m2/repository -DskipTests compile` 成功，337 个生产源，6.609 秒；同时确认离线缓存别名配置可用于生产源编译。没有运行测试、服务或真实认证。
+- %% NEEDS_INPUT: 是否允许测试源码编译及已列出的 Java/Python 定向测试？先前的授权问题仍待回复。生产源编译已通过，测试源码编译及运行尚未完成，4.1/4.2 未完成，未请求正式 Reviewer 或标记 Complete。
 - [使用与升级说明](../../MODEL-AUTHENTICATION.md) 记录密钥配置、类型选择、Codex 实验性 RPC、原生直接 API 控制边界、订阅金额未知及本机断开与远端撤销的区别。
 - 用户已明确授权集中管理方向；不因旧评估的 Worker 本地存储建议重复要求确认。
 - Review policy Independent：涉及认证秘密、账户隔离、公开接口、持久化与跨进程/实例刷新。
