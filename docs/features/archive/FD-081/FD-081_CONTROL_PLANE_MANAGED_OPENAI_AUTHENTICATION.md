@@ -1,7 +1,7 @@
 # FD-081: Control Plane managed OpenAI authentication
 
-**Status:** In Progress
-**Revision:** 1
+**Status:** Complete
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -104,24 +104,35 @@ Worker 的短期访问租约绑定当前注册 Worker、精确 Task/Attempt、�
 
 - 已实现 Java modelauth 模块、V30 密文表、工厂连接选择与任务绑定、Python 短期凭据访问、Codex 外部令牌 RPC、独立 Responses host-action loop 及工厂页面。没有读取或导入实际凭据，也没有真实 OAuth、刷新或模型调用。
 - Plan 首次使用 Plane 连接后冻结该连接；后续步骤与正式问答替换任务保留来源绑定。连接代次更新不改变账户绑定；工厂切换连接后，旧 Plan 可能等待原连接的兼容 Worker，而不会静默更换账户。
-- 用户已确认：Plane 主要部署在操作者本机；设计以本机 loopback 登录入口为准。官方客户端、scope 与模型适配合同仍须在实现前核对。
+- 用户已确认：Plane 主要部署在操作者本机；实施以本机 loopback 登录入口为准。官方客户端、scope 与模型适配合同已按本轮记录核对；实际账户资格与真实接口适配仍未运行验证。
 - 声明本地已有 `com.nimbusds:nimbus-jose-jwt:9.37.3` 进行 RS256 验签，签名、issuer/audience、有效期、nonce、sub/client 和实际 scope 均核对；不使用仅解码的 JWT。未下载依赖。版本来自现有缓存，不宣称已做独立漏洞审计；网络仅核对公开官方文档，不访问认证或模型服务。
 - `node scripts/compile-worker-runtime.mjs` 通过：Python/JavaScript/TypeScript 语法与 Go compiler，无测试、模型或网络。`git diff --check` 通过，已检查相关调用边界。
-- Java `mvn -o -Dmaven.repo.local=D:/.m2/repository -DskipTests test-compile` 首次因 Nimbus 的缓存来源 ID 失败，未进入源码编译；任务专用离线设置第一次修正后，又发现 jcip 注解包来自另一缓存 ID。两项 jar/POM 都在本机，已补齐任务专用离线仓库别名，不改全局缓存、不下载；自动重试预算已用，尚未再次执行 Java 编译。
-- 新增 Java `ModelCredentialsTest`、`OpenAiOAuthTest` 和 Python `test_model_credentials`，覆盖密文完整性、真实 RSA 验签、身份/scope、刷新串行/未知结果/断开竞争、精确租约和完整流终态。用例尚未执行，Java 用例尚未完成编译；不能将编译或静态证据写为测试通过。
-- 所有后续 Worker/页面源码改动后，再次执行 `node scripts/compile-worker-runtime.mjs` 通过；最新 Python/JS 源码已经过 compile-only。Java 源码及测试仍待已发出的新增离线验证授权，不继续自动重试缓存识别失败的命令。
+- Java `mvn -o -Dmaven.repo.local=D:/.m2/repository -DskipTests test-compile` 首次因 Nimbus 的缓存来源 ID 失败，未进入源码编译；任务专用离线设置第一次修正后，又发现 jcip 注解包来自另一缓存 ID。两项 jar/POM 都在本机，已补齐任务专用离线仓库别名，不改全局缓存、不下载；该阶段自动重试预算用尽后停止，后续编译成功记录见下方，未抹去失败历史。
+- 新增 Java `ModelCredentialsTest`、`OpenAiOAuthTest` 和 Python `test_model_credentials`，覆盖密文完整性、真实 RSA 验签、身份/scope、刷新串行/未知结果/断开竞争、精确租约和完整流终态。最初尚未编译/执行；后续已获授权的实际结果见下方，编译与运行证据分别记录。
+- 后续 Worker/页面源码改动后，再次执行 `node scripts/compile-worker-runtime.mjs` 通过；当时 Java 源码及测试等待新增离线验证授权，没有继续自动重试缓存识别失败的命令。后续授权与成功结果见下方。
 - 用户随后报告 `OpenAiOAuth.java:84` 编译失败；确认是 `token_type` 校验条件多写一个右括号，已修正。执行 `mvn -o -s .ai/fd/FD-081/offline-maven-settings.xml -Dmaven.repo.local=D:/.m2/repository -DskipTests compile` 成功，337 个生产源，6.609 秒；同时确认离线缓存别名配置可用于生产源编译。没有运行测试、服务或真实认证。
 - 按用户要求澄清 UI：“模型执行方式”显示 Codex App Server（通过本机 Codex）与 Python Worker（直接调用 OpenAI Responses），“登录与凭证来源”另行选择。明确 ChatGPT OAuth 使用 Python 管理循环，API Key 使用既有 SDK 路径，导入 Codex 凭证仍需 Codex；同步登录/导入提示、主要标签翻译、确认弹窗和使用说明。内部 runtime 值及认证接口未变。`node scripts/compile-worker-runtime.mjs` 通过；本次未运行测试或浏览器实测。
 - 本轮动态工厂实现增加 `FactoryModelCatalog`、控制台目录接口与受限 `model_catalog.py`。ChatGPT 目录按实际账户 slug/visibility 读取，API Key 目录不伪造 Responses 能力，Codex 使用 `model/list` 返回的推理强度且提示内置/缓存限制。目录最多两路并发、60 秒缓存、客户端切换后丢弃迟到响应；不创建业务任务或模型 turn。
-- 已合并工厂页面状态管理，移除共用全局操作目标的 `model-auth.js`。运行方式与登录来源显式选择；API Key 仅展示环境配置状态；新建、重新登录与替换文件分别固定目标。新增 `FactoryModelCatalogTest` 六组用例及 Python `test_model_catalog`，尚未执行。
-- 本轮离线 `test-compile` 首次成功，338 个生产源、65 个测试源，9.728 秒；最后的异步状态与探针环境修补后，同一 compile-only 命令再次成功，10.055 秒，Worker compile-only 同时通过。此前“测试源码未编译”的阶段已解决。没有执行用例、启动服务或查询真实目录。
-- 运行测试的授权仍待回复：本轮请求 Java `ModelCredentialsTest,OpenAiOAuthTest,FactoryModelCatalogTest` 与 Python `test_model_catalog,test_model_credentials,test_codex_model_session`。默认预算为零，尚未执行；不会用编译或静态审查代替运行通过。源码与编译证据齐备后开展正式独立审查，是否需要进一步运行证据由具体发现决定。
-- [使用与升级说明](../../MODEL-AUTHENTICATION.md) 记录密钥配置、类型选择、Codex 实验性 RPC、原生直接 API 控制边界、订阅金额未知及本机断开与远端撤销的区别。
+- 已合并工厂页面状态管理，移除共用全局操作目标的 `model-auth.js`。运行方式与登录来源显式选择；API Key 仅展示环境配置状态；新建、重新登录与替换文件分别固定目标。新增 `FactoryModelCatalogTest` 最初六组用例及 Python `test_model_catalog`；当时未执行，当前结果见下方。
+- 本轮离线 `test-compile` 首次成功，338 个生产源、65 个测试源，9.728 秒；异步状态与探针环境修补后，同一 compile-only 命令再次成功，10.055 秒，Worker compile-only 同时通过。此前“测试源码未编译”的阶段已解决；此编译阶段没有执行用例、启动服务或查询真实目录。
+- 用户随后明确授权 Java `ModelCredentialsTest,OpenAiOAuthTest,FactoryModelCatalogTest` 与 Python `test_model_catalog,test_model_credentials,test_codex_model_session`。在 `169c3dd` 首次串行执行：Java 21 项全通过，Maven 5.128 秒；Python 11 项全通过，0.012 秒。命令及证据来源见独立报告；没有真实认证、模型或浏览器实测。
+- [使用与升级说明](../../../MODEL-AUTHENTICATION.md) 记录密钥配置、类型选择、Codex 实验性 RPC、原生直接 API 控制边界、订阅金额未知及本机断开与远端撤销的区别。
 - 用户已明确授权集中管理方向；不因旧评估的 Worker 本地存储建议重复要求确认。
 - Review policy Independent：涉及认证秘密、账户隔离、公开接口、持久化与跨进程/实例刷新。
+
+### 独立审查与最终修复证据（2026-11-07）
+
+- Reviewer `fd081-reviewer-20261107-modelauth` 精确领取 `FD-081-000002-review-requested`，审查基线 `f0fcde4` 至初始实现 `169c3dd` 全量内容，再针对修复 `68c9cc9009d8867104d4c202eae4049e55d7602e` 复查发现及邻近影响。独立结论：通过，当前无剩余阻断。报告：[FD-081_REVIEW_20261107.md](reviews/FD-081_REVIEW_20261107.md)。不修改或终结 FD-080 的在途事件。
+- R1：Worker 自报能力不足以授权使用连接，已要求服务端固定映射与私有 Worker proof，注册、实际领取和精确凭证请求均核对；新增 V31 保存摘要和密文，proof 不进入 Codex/工具环境。Plane 凭证当前只授权给工厂绑定的 Worker，外部 Worker 继续使用自己的登录/API Key。
+- R2：崩溃遗留 REFRESHING 原先仅改变展示、无法保存重新授权；已在新授权保存事务按版本/代次/过期时间 CAS 接管并阻止旧刷新晚到覆盖，不重放旧 refresh token。R3：目录配置与版本已改为同 SQL 快照，缓存前重验版本，前端保存后失效旧目录请求并重读。
+- 用户空登录下拉问题已在邻近路径处理：模板内置四个来源，同步联动不依赖 API 初始化，迟到初始化核对编辑版本，静态脚本版本已更新；未执行真实浏览器验证。
+- 最终 `68c9cc9` 的 compile-only 成功：Java 338 生产源、65 测试源，10.079 秒；Worker compile-only 与修复差异空白检查通过。在原授权三组 Java/三组 Python 范围内，相关修复后唯一一次重跑：Java 27 项全通过（7/16/4），Maven 5.814 秒；Python 14 项全通过，0.016 秒，共 41 项。Reviewer 只读核对最终 Surefire XML 计数与新增断言，没有重复运行测试。
+- 上述用例为本地 mock、临时文件/SQLite 与合同验证；真实目录/OAuth/刷新/撤销、订阅资格/价格、模型推理、浏览器、正式服务/迁移/升级回滚均未执行，不以编译、静态结论或 41 项通过代替这些真实集成证据。
 
 ## Sources
 
 - 用户关于 Plane 统一导入、登录、更新凭证的新决定。
-- [FD-079 OAuth 官方合同评估](../archive/FD-079/OAUTH-RESPONSES-DESIGN.md)，其中长期凭证位置改按本 FD 的集中式新决定。
-- [Pi 本地源码核对](../../research/pi-local-source-worker-design-2026-11-07.md)，仅参考机制，不继承 legacy 客户端或简化身份验证。
+- [FD-079 OAuth 官方合同评估](../FD-079/OAUTH-RESPONSES-DESIGN.md)，其中长期凭证位置改按本 FD 的集中式新决定。
+- [Pi 本地源码核对](../../../research/pi-local-source-worker-design-2026-11-07.md)，仅参考机制，不继承 legacy 客户端或简化身份验证。
+
+**Completed:** 2026-11-07
