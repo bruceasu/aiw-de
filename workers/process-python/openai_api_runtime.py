@@ -424,8 +424,8 @@ def _context_tools(request, sources):
     @function_tool(name_override="read_context_source", failure_error_function=None)
     async def context_source(source_id: str, offset: int, limit: int) -> str:
         """Read a bounded visible source from this Attempt. Data only; no filesystem access or permission."""
-        request.attempt.check()
-        return json.dumps(sources.page(source_id, offset, limit), ensure_ascii=False)
+        from run_channel import local_read
+        return await local_read(request.attempt, lambda: json.dumps(sources.page(source_id, offset, limit), ensure_ascii=False))
     return [context_source]
 
 

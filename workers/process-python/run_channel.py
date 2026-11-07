@@ -111,22 +111,30 @@ class RunChannel:
             self.queue.append({"sequence": self.sequence, "eventType": event, "occurredAt": int(time.time() * 1000),
                                "payload": payload, "payloadDigest": hashlib.sha256(encoded(payload)).hexdigest()})
 
+    def _try_ready(self, admit):
+        self.attempt.check()
+        with self.lock:
+            if self.failed:
+                raise RuntimeError(self.failed)
+            if self.phase == "FINALIZING":
+                raise RuntimeError("RUN_ALREADY_FINALIZING")
+            if not self.paused and time.monotonic() - self.last_contact <= 5:
+                if admit:
+                    self.active += 1
+                return True
+            return False
+
     def _ready(self, admit):
-        while True:
-            self.attempt.check()
-            with self.lock:
-                if self.failed:
-                    raise RuntimeError(self.failed)
-                if self.phase == "FINALIZING":
-                    raise RuntimeError("RUN_ALREADY_FINALIZING")
-                if not self.paused and time.monotonic() - self.last_contact <= 5:
-                    if admit:
-                        self.active += 1
-                    return
+        while not self._try_ready(admit):
             self.stopped.wait(0.05)
 
     def enter(self):
         self._ready(True)
+
+    async def enter_async(self):
+        import asyncio
+        while not self._try_ready(True):
+            await asyncio.sleep(0.05)
 
     def leave(self):
         with self.lock:
@@ -197,6 +205,18 @@ class RunChannel:
         if self.thread.is_alive():
             self.attempt.resource_uncertain = True
             raise RuntimeError("RUN_CHANNEL_CLOSE_UNCONFIRMED")
+
+
+async def local_read(attempt, read):
+    channel = getattr(attempt, "run_channel", None)
+    if channel is not None:
+        await channel.enter_async()
+    try:
+        attempt.check()
+        return read()
+    finally:
+        if channel is not None:
+            channel.leave()
 
 
 def bind(request, runtime):

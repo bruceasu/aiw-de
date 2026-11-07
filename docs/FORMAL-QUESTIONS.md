@@ -34,6 +34,8 @@ LEGACY_PLAN_TASK 是现有受控来源，封闭支持 configured-plan 和 flexib
 
 v2 checkpoint 包含固定 location、运行配置摘要、不可变 handoff 引用/摘要和 `handoff-store:<摘要>` 存储亲和性，Git 信息可选。CP 仅核对来源、Owner、租约、版本和摘要，不检查目录/文件。Worker 保留报告与工作树摘要，确认实际静止后调用原问题端点 `ack?version=v2`；只有平台确认后才释放容量、进入 `WAITING_INPUT`，不能把阻塞报告视作任务成功。
 
+原生运行 availability 的 `checkpointRequired` 由 CP 查询正式 successor 绑定后声明；不以通用 `questions-v2` 能力推断任务来源。Worker 校验该声明与实际 checkpoint 集合一致后才执行模型。
+
 确认答案由同一正式问题消费者推进一次，successor 保留原技能、目标、配置与模型政策。Worker 必须从固定 checkpoint 恢复；源目录改变、配置/存储不匹配或停止结果未知时暂停自动推进。没有新回答的旧任务不能通过普通重试继续猜测。原生单次执行的暂停/继续/取消在 Worker 工作台，整个 Plan 仍使用既有 Plan 控制；问答页不会伪造缺失的执行策略。实现与验证边界见 [Worker 说明](../workers/process-python/AUTOMATION-LOOP.md)。
 
 ## 秘书与隐私

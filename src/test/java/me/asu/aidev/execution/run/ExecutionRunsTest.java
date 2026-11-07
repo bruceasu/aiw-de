@@ -141,4 +141,17 @@ class ExecutionRunsTest {
         nativeEvent(1,"execution-quiescent",Map.of("count",0,"complete",true));
         runs.seal("task",new Seal(lease,1,1,"boundary"));assertThat(phase()).isEqualTo("FINALIZING");
     }
+    @Test void nativeContinuationIdentityComesFromTheSourceSlotNotWorkerCapabilities() {
+        nativeRun();
+        jdbc.execute("ALTER TABLE work_task ADD COLUMN subject_type TEXT");jdbc.execute("ALTER TABLE work_task ADD COLUMN subject_id TEXT");
+        jdbc.update("UPDATE work_task SET subject_type='flexible-plan',subject_id='plan'");
+        jdbc.execute("CREATE TABLE formal_question_slot(question_id TEXT,successor_task_id TEXT)");
+        var owners=(NativePlanOwners)org.springframework.test.util.ReflectionTestUtils.getField(runs,"nativeOwners");
+        when(owners.bound("plan")).thenReturn(true);
+        @SuppressWarnings("unchecked") var fresh=(Map<String,Object>)runs.availability("task",lease);
+        assertThat(fresh.get("checkpointRequired")).isEqualTo(false);
+        jdbc.update("INSERT INTO formal_question_slot VALUES('question','task')");
+        @SuppressWarnings("unchecked") var continuation=(Map<String,Object>)runs.availability("task",lease);
+        assertThat(continuation.get("checkpointRequired")).isEqualTo(true);
+    }
 }

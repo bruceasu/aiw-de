@@ -10,6 +10,7 @@
   const native=()=>$('wr-source').value==='native';
   const selected=()=>native()?(attempts.find(a=>a.attempt_id===$('wr-attempt').value)||{}):({taskId:$('wb-task').value,attemptId:$('wb-attempt').value});
   const choice=()=>{const s=selected();return {taskId:s.taskId||s.task_id||'',attemptId:s.attemptId||s.attempt_id||''};};
+  const aligned=()=>{const current=choice();return state&&state.taskId===current.taskId&&state.attemptId===current.attemptId;};
   function options(id,items,value,label,empty) {
     const host=$(id),previous=host.value;host.replaceChildren(new Option(empty,''));
     for(const item of items)host.add(new Option(label(item),value(item)));
@@ -32,9 +33,9 @@
     return response.json();
   }
   function controls() {
-    const live=state&&!state.stale&&state.attemptState==='RUNNING'&&['TOOL','TURN'].includes(state.capabilities.pauseBoundary)&&!busy&&!pending;
+    const live=aligned()&&!state.stale&&state.attemptState==='RUNNING'&&['TOOL','TURN'].includes(state.capabilities.pauseBoundary)&&!busy&&!pending;
     $('wr-pause').disabled=!live||state.phase!=='RUNNING';$('wr-resume').disabled=!live||state.phase!=='PAUSED';
-    const cancellable=state&&state.attemptState==='RUNNING'&&!busy&&!pending;
+    const cancellable=aligned()&&state.attemptState==='RUNNING'&&!busy&&!pending;
     $('wr-cancel').disabled=!cancellable||['STOPPING','SETTLED'].includes(state.phase);
     $('wr-retry').hidden=!pending;$('wr-retry').disabled=busy||!pending?.checked;
     for(const id of ['wr-source','wr-plan','wr-attempt'])$(id).disabled=busy||Boolean(pending);
@@ -80,17 +81,23 @@
   }
   async function submit(body,route='command') {
     if(busy)return;busy=true;controls();
+    if(route==='command'&&(!aligned()||body.taskId!==state.taskId||body.attemptId!==state.attemptId)){
+      busy=false;state=null;$('wr-feedback').textContent='执行选择已变化。请切回原任务和尝试并刷新核对，再提交控制请求。';render();return;
+    }
     try{await request(route,body);pending=null;$('wr-feedback').textContent=route==='bind'?'计划已启用控制和正式问答。':'请求已受理，请按回执确认实际是否生效。';}
     catch(error){if(!error.status||error.status>=500)pending={body,route,checked:false};$('wr-feedback').textContent=error.message;}
     finally{catalogAt=0;busy=false;await refresh();}
   }
   for(const [id,action] of [['wr-pause','PAUSE'],['wr-resume','RESUME'],['wr-cancel','CANCEL']])$(id).addEventListener('click',()=>{
-    if(!state||busy||pending)return;
+    if(!aligned()||busy||pending)return;
     submit({requestId:'run-'+crypto.randomUUID(),taskId:state.taskId,attemptId:state.attemptId,instructionRevision:state.instructionRevision,expectedRunRevision:state.revision,action});
   });
   $('wr-retry').addEventListener('click',()=>{if(pending?.checked&&!busy)submit(pending.body,pending.route);});
   $('wr-bind').addEventListener('click',()=>{const plan=plans.find(p=>p.id===$('wr-plan').value);if(plan&&!$('wr-bind').disabled)submit({requestId:'bind-'+crypto.randomUUID(),planId:plan.id,expectedPlanVersion:plan.version},'bind');});
-  for(const id of ['wr-source','wr-plan','wr-attempt'])$(id).addEventListener('change',()=>{state=null;catalogAt=0;refresh();});
+  for(const id of ['wr-source','wr-plan','wr-attempt','wb-task','wb-attempt'])$(id).addEventListener('change',()=>{
+    if(id.startsWith('wb-')&&native())return;
+    state=null;catalogAt=0;render();refresh();
+  });
   const timer=setInterval(refresh,2000);
   window.addEventListener('pagehide',()=>{hidden=true;state=null;events=[];clearInterval(timer);render();});
   window.addEventListener('pageshow',event=>{if(event.persisted){hidden=false;location.reload();}});

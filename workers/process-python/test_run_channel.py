@@ -1,11 +1,12 @@
 import hashlib
+import asyncio
 import threading
 import time
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from run_channel import RunChannel, bind, encoded
+from run_channel import RunChannel, bind, encoded, local_read
 from run_contract import RuntimeCapabilities
 
 
@@ -109,6 +110,44 @@ class RunChannelTest(unittest.TestCase):
         channel.observe("native-turn-started", {"status": "running"})
         channel._accept(self.view("PAUSING", [command], ack=1))
         self.assertEqual(channel.pending_receipts, [])
+
+
+class LocalReadControlTest(unittest.TestCase):
+    def test_local_source_read_waits_asynchronously_and_holds_the_same_activity_counter(self):
+        fixture = RunChannelTest()
+        channel = fixture.channel()
+        self.addCleanup(fixture.doCleanups)
+        channel.attempt.run_channel = channel
+        channel.paused = True
+        def read():
+            self.assertEqual(channel.active, 1)
+            return 'retained source'
+        async def scenario():
+            task = asyncio.create_task(local_read(channel.attempt, read))
+            await asyncio.sleep(0)
+            self.assertFalse(task.done())
+            self.assertEqual(channel.active, 0)
+            channel.paused = False
+            self.assertEqual(await asyncio.wait_for(task, 1), 'retained source')
+            self.assertEqual(channel.active, 0)
+        asyncio.run(scenario())
+
+    def test_cancelled_waiting_source_read_never_leaks_admission_or_runs_the_read(self):
+        fixture = RunChannelTest()
+        channel = fixture.channel()
+        self.addCleanup(fixture.doCleanups)
+        channel.attempt.run_channel = channel
+        channel.paused = True
+        read = Mock()
+        async def scenario():
+            task = asyncio.create_task(local_read(channel.attempt, read))
+            await asyncio.sleep(0)
+            task.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await task
+            self.assertEqual(channel.active, 0)
+            read.assert_not_called()
+        asyncio.run(scenario())
 
 
 if __name__ == "__main__":

@@ -215,7 +215,9 @@ public class ExecutionRuns {
         var rows=repo.jdbc().queryForList("SELECT subject_type,subject_id FROM work_task WHERE id=?",task);
         if(rows.size()!=1||!"flexible-plan".equals(rows.getFirst().get("subject_type"))||!nativeOwners.bound((String)rows.getFirst().get("subject_id")))return Map.of("supported",false);
         var basis=nativeOwners.task(task,true);
-        return Map.of("supported",true,"planId",basis.planId(),"sourceVersion",basis.sourceVersion(),"sourceDigest",basis.sourceDigest());
+        long checkpoints=repo.jdbc().queryForObject("SELECT COUNT(*) FROM formal_question_slot WHERE successor_task_id=?",Long.class,task);
+        if(checkpoints>1)throw new IllegalStateException("One exact continuation source required");
+        return Map.of("supported",true,"planId",basis.planId(),"sourceVersion",basis.sourceVersion(),"sourceDigest",basis.sourceDigest(),"checkpointRequired",checkpoints==1);
     }
     @Transactional public Object humanNativeStopped(String task,GuardContract.StopEvidence input) {
         boundary.lock();String current=owner();var basis=nativeOwners.task(task,false);

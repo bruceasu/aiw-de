@@ -33,9 +33,10 @@ class NativeRunTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'DUPLICATE_FIELD'):
             input_question('{"outcome":"BLOCKED_INPUT","outcome":"PASS"}')
 
-    def checkpoint_run(self, records, required=True):
+    def checkpoint_run(self, records, continuation=True):
         run = NativeRun.__new__(NativeRun)
-        run.task = {'taskId': 'next', 'requiredCapabilities': [QUESTION_CAPABILITY] if required else []}
+        run.task = {'taskId': 'next', 'requiredCapabilities': [QUESTION_CAPABILITY]}
+        run.availability = {'checkpointRequired': continuation}
         run.config = SimpleNamespace(capabilities={'handoff-store:' + 'a' * 64})
         run.client = SimpleNamespace(_post=Mock(return_value=records))
         run.base, run.lease = '/tasks/next', {'attemptId': 'next-attempt'}
@@ -51,9 +52,17 @@ class NativeRunTest(unittest.TestCase):
                 run.begin()
             self.assertTrue(run.attempt.resource_uncertain)
             self.assertNotIn('checkpointInputs', run.task)
-        fresh = self.checkpoint_run([], required=False)
+        fresh = self.checkpoint_run([], continuation=False)
         fresh.begin()
         self.assertEqual(fresh.task['checkpointInputs'], [])
+
+    def test_capability_is_not_a_continuation_marker_and_missing_declaration_is_rejected(self):
+        run = self.checkpoint_run([], continuation=None)
+        with self.assertRaisesRegex(RuntimeError, 'CONTINUATION_DECLARATION_REQUIRED'):
+            run.begin()
+        run = self.checkpoint_run([{'source': 'unrequested'}], continuation=False)
+        with self.assertRaisesRegex(RuntimeError, 'CHECKPOINT_UNEXPECTED'):
+            run.begin()
 
     def test_a_verified_checkpoint_keeps_source_and_confirmed_answer_identity(self):
         record = {'taskId': 'old', 'attemptId': 'old-attempt', 'answerRevision': 2,
@@ -80,7 +89,7 @@ class NativeRunTest(unittest.TestCase):
         config = SimpleNamespace(runtime='codex-app-server', worker_id='worker', capabilities={'native-config:' + 'a' * 64})
         task = {'taskId': 'task', 'attemptId': 'attempt', 'leaseToken': 'lease'}
         attempt = SimpleNamespace(resource_uncertain=False)
-        client = SimpleNamespace(_post=Mock(return_value={'supported': True}))
+        client = SimpleNamespace(_post=Mock(return_value={'supported': True, 'checkpointRequired': False}))
         with patch('native_run.capabilities', return_value=config.capabilities), patch('native_run.NativeRun', side_effect=RuntimeError('response lost')):
             with self.assertRaisesRegex(RuntimeError, 'response lost'):
                 open_run(config, client, task, attempt)

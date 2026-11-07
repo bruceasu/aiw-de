@@ -115,8 +115,13 @@ class NativeRun:
         records = self.client._post(self.base + "/questions/checkpoints", self.lease)
         if not isinstance(records, list) or len(records) > 1:
             raise RuntimeError("NATIVE_CHECKPOINT_SET_INVALID")
-        if QUESTION_CAPABILITY in self.task.get("requiredCapabilities", []) and not records:
+        required = self.availability.get("checkpointRequired")
+        if type(required) is not bool:
+            raise RuntimeError("NATIVE_CONTINUATION_DECLARATION_REQUIRED")
+        if required and not records:
             raise RuntimeError("NATIVE_CHECKPOINT_REQUIRED")
+        if not required and records:
+            raise RuntimeError("NATIVE_CHECKPOINT_UNEXPECTED")
         for item in records:
             if (not isinstance(item, dict) or item.get("storageCapability") not in self.config.capabilities
                     or not isinstance(item.get("taskId"), str) or not item["taskId"]
@@ -217,6 +222,8 @@ def open_run(config, client, task, attempt):
     expected = next(item for item in capabilities(config) if item.startswith("native-config:"))
     if expected not in config.capabilities:
         raise RuntimeError("NATIVE_ADAPTER_CHANGED_DRAIN_REQUIRED")
+    if type(availability.get("checkpointRequired")) is not bool:
+        raise RuntimeError("NATIVE_CONTINUATION_DECLARATION_REQUIRED")
     try:
         return NativeRun(config, client, task, attempt, availability)
     except Exception:
