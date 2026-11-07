@@ -25,7 +25,7 @@ class ModelCredentialsTest {
     final String actor="web:admin";
     @BeforeEach void setup() {
         var data=new DriverManagerDataSource("jdbc:sqlite:"+temp.resolve("credentials.db"));jdbc=new JdbcTemplate(data);
-        new ResourceDatabasePopulator(new ClassPathResource("db/migration/V30__model_credentials.sql")).execute(data);
+        new ResourceDatabasePopulator(new ClassPathResource("db/migration/V30__model_credentials.sql"),new ClassPathResource("db/migration/V31__model_worker_proofs.sql")).execute(data);
         jdbc.execute("CREATE TABLE authority_audit(id TEXT,target_key TEXT,grant_id TEXT,request_id TEXT,actor TEXT,event TEXT,detail TEXT,created_ms BIGINT)");
         jdbc.execute("CREATE TABLE execution_context(task_id TEXT,owner_id TEXT)");jdbc.execute("CREATE TABLE authority_owner(id TEXT,actor TEXT)");
         jdbc.execute("CREATE TABLE flexible_workflow_plan(id TEXT,created_by TEXT)");jdbc.update("INSERT INTO flexible_workflow_plan VALUES('plan',?)",actor);
@@ -33,7 +33,7 @@ class ModelCredentialsTest {
         repo=new AuthorityRepository(jdbc);boundary=mock(AuthorityBoundary.class);when(boundary.human()).thenReturn(actor);
         oauth=mock(OpenAiOAuth.class);guard=mock(ExecutionGuard.class);
         var vault=new CredentialVault(Base64.getEncoder().encodeToString(new byte[32]));
-        service=new ModelConnections(repo,boundary,mock(AuthorityGrantService.class),vault,oauth,guard,new DataSourceTransactionManager(data));
+        service=spy(new ModelConnections(repo,boundary,mock(AuthorityGrantService.class),vault,oauth,guard,new DataSourceTransactionManager(data)));
         ReflectionTestUtils.setField(service,"workerToken","test-machine-credential");
     }
     Issued issued(String token,long expiry) {
@@ -45,7 +45,8 @@ class ModelCredentialsTest {
         when(worker.capabilities()).thenReturn(Set.of(ModelConnections.capability(c.id(),c.version())));return worker;
     }
     Access input(Connection c) {return new Access(new GuardContract.Lease("worker","attempt","lease"),c.id(),c.version(),"model-a",null);}
-    void bind(Connection c) {jdbc.update("INSERT INTO model_auth_task VALUES('task',?,?,?,'openai-agents','model-a')",c.id(),c.version(),actor);}
+    void register(Connection c) {String proof=service.registerWorker("worker",c.id(),c.version(),"openai-agents","model-a");doReturn(proof).when(service).proofHeader();}
+    void bind(Connection c) {register(c);jdbc.update("INSERT INTO model_auth_task VALUES('task',?,?,?,'openai-agents','model-a')",c.id(),c.version(),actor);}
     @Test void vaultRequiresKeyAndAuthenticatesOwnerAndGeneration() {
         var vault=new CredentialVault(Base64.getEncoder().encodeToString(new byte[32]));String cipher=vault.seal("owner:1","secret");
         assertThat(cipher).doesNotContain("secret");assertThat(vault.open("owner:1",cipher)).isEqualTo("secret");
@@ -117,7 +118,7 @@ class ModelCredentialsTest {
     @Test void planAndQuestionSuccessorKeepTheirOriginalConnection() {
         var c=create(System.currentTimeMillis()+3600000);var task=mock(WorkTask.class);
         when(task.id()).thenReturn(new TaskId("task"));when(task.subjectType()).thenReturn("flexible-plan");when(task.subjectId()).thenReturn("plan");
-        var worker=worker(c);service.registerWorker("worker",c.id(),c.version(),"openai-agents","model-a");service.claimed(task,worker);
+        var worker=worker(c);register(c);service.claimed(task,worker);
         service.replaced(task.id(),new TaskId("successor"));
         assertThat(jdbc.queryForObject("SELECT connection_id FROM model_auth_task WHERE task_id='successor'",String.class)).isEqualTo(c.id());
         var local=mock(Worker.class);when(local.capabilities()).thenReturn(Set.of());
@@ -129,5 +130,42 @@ class ModelCredentialsTest {
         assertThatThrownBy(()->OpenAiLogin.parse("state=first&state=second")).isInstanceOf(IllegalArgumentException.class);
         assertThat(me.asu.aidev.webconsole.security.WebConsoleApiRoutes.matches("/api/r1/model-connections/import")).isTrue();
         assertThat(me.asu.aidev.webconsole.security.WebConsoleApiRoutes.matches("/api/r1/worker-protocol/v1/tasks/task/model-credential")).isFalse();
+    }
+    @Test void advertisedCapabilityWithoutServerWorkerBindingCannotClaimOrAccess() {
+        var c=create(System.currentTimeMillis()+3600000);var task=mock(WorkTask.class);
+        when(task.id()).thenReturn(new TaskId("task"));when(task.subjectType()).thenReturn("flexible-plan");when(task.subjectId()).thenReturn("plan");
+        assertThat(service.canClaim(task,worker(c))).isFalse();
+        assertThatThrownBy(()->service.access("task",input(c),worker(c))).isInstanceOf(SecurityException.class);
+        assertThatThrownBy(()->service.validateRegistration(new me.asu.aidev.worker.application.RegisterWorkerCommand(new WorkerId("worker"),"openai-agents:coder",worker(c).capabilities(),1))).isInstanceOf(SecurityException.class);
+    }
+    @Test void publicWorkerIdentityWithoutPrivateProofCannotRegisterClaimOrReadTokens() {
+        var c=create(System.currentTimeMillis()+3600000);bind(c);doReturn("").when(service).proofHeader();
+        var task=mock(WorkTask.class);when(task.id()).thenReturn(new TaskId("task"));when(task.subjectType()).thenReturn("flexible-plan");when(task.subjectId()).thenReturn("plan");
+        assertThatThrownBy(()->service.validateRegistration(new me.asu.aidev.worker.application.RegisterWorkerCommand(new WorkerId("worker"),"openai-agents:coder",worker(c).capabilities(),1))).isInstanceOf(SecurityException.class);
+        assertThatThrownBy(()->service.claimed(task,worker(c))).isInstanceOf(SecurityException.class);
+        assertThatThrownBy(()->service.access("task",input(c),worker(c))).isInstanceOf(SecurityException.class);verifyNoInteractions(oauth);
+    }
+    @Test void registeredWorkerCannotChangeItsModelConnectionOrRuntime() {
+        var c=create(System.currentTimeMillis()+3600000);register(c);
+        assertThatCode(()->service.validateRegistration(new me.asu.aidev.worker.application.RegisterWorkerCommand(new WorkerId("worker"),"openai-agents:coder",worker(c).capabilities(),1))).doesNotThrowAnyException();
+        assertThatThrownBy(()->service.validateRegistration(new me.asu.aidev.worker.application.RegisterWorkerCommand(new WorkerId("worker"),"codex-app-server:coder",worker(c).capabilities(),1))).isInstanceOf(SecurityException.class);
+        assertThat(jdbc.queryForObject("SELECT proof_cipher FROM model_auth_worker",String.class)).doesNotContain(service.proofHeader());
+    }
+    @Test void aNewAuthorizationRecoversAnExpiredRefreshIntentWithoutReplayingIt() {
+        var c=create(System.currentTimeMillis()+1000);
+        jdbc.update("UPDATE model_connection SET state='REFRESHING',refresh_started_ms=?",System.currentTimeMillis()-60000);
+        var prior=service.row(c.id());var recovered=service.save(actor,Kind.CHATGPT_RESPONSES,"My connection",issued("reauthorized",System.currentTimeMillis()+3600000),prior);
+        assertThat(recovered.state()).isEqualTo("READY");assertThat(recovered.generation()).isEqualTo(2);verifyNoInteractions(oauth);
+    }
+    @Test void aLateOldRefreshCannotOverwriteAnExplicitRecoveredAuthorization() {
+        var c=create(System.currentTimeMillis()+1000);bind(c);
+        when(oauth.refresh(any(),anyString(),anyString(),any())).thenAnswer(call->{
+            jdbc.update("UPDATE model_connection SET refresh_started_ms=?",System.currentTimeMillis()-60000);
+            service.save(actor,Kind.CHATGPT_RESPONSES,"My connection",issued("reauthorized",System.currentTimeMillis()+3600000),service.row(c.id()));
+            return issued("old-late-reply",System.currentTimeMillis()+3600000);
+        });
+        assertThatThrownBy(()->service.access("task",input(c),worker(c))).isInstanceOf(IllegalStateException.class);
+        assertThat(service.row(c.id()).get("state")).isEqualTo("READY");
+        assertThat(service.access("task",input(c),worker(c)).accessToken()).isEqualTo("access-reauthorized");verify(oauth,times(1)).refresh(any(),anyString(),anyString(),any());
     }
 }

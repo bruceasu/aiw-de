@@ -50,4 +50,18 @@ class FactoryModelCatalogTest {
         assertThatThrownBy(()->catalog.models(new FactoryModelCatalog.Query("openai-agents","api-key",null,null,false))).isInstanceOf(SecurityException.class);
         verifyNoInteractions(oauth);
     }
+    @Test void lateDirectoryFromAnOldSavedEnvironmentIsNotCachedAsTheNewSource() throws Exception {
+        var connections=mock(ModelConnections.class);when(connections.actor()).thenReturn("web:admin");var oauth=mock(OpenAiOAuth.class);
+        var settings=mock(me.asu.aidev.execution.config.AgentFactorySettings.class);
+        var config=new me.asu.aidev.execution.config.AgentFactorySettings.Settings("openai-agents","model-a","medium",true,"python","","");
+        when(settings.snapshot()).thenReturn(new me.asu.aidev.execution.config.AgentFactorySettings.Snapshot(config,"source-a"));when(settings.version()).thenReturn("source-b");
+        var catalog=spy(new FactoryModelCatalog(connections,oauth,settings,null));doReturn("test-api-key").when(catalog).environment("OPENAI_API_KEY");
+        when(oauth.models(anyString(),anyString())).thenReturn(json.readTree("{\"data\":[{\"id\":\"old-source-model\"}]}"));
+        var query=new FactoryModelCatalog.Query("openai-agents","api-key",null,null,false);
+        assertThatThrownBy(()->catalog.models(query)).hasMessage("MODEL_DIRECTORY_SOURCE_CHANGED");
+        when(settings.snapshot()).thenReturn(new me.asu.aidev.execution.config.AgentFactorySettings.Snapshot(config,"source-b"));
+        when(oauth.models(anyString(),anyString())).thenReturn(json.readTree("{\"data\":[{\"id\":\"new-source-model\"}]}"));
+        assertThat(catalog.models(query).models()).extracting(FactoryModelCatalog.Model::id).containsExactly("new-source-model");
+        verify(oauth,times(2)).models(anyString(),anyString());
+    }
 }

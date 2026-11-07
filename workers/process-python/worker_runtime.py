@@ -13,6 +13,13 @@ from pathlib import Path
 from datetime import datetime, timezone
 
 OWNER = "aiw.worker.attempt.v1"
+def child_environment(environment=None):
+    result = dict(os.environ if environment is None else environment)
+    if result.get("AIW_MODEL_WORKER_PROOF"):
+        for name in ("AIW_MODEL_WORKER_PROOF", "AIW_WORKER_TOKEN", "AIW_MODEL_CREDENTIAL_KEY", "AIDEV_MODEL_AUTH_KEY",
+                     "SPRING_APPLICATION_JSON", "JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "JAVA_OPTS", "MAVEN_OPTS"):
+            result.pop(name, None)
+    return result
 _local = threading.local()
 _locks_guard = threading.Lock()
 _locks = {}

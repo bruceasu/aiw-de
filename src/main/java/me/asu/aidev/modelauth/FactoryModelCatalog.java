@@ -34,8 +34,8 @@ public class FactoryModelCatalog {
         String actor=connections.actor();validate(input);
         var chosen=input.credentialRef()==null?null:new Selection(input.credentialRef(),Objects.requireNonNull(input.credentialVersion()));
         if(chosen!=null)connections.selection(chosen,input.runtime());
-        var config=settings.current();
-        String key=AuthorityRepository.hash(actor+"\n"+input.runtime()+"\n"+input.mode()+"\n"+Objects.toString(input.credentialRef(),"")+":"+input.credentialVersion()+"\n"+settings.version());
+        var snapshot=settings.snapshot();var config=snapshot.settings();
+        String key=AuthorityRepository.hash(actor+"\n"+input.runtime()+"\n"+input.mode()+"\n"+Objects.toString(input.credentialRef(),"")+":"+input.credentialVersion()+"\n"+snapshot.version());
         synchronized(cache) {
             var known=cache.get(key);
             if(!input.force()&&known!=null&&known.fetchedAt()+60000>System.currentTimeMillis())return new Catalog(known.models(),known.source(),known.notice(),known.fetchedAt(),true);
@@ -58,6 +58,7 @@ public class FactoryModelCatalog {
             var result=new Catalog(parse(raw,source),source,notice,System.currentTimeMillis(),false);
             // A disconnection or account replacement during the request invalidates late metadata too.
             if(chosen!=null)connections.selection(chosen,input.runtime());
+            if(!Objects.equals(snapshot.version(),settings.version()))throw new IllegalStateException("MODEL_DIRECTORY_SOURCE_CHANGED");
             synchronized(cache) {if(cache.size()>=64)cache.remove(cache.keySet().iterator().next());cache.put(key,result);}
             return result;
         } finally {probes.release();}

@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkerService {
+    @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.modelauth.ModelConnections> modelConnections;
     @Autowired private WorkerRegistrationService registrations;
     @Autowired private me.asu.aidev.execution.config.FactoryWorkerRegistry factoryRegistrations;
     private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
@@ -33,6 +34,7 @@ public class WorkerService {
 
     @Transactional
     public Worker register(RegisterWorkerCommand command) {
+        if(modelConnections!=null)modelConnections.getObject().validateRegistration(command);
         if (delegation != null) {
             delegation.registered(command.workerId().value());
         }

@@ -23,6 +23,8 @@ class ModelCredentialProvider:
         endpoint = urlsplit(client.base)
         if not client.token or endpoint.scheme != "https" and endpoint.hostname not in {"127.0.0.1", "localhost", "::1"}:
             raise RuntimeError("MODEL_AUTH_SECURE_PLANE_REQUIRED")
+        if not getattr(client, "model_proof", ""):
+            raise RuntimeError("MODEL_WORKER_PROOF_REQUIRED")
         self.client = copy.copy(client)
         self.client.timeout = min(self.client.timeout, 25)
         self.task, self.attempt, self.model = task, attempt, model

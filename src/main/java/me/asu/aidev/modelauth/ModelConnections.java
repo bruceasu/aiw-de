@@ -56,12 +56,40 @@ public class ModelConnections {
     }
     private static String runtime(Map<String,Object> row) {return Kind.CODEX_APP_SERVER.name().equals(row.get("kind"))?"codex-app-server":"openai-agents";}
     public static String capability(String id,long version) {return "model-auth:"+AuthorityRepository.hash(id+":"+version);}
-    public void registerWorker(String worker,String id,long version,String runtime,String model) {
+    public String registerWorker(String worker,String id,long version,String runtime,String model) {
         var connection=row(id);
         if(version!=number(connection,"version")||!runtime.equals(runtime(connection))||!"READY".equals(connection.get("state")))throw new IllegalStateException("MODEL_CONNECTION_CHANGED");
-        repo.jdbc().update("INSERT INTO model_auth_worker VALUES(?,?,?,?,?) ON CONFLICT(worker_id) DO NOTHING",worker,id,version,runtime,model);
+        repo.jdbc().update("INSERT INTO model_auth_worker(worker_id,connection_id,connection_version,runtime,model) VALUES(?,?,?,?,?) ON CONFLICT(worker_id) DO NOTHING",worker,id,version,runtime,model);
         var fixed=repo.jdbc().queryForMap("SELECT * FROM model_auth_worker WHERE worker_id=?",worker);
         if(!id.equals(fixed.get("connection_id"))||version!=number(fixed,"connection_version")||!model.equals(fixed.get("model"))||!runtime.equals(fixed.get("runtime")))throw new SecurityException("MODEL_WORKER_CONFIGURATION_CHANGED");
+        String aad="aiw.model-worker.v1:"+worker+":"+id+":"+version;
+        if(fixed.get("proof_cipher")==null&&fixed.get("proof_digest")==null) {
+            var bytes=new byte[32];new java.security.SecureRandom().nextBytes(bytes);String proof=Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+            repo.jdbc().update("UPDATE model_auth_worker SET proof_digest=?,proof_cipher=? WHERE worker_id=? AND proof_digest IS NULL AND proof_cipher IS NULL",AuthorityRepository.hash(proof),vault.seal(aad,proof),worker);
+            fixed=repo.jdbc().queryForMap("SELECT * FROM model_auth_worker WHERE worker_id=?",worker);
+        }
+        String proof=vault.open(aad,(String)fixed.get("proof_cipher"));
+        if(!AuthorityRepository.hash(proof).equals(fixed.get("proof_digest")))throw new SecurityException("MODEL_WORKER_PROOF_INVALID");return proof;
+    }
+    String proofHeader() {
+        var attributes=org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        return attributes instanceof org.springframework.web.context.request.ServletRequestAttributes servlet?Objects.toString(servlet.getRequest().getHeader("X-AIW-Model-Worker"),""):"";
+    }
+    private Map<String,Object> workerMapping(String id,String runtime,Set<String> capabilities) {
+        var rows=repo.jdbc().queryForList("SELECT * FROM model_auth_worker WHERE worker_id=?",id);
+        if(rows.size()!=1)throw new SecurityException("MODEL_WORKER_BINDING_REQUIRED");var fixed=rows.getFirst();
+        if(!(fixed.get("proof_digest") instanceof String)||!runtime.startsWith(fixed.get("runtime")+":")
+                ||capabilities.stream().filter(value->value.startsWith("model-auth:")).count()!=1
+                ||!capabilities.contains(capability((String)fixed.get("connection_id"),number(fixed,"connection_version"))))throw new SecurityException("MODEL_WORKER_CONFIGURATION_CHANGED");
+        return fixed;
+    }
+    private void requireWorkerProof(Map<String,Object> fixed) {
+        if(!(fixed.get("proof_digest") instanceof String expected)||!java.security.MessageDigest.isEqual(expected.getBytes(java.nio.charset.StandardCharsets.US_ASCII),AuthorityRepository.hash(proofHeader()).getBytes(java.nio.charset.StandardCharsets.US_ASCII)))
+            throw new SecurityException("MODEL_WORKER_PROOF_REQUIRED");
+    }
+    public void validateRegistration(me.asu.aidev.worker.application.RegisterWorkerCommand input) {
+        boolean bound=!repo.jdbc().queryForList("SELECT worker_id FROM model_auth_worker WHERE worker_id=?",String.class,input.workerId().value()).isEmpty();
+        if(bound||input.capabilities().stream().anyMatch(value->value.startsWith("model-auth:")))requireWorkerProof(workerMapping(input.workerId().value(),input.runtimeType(),input.capabilities()));
     }
     public Connection importCredential(Import input) {
         String actor=actor();if(!vault.ready())throw new IllegalStateException("MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED");
@@ -84,8 +112,8 @@ public class ModelConnections {
             String state=issued.inferenceAllowed()?"READY":"IDENTITY_ONLY";
             String cipher=vault.seal(aad(id,actor,issued.clientId(),generation),repo.encode(issued.tokens()));
             if(prior==null) repo.jdbc().update("INSERT INTO model_connection VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",id,actor,kind.name(),label,issued.clientId(),issued.subject(),issued.accountId(),issued.planType(),state,version,generation,issued.expiresAt(),issued.earliestRefreshAt(),cipher,null,System.currentTimeMillis());
-            else if(repo.jdbc().update("UPDATE model_connection SET label=?,state=?,generation=?,expires_ms=?,earliest_refresh_ms=?,secret_cipher=?,refresh_started_ms=NULL,updated_ms=? WHERE id=? AND owner_actor=? AND version=? AND generation=? AND state<>'REFRESHING'",
-                    label,state,generation,issued.expiresAt(),issued.earliestRefreshAt(),cipher,System.currentTimeMillis(),id,actor,version,generation-1)!=1)throw new IllegalStateException("MODEL_CONNECTION_CHANGED");
+            else if(repo.jdbc().update("UPDATE model_connection SET label=?,state=?,generation=?,expires_ms=?,earliest_refresh_ms=?,secret_cipher=?,refresh_started_ms=NULL,updated_ms=? WHERE id=? AND owner_actor=? AND version=? AND generation=? AND (state<>'REFRESHING' OR COALESCE(refresh_started_ms,0)<=?)",
+                    label,state,generation,issued.expiresAt(),issued.earliestRefreshAt(),cipher,System.currentTimeMillis(),id,actor,version,generation-1,System.currentTimeMillis()-30000)!=1)throw new IllegalStateException("MODEL_CONNECTION_CHANGED");
             repo.audit("MODEL_CONNECTION:"+id,null,null,actor,"MODEL_CREDENTIAL_SAVED","Validated token set; generation "+generation);
             return projection(row(id));
         });
@@ -188,10 +216,11 @@ public class ModelConnections {
     }
     Map<String,Object> forWorker(Worker worker) {
         var auth=worker.capabilities().stream().filter(cap->cap.startsWith("model-auth:")).toList();
-        if(auth.isEmpty())return null;if(auth.size()!=1)throw new SecurityException("ONE_MODEL_CONNECTION_REQUIRED");
-        for(var row:repo.jdbc().queryForList("SELECT * FROM model_connection WHERE state='READY'"))
-            if(auth.getFirst().equals(capability((String)row.get("id"),number(row,"version")))&&worker.runtimeType().startsWith(runtime(row)+":"))return row;
-        throw new IllegalStateException("MODEL_CONNECTION_NOT_READY");
+        var fixed=repo.jdbc().queryForList("SELECT * FROM model_auth_worker WHERE worker_id=?",worker.id().value());
+        if(auth.isEmpty()&&fixed.isEmpty())return null;
+        var binding=workerMapping(worker.id().value(),worker.runtimeType(),worker.capabilities());
+        var row=row((String)binding.get("connection_id"));
+        if(number(row,"version")!=number(binding,"connection_version")||!"READY".equals(row.get("state")))throw new IllegalStateException("MODEL_CONNECTION_NOT_READY");return row;
     }
     private String taskActor(WorkTask task) {
         var managed=repo.jdbc().queryForList("SELECT o.actor FROM execution_context c JOIN authority_owner o ON o.id=c.owner_id WHERE c.task_id=?",String.class,task.id().value());
@@ -217,12 +246,14 @@ public class ModelConnections {
     public void claimed(WorkTask task,Worker worker) {
         if(!canClaim(task,worker))throw new SecurityException("MODEL_CREDENTIAL_SCOPE_DENIED");
         var row=forWorker(worker);if(row==null)return;
+        requireWorkerProof(workerMapping(worker.id().value(),worker.runtimeType(),worker.capabilities()));
         if(Set.of("flexible-plan","configured-plan").contains(task.subjectType())) {
             repo.jdbc().update("INSERT INTO model_auth_plan VALUES(?,?,?,?) ON CONFLICT(subject_type,subject_id) DO NOTHING",task.subjectType(),task.subjectId(),row.get("id"),number(row,"version"));
             if(!canClaim(task,worker))throw new SecurityException("MODEL_PLAN_CONNECTION_CHANGED");
         }
         var fixed=repo.jdbc().queryForList("SELECT model FROM model_auth_worker WHERE worker_id=? AND connection_id=? AND connection_version=?",String.class,worker.id().value(),row.get("id"),number(row,"version"));
-        repo.jdbc().update("INSERT INTO model_auth_task VALUES(?,?,?,?,?,?) ON CONFLICT(task_id) DO NOTHING",task.id().value(),row.get("id"),number(row,"version"),row.get("owner_actor"),runtime(row),fixed.isEmpty()?"":fixed.getFirst());
+        if(fixed.size()!=1)throw new SecurityException("MODEL_WORKER_BINDING_REQUIRED");
+        repo.jdbc().update("INSERT INTO model_auth_task VALUES(?,?,?,?,?,?) ON CONFLICT(task_id) DO NOTHING",task.id().value(),row.get("id"),number(row,"version"),row.get("owner_actor"),runtime(row),fixed.getFirst());
     }
     public void replaced(me.asu.aidev.work.domain.TaskId source,me.asu.aidev.work.domain.TaskId successor) {
         repo.jdbc().update("INSERT INTO model_auth_task SELECT ?,connection_id,connection_version,owner_actor,runtime,model FROM model_auth_task WHERE task_id=? ON CONFLICT(task_id) DO NOTHING",successor.value(),source.value());
@@ -234,10 +265,12 @@ public class ModelConnections {
     }
     public AccessToken access(String task,Access input,Worker worker) {
         if(workerToken==null||workerToken.isBlank())throw new SecurityException("MODEL_AUTH_WORKER_AUTHENTICATION_REQUIRED");
+        var registered=workerMapping(worker.id().value(),worker.runtimeType(),worker.capabilities());requireWorkerProof(registered);
         guard.verifyLease(task,input.lease(),true,true);
         var binding=repo.jdbc().queryForMap("SELECT * FROM model_auth_task WHERE task_id=?",task);
         var row=owned(input.connectionId(),input.connectionVersion(),(String)binding.get("owner_actor"));
         if(!input.connectionId().equals(binding.get("connection_id"))||input.connectionVersion()!=number(binding,"connection_version")
+                ||!input.connectionId().equals(registered.get("connection_id"))||input.connectionVersion()!=number(registered,"connection_version")
                 ||!worker.capabilities().contains(capability(input.connectionId(),input.connectionVersion()))
                 ||!worker.id().value().equals(input.lease().workerId())||!worker.runtimeType().startsWith(runtime(row)+":"))throw new SecurityException("MODEL_CREDENTIAL_SCOPE_DENIED");
         if(input.model()==null||!input.model().matches("[A-Za-z0-9._-]{1,120}"))throw new IllegalArgumentException("MODEL_REQUIRED");

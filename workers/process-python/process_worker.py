@@ -173,6 +173,7 @@ class ControlPlaneClient:
     def __init__(self, config: WorkerConfig):
         self.base = config.control_plane_url + "/api/r1/worker-protocol/v1"
         self.token = config.worker_token
+        self.model_proof = os.getenv("AIW_MODEL_WORKER_PROOF", "") if os.getenv("AIW_MODEL_CREDENTIAL_REF") else ""
         self.timeout = config.http_timeout
         self.capabilities_digest = hashlib.sha256(json.dumps(sorted(config.capabilities), ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
 
@@ -230,6 +231,7 @@ class ControlPlaneClient:
         headers = {"Accept": "application/json"}
         if data is not None: headers["Content-Type"] = "application/json"
         if self.token: headers["Authorization"] = "Bearer " + self.token
+        if self.model_proof: headers["X-AIW-Model-Worker"] = self.model_proof
         req = urllib.request.Request(self.base + path, data=data or b"", headers=headers, method="POST")
         try:
             active = current_attempt()

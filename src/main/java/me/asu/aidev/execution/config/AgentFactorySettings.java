@@ -35,7 +35,9 @@ public class AgentFactorySettings {
         var rows=repo.jdbc().queryForList("SELECT id,detail FROM authority_audit WHERE target_key='AGENT_FACTORY' AND event='AGENT_FACTORY_SETTINGS' ORDER BY created_ms DESC,id DESC LIMIT 1");
         return rows.isEmpty()?Map.of():rows.getFirst();
     }
-    public Settings current() {var row=latest();return row.isEmpty()?null:repo.decode(String.valueOf(row.get("detail")),Settings.class);}
+    public record Snapshot(Settings settings,String version) {}
+    public Snapshot snapshot() {var row=latest();return row.isEmpty()?new Snapshot(null,catalogue.version()):new Snapshot(repo.decode(String.valueOf(row.get("detail")),Settings.class),"factory-"+row.get("id"));}
+    public Settings current() {return snapshot().settings();}
     public List<AiProfileCatalog.NamedProfile> profiles() {
         var saved=current();
         return saved==null?catalogue.approved(TaskType.EXTERNAL_WORK):List.of(new AiProfileCatalog.NamedProfile("factory-default",

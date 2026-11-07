@@ -8,7 +8,9 @@
 <form id="factory-settings"><fieldset id="factory-fields" disabled>
 <h3>1. 执行与登录</h3><div class="form-grid">
 <label class="field">模型执行方式<select name="runtime" required><option value="" disabled selected>请选择模型执行方式</option><option value="codex-app-server">Codex App Server（通过本机 Codex）</option><option value="openai-agents">Python Worker（直接调用 OpenAI Responses）</option></select></label>
-<label class="field">登录方式<select id="factory-auth-mode" required><option value="" disabled selected>请先选择执行方式</option></select></label>
+<label class="field">登录方式<select id="factory-auth-mode" required><option value="" disabled selected>请选择对应的登录方式</option>
+<optgroup label="Codex App Server"><option value="codex-local" data-runtime="codex-app-server">使用 Worker 本机 Codex 登录</option><option value="codex-plane" data-runtime="codex-app-server">使用 Plane 保存的 Codex 凭证</option></optgroup>
+<optgroup label="Python Worker"><option value="chatgpt" data-runtime="openai-agents">使用 ChatGPT 登录（OAuth）</option><option value="api-key" data-runtime="openai-agents">使用 API Key（运行环境）</option></optgroup></select></label>
 </div><p id="factory-auth-help" class="help" role="status"></p>
 <div id="factory-plane-settings" hidden>
 <label class="field">使用已保存的连接<select name="credentialRef" id="factory-credential"><option value="">请选择连接</option></select><input name="credentialVersion" type="hidden"></label>
@@ -38,4 +40,4 @@
 <div id="model-auth-connections"></div><button class="btn ghost" id="model-auth-reload" type="button" disabled>重新读取连接状态</button></section>
 <section class="card"><h2>本机 Worker 状态</h2><div id="factory-workers" role="status"></div><button class="btn ghost" id="factory-refresh" type="button">刷新状态</button></section>
 <section class="card"><h2>接入外部 Worker</h2><p>外部 Worker 使用注册、心跳、领取任务和提交结果协议，无需由工厂启动。执行工厂任务时，还需声明匹配的运行时、仓库与配置执行能力。</p><a class="btn ghost" href="/ui/workers">查看 Worker</a></section>
-</div></main></div><script src="/ui/agent-factory.js" defer></script><script src="/ui/console.js"></script></body></html>
+</div></main></div><script src="/ui/agent-factory.js?v=fd081-catalog-20261107b" defer></script><script src="/ui/console.js"></script></body></html>

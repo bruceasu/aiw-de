@@ -139,10 +139,10 @@ public class ManagedWorkerProvisioner {
         try {
             var builder=new ProcessBuilder(config.python(),root.resolve("managed_worker.py").toString()).directory(root.toFile());
             var env=builder.environment();env.keySet().removeIf(name->name.startsWith("AIW_PERSONAL_"));
-            env.remove("AIW_MODEL_CREDENTIAL_KEY");env.remove("AIDEV_MODEL_AUTH_KEY");env.remove("AIW_MODEL_CREDENTIAL_REF");env.remove("AIW_MODEL_CREDENTIAL_VERSION");
+            env.remove("AIW_MODEL_CREDENTIAL_KEY");env.remove("AIDEV_MODEL_AUTH_KEY");env.remove("AIW_MODEL_CREDENTIAL_REF");env.remove("AIW_MODEL_CREDENTIAL_VERSION");env.remove("AIW_MODEL_WORKER_PROOF");
             for(String name:List.of("SPRING_APPLICATION_JSON","JAVA_TOOL_OPTIONS","JDK_JAVA_OPTIONS","JAVA_OPTS","MAVEN_OPTS"))env.remove(name);
             if(config.credentialRef()!=null) {
-                modelConnections.registerWorker(slot.worker,config.credentialRef(),config.credentialVersion(),config.runtime(),config.model());
+                env.put("AIW_MODEL_WORKER_PROOF",modelConnections.registerWorker(slot.worker,config.credentialRef(),config.credentialVersion(),config.runtime(),config.model()));
                 env.put("AIW_MODEL_CREDENTIAL_REF",config.credentialRef());env.put("AIW_MODEL_CREDENTIAL_VERSION",config.credentialVersion().toString());
                 env.remove("OPENAI_API_KEY");env.remove("OPENAI_BASE_URL");
                 if(config.runtime().equals("codex-app-server")) {
@@ -171,6 +171,7 @@ public class ManagedWorkerProvisioner {
             builder.redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD);
             slot.process=builder.start();
         } catch(java.io.IOException failure) {slot.failure="无法启动 Python Worker，请检查 Agent 工厂设置中的 Python 路径及本机安装。";}
+        catch(RuntimeException failure) {slot.failure="模型连接或 Worker 固定配置尚未就绪，请核对连接状态并重新保存工厂设置。";}
     }
     private void readStatus(Slot slot) {
         if(slot.failure!=null||slot.status==null)return;

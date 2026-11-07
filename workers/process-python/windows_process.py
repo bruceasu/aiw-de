@@ -92,6 +92,8 @@ class WindowsJob:
             raise RuntimeError("WINDOWS_JOB_LIMIT_FAILED")
 
     def start(self, argv, cwd, environment):
+        from worker_runtime import child_environment
+        environment = child_environment(environment)
         # The desktop/service may run under pythonw.exe. Use the matching
         # console interpreter for this pipe-only child: pythonw's GUI subsystem
         # does not provide the same standard-handle startup as python.exe.

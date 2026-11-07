@@ -24,6 +24,7 @@
     MODEL_DIRECTORY_PROBE_FAILED: "Codex 模型目录读取失败，请检查安装版本、登录状态及已保存的程序路径。",
     MODEL_DIRECTORY_TIMEOUT: "读取 Codex 模型目录超时，可以稍后重试或手动填写。",
     MODEL_DIRECTORY_BUSY: "已有模型目录查询正在执行，请稍后重新读取。",
+    MODEL_DIRECTORY_SOURCE_CHANGED: "已保存的运行环境刚刚变化，旧目录结果已丢弃，请重新读取模型目录。",
     MODEL_DIRECTORY_FORMAT_UNSUPPORTED: "目录返回格式暂不支持，请手动填写模型。",
     MODEL_AUTH_REMOTE_REJECTED_401: "目录接口未接受当前凭证，请重新登录、更新凭证或检查 API Key。",
     MODEL_AUTH_REMOTE_REJECTED_403: "当前凭证无权读取模型目录，请检查账户授权或 API Key 权限。",
@@ -38,7 +39,8 @@
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
     const response = await fetch(root + path + "?_csrf=" + encodeURIComponent(csrf), { method: "POST", credentials: "same-origin", cache: "no-store", signal,
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify(body) });
-    const result = await response.json().catch(() => ({}));
+    const result = await response.json().catch(() => null);
+    if (result === null || typeof result !== "object") throw new Error(t("接口返回格式异常，请重新登录或刷新页面。"));
     if (!response.ok) throw new Error(t(errors[result.code || result.message] || result.message || "操作未完成，请检查登录状态和权限。"));
     return result;
   }
@@ -50,7 +52,9 @@
     mode.replaceChildren(new Option(t(runtime.value ? "请选择登录方式" : "请先选择执行方式"), ""));
     for (const [value, name] of runtime.value === "codex-app-server"
       ? [["codex-local", "使用 Worker 本机 Codex 登录"], ["codex-plane", "使用 Plane 保存的 Codex 凭证"]]
-      : runtime.value === "openai-agents" ? [["chatgpt", "使用 ChatGPT 登录（OAuth）"], ["api-key", "使用 API Key（运行环境）"]] : []) mode.add(new Option(t(name), value));
+      : runtime.value === "openai-agents" ? [["chatgpt", "使用 ChatGPT 登录（OAuth）"], ["api-key", "使用 API Key（运行环境）"]]
+      : [["codex-local", "使用 Worker 本机 Codex 登录"], ["codex-plane", "使用 Plane 保存的 Codex 凭证"], ["chatgpt", "使用 ChatGPT 登录（OAuth）"], ["api-key", "使用 API Key（运行环境）"]]) mode.add(new Option(t(name), value));
+    mode.disabled = !runtime.value;
     mode.value = chosen;
   }
   function showModel(id = "", asManual = false) {
@@ -259,19 +263,28 @@
       if (!await window.aiwConfirm(t("保存以下工厂设置？") + "\n" + detail)) return;
       if (JSON.stringify(settingsInput()) !== snapshot) throw new Error(t("设置在确认期间发生变化，请重新核对后保存。"));
       const result = await call(factoryRoot, "settings", input);saved = result.settings || input;renderWorkers(result.managedWorkers || []);
-      status.textContent = t("工厂设置已保存，后续新 Worker 使用此设置。");
+      const stillConfirmed = JSON.stringify(settingsInput()) === snapshot;
+      contextKey = null;synchronize({ preserveModel: true });
+      status.textContent = t(stillConfirmed ? "工厂设置已保存，正在按已保存的运行环境重新读取模型目录。" : "已保存刚才确认的设置；页面选择随后发生变化，当前选择尚未保存。");
     }
     catch (error) { status.textContent = error.message; }
     finally { save.disabled = false; fields.disabled = false; }
   });
+  // Local choices must not depend on successful credential or catalog API calls.
+  modes();fields.disabled = false;
   (async () => {
+    const startedRevision = revision;
     const results = await Promise.allSettled([call(factoryRoot, "state"), call(authRoot, "state"), call(authRoot, "catalog-context")]);
     byId("model-auth-reload").disabled = false;
     if (results[1].status === "fulfilled") { connections = results[1].value.connections;vault = results[1].value.vaultConfigured; }
     else authError = results[1].reason.message;
     if (results[2].status === "fulfilled") environment = results[2].value;
-    if (results[0].status === "rejected") { status.textContent = results[0].reason.message;authStatus.textContent = authError;return; }
+    if (results[0].status === "rejected") { status.textContent = results[0].reason.message;authStatus.textContent = authError;synchronize({ preserveModel: true });return; }
     const result = results[0].value; saved = result.settings || null;const params = new URLSearchParams(location.search);
+    if (revision !== startedRevision) {
+      save.disabled = false;synchronize({ preserveModel: true });renderWorkers(result.managedWorkers || []);
+      status.textContent = t("已读取工厂设置，并保留你正在编辑的页面选择。保存后才会生效。");return;
+    }
     for (const name of ["runtime", "model", "effort", "python", "executable", "guardHome"]) {
       const value = saved?.[name] ?? (["runtime", "model", "effort"].includes(name) ? params.get(name) : null);
       if (name === "effort" && value === "xhigh" && runtime.value === "codex-app-server") form.elements.effort.add(new Option("xhigh", "xhigh"));

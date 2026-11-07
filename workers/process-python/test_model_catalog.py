@@ -1,5 +1,7 @@
 import unittest
 from unittest.mock import Mock
+from html.parser import HTMLParser
+from pathlib import Path
 
 from model_catalog import read_catalog, CatalogCredential
 
@@ -28,6 +30,29 @@ class ModelCatalogTest(unittest.TestCase):
         source = CatalogCredential({"accessToken": "access", "accountId": "account"})
         with self.assertRaisesRegex(RuntimeError, "LOGIN_REQUIRED"):
             source.codex_refresh({"id": 1})
+
+    def test_login_choices_exist_in_the_template_before_api_initialization(self):
+        class Options(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.active = False
+                self.values = set()
+
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if tag == "select":
+                    self.active = attrs.get("id") == "factory-auth-mode"
+                elif tag == "option" and self.active:
+                    self.values.add(attrs.get("value"))
+
+            def handle_endtag(self, tag):
+                if tag == "select":
+                    self.active = False
+
+        parser = Options()
+        template = Path(__file__).resolve().parents[2] / "src/main/resources/templates/ui/agent-factory.html"
+        parser.feed(template.read_text(encoding="utf-8"))
+        self.assertTrue({"codex-local", "codex-plane", "chatgpt", "api-key"}.issubset(parser.values))
 
 
 if __name__ == "__main__":

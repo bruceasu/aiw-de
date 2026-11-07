@@ -15,7 +15,7 @@ class ModelCredentialsTest(unittest.TestCase):
         self.addCleanup(self.env.stop)
         self.attempt = Mock()
         self.attempt.remaining.return_value = 60
-        self.client = SimpleNamespace(base="http://127.0.0.1:8080/api/r1/worker-protocol/v1", token="machine", timeout=30,
+        self.client = SimpleNamespace(base="http://127.0.0.1:8080/api/r1/worker-protocol/v1", token="machine", model_proof="worker-private-proof", timeout=30,
             _post=Mock(return_value={"kind": "CHATGPT_RESPONSES", "accessToken": "short-access", "generation": 1, "expiresAt": 1234}))
 
     def provider(self):
@@ -60,6 +60,18 @@ class ModelCredentialsTest(unittest.TestCase):
             {"type": "response.completed", "response": {"status": "completed", "output": [], "usage": {"input_tokens": 12, "output_tokens": 3}}}))
         self.assertEqual(text, "report")
         self.assertEqual(usage["input_tokens"], 12)
+
+    def test_missing_worker_proof_cannot_use_a_public_connection_reference(self):
+        self.client.model_proof = ""
+        with self.assertRaisesRegex(RuntimeError, "WORKER_PROOF_REQUIRED"):
+            self.provider()
+
+    def test_worker_proof_and_machine_credentials_are_not_in_child_environment(self):
+        from worker_runtime import child_environment
+        source = {"PATH": "programs", "AIW_MODEL_WORKER_PROOF": "proof", "AIW_WORKER_TOKEN": "machine", "AIW_MODEL_CREDENTIAL_KEY": "vault-key"}
+        environment = child_environment(source)
+        self.assertEqual(environment, {"PATH": "programs"})
+        self.assertEqual(source["AIW_MODEL_WORKER_PROOF"], "proof")
 
 
 if __name__ == "__main__":
