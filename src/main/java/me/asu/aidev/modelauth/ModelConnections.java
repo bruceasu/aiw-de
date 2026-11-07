@@ -102,6 +102,14 @@ public class ModelConnections {
         var row=owned(selected.id(),selected.version(),actor());
         refresh(row,true,null);return projection(row(selected.id()));
     }
+    /** Explicit console-admin catalog read, separate from machine task/Attempt access. */
+    public AccessToken catalogAccess(Selection selected,String runtime) {
+        selection(selected,runtime);String actor=actor();
+        var current=refresh(owned(selected.id(),selected.version(),actor),false,null);
+        var latest=owned(selected.id(),selected.version(),actor);
+        if(!"READY".equals(latest.get("state"))||number(latest,"generation")!=number(current,"generation"))throw new IllegalStateException("MODEL_CONNECTION_CHANGED");
+        return new AccessToken(secrets(current).accessToken(),number(current,"expires_ms"),number(current,"generation"),Kind.valueOf((String)current.get("kind")),(String)current.get("account_id"),(String)current.get("plan_type"));
+    }
     private Map<String,Object> refresh(Map<String,Object> initial,boolean force,Long rejectedGeneration) {
         String id=(String)initial.get("id");
         var locked=transaction.execute(status->{

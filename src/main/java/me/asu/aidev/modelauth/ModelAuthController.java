@@ -11,6 +11,7 @@ import static me.asu.aidev.modelauth.ModelAuthContract.*;
 
 @RestController
 public class ModelAuthController {
+    @org.springframework.beans.factory.annotation.Autowired private FactoryModelCatalog catalog;
     private final ModelConnections connections;private final OpenAiLogin login;private final AuthorityRepository repo;private final WorkerService workers;
     public ModelAuthController(ModelConnections connections,OpenAiLogin login,AuthorityRepository repo,WorkerService workers) {
         this.connections=connections;this.login=login;this.repo=repo;this.workers=workers;
@@ -18,6 +19,8 @@ public class ModelAuthController {
     private <T>T read(String raw,Class<T> type) {if(raw.length()>131072)throw new IllegalArgumentException();return repo.decode(raw,type);}
     private static HttpHeaders headers() {var headers=new HttpHeaders();headers.setCacheControl("no-store");headers.setPragma("no-cache");return headers;}
     @PostMapping("/api/r1/model-connections/state") public ResponseEntity<?> state() {return ResponseEntity.ok().headers(headers()).body(connections.state());}
+    @PostMapping("/api/r1/model-connections/catalog-context") public ResponseEntity<?> context() {return ResponseEntity.ok().headers(headers()).body(catalog.context());}
+    @PostMapping("/api/r1/model-connections/models") public ResponseEntity<?> models(@RequestBody String raw) {return ResponseEntity.ok().headers(headers()).body(catalog.models(read(raw,FactoryModelCatalog.Query.class)));}
     @PostMapping("/api/r1/model-connections/import") public Object importCredential(@RequestBody String raw) {return connections.importCredential(read(raw,Import.class));}
     @PostMapping("/api/r1/model-connections/login") public ResponseEntity<?> login(@RequestBody String raw,HttpSession session) {return ResponseEntity.ok().headers(headers()).body(login.start(read(raw,Login.class),session));}
     @PostMapping("/api/r1/model-connections/logins/{id}/status") public Object status(@PathVariable String id,HttpSession session) {return login.status(id,session,false);}

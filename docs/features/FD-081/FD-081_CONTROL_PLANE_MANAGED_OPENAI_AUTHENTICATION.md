@@ -81,10 +81,11 @@ Worker 的短期访问租约绑定当前注册 Worker、精确 Task/Attempt、�
 - [x] 1.1 确认本机/远端部署与官方回调方案，核对可导入客户端及模型适配合同。
 - [x] 2.1 实现 Owner 隔离的连接元数据、受保护存储和明确连接状态，选择固定引用。
 - [x] 2.2 实现显式导入与正常登录，验证完整身份、scope、客户端和一次性回调。
+- [x] 2.3 按执行方式和登录方式动态显示设置、查询真实模型目录及推理强度；将新建连接与逐连接管理分开，丢弃旧选择的异步结果。
 - [x] 3.1 实现 token-set 刷新协调、代次 CAS、未知轮换恢复与本机断开；远端撤销区分确认和未确认。
 - [x] 3.2 接入精确 Worker/Attempt 的短期访问租约，保持既有循环和权限边界。
-- [ ] 4.1 UI、说明、升级/回滚与 mock/合同用例已写；完成 Java 编译与获授权检查并记录真实限制。
-- [ ] 4.2 准备整项独立审查输入；正式 Reviewer 回执单独把关。
+- [x] 4.1 UI、说明、升级/回滚与 mock/合同用例已写；执行适用编译并记录已获授权检查及未运行项。
+- [x] 4.2 准备整项独立审查输入；正式 Reviewer 回执单独把关。
 
 ## Acceptance
 
@@ -95,6 +96,8 @@ Worker 的短期访问租约绑定当前注册 Worker、精确 Task/Attempt、�
 5. 所有登录、导入、刷新、失效与恢复有可核对状态；未验证的实际推理、订阅资格和费用保持未知。
 
 ## Verification
+
+- 用户进一步要求执行方式、凭证和模型目录联动，并指出全局登录/更新按钮目标不清晰。本轮增加只读目录接口与动态配置 UI；查询可读取所选账户目录或启动受限的本机 Codex 目录探针，不启动业务 Worker/模型推理，不修改任务权限。API Key 仍来自原运行环境，不新增浏览器录入或保存密钥的入口。开发阶段不执行真实目录查询。
 
 - 2026-11-07 用户明确要求开始实现。沿用当前工作区，不创建 worktree；FD-080 的已领取审查事件和未完成验证保持独立。
 - 已再次核对官方注册、令牌、刷新、Responses 和 app-server 外部令牌接口。新注册使用 `dynamic_agent_client`，保存回调实际签发的客户端；公开 Responses 授权与 Codex app-server 的 `chatgptAuthTokens` 为两条适配路径。
@@ -109,7 +112,10 @@ Worker 的短期访问租约绑定当前注册 Worker、精确 Task/Attempt、�
 - 所有后续 Worker/页面源码改动后，再次执行 `node scripts/compile-worker-runtime.mjs` 通过；最新 Python/JS 源码已经过 compile-only。Java 源码及测试仍待已发出的新增离线验证授权，不继续自动重试缓存识别失败的命令。
 - 用户随后报告 `OpenAiOAuth.java:84` 编译失败；确认是 `token_type` 校验条件多写一个右括号，已修正。执行 `mvn -o -s .ai/fd/FD-081/offline-maven-settings.xml -Dmaven.repo.local=D:/.m2/repository -DskipTests compile` 成功，337 个生产源，6.609 秒；同时确认离线缓存别名配置可用于生产源编译。没有运行测试、服务或真实认证。
 - 按用户要求澄清 UI：“模型执行方式”显示 Codex App Server（通过本机 Codex）与 Python Worker（直接调用 OpenAI Responses），“登录与凭证来源”另行选择。明确 ChatGPT OAuth 使用 Python 管理循环，API Key 使用既有 SDK 路径，导入 Codex 凭证仍需 Codex；同步登录/导入提示、主要标签翻译、确认弹窗和使用说明。内部 runtime 值及认证接口未变。`node scripts/compile-worker-runtime.mjs` 通过；本次未运行测试或浏览器实测。
-- %% NEEDS_INPUT: 是否允许测试源码编译及已列出的 Java/Python 定向测试？先前的授权问题仍待回复。生产源编译已通过，测试源码编译及运行尚未完成，4.1/4.2 未完成，未请求正式 Reviewer 或标记 Complete。
+- 本轮动态工厂实现增加 `FactoryModelCatalog`、控制台目录接口与受限 `model_catalog.py`。ChatGPT 目录按实际账户 slug/visibility 读取，API Key 目录不伪造 Responses 能力，Codex 使用 `model/list` 返回的推理强度且提示内置/缓存限制。目录最多两路并发、60 秒缓存、客户端切换后丢弃迟到响应；不创建业务任务或模型 turn。
+- 已合并工厂页面状态管理，移除共用全局操作目标的 `model-auth.js`。运行方式与登录来源显式选择；API Key 仅展示环境配置状态；新建、重新登录与替换文件分别固定目标。新增 `FactoryModelCatalogTest` 六组用例及 Python `test_model_catalog`，尚未执行。
+- 本轮离线 `test-compile` 首次成功，338 个生产源、65 个测试源，9.728 秒；最后的异步状态与探针环境修补后，同一 compile-only 命令再次成功，10.055 秒，Worker compile-only 同时通过。此前“测试源码未编译”的阶段已解决。没有执行用例、启动服务或查询真实目录。
+- 运行测试的授权仍待回复：本轮请求 Java `ModelCredentialsTest,OpenAiOAuthTest,FactoryModelCatalogTest` 与 Python `test_model_catalog,test_model_credentials,test_codex_model_session`。默认预算为零，尚未执行；不会用编译或静态审查代替运行通过。源码与编译证据齐备后开展正式独立审查，是否需要进一步运行证据由具体发现决定。
 - [使用与升级说明](../../MODEL-AUTHENTICATION.md) 记录密钥配置、类型选择、Codex 实验性 RPC、原生直接 API 控制边界、订阅金额未知及本机断开与远端撤销的区别。
 - 用户已明确授权集中管理方向；不因旧评估的 Worker 本地存储建议重复要求确认。
 - Review policy Independent：涉及认证秘密、账户隔离、公开接口、持久化与跨进程/实例刷新。

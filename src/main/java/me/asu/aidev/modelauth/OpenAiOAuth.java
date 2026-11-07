@@ -54,6 +54,14 @@ public class OpenAiOAuth {
                 .POST(HttpRequest.BodyPublishers.ofString(form(params))).build();
         return request(request);
     }
+    public JsonNode models(String access,String base) {
+        var uri=URI.create(base);
+        boolean local=Set.of("127.0.0.1","localhost","::1","[::1]").contains(Objects.toString(uri.getHost(),""));
+        if(uri.getHost()==null||uri.getUserInfo()!=null||uri.getQuery()!=null||uri.getFragment()!=null
+                ||!("https".equals(uri.getScheme())||local&&"http".equals(uri.getScheme())))throw new IllegalArgumentException("MODEL_DIRECTORY_ENDPOINT_INVALID");
+        String endpoint=base.replaceFirst("/+$","")+"/models";
+        return request(HttpRequest.newBuilder(URI.create(endpoint)).timeout(Duration.ofSeconds(12)).header("Authorization","Bearer "+access).header("Accept","application/json").GET().build());
+    }
     public boolean revoke(String client,TokenSet tokens) {
         try {
             var discovery=request(HttpRequest.newBuilder(URI.create(ISSUER+"/.well-known/openid-configuration")).timeout(Duration.ofSeconds(8)).GET().build());

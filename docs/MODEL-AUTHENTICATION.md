@@ -1,6 +1,6 @@
 # Plane 管理 OpenAI 凭证
 
-本机 Plane 的 **Agent 工厂设置 → 模型登录与凭证** 提供登录、显式导入、更新和本机断开。模型账户不授予工具、计划、审批或文件权限。现有 Worker 本机 Codex 登录和 API Key 路径仍可选择。
+本机 Plane 的 **Agent 工厂设置 → 执行与登录** 按当前执行方式显示登录来源；**已保存的登录连接** 管理各个连接的更新、重新登录和断开。模型账户不授予工具、计划、审批或文件权限。现有 Worker 本机 Codex 登录和 API Key 路径仍可选择。
 
 页面将“模型执行方式”和“登录与凭证来源”分别设置。两种执行方式的内部标识保持原样，OAuth 是凭证来源，不增加第三个执行方式：
 
@@ -9,6 +9,26 @@
 | Codex App Server（通过本机 Codex） | Worker 本机 Codex 登录，或 Plane 导入的 Codex 凭证 | 通过 Codex app-server 调用模型；受控主机动作仍遵循原工具准入。 |
 | Python Worker（直接调用 OpenAI Responses） | Plane 的 ChatGPT OAuth 连接 | Python Worker 管理执行循环和工具调用，直接调用公开 Responses；无需 Codex 或 API Key。 |
 | Python Worker（直接调用 OpenAI Responses） | Worker 本机 API Key | Python Worker 通过已有 OpenAI Agents SDK 路径调用 Responses。 |
+
+## 动态配置与模型目录
+
+页面按“执行方式 → 登录方式 → 对应设置 → 模型”排列。新的安装不预选执行或登录来源；载入已保存设置时恢复原选择。
+
+- Codex App Server：选择 Worker 本机登录或 Plane 保存的 Codex 凭证。仅此方式显示 Codex 程序路径；本机登录时才显示 Codex 登录目录。
+- Python Worker：选择 ChatGPT OAuth 或运行环境 API Key。OAuth 显示连接选择与新账户登录；API Key 显示本机是否已配置及是否使用自定义 API 地址，不回显密钥、不新增浏览器密钥存储。
+- 新建 ChatGPT 连接始终创建新连接，不会把当前工厂选中的连接作为覆盖目标。每张已有连接卡片分别绑定重新登录、更新文件、刷新和断开；替换凭据仍校验同一账户和客户端。
+
+完成登录设置后自动读取目录，也可手动刷新。`POST /api/r1/model-connections/models` 只接受与执行方式匹配的登录来源，要求当前控制台管理员权限；浏览器不接收模型凭据。
+
+| 登录来源 | 目录来源 | 已知限制 |
+| --- | --- | --- |
+| Plane 的 ChatGPT OAuth | 用该账户 token 请求公开 `/v1/models`，保留可见模型的实际 slug | 尚未执行真实推理或核对额度。 |
+| 本机运行环境 API Key | 对既有 `OPENAI_BASE_URL` 或默认地址请求 `/models` | 返回的是账户目录，可能包含其他用途模型；不据名称猜测 Responses 兼容性。 |
+| Codex 本机登录或 Plane Codex 凭证 | 受限本机探针调用 app-server `model/list`，使用返回的模型和推理强度 | 目录可能来自 Codex 内置/缓存；外部 Worker 的环境与账户可用性可能不同。 |
+
+Codex 探针只初始化协议、读取账户和模型目录，不创建 thread/turn、业务任务或 Worker 注册，不执行工具。目录查询使用已保存的程序路径；未保存的路径不用于启动进程。Plane 凭据只通过 stdin/RPC 传给受限探针，不进入命令参数或环境；不传 refresh token。
+
+目录有 60 秒短期缓存和最多两个并发查询。切换执行方式、登录方式或连接会清除旧模型选择，并丢弃旧请求的迟到结果；新目录不自动选择第一个模型。目录失败或模型不在列表时，可明确选择手动填写。模型 ID 仍遵守既有 Worker 格式，未开放其他格式。推理强度优先使用目录返回的能力，缺失时明确显示为通用选项。
 
 ## 配置受保护存储
 
@@ -32,13 +52,13 @@ Worker 凭证接口必须配置 `AIW_WORKER_TOKEN`。HTTP 仅用于本机 loopba
 
 1. 点击 **Continue with ChatGPT**。浏览器可能要求允许打开登录窗口。
 2. Plane 启动短期 `127.0.0.1` 回调监听器，执行动态注册或对所选独立连接重新授权。不会安装或启动 Codex CLI/Pi。
-3. 登录完成后，将“模型执行方式”设为“Python Worker（直接调用 OpenAI Responses）”，在“登录与凭证来源”中选择该连接，并填写账户实际支持的模型，再保存工厂设置。界面不会自动改变默认模型或账户。
+3. 在 Python Worker 下选择 ChatGPT OAuth 登录方式及该连接，从当前账户目录选择模型，或明确手动填写，再保存工厂设置。界面不会自动切换执行方式或选择其他账户。
 
 每次登录都使用独立的 state、PKCE 和 nonce，并绑定当前控制台会话和权限。Plane 验证签名、issuer、客户端 audience、有效期、nonce、账户连续性及实际使用 scope。登录取消/失败不覆盖旧连接。仅身份授权成功时显示“已登录，尚未获得模型权限”，不能发起推理。
 
 独立连接使用公开 `https://api.openai.com/v1/responses`；Python 管理循环、上下文和工具执行，使用显式上下文、`store=false` 和 `stream=true`。完整 `response.completed` 之前不执行模型提议的工具；断流、额度不足或认证失败不会变成“修复代码”反馈。不会静默切换至 API Key、其他账户或其他执行引擎。
 
-模型名称目前由操作者明确填写；未调用账户模型目录来证明可用性。认证就绪不表示当前订阅资格、模型可用、额度或实际推理已验证。原生直接 Responses 任务保留 API 路径已有的控制边界，不宣称获得 Codex 原生回合控制；已有 GuardBroker 任务继续使用原控制通道与工具准入。
+模型由操作者从目录选择或明确手动填写。认证就绪或目录可见不表示当前订阅资格、额度或实际推理已验证。原生直接 Responses 任务保留 API 路径已有的控制边界，不宣称获得 Codex 原生回合控制；已有 GuardBroker 任务继续使用原控制通道与工具准入。
 
 ## 导入已有 Codex 凭证
 
