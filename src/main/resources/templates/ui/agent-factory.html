@@ -14,10 +14,23 @@
 </div><p id="factory-auth-help" class="help" role="status"></p>
 <div id="factory-plane-settings" hidden>
 <label class="field">使用已保存的连接<select name="credentialRef" id="factory-credential"><option value="">请选择连接</option></select><input name="credentialVersion" type="hidden"></label>
+<p id="factory-auth-prerequisite" class="callout" role="status" aria-live="polite"></p>
+<button class="btn ghost" id="factory-auth-retry" type="button" hidden>重新检查登录配置</button>
+<details class="authority-disclosure" id="factory-vault-setup" hidden><summary>配置 Plane 凭证加密存储</summary>
+<p class="help">登录前需要配置 AIW_MODEL_CREDENTIAL_KEY，用于加密保存凭据。它不是 OpenAI API Key。若已保存过连接，请恢复原密钥，不要生成新密钥。</p>
+<p class="help">仅首次全新安装：在用于启动 Plane 的 PowerShell 会话中执行以下命令，再从同一会话启动 Plane。命令不会输出密钥。</p>
+<pre data-i18n-skip><code>if ($env:AIW_MODEL_CREDENTIAL_KEY) { throw '当前会话已有密钥，请核对原配置，不要覆盖。' }
+$modelCredentialBytes = New-Object byte[] 32
+$modelCredentialRandom = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$modelCredentialRandom.GetBytes($modelCredentialBytes)
+$modelCredentialRandom.Dispose()
+$env:AIW_MODEL_CREDENTIAL_KEY = [Convert]::ToBase64String($modelCredentialBytes)</code></pre>
+<p class="help">以上只设置当前会话。请将同一密钥保存到工作区和数据库之外的受保护配置，并单独备份；每次启动须使用相同密钥。重启 Plane 后刷新本页，再填写连接名称并登录。</p>
+</details>
 <details class="authority-disclosure" id="factory-new-connection"><summary id="factory-new-summary">新增登录连接</summary>
 <label class="field">新连接名称<input id="model-auth-label" maxlength="160" autocomplete="off" placeholder="为新账户填写一个容易识别的名称"></label>
-<div id="factory-chatgpt-create" hidden><p class="help">登录新的 ChatGPT 账户，创建独立连接。无需 Codex 或 API Key；不会替换已有连接。</p><button class="btn primary" id="model-auth-login" type="button">Continue with ChatGPT</button></div>
-<div id="factory-codex-create" hidden><p class="help">选择 Codex auth.json，导入为新的连接。不会扫描本机目录，也不会替换已有连接。</p><input id="model-auth-file" type="file" accept="application/json,.json"><button class="btn ghost" id="model-auth-import" type="button">导入为新连接</button></div>
+<div id="factory-chatgpt-create" hidden><p class="help">登录新的 ChatGPT 账户，创建独立连接。无需 Codex 或 API Key；不会替换已有连接。</p><button class="btn primary" id="model-auth-login" type="button" disabled aria-describedby="factory-auth-prerequisite">Continue with ChatGPT</button></div>
+<div id="factory-codex-create" hidden><p class="help">选择 Codex auth.json，导入为新的连接。不会扫描本机目录，也不会替换已有连接。</p><input id="model-auth-file" type="file" accept="application/json,.json"><button class="btn ghost" id="model-auth-import" type="button" disabled aria-describedby="factory-auth-prerequisite">导入为新连接</button></div>
 </details></div>
 <p id="factory-local-settings" class="callout" hidden></p>
 <p id="factory-api-settings" class="callout" role="status" hidden></p>
@@ -40,4 +53,4 @@
 <div id="model-auth-connections"></div><button class="btn ghost" id="model-auth-reload" type="button" disabled>重新读取连接状态</button></section>
 <section class="card"><h2>本机 Worker 状态</h2><div id="factory-workers" role="status"></div><button class="btn ghost" id="factory-refresh" type="button">刷新状态</button></section>
 <section class="card"><h2>接入外部 Worker</h2><p>外部 Worker 使用注册、心跳、领取任务和提交结果协议，无需由工厂启动。执行工厂任务时，还需声明匹配的运行时、仓库与配置执行能力。</p><a class="btn ghost" href="/ui/workers">查看 Worker</a></section>
-</div></main></div><script src="/ui/agent-factory.js?v=fd081-catalog-20261107b" defer></script><script src="/ui/console.js"></script></body></html>
+</div></main></div><script src="/ui/agent-factory.js?v=fd082-login-setup-20261107" defer></script><script src="/ui/console.js"></script></body></html>

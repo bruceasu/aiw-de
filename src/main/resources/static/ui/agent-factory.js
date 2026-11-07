@@ -11,7 +11,7 @@
   const factoryRoot = "/api/r1/authority/agent-factory/", authRoot = "/api/r1/model-connections/";
   const labels = { READY: "认证就绪", IDENTITY_ONLY: "仅身份登录，尚无模型权限", REFRESHING: "正在更新访问凭证", REFRESH_OUTCOME_UNKNOWN: "刷新结果未知，需要重新登录或导入", AUTH_REQUIRED: "需要重新登录", DISCONNECTED: "已断开" };
   const errors = {
-    MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED: "Plane 尚未配置凭证加密存储。请配置 AIW_MODEL_CREDENTIAL_KEY 后重启，再登录或导入。",
+    MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED: "登录暂不可用：Plane 凭证加密存储未就绪。AIW_MODEL_CREDENTIAL_KEY 未配置或格式无效，须为随机 32 字节的 Base64。请按下方说明配置后重启 Plane。",
     MODEL_REFRESH_TOO_EARLY: "尚未到服务端允许的刷新时间。", MODEL_AUTH_SCOPE_DENIED: "当前账户无权执行此操作，或凭证身份校验失败。",
     MODEL_AUTH_INVALID_INPUT: "凭证格式、来源或有效期不符合要求。请重新登录或选择正确的文件。",
     MODEL_TOKEN_ALREADY_IMPORTED_OR_USED: "这组轮换凭证已导入或使用，请选择已有连接，或获取新的凭证后再导入。",
@@ -76,19 +76,36 @@
     byId("factory-effort-help").textContent = t(item?.efforts?.length ? "推理强度来自所选模型的目录信息。" : "目录未提供此模型的推理强度信息；这里显示执行方式的通用选项。实际支持情况以模型响应为准。");
   }
   function sourceReady() { return Boolean(runtime.value && mode.value && (!plane() || selected()?.state === "READY")); }
+  function loginBlocker() {
+    if (vault === null) return authError ? t("无法检查登录配置：") + authError + t(" 请重新检查，成功后才能登录或导入。") : t("正在检查 Plane 凭证加密存储，检查完成后才能登录或导入。");
+    if (vault !== true) return t(errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
+    if (loginStarting || login !== null) return t("已有 ChatGPT 登录正在进行，请在登录窗口完成，或在下方取消当前登录。");
+    return "";
+  }
   function synchronize({ requestedRef, preserveModel = false, auto = true } = {}) {
     const previous = requestedRef === undefined ? credential.value : requestedRef;
     const usePlane = plane(), codex = runtime.value === "codex-app-server";
     byId("factory-plane-settings").hidden = !usePlane;credential.disabled = !usePlane;credential.required = usePlane;
-    credential.replaceChildren(new Option(t("请选择已保存的连接"), ""));
-    for (const item of connections.filter(value => usePlane && value.kind === kind())) credential.add(new Option(item.label + " · " + t(labels[item.state] || item.state), item.id));
+    const matching = connections.filter(value => usePlane && value.kind === kind());
+    credential.replaceChildren(new Option(t(matching.length ? "请选择已保存的连接" : vault === null
+      ? (authError ? "暂无法读取已保存的连接" : "正在读取登录连接…") : "尚无此类型的连接，请先在下方创建"), ""));
+    for (const item of matching) credential.add(new Option(item.label + " · " + t(labels[item.state] || item.state), item.id));
     credential.value = previous || "";
     const connection = selected();form.elements.credentialVersion.value = connection?.version ?? "";
     credential.setCustomValidity(usePlane && connection && connection.state !== "READY" ? t("此连接尚未就绪，请先在下方连接卡片中恢复。") : "");
     byId("factory-chatgpt-create").hidden = mode.value !== "chatgpt";byId("factory-codex-create").hidden = mode.value !== "codex-plane";
     byId("factory-new-summary").textContent = t(mode.value === "chatgpt" ? "登录新的 ChatGPT 账户" : "导入新的 Codex 登录凭证");
+    if (usePlane && !matching.length) byId("factory-new-connection").open = true;
+    const blocker = loginBlocker();
+    byId("factory-auth-prerequisite").hidden = !usePlane || !blocker;
+    byId("factory-auth-prerequisite").textContent = blocker;
+    byId("factory-auth-retry").hidden = !usePlane || (vault !== null && vault !== false);
+    byId("factory-auth-retry").disabled = busy.has("reload");
+    byId("factory-vault-setup").hidden = !usePlane || vault !== false;
     byId("model-auth-login").disabled = vault !== true || login !== null || loginStarting;
+    byId("model-auth-login").title = blocker;
     byId("model-auth-import").disabled = vault !== true;
+    byId("model-auth-import").title = vault === true ? "" : blocker;
     byId("factory-local-settings").hidden = mode.value !== "codex-local";
     byId("factory-local-settings").textContent = t("复用 Worker 本机的 Codex 登录。模型目录查询使用 Plane 本机的相同程序路径；外部 Worker 的模型可用性可能不同。");
     byId("factory-api-settings").hidden = mode.value !== "api-key";
@@ -137,7 +154,9 @@
   }
   function renderConnections() {
     const list = byId("model-auth-connections");list.replaceChildren();
-    if (!connections.length) { list.textContent = t("尚无 Plane 保存的登录连接。请先在上方选择登录方式，再新增连接。");return; }
+    if (!connections.length) { list.textContent = t(vault === null
+      ? (authError ? "暂无法读取已保存的连接，请重新检查登录配置。" : "正在读取登录连接…")
+      : "尚无 Plane 保存的登录连接。请先在上方选择登录方式，再新增连接。");return; }
     for (const item of connections) {
       const row = document.createElement("article");row.className = "card";
       const title = document.createElement("h3");title.textContent = item.label;
@@ -163,15 +182,16 @@
   }
   async function runAction(key, action) {
     if (busy.has(key)) return;busy.add(key);renderConnections();
+    if (key === "reload") byId("factory-auth-retry").disabled = true;
     try { await action(); }catch (error) { authStatus.textContent = error.message; }
-    finally { busy.delete(key);renderConnections(); }
+    finally { busy.delete(key);renderConnections();if (key === "reload") byId("factory-auth-retry").disabled = false; }
   }
   async function reloadConnections() {
     const epoch = ++connectionEpoch;
     const results = await Promise.allSettled([call(authRoot, "state"), call(authRoot, "catalog-context")]);
     if (epoch !== connectionEpoch) return;
     if (results[1].status === "fulfilled") environment = results[1].value;
-    if (results[0].status === "rejected") { authError = results[0].reason.message;authStatus.textContent = authError;synchronize({ preserveModel: true });return; }
+    if (results[0].status === "rejected") { vault = null;authError = results[0].reason.message;authStatus.textContent = authError;synchronize({ preserveModel: true });return; }
     const state = results[0].value;connections = state.connections;vault = state.vaultConfigured;authError = "";
     authStatus.textContent = t(vault ? "已保存连接如下。操作目标以每张连接卡片的名称为准。" : errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
     synchronize({ preserveModel: true });
@@ -248,6 +268,7 @@
   byId("model-auth-login").addEventListener("click", () => runAction("new-login", () => beginLogin()));
   byId("model-auth-import").addEventListener("click", () => runAction("new-import", () => importFile(byId("model-auth-file").files[0])));
   byId("model-auth-reload").addEventListener("click", () => runAction("reload", reloadConnections));
+  byId("factory-auth-retry").addEventListener("click", () => runAction("reload", reloadConnections));
   cancelLogin.addEventListener("click", () => runAction("cancel", async () => {
     if (!login) return;await call(authRoot, "logins/" + encodeURIComponent(login.id) + "/cancel");endPolling();login = null;cancelLogin.hidden = true;
     synchronize({ preserveModel: true, auto: false });authStatus.textContent = t("当前登录已取消，已有连接保持原状。");
@@ -274,11 +295,14 @@
   modes();fields.disabled = false;
   (async () => {
     const startedRevision = revision;
+    const startedConnectionEpoch = connectionEpoch;
     const results = await Promise.allSettled([call(factoryRoot, "state"), call(authRoot, "state"), call(authRoot, "catalog-context")]);
     byId("model-auth-reload").disabled = false;
-    if (results[1].status === "fulfilled") { connections = results[1].value.connections;vault = results[1].value.vaultConfigured; }
-    else authError = results[1].reason.message;
-    if (results[2].status === "fulfilled") environment = results[2].value;
+    if (startedConnectionEpoch === connectionEpoch) {
+      if (results[1].status === "fulfilled") { connections = results[1].value.connections;vault = results[1].value.vaultConfigured; }
+      else authError = results[1].reason.message;
+      if (results[2].status === "fulfilled") environment = results[2].value;
+    }
     if (results[0].status === "rejected") { status.textContent = results[0].reason.message;authStatus.textContent = authError;synchronize({ preserveModel: true });return; }
     const result = results[0].value; saved = result.settings || null;const params = new URLSearchParams(location.search);
     if (revision !== startedRevision) {
