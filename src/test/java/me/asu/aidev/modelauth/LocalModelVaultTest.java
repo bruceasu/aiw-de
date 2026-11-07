@@ -1,7 +1,11 @@
 package me.asu.aidev.modelauth;
 
 import java.nio.file.*;
+import java.io.*;
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import me.asu.aidev.authority.*;
 import me.asu.aidev.execution.guard.ExecutionGuard;
 import org.junit.jupiter.api.*;
@@ -121,5 +125,30 @@ class LocalModelVaultTest {
         assertThat(wrong.status().ready()).isFalse();assertThat(jdbc.queryForMap("SELECT * FROM model_vault_local").get("key_digest")).isNull();
         var correct=new CredentialVault(Base64.getEncoder().encodeToString(original),repo,manager,new LocalModelKeyStore(keys,protector));
         assertThat(correct.ready()).isTrue();assertThat(keys).doesNotExist();
+    }
+    private Process helper(InputStream output,OutputStream input,boolean aliveInitially) throws Exception {
+        var process=mock(Process.class);var alive=new AtomicBoolean(aliveInitially);
+        when(process.getInputStream()).thenReturn(output);when(process.getOutputStream()).thenReturn(input);when(process.getErrorStream()).thenReturn(InputStream.nullInputStream());
+        when(process.isAlive()).thenAnswer(ignored->alive.get());when(process.waitFor(anyLong(),any(TimeUnit.class))).thenReturn(true);
+        when(process.destroyForcibly()).thenAnswer(ignored->{alive.set(false);return process;});return process;
+    }
+    @Test void blockedHelperInputCannotPreventTheDeadlineOrProcessCleanup() throws Exception {
+        var input=new OutputStream() {
+            public void write(int value) throws IOException {
+                try {new CountDownLatch(1).await();}catch(InterruptedException error) {Thread.currentThread().interrupt();throw new InterruptedIOException();}
+            }
+        };
+        var process=helper(new ByteArrayInputStream("eA==".getBytes(java.nio.charset.StandardCharsets.US_ASCII)),input,true);
+        Assertions.assertTimeoutPreemptively(Duration.ofSeconds(3),()->assertThatThrownBy(()->LocalModelKeyStore.exchange(process,new byte[16384],50)).hasMessage("MODEL_LOCAL_KEY_UNAVAILABLE"));
+        verify(process).destroyForcibly();
+    }
+    @Test void blockedHelperOutputCannotMakeExecutorShutdownWaitIndefinitely() throws Exception {
+        var output=new InputStream() {
+            public int read() throws IOException {
+                try {new CountDownLatch(1).await();return -1;}catch(InterruptedException error) {Thread.currentThread().interrupt();throw new InterruptedIOException();}
+            }
+        };
+        var process=helper(output,new ByteArrayOutputStream(),false);
+        Assertions.assertTimeoutPreemptively(Duration.ofSeconds(3),()->assertThatThrownBy(()->LocalModelKeyStore.exchange(process,new byte[32],50)).hasMessage("MODEL_LOCAL_KEY_UNAVAILABLE"));
     }
 }

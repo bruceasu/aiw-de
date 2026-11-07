@@ -68,6 +68,43 @@ class LocalModelKeyStore {
         try {return Files.deleteIfExists(file(id,".dpapi"))||!Files.exists(file(id,".dpapi"));}
         catch(Exception error) {return false;}
     }
+    /** One deadline covers all pipe I/O and waiting after process creation; cleanup never joins indefinitely. */
+    static byte[] exchange(Process process,byte[] value,long timeoutMillis) {
+        long deadline=System.nanoTime()+TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+        var executor=Executors.newVirtualThreadPerTaskExecutor();Future<?> writer=null;Future<byte[]> reader=null;
+        byte[] payload=Base64.getEncoder().encode(value);
+        try {
+            reader=executor.submit(()->process.getInputStream().readNBytes(24577));
+            writer=executor.submit(()->{
+                try(var input=process.getOutputStream()) {input.write(payload);}finally {Arrays.fill(payload,(byte)0);}
+                return null;
+            });
+            writer.get(remaining(deadline),TimeUnit.NANOSECONDS);
+            if(!process.waitFor(remaining(deadline),TimeUnit.NANOSECONDS))throw new TimeoutException();
+            byte[] encoded=reader.get(remaining(deadline),TimeUnit.NANOSECONDS);
+            if(process.exitValue()!=0||encoded.length>24576)throw new IOException();
+            return Base64.getDecoder().decode(new String(encoded,StandardCharsets.US_ASCII));
+        }catch(InterruptedException error) {Thread.currentThread().interrupt();throw new IllegalStateException("MODEL_LOCAL_KEY_UNAVAILABLE");}
+        catch(Exception error) {throw new IllegalStateException("MODEL_LOCAL_KEY_UNAVAILABLE");}
+        finally {
+            if(process.isAlive()) {
+                process.destroyForcibly();
+                try {process.waitFor(1,TimeUnit.SECONDS);}catch(InterruptedException error) {Thread.currentThread().interrupt();}
+            }
+            if(writer!=null)writer.cancel(true);if(reader!=null)reader.cancel(true);
+            executor.shutdownNow();Arrays.fill(payload,(byte)0);
+            // A pipe close may contend with a blocked writer; never close it synchronously on the request thread.
+            var cleanup=Thread.ofVirtual().start(()->{
+                try {process.getOutputStream().close();}catch(IOException ignored) { }
+                try {process.getInputStream().close();}catch(IOException ignored) { }
+                try {process.getErrorStream().close();}catch(IOException ignored) { }
+            });
+            try {cleanup.join(100);}catch(InterruptedException error) {Thread.currentThread().interrupt();}
+        }
+    }
+    private static long remaining(long deadline) throws TimeoutException {
+        long value=deadline-System.nanoTime();if(value<=0)throw new TimeoutException();return value;
+    }
     private static final class WindowsProtector implements Protector {
         public byte[] protect(byte[] value) {return invoke(value,true);}
         public byte[] unprotect(byte[] value) {return invoke(value,false);}
@@ -85,20 +122,8 @@ class LocalModelKeyStore {
             builder.environment().clear();
             for(String name:List.of("SystemRoot","WINDIR","TEMP","TMP","USERPROFILE","LOCALAPPDATA"))
                 if(System.getenv(name)!=null)builder.environment().put(name,System.getenv(name));
-            Process process=null;
-            try(var executor=Executors.newVirtualThreadPerTaskExecutor()) {
-                process=builder.start();Process child=process;
-                try {
-                var output=executor.submit(()->child.getInputStream().readNBytes(24577));
-                try(var input=process.getOutputStream()) {input.write(Base64.getEncoder().encode(value));}
-                if(!process.waitFor(15,TimeUnit.SECONDS)) {process.destroyForcibly();throw new IOException();}
-                byte[] encoded=output.get(1,TimeUnit.SECONDS);
-                if(process.exitValue()!=0||encoded.length>24576)throw new IOException();
-                return Base64.getDecoder().decode(new String(encoded,StandardCharsets.US_ASCII));
-                }finally {if(child.isAlive())child.destroyForcibly();}
-            }catch(InterruptedException error) {Thread.currentThread().interrupt();throw new IllegalStateException("MODEL_LOCAL_KEY_UNAVAILABLE");}
+            try {return exchange(builder.start(),value,15000);}
             catch(Exception error) {throw new IllegalStateException("MODEL_LOCAL_KEY_UNAVAILABLE");}
-            finally {if(process!=null&&process.isAlive())process.destroyForcibly();}
         }
     }
 }
