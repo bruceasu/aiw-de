@@ -27,6 +27,11 @@ public class ModelAuthController {
     @PostMapping("/api/r1/model-connections/logins/{id}/cancel") public Object cancel(@PathVariable String id,HttpSession session) {return login.status(id,session,true);}
     @PostMapping("/api/r1/model-connections/refresh") public Object refresh(@RequestBody String raw) {return connections.refresh(read(raw,Selection.class));}
     @PostMapping("/api/r1/model-connections/disconnect") public Object disconnect(@RequestBody String raw) {return connections.disconnect(read(raw,Selection.class));}
+    @PostMapping("/api/r1/model-connections/reset-local-storage") public ResponseEntity<?> resetLocalStorage(@RequestBody String raw) {
+        String actor=connections.actor();var input=read(raw,ResetLocalStorage.class);
+        var result=connections.resetLocalStorage(input);login.cancelForActor(actor);
+        return ResponseEntity.ok().headers(headers()).body(result);
+    }
     @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/model-credential") public ResponseEntity<?> access(@PathVariable String task,@RequestBody String raw) {
         var input=read(raw,Access.class);return ResponseEntity.ok().headers(headers()).body(connections.access(task,input,workers.get(new WorkerId(input.lease().workerId()))));
     }

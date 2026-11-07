@@ -11,7 +11,14 @@
   const factoryRoot = "/api/r1/authority/agent-factory/", authRoot = "/api/r1/model-connections/";
   const labels = { READY: "认证就绪", IDENTITY_ONLY: "仅身份登录，尚无模型权限", REFRESHING: "正在更新访问凭证", REFRESH_OUTCOME_UNKNOWN: "刷新结果未知，需要重新登录或导入", AUTH_REQUIRED: "需要重新登录", DISCONNECTED: "已断开" };
   const errors = {
-    MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED: "登录暂不可用：Plane 凭证加密存储未就绪。AIW_MODEL_CREDENTIAL_KEY 未配置或格式无效，须为随机 32 字节的 Base64。请按下方说明配置后重启 Plane。",
+    MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED: "本机登录存储暂不可用。请重新检查；密钥丢失时可删除旧登录后重新登录。",
+    MODEL_CREDENTIAL_KEY_INVALID: "高级配置中的 AIW_MODEL_CREDENTIAL_KEY 格式无效。请修正原配置；全新安装也可移除该覆盖配置，重启后由 Windows 自动保护密钥。",
+    MODEL_CREDENTIAL_VAULT_UNAVAILABLE: "当前配置的密钥无法解密旧登录。请恢复原密钥；也可移除覆盖配置、重启后明确删除旧登录再重新登录。",
+    MODEL_LOCAL_KEY_PLATFORM_UNSUPPORTED: "此平台暂不支持自动保护密钥。Windows 本机默认自动管理；其他部署请使用下方高级密钥配置。",
+    MODEL_LOCAL_KEY_MISSING: "本机登录加密密钥已丢失，旧登录无法读取。可恢复原密钥保护文件，或删除旧登录并重新登录。",
+    MODEL_LOCAL_KEY_CHANGED: "本机登录密钥代次已变化，或密钥与数据库不匹配。请重新检查；无法恢复时可删除旧登录再登录。",
+    MODEL_LOCAL_KEY_UNAVAILABLE: "无法读取本机登录密钥。请确认 Plane 使用原 Windows 账户且本机存储可用；无法恢复时可删除旧登录再登录。",
+    MODEL_LOCAL_KEY_OTHER_OWNERS: "数据库中还有其他 Owner 的登录凭据，不能重置共享密钥。请先由对应 Owner 处理各自的登录。",
     MODEL_REFRESH_TOO_EARLY: "尚未到服务端允许的刷新时间。", MODEL_AUTH_SCOPE_DENIED: "当前账户无权执行此操作，或凭证身份校验失败。",
     MODEL_AUTH_INVALID_INPUT: "凭证格式、来源或有效期不符合要求。请重新登录或选择正确的文件。",
     MODEL_TOKEN_ALREADY_IMPORTED_OR_USED: "这组轮换凭证已导入或使用，请选择已有连接，或获取新的凭证后再导入。",
@@ -30,7 +37,7 @@
     MODEL_AUTH_REMOTE_REJECTED_403: "当前凭证无权读取模型目录，请检查账户授权或 API Key 权限。",
     MODEL_AUTH_REMOTE_REJECTED_429: "模型目录查询受到限流，请稍后重新读取。"
   };
-  let connections = [], vault = null, environment = null, authError = "", saved = null;
+  let connections = [], vault = null, storage = null, environment = null, authError = "", saved = null;
   let models = [], manual = false, contextKey = null, readyBefore = false, revision = 0;
   let catalogEpoch = 0, catalogController = null, catalogTimer = null, connectionEpoch = 0;
   let login = null, loginTimer = null, loginPolling = false, loginStarting = false;
@@ -78,10 +85,11 @@
   function sourceReady() { return Boolean(runtime.value && mode.value && (!plane() || selected()?.state === "READY")); }
   function loginBlocker() {
     if (vault === null) return authError ? t("无法检查登录配置：") + authError + t(" 请重新检查，成功后才能登录或导入。") : t("正在检查 Plane 凭证加密存储，检查完成后才能登录或导入。");
-    if (vault !== true) return t(errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
+    if (vault !== true) return t(errors[storage?.vaultState] || errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
     if (loginStarting || login !== null) return t("已有 ChatGPT 登录正在进行，请在登录窗口完成，或在下方取消当前登录。");
     return "";
   }
+  function connectionState(state) { storage = state;connections = state.connections;vault = state.vaultConfigured;authError = ""; }
   function synchronize({ requestedRef, preserveModel = false, auto = true } = {}) {
     const previous = requestedRef === undefined ? credential.value : requestedRef;
     const usePlane = plane(), codex = runtime.value === "codex-app-server";
@@ -101,7 +109,11 @@
     byId("factory-auth-prerequisite").textContent = blocker;
     byId("factory-auth-retry").hidden = !usePlane || (vault !== null && vault !== false);
     byId("factory-auth-retry").disabled = busy.has("reload");
-    byId("factory-vault-setup").hidden = !usePlane || vault !== false;
+    byId("factory-vault-setup").hidden = !usePlane || vault !== false || storage?.vaultMode === "WINDOWS_DPAPI";
+    byId("factory-vault-info").hidden = !usePlane;
+    byId("factory-vault-info").textContent = t(storage?.vaultMode === "CONFIGURED" ? "Plane 正在使用部署中明确配置的加密密钥。" : "Windows 本机会自动生成并保护登录密钥，无需手工设置环境变量。");
+    byId("factory-vault-recovery").hidden = !usePlane || vault !== false || !storage?.canResetVault;
+    byId("factory-vault-reset").disabled = busy.has("vault-reset") || loginStarting;
     byId("model-auth-login").disabled = vault !== true || login !== null || loginStarting;
     byId("model-auth-login").title = blocker;
     byId("model-auth-import").disabled = vault !== true;
@@ -115,7 +127,7 @@
     byId("factory-codex-executable").hidden = !codex;form.elements.executable.disabled = !codex;
     byId("factory-codex-home").hidden = mode.value !== "codex-local";form.elements.guardHome.disabled = mode.value !== "codex-local";
     byId("factory-auth-help").textContent = t(!mode.value ? "先选择执行方式，再选择对应的登录方式。" : usePlane
-      ? (vault === false ? errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED : authError || (mode.value === "chatgpt" ? "选择已有 ChatGPT 连接，或展开下方区域登录新账户。无需 Codex 或 API Key。" : "选择已有 Codex 连接，或展开下方区域导入新连接。仍需本机安装 Codex。"))
+      ? (vault === false ? errors[storage?.vaultState] || errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED : authError || (mode.value === "chatgpt" ? "选择已有 ChatGPT 连接，或展开下方区域登录新账户。无需 Codex 或 API Key。" : "选择已有 Codex 连接，或展开下方区域导入新连接。仍需本机安装 Codex。"))
       : mode.value === "api-key" ? "API Key 来自 Worker 运行环境，本页不录入或保存 API Key。" : "此方式使用 Worker 自己的 Codex 登录，不从 Plane 领取凭证。");
     const next = [runtime.value, mode.value, credential.value, form.elements.credentialVersion.value].join("|");
     const changed = contextKey !== next, ready = sourceReady();
@@ -192,8 +204,8 @@
     if (epoch !== connectionEpoch) return;
     if (results[1].status === "fulfilled") environment = results[1].value;
     if (results[0].status === "rejected") { vault = null;authError = results[0].reason.message;authStatus.textContent = authError;synchronize({ preserveModel: true });return; }
-    const state = results[0].value;connections = state.connections;vault = state.vaultConfigured;authError = "";
-    authStatus.textContent = t(vault ? "已保存连接如下。操作目标以每张连接卡片的名称为准。" : errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
+    connectionState(results[0].value);
+    authStatus.textContent = t(vault ? "已保存连接如下。操作目标以每张连接卡片的名称为准。" : errors[storage?.vaultState] || errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
     synchronize({ preserveModel: true });
   }
   async function importFile(file, target = null) {
@@ -269,6 +281,18 @@
   byId("model-auth-import").addEventListener("click", () => runAction("new-import", () => importFile(byId("model-auth-file").files[0])));
   byId("model-auth-reload").addEventListener("click", () => runAction("reload", reloadConnections));
   byId("factory-auth-retry").addEventListener("click", () => runAction("reload", reloadConnections));
+  byId("factory-vault-reset").addEventListener("click", () => runAction("vault-reset", async () => {
+    if (!storage?.canResetVault) return;
+    const expectedRevision = storage.vaultRevision;
+    byId("factory-vault-reset").disabled = true;
+    try {
+      if (!await window.aiwConfirm(t("删除我的全部模型登录并重置本机登录存储？需要重新登录并保存工厂设置。旧 Worker 的模型凭证将失效，在途 Plan 不会自动换账户；Plan、任务和工作文件保留。远端授权撤销未确认。"))) return;
+      const result = await call(authRoot, "reset-local-storage", { expectedRevision, confirmClear: true });
+      endPolling();login = null;cancelLogin.hidden = true;revision++;credential.value = "";
+      await reloadConnections();synchronize({ preserveModel: true, auto: false });
+      authStatus.textContent = t(result.oldKeyRemoved ? "旧登录已删除，本机登录存储已重置。请重新登录，再保存工厂设置。远端授权撤销未确认。" : "旧登录已删除；旧密钥保护文件未能删除，请检查本机存储权限。请重新登录并保存工厂设置，远端授权撤销未确认。");
+    } finally { byId("factory-vault-reset").disabled = false; }
+  }));
   cancelLogin.addEventListener("click", () => runAction("cancel", async () => {
     if (!login) return;await call(authRoot, "logins/" + encodeURIComponent(login.id) + "/cancel");endPolling();login = null;cancelLogin.hidden = true;
     synchronize({ preserveModel: true, auto: false });authStatus.textContent = t("当前登录已取消，已有连接保持原状。");
@@ -299,7 +323,7 @@
     const results = await Promise.allSettled([call(factoryRoot, "state"), call(authRoot, "state"), call(authRoot, "catalog-context")]);
     byId("model-auth-reload").disabled = false;
     if (startedConnectionEpoch === connectionEpoch) {
-      if (results[1].status === "fulfilled") { connections = results[1].value.connections;vault = results[1].value.vaultConfigured; }
+      if (results[1].status === "fulfilled") connectionState(results[1].value);
       else authError = results[1].reason.message;
       if (results[2].status === "fulfilled") environment = results[2].value;
     }
@@ -318,6 +342,6 @@
     modes(saved?.runtime ? saved.credentialRef ? (saved.runtime === "codex-app-server" ? "codex-plane" : "chatgpt") : (saved.runtime === "codex-app-server" ? "codex-local" : "api-key") : "");
     fields.disabled = false;save.disabled = false;showModel(modelInput.value);synchronize({ requestedRef: saved?.credentialRef || "", preserveModel: true });
     renderWorkers(result.managedWorkers || []);status.textContent = t(saved ? "工厂设置已载入。" : "请按顺序选择执行方式、登录方式和模型，再保存设置。");
-    authStatus.textContent = authError || t(vault ? "已保存连接如下。新增与更新操作分别处理，不会隐式覆盖其他连接。" : errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
+    authStatus.textContent = authError || t(vault ? "已保存连接如下。新增与更新操作分别处理，不会隐式覆盖其他连接。" : errors[storage?.vaultState] || errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
   })().catch(error => { status.textContent = error.message; });
 })();

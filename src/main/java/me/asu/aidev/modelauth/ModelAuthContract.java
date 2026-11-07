@@ -9,6 +9,7 @@ public final class ModelAuthContract {
     public enum Kind { CHATGPT_RESPONSES, CODEX_APP_SERVER }
     public record Connection(String id,Kind kind,String label,String state,long version,long generation,long expiresAt) {}
     public record Selection(String id,long version) {}
+    public record ResetLocalStorage(String expectedRevision,boolean confirmClear) {}
     public record Disconnection(Connection connection,boolean remoteRevocationConfirmed) {}
     public record Login(String connectionId,Long expectedVersion,String label) {}
     public record Import(String connectionId,Long expectedVersion,String label,String content) {

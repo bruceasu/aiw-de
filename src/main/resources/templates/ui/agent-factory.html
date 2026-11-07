@@ -16,7 +16,9 @@
 <label class="field">使用已保存的连接<select name="credentialRef" id="factory-credential"><option value="">请选择连接</option></select><input name="credentialVersion" type="hidden"></label>
 <p id="factory-auth-prerequisite" class="callout" role="status" aria-live="polite"></p>
 <button class="btn ghost" id="factory-auth-retry" type="button" hidden>重新检查登录配置</button>
-<details class="authority-disclosure" id="factory-vault-setup" hidden><summary>配置 Plane 凭证加密存储</summary>
+<p id="factory-vault-info" class="help"></p>
+<div id="factory-vault-recovery" hidden><p class="help">无法恢复密钥时，可以删除自己的旧模型登录并重新登录。Plan、任务和工作文件保留，旧任务的账户绑定不会自动更换。远端授权需另行在 ChatGPT 中处理。</p><button class="btn ghost" id="factory-vault-reset" type="button">删除旧登录并重置本机存储</button></div>
+<details class="authority-disclosure" id="factory-vault-setup" hidden><summary>高级部署：手工配置加密密钥</summary>
 <p class="help">登录前需要配置 AIW_MODEL_CREDENTIAL_KEY，用于加密保存凭据。它不是 OpenAI API Key。若已保存过连接，请恢复原密钥，不要生成新密钥。</p>
 <p class="help">仅首次全新安装：在用于启动 Plane 的 PowerShell 会话中执行以下命令，再从同一会话启动 Plane。命令不会输出密钥。</p>
 <pre data-i18n-skip><code>if ($env:AIW_MODEL_CREDENTIAL_KEY) { throw '当前会话已有密钥，请核对原配置，不要覆盖。' }
@@ -53,4 +55,4 @@ $env:AIW_MODEL_CREDENTIAL_KEY = [Convert]::ToBase64String($modelCredentialBytes)
 <div id="model-auth-connections"></div><button class="btn ghost" id="model-auth-reload" type="button" disabled>重新读取连接状态</button></section>
 <section class="card"><h2>本机 Worker 状态</h2><div id="factory-workers" role="status"></div><button class="btn ghost" id="factory-refresh" type="button">刷新状态</button></section>
 <section class="card"><h2>接入外部 Worker</h2><p>外部 Worker 使用注册、心跳、领取任务和提交结果协议，无需由工厂启动。执行工厂任务时，还需声明匹配的运行时、仓库与配置执行能力。</p><a class="btn ghost" href="/ui/workers">查看 Worker</a></section>
-</div></main></div><script src="/ui/agent-factory.js?v=fd082-login-setup-20261107" defer></script><script src="/ui/console.js"></script></body></html>
+</div></main></div><script src="/ui/agent-factory.js?v=fd083-managed-key-20261107" defer></script><script src="/ui/console.js"></script></body></html>

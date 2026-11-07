@@ -24,7 +24,7 @@ spring:
 
 aidev:
   model-auth:
-    # Base64 of a random 32-byte key. Keep outside this repository and the database.
+    # Optional deployment override. Windows otherwise protects a per-installation key with CurrentUser DPAPI.
     key: ${AIW_MODEL_CREDENTIAL_KEY:}
   database:
     mode: postgresql

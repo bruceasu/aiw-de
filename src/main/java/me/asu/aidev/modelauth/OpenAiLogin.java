@@ -16,7 +16,7 @@ import static me.asu.aidev.modelauth.ModelAuthContract.*;
 @Service
 public class OpenAiLogin {
     private static final class Pending {
-        String id,actor,sessionId,label,client,state,nonce,verifier,redirect,authority;
+        String id,actor,sessionId,label,client,state,nonce,verifier,redirect,authority,vaultRevision;
         HttpSession session;HttpServer server;Map<String,Object> prior;
         long expires;volatile String status="PENDING",connection;AtomicBoolean consumed=new AtomicBoolean();
     }
@@ -27,11 +27,11 @@ public class OpenAiLogin {
     }
     private static String random() {var data=new byte[32];new SecureRandom().nextBytes(data);return Base64.getUrlEncoder().withoutPadding().encodeToString(data);}
     public Object start(Login input,HttpSession session) {
-        String actor=connections.actor();if(!vault.ready())throw new IllegalStateException("MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED");
+        String actor=connections.actor();var storage=vault.status();if(!storage.ready())throw new IllegalStateException("MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED");
         if(input.label()==null||input.label().isBlank()||input.label().length()>160)throw new IllegalArgumentException("MODEL_CONNECTION_LABEL_REQUIRED");
         // Bounded pending listeners; the system browser is opened by the console, never by a server subprocess.
         if(pending.values().stream().filter(p->p.status.equals("PENDING")||p.status.equals("PROCESSING")).count()>=4)throw new IllegalStateException("MODEL_LOGIN_LIMIT");
-        var p=new Pending();p.id="ML-"+UUID.randomUUID();p.actor=actor;p.session=session;p.sessionId=session.getId();p.label=input.label();
+        var p=new Pending();p.id="ML-"+UUID.randomUUID();p.actor=actor;p.session=session;p.sessionId=session.getId();p.label=input.label();p.vaultRevision=storage.revision();
         p.authority=security.currentDelegationAuthority(actor,"A17_CONFIGURATION");
         if(p.authority==null||p.authority.isBlank())throw new SecurityException("MODEL_LOGIN_CURRENT_ADMIN_REQUIRED");
         if(input.connectionId()!=null) {
@@ -73,7 +73,7 @@ public class OpenAiLogin {
             var issued=oauth.exchange(client,p.redirect,code,p.verifier,p.nonce);
             synchronized(p) {
                 if(!authenticated(p)||!p.status.equals("PROCESSING"))throw new SecurityException();
-                var saved=connections.save(p.actor,Kind.CHATGPT_RESPONSES,p.label,issued,p.prior);
+                var saved=connections.save(p.actor,Kind.CHATGPT_RESPONSES,p.label,issued,p.prior,p.vaultRevision);
                 p.connection=saved.id();p.status="COMPLETED";
             }
             status=200;result="已连接 ChatGPT，可以关闭此窗口并返回 AIW。";
@@ -97,6 +97,13 @@ public class OpenAiLogin {
         synchronized(p) {
             if(cancel&&(p.status.equals("PENDING")||p.status.equals("PROCESSING"))) {p.status="CANCELLED";p.consumed.set(true);p.server.stop(0);p.verifier=null;p.nonce=null;}
             return Map.of("status",p.status,"connectionId",Objects.toString(p.connection,""));
+        }
+    }
+    void cancelForActor(String actor) {
+        for(var p:pending.values())if(p.actor.equals(actor))synchronized(p) {
+            if(p.status.equals("PENDING")||p.status.equals("PROCESSING")) {
+                p.status="CANCELLED";p.consumed.set(true);p.server.stop(0);p.verifier=null;p.nonce=null;
+            }
         }
     }
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay=15000) public void expire() {

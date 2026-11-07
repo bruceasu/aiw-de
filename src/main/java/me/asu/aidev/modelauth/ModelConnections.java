@@ -32,7 +32,27 @@ public class ModelConnections {
     }
     public Map<String,Object> state() {
         String actor=actor();var values=repo.jdbc().queryForList("SELECT * FROM model_connection WHERE owner_actor=? ORDER BY updated_ms DESC",actor);
-        return Map.of("vaultConfigured",vault.ready(),"connections",values.stream().map(this::projection).toList());
+        var storage=vault.status();
+        boolean resetAllowed="WINDOWS_DPAPI".equals(storage.mode())&&!storage.ready()&&!storage.revision().isBlank()
+                &&repo.jdbc().queryForObject("SELECT COUNT(*) FROM model_connection WHERE owner_actor<>? AND secret_cipher IS NOT NULL",Long.class,actor)==0;
+        return Map.of("vaultConfigured",storage.ready(),"vaultMode",storage.mode(),"vaultState",storage.state(),"vaultRevision",storage.revision(),
+                "canResetVault",resetAllowed,"connections",values.stream().map(this::projection).toList());
+    }
+    /** Local recovery only. Retain task/plan bindings so old work cannot silently change accounts. */
+    public Map<String,Object> resetLocalStorage(ResetLocalStorage input) {
+        String actor=actor();
+        if(!input.confirmClear())throw new IllegalArgumentException("MODEL_LOCAL_KEY_CLEAR_CONFIRMATION_REQUIRED");
+        transaction.executeWithoutResult(status->{
+            vault.rotateLocal(input.expectedRevision());
+            if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM model_connection WHERE owner_actor<>? AND secret_cipher IS NOT NULL",Long.class,actor)>0)
+                throw new IllegalStateException("MODEL_LOCAL_KEY_OTHER_OWNERS");
+            repo.jdbc().update("UPDATE model_auth_worker SET proof_digest=NULL,proof_cipher=NULL WHERE connection_id IN (SELECT id FROM model_connection WHERE owner_actor=?)",actor);
+            // The original schema deliberately uses immutable references without FK cascades.
+            repo.jdbc().update("DELETE FROM model_connection WHERE owner_actor=?",actor);
+            repo.audit("MODEL_VAULT",null,null,actor,"MODEL_LOCAL_CREDENTIALS_RESET","Local model credentials cleared; prior task/plan references retained; remote revocation not confirmed");
+        });
+        boolean removed=vault.removeLocal(input.expectedRevision());
+        return Map.of("oldKeyRemoved",removed,"remoteRevocationConfirmed",false,"state",state());
     }
     private Connection projection(Map<String,Object> row) {
         String state=(String)row.get("state");
@@ -92,17 +112,21 @@ public class ModelConnections {
         if(bound||input.capabilities().stream().anyMatch(value->value.startsWith("model-auth:")))requireWorkerProof(workerMapping(input.workerId().value(),input.runtimeType(),input.capabilities()));
     }
     public Connection importCredential(Import input) {
-        String actor=actor();if(!vault.ready())throw new IllegalStateException("MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED");
+        String actor=actor();var storage=vault.status();if(!storage.ready())throw new IllegalStateException("MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED");
         if(input.content()==null||input.content().length()>98304)throw new IllegalArgumentException("MODEL_IMPORT_LIMIT");
         var source=repo.decode(input.content(),com.fasterxml.jackson.databind.JsonNode.class);
         Kind kind=source.has("tokens")?Kind.CODEX_APP_SERVER:Kind.CHATGPT_RESPONSES;
         var issued=oauth.importTokens(source);
         var prior=input.connectionId()==null?null:owned(input.connectionId(),Objects.requireNonNull(input.expectedVersion()),actor);
-        return save(actor,kind,input.label(),issued,prior);
+        return save(actor,kind,input.label(),issued,prior,storage.revision());
     }
     Connection save(String actor,Kind kind,String label,Issued issued,Map<String,Object> prior) {
+        return save(actor,kind,label,issued,prior,null);
+    }
+    Connection save(String actor,Kind kind,String label,Issued issued,Map<String,Object> prior,String expectedVaultRevision) {
         if(label==null||label.isBlank()||label.length()>160)throw new IllegalArgumentException("MODEL_CONNECTION_LABEL_REQUIRED");
         return transaction.execute(status->{
+            if(expectedVaultRevision!=null)vault.requireRevision(expectedVaultRevision);
             String id=prior==null?"MC-"+UUID.randomUUID():(String)prior.get("id");
             long version=prior==null?1:number(prior,"version"),generation=prior==null?1:number(prior,"generation")+1;
             if(prior!=null&&(!actor.equals(prior.get("owner_actor"))||!kind.name().equals(prior.get("kind"))
