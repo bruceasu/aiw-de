@@ -15,6 +15,8 @@ import me.asu.aidev.work.domain.WorkTask;
 public record WorkflowPlanSpec(String goal, Source source, List<Step> steps, String location) {
     public WorkflowPlanSpec(String goal,Source source,List<Step> steps) { this(goal,source,steps,null); }
     public enum Source { MANAGER, AI }
+    public enum ReviewMode { SELF, MILESTONE, INDEPENDENT }
+    public enum ReviewRisk { LOW, HIGH, UNKNOWN }
 
     public WorkflowPlanSpec {
         location=location==null || location.isBlank()?null:location.strip();
@@ -40,7 +42,15 @@ public record WorkflowPlanSpec(String goal, Source source, List<Step> steps, Str
 
     public record Step(String key, Set<String> requiredSkills, Set<String> preferredSkills,
                        String skillRef, String instruction, String repositoryRef,
-                       String baseRevision, Set<String> dependsOn, String model, String effort) {
+                       String baseRevision, Set<String> dependsOn, String model, String effort,
+                       @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) ReviewMode reviewMode,
+                       @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) ReviewRisk reviewRisk) {
+        public Step(String key, Set<String> requiredSkills, Set<String> preferredSkills,
+                    String skillRef, String instruction, String repositoryRef, String baseRevision,
+                    Set<String> dependsOn, String model, String effort) {
+            this(key, requiredSkills, preferredSkills, skillRef, instruction, repositoryRef, baseRevision,
+                    dependsOn, model, effort, null, null);
+        }
         public Step(String key, Set<String> requiredSkills, Set<String> preferredSkills,
                     String skillRef, String instruction, String repositoryRef,
                     String baseRevision, Set<String> dependsOn) {
@@ -49,6 +59,10 @@ public record WorkflowPlanSpec(String goal, Source source, List<Step> steps, Str
         }
 
         public Step {
+            var mode = reviewMode == null ? ReviewMode.INDEPENDENT : reviewMode;
+            var risk = reviewRisk == null ? ReviewRisk.UNKNOWN : reviewRisk;
+            if (risk != ReviewRisk.LOW && mode != ReviewMode.INDEPENDENT)
+                throw new IllegalArgumentException("High or unknown risk requires independent review");
             model = preference(model);
             effort = preference(effort);
             if (key == null || !key.matches("[a-z][a-z0-9._-]{0,31}")) {
@@ -76,6 +90,9 @@ public record WorkflowPlanSpec(String goal, Source source, List<Step> steps, Str
             repositoryRef = validated.repositoryRef();
             baseRevision = validated.baseRevision();
         }
+
+        public ReviewMode effectiveReviewMode() { return reviewMode==null?ReviewMode.INDEPENDENT:reviewMode; }
+        public ReviewRisk effectiveReviewRisk() { return reviewRisk==null?ReviewRisk.UNKNOWN:reviewRisk; }
 
         private static String preference(String value) {
             if (value == null || value.isBlank()) return null;

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 /** Supplies role-specialized processes only for already-confirmed native workflow tasks. */
 @Service
 public class WorkflowWorkerProvisioning {
+    @org.springframework.beans.factory.annotation.Autowired private WorkflowReviewClaimPolicy stageReviewPolicy;
     @org.springframework.beans.factory.annotation.Autowired private FactoryReviewClaimPolicy factoryReviewPolicy;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.run.NativeRunClaimPolicy nativeRuns;
     public record Preparation(String taskId,String planId,String state,String message) {}
@@ -62,6 +63,7 @@ public class WorkflowWorkerProvisioning {
                 boolean online=workers.online(Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW)).stream()
                         .anyMatch(w -> w.runtimeType().startsWith(config.runtime()+":") && w.supports(required)
                                 && (factoryReviewPolicy==null || factoryReviewPolicy.canClaim(currentTask,w))
+                                && (stageReviewPolicy==null || stageReviewPolicy.canClaim(currentTask,w))
                                 && (nativeRuns==null || nativeRuns.canClaim(currentTask,w)));
                 if(!online) {
                     boolean frozen=required.stream().anyMatch(c->c.startsWith("native-config:"));

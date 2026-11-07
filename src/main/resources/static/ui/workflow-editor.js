@@ -26,20 +26,24 @@
     return node;
   };
   const line = (parent, tag, text, className) => parent.appendChild(el(tag, text, className));
+  const reviewNames={SELF:'Self-check',MILESTONE:'Stage milestone review',INDEPENDENT:'Independent step review'};
+  const reviewMode=step=>step.reviewMode||'INDEPENDENT';
+  const reviewRisk=step=>step.reviewRisk||'UNKNOWN';
   const graph = (host, steps) => {
     host.replaceChildren();
     for (const [index, step] of steps.entries()) {
       const row = el('div', undefined, 'workflow-node');
       line(row, 'strong', `${index + 1}. ${step.key || '(unnamed)'}`);
       line(row, 'span', step.dependsOn?.length ? ` ← ${step.dependsOn.join(', ')}` : ' · start', 'muted');
+      line(row,'span',' · '+reviewNames[reviewMode(step)],'muted');
       host.appendChild(row);
     }
   };
   const skillNames = value => value.split(',').map(x => x.trim()).filter(Boolean);
-  const stepCopy = step => ({ ...step, requiredSkills: [...(step.requiredSkills || [])],
+  const stepCopy = step => ({ ...step, reviewMode:reviewMode(step),reviewRisk:reviewRisk(step),requiredSkills: [...(step.requiredSkills || [])],
     preferredSkills: [...(step.preferredSkills || [])], dependsOn: [...(step.dependsOn || [])] });
   const blank = () => ({ key: '', requiredSkills: ['requirement-analysis'], preferredSkills: [],
-    skillRef: 'software-requirements-analyst', instruction: '', repositoryRef: null, baseRevision: null, dependsOn: [] });
+    skillRef: 'software-requirements-analyst', instruction: '', repositoryRef: null, baseRevision: null, dependsOn: [],reviewMode:'INDEPENDENT',reviewRisk:'UNKNOWN' });
 
   if (editor && editor.dataset.enabled === 'true') {
     const editId = new URLSearchParams(location.search).get('edit');
@@ -173,6 +177,15 @@
         line(effort.parentElement, 'span', 'Leave empty to let the Worker decide. Invalid or unavailable settings fall back to the Worker configuration.', 'help');
         field(grid, 'Declared earlier dependencies (comma separated)', step.dependsOn.join(', '), value => { step.dependsOn = skillNames(value); });
         field(grid, 'Instruction and acceptance criteria', step.instruction, value => { step.instruction = value; }, true);
+        const riskLabel=el('label','Review risk','field'),risk=el('select');
+        for(const [value,label] of [['UNKNOWN','Not assessed — independent review'],['LOW','Ordinary low-risk work'],['HIGH','High-risk change']]){const option=el('option',label);option.value=value;risk.appendChild(option);}
+        risk.value=reviewRisk(step);riskLabel.appendChild(risk);grid.appendChild(riskLabel);
+        const reviewLabel=el('label','Acceptance method','field'),review=el('select');
+        for(const [value,label] of Object.entries(reviewNames)){const option=el('option',label);option.value=value;review.appendChild(option);}
+        review.value=reviewMode(step);review.disabled=risk.value!=='LOW';reviewLabel.appendChild(review);grid.appendChild(reviewLabel);
+        risk.addEventListener('change',()=>{step.reviewRisk=risk.value;step.reviewMode=risk.value==='LOW'?(index===steps.length-1||reviewRisk(steps[index+1])==='HIGH'?'MILESTONE':'SELF'):'INDEPENDENT';markEdit();renderSteps();});
+        review.addEventListener('change',()=>{step.reviewMode=review.value;markEdit();});
+        line(grid,'p','Unknown risk, permissions, billing, persistence, schema, concurrency and deployment changes require independent review. The Worker cannot lower this policy.','help');
         card.appendChild(grid);
         const controls = el('div', undefined, 'form-actions');
         const button = (name, action, disabled = false) => {
@@ -203,6 +216,7 @@
         if (!role) problems.push('trusted role and skill');
         if (step.baseRevision && !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(step.baseRevision)) problems.push('full Git revision');
         if (role?.resultKind === 'VERDICT' && (!step.dependsOn.length || step.baseRevision)) problems.push('upstream dependency and empty revision');
+        if(reviewRisk(step)!=='LOW'&&reviewMode(step)!=='INDEPENDENT')problems.push('independent review for high or unknown risk');
         if (problems.length && !notice.textContent) notice.textContent = `Step ${index + 1} (${step.key || 'unnamed'}): check ${problems.join(', ')}.`;
         seen.add(step.key);
         const tr = el('tr');
@@ -212,9 +226,9 @@
           catalog.workers.length >= 100 ? 'Unknown: snapshot limit reached' : 'No active match in snapshot';
         const reviewers = catalog.workers.filter(worker => worker.status === 'ACTIVE' &&
           worker.capabilities.includes('workflow-review'));
-        const reviewMatch = reviewers.length ? `${reviewers.length} independent reviewer(s)` : 'No independent reviewer';
+        const reviewMatch = reviewMode(step)==='SELF'?'Self-check; no Reviewer is dispatched on PASS':reviewers.length ? `${reviewers.length} independent reviewer(s)` : 'No independent reviewer';
         [step.key || '?', `${step.requiredSkills.join(', ')} / ${step.skillRef}`, step.dependsOn.join(', ') || '—',
-          editor.querySelector('[data-location]').value || 'Worker uses a Plan temporary directory', `${match}; ${reviewMatch}`]
+          editor.querySelector('[data-location]').value || 'Worker uses a Plan temporary directory',`${reviewNames[reviewMode(step)]} · ${reviewRisk(step)}`, `${match}; ${reviewMatch}`]
           .forEach(text => line(tr, 'td', text));
         preview.appendChild(tr);
       }
@@ -222,6 +236,14 @@
       return !notice.textContent;
     };
     goal.addEventListener('input', markEdit);
+    editor.querySelector('[data-stage-review]')?.addEventListener('click',async()=>{
+      if(!catalog||!steps.length)return;
+      const version=inputVersion;
+      if(!await window.aiwConfirm('Declare all non-high-risk steps ordinary low-risk work? Each ordinary stage will use self-checks and end with a milestone review. High-risk steps keep independent review. Assess unknown impact before confirming the Plan.'))return;
+      if(inputVersion!==version)return;
+      steps.forEach((step,index)=>{if(reviewRisk(step)==='HIGH')return;step.reviewRisk='LOW';step.reviewMode=index===steps.length-1||reviewRisk(steps[index+1])==='HIGH'?'MILESTONE':'SELF';});
+      markEdit();renderSteps();
+    });
     editor.querySelector('[data-add-step]').addEventListener('click', () => {
       if (!catalog) return;
       if (steps.length >= 32) { notice.textContent = 'Maximum 32 steps.'; return; }
@@ -688,13 +710,15 @@
             .sort((a, b) => (Date.parse(b.task.createdAt) || 0) - (Date.parse(a.task.createdAt) || 0)
               || b.task.id.value.localeCompare(a.task.id.value));
           const tr = el('tr');
-          [ `${step.key} / ${step.skillRef}`, `${step.instruction}\nModel: ${step.model || 'Worker choice'} · Effort: ${step.effort || 'Worker choice'}`,  step.dependsOn.join(', ') || 'Listed order',
+          [ `${step.key} / ${step.skillRef}`, `${step.instruction}\nModel: ${step.model || 'Worker choice'} · Effort: ${step.effort || 'Worker choice'}\nAcceptance: ${reviewNames[reviewMode(step)]} · Risk: ${reviewRisk(step)}`,  step.dependsOn.join(', ') || 'Listed order',
             plan.spec.location || 'Plan temporary directory'
           ].forEach(value => line(tr, 'td', value));
           const resultCell = el('td');
           const skipped = data.controls.some(control => control.status === 'APPLIED' && control.action === 'JUMP'
             && index >= control.fromStep && index < control.targetStep);
-          if (!actual.length) line(resultCell, 'div', skipped ? 'Skipped by manager decision' : 'Waiting for the previous step to pass review');
+          if (!actual.length) line(resultCell, 'div', skipped ? 'Skipped by manager decision' : 'Waiting for acceptance under the confirmed policy');
+          if(reviewMode(step)==='SELF'&&!actual.some(row=>row.task.id.value.includes('~review-'))&&actual.some(row=>row.task.state==='COMPLETED'&&row.verdict==='PASS'))
+            line(resultCell,'p','Self-check passed; no independent review was required by this policy.','help');
           if (actual.length) resultCell.appendChild(taskRecord(actual[0], reportStates));
           if (actual.length > 1) {
             const more = line(resultCell, 'button', 'View all records', 'btn ghost small-btn');
@@ -856,8 +880,12 @@
     };
     detail.querySelector('[data-copy]')?.addEventListener('click', () => { location.href = `/ui/plans/new?copy=${encodeURIComponent(id)}`; });
     detail.querySelector('[data-confirm]')?.addEventListener('click', async () => {
-      if (!plan || !await window.aiwConfirm(`Confirm ${plan.spec.steps.length} selected steps at version ${plan.version}? This creates Worker tasks.`)) return;
-      try { await api(`/plans/${encodeURIComponent(id)}/confirm`, { version: plan.version });
+      if(!plan)return;
+      const selected=structuredClone(plan);
+      const policy=selected.spec.steps.map(step=>`${step.key}: ${reviewNames[reviewMode(step)]} (${reviewRisk(step)})`).join('\n');
+      if(!await window.aiwConfirm(`Confirm ${selected.spec.steps.length} selected steps at version ${selected.version}? This creates Worker tasks and fixes these review requirements:\n${policy}`))return;
+      if(!plan||plan.id!==selected.id||plan.version!==selected.version){actionStatus.textContent='The Plan changed. Refresh and confirm its current review policy.';return;}
+      try { await api(`/plans/${encodeURIComponent(id)}/confirm`, { version: selected.version });
         actionStatus.textContent = 'Execution confirmed. Worker tasks have been created.'; await load();
       } catch (error) {
         actionStatus.textContent = `Confirmation failed: ${error.message}`;

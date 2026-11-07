@@ -4,6 +4,14 @@ Define how the Control Plane owns work tasks, dependencies, worker leases, and e
 
 ## Requirements
 
+### Requirement: Human-confirmed risk-based review boundaries
+
+A flexible Plan SHALL freeze each step's review mode and declared risk at confirmation. Only explicitly low-risk work MAY use SELF acceptance or a MILESTONE boundary. High or unknown risk SHALL require INDEPENDENT review. A Worker report or answer SHALL NOT lower that policy. Missing fields in an existing specification SHALL retain independent review and SHALL NOT be inserted during legacy specification re-encoding.
+
+A successful SELF step MAY advance without dispatching a Reviewer; its result SHALL be labelled self-checked rather than independently reviewed. A milestone Reviewer SHALL receive the fixed ordinary-stage deliverables and their original acceptance criteria since the previous review boundary. Independent step review SHALL retain its own scope. Automatic Plan completion SHALL require actual completed results and every review required by the confirmed policy.
+
+A failed self-check SHALL stop automatic advancement. An authorized operator MAY request an exact-version review or bounded correction through the existing recovery path. Once review findings require correction, the corrected result SHALL retain independent recheck of the findings and affected behavior, even when the original step allowed self-check. Existing resource, lease, authority and configured-factory acceptance gates SHALL remain effective.
+
 ### Requirement: Human-readable preparation and optional method composition
 The console SHALL offer plan, repository, method, approved-model and owner-scoped upstream choices without requiring hand-written Intent, Assembly or Candidate JSON. Internal preparation identity, versions and generations SHALL be maintained by the UI. Results SHALL explain readiness, blockers and recovery without rendering raw API JSON; READY SHALL mean task creation, not execution success. Created tasks SHALL have an owner-validated exact-task status entry that can be refreshed independently of preparation readiness; a plan-definition link SHALL NOT be presented as that task's execution progress. Default methods SHALL be usable without custom composition.
 

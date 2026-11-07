@@ -191,11 +191,13 @@ public class WorkflowPlanService {
             blocked = "Finish or retry the current task before requesting a new review.";
         } else if (latest == null || latest.state() != TaskState.COMPLETED
                 || !WorkflowTaskPosition.parse(plan, latest.id()).map(position -> position.review()
-                        && position.round() >= MAX_ATTEMPTS_PER_STEP).orElse(false)
+                        ? position.round() >= MAX_ATTEMPTS_PER_STEP
+                        : plan.spec().steps().get(position.step()).effectiveReviewMode()==WorkflowPlanSpec.ReviewMode.SELF
+                            && !requiresReview(plan,position.step(),position.round())).orElse(false)
                 || controls.skipped(id, stepIndex(plan, latest.id()))
                 || !attempts.findCompletionReport(latest.id())
                         .map(report -> report.verdict() == CompletionVerdict.REPAIR_REQUIRED).orElse(false)) {
-            blocked = "Only an exhausted step awaiting corrections can be reviewed again.";
+            blocked = "Only an exhausted review or a blocked self-check can request explicit recovery.";
         }
         return new ReviewRecovery(plan.version(), latest == null ? null : latest.id().value(),
                 latest == null ? -1 : latest.version(), blocked == null, blocked);
@@ -224,7 +226,8 @@ public class WorkflowPlanService {
         TaskId previous = new TaskId(taskId);
         int step = stepIndex(plan, previous);
         int round = WorkflowTaskPosition.parse(plan, previous).orElseThrow().round();
-        TaskId next = new TaskId(reviewId(plan, step, round).value()
+        boolean firstSelfReview=!WorkflowTaskPosition.parse(plan,previous).orElseThrow().review();
+        TaskId next = firstSelfReview?reviewId(plan,step,round):new TaskId(reviewId(plan, step, round).value()
                 + "-resume-" + (reviewRecoveryNumber(previous) + 1));
         Instant now = Instant.now();
         String audit = "Review recovery: " + reason.strip();
@@ -233,7 +236,7 @@ public class WorkflowPlanService {
             throw new IllegalStateException("Plan changed. Reload before requesting a new review.");
         }
         createReview(plan, step, round, next, reason.strip());
-        tasks.linkCorrection(previous, next, actor, reason.strip(), now);
+        if(!firstSelfReview)tasks.linkCorrection(previous, next, actor, reason.strip(), now);
         tasks.recordControlEvent(UUID.randomUUID().toString(), next, null, "RESUME_REVIEW", actor, reason.strip(), true, now);
         return get(id);
     }
@@ -374,8 +377,25 @@ public class WorkflowPlanService {
     }
 
     boolean passed(WorkflowPlan plan, int step) {
-        return rounds(plan, step).stream().anyMatch(round -> attempts.findCompletionReport(effectiveReviewId(plan, step, round))
+        return rounds(plan, step).stream().anyMatch(round -> attempts.findCompletionReport(acceptanceId(plan,step,round))
                 .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false));
+    }
+
+    boolean requiresReview(WorkflowPlan plan,int step,int round) {
+        return plan.spec().steps().get(step).effectiveReviewMode()!=WorkflowPlanSpec.ReviewMode.SELF
+                || tasks.find(effectiveReviewId(plan,step,round)).isPresent()
+                || round>1&&tasks.find(effectiveReviewId(plan,step,round-1)).isPresent()
+                || tasks.find(effectiveExecutionId(plan,step,round)).map(task->task.instruction()
+                        .contains("\nManager-authorized correction scope:\n")).orElse(false);
+    }
+
+    private TaskId acceptanceId(WorkflowPlan plan,int step,int round) {
+        return requiresReview(plan,step,round)?effectiveReviewId(plan,step,round):effectiveExecutionId(plan,step,round);
+    }
+
+    private TaskId effectiveExecutionId(WorkflowPlan plan,int step,int round) {
+        TaskId original=executionId(plan,step,round);
+        return attempts.findCompletedInput(original).map(me.asu.aidev.execution.domain.TaskInput::taskId).orElse(original);
     }
 
     String completedRevision(TaskId task, String fallback) {
@@ -404,7 +424,7 @@ public class WorkflowPlanService {
         return control(id, version, null, actor, reason, true);
     }
 
-    /** Records automatic completion from persisted independent reviews, never from a caller's claim. */
+    /** Records automatic completion from persisted policy-specific acceptance, never a caller's claim. */
     @Transactional
     public void completeReviewed(String id, TaskId reviewId) {
         managedSerialization(id);
@@ -415,10 +435,10 @@ public class WorkflowPlanService {
                 || controls.pending(id).isPresent() || outcomes.find(id).isPresent()) return;
         var position = WorkflowTaskPosition.parse(plan, reviewId).orElse(null);
         int last = plan.spec().steps().size() - 1;
-        if (position == null || !position.review() || position.step() != last) return;
+        if (position == null || position.step() != last) return;
         var rounds = rounds(plan, last);
         if (rounds.isEmpty() || rounds.getLast() != position.round()
-                || !effectiveReviewId(plan, last, position.round()).equals(reviewId)
+                || !acceptanceId(plan, last, position.round()).equals(reviewId)
                 || !attempts.findCompletionReport(reviewId)
                         .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false)) return;
         var current = effectiveSteps(id);
@@ -430,7 +450,7 @@ public class WorkflowPlanService {
                 || !attempts.findCompletionReport(taskId)
                         .map(report -> report.verdict() == CompletionVerdict.PASS).orElse(false))) return;
         if (!plans.transition(id, plan.version(), WorkflowPlan.State.CONFIRMED, WorkflowPlan.State.COMPLETED,
-                "workflow", "All workflow steps accepted; final independent review: " + reviewId.value(), Instant.now())) {
+                "workflow", (position.review()?"All workflow steps accepted; final independent review: ":"All workflow steps accepted under the confirmed self-check policy: ") + reviewId.value(), Instant.now())) {
             throw new IllegalStateException("Plan changed during reviewed completion");
         }
 
@@ -649,17 +669,18 @@ public class WorkflowPlanService {
         TaskId id = executionId(plan, stepIndex, attempt);
         String feedback = "";
         if (attempt > 1) {
-            var review = attempts.findCompletionReport(effectiveReviewId(plan, stepIndex, attempt - 1))
+            var review = attempts.findCompletionReport(acceptanceId(plan, stepIndex, attempt - 1))
                     .orElseThrow(() -> new IllegalStateException("prior review is missing"));
             if (review.verdict() != CompletionVerdict.REPAIR_REQUIRED) {
                 throw new IllegalStateException("prior review did not request repair");
             }
             feedback = "\nPrevious independent review (attempt " + (attempt - 1) + "):\n"
-                    + review.summary() + "\nAddress these findings and explain the changes.";
+                    + review.summary() + "\nAddress these findings and affected behavior only. Preserve accepted outputs, explain the changes, and do not rerun unrelated work or the whole Plan.";
         }
         taskService.createIfAbsent(new CreateWorkTaskCommand(id, TaskType.EXTERNAL_WORK, SUBJECT, plan.id(),
                 step.requiredSkills(), step.skillRef(),
                 "Goal: " + plan.spec().goal() + "\nStep: " + step.key()
+                        + "\nFixed review mode: "+step.effectiveReviewMode()+"; declared risk: "+step.effectiveReviewRisk()+". This policy grants no tool authority and cannot be changed by this report."
                         + "\nExecute this step and address its acceptance criteria:\n" + questionContext(step.instruction(), plan.id()) + feedback + authorization,
                 step.repositoryRef(), revision, TaskPriority.NORMAL, dependencies));
         plans.savePreferences(id, step.preferredSkills());
@@ -681,11 +702,14 @@ public class WorkflowPlanService {
     private void createReview(WorkflowPlan plan, int stepIndex, int attempt, TaskId id, String recoveryContext) {
         managedAdmission(plan.id());
         var step = plan.spec().steps().get(stepIndex);
-        TaskId execution = executionId(plan, stepIndex, attempt);
+        TaskId execution = effectiveExecutionId(plan, stepIndex, attempt);
         var output = attempts.findCompletedInput(execution)
                 .orElseThrow(() -> new IllegalStateException("completed workflow output is missing: " + execution.value()));
         var inputs = new java.util.LinkedHashSet<TaskId>(acceptedInputs(plan, stepIndex - 1));
         inputs.add(execution);
+        if(attempt>1)inputs.add(acceptanceId(plan,stepIndex,attempt-1));
+        TaskId priorReview=effectiveReviewId(plan,stepIndex,attempt);
+        if(!priorReview.equals(id)&&tasks.find(priorReview).isPresent())inputs.add(priorReview);
         var reviewSkills = new java.util.LinkedHashSet<String>();
         reviewSkills.add("workflow-review");
         if (taskOutputs != null && inputs.stream().anyMatch(input -> taskOutputs.completed(input.value())
@@ -699,10 +723,15 @@ public class WorkflowPlanService {
                 .filter(instruction -> instruction.contains("\nManager-authorized correction scope:\n"))
                 .map(instruction -> instruction.substring(instruction.indexOf("\nManager-authorized correction scope:\n")))
                 .orElse("");
+        String scope=me.asu.aidev.workflow.domain.WorkflowReviewPolicy.scope(plan.spec(),stepIndex).stream()
+                .map(index->plan.spec().steps().get(index)).map(covered->"Step "+covered.key()+": "+covered.instruction())
+                .collect(java.util.stream.Collectors.joining("\n"));
         taskService.createIfAbsent(new CreateWorkTaskCommand(id, TaskType.EXTERNAL_WORK, SUBJECT, plan.id(),
                 Set.copyOf(reviewSkills), "workflow-stage-reviewer",
                 "Independently review the authoritative output of step '" + step.key() + "' against this goal and step instruction. "
                         + "Goal: " + plan.spec().goal() + "\nStep instruction and acceptance criteria: " + questionContext(step.instruction(), plan.id()) + authorization
+                        + "\nFixed review mode: "+step.effectiveReviewMode()+". Review these covered deliverables and their original acceptance criteria:\n"+scope
+                        + "\nFor corrections, focus on concrete prior findings and affected behavior; do not request a whole-Plan rerun or expand tool authority."
                         + (recoveryContext.isBlank() ? "" : "\nHuman review recovery context:\n" + recoveryContext)
                         + "\nReturn concrete findings when correction is needed. End with exactly one line: "
                         + "AIW_VERDICT: PASS or AIW_VERDICT: REPAIR_REQUIRED.",
@@ -715,10 +744,10 @@ public class WorkflowPlanService {
         for (int step = 0; step <= throughStep; step++) {
             boolean accepted = false;
             for (int attempt : rounds(plan, step)) {
-                TaskId review = effectiveReviewId(plan, step, attempt);
+                TaskId review = acceptanceId(plan, step, attempt);
                 if (attempts.findCompletionReport(review).map(report -> report.verdict() == CompletionVerdict.PASS)
                         .orElse(false)) {
-                    result.add(executionId(plan, step, attempt));
+                    result.add(effectiveExecutionId(plan, step, attempt));
                     result.add(review);
                     accepted = true;
                     break;

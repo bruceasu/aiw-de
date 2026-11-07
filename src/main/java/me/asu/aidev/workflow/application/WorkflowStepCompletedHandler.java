@@ -11,7 +11,7 @@ import me.asu.aidev.workflow.domain.WorkflowPlan;
 import me.asu.aidev.workflow.domain.WorkflowTaskPosition;
 import org.springframework.stereotype.Component;
 
-/** Advances a selected workflow only after an independent verdict for the current step. */
+/** Advances only after the acceptance required by the human-confirmed review policy. */
 @Component
 public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
     @org.springframework.beans.factory.annotation.Autowired
@@ -58,8 +58,13 @@ public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
         int step = position.step(), round = position.round();
         if (report == null) throw new IllegalStateException("workflow completion requires a report");
         if (!position.review()) {
-            plans.createReview(plan, step, round);
-            return List.of(plans.effectiveReviewId(plan, step, round));
+            if(plan.spec().steps().get(step).effectiveReviewMode()!=me.asu.aidev.workflow.domain.WorkflowPlanSpec.ReviewMode.SELF
+                    || plans.requiresReview(plan,step,round)) {
+                plans.createReview(plan, step, round);
+                return List.of(plans.effectiveReviewId(plan, step, round));
+            }
+            if(report.verdict()!=CompletionVerdict.PASS)return List.of();
+            return advanceAccepted(plan,step,task.id());
         }
         if (!task.id().equals(plans.effectiveReviewId(plan, step, round))) return List.of();
         if (report.verdict() == CompletionVerdict.REPAIR_REQUIRED) {
@@ -71,8 +76,12 @@ public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
             plans.createExecution(plan, step, round + 1, Set.copyOf(inputs));
             return List.of(WorkflowPlanService.executionId(plan, step, round + 1));
         }
+        return advanceAccepted(plan,step,task.id());
+    }
+
+    private List<TaskId> advanceAccepted(WorkflowPlan plan,int step,TaskId acceptance) {
         if (step + 1 == plan.spec().steps().size()) {
-            plans.completeReviewed(plan.id(), task.id());
+            plans.completeReviewed(plan.id(), acceptance);
             return List.of();
         }
         TaskId next = WorkflowPlanService.executionId(plan, step + 1, 1);

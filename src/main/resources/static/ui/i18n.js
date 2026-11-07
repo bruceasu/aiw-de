@@ -1,5 +1,17 @@
 (() => {
   const translations = {
+    'Review risk': '评审风险',
+    'Acceptance method': '验收方式',
+    'Self-check': '自检',
+    'Stage milestone review': '阶段里程碑评审',
+    'Independent step review': '单步独立评审',
+    'Not assessed — independent review': '尚未评估，保留独立评审',
+    'Ordinary low-risk work': '普通低风险工作',
+    'High-risk change': '高风险改动',
+    'Set ordinary stage review…': '设置普通阶段评审…',
+    'Unknown risk, permissions, billing, persistence, schema, concurrency and deployment changes require independent review. The Worker cannot lower this policy.': '风险未知，以及权限、计费、持久化、结构迁移、并发和部署改动应保留独立评审，Worker 不能降低要求。',
+    'Self-check passed; no independent review was required by this policy.': '自检已通过；当前固定策略不要求独立评审。',
+    'Waiting for acceptance under the confirmed policy': '等待按已确认策略验收',
     'Personalization': '个性化偏好',
     'Your console, your way': '按你的习惯设置控制台',
     'Changes apply immediately and are saved in this browser.': '修改立即生效，并保存在当前浏览器。',
