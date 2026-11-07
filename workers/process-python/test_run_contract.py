@@ -66,6 +66,22 @@ class ContextLedgerTest(unittest.TestCase):
         raw = json.dumps({"messages": ["任务"]}, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
         self.assertEqual(observed.input_bytes, len(raw))
 
+    def test_request_binding_and_tool_schema_are_metadata_only_and_frozen(self):
+        evidence = Evidence()
+        ledger = ContextLedger(evidence)
+        binding = {'instruction_revision': 3, 'configuration_digest': 'a' * 64, 'model': 'configured-model', 'effort': 'high'}
+        observed = ledger.observe('api', {'messages': ['private task'], 'tools': [{'name': 'read'}]}, request_scope='REQUEST', binding=binding)
+        self.assertEqual(observed.instruction_revision, 3)
+        self.assertEqual(observed.configuration_digest, 'a' * 64)
+        self.assertEqual(len(observed.tool_schema_digest), 64)
+        self.assertNotIn('private task', json.dumps(evidence.events))
+        with self.assertRaisesRegex(RuntimeError, 'CONTEXT_BINDING_CHANGED'):
+            ledger.observe('api', {'messages': []}, request_scope='REQUEST', binding={**binding, 'model': 'different'})
+
+    def test_unobservable_native_tool_schema_stays_unknown(self):
+        observed = ContextLedger(Evidence()).observe('codex', {'messages': ['task']}, request_scope='BACKEND_TURN')
+        self.assertIsNone(observed.tool_schema_digest)
+
 
 if __name__ == "__main__":
     unittest.main()

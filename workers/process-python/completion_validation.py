@@ -1,8 +1,17 @@
 """Candidate validation before sealing inputs. Business report semantics stay injected."""
 from __future__ import annotations
 
+import os
+
 
 CORRECTABLE = frozenset({"COMPLETION_REPORT_EMPTY", "COMPLETION_VERDICT_INVALID", "COMPLETION_REPORT_CONFLICT"})
+
+
+def correction_limit():
+    value = os.environ.get("AIW_COMPLETION_CORRECTIONS", "0")
+    if value not in {"0", "1", "2"}:
+        raise RuntimeError("COMPLETION_CORRECTION_SETTING_INVALID")
+    return int(value)
 
 
 class CompletionValidator:
@@ -27,6 +36,8 @@ class CompletionValidator:
         except RuntimeError as error:
             code = str(error)
             if code not in CORRECTABLE:
+                raise
+            if self.maximum == 0:
                 raise
             key = (code, progress)
             if self.used >= self.maximum or key in self.seen:

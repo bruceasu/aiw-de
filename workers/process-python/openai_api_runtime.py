@@ -151,7 +151,7 @@ class OpenAIApiRuntime:
             from completion_validation import CompletionValidator
             from execution_guard import digest
             correction_limit = _completion_corrections()
-            candidate = CompletionValidator(getattr(request, "candidate_validator", None) if correction_limit or getattr(request.attempt, "run_channel", None) is not None else None,
+            candidate = CompletionValidator(getattr(request, "candidate_validator", None),
                                             request.attempt.evidence, correction_limit)
             run_input = "Execute the assigned task and return its final report."
             while True:
@@ -702,10 +702,8 @@ def _json_value(value: Any) -> Any:
 
 
 def _completion_corrections():
-    value = os.environ.get("AIW_COMPLETION_CORRECTIONS", "0")
-    if value not in {"0", "1", "2"}:
-        raise RuntimeError("COMPLETION_CORRECTION_SETTING_INVALID")
-    return int(value)
+    from completion_validation import correction_limit
+    return correction_limit()
 
 
 def _positive_setting(name: str, default: int) -> int:

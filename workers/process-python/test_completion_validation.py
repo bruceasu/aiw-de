@@ -37,6 +37,12 @@ class CompletionValidationTest(unittest.TestCase):
         self.assertIsNone(CompletionValidator(None, evidence).feedback("text", "unchanged"))
         evidence.record.assert_not_called()
 
+    def test_zero_corrections_still_validates_and_preserves_the_original_failure(self):
+        policy = CompletionValidator(Mock(side_effect=RuntimeError('COMPLETION_REPORT_CONFLICT')), Mock(), 0)
+        with self.assertRaisesRegex(RuntimeError, '^COMPLETION_REPORT_CONFLICT$'):
+            policy.feedback('invalid report', 'unchanged')
+        self.assertEqual(policy.used, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

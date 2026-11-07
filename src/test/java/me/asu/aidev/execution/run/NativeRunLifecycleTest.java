@@ -33,6 +33,8 @@ class NativeRunLifecycleTest {
         jdbc.execute("CREATE TABLE execution_run_event(attempt_id TEXT,event_type TEXT,payload_json TEXT,sequence_no BIGINT)");
         jdbc.execute("CREATE TABLE execution_stop_evidence(attempt_id TEXT)");
         jdbc.execute("CREATE TABLE execution_run_command(attempt_id TEXT,action TEXT,status TEXT,updated_ms BIGINT)");
+        jdbc.execute("ALTER TABLE work_task ADD COLUMN subject_id TEXT");jdbc.update("UPDATE work_task SET subject_id='plan'");
+        jdbc.execute("CREATE TABLE flexible_workflow_control(plan_id TEXT,task_id TEXT,status TEXT)");
         var repo=new AuthorityRepository(jdbc);var tasks=mock(WorkTaskRepository.class);workers=mock(WorkerRepository.class);budget=mock(TaskConcurrencyBudget.class);
         var source=new WorkTask(new TaskId("task"),TaskType.IMPLEMENTATION,TaskState.YIELDING,"flexible-plan","plan",Set.of(),null,"Original goal",1,null,null,TaskPriority.NORMAL,1,Instant.now(),Instant.now());
         when(tasks.find(source.id())).thenReturn(Optional.of(source));when(tasks.lock(source.id())).thenReturn(true);when(workers.releaseCapacity(any(),any())).thenReturn(true);
@@ -50,5 +52,13 @@ class NativeRunLifecycleTest {
         assertThat(jdbc.queryForObject("SELECT state FROM execution_attempt",String.class)).isEqualTo("YIELDED");
         assertThatThrownBy(()->lifecycle.yielded("task",lease)).isInstanceOf(IllegalStateException.class);
         verify(workers).releaseCapacity(eq(new WorkerId("worker")),any());verify(budget).release(any(),any());
+    }
+    @Test void wholePlanStopRetainsItsCallbackEvenAfterAnAcceptedRunCancellation() {
+        jdbc.update("INSERT INTO execution_run_command VALUES('attempt','CANCEL','ACCEPTED',1)");
+        assertThat(lifecycle.cancellation("task","attempt")).isTrue();
+        jdbc.update("INSERT INTO flexible_workflow_control VALUES('plan','task','PENDING_STOP')");
+        assertThat(lifecycle.cancellation("task","attempt")).isFalse();
+        jdbc.update("UPDATE flexible_workflow_control SET status='APPLIED'");
+        assertThat(lifecycle.cancellation("task","attempt")).isTrue();
     }
 }

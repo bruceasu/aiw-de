@@ -645,7 +645,7 @@ class ProcessSlot:
                 if attempt.reason in {"deadline", "lease-lost", "force-shutdown"}:
                     try: attempt.evidence.record("attempt-cancelled", reason=attempt.reason)
                     except Exception: pass
-            if started and not lost and not reporting and not (native and attempt.resource_uncertain):
+            if started and not lost and not reporting and not ((broker or native) and attempt.resource_uncertain):
                 try:
                     if (broker or native) and attempt.reason == "stop-requested" and not attempt.resource_uncertain and not (broker and broker._active):
                         self.client._task_action(task, self.config.worker_id, "stop-acknowledgement", session_id)

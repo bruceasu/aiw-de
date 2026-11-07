@@ -32,7 +32,7 @@ def _regular_parents(target):
             entry.mkdir(mode=0o700)
 
 class Evidence:
-    context_fields = frozenset("sourceKind version purpose visibility requestScope changed capabilities questionKey questionId".split())
+    context_fields = frozenset("sourceKind version purpose visibility requestScope changed capabilities questionKey questionId instructionRevision configurationDigest toolSchemaDigest materialInventoryDigest".split())
     fields = set("status runtime unknown usageKnown path digest bytes count inputBytes outputBytes durationMs complete truncated operation callId parentCallId tool inputTokens outputTokens cachedTokens publicationRef resultRevision sideEffect verdict code reportStatus reason model effort phase".split())
     def __init__(self, config, task):
         root = Path(os.getenv("AIW_WORKER_EVIDENCE_ROOT", str(Path(config.fallback_workspace).parent / ".aidev-attempt-evidence"))).absolute()
@@ -122,6 +122,7 @@ class Attempt:
         self.closed = threading.Event()
         self.force_event = force_event
         self.required_capabilities = frozenset(task.get("requiredCapabilities", []))
+        self.instruction_revision = task.get("instructionRevision")
         self.turn = None
         self.reason = None
         self.interrupt_started = False

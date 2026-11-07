@@ -60,6 +60,12 @@ class ContextProjection:
     visibility: str
     request_scope: str
     purpose: str
+    instruction_revision: int | None = None
+    configuration_digest: str | None = None
+    model: str | None = None
+    effort: str | None = None
+    tool_schema_digest: str | None = None
+    material_inventory_digest: str | None = None
 
 
 class ContextLedger:
@@ -72,6 +78,7 @@ class ContextLedger:
         self.previous = {}
         self.materials = set()
         self.capabilities = {}
+        self.bindings = {}
 
     def capabilities_observed(self, runtime, value):
         with self.lock:
@@ -99,18 +106,28 @@ class ContextLedger:
                                  complete=False, unknown="inventory-not-per-request-attribution")
             self.materials.add(identity)
 
-    def observe(self, runtime, projection, *, request_scope, purpose="task", parts=None):
+    def observe(self, runtime, projection, *, request_scope, purpose="task", parts=None, binding=None):
         if request_scope not in {"REQUEST", "BACKEND_TURN", "UNKNOWN"}:
             raise ValueError("Invalid request accounting scope")
         raw = _encoded(projection)
         with self.lock:
+            binding = dict(binding or {})
+            prior = self.bindings.get(runtime)
+            if prior is not None and prior != binding:
+                raise RuntimeError("CONTEXT_BINDING_CHANGED_WITHIN_ATTEMPT")
+            self.bindings[runtime] = binding
             self.sequence += 1
             context_id = "context-" + str(self.sequence)
             observed = ContextProjection(context_id, _digest(raw), len(raw), runtime,
-                                         "WORKER_PROJECTION", request_scope, purpose)
+                                         "WORKER_PROJECTION", request_scope, purpose, **binding,
+                                         tool_schema_digest=_digest(_encoded(projection["tools"])) if "tools" in projection else None,
+                                         material_inventory_digest=_digest(_encoded(sorted(self.materials))))
             self.evidence.record("context-projected", callId=context_id, runtime=runtime,
                                  digest=observed.digest, inputBytes=len(raw), purpose=purpose,
                                  visibility=observed.visibility, requestScope=request_scope,
+                                 instructionRevision=observed.instruction_revision, configurationDigest=observed.configuration_digest,
+                                 model=observed.model, effort=observed.effort, toolSchemaDigest=observed.tool_schema_digest,
+                                 materialInventoryDigest=observed.material_inventory_digest,
                                  usageKnown=False, unknown="provider-added-context-and-input-token-attribution")
             components = parts if parts is not None else projection
             for kind, value in components.items():
@@ -152,7 +169,10 @@ def observe_context(request, runtime, projection, *, request_scope, purpose=None
     observed.capabilities_observed(runtime, capabilities)
     return observed.observe(runtime, projection, request_scope=request_scope,
         purpose=purpose or getattr(request, "context_purpose", "task"),
-        parts=dict(request.context_parts) if getattr(request, "context_parts", ()) else None)
+        parts=dict(request.context_parts) if getattr(request, "context_parts", ()) else None,
+        binding={"instruction_revision": getattr(request.attempt, "instruction_revision", None),
+                 "configuration_digest": getattr(channel, "configuration_digest", None) if channel else getattr(request.broker, "context", {}).get("configurationDigest") if broker else None,
+                 "model": getattr(request, "model", None), "effort": getattr(request, "reasoning_effort", None)})
 
 
 def register_material(kind, source_id, version, content):
