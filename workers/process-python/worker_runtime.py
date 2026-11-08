@@ -323,11 +323,44 @@ def git(cwd, *args, cleanup=False):
         if not reader.is_alive():
             child.stdout.close()
 
-def failure_code(error):
+def failure_code(error, category=None):
     import re
     value = str(error).split(":", 1)[0]
     if re.fullmatch(r"[A-Z][A-Z0-9_]{2,100}", value):
         return value
+    if category == "MODEL_ERROR":
+        chain, seen, current = [], set(), error
+        while current is not None and id(current) not in seen and len(chain) < 8:
+            seen.add(id(current))
+            chain.append(current)
+            current = getattr(current, "__cause__", None) or getattr(current, "__context__", None)
+        for current in reversed(chain):
+            status = getattr(current, "status_code", None)
+            if status is None:
+                status = getattr(getattr(current, "response", None), "status_code", None)
+            if type(status) is int and 100 <= status <= 599:
+                return f"MODEL_API_HTTP_{status}"
+        model_codes = {
+            "APITimeoutError": "MODEL_API_TIMEOUT", "TimeoutError": "MODEL_API_TIMEOUT",
+            "TimeoutException": "MODEL_API_TIMEOUT", "ReadTimeout": "MODEL_API_TIMEOUT",
+            "ConnectTimeout": "MODEL_API_TIMEOUT", "APIConnectionError": "MODEL_API_CONNECTION_ERROR",
+            "ConnectionError": "MODEL_API_CONNECTION_ERROR", "ConnectError": "MODEL_API_CONNECTION_ERROR",
+            "ReadError": "MODEL_API_CONNECTION_ERROR", "WriteError": "MODEL_API_CONNECTION_ERROR",
+            "RemoteProtocolError": "MODEL_API_CONNECTION_ERROR",
+            "AuthenticationError": "MODEL_API_AUTHENTICATION_ERROR",
+            "PermissionDeniedError": "MODEL_API_PERMISSION_DENIED", "RateLimitError": "MODEL_API_RATE_LIMIT",
+            "BadRequestError": "MODEL_API_BAD_REQUEST", "NotFoundError": "MODEL_API_NOT_FOUND",
+            "InternalServerError": "MODEL_API_SERVER_ERROR",
+        }
+        for current in reversed(chain):
+            code = model_codes.get(type(current).__name__)
+            if code:
+                return code
+        for current in reversed(chain):
+            name = re.sub(r"[^A-Za-z0-9_]", "_", type(current).__name__).upper().strip("_")
+            if name and name not in {"ERROR", "EXCEPTION", "RUNTIMEERROR"}:
+                return "MODEL_EXCEPTION_" + name[:40]
+        return "MODEL_EXCEPTION_UNKNOWN"
     if isinstance(error, OSError):
         if getattr(error, "winerror", None) == 206 or (getattr(error, "winerror", None) in {2, 3} and not str(error.filename or "").startswith("\\\\?\\")
                 and len(str(error.filename or "")) >= 260):

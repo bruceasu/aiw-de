@@ -493,18 +493,18 @@ def _model_preferences(request, config):
     effort = request.reasoning_effort or config.reasoning_effort
     parallel_tool_calls = getattr(config, "parallel_tool_calls", True)
     if config.provider == "deepseek":
-        if effort and effort not in {"none", "low", "high", "max"}: raise RuntimeError("DEEPSEEK_REASONING_EFFORT_INVALID")
+        if effort and effort not in {"default", "none", "low", "high", "max"}: raise RuntimeError("DEEPSEEK_REASONING_EFFORT_INVALID")
         if config.protocol == "chat-completions":
             return {"parallel_tool_calls": parallel_tool_calls, "preserve_raw_usage": True,
-                    "extra_args": {"reasoning_effort": effort or "none"}}
+                    **({"extra_args": {"reasoning_effort": effort}} if effort and effort != "default" else {})}
         return {"parallel_tool_calls": parallel_tool_calls, "store": False, "preserve_raw_usage": True,
-                "reasoning": {"effort": effort or "none"}}
+                **({"reasoning": {"effort": effort}} if effort and effort != "default" else {})}
     if config.protocol == "chat-completions":
         return {"parallel_tool_calls": parallel_tool_calls, "preserve_raw_usage": True,
-                **({"extra_args": {"reasoning_effort": effort}} if effort and effort != "none" else {})}
+                **({"extra_args": {"reasoning_effort": effort}} if effort and effort != "default" else {})}
     settings = {"parallel_tool_calls": parallel_tool_calls, "truncation": "disabled", "store": False, "preserve_raw_usage": True}
     effort = request.reasoning_effort or config.reasoning_effort
-    if effort and effort != "none": settings["reasoning"] = {"effort": effort}
+    if effort and effort != "default": settings["reasoning"] = {"effort": effort}
     if request.service_tier: settings["extra_args"] = {"service_tier": request.service_tier}
     return settings
 

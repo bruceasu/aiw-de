@@ -678,7 +678,7 @@ class ProcessSlot:
                         native.end()
                     except Exception:
                         attempt.resource_uncertain = True
-                failure_code = classify_failure(error)
+                failure_code = classify_failure(error, phase)
                 try: attempt.evidence.record("attempt-failed", status=status, phase=phase, code=failure_code)
                 except Exception: pass
                 if attempt.reason in {"deadline", "lease-lost", "force-shutdown"}:
@@ -688,7 +688,7 @@ class ProcessSlot:
                 try:
                     if (broker or native) and attempt.reason == "stop-requested" and not attempt.resource_uncertain and not (broker and broker._active):
                         self.client._task_action(task, self.config.worker_id, "stop-acknowledgement", session_id)
-                    else: self.client.fail(task, self.config.worker_id, session_id, classify_failure(error), phase)
+                    else: self.client.fail(task, self.config.worker_id, session_id, failure_code, phase)
                 except ProtocolError: pass
             print(f"attempt {task.get('attemptId')}: {status}", file=sys.stderr, flush=True)
         finally:

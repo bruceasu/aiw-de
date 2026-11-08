@@ -78,11 +78,16 @@
   }
   function efforts() {
     const item = models.find(value => value.id === modelInput.value), current = form.elements.effort.value;
-    const allowed = apiProvider.value === "deepseek" && runtime.value === "openai-agents" ? ["none", "low", "high", "max"] : item?.efforts?.length ? item.efforts : runtime.value === "codex-app-server"
-      ? ["none", "minimal", "low", "medium", "high", "xhigh"] : ["none", "minimal", "low", "medium", "high"];
-    form.elements.effort.replaceChildren(...allowed.map(value => new Option(value, value)));
-    form.elements.effort.value = allowed.includes(current) ? current : allowed.includes(item?.defaultEffort) ? item.defaultEffort : allowed.includes("medium") ? "medium" : allowed[0];
-    byId("factory-effort-help").textContent = t(apiProvider.value === "deepseek" && runtime.value === "openai-agents" ? "推理选项依据 DeepSeek 协议声明；Chat Completions 使用完整消息回传适配。尚未对当前模型执行真实验证。" : item?.efforts?.length ? "推理强度来自所选模型的目录信息。" : "目录未提供此模型的推理强度信息；这里显示执行方式的通用选项。实际支持情况以模型响应为准。");
+    const python = runtime.value === "openai-agents", deepseek = python && apiProvider.value === "deepseek";
+    const allowed = runtime.value === "codex-app-server" ? item?.efforts?.length ? item.efforts : ["none", "minimal", "low", "medium", "high", "xhigh"]
+      : deepseek ? ["default", "none", ...(item?.efforts?.length ? item.efforts : ["low", "high", "max"])]
+      : ["default", ...(item?.efforts?.length ? item.efforts : ["none", "minimal", "low", "medium", "high", "xhigh", "max"])];
+    form.elements.effort.replaceChildren(...allowed.map(value => new Option(value === "default" ? t("Use model default (do not set reasoning effort)") : value, value)));
+    form.elements.effort.value = allowed.includes(current) ? current : allowed.includes(item?.defaultEffort) ? item.defaultEffort : allowed.includes("default") ? "default" : allowed.includes("medium") ? "medium" : allowed[0];
+    byId("factory-effort-help").textContent = deepseek
+      ? t("DeepSeek model metadata is used when it lists model-specific effort values. Otherwise these are generic overrides and may be rejected; model default defers to the API.")
+      : python ? t("The selected model catalog does not report reasoning support per model. Use model default to omit the parameter; explicit values follow the API enum, but support varies by model. Check the selected model's documentation.")
+      : item?.efforts?.length ? t("推理强度来自所选模型的目录信息。") : t("目录未提供此模型的推理强度信息；这里显示执行方式的通用选项。实际支持情况以模型响应为准。");
   }
   function sourceReady() { return Boolean(runtime.value && mode.value && (runtime.value !== "openai-agents" || apiProvider.value) && (!plane() || selected()?.state === "READY")); }
   function loginBlocker() {

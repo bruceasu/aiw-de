@@ -17,4 +17,21 @@
 .goal-source,.goal-attachment,.goal-version {padding:12px 0;border-bottom:1px solid var(--border,rgba(255,255,255,.12))}
 .goal-step {margin:16px 0;padding:14px;border:1px solid var(--border,rgba(255,255,255,.12));border-radius:10px}
 .goal-version pre {white-space:pre-wrap;overflow-wrap:anywhere}.goal-layout .form-actions {display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.goal-discussion-dialog{padding:0}
+.goal-discussion-dialog:not([open]){display:none}
+.goal-discussion-dialog[open]{display:flex}
+.goal-discussion-dialog::backdrop{background:#02070dcc;backdrop-filter:blur(4px)}
+.goal-discussion-shell{display:flex;flex-direction:column;width:100%;height:100%;min-height:0}
+.goal-discussion-bar{cursor:default;touch-action:auto;user-select:auto}
+.goal-discussion-bar h2{margin:2px 0;font-size:18px}.goal-discussion-kicker{margin:0;color:var(--accent);font:700 10px Consolas,monospace;letter-spacing:.12em;text-transform:uppercase}.goal-discussion-subject{margin:4px 0 0;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.goal-discussion-controls{gap:6px}.goal-discussion-controls .goal-window-icon{display:block;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.goal-discussion-controls .goal-window-icon--restore{display:none}.goal-discussion-dialog[data-maximized=true] .goal-window-icon--maximize{display:none}.goal-discussion-dialog[data-maximized=true] .goal-window-icon--restore{display:block}
+.goal-discussion-body{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.8fr);flex:1;min-height:0}
+.goal-discussion-chat{display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0;padding:18px;overflow:hidden}
+.goal-discussion-chat .goal-messages{flex:1;min-height:100px;max-height:none;overflow:auto}
+.goal-discussion-chat .field{display:grid;gap:8px;margin:4px 0}.goal-discussion-chat textarea{width:100%;max-width:100%;resize:vertical}
+.goal-discussion-chat .help{margin:0;max-width:84ch}.goal-discussion-chat .form-actions{display:flex;gap:10px;flex-wrap:wrap;margin:0}
+.goal-discussion-materials{min-width:0;min-height:0;padding:18px;overflow:auto;border-left:1px solid var(--line);background:var(--panel);background:color-mix(in srgb,var(--panel) 88%,var(--nav))}
+.goal-discussion-materials h3{margin:0 0 12px}.goal-discussion-materials .form-actions{display:flex;gap:8px;flex-wrap:wrap}.goal-discussion-materials input:not([type=checkbox]){min-width:0;flex:1}
+.goal-discussion-materials .field{display:grid;gap:8px;margin:16px 0 8px}.goal-discussion-materials input[type=file]{width:100%}
+@media(max-width:760px){.goal-discussion-bar{padding:12px}.goal-discussion-body{grid-template-columns:1fr;overflow:auto}.goal-discussion-chat{min-height:55dvh;padding:12px}.goal-discussion-materials{max-height:38dvh;padding:12px;border-top:1px solid var(--line);border-left:0}}
 @media(max-width:900px){.goal-layout{grid-template-columns:1fr}}

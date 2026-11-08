@@ -37,7 +37,11 @@ def run():
         return result
     except Exception as error:
         if isinstance(error, ModuleNotFoundError):
-            code = "PYTHON_DEPENDENCY_MISSING"
+            code = {
+                "tomllib": "PYTHON_VERSION_UNSUPPORTED",
+                "agents": "OPENAI_AGENTS_SDK_MISSING",
+                "openai": "OPENAI_SDK_MISSING",
+            }.get(getattr(error, "name", ""), "PYTHON_DEPENDENCY_MISSING")
         elif isinstance(error, FileNotFoundError):
             code = "EXECUTABLE_NOT_FOUND"
         else:

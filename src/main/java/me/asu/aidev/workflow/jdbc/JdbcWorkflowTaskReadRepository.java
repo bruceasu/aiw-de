@@ -21,7 +21,37 @@ public class JdbcWorkflowTaskReadRepository {
     public record Diagnostic(String code,String summary,String nextAction,boolean specific) {}
     public static Diagnostic explain(String code) {
         if(code==null) return null;
+        if(code.matches("MODEL_API_HTTP_[1-5][0-9]{2}")) {
+            int status=Integer.parseInt(code.substring("MODEL_API_HTTP_".length()));
+            if(status==401) return new Diagnostic(code,"The model API rejected authentication.",
+                    "Check the configured credential and confirm the account can use this model.",true);
+            if(status==403) return new Diagnostic(code,"The model API denied this request.",
+                    "Check model access and provider account permissions.",true);
+            if(status==400||status==422) return new Diagnostic(code,"The model API rejected the request parameters.",
+                    "Check the configured model, API protocol, and supported request settings.",true);
+            if(status==404) return new Diagnostic(code,"The model endpoint or requested model was not found.",
+                    "Check the API endpoint and configured model name.",true);
+            if(status==408||status==504) return new Diagnostic(code,"The model API request timed out.",
+                    "Check the Worker network path and provider response time before retrying.",true);
+            if(status==429) return new Diagnostic(code,"The model API rate limit was reached.",
+                    "Wait for the provider limit to reset or select an available model profile.",true);
+            if(status>=500) return new Diagnostic(code,"The model API returned a server error.",
+                    "Check the provider service status before retrying.",true);
+            return new Diagnostic(code,"The model API returned an HTTP error.",
+                    "Check the provider request and model connection settings.",true);
+        }
+        if(code.matches("MODEL_EXCEPTION_[A-Z0-9_]{1,40}"))
+            return new Diagnostic(code,"The model runtime raised a classified exception. See the error code for its type; raw error text was omitted.",
+                    "Check the Worker runtime and model configuration. Raw exception text is omitted to protect request data.",true);
         String summary=switch(code) {
+            case "MODEL_API_TIMEOUT" -> "The model API request timed out.";
+            case "MODEL_API_CONNECTION_ERROR" -> "The Worker could not connect to the model API.";
+            case "MODEL_API_AUTHENTICATION_ERROR" -> "The model API rejected authentication.";
+            case "MODEL_API_PERMISSION_DENIED" -> "The model API denied this request.";
+            case "MODEL_API_RATE_LIMIT" -> "The model API rate limit was reached.";
+            case "MODEL_API_BAD_REQUEST" -> "The model API rejected the request parameters.";
+            case "MODEL_API_NOT_FOUND" -> "The model endpoint or requested model was not found.";
+            case "MODEL_API_SERVER_ERROR" -> "The model API returned a server error.";
             case "WRITABLE_WORKSPACE_REQUIRED" -> "This coding Worker requires an isolated Git workspace, but no usable revision was assigned.";
             case "GIT_HEAD_UNAVAILABLE" -> "The selected workspace has no readable current Git commit.";
             case "WORKSPACE_SNAPSHOT_PATH_TOO_LONG", "FILESYSTEM_PATH_TOO_LONG", "OUTPUT_PATH_TOO_LONG" -> "A filesystem path is too long for the current Windows operation.";
@@ -34,6 +64,14 @@ public class JdbcWorkflowTaskReadRepository {
             default -> "The Worker reported an execution failure. Use the recorded code and attempt identity for diagnosis.";
         };
         String action=switch(code) {
+            case "MODEL_API_TIMEOUT" -> "Check the Worker network path and provider response time before retrying.";
+            case "MODEL_API_CONNECTION_ERROR" -> "Check network access from the Worker to the configured model endpoint.";
+            case "MODEL_API_AUTHENTICATION_ERROR" -> "Check the configured credential and confirm the account can use this model.";
+            case "MODEL_API_PERMISSION_DENIED" -> "Check model access and provider account permissions.";
+            case "MODEL_API_RATE_LIMIT" -> "Wait for the provider limit to reset or select an available model profile.";
+            case "MODEL_API_BAD_REQUEST" -> "Check the configured model, API protocol, and supported request settings.";
+            case "MODEL_API_NOT_FOUND" -> "Check the API endpoint and configured model name.";
+            case "MODEL_API_SERVER_ERROR" -> "Check the provider service status before retrying.";
             case "WRITABLE_WORKSPACE_REQUIRED" -> "Use the updated Worker: when no revision is specified, it pins the selected repository's current HEAD before coding.";
             case "GIT_HEAD_UNAVAILABLE" -> "Check that the selected directory is a Git repository with at least one commit, then retry.";
             case "WORKSPACE_SNAPSHOT_PATH_TOO_LONG", "FILESYSTEM_PATH_TOO_LONG", "OUTPUT_PATH_TOO_LONG" -> "Use the updated short output paths and Windows-compatible Worker. Preserve historical files, then retry the failed task.";

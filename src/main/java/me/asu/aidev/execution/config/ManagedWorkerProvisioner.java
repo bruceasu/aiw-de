@@ -186,6 +186,9 @@ public class ManagedWorkerProvisioner {
             if(!code.matches("[A-Z][A-Z0-9_]{2,100}"))code="WORKER_INITIALIZATION_FAILED";
             String reason=switch(code) {
                 case "PYTHON_DEPENDENCY_MISSING" -> "Python 缺少 Worker 运行依赖，请使用已安装依赖的 Python 环境。";
+                case "PYTHON_VERSION_UNSUPPORTED" -> "Worker 要求 Python 3.11 或更高版本，请调整 Agent 工厂中的 Python 路径。";
+                case "OPENAI_AGENTS_SDK_MISSING" -> "当前 Python 环境缺少 OpenAI Agents SDK，请在该环境中安装 Worker 的 requirements.txt。";
+                case "OPENAI_SDK_MISSING" -> "当前 Python 环境缺少 OpenAI SDK，请在该环境中安装 Worker 的 requirements.txt。";
                 case "EXECUTABLE_NOT_FOUND" -> "运行环境找不到必要程序，请核对 Python、Git 和 Codex 的安装路径。";
                 case "DEDICATED_GUARDED_CODEX_HOME_REQUIRED","GUARDED_HOME_MUST_BE_DEDICATED" -> "Codex 专业 Worker 的受控登录目录尚未就绪，请在工厂高级设置中选择已有的受控执行环境。";
                 default -> "Worker 初始化检查未通过，请核对工厂运行环境。";

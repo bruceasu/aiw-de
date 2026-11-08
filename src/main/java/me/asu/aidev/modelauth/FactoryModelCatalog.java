@@ -81,7 +81,7 @@ public class FactoryModelCatalog {
     }
     static List<Model> parse(JsonNode raw,String source) {
         if(raw==null)throw new IllegalStateException("MODEL_DIRECTORY_FORMAT_UNSUPPORTED");
-        boolean chatgpt=source.equals("CHATGPT_ACCOUNT"),codex=source.equals("CODEX_RPC");
+        boolean chatgpt=source.equals("CHATGPT_ACCOUNT"),codex=source.equals("CODEX_RPC"),deepseek=source.equals("DEEPSEEK_API_ACCOUNT");
         var rows=raw.path(chatgpt?"models":"data");if(!rows.isArray())throw new IllegalStateException("MODEL_DIRECTORY_FORMAT_UNSUPPORTED");
         var models=new LinkedHashMap<String,Model>();
         for(var row:rows) {
@@ -93,7 +93,10 @@ public class FactoryModelCatalog {
             if(codex&&row.path("supportedReasoningEfforts").isArray())for(var item:row.path("supportedReasoningEfforts")) {
                 String effort=item.path("reasoningEffort").asText();if(Set.of("none","minimal","low","medium","high","xhigh").contains(effort)&&!efforts.contains(effort))efforts.add(effort);
             }
-            String fallback=row.path("defaultReasoningEffort").asText("");
+            if(deepseek&&row.path("effort").path("supported_levels").isArray())for(var item:row.path("effort").path("supported_levels")) {
+                String effort=item.asText();if(Set.of("low","high","max").contains(effort)&&!efforts.contains(effort))efforts.add(effort);
+            }
+            String fallback=codex?row.path("defaultReasoningEffort").asText(""):deepseek?row.path("effort").path("default_level").asText(""):"";
             models.putIfAbsent(id,new Model(id,name,List.copyOf(efforts),efforts.contains(fallback)?fallback:null));
             if(models.size()>=500)break;
         }

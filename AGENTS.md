@@ -65,17 +65,19 @@ Follow the shared resource-budget and validation files for authorization,
 command scope, and retry rules. The default is static analysis and editing.
 
 - Tests, final-artifact builds, formatters, linters, type checks, verification
-  scripts, network calls, dependency downloads, permission probes, privilege
+  scripts, permission probes, privilege
   escalation, `codex-auto-review`, and sub-agents have a default budget of zero.
 - Implementation alone does not authorize these restricted actions.
-- Use at most three targeted discovery batches before editing, unless a
-  concrete blocker requires more evidence.
+- Use at most four targeted discovery batches for ordinary tasks. Continue one
+  focused batch at a time only to resolve a concrete uncertainty, and stop when
+  there is enough evidence to make the scoped change.
 - After editing, use at most one static/read-only validation command by default.
 - After source-code implementation, run one compile-only check. Prefer an
   applicable `scripts/compile*` or root `compile*` script; otherwise use the
   narrowest language compiler command. For Java, use the narrowest Maven or
-  Gradle compile goal. Do not retain a final distributable artifact or download
-  dependencies without authorization. Docs-only edits do not need compilation.
+  Gradle compile goal. Do not retain a final distributable artifact. Dependency
+  resolution follows the shared resource-budget rules. Docs-only edits do not
+  need compilation.
 - Do not automatically run `scripts/verify.sh`, `build*`, tests, or smoke checks.
 - Do not repeat an unchanged failed command. A compile-only check may be retried
   once after a relevant source fix; follow the shared rules for other retries.

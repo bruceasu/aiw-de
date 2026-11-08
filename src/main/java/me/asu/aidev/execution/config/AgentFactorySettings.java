@@ -30,7 +30,7 @@ public class AgentFactorySettings {
             if(runtime==null||!Set.of("codex-app-server","openai-agents").contains(runtime))throw new IllegalArgumentException("请选择支持的模型运行时。");
             if(model==null||!model.matches("[A-Za-z0-9._-]{1,120}"))throw new IllegalArgumentException("请填写模型名称。");
             var efforts=runtime.equals("codex-app-server")?Set.of("none","minimal","low","medium","high","xhigh")
-                :apiProvider.equals("deepseek")?Set.of("none","low","high","max"):Set.of("none","minimal","low","medium","high");
+                :apiProvider.equals("deepseek")?Set.of("default","none","low","high","max"):Set.of("default","none","minimal","low","medium","high","xhigh","max");
             if(effort==null||!efforts.contains(effort))throw new IllegalArgumentException("此服务商与协议不支持所选推理强度。");
             for(String value:List.of(Objects.toString(python,""),Objects.toString(executable,""),Objects.toString(guardHome,"")))
                 if(value.length()>2048||value.indexOf('\n')>=0||value.indexOf('\r')>=0||value.indexOf('\0')>=0)throw new IllegalArgumentException("启动路径无效。");

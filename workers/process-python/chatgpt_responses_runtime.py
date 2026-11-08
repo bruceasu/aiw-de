@@ -35,7 +35,7 @@ class ResponsesConversation:
         projected = [*self.history, {"role": "user", "content": instruction}]
         payload = {"model": request.model, "instructions": HOST_ACTION_INSTRUCTIONS if system_instructions is None else system_instructions,
                    "input": projected, "store": False, "stream": True}
-        if request.reasoning_effort:
+        if request.reasoning_effort and request.reasoning_effort != "default":
             payload["reasoning"] = {"effort": request.reasoning_effort}
         body = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode()
         if len(body) > setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024):

@@ -76,13 +76,40 @@
       b.disabled = busy; action.disabled = busy;
       item.append(b, action); $('goal-list').append(item);
     });
-    if (!rows.length) $('goal-list').append(node('p', showDeleted ? '最近的目标中没有已删除记录。' : '最近的目标中没有当前记录。可新建目标，或从“已删除”恢复。', 'goal-list-empty'));
+    if (!rows.length) $('goal-list').append(node('p', showDeleted ? 'No wishes are resting in the archive.' : 'The pool is quiet. Plant your first wish when you are ready.', 'goal-list-empty'));
   }
   function clearSelection() {
+    if ($('goal-discussion-dialog').open) $('goal-discussion-dialog').close();
     current = null; data = null; dirty = false; editorDirty.clear();
     $('goal-detail').hidden = true; $('goal-empty').hidden = false;
     $('goal-message').value = '';
   }
+  const discussionDialog = $('goal-discussion-dialog');
+  const discussionOpener = $('goal-discussion-open');
+  const discussionMaximize = $('goal-discussion-maximize');
+  function setDiscussionMaximized(maximized) {
+    discussionDialog.dataset.maximized = String(maximized);
+    discussionMaximize.setAttribute('aria-pressed', String(maximized));
+    const label = text(maximized ? 'Restore wish discussion' : 'Maximize wish discussion');
+    discussionMaximize.setAttribute('aria-label', label);
+    discussionMaximize.title = label;
+  }
+  discussionOpener.onclick = () => {
+    if (!current || current.deleted || discussionDialog.open) return;
+    $('goal-discussion-subtitle').textContent = current.title;
+    setDiscussionMaximized(false);
+    discussionDialog.showModal();
+    discussionOpener.setAttribute('aria-expanded', 'true');
+    $('goal-message').focus({preventScroll:true});
+  };
+  $('goal-discussion-close').onclick = () => discussionDialog.close();
+  discussionMaximize.onclick = () => {
+    setDiscussionMaximized(discussionDialog.dataset.maximized !== 'true');
+  };
+  discussionDialog.addEventListener('close', () => {
+    discussionOpener.setAttribute('aria-expanded', 'false');
+    setDiscussionMaximized(false);
+  });
   for (const deleted of [false, true]) $(deleted ? 'goal-show-deleted' : 'goal-show-active').onclick = () => run(async () => {
     clean();
     if (current && current.deleted !== deleted && $('goal-message').value.trim() && !await window.aiwConfirm('切换列表将放弃当前未发送的消息，是否继续？', {title:'切换目标列表'})) return;
@@ -166,11 +193,13 @@
     $('goal-detail').hidden = false; $('goal-empty').hidden = true;
     $('goal-title').value = current.title; $('goal-body').value = current.content.body;
     $('goal-missing').value = current.content.missing; $('goal-backend').value = current.content.backend;
+    $('goal-discussion-subtitle').textContent = current.title;
     discussionConfiguration();
     selectedSources = new Set(current.content.knowledgeIds);
     $('goal-revision').textContent = `${current.deleted ? 'Deleted · ' : ''}Version ${current.revision}`;
     $('goal-delete').hidden = current.deleted; $('goal-restore').hidden = !current.deleted;
     $('goal-detail').querySelectorAll('input,textarea,select,button').forEach(el => { el.disabled = current.deleted; });
+    discussionDialog.querySelectorAll('input,textarea,select,button').forEach(el => { el.disabled = current.deleted; });
     $('goal-restore').disabled = false; $('goal-reload').disabled = false;
     $('goal-messages').replaceChildren();
     current.content.messages.forEach(m => {
@@ -205,16 +234,16 @@
     }, 3000);
   }
   ['goal-title','goal-body','goal-missing','goal-backend'].forEach(id => $(id).addEventListener('input', () => { dirty = true; }));
-  $('goal-new').onclick = () => run(async () => { clean(); const draft = await api('', {}); await load(draft.id); status('Goal created. Start with your intent.'); });
+  $('goal-new').onclick = () => run(async () => { clean(); const draft = await api('', {}); await load(draft.id); status('A new wish is ready. What would you like to make real?'); });
   $('goal-reload').onclick = () => run(async () => {
     if ((dirty || editorDirty.size) && !await window.aiwConfirm('放弃尚未保存的目标和计划编辑，重新加载已保存版本？', {title:'重新加载目标', danger:true})) return;
-    await load(current.id); status('Saved version restored.');
+    await load(current.id); status('Your saved wish is back in the pool.');
   });
   $('goal-save').onclick = () => run(async () => {
     if (editorDirty.size) throw new Error('Save plan editing changes first.');
     await api(`/${current.id}/edit`, {revision:current.revision,title:$('goal-title').value,body:$('goal-body').value,
       missing:$('goal-missing').value,backend:$('goal-backend').value,knowledgeIds:[...selectedSources]});
-    await load(current.id); status('Goal saved. Existing formal versions and plans are unchanged.');
+    await load(current.id); status('Your wish is saved. Existing wish snapshots and plans are unchanged.');
   });
   for (const action of ['delete','restore']) $('goal-'+action).onclick = () => run(() => changeDeleted(current, action === 'delete'));
   $('goal-send').onclick = () => run(async () => {

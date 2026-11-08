@@ -36,8 +36,8 @@ def efforts(runtime="openai-agents"):
     if runtime == "codex-app-server":
         return {"none", "minimal", "low", "medium", "high", "xhigh"}
     if provider(runtime) == "deepseek":
-        return {"none", "low", "high", "max"}
-    return {"none", "minimal", "low", "medium", "high"}
+        return {"default", "none", "low", "high", "max"}
+    return {"default", "none", "minimal", "low", "medium", "high", "xhigh", "max"}
 
 
 def compatible(profile, runtime):
