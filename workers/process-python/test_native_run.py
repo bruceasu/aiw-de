@@ -5,12 +5,26 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from native_run import NativeRun, input_question, open_run, CAPABILITY, QUESTION_CAPABILITY
+from native_run import NativeRun, input_question, open_run, capabilities, CAPABILITY, QUESTION_CAPABILITY
 from plan_workspace import PlanWorkspace, input_manifests
 from worker_runtime import attempt_scope, snapshot
 
 
 class NativeRunTest(unittest.TestCase):
+    def test_openai_native_configuration_changes_with_oauth_adapter(self):
+        config = SimpleNamespace(runtime='openai-agents', process_role='worker', model='model',
+                                 reasoning_effort='', sandbox='workspace-write', approval_mode='never',
+                                 network_access=False)
+        original_read = Path.read_bytes
+        def modified_adapter(path):
+            data = original_read(path)
+            return data + b'\n# changed adapter' if path.name == 'chatgpt_responses_runtime.py' else data
+        before = capabilities(config)
+        with patch.object(Path, 'read_bytes', modified_adapter):
+            after = capabilities(config)
+        self.assertNotEqual(next(c for c in before if c.startswith('native-config:')),
+                            next(c for c in after if c.startswith('native-config:')))
+
     def test_only_explicit_missing_input_opens_a_question(self):
         for text in ['', 'Please repair the output.', '{"verdict":"REPAIR_REQUIRED","completed":false}']:
             with self.subTest(text=text):

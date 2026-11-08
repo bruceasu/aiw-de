@@ -107,11 +107,20 @@ class OpenAIApiRuntime:
         from openai import AsyncOpenAI, DefaultAsyncHttpxClient
 
         set_tracing_disabled(True)
-        client = AsyncOpenAI(api_key=self.config.api_key, base_url=self.config.base_url,
+        oauth = request.credential_provider is not None
+        if oauth and (self.config.provider != "openai" or self.config.protocol != "responses"):
+            raise RuntimeError("MODEL_CONNECTION_PROVIDER_MISMATCH")
+        if oauth and request.model_images:
+            raise RuntimeError("MODEL_IMAGES_OAUTH_NOT_CONNECTED")
+        client = AsyncOpenAI(api_key=self.config.api_key or "oauth-adapter", base_url=self.config.base_url,
                              timeout=self.config.api_timeout_ms / 1000, max_retries=0,
                              http_client=DefaultAsyncHttpxClient(follow_redirects=False))
         provider = OpenAIProvider(openai_client=client, use_responses=self.config.protocol == "responses")
-        base_model = provider.get_model(request.model or self.config.model)
+        if oauth:
+            from chatgpt_responses_runtime import sdk_model
+            base_model = sdk_model(request, on_session)
+        else:
+            base_model = provider.get_model(request.model or self.config.model)
         chat_round = self.config.provider == "deepseek" and self.config.protocol == "chat-completions"
         if chat_round:
             from deepseek_chat import create_model
@@ -188,7 +197,7 @@ class OpenAIApiRuntime:
                 from model_images import input_message
                 run_input = input_message(request.model_images, run_input)
             while True:
-                if chat_round:
+                if chat_round or oauth:
                     # The adapter consumes a bounded native stream and returns only a completed round.
                     # Cancellation interrupts this task; individual tools still use the existing host broker.
                     context.work_started = True
@@ -258,9 +267,9 @@ class _GuardedModel(Model):
         self._summary_tracing = tracing
         if previous_response_id or conversation_id: raise RuntimeError("SERVER_HISTORY_CONTEXT_TRANSFORMS_UNSUPPORTED")
         if self._request.broker is not None:
-            if self._request.broker.pending_question:
+            if self._request.broker.pending_question or self._request.broker.pending_approval:
                 from formal_questions import YieldRequested
-                raise YieldRequested("QUESTION_WAITING")
+                raise YieldRequested("WORKER_YIELD_WAITING")
             if self.inputs is None:
                 from operator_inputs import OperatorInputs
                 self.inputs = OperatorInputs(self._request.broker)
@@ -686,7 +695,8 @@ def _edit(context: ToolContext, path: str, old: str, new: str) -> dict[str, Any]
     if not old or original.count(old) != 1: raise RuntimeError("EDIT_MATCH_NOT_UNIQUE")
     changed = original.replace(old, new, 1).encode("utf-8")
     if len(changed) > 2 * 1024 * 1024: raise RuntimeError("EDIT_RESULT_TOO_LARGE")
-    _atomic_write(file, changed)
+    _atomic_write(file, changed, expected=original.encode("utf-8"),
+                  validate=lambda: _resolve(context, path, write=True))
     return {"content": "File edited", "resultDigest": hashlib.sha256(changed).hexdigest()}
 
 
@@ -694,7 +704,9 @@ def _edit_many(context: ToolContext, path: str, edits: list[tuple[str, str]]) ->
     _require_writable(context)
     if not edits or len(edits) > 128: raise RuntimeError("EDIT_COUNT_INVALID")
     file = _resolve(context, path)
+    if file.stat().st_size > 2 * 1024 * 1024: raise RuntimeError("EDIT_FILE_TOO_LARGE")
     original = file.read_bytes().decode("utf-8")
+    baseline = original.encode("utf-8")
     plans = []
     for old, new in edits:
         if not old or original.count(old) != 1: raise RuntimeError("EDIT_MATCH_NOT_UNIQUE")
@@ -705,14 +717,27 @@ def _edit_many(context: ToolContext, path: str, edits: list[tuple[str, str]]) ->
     for start, end, new in reversed(plans): original = original[:start] + new + original[end:]
     data = original.encode("utf-8")
     if len(data) > 2 * 1024 * 1024: raise RuntimeError("EDIT_RESULT_TOO_LARGE")
-    _atomic_write(file, data)
+    _atomic_write(file, data, expected=baseline,
+                  validate=lambda: _resolve(context, path, write=True))
     return {"content": "Files edited", "resultDigest": hashlib.sha256(data).hexdigest()}
 
 
-def _atomic_write(file: Path, data: bytes) -> None:
+def _atomic_write(file: Path, data: bytes, *, expected: bytes | None = None, validate=None) -> None:
     fd, temp_name = tempfile.mkstemp(prefix=".aiw-", dir=file.parent)
     try:
-        with os.fdopen(fd, "wb") as stream: stream.write(data)
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        if validate is not None:
+            validate()
+        if expected is not None:
+            try:
+                unchanged = file.read_bytes() == expected
+            except FileNotFoundError:
+                unchanged = False
+            if not unchanged:
+                raise RuntimeError("EDIT_FILE_VERSION_CONFLICT")
         os.replace(temp_name, file)
     finally:
         try: os.unlink(temp_name)

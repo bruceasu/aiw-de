@@ -153,6 +153,11 @@ public class WorkerProtocolV1Controller {
                 new LeaseToken(required(request.leaseToken(), "leaseToken")));
     }
 
+    @PostMapping("/tasks/{taskId}/handoff")
+    public void handoff(@PathVariable String taskId,@RequestBody HandoffRequest request) {
+        handoffs.record(taskId,required(request.workerId(),"workerId"),required(request.leaseToken(),"leaseToken"),request.handoff());
+    }
+
     @org.springframework.transaction.annotation.Transactional
     @PostMapping("/tasks/{taskId}/complete")
     public CompletionResponse complete(@PathVariable String taskId, @RequestBody CompleteTaskRequest request) {
@@ -231,6 +236,7 @@ public class WorkerProtocolV1Controller {
     }
     public record HeartbeatResponse(boolean stopRequested) {}
     public record StopAcknowledgementRequest(String workerId, String leaseToken) {}
+    public record HandoffRequest(String workerId,String leaseToken,me.asu.aidev.execution.application.TaskHandoffs.Reference handoff) {}
     public record LeaseActionRequest(String workerId, String leaseToken, String externalSessionId) {}
     public record StartTaskRequest(String workerId, String leaseToken, String externalSessionId,
                                    String profileId, String profileVersion, String selectionReason) {}

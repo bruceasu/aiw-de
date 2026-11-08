@@ -30,6 +30,12 @@ def capabilities(config):
     root = Path(__file__).resolve().parent
     modules = ("native_run.py", "run_channel.py", "run_contract.py", "process_worker.py", "worker_runtime.py",
                "app_server_runtime.py", "plan_workspace.py", "agent_runtime.py", "process_profiles.py", "skill_files.py", "model_credentials.py")
+    if config.runtime == "openai-agents":
+        # A successor must run the same model adapter and host tools as its
+        # source attempt, including when OAuth changes the model transport.
+        modules += ("openai_api_runtime.py", "chatgpt_responses_runtime.py", "api_connection.py",
+                    "deepseek_chat.py", "model_images.py", "automation_loop.py", "tool_arguments.py",
+                    "context_window.py", "completion_validation.py")
     value = {"runtime": config.runtime, "role": config.process_role, "modelPolicy": config.model,
              "credentialRef": os.environ.get("AIW_MODEL_CREDENTIAL_REF"), "credentialVersion": os.environ.get("AIW_MODEL_CREDENTIAL_VERSION"),
              "effort": config.reasoning_effort, "sandbox": config.sandbox, "approval": config.approval_mode,

@@ -41,10 +41,14 @@ public final class GuardContract {
         public boolean configured() { return timeMs!=null && tasks!=null && costMicros!=null && price!=null && attemptTimeMs>0 && attemptCostMicros>0; }
     }
     public record Policy(String protocol, String ownerId, String planId, long revision, long expiresAt,
-                         List<Rule> rules, List<Command> commands, Budget budget) {
+                         List<Rule> rules, List<Command> commands, Budget budget, int riskStrategyVersion) {
+        public Policy(String protocol,String ownerId,String planId,long revision,long expiresAt,List<Rule> rules,List<Command> commands,Budget budget) {
+            this(protocol,ownerId,planId,revision,expiresAt,rules,commands,budget,0);
+        }
         public Policy {
             GuardContract.protocol(protocol);text(ownerId,128);text(planId,128);
             if(revision<1 || expiresAt<1) throw new IllegalArgumentException("Policy revision/expiry required");
+            if(riskStrategyVersion<0 || riskStrategyVersion>1) throw new IllegalArgumentException("Supported riskStrategyVersion is 0 or 1");
             rules=List.copyOf(rules);commands=List.copyOf(commands);
             if(budget==null) budget=new Budget(null,null,null,0,0,null);
             if(rules.size()>32 || commands.size()>16 || commands.stream().map(Command::id).distinct().count()!=commands.size())

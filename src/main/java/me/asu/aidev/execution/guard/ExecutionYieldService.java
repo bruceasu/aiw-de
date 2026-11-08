@@ -104,14 +104,33 @@ public class ExecutionYieldService {
         if(old.state()!=TaskState.WAITING_INPUT || old.version()!=expectedVersion || successor.id().value().equals(source)
                 || !successor.subjectId().equals(old.subjectId()) || !successor.subjectType().equals(old.subjectType())
                 || successor.type()!=old.type() || !validContinuationCapabilities(source,old,successor)
-                || !Objects.equals(successor.repositoryRef(),old.repositoryRef()) || !validContinuationBase(source,old,successor))
+                || !Objects.equals(successor.repositoryRef(),old.repositoryRef()) || !validContinuationBase(source,old,successor,decisionId))
             throw new IllegalStateException("Exact waiting source and fixed successor required");
         if(!guard.canClaim(source)) throw new IllegalStateException("Continuation control or budget blocked");
         tasks.lock(old.id());tasks.insert(successor);
         configurations.getObject().continueBinding(source,successor.id().value());
         var refs=new ArrayList<>(c.snapshot().references());refs.addAll(additionalRefs);
+        var inputs=new ArrayList<>(c.snapshot().inputs());
+        var approvals=repo.jdbc().queryForList("SELECT task_id,attempt_id,binding_json FROM execution_tool_approval WHERE id=? AND state='APPROVED'",decisionId);
+        if(!approvals.isEmpty()) {
+            if(approvals.size()!=1 || !source.equals(approvals.getFirst().get("task_id")))
+                throw new IllegalStateException("Approval continuation source changed");
+            var binding=repo.decode(String.valueOf(approvals.getFirst().get("binding_json")),ToolApprovals.Binding.class);
+            var sourceTask=tasks.find(old.id()).orElseThrow();
+            String attempt=String.valueOf(approvals.getFirst().get("attempt_id"));
+            if(!binding.operation().lease().attemptId().equals(attempt)
+                    || repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_handoff WHERE task_id=? AND attempt_id=?",Long.class,source,attempt)!=1)
+                throw new IllegalStateException("Approval checkpoint handoff unavailable");
+            if(inputs.stream().noneMatch(input->input.taskId().equals(sourceTask.id()) && attempt.equals(input.attemptId()))) {
+                boolean gitRevision=binding.gitCheckpoint();
+                inputs.add(new me.asu.aidev.execution.domain.TaskInput(sourceTask.id(),sourceTask.type(),sourceTask.repositoryRef(),
+                        sourceTask.baseRevision(),gitRevision?binding.checkpoint().revision():null,null,List.of(),
+                        me.asu.aidev.execution.domain.CompletionVerdict.REPAIR_REQUIRED,
+                        "A fixed workspace operation is awaiting its approved continuation.",attempt));
+            }
+        }
         // This is a continuation of the original grant. Replacing a policy never expands it.
-        ledger.task(c.planId());String json=repo.encode(new ExecutionGuard.Snapshot(successor,c.snapshot().inputs(),List.copyOf(refs)));
+        ledger.task(c.planId());String json=repo.encode(new ExecutionGuard.Snapshot(successor,List.copyOf(inputs),List.copyOf(refs)));
         repo.jdbc().update("""
                 INSERT INTO execution_context(task_id,plan_id,policy_revision,generation,decision_id,config_digest,policy_json,input_json,input_digest,task_version,resumes_task_id)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?)
@@ -120,7 +139,21 @@ public class ExecutionYieldService {
         repo.jdbc().update("UPDATE execution_context SET successor_task_id=? WHERE task_id=? AND successor_task_id IS NULL",successor.id().value(),source);
         return successor.id();
     }
-    private boolean validContinuationBase(String source,WorkTask old,WorkTask next) {
+    private boolean validContinuationBase(String source,WorkTask old,WorkTask next,String decisionId) {
+        var approvals=repo.jdbc().queryForList("SELECT binding_json,state FROM execution_tool_approval WHERE id=? AND task_id=? AND successor_task_id IS NULL",decisionId,source);
+        if(!approvals.isEmpty()) {
+            if(approvals.size()!=1 || !"APPROVED".equals(approvals.getFirst().get("state")))return false;
+            var binding=repo.decode(String.valueOf(approvals.getFirst().get("binding_json")),ToolApprovals.Binding.class);
+            var yields=repo.jdbc().queryForList("SELECT checkpoint_json,state FROM execution_yield WHERE task_id=?",source);
+            if(yields.size()!=1 || !"ACKNOWLEDGED".equals(yields.getFirst().get("state"))
+                    || !binding.checkpoint().equals(repo.decode(String.valueOf(yields.getFirst().get("checkpoint_json")),FrozenRef.class)))return false;
+            var handoffs=repo.jdbc().queryForList("SELECT sha256 FROM execution_handoff WHERE task_id=? AND attempt_id=?",String.class,
+                    source,binding.operation().lease().attemptId());
+            if(handoffs.size()!=1 || !binding.checkpoint().sha256().equals(handoffs.getFirst()))return false;
+            if(!Objects.equals(old.repositoryRef(),binding.operation().repositoryRef())
+                    || !Objects.equals(next.baseRevision(),old.baseRevision()))return false;
+            return true;
+        }
         if(Objects.equals(next.baseRevision(),old.baseRevision())) return true;
         var rows=repo.jdbc().queryForList("SELECT s.checkpoint_json,y.state FROM formal_question_slot s JOIN execution_yield y ON y.task_id=s.source_task_id WHERE s.source_task_id=? AND s.successor_task_id IS NULL",source);
         if(rows.size()!=1||!"ACKNOWLEDGED".equals(rows.getFirst().get("state"))) return false;

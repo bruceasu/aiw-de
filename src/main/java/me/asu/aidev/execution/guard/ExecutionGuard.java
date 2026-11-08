@@ -91,10 +91,12 @@ public class ExecutionGuard {
         String encoded=repo.encode(input),digest=AuthorityRepository.hash(encoded);
         if(!previous.isEmpty()) {
             var p=previous.getFirst();if(!Objects.equals(p.get("owner_id"),input.ownerId())) throw new SecurityException("Policy owner is fixed");
+            if(input.riskStrategyVersion()<policy(p).riskStrategyVersion())throw new IllegalArgumentException("Risk strategy cannot be downgraded");
             if(number(p,"revision")==input.revision() && Objects.equals(p.get("digest"),digest)) return policyView(input.planId());
             if(input.revision()!=number(p,"revision")+1) throw new IllegalStateException("Exact next policy revision required");
         } else {
             if(input.revision()!=1) throw new IllegalArgumentException("Initial policy revision must be one");
+            if(input.riskStrategyVersion()!=1) throw new IllegalArgumentException("A new Plan must explicitly select riskStrategyVersion 1");
             if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM work_task WHERE subject_type='flexible-plan' AND subject_id=? AND attempt_no>0",Long.class,input.planId())>0)
                 throw new IllegalStateException("A running legacy Plan cannot be adopted into guarded execution; create a fresh Plan");
         }
@@ -252,6 +254,12 @@ public class ExecutionGuard {
             var op=previous.getFirst();if(!Objects.equals(op.get("request_digest"),digest) || !Objects.equals(op.get("task_id"),task)) throw new IllegalStateException("OPERATION_ID_CONFLICT");
             return receipt(op,false,"QUERY_ORIGINAL_OUTCOME_ONLY");
         }
+        var approvals=repo.jdbc().queryForList("SELECT state,start_digest,consumed_task_id FROM execution_tool_approval WHERE operation_id=?",input.operationId());
+        if(!approvals.isEmpty()) {
+            var approval=approvals.getFirst();
+            if(!"CONSUMED".equals(approval.get("state")) || !digest.equals(approval.get("start_digest")) || !task.equals(approval.get("consumed_task_id")))
+                throw new SecurityException("Exact atomic approval consumption required before start");
+        }
         var c=contextRow(task);var row=policyRow(String.valueOf(c.get("plan_id")));var original=repo.decode(String.valueOf(c.get("policy_json")),Policy.class);var current=policy(row);
         boolean allowed=active(row) && number(c,"generation")==number(row,"generation") && input.expectedGrantRevision()==current.revision()
                 && !uncertain(task,input.lease().attemptId()) && unchanged(task,c)
@@ -269,6 +277,18 @@ public class ExecutionGuard {
         return policy.rules().stream().anyMatch(rule->rule.tool()==input.tool() && rule.repositoryRef().equals(input.repositoryRef())
                 && (rule.baseRevision()==null || rule.baseRevision().equals(baseline))
                 && (rule.pathPrefix().isEmpty() || rule.pathPrefix().equals(".") || input.resource().equals(rule.pathPrefix()) || input.resource().startsWith(rule.pathPrefix()+"/")));
+    }
+    /** Approval is an extra condition, never a replacement for either frozen or current authority. */
+    void requireApprovalScope(String task,Begin input) {
+        if(!boundary.instance().equals(input.platformInstanceId())) throw new SecurityException("Platform instance mismatch");
+        verifyLease(task,input.lease(),true,true);
+        var c=contextRow(task);var row=policyRow(String.valueOf(c.get("plan_id")));
+        var original=repo.decode(String.valueOf(c.get("policy_json")),Policy.class);var current=policy(row);
+        String baseline=repo.decode(String.valueOf(c.get("input_json")),Snapshot.class).task().baseRevision();
+        if(!active(row) || AuthorityRepository.flag(row.get("paused")) || number(c,"generation")!=number(row,"generation")
+                || input.expectedGrantRevision()!=current.revision() || uncertain(task,input.lease().attemptId()) || !unchanged(task,c)
+                || !permits(original,input,baseline) || !permits(current,input,baseline))
+            throw new SecurityException("Approval cannot extend execution authority");
     }
     public boolean unknownTask(String task) { return repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_operation WHERE task_id=? AND state IN ('STARTED','UNKNOWN')",Long.class,task)>0; }
     private boolean uncertain(String task,String attempt) {

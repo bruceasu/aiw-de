@@ -31,6 +31,8 @@ public class AuthorityPageController {
         String actor=Objects.requireNonNull(boundary.human(),"Authenticated human required");
         var owners=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
         model.addAttribute("ownerId",owners.size()==1?owners.getFirst():"");
+        if(view.equals("workbench"))model.addAttribute("toolApprovalPlans",repo.jdbc().queryForList(
+                "SELECT p.plan_id FROM execution_policy p JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY p.plan_id",String.class,actor));
         model.addAttribute("categories",configurations.categories());
         model.addAttribute("methods",configurations.catalogue().methods());
         return view.equals("workbench")?"ui/worker-workbench":view.equals("observations")?"ui/execution-observations":view.equals("roles")?"ui/roles":"ui/configurations";

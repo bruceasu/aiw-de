@@ -189,7 +189,7 @@ class PlanWorkspace:
         changed = self.git(self.cwd, "diff", "--name-only", "-z", self.base, revision)
         return {"resultRevision": revision, "changedFiles": sorted(filter(None, changed.split("\0")))}
 
-    def handoff(self, task, report, result, checkpoint_tree_digest=None):
+    def handoff(self, task, report, result, checkpoint_tree_digest=None, tool_approval=None):
         target = directory(self.root, ".ai", "handoffs", key(task["taskId"]), key(task["attemptId"]))
         with (target / "report.md").open("xb") as file:
             file.write(report["summary"].encode("utf-8"))
@@ -199,6 +199,8 @@ class PlanWorkspace:
                     "deliverables": report.get("outputFiles", [])}
         if checkpoint_tree_digest is not None:
             manifest["checkpointTreeSha256"] = checkpoint_tree_digest
+        if tool_approval is not None:
+            manifest["toolApproval"] = tool_approval
         raw = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
         with (target / "manifest.json").open("xb") as file:
             file.write(raw)
