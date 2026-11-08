@@ -15,12 +15,15 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def complete(settings, instruction, legacy, *, cancelled=None, on_evidence=None):
     value = dict(settings.value)
+    value["_connections"] = settings.connections
     if value.get("provider") in {"codex-app-server", "openai-agents"}:
         try:
             from assistant_model_runtime import complete_text
             return complete_text(value, instruction, cancelled, on_evidence)
         except Exception as error:
             code = str(error)
+            if error.__class__.__name__ == "ModelAuthRequired":
+                raise ValueError(code) from None
             if code == "PROCESS_TREE_UNCERTAIN":
                 if cancelled is not None:
                     cancelled.set()

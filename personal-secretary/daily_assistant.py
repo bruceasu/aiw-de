@@ -12,6 +12,9 @@ from assistant_tools import ConfirmationRequired, DailyTools, explicit_paths
 from assistant_skills import PersonalSkills
 from store import encode
 from authorization_requests import AuthorizationRequired
+from secretary_runs import RunYield
+from secretary_host import SecretaryHost
+from secretary_credentials import ModelAuthRequired
 
 
 INSTRUCTIONS = """You are a personal secretary. Reply in the user's language.
@@ -33,11 +36,16 @@ and exchange rates. For currency conversion, cite the rate, date and source,
 show the calculation, and explain that exchange fees or spreads may change
 the actual amount. Never invent a current exchange rate.
 Do not replace a complete file using a truncated read.
+For existing text files, read the current version and use prepare_edit with
+exact, unique replacements. DRAFT_READY means a revision copy was saved and
+the original was kept. Do not claim the original was changed in that case.
 To request a tool, return one JSON object with one of these actions:
 {"action":"search","query":"short public search query"}
 {"action":"read_url","url":"https://public.example/page"}
 {"action":"read_file","path":"absolute file path"}
-{"action":"write_file","path":"absolute file path","text":"complete UTF-8 text"}
+{"action":"create_file","path":"new absolute file path","text":"complete UTF-8 text"}
+{"action":"prepare_edit","path":"existing absolute file path","expectedVersion":"from read_file","edits":[{"old":"unique exact original text","new":"replacement text"}]}
+{"action":"restore_file","operationId":"from file receipt","expectedCurrentVersion":"from current read_file"}
 {"action":"delete_file","path":"absolute file path"}
 {"action":"list_skills"}
 {"action":"read_skill","name":"skill name from catalog","path":"SKILL.md or declared Markdown path","offset":0,"limit":8192}
@@ -135,7 +143,10 @@ class DailyAssistant:
     def _decision(self, row, **changes):
         current = self.store.get("decision", row["id"])
         value = {key: value for key, value in current.items() if key not in {"id", "revision"}}
-        return self.store.put("decision", current["id"], {**value, **changes}, current["revision"])
+        updated = self.store.put("decision", current["id"], {**value, **changes}, current["revision"])
+        if updated.get("kind") == "DAILY_PLAN":
+            self.runtime.runs.sync_job(updated)
+        return updated
 
     def _start(self, work_id, target, *args):
         with self.lock:
@@ -151,7 +162,7 @@ class DailyAssistant:
         threading.Thread(target=run, daemon=True).start()
         return True
 
-    def chat(self, work, text):
+    def chat(self, work, text, message_id=None, binding=None, request_id=None):
         if self.runtime.authorizations.pending(work["id"]):
             raise ValueError("这项工作正在等待授权，请先到“待你确认”处理原申请；授权后会继续，无需重复提交。")
         if self.runtime.professional.pending(work["id"]):
@@ -167,7 +178,8 @@ class DailyAssistant:
                 raise ValueError("秘书正在处理其他工作，请等其中一项完成后再发送。")
             self.busy.add(work["id"])
         try:
-            message = self.store.put("message", str(uuid.uuid4()), {"workId": work["id"], "text": text,
+            message = self.store.put("message", message_id or str(uuid.uuid4()), {"workId": work["id"], "text": text,
+                "acceptedBinding": binding, "requestId": request_id,
                 "reply": "已收到，正在处理……", "createdAt": now_ms(), "state": "PENDING"}, 0)
         except Exception:
             with self.lock: self.busy.discard(work["id"])
@@ -211,6 +223,7 @@ class DailyAssistant:
                             dueMs=due_ms, timeZone=time_zone, executionMode=execution_mode, localPlan=plan, assistantMode="daily")
 
     def tick(self):
+        self.followups()
         for work in self.store.list("work"):
             if work.get("assistantMode") != "daily" or work.get("state") != "SCHEDULED":
                 continue
@@ -224,11 +237,15 @@ class DailyAssistant:
             self._start(work["id"], self.run, work, work.get("body", ""))
 
     def run(self, work, text, message_id=None, continuation=None):
+        host = None
         job = continuation
         action = None
         try:
             if not self.settings.configured():
                 raise ValueError("还没有连接模型。请打开“设置”完成首次连接，然后重新安排这项工作。")
+            message = self.store.get("message", message_id) if message_id else None
+            if not continuation and message and message.get("acceptedBinding") is not None and message["acceptedBinding"] != self.runtime.runs.binding(self.settings.value):
+                raise ValueError("接收消息后模型或知识库连接发生变化，本次请求未开始；请核对设置后重新提出请求。")
             recovering_plan = not message_id and not continuation and self.runtime.professional.needs_plan_recovery(work)
             if job is None:
                 try:
@@ -247,6 +264,7 @@ class DailyAssistant:
             skills = PersonalSkills()
             tools.written = list(job.get("written", []))
             tools.sources = list(job.get("sources", []))
+            host = SecretaryHost(self, work, job, tools, skills)
             if recovering_plan:
                 action = {"action": "professional_options"}
                 self.runtime.professional.prepare_own_plan(self.store.get("work", work["id"]), job)
@@ -257,12 +275,16 @@ class DailyAssistant:
                     raise ValueError("工作已停止，未继续执行授权后的操作。")
                 action = resumed
                 job = self._decision(job, resumePlatformAction=None)
+                host.job = job
+                self.runtime.runs.check(host.identity)
+                receipt_key = self.runtime.runs.call_key(host.identity, action)
                 if action.get("action") == "delegate_task":
-                    self.runtime.professional.submit(self.store.get("work", work["id"]), job, action)
-                    return
-                result = self.runtime.professional.options() if action.get("action") == "professional_options" else self.runtime.platform_actions.perform(work, job, action)
+                    self.runtime.runs.admitted(receipt_key, lambda: self.runtime.professional.submit(self.store.get("work", work["id"]), job, action) or {"status": "DELEGATED"})
+                    raise RunYield("delegated")
+                result = self.runtime.runs.admitted(receipt_key, lambda: self.runtime.professional.options() if action.get("action") == "professional_options" else self.runtime.platform_actions.perform(work, job, action))
                 job = self._decision(job, steps=job["steps"] + [{"action": action, "result": result}])
-                if self.runtime.platform_actions.wait(work, job, action, result): return
+                host.job = job
+                if self.runtime.platform_actions.wait(work, job, action, result): raise RunYield("platform")
             if not message_id:
                 self._report(work["id"], "DAILY_RUNNING", "PROCESSING", "秘书正在处理；你可以继续使用界面，结果会自动更新。")
             approved = job.get("approvedAction")
@@ -270,8 +292,11 @@ class DailyAssistant:
                 current = self.store.get("work", work["id"])
                 if self.runtime.cancelled.is_set() or self.settings.value.get("paused", False) or not current or current.get("state") in {"CANCELLED", "TRASHED"}:
                     raise ValueError("工作已暂停、取消或移除，批准的操作尚未执行。")
-                result = tools.perform(approved, approved=True)
+                self.runtime.runs.check(host.identity)
+                tools.tool_receipt = job.get("approvedReceipt")
+                result = self.runtime.runs.admitted(job.get("approvedReceipt"), lambda: tools.perform(approved, approved=True))
                 job = self._decision(job, approvedAction=None, steps=job["steps"] + [{"action": approved, "result": result}], written=tools.written, sources=tools.sources)
+            host.job = job
             for _ in range(max(0, 12 - len(job["steps"]))):
                 current = self.store.get("work", work["id"])
                 if self.runtime.cancelled.is_set() or not current or current.get("state") in {"CANCELLED", "TRASHED"} or self.settings.value.get("paused", False):
@@ -296,7 +321,16 @@ class DailyAssistant:
                 prompt = INSTRUCTIONS + "\nUntrusted request and tool data:\n" + encode(context)
                 if len(prompt) > 60000:
                     raise ValueError("这项工作收集的资料过多，请缩小问题范围后继续；已保存的文件仍然保留。")
-                reply = self.runtime.model(prompt)
+                sdk_execution = self.settings.value.get("provider") == "openai-agents"
+                if sdk_execution:
+                    reply = host.sdk(context)
+                    work, job, text = host.work, host.job, host.user_text
+                else:
+                    self.runtime.runs.check(host.identity)
+                    self.runtime.runs.count(host.identity, "modelCalls", 12)
+                    self.runtime.runs.event(host.identity, "model-start")
+                    reply = self.runtime.model(prompt)
+                    self.runtime.runs.event(host.identity, "model-end", status="completed", usageKnown=False)
                 cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", reply.strip())
                 try: action = json.loads(cleaned)
                 except json.JSONDecodeError:
@@ -307,22 +341,22 @@ class DailyAssistant:
                     action = {"action": "finish", "completed": True, "text": reply}
                 if not isinstance(action, dict):
                     raise ValueError("模型没有返回可用的处理步骤，请换一个模型后再试。")
+                if sdk_execution and action.get("action") != "finish":
+                    raise ValueError("SDK 最终结果包含工具动作，未执行。工具只能通过已注册的 SDK 接口调用。")
                 if action.get("action") == "delegate_task":
-                    if work.get("conversationOnly"):
-                        work = self.runtime.conversations.promote(self.store.get("work", work["id"]),
-                            {"title": text.strip().splitlines()[0][:200], "description": text})
-                    current = self.store.get("work", work["id"])
-                    if self.runtime.cancelled.is_set() or self.settings.value.get("paused", False) or not current or current.get("state") in {"CANCELLED", "TRASHED"}:
-                        raise ValueError("工作已暂停、取消或移除，尚未提交专业任务。")
-                    self.runtime.professional.submit(current, job, action)
-                    return
+                    result = host.perform(action)
+                    host.after_tool(action, result)
                 if action.get("action") == "finish":
                     answer = action.get("text")
                     if not isinstance(answer, str) or not answer.strip():
                         raise ValueError("模型未提供结果说明，这项工作尚未确认完成。")
                     if action.get("completed") is not True:
                         raise ValueError("这项请求尚未完成：" + answer[:900])
+                    from secretary_completion import validate_completion
+                    validate_completion(work.get("body", "") + "\n" + text, answer, job["steps"])
                     if not message_id and (current.get("professionalDraftPlanId") or current.get("professionalPlanId")):
+                        if sdk_execution:
+                            raise ValueError("这项专业工作尚未提交给 Worker，不能标记完成。请核对委派准备条件后重新安排。")
                         if any(step.get("result", {}).get("code") == "DELEGATION_NOT_SUBMITTED" for step in job["steps"]):
                             raise ValueError("这项专业工作尚未提交给 Worker，不能标记完成。请查看专业任务准备记录；这不是文件保存失败。")
                         job = self._decision(job, steps=job["steps"] + [{"action": action, "result": {
@@ -334,12 +368,21 @@ class DailyAssistant:
                         raise ValueError("这项专业工作还没有专业 Worker 的执行结果，不能标记完成。请让秘书检查专业平台连接和任务准备条件后委派执行。")
                     outputs = explicit_paths(user_request) if re.search(r"保存|写入|写到|存到|save", user_request, re.I) else []
                     if work.get("outputPath"): outputs = [work["outputPath"]]
+                    notes = self.runtime.runs.get(host.identity).get("notes", [])
+                    for note in notes:
+                        if re.search(r"保存|写入|写到|存到|save", note, re.I) and explicit_paths(note):
+                            outputs = explicit_paths(note)
                     if outputs and str(Path(outputs[-1]).expanduser().resolve()) not in tools.written:
-                        raise ValueError("还没有成功保存你要求的文件，这项工作未完成。请核对文件位置和工作报告。")
+                        requested = str(Path(outputs[-1]).expanduser().resolve())
+                        draft = any(step.get("result", {}).get("status") == "DRAFT_READY" and step["result"].get("originalPath") == requested
+                                    and step["result"].get("path") in tools.written for step in job["steps"])
+                        if not draft:
+                            raise ValueError("还没有成功保存你要求的文件，这项工作未完成。请核对文件位置和工作报告。")
                     if re.search(r"天气|weather|新闻|最新|搜索|search|本周|未来一周|汇率|兑换|换汇|exchange\s+rate|currency\s+conversion", user_request, re.I) and not tools.sources:
                         raise ValueError("没有取得可核验的最新网页资料，不能把这次查询标为完成。请检查网络或指定可访问的来源。")
                     if tools.written: answer += "\n\n已保存：\n" + "\n".join(tools.written)
                     self._decision(job, state="DONE", result=answer, written=tools.written, sources=tools.sources)
+                    self.runtime.runs.finish(host.identity, "SUCCEEDED")
                     if message_id: self._message(message_id, answer)
                     else: self._report(work["id"], "DONE", "COMPLETED", answer[:4000], savedFiles=tools.written, sources=tools.sources)
                     if message_id and not work.get("conversationOnly") and work.get("assistantMode") != "professional":
@@ -349,17 +392,8 @@ class DailyAssistant:
                     current = self.store.get("work", work["id"])
                     if self.runtime.cancelled.is_set() or self.settings.value.get("paused", False) or not current or current.get("state") in {"CANCELLED", "TRASHED"}:
                         raise ValueError("工作已暂停、取消或移除，后续操作已停止。")
-                    if action.get("action") == "create_work":
-                        work = self.runtime.conversations.promote(current, action)
-                        result = {"workId": work["id"], "title": work["title"], "created": True}
-                    elif action.get("action") in {"platform_permissions", "platform_questions", "platform_action", "platform_answer"}:
-                        result = self.runtime.platform_actions.perform(work, job, action)
-                    elif action.get("action") in {"list_skills", "read_skill"}:
-                        result = skills.perform(action)
-                    else:
-                        if action.get("action") == "knowledge_save_note":
-                            action["requestId"] = job["id"] + ":knowledge-note"
-                        result = self.runtime.professional.options() if action.get("action") == "professional_options" else tools.perform(action)
+                    result = host.perform(action)
+                    work, job = host.work, host.job
                 except AuthorizationRequired:
                     raise
                 except ConfirmationRequired as required:
@@ -373,19 +407,99 @@ class DailyAssistant:
                     return
                 except (ValueError, OSError, UnicodeError, http.client.HTTPException) as error:
                     result = {"error": str(error)[:300] if isinstance(error, ValueError) else "工具暂时不可用，请检查来源或文件位置。"}
-                job = self._decision(job, steps=job["steps"] + [{"action": action, "result": result}], written=tools.written, sources=tools.sources)
+                # The shared host already persisted successful tool steps.
+                if not job["steps"] or job["steps"][-1].get("action") != action:
+                    job = self._decision(job, steps=job["steps"] + [{"action": action, "result": result}], written=tools.written, sources=tools.sources)
                 if self.runtime.platform_actions.wait(work, job, action, result): return
             raise ValueError("这项工作已达到一次处理的步骤上限，尚未确认完成。请缩小范围或拆成多项工作；已保存文件仍保留。")
+        except ModelAuthRequired as error:
+            if host:
+                self.runtime.runs.finish(host.identity, "WAITING_AUTH", str(error))
+                job = self.store.get("decision", host.job["id"])
+            if job:
+                self._decision(job, state="WAITING_AUTH", message=str(error))
+            if message_id:
+                self._message(message_id, str(error), "WAITING_AUTH")
+            else:
+                self._report(work["id"], "WAITING_AUTH", "MODEL_AUTH_REQUIRED", str(error))
+        except RunYield as error:
+            if host:
+                if error.reason == "steer":
+                    self.runtime.runs.save(self.runtime.runs.get(host.identity), steerPending=False)
+                    latest = self.store.get("decision", host.job["id"])
+                    latest = self._decision(latest, approvedAction=None, approvedReceipt=None, resumePlatformAction=None)
+                    host.job = latest
+                    for receipt in self.runtime.runs.records("SECRETARY_TOOL", host.identity):
+                        if receipt.get("kind") == "SECRETARY_TOOL" and receipt.get("runId") == host.identity and receipt.get("state") == "WAITING":
+                            self.runtime.runs.save(receipt, state="SUPERSEDED")
+                    notes = self.runtime.runs.get(host.identity).get("notes", [])
+                    self.run(host.work, host.job["userText"] + "\n" + "\n".join(notes), message_id, host.job)
+                else:
+                    host.stopped(error.reason)
         except AuthorizationRequired as error:
             if job and isinstance(action, dict):
                 self.runtime.authorizations.wait(self.store.get("work", work["id"]), job, action, error)
+                if host:
+                    host.job = self.store.get("decision", job["id"])
+                    host.stopped("authorization")
             else:
                 raise
         except Exception as error:
             message = str(error) if isinstance(error, ValueError) else "处理发生异常，结果尚未确认。请检查模型连接、来源或文件位置后再安排。"
+            if host:
+                job = self.store.get("decision", host.job["id"])
             if job: self._decision(job, state="FAILED", message=message[:1000])
+            if host:
+                unknown = any(row.get("kind") == "SECRETARY_TOOL" and row.get("runId") == host.identity and row.get("state") in {"UNKNOWN", "STARTED"}
+                              for row in self.runtime.runs.records("SECRETARY_TOOL", host.identity))
+                self.runtime.runs.finish(host.identity, "RECONCILING" if unknown else "FAILED", message)
             if message_id: self._message(message_id, message[:1000], "FAILED")
             else: self._report(work["id"], "FAILED", "NOT_COMPLETED", message[:1000])
+
+    def resume_run(self, identity):
+        run = self.runtime.runs.get(identity)
+        if run["binding"] != self.runtime.runs.binding(self.settings.value):
+            raise ValueError("模型或知识库设置已经变化，不能替原运行更换连接。请恢复原设置，或取消后重新安排。")
+        if run["state"] != "PAUSED" or self.settings.value.get("paused", False):
+            raise ValueError("请先继续秘书工作，再继续已暂停的运行。")
+        job = self.store.get("decision", run["jobId"])
+        work = self.store.get("work", run["workId"])
+        if not job or not work or work.get("state") in {"CANCELLED", "TRASHED"}:
+            raise ValueError("原工作已取消或移除，不能继续。")
+        if not self._start(work["id"], self.run, work, job["userText"], job.get("messageId"), job):
+            raise ValueError("这项工作仍在结束上一回合，或秘书正在处理其他工作，请稍后继续。")
+
+    def followups(self):
+        if self.settings.value.get("paused", False) or self.runtime.cancelled.is_set():
+            return
+        commands = [row for row in self.runtime.runs.records("SECRETARY_CONTROL") if row.get("kind") == "SECRETARY_CONTROL"
+                    and row.get("state") == "QUEUED" and row.get("payload", {}).get("control") == "follow-up"]
+        commands.sort(key=lambda row: (row.get("createdAt", 0), row["id"]))
+        for command in commands:
+            run = self.runtime.runs.get(command["runId"])
+            if run["state"] in {"FAILED", "CANCELLED"}:
+                self.runtime.runs.save(command, state="NOT_APPLIED", note="原请求失败或已取消，此后续请求未开始。请核对结果后重新提交。")
+                continue
+            if run["state"] != "SUCCEEDED" or run["workId"] in self.busy:
+                continue
+            if command.get("binding") != self.runtime.runs.binding(self.settings.value):
+                self.runtime.runs.save(command, state="NOT_APPLIED", note="模型或知识库配置已经变化，未开始此排队请求。请核对设置后重新发送。")
+                continue
+            work = self.store.get("work", run["workId"])
+            if not work or work.get("state") in {"CANCELLED", "TRASHED"}:
+                self.runtime.runs.save(command, state="NOT_APPLIED", note="原工作已取消或移除，此后续请求未开始。")
+                continue
+            claimed = self.runtime.runs.save(command, state="STARTING")
+            try:
+                message = self.chat(work, command["payload"]["text"])
+            except ValueError:
+                self.runtime.runs.save(claimed, state="QUEUED")
+            except Exception:
+                self.runtime.runs.save(claimed, state="UNKNOWN")
+            else:
+                self.runtime.runs.save(claimed, state="APPLIED", messageId=message["id"])
+                self.runtime.runs.event(run["id"], "control-applied", control="follow-up")
+            return
 
     def confirm(self, identity, revision, accepted):
         if type(accepted) is not bool or type(revision) is not int:
@@ -400,6 +514,8 @@ class DailyAssistant:
             raise ValueError("工作已经变化，这条旧确认不能继续使用。请重新处理该工作并核对新操作。")
         if not accepted:
             self._decision(row, state="REJECTED")
+            job = self.store.get("decision", row["jobId"])
+            if job: self._decision(job, state="CANCELLED")
             if row.get("messageId"): self._message(row["messageId"], "已按你的选择停止这次操作。", "CANCELLED")
             else: self._report(work["id"], "CANCELLED", "DECLINED", "你已拒绝这次操作，工作已停止。")
             return {"state": "REJECTED", "note": "已拒绝，这项操作不会执行。"}
@@ -414,7 +530,7 @@ class DailyAssistant:
         try:
             self._decision(row, state="ACCEPTED")
             job = self.store.get("decision", row["jobId"])
-            job = self._decision(job, state="RUNNING", approvedAction=row["action"])
+            job = self._decision(job, state="RUNNING", approvedAction=row["action"], approvedReceipt=row.get("receiptKey"))
         except Exception:
             with self.lock: self.busy.discard(work["id"])
             raise

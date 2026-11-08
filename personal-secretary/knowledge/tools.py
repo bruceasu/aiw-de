@@ -8,9 +8,27 @@ import uuid
 from .client import KnowledgeError
 
 
+class KnowledgeNotExecuted(KnowledgeError):
+    """A local rejection before any remote note-creation request."""
+
+
+def explicit_note_save(text):
+    for clause in reversed(re.split(r"[\n。！？!?]", text)):
+        clause = clause.strip()
+        if re.search(r"不要|不用|别再|停止|取消|\b(?:do not|don't|never|stop)\b", clause, re.I) and re.search(r"保存|存入|写入|入库|\b(?:save|store|add|write)\b", clause, re.I):
+            return False
+        if re.search(r"^(?:请|麻烦)?(?:告诉我|解释|说明|教我|如何|怎么|怎样)|^(?:how|what|explain|can you explain)\b", clause, re.I):
+            continue
+        destination = re.search(r"知识库|知識庫|knowledge\s*(?:base|library)?", clause, re.I)
+        operation = re.search(r"保存|存入|写入|记到|入库|新增|创建|\b(?:save|store|add|write|create)\b", clause, re.I)
+        if destination and operation:
+            return True
+    return False
+
+
 def perform(host, action):
     self = host
-    client = self.settings.knowledge_client()
+    client, connection = self.settings.knowledge_connection()
     if action.get("action") == "knowledge_note_status":
         identity = action.get("requestId")
         if not isinstance(identity, str) or not identity or len(identity) > 200:
@@ -18,14 +36,16 @@ def perform(host, action):
         record = self.store.get("decision", "knowledge-note:" + identity)
         if not record or record.get("kind") != "KNOWLEDGE_NOTE":
             raise KnowledgeError("找不到这条本地笔记请求记录。")
-        if record.get("serviceId") != self.settings.value.get("knowledgeServiceId"):
-            raise KnowledgeError("知识库服务身份已变化，已停止核对或重放待处理笔记。")
+        if record.get("connection") != connection:
+            raise KnowledgeError("无法确认仍是原知识库凭据，已停止核对或重发。请恢复原连接；旧记录缺少身份信息时不可自动重放。")
         try:
             if record.get("state") in {"pending", "unknown"}:
                 try:
                     result = client.creation(record["key"])
                 except KnowledgeError as status_error:
                     if status_error.code != "CREATION_NOT_FOUND": raise
+                    if action.get("queryOnly") is True:
+                        raise KnowledgeError("原创建记录尚未查到；运行已取消，仅查询，不重发笔记。") from None
                     result = client.create_note(record["key"], record["body"])
             else:
                 result = record.get("result") or {}
@@ -37,7 +57,9 @@ def perform(host, action):
         updated = {key: value for key, value in record.items() if key not in {"id", "revision"}}
         updated.update(state=result.get("state"), result=result)
         self.store.put("decision", "knowledge-note:" + identity, updated, record["revision"])
-        return {"state": result.get("state"), "indexState": result.get("indexState"), "note": "笔记已保存" if result.get("state") == "succeeded" else "笔记创建失败，未确认保存" if result.get("state") == "failed" else "笔记仍在处理中；保存结果尚未最终确认"}
+        return {"state": result.get("state"), "indexState": result.get("indexState"), "documentId": result.get("documentId"),
+                "url": self.settings.trusted_knowledge_url(result.get("url", "")) if result.get("url") else None,
+                "note": "笔记已保存" if result.get("state") == "succeeded" else "笔记创建失败，未确认保存" if result.get("state") == "failed" else "笔记仍在处理中；保存结果尚未最终确认"}
     if action.get("action") == "knowledge_search":
         if self.knowledge_counts["search"] >= 1: raise KnowledgeError("本次请求的知识库搜索次数已用完。")
         self.knowledge_counts["search"] += 1
@@ -91,9 +113,9 @@ def perform(host, action):
         self.sources.append(url)
         return result
     if action.get("action") == "knowledge_save_note":
-        if not re.search(r"保存|存入|写入|记到|入库|save|store|add to (?:the )?knowledge", self.user_message, re.I):
-            raise KnowledgeError("只有用户当前消息明确要求保存时才能创建知识库笔记。")
-        if "create_note" not in self.settings.value.get("knowledgeCapabilities", []): raise KnowledgeError("当前知识库凭证未开放笔记创建能力。")
+        if not explicit_note_save(self.user_message):
+            raise KnowledgeNotExecuted("只有用户当前消息明确要求保存到知识库时才能创建笔记；询问保存方法或仅保存文件不代表入库授权。")
+        if "create_note" not in self.settings.value.get("knowledgeCapabilities", []): raise KnowledgeNotExecuted("当前知识库凭证未开放笔记创建能力。")
         title, content = action.get("title"), action.get("content")
         if not isinstance(title, str) or not title.strip() or len(title.strip()) > 200 or not isinstance(content, str) or not content.strip() or len(content) > 100000:
             raise KnowledgeError("笔记标题或正文格式无效。")
@@ -110,10 +132,10 @@ def perform(host, action):
         record = self.store.get("decision", "knowledge-note:" + identity)
         if record:
             if record.get("digest") != digest: raise KnowledgeError("此请求键已有不同笔记正文，已停止重放。")
-            if record.get("serviceId") != self.settings.value.get("knowledgeServiceId"): raise KnowledgeError("知识库服务身份已变化，已停止重放待核对笔记。")
+            if record.get("connection") != connection: raise KnowledgeError("知识库连接或凭据已变化，已停止重放待核对笔记。")
         else:
             key = str(uuid.uuid4())
-            record = self.store.put("decision", "knowledge-note:" + identity, {"kind":"KNOWLEDGE_NOTE", "key":key, "body":body, "digest":digest, "serviceId":self.settings.value.get("knowledgeServiceId"), "state":"pending"}, 0)
+            record = self.store.put("decision", "knowledge-note:" + identity, {"kind":"KNOWLEDGE_NOTE", "key":key, "body":body, "digest":digest, "serviceId":connection.get("knowledgeServiceId"), "connection":connection, "state":"pending"}, 0)
         try:
             if record.get("state") in {"pending", "unknown"}:
                 try:

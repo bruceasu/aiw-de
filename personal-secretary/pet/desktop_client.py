@@ -10,6 +10,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+import uuid
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -45,6 +46,7 @@ class PersonalClient:
     def __init__(self, origin):
         self.origin = personal_origin(origin)
         self.csrf = ""
+        self.chat_submissions = {}
         self.opener = urllib.request.build_opener(
             urllib.request.ProxyHandler({}), NoRedirect(),
             urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
@@ -209,9 +211,33 @@ class PersonalClient:
             time.sleep(0.2)
         raise PersonalError("停止请求已接受，服务仍在清理。请稍后查看状态，不要强制结束正在保存的操作。")
 
+    def chat_payload(self, work_id, text):
+        payload = {"workId": work_id or "", "text": text}
+        key = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+        if key not in self.chat_submissions:
+            self.chat_submissions[key] = {**payload, "requestId": str(uuid.uuid4())}
+        return dict(self.chat_submissions[key])
+
+    def forget_chat(self, payload):
+        key = json.dumps({"workId": payload.get("workId") or "", "text": payload.get("text")}, ensure_ascii=False, sort_keys=True)
+        self.chat_submissions.pop(key, None)
+
     def operate(self, route, data):
-        result = self.request(route, data)
+        chat_key = None
+        if route == "chat":
+            data = dict(data) if data.get("requestId") else self.chat_payload(data.get("workId"), data.get("text"))
+            chat_key = json.dumps({"workId": data.get("workId") or "", "text": data.get("text")}, ensure_ascii=False, sort_keys=True)
         try:
-            return result, self.state(), ""
+            result = self.request(route, data)
+        except PersonalError as error:
+            if chat_key and 400 <= error.status < 500:
+                self.chat_submissions.pop(chat_key, None)
+            if chat_key and not error.status:
+                raise PersonalError("消息提交结果尚未确认。重发原内容和目标将使用原提交标识核对，未自动重发。" + str(error)) from None
+            raise
+        if chat_key and result.get("state") != "UNKNOWN":
+            self.chat_submissions.pop(chat_key, None)
+        try:
+            return result, self.state(), result.get("reply", "原请求状态未知，未重复排队；请核对原对话。") if chat_key and result.get("state") == "UNKNOWN" else ""
         except PersonalError:
             return result, None, "服务已返回结果，但状态刷新失败。请先刷新状态并核对原回执，避免重复提交。"

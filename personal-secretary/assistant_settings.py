@@ -1,10 +1,12 @@
 """One-time daily-assistant settings. Model credentials never enter record exports."""
 
 from pathlib import Path
+import os
 import urllib.parse
 
 from private_config import read_private, write_private
 from knowledge_client import KNOWLEDGE_AVAILABLE, KnowledgeError, KnowledgeSettings
+from secretary_credentials import ModelConnections
 
 
 class AssistantSettings:
@@ -13,7 +15,13 @@ class AssistantSettings:
         self.path = self.directory / "assistant-settings.json"
         self.value = read_private(self.path, {})
         self.legacy_command = legacy_command
-        self.value.setdefault("provider", "command" if legacy_command else "codex-app-server")
+        self.value.setdefault("provider", "command" if legacy_command else "openai-agents")
+        self.connections = ModelConnections(self.directory)
+        if "authMode" not in self.value:
+            legacy_sdk = self.path.exists() and self.value.get("provider") == "openai-agents" and self.value.get("model")
+            self.value["authMode"] = "api-key" if self.value.get("key") or legacy_sdk else ""
+            if legacy_sdk and not self.value.get("key"):
+                self.value["credentialSource"] = "environment"
         self.knowledge = KnowledgeSettings(self.directory, self.value)
 
     def public(self):
@@ -22,7 +30,9 @@ class AssistantSettings:
                 "model": self.value.get("model", ""), "hasKey": bool(self.value.get("key")),
                 "executable": self.value.get("executable", ""), "effort": self.value.get("effort", ""),
                 "roots": self.value.get("roots", []), "scope": "daily-assistant-v1",
-                "knowledge": self.knowledge.public()}
+                "knowledge": self.knowledge.public(), "authMode": self.value.get("authMode", ""),
+                "credentialSource": self.value.get("credentialSource", ""),
+                "connectionId": self.value.get("connectionId", ""), "models": self.connections.public()}
 
     def knowledge_available(self):
         return KNOWLEDGE_AVAILABLE
@@ -31,6 +41,11 @@ class AssistantSettings:
         if not KNOWLEDGE_AVAILABLE:
             raise KnowledgeError("Knowledge Base package is unavailable.")
         return self.knowledge.client()
+
+    def knowledge_connection(self):
+        if not KNOWLEDGE_AVAILABLE:
+            raise KnowledgeError("Knowledge Base package is unavailable.")
+        return self.knowledge.connection()
 
     def trusted_knowledge_url(self, value):
         if not KNOWLEDGE_AVAILABLE:
@@ -55,12 +70,14 @@ class AssistantSettings:
         if self.value.get("provider") == "codex-app-server":
             return True  # Installation and login are checked only on an explicit model call.
         if self.value.get("provider") == "openai-agents":
-            return bool(self.value.get("model"))
+            return bool(self.value.get("model") and self.value.get("authMode") in {"api-key", "chatgpt"}
+                        and (self.value.get("connectionId") or self.value.get("key") or
+                             self.value.get("credentialSource") == "environment" and os.environ.get("OPENAI_API_KEY", "").strip()))
         return bool(self.legacy_command or self.value.get("command") or
                     self.value.get("endpoint") and self.value.get("model"))
 
     def save(self, data):
-        provider = data.get("provider", "codex-app-server")
+        provider = data.get("provider", self.value.get("provider", "openai-agents"))
         value = {"provider": provider, "paused": self.value.get("paused", False), **{
             key: self.value[key] for key in ("knowledgeEnabled", "knowledgeBaseUrl", "knowledgeCredentialRef", "knowledgeServiceId", "knowledgePublicBaseUrl", "knowledgeCapabilities") if key in self.value}}
         if provider in {"chat", "openai-agents"}:
@@ -78,6 +95,21 @@ class AssistantSettings:
             if not isinstance(key, str) or len(key) > 4096 or "\n" in key or "\r" in key:
                 raise ValueError("模型密钥格式不正确。")
             value.update(endpoint=endpoint, model=model, key=key)
+            if provider == "openai-agents":
+                mode = data.get("authMode", self.value.get("authMode", ""))
+                if mode not in {"api-key", "chatgpt"}:
+                    raise ValueError("请明确选择使用 ChatGPT 套餐登录或 API Key。")
+                identity = data.get("connectionId") or self.value.get("connectionId")
+                if mode == "api-key" and data.get("key"):
+                    identity = self.connections.create_api_key(data["key"], endpoint)["id"]
+                if identity:
+                    value.update(self.connections.binding(identity, mode))
+                    value.pop("key", None)
+                elif mode == "api-key" and self.value.get("credentialSource") == "environment" and endpoint == self.value.get("endpoint") and os.environ.get("OPENAI_API_KEY", "").strip():
+                    value["credentialSource"] = "environment"
+                elif mode == "chatgpt" or not key:
+                    raise ValueError("请先登录并选择本机连接，或填写 API Key。")
+                value["authMode"] = mode
         elif provider == "codex-app-server":
             executable = data.get("executable", "")
             if not isinstance(executable, str) or len(executable) > 4096 or any(c in executable for c in "\x00\n\r"):

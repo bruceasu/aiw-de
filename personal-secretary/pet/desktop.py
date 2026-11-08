@@ -318,6 +318,9 @@ def main():
                     self.sync_goal_button()
                     self.sync_schedule_button()
                     if error:
+                        pending_chat = getattr(self, "pending_chat", None)
+                        if 400 <= error.status < 500 and pending_chat and getattr(complete, "chat_request_id", None) == pending_chat["requestId"]:
+                            self.pending_chat = None
                         self.status.set(str(error))
                         self.pet.result_uncertain()
                         if error.status == 401:
@@ -366,6 +369,8 @@ def main():
                 self.status.set(warning or ("已收到，秘书正在处理，回复会自动显示。" if route == "chat" else result.get("note") or result.get("report", {}).get("message") or label + "已完成。"))
                 if warning:
                     self.pet.result_uncertain()
+            if route == "chat":
+                complete.chat_request_id = data.get("requestId")
             self.run(label, lambda: self.client.operate(route, data), complete)
 
         def refresh(self):
@@ -470,6 +475,7 @@ def main():
                 self.chat_input.bind("<Control-Return>", lambda _event: (self.send_chat(), "break")[-1])
                 bar = ttk.Frame(body); bar.pack(fill="x")
                 self.action(bar, "发送 · Ctrl+Enter", self.send_chat, True)
+                self.action(bar, "核对后另发请求", self.new_chat_request)
                 self.action(bar, "工作台", lambda: self.show_workbench(0))
                 self.action(bar, "刷新", self.refresh)
                 ttk.Label(body, textvariable=self.status, wraplength=580, style="Muted.TLabel").pack(fill="x", pady=(8, 0))
@@ -517,18 +523,44 @@ def main():
                 self.operate("work", {"title": "日常对话", "body": "", "planId": ""}, "创建私人日常对话", choose)
 
         def send_chat(self):
+            if self.busy:
+                self.status.set("请等待当前提交返回，再核对原消息。"); return
+            if not self.require_session():
+                return
             if self.snapshot.get("modelConfigured") is False:
                 self.status.set("请先在“设置模型”连接模型，保存后即可直接聊天。"); self.show_settings(); return
             work_id, text = self.selected_work(self.chat_work), self.chat_input.get("1.0", "end-1c")
             if not text.strip() or len(text) > 4000:
                 self.status.set("请输入 1–4000 字的消息。"); return
+            pending = getattr(self, "pending_chat", None)
+            if pending and getattr(self, "pending_chat_client", None) is not self.client:
+                self.status.set("个人服务连接已经变化，未向新连接重发旧消息。请先核对原服务，再明确选择“核对后另发请求”。"); return
+            if pending and pending["text"] != text:
+                self.status.set("上一条提交结果尚未确认。请先重发原文核对；确认另发新请求时，点击“核对后另发请求”。"); return
+            payload = pending or self.client.chat_payload(work_id, text)
+            # State polling may select a newly created conversation. A retry
+            # still addresses the original target, including an empty target.
+            work_id = payload["workId"]
+            self.pending_chat = payload
+            self.pending_chat_client = self.client
             def complete(result):
+                if result.get("state") == "UNKNOWN":
+                    return  # Keep the original text and target for an exact retry.
+                self.pending_chat = None
                 if not work_id and result.get("workId") in self.choice_ids.get(self.chat_work, []):
                     self.chat_work.current(self.choice_ids[self.chat_work].index(result["workId"]))
                     self.render_chat()
                 if (not work_id or self.selected_work(self.chat_work) == work_id) and self.chat_input.get("1.0", "end-1c") == text:
                     self.set_text(self.chat_input, "")
-            self.operate("chat", {"workId": work_id, "text": text}, "等待个人模型回复", complete)
+            self.operate("chat", payload, "核对原提交" if pending else "等待个人模型回复", complete)
+
+        def new_chat_request(self):
+            if not getattr(self, "pending_chat", None):
+                self.status.set("可以输入新的请求。"); return
+            if messagebox.askyesno("另发新请求", "原提交可能已被处理；结束本机重试记录不会撤销它。你已核对原对话及运行回执，并明确要另发新请求吗？", parent=self.chat_window):
+                self.pending_chat_client.forget_chat(self.pending_chat)
+                self.pending_chat = None
+                self.status.set("已结束本机原提交的重试记录；原服务请求及结果仍保留。下次发送将作为新请求。")
 
         def show_workbench(self, tab=0):
             if not self.require_session():

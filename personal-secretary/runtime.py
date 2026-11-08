@@ -51,17 +51,21 @@ class Runtime:
         self.cancelled = threading.Event()
         self.process = None
         self.model_lock = threading.Lock()
+        self.chat_lock = threading.RLock()
         self.last_model_usage = None
         self.settings = AssistantSettings(store.path.parent, model_command)
         self.platform_setup = PlatformSetup(self)
         self.professional = ProfessionalTasks(self)
         self.conversations = Conversations(self)
+        from secretary_runs import RunJournal
+        self.runs = RunJournal(self)
         self.daily = DailyAssistant(self, self.settings)
         self.authorizations = AuthorizationRequests(self)
         self.platform_actions = PlatformAgentActions(self)
 
     def cancel(self):
         self.cancelled.set()
+        self.settings.connections.cancel_login()
         self.enabled = False
         if self.process is not None:
             try:
@@ -70,6 +74,8 @@ class Runtime:
                 pass
 
     def model(self, instruction):
+        if not self.settings.configured():
+            raise PersonalChatError("CHAT_MODEL_NOT_CONFIGURED", "请先明确选择模型认证方式、连接和模型，再运行检查或发送请求。")
         with self.model_lock:
             if self.cancelled.is_set():
                 raise PersonalChatError("CHAT_STOPPING", "个人服务正在停止或模型资源待核对，请重新连接运行中的个人服务。")
@@ -138,7 +144,39 @@ class Runtime:
                 self.report_work(work, "NEEDS_HUMAN", "BACKGROUND_ERROR",
                     "后台处理发生异常，本地处理已暂停；执行结果尚未确认，请核对平台任务及原回执后重新启用。")
 
-    def chat(self, work_id, text):
+    def chat(self, work_id, text, request_id=None):
+        if request_id is None:
+            # Internal/native callers get an independent submission. HTTP clients
+            # must supply their own stable ID before making a retryable request.
+            request_id = str(uuid.uuid4())
+        if not isinstance(request_id, str) or not 1 <= len(request_id) <= 100:
+            raise PersonalChatError("CHAT_INVALID_INPUT", "缺少有效的消息提交标识，请刷新页面后重试。")
+        if not isinstance(text, str) or not text.strip() or len(text) > 4000 or not isinstance(work_id, (str, type(None))):
+            raise PersonalChatError("CHAT_INVALID_INPUT", "请输入 1–4000 字的消息。")
+        payload = {"workId": work_id or "", "text": text}
+        key = "secretary-submission:" + hashlib.sha256(request_id.encode()).hexdigest()
+        with self.chat_lock:
+            prior = self.store.get("runtime", key)
+            if prior:
+                if prior.get("payload") != payload:
+                    raise PersonalChatError("CHAT_INVALID_INPUT", "同一提交标识不能用于不同消息或对话。")
+                message = self.store.get("message", prior["messageId"])
+                return message or {"workId": prior["workId"], "state": "UNKNOWN", "requestId": request_id,
+                    "reply": "原请求已记录，但开始处理的结果尚未确认；未重复排队。请核对原对话或运行记录。"}
+            if not self.settings.configured() or self.settings.value.get("paused", False):
+                raise PersonalChatError("CHAT_NOT_READY", "请先连接模型并继续工作，再开始对话。")
+            if work_id and not self.store.get("work", work_id):
+                raise PersonalChatError("CHAT_INVALID_INPUT", "原工作不存在，请重新选择。")
+            target = work_id or "conversation:" + key.split(":", 1)[1]
+            submission = self.store.put("runtime", key, {"kind": "SECRETARY_SUBMISSION", "payload": payload,
+                "workId": target, "messageId": "chat:" + key.split(":", 1)[1], "state": "ACCEPTED",
+                "binding": self.runs.binding(self.settings.value), "createdAt": int(time.time() * 1000)}, 0)
+            if not work_id:
+                self.store.put("work", target, {"title": text.strip().splitlines()[0][:60], "body": "",
+                    "state": "DRAFT", "conversationOnly": True}, 0)
+            return self._chat_accepted(target, text, submission, request_id)
+
+    def _chat_accepted(self, work_id, text, submission, request_id):
         work = self.store.get("work", work_id)
         if work is None or not isinstance(text, str) or not text.strip() or len(text) > 4000:
             raise PersonalChatError("CHAT_INVALID_INPUT", "请选择仍然存在的工作，并输入 1–4000 字的消息；若工作已变化，请刷新后重新选择。")
@@ -147,7 +185,8 @@ class Runtime:
         if work.get("conversationHidden"):
             work = self.store.put("work", work_id, {**content(work), "conversationHidden": False}, work["revision"])
         try:
-            return self.daily.chat(work, text)
+            return self.daily.chat(work, text, message_id=submission["messageId"],
+                                   binding=submission["binding"], request_id=request_id)
         except ValueError as error:
             raise PersonalChatError("CHAT_NOT_READY", str(error)) from None
 

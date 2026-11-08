@@ -716,6 +716,8 @@ function updateCancelRevision() {
 }
 function render() {
   renderAssistant();
+  renderSecretaryModels();
+  renderSecretaryRuns();
   if (snapshot.conversations) for (const id of chatPages.keys()) {
     if (!snapshot.conversations.some(item => item.id === id)) chatPages.delete(id);
   }
@@ -758,16 +760,16 @@ async function refresh() {
   byId("pairing-status").hidden = true;
   return true;
 }
-async function post(route, data) {
+async function post(route, data, refreshState = true) {
   const response = await fetch("/api/" + route, {
     method: "POST", credentials: "same-origin",
     headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf }, body: JSON.stringify(data)
   });
   const result = await response.json();
-  if (!response.ok) throw apiError(response, result, route);
+  if (!response.ok) { const error = apiError(response, result, route); error.httpStatus = response.status; throw error; }
   if (route === "work") showSavedWork(result);
   let refreshed = true;
-  try { refreshed = await refresh() !== false; } catch (_) { refreshed = false; }
+  if (refreshState) try { refreshed = await refresh() !== false; } catch (_) { refreshed = false; }
   return { result, refreshed };
 }
 
@@ -776,6 +778,137 @@ async function assistantOperation(route, data, message) {
     const { result, refreshed } = await post(route, data);
     feedback(refreshed ? result.note || result.report?.message || message : "操作已返回结果，请刷新列表查看最新状态。", refreshed ? "ok" : "warn");
   } catch (error) { feedback(errorMessage(error), "error"); }
+}
+
+let modelLoginBusy = false;
+let modelAuthorizationUrl = "";
+const secretaryRunDrafts = new Map();
+const secretaryRunDetails = new Map();
+const secretaryControlRequests = new Map();
+
+function renderSecretaryModels() {
+  const form = formFor("settings");
+  if (!form || !snapshot?.assistant) return;
+  const sdk = form.elements.provider.value === "openai-agents";
+  const mode = form.elements.authMode.value;
+  const models = snapshot.assistant.models || {};
+  const select = form.elements.connectionId;
+  const selected = select.value || select.dataset.savedId || "";
+  const signature = JSON.stringify([mode, models.connections]);
+  if (select.dataset.signature !== signature) {
+    select.replaceChildren(new Option("请选择连接，或创建新连接", ""));
+    for (const connection of models.connections || []) {
+      if (connection.kind !== mode) continue;
+      const status = connection.status === "READY" ? connection.kind === "api-key" ? "密钥已保存，模型待检查" : "已授权，模型待检查"
+        : ({ REAUTH_REQUIRED: "需要重新登录", REFRESHING: "刷新结果待确认", DISCONNECTED: "本机已停用" })[connection.status] || connection.status;
+      const option = new Option(`${connection.label || connection.kind} · ${connection.account || connection.id} · ${status}`, connection.id);
+      select.add(option);
+    }
+    select.value = selected;
+    select.dataset.signature = signature;
+  }
+  for (const element of document.querySelectorAll("[data-sdk-auth]")) element.hidden = !sdk;
+  form.elements.authMode.disabled = !sdk;
+  select.disabled = !sdk;
+  form.elements.key.disabled = form.elements.provider.value === "codex-app-server" || sdk && mode !== "api-key";
+  form.elements.endpoint.disabled = form.elements.provider.value === "codex-app-server" || sdk && mode === "chatgpt";
+  const loginActive = ["WAITING", "EXCHANGING"].includes(models.login?.state);
+  byId("model-login").disabled = modelLoginBusy || !sdk || mode !== "chatgpt" || !models.persistentOAuth || !snapshot.localOAuth || loginActive;
+  byId("model-login-cancel").disabled = !loginActive || modelLoginBusy;
+  byId("model-disconnect").disabled = !select.value || modelLoginBusy;
+  let message = "秘书使用本机独立连接，Control Plane 不需要在线。";
+  if (models.error) message = models.error;
+  else if (sdk && !mode) message = "请明确选择使用 ChatGPT 套餐登录或 API Key，再选择连接和模型。";
+  else if (sdk && mode === "chatgpt" && !models.persistentOAuth) message = "此系统暂不支持受保护的 OAuth 保存，请使用 API Key 或本机 Codex 备用方式。";
+  else if (sdk && mode === "chatgpt" && !snapshot.localOAuth) message = "请在秘书主机打开本机界面登录；当前远程浏览器不能接收秘书的回环回调。";
+  else if (models.login?.message && mode === "chatgpt") message = models.login.message;
+  else if (sdk && mode === "chatgpt" && !select.value) message = "还没有选择 ChatGPT 连接。先登录，再选择返回的本机连接；登录不代表已选择模型。";
+  else if (sdk && mode === "api-key" && !select.value) message = snapshot.assistant.hasKey ? "当前沿用此前保存的本机密钥；可重新填写密钥后保存，迁入本机连接管理。" : "选择已保存的 API Key 连接，或填写 API Key 后保存以创建连接。";
+  else if (!sdk && form.elements.provider.value === "codex-app-server") message = "明确使用本机 Codex 备用通道；沿用本机登录，不自动切换到其它账户或付费方式。";
+  byId("model-connection-status").textContent = message;
+  if (sdk && snapshot.assistant.credentialSource === "environment" && !select.value) byId("model-connection-status").textContent = "当前沿用此前明确配置的 OPENAI_API_KEY 启动环境来源；可填写密钥或选择连接后迁入本机连接管理。";
+  if (loginActive && modelAuthorizationUrl) {
+    const link = node("a", "", "打开 ChatGPT 登录页"); link.href = modelAuthorizationUrl; link.target = "_blank"; link.rel = "noopener noreferrer";
+    byId("model-connection-status").append(document.createTextNode(" "), link);
+  }
+}
+
+function renderSecretaryRuns() {
+  let panel = byId("secretary-runs");
+  if (!panel) {
+    panel = node("section", "card"); panel.id = "secretary-runs";
+    byId("view-chat").append(panel);
+  }
+  if (document.activeElement?.tagName === "TEXTAREA" && panel.contains(document.activeElement)) return;
+  panel.replaceChildren(node("h2", "", "运行过程与控制"));
+  const runs = snapshot?.runs || [];
+  if (!runs.length) { panel.append(node("p", "help", "开始处理请求后，这里显示真实运行与工具记录。")); return; }
+  const labels = { QUEUED: "等待处理", RUNNING: "正在处理", PAUSE_REQUESTED: "暂停待生效", PAUSED: "已暂停", WAITING_USER: "等待确认或专业任务结果", WAITING_AUTH: "等待登录", RECONCILING: "结果待核对", SUCCEEDED: "已完成", FAILED: "未完成", CANCELLED: "已取消" };
+  for (const run of runs.slice(0, 12)) {
+    const section = node("section", "record-card");
+    const work = (snapshot.work || []).find(row => row.id === run.workId);
+    section.append(node("h3", "", work?.title || "私人会话"), node("p", "help", `${labels[run.state] || run.state} · 模型 ${run.modelCalls || 0} 次 · 工具 ${run.toolCalls || 0} 次`));
+    section.append(node("p", "help", run.usageKnown ? `执行回合用量：输入 ${run.inputTokens}，输出 ${run.outputTokens} tokens（不含单独的会话摘要）` : "执行回合用量尚未完整获知；不按零费用计算。"));
+    if (run.note) section.append(node("p", "help", run.note));
+    if (run.hasUnknownEffect) section.append(node("p", "help", "仍有未知副作用；取消后续操作不表示原操作未执行，原始记录继续保留。"));
+    for (const pending of run.queuedControls || []) section.append(node("p", "help", `${pending.control === "follow-up" ? "稍后处理" : "待应用控制"} · ${pending.state} · ${pending.text || pending.control} ${pending.note || ""}`));
+    for (const operation of (snapshot.decisions || []).filter(item => item.kind === "FILE_OPERATION" && item.runId === run.id)) {
+      section.append(node("p", "help", `${operation.resultStatus === "DRAFT_READY" ? "修订副本（原文件保留）" : "新文件"} · ${operation.state} · ${operation.path}`));
+      if (operation.state === "SUCCEEDED" && operation.resultStatus === "DRAFT_READY") section.append(button("查看修订差异", async () => {
+        try {
+          const { result } = await post("file/diff", { id: operation.id }, false);
+          secretaryRunDetails.set(run.id, result.diff + (result.truncated ? "\n（差异显示已截断）" : ""));
+          renderSecretaryRuns();
+        } catch (error) { feedback(errorMessage(error), "error"); }
+      }));
+    }
+    const actions = node("div", "record-actions");
+    const send = async (control, text = "") => {
+      const current = (snapshot.runs || []).find(item => item.id === run.id);
+      if (!current) return;
+      const key = JSON.stringify([run.id, control, text]);
+      let requestId = secretaryControlRequests.get(key);
+      if (!requestId) { requestId = crypto.randomUUID(); secretaryControlRequests.set(key, requestId); }
+      try {
+        const { result } = await post("run/control", { runId: run.id, revision: current.revision, control, text, requestId });
+        secretaryControlRequests.delete(key);
+        secretaryRunDrafts.delete(run.id);
+        feedback(result.note || "控制已记录，将在安全边界处理。");
+      } catch (error) {
+        if (error.httpStatus >= 400 && error.httpStatus < 500) secretaryControlRequests.delete(key);
+        feedback(errorMessage(error), "error");
+      }
+    };
+    if (run.state === "RUNNING") actions.append(button("暂停", () => send("pause")));
+    if (run.state === "PAUSED") actions.append(button("继续原运行", () => send("resume")));
+    if (["RUNNING", "PAUSED", "PAUSE_REQUESTED", "WAITING_USER", "WAITING_AUTH", "RECONCILING"].includes(run.state)) actions.append(button("取消后续操作", () => send("cancel")));
+    if (run.state === "RECONCILING" || run.state === "CANCELLED" && run.hasUnknownEffect) actions.append(button("核对原操作结果", async () => {
+      const current = (snapshot.runs || []).find(item => item.id === run.id);
+      try { const { result } = await post("run/reconcile", { runId: run.id, revision: current.revision }); feedback(result.note); }
+      catch (error) { feedback(errorMessage(error), "error"); }
+    }));
+    actions.append(button("查看执行事件", async () => {
+      try {
+        const { result } = await post("run/events", { runId: run.id }, false);
+        secretaryRunDetails.set(run.id, result.map(event => `${event.sequence}. ${event.type} ${event.tool || event.control || ""} ${event.status || event.state || ""}`).join("\n"));
+        renderSecretaryRuns();
+      } catch (error) { feedback(errorMessage(error), "error"); }
+    }));
+    section.append(actions);
+    if (["RUNNING", "PAUSED", "PAUSE_REQUESTED", "WAITING_USER"].includes(run.state)) {
+      const text = node("textarea", ""); text.rows = 2; text.maxLength = 4000;
+      text.placeholder = "补充当前工作的要求，或安排完成后再做的事";
+      text.value = secretaryRunDrafts.get(run.id) || "";
+      text.addEventListener("input", () => secretaryRunDrafts.set(run.id, text.value));
+      section.append(text);
+      const commands = node("div", "record-actions");
+      if (run.state !== "WAITING_USER") commands.append(button("调整当前工作", () => send("steer", text.value)));
+      commands.append(button("完成后再处理", () => send("follow-up", text.value)));
+      section.append(commands, node("p", "help", "调整在安全边界生效。暂停或取消不会撤销已完成或已受理的操作。"));
+    }
+    if (secretaryRunDetails.has(run.id)) section.append(node("pre", "", secretaryRunDetails.get(run.id)));
+    panel.append(section);
+  }
 }
 
 function renderAssistant() {
@@ -787,6 +920,8 @@ function renderAssistant() {
   if (!settingsLoaded) {
     const form = formFor("settings");
     form.elements.provider.value = settings.provider;
+    form.elements.authMode.value = settings.authMode || "";
+    form.elements.connectionId.dataset.savedId = settings.connectionId || "";
     form.elements.endpoint.value = settings.endpoint;
     form.elements.model.value = settings.model;
     form.elements.executable.value = settings.executable || "";
@@ -1124,6 +1259,17 @@ document.querySelectorAll("[data-reset-editor]").forEach(control => control.addE
 }));
 for (const route of Object.keys(previewVersions)) formFor(route).addEventListener("input", () => invalidatePreview(route));
 
+// Keep only IDs and request digests across reloads, never private chat text.
+async function chatSubmission(data) {
+  const bytes = new TextEncoder().encode(JSON.stringify({ workId: data.workId || "", text: data.text }));
+  const digest = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), b => b.toString(16).padStart(2, "0")).join("");
+  const key = "secretary-chat-submit:" + digest;
+  const id = sessionStorage.getItem(key) || crypto.randomUUID();
+  sessionStorage.setItem(key, id);
+  data.requestId = id;
+  return key;
+}
+
 document.querySelectorAll("form[data-route]").forEach(form => form.addEventListener("submit", async event => {
   event.preventDefault();
   if (form.getAttribute("aria-busy") === "true") return;
@@ -1134,7 +1280,9 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
   if (submit.disabled) return;
   form.setAttribute("aria-busy", "true"); submit.disabled = true;
   const version = previewVersions[route];
+  let chatSubmissionKey;
   try {
+    if (route === "chat") chatSubmissionKey = await chatSubmission(data);
     let requestRoute = route;
     if (route === "schedule") {
       if (immediate) {
@@ -1158,6 +1306,7 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
       if (data.command.trim()) data.command = parseInput(data.command, "模型程序参数"); else delete data.command;
     }
     const { result, refreshed } = await post(requestRoute, data);
+    if (chatSubmissionKey && result.state !== "UNKNOWN") sessionStorage.removeItem(chatSubmissionKey);
     if (route === "settings") {
       settingsLoaded = false;
       knowledgeSettingsDirty = false;
@@ -1168,12 +1317,12 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
     const current = applyResult(route, result, version);
     updateSavedEditor(route, data, refreshed);
     if (route === "login") form.reset();
-    if (route === "chat" && form.elements.text.value === data.text) form.elements.text.value = "";
-    if (route === "chat" && result.workId) { form.elements.workId.value = result.workId; renderChat(); }
+    if (route === "chat" && result.state !== "UNKNOWN" && form.elements.text.value === data.text) form.elements.text.value = "";
+    if (route === "chat" && result.state !== "UNKNOWN" && result.workId) { form.elements.workId.value = result.workId; renderChat(); }
     let message = route === "login" ? "个人服务已接受配对。" : (refreshed ? "操作已记录，状态已更新。" : "操作已返回结果。");
     if (route === "schedule" && result.report) message = result.report.message;
     if (immediate && result.state === "SCHEDULED") message = "已提交马上执行，进度和结果会自动更新；秘书暂停时需先点击“继续工作”。";
-    if (route === "chat") message = "已收到，秘书正在处理，回复会自动显示。";
+    if (route === "chat") message = result.state === "UNKNOWN" ? result.reply : "请求已记录，回复会自动显示；重发的原请求未重复排队。";
     if (route === "work") message = "工作已保存，并已选入安排列表。";
     if (route === "settings") message = "设置已保存，可以直接聊天或安排工作。";
     if (route === "question-preview" || route === "goal-preview") message = current ? "本地预览已生成，请核对精确内容后确认提交。" : "内容已变化，请重新生成本地预览。";
@@ -1181,6 +1330,11 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
     if (!refreshed) message += " 服务已返回结果，但状态读取失败。请先刷新状态、核对原回执，避免重复提交。";
     feedback(message, !refreshed || !current || route === "schedule" && result.state !== "SCHEDULED" ? "warn" : "ok", byId("personal-app").hidden);
   } catch (error) {
+    if (chatSubmissionKey && error.httpStatus >= 400 && error.httpStatus < 500) sessionStorage.removeItem(chatSubmissionKey);
+    if (chatSubmissionKey && !error.httpStatus) {
+      feedback("消息提交结果尚未确认。可在此页面重发相同内容，系统将使用原提交标识核对，避免重复执行。" + errorMessage(error), "warn");
+      return;
+    }
     feedback(errorMessage(error), "error", route === "login" || byId("personal-app").hidden);
   } finally {
     form.removeAttribute("aria-busy");
@@ -1208,6 +1362,51 @@ byId("check-model").addEventListener("click", async event => {
   feedback("正在检查模型连接，请稍候……");
   try { await assistantOperation("settings/check", {}, "模型连接正常。"); }
   finally { button.disabled = false; }
+});
+byId("check-model").textContent = "检查已保存的模型配置";
+for (const name of ["provider", "authMode"]) formFor("settings").elements[name].addEventListener("change", () => {
+  const select = formFor("settings").elements.connectionId;
+  select.value = ""; select.dataset.savedId = ""; delete select.dataset.signature;
+  renderSecretaryModels();
+});
+formFor("settings").elements.connectionId.addEventListener("change", event => {
+  event.target.dataset.savedId = event.target.value;
+  renderSecretaryModels();
+});
+byId("model-login").addEventListener("click", async () => {
+  if (modelLoginBusy) return;
+  modelLoginBusy = true;
+  const popup = window.open("about:blank", "_blank");
+  if (popup) popup.opener = null;
+  renderSecretaryModels();
+  try {
+    const { result } = await post("model/login", {});
+    const url = new URL(result.authorizationUrl);
+    if (url.origin !== "https://auth.openai.com" || url.pathname !== "/api/accounts/authorize") throw new Error("登录地址来源无效。");
+    modelAuthorizationUrl = url.href;
+    if (popup) popup.location.replace(url.href);
+    else {
+      const link = node("a", "", "打开 ChatGPT 登录页"); link.href = url.href; link.target = "_blank"; link.rel = "noopener noreferrer";
+      byId("model-connection-status").append(document.createTextNode(" 浏览器拦截了窗口，请点击："), link);
+    }
+    feedback(result.note);
+  } catch (error) { if (popup) popup.close(); feedback(errorMessage(error), "error"); }
+  finally { modelLoginBusy = false; renderSecretaryModels(); }
+});
+byId("model-login-cancel").addEventListener("click", () => assistantOperation("model/cancel", {}, "原登录已取消。"));
+byId("model-disconnect").addEventListener("click", async () => {
+  const identity = formFor("settings").elements.connectionId.value;
+  const connection = snapshot.assistant.models.connections.find(item => item.id === identity);
+  if (!connection) return;
+  await assistantOperation("model/disconnect", { id: identity, version: connection.version }, "本机连接已停用；需要时请重新登录。远端授权撤销尚未确认。");
+});
+byId("model-import").addEventListener("click", async () => {
+  try {
+    const registration = JSON.parse(byId("model-import-metadata").value);
+    const { result } = await post("model/import", { registration });
+    byId("model-import-metadata").value = "";
+    feedback(result.note);
+  } catch (error) { feedback(errorMessage(error), "error"); }
 });
 byId("enable-platform").addEventListener("click", () => assistantOperation("enable", { enabled: true }, "已连接当前已授权的专业平台；日常助理设置不受影响。"));
 byId("refresh").addEventListener("click", async () => {

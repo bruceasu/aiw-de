@@ -59,6 +59,25 @@ The platform SHALL fix concrete target, business selections, actual state/versio
 
 The reference secretary SHALL persist the original selection/request before preparation, then persist the original Envelope before using the existing durable action/question outbox. Unknown results SHALL retain and reconcile the same request; stale process-bound preparations SHALL NOT be silently rebuilt. Full snapshots and private data SHALL NOT be exposed through preparation. Scoped formal-question reads SHALL NOT expand legacy read_scope; original question projection and source associations SHALL remain exact. Historical receipt reads SHALL require the same Owner and Worker. See docs/ACTION-PERMISSIONS.md.
 
+### Requirement: Secretary-owned SDK execution and independent model connections
+The reference secretary SHALL prefer the Python OpenAI Agents SDK for new installations, require an explicit authentication source and model, and preserve existing provider selections. Its model connections SHALL be independent of the Control Plane. ChatGPT OAuth and API Key connections SHALL NOT grant file or platform authority. Codex SHALL remain an explicitly selected fallback without automatic account, runtime or billing-source switching.
+
+The SDK SHALL manage the main model/tool loop while the secretary owns tool implementations, current authorization, finite budgets, canonical history and durable effects. Only completed model responses MAY dispatch tools. Unsupported SDK/OAuth capabilities SHALL fail clearly before effects. The initial OAuth adapter MAY translate completed text actions into SDK function calls instead of claiming support for unverified native tool formats.
+SDK final output SHALL be treated only as a result, never dispatched through a legacy text-action loop.
+
+### Requirement: Durable control and honest file and knowledge outcomes
+Steering SHALL change the current request at a safe boundary; follow-up requests SHALL remain separate queued inputs. Pause/cancel requests SHALL NOT claim that in-flight effects were undone. Unknown outcomes SHALL be reconciled using original receipts and operation identities before replay. Interrupted tool calls SHALL distinguish not executed, waiting and unknown outcomes.
+Chat submissions SHALL carry a durable client submission ID bound to the original content and target before creating a conversation or queueing execution. Replays SHALL return the original record; ID reuse with different content or target SHALL be rejected. Formal asynchronous receipts SHALL synchronize run terminal states without reviving cancelled runs. Follow-ups after failure or cancellation SHALL be marked not applied.
+
+Text edits SHALL preserve the original by default and create revision copies with verified versions and unique exact replacements. Partial reads SHALL NOT authorize whole-document replacement. Original writeback SHALL remain unavailable without a verified platform protection boundary. Backups, diffs and restoration copies SHALL retain version checks, and complex formats SHALL NOT be rewritten as plain text.
+
+Knowledge Base tools SHALL preserve the existing optional remote API contract, source versions, trusted citations, request budgets and note-creation idempotency. Saving SHALL require the current user's explicit intent; accepted, saved and searchable states SHALL be distinct. Private conversations and memory SHALL NOT be automatically uploaded to the Knowledge Base.
+Note reconciliation and replay SHALL require the original connection and credential identity. A shared service ID alone SHALL NOT authorize sending a prior principal's note using replacement credentials. Missing identity evidence SHALL block replay.
+
+The reference private-store upgrade SHALL retain existing data, save a restricted pre-upgrade snapshot, and fence older writers out of the new runtime record format. Runtime metadata SHALL be observable without routinely returning full transcripts or credentials. Evidence remains subject to the limits above.
+Permanent conversation deletion SHALL remove its private runtime graph and submission records in the same deletion transaction while retaining unrelated work, existing backups and output files under the existing deletion policy.
+Both deletion entries SHALL reject nonterminal runs and terminal runs with unresolved effects, rechecking under the deletion transaction. Cancellation SHALL NOT discard recovery evidence. Reconciliation after cancellation SHALL keep the run cancelled and SHALL NOT resubmit a note on a missing remote creation record. Supported desktop chat clients SHALL retain the original submission ID, content and target while the outcome is unknown.
+
 ## Agent client transport
 
 ### Requirement: Remote Agent client mutual TLS

@@ -131,60 +131,61 @@ def complete_text(settings, instruction, cancelled=None, on_evidence=None):
 
 
 async def _complete_openai(settings, request):
+    if settings.get("authMode") == "chatgpt":
+        from secretary_sdk import oauth_text
+        access = settings["_connections"].access(settings["connectionId"], settings["connectionVersion"], "chatgpt")
+        text, usage, _response_id = await asyncio.to_thread(oauth_text, access["token"], settings["model"], request.instruction,
+            [{"role": "user", "content": "Follow the host instruction and return only the requested text. No tools."}], request.attempt.check, None, settings.get("effort", ""))
+        request.attempt.check()
+        request.attempt.evidence.record("model-terminal", status="completed", runtime="chatgpt-responses", usageKnown=bool(usage), usageSource="provider-response")
+        return text
     os.environ.setdefault("OPENAI_AGENTS_DONT_LOG_MODEL_DATA", "1")
     os.environ.setdefault("OPENAI_AGENTS_DONT_LOG_TOOL_DATA", "1")
     try:
-        from agents import Agent, ModelSettings, OpenAIProvider, RunConfig, Runner, set_tracing_disabled
-        from openai import AsyncOpenAI
+        from openai import AsyncOpenAI, DefaultAsyncHttpxClient
     except ImportError:
         raise RuntimeError("OPENAI_AGENTS_SDK_MISSING") from None
 
     request.attempt.check()
-    api_key = settings.get("key") or os.environ.get("OPENAI_API_KEY", "").strip()
+    if settings.get("connectionId"):
+        access = settings["_connections"].access(settings["connectionId"], settings["connectionVersion"], "api-key")
+        api_key, base_url = access["token"], access["baseUrl"]
+    else:
+        api_key, base_url = settings.get("key") or os.environ.get("OPENAI_API_KEY", "").strip(), settings.get("endpoint")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY_REQUIRED")
-    set_tracing_disabled(True)
-    client = AsyncOpenAI(api_key=api_key, base_url=settings.get("endpoint") or "https://api.openai.com/v1",
-                         timeout=ATTEMPT_TIMEOUT_SECONDS, max_retries=0)
-    provider = OpenAIProvider(openai_client=client, use_responses=True)
-    model = provider.get_model(request.model)
-    preferences = {"parallel_tool_calls": True, "truncation": "disabled", "store": False,
-                   "preserve_raw_usage": True}
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url or "https://api.openai.com/v1",
+                         timeout=ATTEMPT_TIMEOUT_SECONDS, max_retries=0, http_client=DefaultAsyncHttpxClient(follow_redirects=False))
+    parameters = {"model": request.model, "instructions": HOST_ACTION_INSTRUCTIONS + "\n" + request.instruction,
+        "input": [{"role": "user", "content": "Return only the requested text. Do not use tools."}], "tools": [], "store": False, "stream": False}
     if request.reasoning_effort and request.reasoning_effort != "none":
-        preferences["reasoning"] = {"effort": request.reasoning_effort}
-    agent = Agent(name="Personal Secretary", instructions=HOST_ACTION_INSTRUCTIONS + "\n" + request.instruction,
-                  model=model, tools=[], model_settings=ModelSettings(**preferences))
-    run_config = RunConfig(tracing_disabled=True, model_provider=provider)
+        parameters["reasoning"] = {"effort": request.reasoning_effort}
     loop = asyncio.get_running_loop()
-    stream_box = []
     execution_task = asyncio.current_task()
 
     def cancel_run():
         def cancel_on_loop():
-            if stream_box:
-                try:
-                    stream_box[0].cancel(mode="immediate")
-                except Exception:
-                    request.attempt.cancel()
-            elif execution_task is not None:
+            if execution_task is not None:
                 execution_task.cancel()
         loop.call_soon_threadsafe(cancel_on_loop)
 
     request.attempt.add_cancel_callback(cancel_run)
     try:
-        result = Runner.run_streamed(agent, "Execute the request and return its final response.",
-                                     run_config=run_config, max_turns=1)
-        stream_box.append(result)
-        if request.attempt.cancelled.is_set() or request.attempt.force_event.is_set():
-            result.cancel(mode="immediate")
-        async for _event in result.stream_events():
-            request.attempt.check()
+        result = await asyncio.wait_for(client.responses.create(**parameters), timeout=request.attempt.remaining())
         request.attempt.check()
-        output = result.final_output
+        from secretary_sdk import normalized
+        items = normalized(result.output)
+        if result.status != "completed" or any(item.get("type") not in {"message", "reasoning"} or item.get("status") not in {None, "completed"} for item in items):
+            raise RuntimeError("RESPONSES_TERMINAL_NOT_COMPLETED")
+        output = "".join(part.get("text", "") for item in items if item.get("type") == "message" for part in item.get("content", []) if part.get("type") == "output_text")
         if not isinstance(output, str) or not output.strip() or len(output.encode("utf-8")) > MAX_OUTPUT_BYTES:
             raise RuntimeError("AGENT_OUTPUT_INVALID")
-        request.attempt.evidence.record("model-terminal", status="completed", runtime="openai-agents",
-                                        usageKnown=False, unknown="token-usage")
+        usage = getattr(result, "usage", None)
+        incoming, outgoing = getattr(usage, "input_tokens", None), getattr(usage, "output_tokens", None)
+        known = type(incoming) is int and incoming >= 0 and type(outgoing) is int and outgoing >= 0
+        request.attempt.evidence.record("model-terminal", status="completed", runtime="openai-responses",
+            usageKnown=known, usageSource="provider-response" if known else "unknown",
+            **({"inputTokens": incoming, "outputTokens": outgoing} if known else {}))
         return output.strip()
     except asyncio.CancelledError:
         request.attempt.check()

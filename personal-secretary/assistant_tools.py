@@ -7,14 +7,10 @@ import ipaddress
 import json
 from pathlib import Path
 import re
-import shutil
 import socket
 import ssl
-import tempfile
 import os
 import urllib.parse
-import uuid
-import hashlib
 from knowledge_client import KnowledgeError
 
 
@@ -97,8 +93,12 @@ class DailyTools:
         if output_path: self.selected.add(Path(output_path).expanduser().resolve())
         self.written, self.sources = [], []
         self.knowledge_counts = {"search": 0, "read": 0, "searchChars": 0, "readChars": 0}
+        from secretary_files import SafeFiles
+        self.files = SafeFiles(self)
 
     def knowledge(self, action):
+        if not self.settings.value.get("knowledgeEnabled", False):
+            raise KnowledgeError("知识库功能未启用，未执行知识库操作。")
         if not self.settings.knowledge_available():
             raise KnowledgeError("Knowledge Base package is unavailable.")
         from knowledge.tools import perform
@@ -131,6 +131,8 @@ class DailyTools:
         kind = action.get("action")
         if kind in {"knowledge_search", "knowledge_read", "knowledge_save_note", "knowledge_note_status"}:
             return self.knowledge(action)
+        if kind in {"read_file", "write_file", "create_file", "prepare_edit", "apply_edit", "restore_file"}:
+            return self.files.perform(action, approved)
         if kind == "search":
             query = action.get("query", "")
             if not isinstance(query, str) or not query.strip() or len(query) > 1000:
@@ -142,16 +144,11 @@ class DailyTools:
             result = fetch_page(action.get("url", ""))
             self.sources.append(result["url"])
             return result
-        if kind not in {"read_file", "write_file", "delete_file"}:
+        if kind != "delete_file":
             if kind in {"payment", "publish", "command"}:
                 raise ValueError("当前没有连接付款、发布或命令执行工具。这项操作未执行，请选择对应服务后单独授权。")
             raise ValueError("模型请求了不支持的操作，这项操作未执行。")
         path = self.path(action, approved or kind == "delete_file")
-        if kind == "read_file":
-            if not path.is_file() or path.stat().st_size > 512000:
-                raise ValueError("文件不存在或超过 512 KB 读取上限。")
-            text = path.read_text(encoding="utf-8-sig")
-            return {"path": str(path), "text": text[:30000], "truncated": len(text) > 30000}
         if kind == "delete_file":
             if not path.is_file() or path.stat().st_size > 16_000_000:
                 raise ValueError("仅支持删除明确选择的、不超过 16 MB 的单个文件。")
@@ -162,23 +159,3 @@ class DailyTools:
                 raise ValueError("待删除文件已变化，请重新核对后确认。")
             path.unlink()
             return {"path": str(path), "deleted": True}
-        text = action.get("text")
-        if not isinstance(text, str) or len(text.encode("utf-8")) > 512000:
-            raise ValueError("保存内容不是文本或超过 512 KB。")
-        if path.exists():
-            if not path.is_file() or path.stat().st_size > 16_000_000:
-                raise ValueError("目标不是普通文件或超过备份上限，请换一个文件位置。")
-            backup = self.settings.directory / "file-backups" / (uuid.uuid4().hex + path.suffix)
-            backup.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-            shutil.copyfile(path, backup)
-            os.chmod(backup, 0o600)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        descriptor, temporary = tempfile.mkstemp(prefix=".assistant-", dir=path.parent)
-        try:
-            with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
-                stream.write(text)
-            os.replace(temporary, path)
-        finally:
-            Path(temporary).unlink(missing_ok=True)
-        self.written.append(str(path))
-        return {"path": str(path), "saved": True}

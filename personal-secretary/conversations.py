@@ -59,6 +59,7 @@ class Conversations:
     def _idle(self, work):
         if not work or work.get("state") in {"SCHEDULED", "DAILY_RUNNING", "ACTIVE", "START_PENDING", "CANCELLED", "TRASHED"} or self.runtime.professional.pending(work["id"]):
             raise ValueError("对话关联的工作仍在处理，请结束或取消后再操作。")
+        self.store.assert_runtime_deletable(work["id"])
         if self.runtime.authorizations.pending(work["id"]):
             raise ValueError("对话仍在等待授权，请先拒绝或完成原申请。")
         if any(row.get("workId") == work["id"] and row.get("kind") == "DAILY_CONFIRMATION" and row.get("state") == "WAITING" for row in self.store.list("decision")):
@@ -92,6 +93,7 @@ class Conversations:
                 raise ValueError("工作已恢复、删除或发生变化，请刷新已删除列表。")
             if identity in self.runtime.daily.busy or self.runtime.professional.pending(identity):
                 raise ValueError("这项工作仍在处理或核对中，暂不能永久删除。请等待本机操作结束；专业任务请先恢复工作并核对平台结果。")
+            self.store.assert_runtime_deletable(identity)
             decisions = [row for row in self.store.list("decision") if row.get("workId") == identity]
             if any(row.get("kind") == "DAILY_CONFIRMATION" and row.get("state") == "WAITING" for row in decisions):
                 raise ValueError("这项工作还有待确认操作，请先恢复工作并处理确认。")

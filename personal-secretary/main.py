@@ -191,7 +191,7 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                 elif self.path == "/api/state":
                     self.respond(200, {"csrf": session["csrf"], "ownerId": runtime.store.owner, "workerId": runtime.store.worker,
                         "platformOrigin": runtime.platform.base.removesuffix("/api/r1/authority"),
-                        "serviceVersion": "daily-assistant-v1", "assistant": runtime.settings.public(),
+                        "serviceVersion": "daily-assistant-v2-sdk", "assistant": runtime.settings.public(),
                         "enabled": not runtime.settings.value.get("paused", False), "platformEnabled": runtime.enabled,
                         "modelConfigured": runtime.settings.configured(), "work": runtime.store.list("work"), "messages": runtime.store.chat_messages(limit=60),
                         "messageCount": sum(runtime.store.chat_counts().values()), "conversations": runtime.conversations.list(), "memories": runtime.store.list("memory"),
@@ -199,6 +199,7 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                         "backgroundError": runtime.background_error,
                         "policies": runtime.store.list("policy"), "drafts": runtime.store.list("draft"), "templates": runtime.store.list("template"),
                         "todos": runtime.store.list("todo"), "decisions": runtime.store.list("decision"),
+                        "runs": runtime.runs.public(), "localOAuth": self.local_request() and os.name == "nt",
                         "receipts": [{key: row[key] for key in ("request_id", "state", "receipt")} for row in runtime.store.pending()]})
                 elif self.path == "/api/backup":
                     self.respond(200, runtime.store.backup())
@@ -274,6 +275,29 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                         pairing_expiry = time.monotonic() + 300
                         attempts = 0
                         result = {"code": pairing, "expiresIn": 300}
+                    elif self.path in {"/api/model/login", "/api/model/cancel", "/api/model/disconnect", "/api/model/import", "/api/run/control", "/api/run/events", "/api/run/reconcile", "/api/file/diff"}:
+                        try:
+                            if self.path == "/api/model/login":
+                                if not self.local_request():
+                                    raise ValueError("请在秘书主机打开本机界面登录；远程浏览器不能使用秘书的回环回调。")
+                                result = runtime.settings.connections.begin_login()
+                            elif self.path == "/api/model/cancel":
+                                result = runtime.settings.connections.cancel_login()
+                            elif self.path == "/api/model/disconnect":
+                                result = runtime.settings.connections.disconnect(data.get("id"), data.get("version"))
+                            elif self.path == "/api/model/import":
+                                result = runtime.settings.connections.import_metadata(data)
+                            elif self.path == "/api/run/control":
+                                result = runtime.runs.control(data)
+                            elif self.path == "/api/run/reconcile":
+                                result = runtime.runs.reconcile(data)
+                            elif self.path == "/api/file/diff":
+                                from secretary_files import operation_diff
+                                result = operation_diff(runtime.store, runtime.settings.directory, data.get("id"))
+                            else:
+                                result = runtime.runs.events(data.get("runId"))
+                        except ValueError as error:
+                            raise PersonalChatError("SECRETARY_OPERATION_REJECTED", str(error)) from None
                     elif self.path == "/api/settings":
                         try:
                             result = runtime.settings.save(data)
@@ -317,15 +341,9 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                         except ValueError as error:
                             raise PersonalChatError("PLATFORM_SETUP_REQUIRED", str(error)) from None
                     elif self.path == "/api/chat":
-                        work_id = data.get("workId")
-                        if not work_id:
-                            if not isinstance(data.get("text"), str) or not data["text"].strip() or len(data["text"]) > 4000:
-                                raise PersonalChatError("CHAT_INVALID_INPUT", "请输入 1–4000 字的消息。")
-                            if not runtime.settings.configured() or runtime.settings.value.get("paused", False):
-                                raise PersonalChatError("CHAT_NOT_READY", "请先连接模型并继续工作，再开始对话。")
-                            work = runtime.conversations.start(data["text"])
-                            work_id = work["id"]
-                        result = runtime.chat(work_id, data["text"])
+                        if not data.get("requestId"):
+                            raise PersonalChatError("CHAT_INVALID_INPUT", "消息缺少提交标识，请刷新页面使用新版客户端。")
+                        result = runtime.chat(data.get("workId"), data.get("text"), data["requestId"])
                     elif self.path in {"/api/conversation/page", "/api/conversation/summary", "/api/conversation/delete", "/api/memory/delete"}:
                         try:
                             if self.path.endswith("/page"):

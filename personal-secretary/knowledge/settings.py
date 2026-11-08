@@ -1,6 +1,7 @@
 """Knowledge Base configuration and credential boundary."""
 
 from pathlib import Path
+import hashlib
 import uuid
 
 from private_config import read_private, write_private
@@ -25,13 +26,23 @@ class KnowledgeSettings:
                 "hasCredential": bool(self.knowledge_secret.get(self.value.get("knowledgeCredentialRef", "")))}
 
     def client(self):
-        if not self.value.get("knowledgeEnabled"):
+        return self.connection()[0]
+
+    def connection(self):
+        # Capture client and identity together. A later settings change must
+        # never pair a replacement token with an old note's identity.
+        value = dict(self.value)
+        if not value.get("knowledgeEnabled"):
             raise KnowledgeError("知识库连接尚未启用。")
-        ref = self.value.get("knowledgeCredentialRef", "")
+        ref = value.get("knowledgeCredentialRef", "")
         token = self.knowledge_secret.get(ref)
         if not token:
             raise KnowledgeError("知识库凭证缺失，请重新保存连接设置。")
-        return KnowledgeClient(self.value.get("knowledgeBaseUrl", ""), token)
+        identity = {key: value.get(key) for key in
+                    ("knowledgeBaseUrl", "knowledgeServiceId", "knowledgeCredentialRef")}
+        # A reference alone is insufficient if its secret was replaced/imported.
+        identity["credentialDigest"] = hashlib.sha256(token.encode()).hexdigest()
+        return KnowledgeClient(value.get("knowledgeBaseUrl", ""), token), identity
 
     def trusted_url(self, value):
         from urllib.parse import urlsplit

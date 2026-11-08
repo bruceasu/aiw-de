@@ -1,13 +1,13 @@
 # FD-084: Secretary SDK execution and safe files with knowledge integration
 
-**Status:** Design
-**Revision:** 1
+**Status:** Complete
+**Revision:** 14
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
 
 **Design date:** 2026-11-08
-**Stage limit:** 本轮仅设计；不实施、不启动服务、不登录、不调用模型、不执行测试或独立审查。
+**Stage limit:** 用户于 2026-11-08 明确 `$fd-workflow FD-084 auto` 并授权先提交设计；在已记录 worktree 实施、独立审查与本地交付。测试、真实账户/服务操作及网络下载没有因此获准。
 
 ## Problem
 
@@ -162,14 +162,24 @@ SDK 中每个函数工具都是 `ToolHost` 的薄适配。调用输入由 Python
 ## Work items
 
 - [x] 1.1 核对当前实现和已确认需求，记录职责、接口、状态、失败恢复及实施边界；本项只代表设计文档完成。
-- [ ] 2.1 核对具体 SDK 版本和模型适配接口；完成 API Key 最小主路径，确认响应完成前不执行工具、回合预算和合法的暂停状态边界。
-- [ ] 2.2 实现秘书独立连接与保护存储、OAuth 校验/刷新协调；完成 OAuth 的 SDK 请求能力适配，明确导入、远程浏览器及不支持平台的边界。
-- [ ] 3.1 将现有日常/知识/平台工具接入统一 ToolHost 和 SDK，保留既有授权与专业任务合同；隔离 Codex 备用驱动及显式切换。
-- [ ] 3.2 实现运行日志、控制队列、规范历史和模型投影，接入 Web/桌面过程展示、steering/follow-up、有限预算及重启对账。
-- [ ] 4.1 实现文件版本读取、修订副本、精确编辑、写回保护、备份/恢复及真实结果核对；目标平台保护能力不满足时禁用原件写回。
-- [ ] 4.2 将知识库引用、请求级预算和笔记幂等恢复贯通 SDK/暂停/重启；保留可选模块隔离。
-- [ ] 5.1 完成设置迁移与现有调度/业务权限回归的静态核对，更新秘书 README/稳定规格；按实际变更执行允许的 compile-only。
-- [ ] 5.2 在另行授权范围内执行定向验证，完成一轮独立实现审查；保留真实 OAuth、文件平台保护和跨机知识库联调的证据边界，再按正常流程交付/归档。
+- [x] 2.1 确定 SDK 模型接口及运行时版本/能力校验策略；实现 API Key 主路径、完整终态检查、有限回合和暂停边界。真实安装环境的集成证据另列，不以编译代替。
+- [x] 2.2 实现秘书独立连接与保护存储、OAuth 校验/刷新协调及受限模型适配，明确导入、远程浏览器及不支持平台的边界。
+- [x] 3.1 将日常/知识/平台工具接入统一 ToolHost 和 SDK，保留既有授权与专业任务合同；隔离 Codex 备用驱动及显式切换。
+- [x] 3.2 实现运行日志、控制队列、规范历史和模型投影，接入 Web/桌面过程展示、steering/follow-up、有限预算及重启对账。
+- [x] 4.1 实现文件版本读取、修订副本、精确编辑、写回拒绝、备份恢复副本与结果核对；所有当前平台的原件写回保持禁用。
+- [x] 4.2 将知识库引用、请求级预算和笔记幂等恢复贯通 SDK/暂停/重启；保留可选模块隔离。
+- [x] 5.1 完成设置迁移与既有调度/业务权限调用路径的静态核对，更新秘书 README/稳定规格；执行 compile-only。此项不代表运行回归通过。
+- [x] 5.2 准备定向回归用例和独立审查交接材料，记录编译、自检与未执行项；实际测试执行、独立审查结论及交付/归档由 Verification 门槛单独把关。
+- [x] 6.1 修复 R1：同一删除事务清除当前工作的运行图及提交正文，不影响其它工作和既有结果文件/备份。
+- [x] 6.2 修复 R2：笔记创建/状态查询绑定原连接及凭据指纹；运行对账检查冻结设置，凭据更换或缺少身份信息时禁止查后重发。
+- [x] 6.3 修复 R3：SDK 最终文本只进入完成校验，禁止旧动作分发及外层纠错循环。
+- [x] 6.4 修复 R4：普通聊天持久提交去重先于新建对话和入队；页面保留未知请求 ID，内容/目标复用冲突拒绝。
+- [x] 6.5 修复 R5：业务终态同步 RunJournal，保护取消/成功终态，未决副作用保持对账；失败/取消的 follow-up 明确不执行。
+- [x] 7.1 修复 B1：两类删除入口共用运行/副作用门槛，在删除事务内重查；取消未决操作保留原回执，取消后的核对不恢复运行或重发笔记。
+- [x] 7.2 修复 B2：受支持的 LegacyTk 发送稳定提交 ID，未知结果保留原消息/目标/标识，明确展示 UNKNOWN；补齐对应源码回归及编译范围。
+- [x] 8.1 修复 C1：按真实回执状态判断未决副作用，安全处理 null/非字典结果；补充两次本地拒绝的真实 invoke 重试路径及 public/cancel/reconcile 回归源码。
+
+5.2 原文同时包含实施与独立审查本身，而 CLI 要求实施项完成后才能申请审查；本次保留 ID，将交接准备与 Verification 门槛分开。没有取消独立审查或验收要求，也没有将未执行的测试记为通过。
 
 顺序：2.1 先建立 SDK 的最小可用纵切；2.2 的独立登录和 OAuth 适配可在接口明确后实施。3.1/3.2 建立统一宿主和恢复基础，再落实 4.1/4.2；未经核对的 OAuth 不能阻塞已明确可实现的 API Key 路径，也不能以 API Key 路径成功代表 OAuth 完成。具体测试执行仍需独立授权。
 
@@ -192,7 +202,7 @@ SDK 中每个函数工具都是 `ToolHost` 的薄适配。调用输入由 Python
 
 ## Verification
 
-### 本轮实际证据
+### 设计轮次证据
 
 - 已静态阅读秘书模型入口、日常循环、文件工具、私有配置/存储、会话摘要、知识库工具/设置及既有跨项目契约；对照当前稳定秘书规格和 FD-079/FD-081/FD-083 的历史范围。
 - 已对照本地 Pi checkout 的 `packages/agent/src/agent-loop.ts`、`agent.ts` 及 coding-agent 会话结构；SDK 循环和会话职责已查阅官方文档。这些不是性能测量或运行验证。
@@ -201,13 +211,88 @@ SDK 中每个函数工具都是 `ToolHost` 的薄适配。调用输入由 Python
 - 已执行一次新增 FD 的静态检查：`git diff --no-index --check -- NUL docs/features/FD-084/FD-084_SECRETARY_SDK_EXECUTION_AND_SAFE_FILES_WITH_KNOW.md`；无空白错误输出，退出码 1 为 no-index 比较存在新增内容的结果。此检查不代表代码、链接或运行合同验证通过；没有重复运行。
 - 未运行编译、测试、模型、服务、浏览器或真实凭据操作；docs-only 无需编译。没有进行 git commit、修改稳定规格、发布或归档。
 
-### 实施前检查项与风险
+### 实施选择与实际进展
 
-- **G1 / SDK-OAuth 合同：** `%% NEEDS_INPUT: 尚缺本机具体 SDK 版本的适配能力证据，特别是 OAuth 工具组织形式、完成终态和可恢复状态。` 这是技术核对项，不是待用户重新决定的业务需求；未解决前只阻断相应适配，不开放伪兼容入口。
-- **G2 / 原件写回：** `%% NEEDS_INPUT: 目标文件系统的锁定/路径身份/替换与恢复边界尚未验证。` 未解决前修订副本可用，原件写回保持不可用。
+- 用户明确授权 `$fd-workflow FD-084 auto`，并选择先提交设计再继续；设计基线提交 `abf8fc5`。坐标：parent=`develop`，branch=`feature/FD-084`，worktree=`D:/03_projects/AI-tools/aiw-de/.wt/FD-084`，已核对父工作区 `.ai/fd/FD-084/workspace.json`。实现和后续审查/归档均在该 worktree。
+- 新增 `secretary_sdk/secretary_host/secretary_runs/secretary_credentials/secretary_oauth/secretary_files/secretary_completion` 职责模块，SDK 只在执行入口延迟导入；Codex 备用不要求安装 SDK。没有新增 Worker 或 Plane 依赖。
+- SDK 使用显式本地历史回放策略，不加载 pickle 或 SDK 私有 RunState；每次安全边界退出都保留工具调用/结果配对及明确的 NOT_EXECUTED/WAITING_USER/UNKNOWN。SDK 内部若转换工具异常，持久阻断标记仍阻止后续模型/工具调用。每回合只接受一个函数调用。
+- API Key 适配通过 OpenAI Python SDK 取得原始 Responses 完整终态，再返回 SDK ModelResponse，避免抽象层丢失整体 status；同一次运行复用 HTTP 客户端。OAuth 走公开、有限 SSE 文本通道，将有效文本动作转换为 SDK 函数调用；不发送未经核对的原生 OAuth tools/namespace，不把它描述为完整原生工具支持。
+- 模型/知识库连接选择与代次固定，旧环境 API Key 来源保留且绑定指纹；新安装不因已有环境变量就选择认证。新请求明确配置后才调用模型。凭据库有跨进程刷新锁、REFRESHING 意图、未知结果阻断、整体轮换与存储上限；取消/过期登录不能写回旧会话。
+- 私库 v1→v2：先取得服务锁、保存有界的受限 SQLite 升级前快照，再事务更新版本；运行中的旧服务不能被另一进程先升级。新增 runtime kind 与事件/来源保存在同一私库，旧版本启动拒绝 v2。检查点不向旧的 personal_history 反复复制完整上下文；界面使用 SQL 元数据投影，原个人记录版本仍保留。
+- 文件操作不覆盖原件，保留 BOM/换行与完整版本；发布副本使用已完整写入临时文件的排他创建，冲突不覆盖；版本/备份校验支持差异和恢复副本。原件写回明确返回未执行。未知发布通过原操作日志与目标摘要对账。
+- 知识预算按原运行保存；笔记以原 serviceId/正文/幂等键对账，pending 状态暂停协调并提供核对入口。保存意图与保存方法问答、普通文件保存分开，后来的“不保存”撤回原入库意图；没有新增原文更新/删除接口。
+- 两次执行 `& ./scripts/compile-secretary-runtime.ps1` 均退出 0：首轮实现后一次，补齐终态/恢复边界及相关用例后一次。仅 Python（含知识库与新增用例源码）、页面脚本及脚本语法，没有 SDK 导入、测试、网络、服务、模型或保留构建物；没有重复运行未变化的失败命令。
+- 已编写 `tests/secretary/test_fd084_core.py`、`test_fd084_sdk.py`，覆盖文件、私库升级、凭据刷新、控制、知识库幂等、完整模型响应与 SDK 边界。SDK/HTTP/JWT/密钥保护使用替身；测试执行申请已提出，尚未收到授权，未执行。
+- 实现已提交 `825f4d1`。首次审查申请被 CLI 以“all FD Work Items must be completed or explicitly cancelled”拒绝，尚未创建审查事件；将 5.2 的交接准备与实际 Verification 分开后重新申请。尚未归档或本地合并。未修改用户真实凭据/数据库，未安装依赖、登录、启动服务、调用模型、push 或发布。
+
+### 独立审查（2026-11-08）
+
+- Reviewer session：`codex-fd084-reviewer-20261108-a`；精确认领源事件 `FD-084-000004-review-requested`，在本 FD worktree 审查 `abf8fc5..27f29a1` 的 25 文件完整范围。
+- 结论：**CHANGES REQUESTED**；[独立报告](reviews/2026-11-08-independent-review-a.md) 记录五项静态可证明缺陷：删除遗漏运行正文、知识库换主体对账可能重发、SDK 最终文本进入旧动作循环、普通请求缺少提交去重、异步回执未同步运行终态/follow-up。
+- 未执行测试、编译、模型/服务、网络或真实凭据操作；没有把未授权执行列为硬缺陷。Worker 原编译记录仅按语法证据保留。修正上述缺陷后需要按实际变更进行聚焦复核；本轮没有通过 Verification，也未归档/交付。
+
+### R1–R5 修复交接（2026-11-08）
+
+- Worker session `codex-fd084-worker-20261108` 已认领 `FD-084-000005-changes-requested`，保留首轮失败历史。
+- 删除操作在原事务选出 workId 对应运行/提交及所有 runId 子项，同时清除 live/history；其它工作、结果文件和已有备份保留。新增回归检查删除后的私库导出不再包含原运行正文。
+- 知识客户端与身份快照一起捕获；身份包含地址、serviceId、credentialRef 和令牌指纹（没有明文令牌）。所有笔记重放及状态查询先比较原身份，旧记录缺失信息时拒绝。运行对账也比较冻结 binding，不能用新账户对原笔记查后重发。
+- SDK 最终结果只允许自然语言结果或 finish 信封，任何其它动作均拒绝；专业委派未发生时不会启动外层 SDK 纠错循环。Codex 明确备用适配保留。
+- `/api/chat` 明确要求 requestId；服务先持久化原内容、目标、连接与确定的消息 ID，再创建对话/排队。重发返回原消息；接收后中断但尚无消息时返回 UNKNOWN，禁止自动重排。页面跨刷新保留 ID/摘要，未知响应保留原提交；不保存正文到浏览器会话存储。
+- DAILY_PLAN 可信终态统一同步 RunJournal；取消/成功终态不可被晚回执或工具退出覆盖。快速回执在工具结算后再同步，UNKNOWN/STARTED 副作用阻止提前完成。失败/取消的 follow-up 明确 NOT_APPLIED。
+- 新增 `test_fd084_review.py`，静态覆盖删除/备份、SDK 最终文本旁路、持久提交重发/冲突/接收后中断、平台正式回执、专业晚回执、快速完成和未知副作用；补齐原知识用例的连接替身。
+- 修复后执行一次 `& ./scripts/compile-secretary-runtime.ps1`，退出 0（Python、JS、PowerShell 语法，无 SDK 导入/测试/网络/保留构建物）；执行一次 `git diff --check`，退出 0，并检查变更与上述调用路径。
+- 定向测试授权仍未收到，没有运行测试、真实 SDK/OAuth/DPAPI/知识库或服务。该限制不记为测试通过；修复等待同一 Reviewer 聚焦复核。
+
+### 独立聚焦复核 B（2026-11-08）
+
+- 同一 Reviewer session `codex-fd084-reviewer-20261108-a` 已认领 `FD-084-000007-implementation-ready`；按真实 receipt 核对 Revision 7，聚焦审查 `27f29a1..f2ee9df`，保留首轮报告。
+- 结论：**CHANGES REQUESTED**（累计第二次失败，三次失败上限保留）；[聚焦报告 B](reviews/2026-11-08-independent-review-b.md) 记录两项剩余问题：B1/R1 删除入口未保护暂停/待对账及未结副作用；B2/R4 强制 requestId 后未更新受支持的 LegacyTk 聊天调用方。
+- R2/R3、R5 快速/晚到回执保护以及 Web/服务端提交去重的相关静态路径已有支持；接收后中断明确保留 UNKNOWN，不记为执行通过。未运行测试、编译、服务或网络，未修改实现。修复 B1/B2 后仅作相应最终聚焦复核。
+
+### B1/B2 修复交接（2026-11-08）
+
+- Worker 沿用 `codex-fd084-worker-20261108`，读取 pending receipt 后正式认领 `FD-084-000008-changes-requested`。保留前两轮失败结论，下一次仅聚焦 B1/B2 及受影响恢复路径。
+- B1：Store 提供两入口共用门槛，拒绝非终态/缺少状态、hasUnknownEffect、hasWaitingTool、工具 STARTED/UNKNOWN/WAITING 或 pending/unknown 远端保存。在实际删除事务及同一 Store 锁内重查，避免入口检查后状态变化。可安全终结的运行仍按原清理范围删除正文。
+- 取消时关闭未获准的 WAITING 工具（NOT_EXECUTED），保留未知副作用；取消后的核对只查原文件/原笔记并保持 CANCELLED。知识状态未找到时禁止再 POST；无法验证则继续保留原回执，页面允许取消后未知结果核对。
+- B2：LegacyTk/PersonalClient 保存原 payload 和提交 ID；未知结果保留编辑框，轮询自动选中新会话也不会改变原提交目标；连接改变时禁止重发旧正文。已知回复后新消息生成新 ID；明确“核对后另发请求”只结束本机重试记录，不撤销服务端操作。重试记录限当前客户端进程，不宣称跨进程持久。
+- 新增两类公开删除入口、事务内复查、取消后未知/笔记 pending、已取消文件核对、未准工具取消及 Tk 丢响应/UNKNOWN/新请求 ID 的回归源码；允许删除样例改为 SUCCEEDED。
+- 两次 compile-only 均通过：先覆盖删除/客户端修复，再在补齐 Tk 轮询目标保持与连接隔离后编译最终源码。编译脚本新增 desktop*.py 语法范围；不导入 GUI/SDK，不执行测试或服务。一次 diff-check 在第二次 Tk 小修前退出 0；最终 diff 将由 Reviewer 按其预算核对，不将前次检查冒充最终检查。
+- 本轮未获得定向测试执行答复，所有新增回归仍为 not-run；无真实账号、模型、网络、DPAPI、数据库升级或服务操作。
+
+### 独立最终聚焦复核 C（2026-11-08）
+
+- Reviewer session `codex-fd084-reviewer-20261108-a` 已读取并认领 `FD-084-000010-implementation-ready`，真实 Revision 10；仅复核 `f2ee9df..2c94399` 的 B1/B2 和直接恢复/桌面路径。
+- 结论：**CHANGES REQUESTED**；[报告 C](reviews/2026-11-08-independent-review-c.md) 记录 C1/P1：新增 unresolved_effects 对宿主重试产生的 result:null 调用 .get，使状态页及取消/对账路径失败。删除门槛和 LegacyTk 提交 ID 的主修复静态已有支持。
+- 累计第三次失败，保留 A/B 历史并达到三次失败上限；本 Reviewer 提交结论后停止，不自动开启额外修复/复核循环。没有通过 Verification，未运行测试/编译/服务/网络或修改实现。
+
+### C1 修复与单次额外复核授权（2026-11-08）
+
+- 用户对“再做一次定向修复和静态复核”明确回复 `confirm`，允许在已累计三次失败后增加且仅增加这一轮；没有重置失败历史，也未授权测试、网络、服务或真实账户操作。Worker 沿用原 session，正式认领 `FD-084-000011-changes-requested`。
+- `unresolved_effects()` 先排除 NOT_EXECUTED，UNKNOWN/STARTED 仍保持未决；其它回执仅在 action/result 都是字典且包含实际 pending/unknown 笔记结果时识别远端未决保存。null/字符串/列表/数字不会被当成已受理保存，也不会对其调用 `.get()`。
+- 新增回归源码通过真实 RunJournal.invoke 连续两次 KnowledgeNotExecuted，检查落盘 NOT_EXECUTED + result:null；随后覆盖 public、暂停后取消与无远端查询的对账。另覆盖非字典结果和实际 UNKNOWN/STARTED、pending/unknown 的状态区别。没有执行这些测试。
+- 实际执行一次 `& ./scripts/compile-secretary-runtime.ps1`，退出 0；一次 `git diff --check`，退出 0，并查看 diff stat。均无 SDK/GUI 导入、模型/网络、运行验证或保留构建物。源码静态核对上述 helper 与 public/finish/reconcile 调用链。
+- 交回同一 Reviewer 做本次唯一新增聚焦复核；通过后按原 auto 授权继续本地归档和交付，不 push/发布/部署。若仍失败则保存证据并停止，不开启第五轮。
+
+### 独立单次额外聚焦复核 D（2026-11-08）
+
+- Reviewer session `codex-fd084-reviewer-20261108-a` 读取真实 pending receipt 后认领 `FD-084-000013-implementation-ready`，核对 Revision 13 与 `08af2ab..e11a283`。本轮仅复核 C1 和 public/cancel/reconcile 直接路径。
+- 结论：**PASS（独立静态实现审查）**；[报告 D](reviews/2026-11-08-independent-review-d.md) 关闭 C1，原 R1–R5/B1/B2 结合此前静态证据无剩余 Reviewer findings。NOT_EXECUTED/result:null 不再误读；真实 UNKNOWN/STARTED 和 pending 保存仍保持未决。
+- 原三次失败及 A/B/C 报告保留；本轮依据用户 confirm 对单次额外定向修复和静态复核的例外授权，没有重置失败历史或扩大范围。
+- Reviewer 没有执行测试、编译、模型/服务、网络或真实 OAuth/DPAPI/知识库/迁移。新增测试仍为 not-run，实际运行风险继续保留；本 PASS 不表示运行验证或发布批准。后续本地归档交付由父会话按原 auto 授权执行。
+
+### 本地归档与交付记录
+
+- 读取正式 `FD-084-000014-verification-passed` 与报告 D，确认无剩余代码 findings。CLI 拒绝 agent session 认领 PM handoff（PM/human handoff 不支持此认领）；没有修改 receipt 或使用 force。随后正常 `aiw fd close FD-084 Complete` 成功归档本 FD 及四轮报告。
+- 归档后的 Sources 相对链接按新目录层级修正，仅文档路径维护，源码与已审查提交一致。记录坐标为 parent=`develop`、branch=`feature/FD-084`、worktree=`.wt/FD-084`；归档提交后使用 `aiw git wt local-merge FD-084` 处理本地 squash 与验证清理，实际结果以工具交付回执为准。
+- 本地完成不代表测试或发布批准；没有 push、部署、真实登录/SDK/OAuth/知识库联调或测试执行。
+
+### 能力门槛与剩余风险
+
+- **G1 / 已落实受限合同：** 使用 SDK 公开 Model/Runner/FunctionTool 接口，运行时检查接口能力并记录安装版本；OAuth 不开放原生工具格式，使用已核对的公开文本 Responses 合同和 SDK 内函数转换。完整终态、配对历史和有限预算由适配器控制。真实安装版本/实际账户联调仍未执行，不能宣称 SDK 全能力或真实 OAuth 已验证。
+- **G2 / 已落实关闭原件写回：** 不引入未验证的文件系统 CAS，当前平台只发布新文件/修订副本；写回接口明确拒绝，保留原件与恢复依据。将来若增加原件写回，需另行实现和验证平台保护，不在本次以比较 hash 后覆盖替代。
 - **G3 / 真实接入：** OAuth 组织许可/订阅资格、真实 DPAPI、知识库跨设备服务身份与幂等语义尚未联调；真实外部操作需要明确授权。文档中已有接口不等于外部服务已经部署。
 - 平台专业任务仍受原 Agent/Grant/正式问题合同约束；原 SDK JSON 动作记录与新函数工具状态不直接混读。凭据、运行记录迁移与并发刷新是主要实施风险。
-- **Independent 理由：** 实施涉及认证/凭据、私有持久状态、并发控制与文件副作用，完成时需要一次独立实现审查。本轮是设计，不启动审查、不生成 PASS，也不将 FD 标为实现完成。
+- **Independent 理由：** 实施涉及认证/凭据、私有持久状态、并发控制与文件副作用，完成时需要一次独立实现审查。独立结论必须来自实际审查事件，不由 Worker 自行生成 PASS。
 
 ### 计划验证（未执行，执行另行授权）
 
@@ -215,14 +300,16 @@ SDK 中每个函数工具都是 `ToolHost` 的薄适配。调用输入由 Python
 
 ## TODO
 
-- 设计范围已记录；FD 保持 Design。解决 G1 和 G2 的对应能力门槛后，再据可实施范围维护 Open/In Progress；当前未获本轮运行代码实施授权。
+- 最终源码 compile-only、自检及独立静态实现审查已完成，详见实际实施记录和报告 D；定向测试仍未运行，只有收到明确执行授权后才能执行，不记为通过。
 - 评估可重用的纯辅助逻辑，避免秘书直接依赖 Worker 的任务租约或 Plane 的 Java 凭据库。
 - 后续用相同模型/任务和工具预算比较调用次数、输入/输出、缓存、耗时、失败/恢复与交付正确性；只有明确授权后执行，不预设 Pi 或 SDK 能带来成本优势。
 
 ## Sources
 
-- 用户本轮确认：秘书独立于 Plane；允许考虑显式导入；优先 Agents SDK，Codex 为备用；吸收 Pi 的控制/上下文机制；可靠文件修改与知识库一并设计。当前请求为“可以按这样来设计”，不是代码实施或测试授权。
-- [秘书稳定规格](../../../openspec/specs/secretary/spec.md)、[知识库交接契约](../../personal-secretary-knowledge-handoff.md)。
-- [FD-079](../archive/FD-079/FD-079_OBSERVABLE_AND_CONTROLLABLE_PYTHON_WORKER_AUTOMA.md)、[FD-081](../archive/FD-081/FD-081_CONTROL_PLANE_MANAGED_OPENAI_AUTHENTICATION.md)、[FD-083](../archive/FD-083/FD-083_AUTOMATICALLY_PROTECT_LOCAL_MODEL_CREDENTIAL_KEY.md)；这些不替代秘书新实现证据。
+- 用户设计确认：秘书独立于 Plane；允许考虑显式导入；优先 Agents SDK，Codex 为备用；吸收 Pi 的控制/上下文机制；可靠文件修改与知识库一并设计。随后明确 `$fd-workflow FD-084 auto` 与“commit then continue”，授权当前隔离实施/本地交付；没有因此授权测试或真实账户操作。
+- [秘书稳定规格](../../../../openspec/specs/secretary/spec.md)、[知识库交接契约](../../../personal-secretary-knowledge-handoff.md)。
+- [FD-079](../FD-079/FD-079_OBSERVABLE_AND_CONTROLLABLE_PYTHON_WORKER_AUTOMA.md)、[FD-081](../FD-081/FD-081_CONTROL_PLANE_MANAGED_OPENAI_AUTHENTICATION.md)、[FD-083](../FD-083/FD-083_AUTOMATICALLY_PROTECT_LOCAL_MODEL_CREDENTIAL_KEY.md)；这些不替代秘书新实现证据。
 - 本地 Pi 源码：`D:/03_projects/AI-tools/pi/packages/agent/src/agent-loop.ts`、`agent.ts` 和 `packages/coding-agent/src/core/agent-session.ts`；不安装、不运行该 checkout。
 - 官方 [Agents SDK](https://developers.openai.com/api/docs/guides/agents/sdk)、[运行与状态](https://developers.openai.com/api/docs/guides/agents/running-agents)、[OAuth 登录](https://developers.openai.com/siwc/token-sharing-open-source/sign-in)、[模型调用](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference)、[预览限制](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations)、[刷新与会话](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions)。引用来自此前已核对页面；本轮设计记录没有重新进行网络查询，不据此承诺未来接口保持不变。
+
+**Completed:** 2026-11-08
