@@ -35,6 +35,7 @@ class ApiRuntimeConfig:
     tool_timeout_ms: int
     provider: str = "openai"
     protocol: str = "responses"
+    parallel_tool_calls: bool = True
 
 
 @dataclass
@@ -80,6 +81,7 @@ class OpenAIApiRuntime:
             max_output_bytes=_positive_setting("AIW_AGENT_MAX_OUTPUT_CHARS", 24000),
             tool_timeout_ms=_positive_setting("AIW_AGENT_TOOL_TIMEOUT_MS", 60000),
             provider=api_provider(), protocol=api_protocol(),
+            parallel_tool_calls=_boolean_setting("AIW_OPENAI_PARALLEL_TOOL_CALLS", True),
         ))
         runtime.versions = {"openai-agents": agents_version, "openai": openai_version}
         return runtime
@@ -480,17 +482,18 @@ class _GuardedModel(Model):
 
 def _model_preferences(request, config):
     effort = request.reasoning_effort or config.reasoning_effort
+    parallel_tool_calls = getattr(config, "parallel_tool_calls", True)
     if config.provider == "deepseek":
         if effort and effort not in {"none", "low", "high", "max"}: raise RuntimeError("DEEPSEEK_REASONING_EFFORT_INVALID")
         if config.protocol == "chat-completions":
-            return {"parallel_tool_calls": True, "preserve_raw_usage": True,
+            return {"parallel_tool_calls": parallel_tool_calls, "preserve_raw_usage": True,
                     "extra_args": {"reasoning_effort": effort or "none"}}
-        return {"parallel_tool_calls": True, "store": False, "preserve_raw_usage": True,
+        return {"parallel_tool_calls": parallel_tool_calls, "store": False, "preserve_raw_usage": True,
                 "reasoning": {"effort": effort or "none"}}
     if config.protocol == "chat-completions":
-        return {"parallel_tool_calls": True, "preserve_raw_usage": True,
+        return {"parallel_tool_calls": parallel_tool_calls, "preserve_raw_usage": True,
                 **({"extra_args": {"reasoning_effort": effort}} if effort and effort != "none" else {})}
-    settings = {"parallel_tool_calls": True, "truncation": "disabled", "store": False, "preserve_raw_usage": True}
+    settings = {"parallel_tool_calls": parallel_tool_calls, "truncation": "disabled", "store": False, "preserve_raw_usage": True}
     effort = request.reasoning_effort or config.reasoning_effort
     if effort and effort != "none": settings["reasoning"] = {"effort": effort}
     if request.service_tier: settings["extra_args"] = {"service_tier": request.service_tier}
@@ -787,3 +790,15 @@ def _positive_setting(name: str, default: int) -> int:
     value = int(os.getenv(name, str(default)))
     if value < 1: raise RuntimeError(f"INVALID_{name}")
     return value
+
+
+def _boolean_setting(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized == "true":
+        return True
+    if normalized == "false":
+        return False
+    raise RuntimeError("OPENAI_PARALLEL_TOOL_CALLS_INVALID")
