@@ -27,7 +27,7 @@ class ParallelToolCallSettingTest(unittest.TestCase):
             provider="openai", protocol="responses", reasoning_effort="",
             parallel_tool_calls=False,
         )
-        result = _model_preferences(SimpleNamespace(reasoning_effort=None), config)
+        result = _model_preferences(SimpleNamespace(reasoning_effort=None, service_tier=None), config)
         self.assertFalse(result["parallel_tool_calls"])
 
 
