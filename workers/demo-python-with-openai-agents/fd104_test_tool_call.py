@@ -49,7 +49,9 @@ async def main() -> int:
         print("OPENAI_API_KEY is required", file=sys.stderr)
         return 2
 
-    model_name = os.getenv("AIW_OPENAI_MODEL", "gpt-6-luna").strip()
+    deepseek_model = os.getenv("DEEPSEEK_MODEL", "").strip()
+    model_name = deepseek_model or os.getenv("AIW_OPENAI_MODEL", "gpt-6-luna").strip()
+    model_source = "DEEPSEEK_MODEL" if deepseek_model else "AIW_OPENAI_MODEL/default"
     calls: list[tuple[int, int]] = []
     trace_number = 0
 
@@ -139,7 +141,7 @@ async def main() -> int:
         result = await Runner.run(agent, "Perform the required calculation using the provided tool.", max_turns=3)
         output = str(result.final_output).strip()
         passed = has_title_annotations and calls == [(19, 23)] and output == "TOOL_CALL_OK:42"
-        print(f"model={model_name}")
+        print(f"model_source={model_source}")
         print(f"title_annotations={str(has_title_annotations).lower()}")
         print(f"tool_calls={json.dumps(calls)}")
         print(f"output={output}")
