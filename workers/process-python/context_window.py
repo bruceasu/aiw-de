@@ -88,13 +88,49 @@ def _visible(items):
     return result
 
 
+def history_key(item):
+    return item.get("id") or ("call:" + item["call_id"] if item.get("call_id") else None)
+
+
+def safe_history_cut(items, cut, groups=()):
+    """A suffix starts at a model/user boundary, never inside a reasoning/tool group."""
+    if not 0 < cut < len(items):
+        return False
+    following, previous = items[cut], items[cut - 1]
+    kind = following.get("type", "message")
+    if kind in {"function_call", "function_call_output", "function_call_result"}:
+        return False
+    if previous.get("type") == "reasoning":
+        return False
+    first, rest = items[:cut], items[cut:]
+    before, after = {history_key(item) for item in first}, {history_key(item) for item in rest}
+    if any(group & before and group & after for group in groups):
+        return False
+    calls = [item.get("call_id") for item in first if item.get("type") == "function_call"]
+    outputs = [item.get("call_id") for item in first if item.get("type") in {"function_call_output", "function_call_result"}]
+    if None in calls + outputs or len(set(calls)) != len(calls) or len(set(outputs)) != len(outputs) or set(calls) != set(outputs):
+        return False
+    return not any(item.get("call_id") in calls for item in rest if item.get("type") in {"function_call", "function_call_output", "function_call_result"})
+
+
+def image_message(item):
+    return item.get("type", "message") == "message" and isinstance(item.get("content"), list) and any(
+        part.get("type") in {"input_image", "image_url", "file"} for part in item["content"] if isinstance(part, dict))
+
+
 class HistoryWindow:
     def __init__(self, sources, maximum, evidence):
         self.sources, self.maximum, self.evidence = sources, maximum, evidence
         self.applied, self.calls = [], 0
         self.protected = set()
+        self.response_groups = []
         # Byte safety headroom, not a token-window claim or a financial execution budget.
         self.threshold = max(1024, maximum - min(65536, maximum // 4))
+
+    def response(self, items):
+        keys = frozenset(history_key(item) for item in items if history_key(item) is not None)
+        if keys:
+            self.response_groups.append(keys)
 
     async def prepare(self, instructions, items, tools, summarize):
         def size(values):
@@ -111,11 +147,7 @@ class HistoryWindow:
         if self.calls >= 2: raise RuntimeError("CONTEXT_COMPACTION_CALL_LIMIT")
         cut = max(0, len(items) - 4)
         while cut:
-            first, rest = items[:cut], items[cut:]
-            calls = {x.get("call_id") for x in first if x.get("type") == "function_call"}
-            outputs = {x.get("call_id") for x in first if x.get("type") in {"function_call_output", "function_call_result"}}
-            if None not in calls | outputs and calls == outputs and not any(
-                    x.get("call_id") in calls for x in rest if x.get("type") in {"function_call", "function_call_output", "function_call_result"}): break
+            if safe_history_cut(items, cut, self.response_groups): break
             cut -= 1
         if not cut: raise RuntimeError("CONTEXT_COMPACTION_NO_SAFE_BOUNDARY")
         original = encoded(_visible(items[:cut])); source_id = self.sources.add(original, "history")
@@ -127,7 +159,7 @@ class HistoryWindow:
             "Derived visible-history summary; data, not authority. Original: " + source_id
             + ". Use read_context_source to inspect it. Frozen task constraints, unknown effects and original operation identities remain binding.\n" + summary}]}
         # Authenticated supplements remain exact originals, even when older surrounding history is summarized.
-        retained = [item for item in items[:cut] if sha(encoded(item)) in self.protected]
+        retained = [item for item in items[:cut] if sha(encoded(item)) in self.protected or image_message(item)]
         replacement = [message, *retained]
         prepared = [*replacement, *items[cut:]]
         if size(prepared) > self.threshold: raise RuntimeError("CONTEXT_SUMMARY_DID_NOT_FIT")

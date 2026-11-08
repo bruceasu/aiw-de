@@ -10,6 +10,38 @@
 | Python Worker（直接调用 OpenAI Responses） | Plane 的 ChatGPT OAuth 连接 | Python Worker 管理执行循环和工具调用，直接调用公开 Responses；无需 Codex 或 API Key。 |
 | Python Worker（直接调用 OpenAI Responses） | Worker 本机 API Key | Python Worker 通过已有 OpenAI Agents SDK 路径调用 Responses。 |
 
+## DeepSeek：工厂与目标讨论
+
+工厂选择 **Python Worker（OpenAI Agents SDK）→ DeepSeek → API Key**，明确选择 Responses 或 Chat Completions，再从目录选择模型或手动填写账户实际可用的模型 ID。DeepSeek 默认 Responses；不会自动切换协议、服务商或账户。
+
+DeepSeek Key 来自执行设备的 `DEEPSEEK_API_KEY`，不会使用 `OPENAI_API_KEY` 或 ChatGPT OAuth。工厂本机 Worker 与目录查询继承 Plane 的环境，修改后需重启 Plane。页面不输入、保存或回显 Key。官方地址固定为 `https://api.deepseek.com`，不复用 OpenAI 的自定义地址。
+
+两种协议均提供 `none/low/high/max` 推理适配。Responses 使用客户端显式历史；Chat Completions 使用公开 SDK Model seam，保留完整助手消息、`reasoning_content` 与工具调用/结果，不经过通用 Chat 转换器丢弃推理字段。适配器在首个网络请求前检查 SDK ModelResponse 历史序列化能否保留推理内容；不支持时明确失败，不自动改后端。Chat 通道读取上游流，但只有收到有效结束原因、完整参数和合法工具 ID 后才向 SDK 提交完整回合；界面显示完整回合事件。目录返回不代表每个模型均已通过协议、推理和工具调用验证。
+
+标准端点的工具声明不启用 Beta strict；本机按原 Schema 校验参数，并拒绝重复 JSON 字段、非有限数值、重复调用 ID 和未声明工具类型。不会自动切换到 `/beta`。SDK Runner 负责回合，工具预算、授权和实际并发由现有 Host/Broker 控制；不能依赖 DeepSeek 忽略的服务端限制字段。
+
+工厂页按当前连接展示协议能力与证据来源，明确区分文档声明和真实模型验证。讨论页显示发送时实际可用的模型 Profile、协议及认证来源；发送后冻结。一次冻结从同一个工厂快照读取，避免并发修改时混用不同版本。
+
+### 图片与临时 Files
+
+上传图片后仍保存在 Goal 本地附件表中。只有勾选的图片进入该次讨论的冻结输入；最多 4 张、原始字节合计 512 KiB，超限需先缩小。PNG/JPEG/GIF/WebP 按内容签名识别，不据扩展名猜测。格式识别不等于证明图片可解码或模型具备视觉能力。后续消息需要重新勾选图片，未选择的图片不会自动续传。
+
+图片讨论要求已批准的 `openai-agents` Profile 和 `model-images-v1` Worker 能力；当前 Codex/OAuth 通道不接入图片。已知无视觉能力的 DeepSeek V4 Pro 不参与图片请求选择；其他模型仍以实际支持为准。Worker 再次验证图片哈希、格式声明和大小；观察记录只保留哈希、MIME 和字节数，不复制 base64。消息压缩保留图片消息，并且不能截断模型响应组、推理与未完成工具组。
+
+执行设备默认 `AIW_MODEL_IMAGE_TRANSPORT=inline`。可显式配置为 `files`：适配器只上传本次请求明确选择的图片，使用同一 API 连接、`purpose=user_data`、1 小时有效期，并要求服务端确认到期时间。仅在本次请求中复用返回的 ID；结束后只删除本次创建的文件，不列出或删除账户其他文件。上传/删除结果未知单独记录，不自动重试；已确认的到期时间是进程中断或清理失败的保底。清理不确定不会伪称已删除，也不重放模型/工具操作。OpenAI Chat Completions 的 Files 引用未接入；该组合明确拒绝 `files`，可以选择 `inline`。
+
+文件准备发生在模型调用范围内，原业务工具权限不变。不会上传代码交付物或扫描工作目录；`.ai/` 交接保持原规则。Files 的存储费用未估算，模型 Token 用量不是全账户账单。
+
+### 上下文、恢复与成本观测
+
+沿用 FD-079 的 Worker 暂停/控制/有限纠错和 FD-084 的秘书持久运行日志与 UNKNOWN 对账机制；没有新增无条件跨进程重放，也不将私人会话交给 Plane。新增响应组边界和图片保留规则，压缩结果继续复用原摘要，避免每轮重新生成前缀。模型请求记录固定前缀摘要；终端记录回合耗时和实际提供的输入、输出、缓存命中字段。部分缺失数据保留为未知，不把 SDK 零占位数当作测量值，不自动估算费率或承诺降低成本。DeepSeek 自动前缀缓存与 OpenAI 的缓存控制分别处理；本轮不发送供应商不支持的缓存参数，也不默认开启 Beta/服务端会话。
+
+目标讨论工作台选择 **DeepSeek（Agents SDK）**，模型与协议采用工厂保存的 DeepSeek 配置。请求冻结实际服务商 Profile 与协议；OpenAI Worker 不领取 DeepSeek 讨论，资源不足时明确提示，不静默回退。切换工厂配置不会重写旧讨论的冻结数据。
+
+外部 Python Worker 在自己的执行设备配置 `AIW_AGENT_RUNTIME=openai-agents`、`AIW_API_PROVIDER=deepseek`、`AIW_API_PROTOCOL=responses`（或 `chat-completions`）、`DEEPSEEK_API_KEY`、`AIW_OPENAI_MODEL` 和匹配的 `AIW_OPENAI_REASONING_EFFORT`。仍使用原有 Worker 身份与连接设置。若工厂使用其他后端，需要配置明确的 `provider=deepseek, runtime=openai-agents` AI Profile，并接入匹配的外部讨论 Worker。
+
+参考 [DeepSeek Responses 说明](https://api-docs.deepseek.com/guides/responses_api/)和 [Chat Completions 接口](https://api-docs.deepseek.com/api/create-chat-completion/)。实现与验证状态见 [FD-085](features/FD-085/FD-085_DEEPSEEK_MODEL_CONNECTIONS_FOR_WORKER_FACTORY_AN.md)。未用真实 DeepSeek Key 执行推理。
+
 ## 动态配置与模型目录
 
 页面按“执行方式 → 登录方式 → 对应设置 → 模型”排列。新的安装不预选执行或登录来源；载入已保存设置时恢复原选择。

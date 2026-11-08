@@ -186,6 +186,12 @@ public class ExecutionConfigurations {
     public void invalidateWorker(String worker) { repo.jdbc().update("DELETE FROM execution_worker_configuration WHERE worker_id=?",worker); }
     public boolean compatible(Worker worker,Binding binding) {
         if(!worker.capabilities().containsAll(Set.of(CAPABILITY,GuardContract.CAPABILITY,me.asu.aidev.execution.skills.SkillFileContract.CAPABILITY)) || !worker.runtimeType().startsWith(binding.runtime()+":")) return false;
+        if(binding.runtime().equals("openai-agents")) {
+            String provider=binding.guidance()==null||binding.guidance().allowedProfiles().isEmpty()?"openai":binding.guidance().allowedProfiles().getFirst().profile().provider();
+            boolean deepseek=worker.runtimeType().startsWith("openai-agents:deepseek:");
+            if(provider.equals("deepseek")!=deepseek)return false;
+            if(!me.asu.aidev.modelauth.ModelCapabilities.protocolMatches(worker.runtimeType(),provider,binding.apiProtocol()))return false;
+        }
         var rows=repo.jdbc().queryForList("SELECT capabilities_json,capabilities_digest FROM execution_worker_configuration WHERE worker_id=?",worker.id().value());
         if(rows.size()!=1) return false;var row=rows.getFirst();String json=String.valueOf(row.get("capabilities_json"));
         if(!AuthorityRepository.hash(json).equals(row.get("capabilities_digest"))) return false;

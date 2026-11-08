@@ -145,6 +145,18 @@
     $('goal-deletion-state').textContent = `已读取“${target.title}”的当前状态：${draft.deleted ? '已删除，可在“已删除”中恢复。' : '未删除，可在“当前目标”中打开。'}没有待确认的删除审批。${current?.id === draft.id ? ' 当前详情保留原有内容；请先复制未保存的编辑，再重新加载已保存版本。' : ''}`;
     status('目标状态核对完成，未重复提交任何操作。');
   });
+  let configurationEpoch = 0;
+  async function discussionConfiguration() {
+    const epoch = ++configurationEpoch, backend = $('goal-backend').value;
+    const output = $('goal-model-configuration');output.textContent = '正在读取实际讨论配置…';
+    try {
+      const value = await api('/discussion-configuration?backend=' + encodeURIComponent(backend));
+      if(epoch !== configurationEpoch || backend !== $('goal-backend').value)return;
+      const models = value.profiles.map(item => item.profile.provider + ' / ' + item.profile.model + ' / ' + item.profile.effort);
+      output.textContent = (models.length ? '可用讨论配置：' + models.join('；') : '未配置明确模型，将采用匹配外部 Worker 的配置。') + ' · ' + value.protocol + ' · ' + value.auth + ' · ' + value.verification + '。发送时冻结；修改工厂设置只影响后续请求。';
+    } catch(error) {if(epoch === configurationEpoch)output.textContent = error.message;}
+  }
+  $('goal-backend').addEventListener('change', discussionConfiguration);
   async function load(id, preserveEdits = false) {
     clearTimeout(replyTimer);
     const latest = await api(`/${encodeURIComponent(id)}`);
@@ -154,6 +166,7 @@
     $('goal-detail').hidden = false; $('goal-empty').hidden = true;
     $('goal-title').value = current.title; $('goal-body').value = current.content.body;
     $('goal-missing').value = current.content.missing; $('goal-backend').value = current.content.backend;
+    discussionConfiguration();
     selectedSources = new Set(current.content.knowledgeIds);
     $('goal-revision').textContent = `${current.deleted ? 'Deleted · ' : ''}Version ${current.revision}`;
     $('goal-delete').hidden = current.deleted; $('goal-restore').hidden = !current.deleted;
@@ -228,15 +241,16 @@
     clean(); const file=$('goal-upload').files[0]; if(!file)return;
     if(file.size>10*1024*1024)throw new Error('Attachment exceeds 10 MiB.');
     await api(`/${current.id}/attachments?revision=${current.revision}&filename=${encodeURIComponent(file.name)}`, {}, {headers:{'Content-Type':'application/octet-stream'},body:file});
-    await load(current.id); $('goal-upload').value=''; status('Attachment saved locally. Convert it, review the result, then explicitly select text to share.');
+    await load(current.id); $('goal-upload').value=''; status('附件已保存在本地。图片可明确勾选发送；其他附件请先转换、核对提取文本，再勾选发送。');
   });
   function renderFiles(){
     $('goal-attachments').replaceChildren(); data.attachments.forEach(a=>{
       const box=node('div',null,'goal-attachment'); const link=node('a',a.filename); link.href=`/api/r1/goals/${current.id}/attachments/${a.id}`;
       const convert=node('button','Convert locally','btn ghost'); convert.onclick=()=>run(async()=>{clean();status('Converting locally…');await api(`/${current.id}/attachments/${a.id}/convert`,{});await load(current.id);status('Conversion status updated.');});
-      box.append(link,node('p',`${a.status}: ${a.detail}`),convert);
+      box.append(link,node('p',`${a.status}: ${a.detail}`));if(a.status!=='IMAGE_READY')box.append(convert);
       if(a.extracted){const detail=node('details');detail.append(node('summary','Review extracted text'),node('pre',a.extracted));box.append(detail);}
       if(a.status==='TEXT_EXTRACTED'){const label=node('label');const check=document.createElement('input');check.type='checkbox';check.value=a.id;check.dataset.shareFile='true';label.append(check,document.createTextNode(' Share this extracted text with the selected backend in my next message'));box.append(label);}
+      if(a.status==='IMAGE_READY'){const label=node('label');const check=document.createElement('input');check.type='checkbox';check.value=a.id;check.dataset.shareFile='true';label.append(check,document.createTextNode(' 将这张图片发送给本次所选模型服务（需要支持图片的 API Key SDK 模型；每条最多 4 张、合计 512 KiB）'));box.append(label);}
       $('goal-attachments').append(box);
     });
   }

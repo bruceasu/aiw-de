@@ -7,7 +7,9 @@
 <p id="factory-status" class="callout" role="status" aria-live="polite">正在读取…</p>
 <form id="factory-settings"><fieldset id="factory-fields" disabled>
 <h3>1. 执行与登录</h3><div class="form-grid">
-<label class="field">模型执行方式<select name="runtime" required><option value="" disabled selected>请选择模型执行方式</option><option value="codex-app-server">Codex App Server（通过本机 Codex）</option><option value="openai-agents">Python Worker（直接调用 OpenAI Responses）</option></select></label>
+<label class="field">模型执行方式<select name="runtime" required><option value="" disabled selected>请选择模型执行方式</option><option value="codex-app-server">Codex App Server（通过本机 Codex）</option><option value="openai-agents">Python Worker（OpenAI Agents SDK）</option></select></label>
+<label class="field" id="factory-api-provider-field" hidden>模型服务商<select name="apiProvider" id="factory-api-provider"><option value="" disabled selected>请选择模型服务商</option><option value="openai">OpenAI</option><option value="deepseek">DeepSeek</option></select></label>
+<label class="field" id="factory-api-protocol-field" hidden>API 协议<select name="apiProtocol" id="factory-api-protocol"><option value="responses">Responses</option><option value="chat-completions">Chat Completions</option></select></label>
 <label class="field">登录方式<select id="factory-auth-mode" required><option value="" disabled selected>请选择对应的登录方式</option>
 <optgroup label="Codex App Server"><option value="codex-local" data-runtime="codex-app-server">使用 Worker 本机 Codex 登录</option><option value="codex-plane" data-runtime="codex-app-server">使用 Plane 保存的 Codex 凭证</option></optgroup>
 <optgroup label="Python Worker"><option value="chatgpt" data-runtime="openai-agents">使用 ChatGPT 登录（OAuth）</option><option value="api-key" data-runtime="openai-agents">使用 API Key（运行环境）</option></optgroup></select></label>
@@ -35,7 +37,7 @@ $env:AIW_MODEL_CREDENTIAL_KEY = [Convert]::ToBase64String($modelCredentialBytes)
 <div id="factory-codex-create" hidden><p class="help">选择 Codex auth.json，导入为新的连接。不会扫描本机目录，也不会替换已有连接。</p><input id="model-auth-file" type="file" accept="application/json,.json"><button class="btn ghost" id="model-auth-import" type="button" disabled aria-describedby="factory-auth-prerequisite">导入为新连接</button></div>
 </details></div>
 <p id="factory-local-settings" class="callout" hidden></p>
-<p id="factory-api-settings" class="callout" role="status" hidden></p>
+<p id="factory-api-settings" class="callout" role="status" hidden></p><p id="factory-api-protocol-help" class="help" hidden>DeepSeek 使用 https://api.deepseek.com，密钥来自执行设备的 DEEPSEEK_API_KEY。修改环境后需重启 Plane 或对应外部 Worker。两种协议均有思考模式适配；Chat Completions 在完整回合结束后提交 SDK，保留原始推理与工具消息。标准端点不启用 Beta strict，本机始终校验工具参数。不会自动切换协议或借用 OpenAI 凭据。</p><p id="factory-capabilities" class="help" role="status" hidden></p>
 <h3>2. 模型与推理</h3><div class="form-grid">
 <label class="field">默认模型<select id="factory-model-choice" required><option value="">请先完成执行与登录设置</option></select></label>
 <label class="field" id="factory-manual-model" hidden>手动模型名称<input name="model" maxlength="120" autocomplete="off" pattern="[A-Za-z0-9._-]{1,120}" placeholder="输入该账户实际可用的模型 ID"></label>
@@ -55,4 +57,4 @@ $env:AIW_MODEL_CREDENTIAL_KEY = [Convert]::ToBase64String($modelCredentialBytes)
 <div id="model-auth-connections"></div><button class="btn ghost" id="model-auth-reload" type="button" disabled>重新读取连接状态</button></section>
 <section class="card"><h2>本机 Worker 状态</h2><div id="factory-workers" role="status"></div><button class="btn ghost" id="factory-refresh" type="button">刷新状态</button></section>
 <section class="card"><h2>接入外部 Worker</h2><p>外部 Worker 使用注册、心跳、领取任务和提交结果协议，无需由工厂启动。执行工厂任务时，还需声明匹配的运行时、仓库与配置执行能力。</p><a class="btn ghost" href="/ui/workers">查看 Worker</a></section>
-</div></main></div><script src="/ui/agent-factory.js?v=fd083-managed-key-20261107" defer></script><script src="/ui/console.js"></script></body></html>
+</div></main></div><script src="/ui/agent-factory.js?v=fd085-deepseek-20261108" defer></script><script src="/ui/console.js"></script></body></html>

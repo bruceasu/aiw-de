@@ -24,7 +24,8 @@ def metadata(config):
     if CAPABILITY not in config.capabilities or "execution-guard-v1" not in config.capabilities:
         raise RuntimeError("CONFIGURATION_ADAPTER_NOT_VERIFIED")
     root = Path(__file__).resolve().parent
-    names = ("execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_text_runtime.py", "guarded_openai_tools.py", "process_worker.py", "worker_runtime.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py", "plan_workspace.py", "agent_runtime.py", "run_contract.py", "automation_loop.py", "completion_validation.py", "codex_model_session.py", "run_channel.py", "tool_coordination.py")
+    names = ("api_connection.py", "deepseek_chat.py", "model_images.py", "execution_configuration.py", "execution_guard.py", "guarded_workspace.py", "guarded_command.py", "guarded_app_server.py", "guarded_text_runtime.py", "guarded_openai_tools.py", "process_worker.py", "worker_runtime.py", "openai_api_runtime.py", "app_server_runtime.py", "formal_questions.py", "skill_files.py", "context_window.py", "operator_inputs.py", "plan_workspace.py", "agent_runtime.py", "run_contract.py", "automation_loop.py", "completion_validation.py", "codex_model_session.py", "run_channel.py", "tool_coordination.py")
+    names = (*names, "tool_arguments.py")
     versions = {"broker": _digest({name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in names})}
     if config.runtime == "openai-agents":
         versions.update({name: importlib.metadata.version(name) for name in ("openai-agents", "openai")})
@@ -32,7 +33,7 @@ def metadata(config):
         for cap in config.capabilities:
             if cap.startswith("guard-protocol:"): versions["codex-protocol"] = cap.split(":", 1)[1]
         if "codex-protocol" not in versions: raise RuntimeError("CONFIGURATION_PROTOCOL_CAPABILITY_MISSING")
-    resource = {key: os.environ.get(key) for key in ("AIW_CODEX_GUARD_HOME", "AIW_CODEX_GUARD_PROFILE", "AIW_GUARD_COMMAND_ENABLED", "AIW_COMMAND_CGROUP_ROOT", "AIW_COMMAND_TOOLCHAIN_ROOTS", "OPENAI_BASE_URL", "OPENAI_ORG_ID", "OPENAI_PROJECT_ID")}
+    resource = {key: os.environ.get(key) for key in ("AIW_MODEL_IMAGE_TRANSPORT", "AIW_API_PROVIDER", "AIW_API_PROTOCOL", "AIW_CODEX_GUARD_HOME", "AIW_CODEX_GUARD_PROFILE", "AIW_GUARD_COMMAND_ENABLED", "AIW_COMMAND_CGROUP_ROOT", "AIW_COMMAND_TOOLCHAIN_ROOTS", "OPENAI_BASE_URL", "OPENAI_ORG_ID", "OPENAI_PROJECT_ID")}
     resource.update(runtime=config.runtime, platform=sys.platform, adapter=versions, guarded=True)
     resource["codexGuardMode"] = os.environ.get("AIW_CODEX_GUARD_MODE", "dynamic-tools")
     resource["hostActionProtocol"] = os.environ.get("AIW_HOST_ACTION_PROTOCOL", "v1")

@@ -12,7 +12,7 @@ public final class RecommendationProfiles {
                 .filter(p -> effort == null || effort.equals(p.profile().effort())).toList();
         var selected = constrained.stream().filter(p -> compatible(p.profile())).toList();
         if (selected.isEmpty() && !constrained.isEmpty()) throw new IllegalArgumentException(
-                "Configured planner profiles are incompatible with Worker runtimes: openai provider required; "
+                "Configured planner profiles are incompatible with Worker runtimes: OpenAI or DeepSeek API provider required; "
                 + "codex-app-server requires fast=false; openai-api/openai-agents require fast=false and supported effort. "
                 + "Profiles: " + constrained.stream().map(p -> p.id() + " (" + p.profile().runtime() + ", fast="
                 + p.profile().fast() + ", effort=" + p.profile().effort() + ")").toList());
@@ -23,6 +23,8 @@ public final class RecommendationProfiles {
     }
 
     public static boolean compatible(me.asu.aidev.ai.application.AiProfileCatalog.Profile p) {
+        if ("deepseek".equals(p.provider())) return "openai-agents".equals(p.runtime()) && !p.fast()
+                && List.of("none","low","high","max").contains(p.effort());
         if (!"openai".equals(p.provider())) return false;
         if ("codex-app-server".equals(p.runtime()) && p.fast()) return false;
         if (List.of("openai-api", "openai-agents").contains(p.runtime())) return !p.fast()

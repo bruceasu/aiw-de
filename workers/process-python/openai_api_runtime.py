@@ -19,6 +19,7 @@ from agents import RunContextWrapper, function_tool
 from ai_preferences import preference_rejected
 from agent_runtime import AgentRunRequest, HOST_ACTION_INSTRUCTIONS
 from agents.models.interface import Model
+from api_connection import provider as api_provider, protocol as api_protocol, key_name, check_auth, efforts as api_efforts
 
 
 @dataclass
@@ -32,6 +33,8 @@ class ApiRuntimeConfig:
     max_input_bytes: int
     max_output_bytes: int
     tool_timeout_ms: int
+    provider: str = "openai"
+    protocol: str = "responses"
 
 
 @dataclass
@@ -61,20 +64,22 @@ class OpenAIApiRuntime:
         except importlib.metadata.PackageNotFoundError as error:
             raise RuntimeError("OPENAI_AGENTS_SDK_MISSING") from error
         # Versions are traceability metadata, never an allowlist. Required APIs are checked when used.
-        api_key = os.getenv("OPENAI_API_KEY", "").strip()
-        if not api_key:
-            raise RuntimeError("OPENAI_API_KEY_REQUIRED")
+        check_auth()
+        api_key = os.getenv(key_name(), "").strip()
         reasoning = os.getenv("AIW_OPENAI_REASONING_EFFORT", "").strip()
-        if reasoning and reasoning not in {"none", "minimal", "low", "medium", "high"}:
+        if api_provider() == "deepseek" and not os.getenv("AIW_OPENAI_MODEL", "").strip():
+            raise RuntimeError("DEEPSEEK_MODEL_REQUIRED")
+        if reasoning and reasoning not in api_efforts():
             raise RuntimeError("OPENAI_REASONING_EFFORT_INVALID")
         runtime = cls(ApiRuntimeConfig(
-            api_key=api_key, base_url=os.getenv("OPENAI_BASE_URL") or None,
+            api_key=api_key, base_url="https://api.deepseek.com" if api_provider()=="deepseek" else os.getenv("OPENAI_BASE_URL") or None,
             model=os.getenv("AIW_OPENAI_MODEL", "gpt-4.1"), reasoning_effort=reasoning,
             api_timeout_ms=_positive_setting("AIW_OPENAI_TIMEOUT_MS", 120000),
             max_turns=_positive_setting("AIW_AGENT_MAX_TURNS", 40),
             max_input_bytes=_positive_setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024),
             max_output_bytes=_positive_setting("AIW_AGENT_MAX_OUTPUT_CHARS", 24000),
             tool_timeout_ms=_positive_setting("AIW_AGENT_TOOL_TIMEOUT_MS", 60000),
+            provider=api_provider(), protocol=api_protocol(),
         ))
         runtime.versions = {"openai-agents": agents_version, "openai": openai_version}
         return runtime
@@ -97,13 +102,29 @@ class OpenAIApiRuntime:
         from run_channel import bind
         bind(request, "openai-agents")
         from agents import Agent, ModelSettings, OpenAIProvider, RunConfig, Runner, set_tracing_disabled
-        from openai import AsyncOpenAI
+        from openai import AsyncOpenAI, DefaultAsyncHttpxClient
 
         set_tracing_disabled(True)
         client = AsyncOpenAI(api_key=self.config.api_key, base_url=self.config.base_url,
-                             timeout=self.config.api_timeout_ms / 1000, max_retries=0)
-        provider = OpenAIProvider(openai_client=client, use_responses=True)
+                             timeout=self.config.api_timeout_ms / 1000, max_retries=0,
+                             http_client=DefaultAsyncHttpxClient(follow_redirects=False))
+        provider = OpenAIProvider(openai_client=client, use_responses=self.config.protocol == "responses")
         base_model = provider.get_model(request.model or self.config.model)
+        chat_round = self.config.provider == "deepseek" and self.config.protocol == "chat-completions"
+        if chat_round:
+            from deepseek_chat import create_model
+            try:
+                base_model = create_model(client, request.model or self.config.model, self.config, request.attempt)
+            except BaseException:
+                await client.close()
+                raise
+        if request.model_images:
+            from model_images import wrap
+            try:
+                base_model = wrap(base_model, client, request, self.config)
+            except BaseException:
+                await client.close()
+                raise
         from context_window import Sources
         sources = Sources()
         request.attempt.context_sources = sources
@@ -119,6 +140,13 @@ class OpenAIApiRuntime:
             tools = resource_tools(request) if request.profile.primary_skill == "goal-discussion" else _create_tools(context)
         if not getattr(request, "model_only", False):
             tools.extend(_context_tools(request, sources))
+        if self.config.provider == "deepseek":
+            # Stable endpoint tools remain host-validated. Never silently opt into Beta strict mode.
+            import copy
+            tools = [copy.copy(tool) for tool in tools]
+            for tool in tools:
+                if hasattr(tool, "strict_json_schema"):
+                    tool.strict_json_schema = False
         guarded_model = _GuardedModel(base_model, request, self.config,
                                       {tool.name: tool.params_json_schema for tool in tools}, sources)
         settings = _model_preferences(request, self.config)
@@ -154,17 +182,27 @@ class OpenAIApiRuntime:
             candidate = CompletionValidator(getattr(request, "candidate_validator", None),
                                             request.attempt.evidence, correction_limit)
             run_input = "Execute the assigned task and return its final report."
+            if request.model_images:
+                from model_images import input_message
+                run_input = input_message(request.model_images, run_input)
             while True:
-                result = Runner.run_streamed(agent, run_input, context=context, run_config=run_config,
-                                             max_turns=max(1, self.config.max_turns - guarded_model.calls))
-                stream_box[:] = [result]
-                if request.attempt.cancelled.is_set():
-                    result.cancel(mode="immediate")
-                async for event in result.stream_events():
-                    if event.type == "run_item_stream_event": context.work_started = True
-                    if request.attempt.cancelled.is_set(): result.cancel(mode="immediate")
-                    if getattr(event, "type", "") == "run_item_stream_event":
-                        await _record_runtime_event(request.attempt, getattr(event, "name", "unknown"))
+                if chat_round:
+                    # The adapter consumes a bounded native stream and returns only a completed round.
+                    # Cancellation interrupts this task; individual tools still use the existing host broker.
+                    context.work_started = True
+                    result = await Runner.run(agent, run_input, context=context, run_config=run_config,
+                                              max_turns=max(1, self.config.max_turns - guarded_model.calls))
+                else:
+                    result = Runner.run_streamed(agent, run_input, context=context, run_config=run_config,
+                                                 max_turns=max(1, self.config.max_turns - guarded_model.calls))
+                    stream_box[:] = [result]
+                    if request.attempt.cancelled.is_set():
+                        result.cancel(mode="immediate")
+                    async for event in result.stream_events():
+                        if event.type == "run_item_stream_event": context.work_started = True
+                        if request.attempt.cancelled.is_set(): result.cancel(mode="immediate")
+                        if getattr(event, "type", "") == "run_item_stream_event":
+                            await _record_runtime_event(request.attempt, getattr(event, "name", "unknown"))
                 request.attempt.check()
                 output = result.final_output
                 if not isinstance(output, str) or (not output.strip() and candidate.validate is None):
@@ -185,8 +223,10 @@ class OpenAIApiRuntime:
         finally:
             self._cancel_callback = None
             try:
-                await guarded_model.close()
-                await client.close()
+                try:
+                    await guarded_model.close()
+                finally:
+                    await client.close()
             finally:
                 request.attempt.remove_cancel_callback(cancel_run)
                 sources.clear()
@@ -210,6 +250,7 @@ class _GuardedModel(Model):
         self._request.attempt.check()
         if self.calls >= self._config.max_turns: raise RuntimeError("MODEL_TOTAL_CALL_LIMIT")
         self.calls += 1
+        self.started_at = time.monotonic()
 
     async def _prepare(self, instructions, input, tools, previous_response_id=None, conversation_id=None, tracing=None):
         self._summary_tracing = tracing
@@ -256,18 +297,21 @@ class _GuardedModel(Model):
 
     def _request_check(self, system_instructions: str | None, input: Any, tools: list[Any], purpose="task") -> None:
         payload = {"instructions": system_instructions, "input": _json_value(input),
-                   "tools": [_json_value(getattr(tool, "params_json_schema", {})) for tool in tools]}
+                   "tools": [{"name": tool.name, "description": getattr(tool, "description", ""),
+                              "parameters": _json_value(getattr(tool, "params_json_schema", {}))} for tool in tools]}
         size = len(json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
         if size > self._config.max_input_bytes:
             raise RuntimeError("MODEL_INPUT_BUDGET_EXCEEDED")
         from run_contract import observe_context
+        from model_images import observed
         observe_context(self._request, "openai-agents", {
             "instructions": system_instructions,
-            "messages": _json_value(input),
-            "tools": [{"name": tool.name, "description": getattr(tool, "description", ""),
-                       "parameters": _json_value(getattr(tool, "params_json_schema", {}))} for tool in tools],
+            "messages": observed(_json_value(input)),
+            "tools": payload["tools"],
         }, request_scope="REQUEST", purpose=purpose)
+        prefix = hashlib.sha256(json.dumps({"model": self._request.model,"instructions": system_instructions, "tools": payload["tools"]}, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
         self._request.attempt.evidence.record("model-request", inputBytes=size, usageKnown=False,
+                                              provider=self._config.provider, protocol=self._config.protocol, prefixDigest=prefix,
                                               unknown="model-window-and-input-tokens")
 
     def _validate(self, response: Any) -> None:
@@ -277,31 +321,49 @@ class _GuardedModel(Model):
         output = _field(response, "output")
         if not isinstance(output, (tuple, list)):
             raise RuntimeError("RESPONSES_OUTPUT_INVALID")
-        usage = _field(response, "usage")
+        if sum(_field(item, "type") == "function_call" for item in output) > 16:
+            raise RuntimeError("RESPONSES_TOOL_BATCH_LIMIT")
+        self.history.response(_json_value(output))
+        usage = self._usage(response)
         known = usage is not None and all(type(value) is int and value >= 0 for value in (
             _field(usage, "input_tokens"), _field(usage, "output_tokens"), _field(_field(usage, "input_tokens_details"), "cached_tokens")))
+        if known:
+            known = _field(_field(usage, "input_tokens_details"), "cached_tokens") <= _field(usage, "input_tokens")
+        seen_calls = set()
         for item in output:
             item_status = _field(item, "status")
             if item_status is not None and item_status != "completed":
                 raise RuntimeError("RESPONSES_ITEM_INCOMPLETE")
+            if _field(item, "type") not in {"message", "reasoning", "function_call"}:
+                raise RuntimeError("RESPONSES_TOOL_TYPE_NOT_DECLARED")
             if _field(item, "type") != "function_call":
                 continue
             name = _field(item, "name")
             call_id = _field(item, "call_id") or _field(item, "callId")
             arguments = _field(item, "arguments")
-            if name not in self._tool_schemas or not call_id or not isinstance(arguments, str):
+            if name not in self._tool_schemas or not call_id or call_id in seen_calls or not isinstance(arguments, str):
                 raise RuntimeError("RESPONSES_TOOL_CALL_INVALID")
+            seen_calls.add(call_id)
             try:
-                parsed_arguments = json.loads(arguments)
-            except (TypeError, ValueError) as error:
+                from tool_arguments import parse_tool_arguments
+                parsed_arguments = parse_tool_arguments(arguments)
+            except (TypeError, ValueError, RecursionError) as error:
                 raise RuntimeError("RESPONSES_TOOL_ARGUMENTS_INVALID") from error
             if not _matches_schema(parsed_arguments, self._tool_schemas[name]):
                 raise RuntimeError("RESPONSES_TOOL_ARGUMENTS_INVALID")
             self._request.attempt.evidence.record("tool-proposed", callId=call_id, tool=name, status="validated")
+        facts = {name: value for name, value in (("inputTokens", _field(usage, "input_tokens")),
+            ("outputTokens", _field(usage, "output_tokens")), ("cachedTokens", _field(_field(usage, "input_tokens_details"), "cached_tokens")))
+            if type(value) is int and value >= 0}
+        if "inputTokens" in facts and facts.get("cachedTokens", 0) > facts["inputTokens"]:
+            facts.pop("cachedTokens")
         self._request.attempt.evidence.record("model-terminal", status="completed", usageKnown=known,
-            usageSource="provider-response" if known else "unknown",
-            **({"inputTokens": _field(usage, "input_tokens"), "outputTokens": _field(usage, "output_tokens"),
-                "cachedTokens": _field(_field(usage, "input_tokens_details"), "cached_tokens")} if known else {}))
+            usageSource="provider-response" if facts else "unknown",
+            durationMs=max(0, int((time.monotonic() - getattr(self, "started_at", time.monotonic())) * 1000)), **facts)
+
+    def _usage(self, response):
+        raw = getattr(self._model, "last_usage", None)
+        return raw if raw is not None else _field(response, "usage")
 
     def _begin(self, include_inputs=True, purpose="task"):
         broker = self._request.broker
@@ -318,7 +380,7 @@ class _GuardedModel(Model):
     def _finish(self, operation, response):
         broker = self._request.broker
         if not broker: return
-        raw = _field(response, "usage")
+        raw = self._usage(response)
         input_tokens, output_tokens = _field(raw, "input_tokens"), _field(raw, "output_tokens")
         cached = _field(_field(raw, "input_tokens_details"), "cached_tokens")
         known = all(type(v) is int and v >= 0 for v in (input_tokens, cached, output_tokens)) and cached <= input_tokens
@@ -359,6 +421,7 @@ class _GuardedModel(Model):
                         previous_response_id: str | None, conversation_id: str | None, prompt: Any):
         async def guarded_stream():
             terminal_seen = False
+            wire_bytes = 0
             operation = None
             try:
                 prepared = await self._prepare(system_instructions, input, tools, previous_response_id, conversation_id, tracing)
@@ -369,6 +432,9 @@ class _GuardedModel(Model):
                     previous_response_id=previous_response_id, conversation_id=conversation_id, prompt=prompt,
                 ):
                     self._request.attempt.check()
+                    wire_bytes += len(json.dumps(_json_value(event), ensure_ascii=False, allow_nan=False).encode("utf-8"))
+                    if wire_bytes > self._config.max_input_bytes * 8:
+                        raise RuntimeError("RESPONSES_STREAM_LIMIT")
                     event_type = _field(event, "type")
                     if event_type in {"response.incomplete", "response.failed", "error"}:
                         raise RuntimeError("RESPONSES_STREAM_INCOMPLETE")
@@ -413,6 +479,17 @@ class _GuardedModel(Model):
 
 
 def _model_preferences(request, config):
+    effort = request.reasoning_effort or config.reasoning_effort
+    if config.provider == "deepseek":
+        if effort and effort not in {"none", "low", "high", "max"}: raise RuntimeError("DEEPSEEK_REASONING_EFFORT_INVALID")
+        if config.protocol == "chat-completions":
+            return {"parallel_tool_calls": True, "preserve_raw_usage": True,
+                    "extra_args": {"reasoning_effort": effort or "none"}}
+        return {"parallel_tool_calls": True, "store": False, "preserve_raw_usage": True,
+                "reasoning": {"effort": effort or "none"}}
+    if config.protocol == "chat-completions":
+        return {"parallel_tool_calls": True, "preserve_raw_usage": True,
+                **({"extra_args": {"reasoning_effort": effort}} if effort and effort != "none" else {})}
     settings = {"parallel_tool_calls": True, "truncation": "disabled", "store": False, "preserve_raw_usage": True}
     effort = request.reasoning_effort or config.reasoning_effort
     if effort and effort != "none": settings["reasoning"] = {"effort": effort}

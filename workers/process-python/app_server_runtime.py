@@ -112,7 +112,7 @@ class StdioSession:
         if credential_provider is not None:
             self.auth_home = tempfile.mkdtemp(prefix="aiw-external-codex-")
             environment = dict(os.environ if environment is None else environment)
-            for name in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "AIW_MODEL_CREDENTIAL_KEY", "AIW_WORKER_TOKEN", "AIW_MODEL_WORKER_PROOF",
+            for name in ("OPENAI_API_KEY", "DEEPSEEK_API_KEY", "OPENAI_BASE_URL", "AIW_MODEL_CREDENTIAL_KEY", "AIW_WORKER_TOKEN", "AIW_MODEL_WORKER_PROOF",
                          "SPRING_APPLICATION_JSON", "JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "JAVA_OPTS", "MAVEN_OPTS"):
                 environment.pop(name, None)
             environment["CODEX_HOME"] = self.auth_home

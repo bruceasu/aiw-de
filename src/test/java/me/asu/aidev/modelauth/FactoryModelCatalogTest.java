@@ -8,6 +8,29 @@ import static org.mockito.Mockito.*;
 
 class FactoryModelCatalogTest {
     private final ObjectMapper json=new ObjectMapper();
+    @Test void deepseekDirectoryUsesOnlyDeepseekKeyAndOfficialEndpoint() throws Exception {
+        var connections=mock(ModelConnections.class);when(connections.actor()).thenReturn("web:admin");
+        var oauth=mock(OpenAiOAuth.class);var settings=mock(me.asu.aidev.execution.config.AgentFactorySettings.class);
+        when(settings.snapshot()).thenReturn(new me.asu.aidev.execution.config.AgentFactorySettings.Snapshot(null,"v1"));when(settings.version()).thenReturn("v1");
+        var catalog=spy(new FactoryModelCatalog(connections,oauth,settings,null));
+        doReturn("deepseek-test-key").when(catalog).environment("DEEPSEEK_API_KEY");
+        doReturn("https://another-provider.invalid").when(catalog).environment("OPENAI_BASE_URL");
+        when(oauth.models("deepseek-test-key","https://api.deepseek.com")).thenReturn(json.readTree("{\"data\":[{\"id\":\"account-model\"}]}"));
+        var result=catalog.models(new FactoryModelCatalog.Query("openai-agents","api-key",null,null,false,"deepseek"));
+        assertThat(result.source()).isEqualTo("DEEPSEEK_API_ACCOUNT");
+        assertThat(result.models()).extracting(FactoryModelCatalog.Model::id).containsExactly("account-model");
+        verify(catalog,never()).environment("OPENAI_API_KEY");verify(oauth).models("deepseek-test-key","https://api.deepseek.com");
+    }
+    @Test void missingDeepseekKeyCannotFallBackToOpenAi() {
+        var connections=mock(ModelConnections.class);when(connections.actor()).thenReturn("web:admin");
+        var oauth=mock(OpenAiOAuth.class);var settings=mock(me.asu.aidev.execution.config.AgentFactorySettings.class);
+        when(settings.snapshot()).thenReturn(new me.asu.aidev.execution.config.AgentFactorySettings.Snapshot(null,"v1"));
+        var catalog=spy(new FactoryModelCatalog(connections,oauth,settings,null));
+        doReturn("").when(catalog).environment("DEEPSEEK_API_KEY");doReturn("other-key").when(catalog).environment("OPENAI_API_KEY");
+        assertThatThrownBy(()->catalog.models(new FactoryModelCatalog.Query("openai-agents","api-key",null,null,false,"deepseek")))
+            .hasMessage("MODEL_DIRECTORY_DEEPSEEK_KEY_NOT_CONFIGURED");
+        verifyNoInteractions(oauth);
+    }
     @Test void chatgptDirectoryPreservesAccountSlugsOrderAndVisibility() throws Exception {
         var rows=json.readTree("""
                 {"models":[{"slug":"model-b","display_name":"Second","visibility":"list"},

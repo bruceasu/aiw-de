@@ -11,21 +11,32 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AgentFactorySettings {
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.modelauth.ModelConnections modelConnections;
-    public record Settings(String runtime,String model,String effort,boolean automaticWorkers,String python,String executable,String guardHome,String credentialRef,Long credentialVersion) {
+    public record Settings(String runtime,String model,String effort,boolean automaticWorkers,String python,String executable,String guardHome,String credentialRef,Long credentialVersion,String apiProvider,String apiProtocol) {
+        public Settings(String runtime,String model,String effort,boolean automaticWorkers,String python,String executable,String guardHome,String credentialRef,Long credentialVersion) {
+            this(runtime,model,effort,automaticWorkers,python,executable,guardHome,credentialRef,credentialVersion,"openai","responses");
+        }
         public Settings(String runtime,String model,String effort,boolean automaticWorkers,String python,String executable,String guardHome) {
             this(runtime,model,effort,automaticWorkers,python,executable,guardHome,null,null);
         }
         public Settings {
+            apiProvider=apiProvider==null?"openai":apiProvider;
+            apiProtocol=apiProtocol==null?"responses":apiProtocol;
+            if(!Set.of("openai","deepseek").contains(apiProvider)||!Set.of("responses","chat-completions").contains(apiProtocol))throw new IllegalArgumentException("请选择支持的模型服务商与 API 协议。");
+            if(!"openai-agents".equals(runtime)&&(!apiProvider.equals("openai")||!apiProtocol.equals("responses")))throw new IllegalArgumentException("Codex 不使用 API 服务商与协议设置。");
+            if(credentialRef!=null&&!credentialRef.isBlank()&&(!apiProvider.equals("openai")||!apiProtocol.equals("responses")))throw new IllegalArgumentException("ChatGPT OAuth 仅用于 OpenAI Responses，不能用于其他服务商或协议。");
             if(credentialRef!=null&&credentialRef.isBlank())credentialRef=null;
             if(credentialRef==null)credentialVersion=null;
             else if(!credentialRef.matches("MC-[0-9a-f-]{36}")||credentialVersion==null||credentialVersion<1)throw new IllegalArgumentException("MODEL_CONNECTION_REQUIRED");
             if(runtime==null||!Set.of("codex-app-server","openai-agents").contains(runtime))throw new IllegalArgumentException("请选择支持的模型运行时。");
             if(model==null||!model.matches("[A-Za-z0-9._-]{1,120}"))throw new IllegalArgumentException("请填写模型名称。");
-            if(effort==null||!(runtime.equals("codex-app-server")?Set.of("none","minimal","low","medium","high","xhigh"):Set.of("none","minimal","low","medium","high")).contains(effort))throw new IllegalArgumentException("此运行时不支持所选推理强度。");
+            var efforts=runtime.equals("codex-app-server")?Set.of("none","minimal","low","medium","high","xhigh")
+                :apiProvider.equals("deepseek")?Set.of("none","low","high","max"):Set.of("none","minimal","low","medium","high");
+            if(effort==null||!efforts.contains(effort))throw new IllegalArgumentException("此服务商与协议不支持所选推理强度。");
             for(String value:List.of(Objects.toString(python,""),Objects.toString(executable,""),Objects.toString(guardHome,"")))
                 if(value.length()>2048||value.indexOf('\n')>=0||value.indexOf('\r')>=0||value.indexOf('\0')>=0)throw new IllegalArgumentException("启动路径无效。");
             python=python==null||python.isBlank()?"python":python.strip();executable=Objects.toString(executable,"").strip();guardHome=Objects.toString(guardHome,"").strip();
         }
+        public String workerRuntime() {return runtime+":"+(runtime.equals("openai-agents")&&(apiProvider.equals("deepseek")||apiProtocol.equals("chat-completions"))?apiProvider+":"+apiProtocol+":":"");}
     }
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final AuthorityGrantService grants;private final AiProfileCatalog catalogue;
     public AgentFactorySettings(AuthorityRepository repo,AuthorityBoundary boundary,AuthorityGrantService grants,AiProfileCatalog catalogue) {
@@ -41,7 +52,7 @@ public class AgentFactorySettings {
     public List<AiProfileCatalog.NamedProfile> profiles() {
         var saved=current();
         return saved==null?catalogue.approved(TaskType.EXTERNAL_WORK):List.of(new AiProfileCatalog.NamedProfile("factory-default",
-                new AiProfileCatalog.Profile("openai",saved.runtime(),saved.model(),saved.effort(),false,1)));
+                new AiProfileCatalog.Profile(saved.apiProvider(),saved.runtime(),saved.model(),saved.effort(),false,1)));
     }
     public String version() {var row=latest();return row.isEmpty()?catalogue.version():"factory-"+row.get("id");}
     public Map<String,Object> state() {

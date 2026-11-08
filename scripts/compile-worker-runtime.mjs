@@ -27,7 +27,7 @@ function compile(executable, args, cwd = root, env = process.env) {
 for (const directory of [path.join(root, "workers/process-typescript/runtime-core"), path.join(root, "extern-workers/process-typescript/scripts")]) {
   for (const file of (await readdir(directory)).filter(file => file.endsWith(".mjs"))) compile(process.execPath, ["--check", path.join(directory, file)]);
 }
-for (const file of ["workflow-editor.js", "workflow-graphs.js", "configurations.js", "configuration-methods.js", "agent-factory.js", "worker-run.js", "i18n.js"]) {
+for (const file of ["workflow-editor.js", "workflow-graphs.js", "configurations.js", "configuration-methods.js", "agent-factory.js", "goals.js", "worker-run.js", "i18n.js"]) {
   compile(process.execPath, ["--check", path.join(root, "src/main/resources/static/ui", file)]);
 }
 const pyDirectory = path.join(root, "workers/process-python");

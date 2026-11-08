@@ -37,6 +37,9 @@ public class GoalController {
     }
     @GetMapping("/ui/goals") public String page(HttpSession session, Model model) { actor(session); return "ui/goals"; }
     @GetMapping("/api/r1/goals") @ResponseBody public Object list(HttpSession session) { return repo.list(actor(session)); }
+    @GetMapping("/api/r1/goals/discussion-configuration") @ResponseBody public Object discussionConfiguration(@RequestParam String backend,HttpSession session) {
+        actor(session);return discussion.configuration(backend);
+    }
     @PostMapping("/api/r1/goals") @ResponseBody public Object create(HttpSession session) { return discussion.create(actor(session)); }
     @GetMapping("/api/r1/goals/sources") @ResponseBody public Object sources(@RequestParam(defaultValue="") String query, HttpSession session) {
         actor(session); return discussion.sources(query.isBlank() ? null : GoalDiscussionService.bounded(query, "Query", 160, true));

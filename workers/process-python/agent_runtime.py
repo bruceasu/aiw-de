@@ -43,6 +43,8 @@ class AgentRunRequest:
     candidate_validator: Any = None
     # In-memory task-scoped accessor; never contains a renewable credential.
     credential_provider: Any = None
+    # Frozen, explicitly selected task inputs. No local paths or renewable credentials.
+    model_images: tuple[dict[str, str], ...] = ()
 
 
 class AgentRuntime(Protocol):

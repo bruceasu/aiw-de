@@ -14,7 +14,10 @@ import static me.asu.aidev.modelauth.ModelAuthContract.*;
 /** Read-only model metadata. Never creates a Task, starts a model turn or returns credentials. */
 @Service
 public class FactoryModelCatalog {
-    public record Query(String runtime,String mode,String credentialRef,Long credentialVersion,boolean force) {}
+    public record Query(String runtime,String mode,String credentialRef,Long credentialVersion,boolean force,String apiProvider) {
+        public Query(String runtime,String mode,String credentialRef,Long credentialVersion,boolean force) {this(runtime,mode,credentialRef,credentialVersion,force,"openai");}
+        public Query {apiProvider=apiProvider==null?"openai":apiProvider;}
+    }
     public record Model(String id,String name,List<String> efforts,String defaultEffort) {}
     public record Catalog(List<Model> models,String source,String notice,long fetchedAt,boolean cached) {}
     private final ModelConnections connections;private final OpenAiOAuth oauth;private final AgentFactorySettings settings;private final AuthorityRepository repo;
@@ -28,6 +31,9 @@ public class FactoryModelCatalog {
     public Object context() {
         connections.actor();
         return Map.of("apiKeyConfigured",!Objects.toString(environment("OPENAI_API_KEY"),"").isBlank(),
+                "deepseekKeyConfigured",!Objects.toString(environment("DEEPSEEK_API_KEY"),"").isBlank(),
+                "capabilities",ModelCapabilities.catalog(),
+                "imageTransport",Objects.toString(environment("AIW_MODEL_IMAGE_TRANSPORT"),"inline"),
                 "customEndpoint",!Objects.toString(environment("OPENAI_BASE_URL"),"").isBlank(),"scope","PLANE_LOCAL_ENVIRONMENT");
     }
     public Catalog models(Query input) {
@@ -35,7 +41,7 @@ public class FactoryModelCatalog {
         var chosen=input.credentialRef()==null?null:new Selection(input.credentialRef(),Objects.requireNonNull(input.credentialVersion()));
         if(chosen!=null)connections.selection(chosen,input.runtime());
         var snapshot=settings.snapshot();var config=snapshot.settings();
-        String key=AuthorityRepository.hash(actor+"\n"+input.runtime()+"\n"+input.mode()+"\n"+Objects.toString(input.credentialRef(),"")+":"+input.credentialVersion()+"\n"+snapshot.version());
+        String key=AuthorityRepository.hash(actor+"\n"+input.runtime()+"\n"+input.apiProvider()+"\n"+input.mode()+"\n"+Objects.toString(input.credentialRef(),"")+":"+input.credentialVersion()+"\n"+snapshot.version());
         synchronized(cache) {
             var known=cache.get(key);
             if(!input.force()&&known!=null&&known.fetchedAt()+60000>System.currentTimeMillis())return new Catalog(known.models(),known.source(),known.notice(),known.fetchedAt(),true);
@@ -50,10 +56,11 @@ public class FactoryModelCatalog {
                 var token=connections.catalogAccess(chosen,input.runtime());
                 raw=oauth.models(token.accessToken(),OpenAiOAuth.RESOURCE);source="CHATGPT_ACCOUNT";notice="DIRECTORY_IS_NOT_INFERENCE_VERIFICATION";
             } else {
-                String token=Objects.toString(environment("OPENAI_API_KEY"),"");
-                if(token.isBlank())throw new IllegalStateException("MODEL_DIRECTORY_API_KEY_NOT_CONFIGURED");
+                boolean deepseek=input.apiProvider().equals("deepseek");
+                String token=Objects.toString(environment(deepseek?"DEEPSEEK_API_KEY":"OPENAI_API_KEY"),"");
+                if(token.isBlank())throw new IllegalStateException(deepseek?"MODEL_DIRECTORY_DEEPSEEK_KEY_NOT_CONFIGURED":"MODEL_DIRECTORY_API_KEY_NOT_CONFIGURED");
                 String endpoint=Objects.toString(environment("OPENAI_BASE_URL"),"");
-                raw=oauth.models(token,endpoint.isBlank()?OpenAiOAuth.RESOURCE:endpoint);source="OPENAI_API_ACCOUNT";notice="API_DIRECTORY_INCLUDES_OTHER_MODEL_TYPES";
+                raw=oauth.models(token,deepseek?"https://api.deepseek.com":endpoint.isBlank()?OpenAiOAuth.RESOURCE:endpoint);source=deepseek?"DEEPSEEK_API_ACCOUNT":"OPENAI_API_ACCOUNT";notice="API_DIRECTORY_INCLUDES_OTHER_MODEL_TYPES";
             }
             var result=new Catalog(parse(raw,source),source,notice,System.currentTimeMillis(),false);
             // A disconnection or account replacement during the request invalidates late metadata too.
@@ -65,6 +72,7 @@ public class FactoryModelCatalog {
     }
     static void validate(Query query) {
         if(query==null||query.runtime()==null||query.mode()==null)throw new IllegalArgumentException("MODEL_DIRECTORY_SELECTION_REQUIRED");
+        if(!Set.of("openai","deepseek").contains(query.apiProvider())||query.apiProvider().equals("deepseek")&&(!query.runtime().equals("openai-agents")||!query.mode().equals("api-key")))throw new IllegalArgumentException("MODEL_DIRECTORY_MODE_MISMATCH");
         boolean codex=query.runtime().equals("codex-app-server"),python=query.runtime().equals("openai-agents");
         if(!(codex&&Set.of("codex-local","codex-plane").contains(query.mode())||python&&Set.of("chatgpt","api-key").contains(query.mode())))throw new IllegalArgumentException("MODEL_DIRECTORY_MODE_MISMATCH");
         boolean plane=Set.of("codex-plane","chatgpt").contains(query.mode());
@@ -100,6 +108,7 @@ public class FactoryModelCatalog {
         if(config!=null&&!config.guardHome().isBlank()&&token==null)args.addAll(List.of("--guard-home",config.guardHome()));
         var builder=new ProcessBuilder(args).directory(root.toFile()).redirectError(ProcessBuilder.Redirect.DISCARD);
         builder.environment().keySet().removeIf(name->name.startsWith("AIW_")||name.startsWith("AIDEV_")||name.startsWith("SPRING_")||Set.of("JAVA_TOOL_OPTIONS","JDK_JAVA_OPTIONS","JAVA_OPTS","MAVEN_OPTS").contains(name));
+        builder.environment().remove("DEEPSEEK_API_KEY");
         if(token!=null) {builder.environment().remove("OPENAI_API_KEY");builder.environment().remove("OPENAI_BASE_URL");}
         Process process=null;
         try {

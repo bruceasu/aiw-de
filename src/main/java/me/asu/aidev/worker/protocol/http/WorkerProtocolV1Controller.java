@@ -199,7 +199,8 @@ public class WorkerProtocolV1Controller {
                     :delegatedGuidance(task,runtimeType,claimed.attemptNo()),
                 configurations!=null && configurations.managed(task.id().value())?null:workflowAiPreferences==null?null:workflowAiPreferences.forTask(task),
                 configurations==null?null:configurations.payload(task.id().value(),claimed.attemptId().value()),
-                skillFiles==null?null:skillFiles.payload(task.id().value(),claimed.attemptId().value()));
+                skillFiles==null?null:skillFiles.payload(task.id().value(),claimed.attemptId().value()),
+                goalPolicy!=null&&goalPolicy.managed(task)?goalPolicy.frozen(task).images():List.of());
     }
 
     private AiProfileCatalog.Guidance delegatedGuidance(me.asu.aidev.work.domain.WorkTask task,String runtime,int attempt) {
@@ -254,5 +255,7 @@ public class WorkerProtocolV1Controller {
             AiProfileCatalog.Guidance aiGuidance,
             me.asu.aidev.workflow.application.WorkflowAiPreferences.Preferences aiPreferences,
             me.asu.aidev.execution.config.ConfigurationContract.Payload executionConfiguration,
-            me.asu.aidev.execution.skills.SkillFileContract.Payload skillFiles) {}
+            me.asu.aidev.execution.skills.SkillFileContract.Payload skillFiles,
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
+            List<me.asu.aidev.goal.application.GoalImages.Image> modelImages) {}
 }

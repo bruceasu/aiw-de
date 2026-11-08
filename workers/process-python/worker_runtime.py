@@ -40,7 +40,7 @@ def _regular_parents(target):
 
 class Evidence:
     context_fields = frozenset("sourceKind version purpose visibility requestScope changed capabilities questionKey questionId instructionRevision configurationDigest toolSchemaDigest materialInventoryDigest".split())
-    fields = set("status runtime unknown usageKnown path digest bytes count inputBytes outputBytes durationMs complete truncated operation callId parentCallId tool inputTokens outputTokens cachedTokens publicationRef resultRevision sideEffect verdict code reportStatus reason model effort phase".split())
+    fields = set("status runtime unknown usageKnown usageSource path digest bytes count inputBytes outputBytes durationMs complete truncated operation callId parentCallId tool inputTokens outputTokens cachedTokens publicationRef resultRevision sideEffect verdict code reportStatus reason model effort phase provider protocol prefixDigest fileId sourceHash expiresAt".split())
     def __init__(self, config, task):
         root = Path(os.getenv("AIW_WORKER_EVIDENCE_ROOT", str(Path(config.fallback_workspace).parent / ".aidev-attempt-evidence"))).absolute()
         for candidate in (config.fallback_workspace, config.repository_root, config.worktree_root):
@@ -74,6 +74,8 @@ class Evidence:
             try:
                 if set(values) - self.fields - self.context_fields:
                     raise RuntimeError("EVIDENCE_FIELD_FORBIDDEN")
+                if "usageSource" in values and values["usageSource"] not in {"provider-response", "unknown"}:
+                    raise RuntimeError("EVIDENCE_USAGE_SOURCE_INVALID")
                 raw = (json.dumps({**self.identity, "event": event, "time": datetime.now(timezone.utc).isoformat(), **values}, ensure_ascii=False) + "\n").encode("utf-8")
                 if self.bytes + len(raw) > self.limit:
                     raise RuntimeError("EVIDENCE_CAPACITY_EXCEEDED")

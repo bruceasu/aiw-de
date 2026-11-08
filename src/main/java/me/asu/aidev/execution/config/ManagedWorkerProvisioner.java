@@ -30,7 +30,7 @@ public class ManagedWorkerProvisioner {
         var config=settings.current();
         if(config==null)
             return new Result(false,"Agent factory is not configured. Select a runtime and model and save the settings first, or connect a matching external discussion Worker.");
-        if(!me.asu.aidev.goal.application.GoalTaskPolicy.runtime(backend,config.runtime()+":"))
+        if(!me.asu.aidev.goal.application.GoalTaskPolicy.runtime(backend,config.workerRuntime()))
             return new Result(false,"The selected discussion backend does not match the Agent factory settings.");
         return request(null,config.runtime(),false,"goal-discussion");
     }
@@ -98,7 +98,7 @@ public class ManagedWorkerProvisioner {
     }
     static String compatibilityKey(String role,String repository,AgentFactorySettings.Settings config) {
         return AuthorityRepository.hash(String.join("\n",role,Objects.toString(repository,""),config.runtime(),config.model(),
-                config.effort(),config.python(),config.executable(),config.guardHome(),Objects.toString(config.credentialRef(),""),Objects.toString(config.credentialVersion(),"")));
+                config.effort(),config.python(),config.executable(),config.guardHome(),Objects.toString(config.credentialRef(),""),Objects.toString(config.credentialVersion(),""),config.apiProvider(),config.apiProtocol()));
     }
     private boolean releaseIdle() {
         for(var entry:new ArrayList<>(slots.entrySet())) {
@@ -152,6 +152,9 @@ public class ManagedWorkerProvisioner {
             }
             env.put("AIW_WORKER_TOKEN",token);env.put("AIW_CONTROL_PLANE_URL","http://127.0.0.1:"+port+contextPath);
             env.put("AIW_AGENT_RUNTIME",config.runtime());
+            env.put("AIW_API_PROVIDER",config.apiProvider());env.put("AIW_API_PROTOCOL",config.apiProtocol());
+            if(config.apiProvider().equals("deepseek")) {env.remove("OPENAI_API_KEY");env.remove("OPENAI_BASE_URL");}
+            else env.remove("DEEPSEEK_API_KEY");
             env.remove("AIW_REPOSITORY_REF");env.remove("AIW_REPOSITORY_ROOT");
 
             slot.worker="factory-"+key.substring(0,24);

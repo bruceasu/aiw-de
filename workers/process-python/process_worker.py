@@ -20,6 +20,7 @@ from typing import Any
 from process_profiles import ProcessProfile, get_profile
 from worker_runtime import Attempt, attempt_scope, current_attempt, git as runtime_git, snapshot, skill_package, workspace_lock, setting, safe_directories, failure_code as classify_failure
 from ai_preferences import step_selection
+from api_connection import compatible as api_compatible, check_auth, runtime_type
 from agent_runtime import AgentRunRequest, AgentRuntime
 from app_server_runtime import CodexAppServerRuntime, preflight as app_server_preflight
 from formal_questions import YieldRequested
@@ -37,10 +38,7 @@ def choose_ai_profile(guidance: dict[str, Any] | None, runtime: str = "codex-app
     if guidance is None:
         return None, None
     allowed = [item for item in guidance["allowedProfiles"]
-               if item["profile"]["provider"] == "openai" and item["profile"]["runtime"] == runtime
-               and not item["profile"].get("fast", False)
-               and item["profile"].get("effort") in ({"none", "minimal", "low", "medium", "high", "xhigh"}
-                     if runtime == "codex-app-server" else {"none", "minimal", "low", "medium", "high"})]
+               if api_compatible(item["profile"], runtime)]
     if not allowed:
         raise ValueError(f"no approved compatible profile for runtime {runtime}")
     previous = guidance.get("previous")
@@ -95,8 +93,8 @@ class WorkerConfig:
                 raise ValueError("Python App Server requires AIW_CODEX_APPROVAL_MODE=deny-all (or never); migrate SDK auto-review explicitly")
             if os.getenv("AIW_CODEX_SANDBOX", "workspace-write") not in {"read-only", "workspace-write"}:
                 raise ValueError("Python App Server supports read-only or workspace-write sandbox only")
-        if runtime == "openai-agents" and not os.getenv("OPENAI_API_KEY", "").strip() and not os.getenv("AIW_MODEL_CREDENTIAL_REF"):
-            raise ValueError("OPENAI_API_KEY is required for openai-agents runtime")
+        if runtime == "openai-agents":
+            check_auth()
         if runtime == "openai-agents" and _bool_env("AIW_AGENT_ALLOW_SHELL", False):
             raise ValueError("AIW_AGENT_ALLOW_SHELL is not supported by the Python API runtime")
         if process_role in {"release-readiness", "orchestrator"}:
@@ -104,9 +102,11 @@ class WorkerConfig:
         profile = get_profile(process_role)
         capabilities = {part.strip() for part in os.getenv("AIW_WORKER_CAPABILITIES", "").split(",") if part.strip()}
         role_capabilities = {"goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
-        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "worker-loop-turn-v1", "questions-v2"} or part.startswith(("repo:", "native-config:", "handoff-store:")) or part in role_capabilities for part in capabilities):
+        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "model-images-v1", "worker-loop-turn-v1", "questions-v2"} or part.startswith(("repo:", "native-config:", "handoff-store:")) or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
+        if runtime == "openai-agents" and not os.getenv("AIW_MODEL_CREDENTIAL_REF"):
+            capabilities.add("model-images-v1")
         if os.getenv("AIW_MODEL_CREDENTIAL_REF"):
             from model_credentials import capability
             capabilities.add(capability())
@@ -180,7 +180,7 @@ class ControlPlaneClient:
     def register(self, config: WorkerConfig) -> dict[str, Any]:
         result = self._post("/workers/register", {
             "workerId": config.worker_id,
-            "runtimeType": f"{config.runtime}:{config.process_role}",
+            "runtimeType": runtime_type(config),
             "capabilities": list(config.capabilities),
             "maxConcurrency": config.max_concurrency,
         }) or {}
@@ -557,6 +557,7 @@ class ProcessSlot:
                     sandbox=self.config.sandbox, approval_mode=self.config.approval_mode, broker=broker,
                     model_only=self.config.process_role == "goal-discussion" or task.get("subjectType") == "workflow-recommendation",
                     candidate_validator=lambda text: _completion_report(profile.result_kind, text),
+                    model_images=tuple(task.get("modelImages") or ()),
                 )
                 if os.getenv("AIW_MODEL_CREDENTIAL_REF"):
                     from model_credentials import ModelCredentialProvider

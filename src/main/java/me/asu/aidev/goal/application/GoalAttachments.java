@@ -29,7 +29,8 @@ public class GoalAttachments {
         repo.lock(draft);
         if (repo.attachments(goal, actor).size() >= 20) throw new IllegalStateException("At most 20 attachments per goal");
         repo.jdbc().update("INSERT INTO goal_attachment VALUES (?,?,?,?,?,?,?,?)", UUID.randomUUID().toString(), goal,
-            filename, Base64.getEncoder().encodeToString(bytes), hash(bytes), "SAVED", "", "Select Convert to extract text locally");
+            filename, Base64.getEncoder().encodeToString(bytes), hash(bytes), GoalImages.mime(bytes)==null?"SAVED":"IMAGE_READY", "",
+            GoalImages.mime(bytes)==null?"Select Convert to extract text locally":"图片保存在本地。仅勾选后才会发送给模型；图片格式识别不代表已验证模型可读性。");
         repo.save(draft, draft.title(), draft.content(), false, false);
         return repo.attachments(goal, actor);
     }
@@ -38,6 +39,7 @@ public class GoalAttachments {
         if (draft.deleted()) throw new IllegalStateException("Restore the goal before using it");
         return draft;
     }
+    public List<Attachment> list(String goal,String actor) {active(goal,actor);return repo.attachments(goal,actor);}
     public byte[] bytes(String goal, String attachment, String actor) {
         active(goal, actor);
         return repo.jdbc().query("SELECT content_base64 FROM goal_attachment WHERE id=? AND goal_id=?",

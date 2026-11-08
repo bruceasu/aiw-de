@@ -35,6 +35,13 @@ public class GoalDiscussionService {
     }
     public record Send(String key, long revision, String text, List<String> attachments) {}
     public record Reply(String id, String state, String detail) {}
+    public Object configuration(String backend) {
+        String selected=bounded(backend,"Backend",20,false);
+        if(!Set.of("openai","deepseek","codex").contains(selected))throw new IllegalArgumentException("Choose openai, deepseek or codex");
+        var frozen=policy.freeze(selected);
+        return Map.of("backend",selected,"profiles",frozen.profiles(),"protocol",Objects.toString(frozen.apiProtocol(),"由所选运行通道决定"),
+            "auth",frozen.oauth()?"Plane OAuth 连接":"执行设备的登录或 API Key","verification","模型和工具兼容性未实测");
+    }
     private record Request(String goal, String actor, long revision, long epoch, String hash, boolean consumed) {}
     public static String bounded(String value, String name, int max, boolean blank) {
         if (value == null || value.length() > max || !blank && value.isBlank()) throw new IllegalArgumentException(name + " is missing or too long (maximum " + max + ")");
@@ -49,7 +56,7 @@ public class GoalDiscussionService {
     @Transactional public Draft edit(String id, String actor, Edit edit) {
         Draft draft = expected(id, actor, edit.revision());
         String backend = bounded(edit.backend(), "Backend", 20, false);
-        if (!Set.of("openai", "codex").contains(backend)) throw new IllegalArgumentException("Choose openai or codex");
+        if (!Set.of("openai", "deepseek", "codex").contains(backend)) throw new IllegalArgumentException("Choose openai, deepseek or codex");
         List<String> ids = edit.knowledgeIds() == null ? List.of() : List.copyOf(new LinkedHashSet<>(edit.knowledgeIds()));
         if (ids.size() > 8 || ids.stream().anyMatch(i -> i == null || i.length() > 256)) throw new IllegalArgumentException("At most 8 knowledge sources");
         ids.forEach(i -> knowledge.find(i).orElseThrow(() -> new IllegalArgumentException("Knowledge source not found")));
@@ -74,6 +81,10 @@ public class GoalDiscussionService {
         var available = repo.attachments(draft.id(), draft.actor());
         for (String id : selected) {
             Attachment a = available.stream().filter(f -> f.id().equals(id)).findFirst().orElseThrow(() -> new IllegalArgumentException("Attachment is not in this goal"));
+            if("IMAGE_READY".equals(a.status())) {
+                input.append("\nUser-selected image ID: ").append(a.id()).append(" SHA256: ").append(a.sha256()).append(" (image supplied separately; no extracted-text claim)");
+                continue;
+            }
             if (!"TEXT_EXTRACTED".equals(a.status())) throw new IllegalArgumentException("Only reviewed text extraction can be shared; image/empty/failed extraction needs user supplied text");
             input.append("\nAttachment ID: ").append(a.id()).append(" SHA256: ").append(a.sha256()).append(" name: ").append(a.filename()).append('\n').append(a.extracted());
         }
@@ -96,9 +107,9 @@ public class GoalDiscussionService {
         Draft draft = expected(id, actor, send.revision());
         repo.lock(draft);
         if (draft.content().messages().size() >= 100) throw new IllegalStateException("Goal has 100 messages; create a new goal for more discussion");
-        var frozen = policy.freeze(draft.content().backend());
+        var frozen = policy.images(policy.freeze(draft.content().backend()),GoalImages.selected(files,draft,selected));
         boolean online = fleet.online(Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW)).stream()
-            .anyMatch(w -> w.supports(Set.of("goal-discussion")) && policy.matches(frozen, w.runtimeType()));
+            .anyMatch(w -> w.supports(frozen.images().isEmpty()?Set.of("goal-discussion"):Set.of("goal-discussion",GoalImages.CAPABILITY)) && policy.matches(frozen, w.runtimeType()));
         String data = repo.encode(Map.of("title", draft.title(), "body", draft.content().body(), "missing", draft.content().missing(),
             "messages", draft.content().messages(), "userMessage", text,
             "sourceRevision", draft.revision(), "selectedSources", evidence(draft, selected)));
@@ -111,7 +122,7 @@ public class GoalDiscussionService {
             if (!started.starting()) throw new IllegalStateException(started.message());
         }
         taskService.createIfAbsent(new CreateWorkTaskCommand(new TaskId(requestId), TaskType.EXTERNAL_WORK, "goal-discussion", id,
-            Set.of("goal-discussion"), "goal-discussion", instruction, null, null, TaskPriority.NORMAL, Set.of()));
+            frozen.images().isEmpty()?Set.of("goal-discussion"):Set.of("goal-discussion",GoalImages.CAPABILITY), "goal-discussion", instruction, null, null, TaskPriority.NORMAL, Set.of()));
         repo.jdbc().update("INSERT INTO goal_request VALUES (?,?,?,?,?,?,?,FALSE)", requestId, id, actor, draft.revision(), draft.epoch(), hash, repo.encode(frozen));
         var messages = new ArrayList<>(draft.content().messages());
         messages.add(new Message(requestId+"-user", "user", text, draft.revision(), false));
@@ -131,7 +142,7 @@ public class GoalDiscussionService {
         var task = tasks.find(new TaskId(requestId)).orElseThrow();
         if (task.state() == TaskState.FAILED || task.state() == TaskState.CANCELLED) return new Reply(requestId, task.state().name(), "Discussion did not complete; your goal is unchanged");
         if (task.state() == TaskState.READY && fleet.online(Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW)).stream()
-                .noneMatch(w -> w.supports(Set.of("goal-discussion")) && policy.matches(policy.frozen(task),w.runtimeType()))) {
+                .noneMatch(w -> w.supports(task.requiredCapabilities()) && policy.matches(policy.frozen(task),w.runtimeType()))) {
             var started=provisioner.requestDiscussion(policy.frozen(task).backend());
             return new Reply(requestId,started.starting()?"QUEUED":"UNAVAILABLE",started.message());
         }

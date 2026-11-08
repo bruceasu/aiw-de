@@ -5,6 +5,7 @@
   const byId = id => document.getElementById(id);
   const fields = byId("factory-fields"), save = byId("factory-save"), status = byId("factory-status");
   const runtime = form.elements.runtime, mode = byId("factory-auth-mode"), credential = byId("factory-credential");
+  const apiProvider = form.elements.apiProvider, apiProtocol = form.elements.apiProtocol;
   const modelChoice = byId("factory-model-choice"), modelInput = form.elements.model, modelStatus = byId("factory-model-status");
   const authStatus = byId("model-auth-status"), cancelLogin = byId("model-auth-cancel");
   const t = text => window.aiwI18n?.t(text) || text;
@@ -25,6 +26,7 @@
     MODEL_AUTH_REFRESH_OUTCOME_UNKNOWN: "刷新结果未知。ChatGPT 连接请重新登录；Codex 连接请取得新凭据后替换。",
     MODEL_CONNECTION_NOT_READY_FOR_RUNTIME: "连接与执行方式不匹配，或尚未就绪。请重新选择登录方式和连接。",
     MODEL_DIRECTORY_API_KEY_NOT_CONFIGURED: "本机运行环境未配置 OPENAI_API_KEY。可改用 ChatGPT 登录，或配置环境后重新读取目录。",
+    MODEL_DIRECTORY_DEEPSEEK_KEY_NOT_CONFIGURED: "本机运行环境未配置 DEEPSEEK_API_KEY。请配置后重启 Plane；外部 Worker 使用自己的密钥时，可手动填写模型。",
     MODEL_DIRECTORY_LOGIN_REQUIRED: "Codex 登录尚不可用。请完成本机 Codex 登录，或更新所选 Plane 连接。",
     MODEL_DIRECTORY_CODEX_UNAVAILABLE: "本机找不到 Codex。请核对已保存的程序路径；也可先手动填写模型。",
     MODEL_DIRECTORY_HELPER_NOT_FOUND: "模型目录查询程序缺失，请核对本机 Worker 安装目录。",
@@ -59,9 +61,9 @@
     mode.replaceChildren(new Option(t(runtime.value ? "请选择登录方式" : "请先选择执行方式"), ""));
     for (const [value, name] of runtime.value === "codex-app-server"
       ? [["codex-local", "使用 Worker 本机 Codex 登录"], ["codex-plane", "使用 Plane 保存的 Codex 凭证"]]
-      : runtime.value === "openai-agents" ? [["chatgpt", "使用 ChatGPT 登录（OAuth）"], ["api-key", "使用 API Key（运行环境）"]]
+      : runtime.value === "openai-agents" ? (apiProvider.value === "deepseek" ? [["api-key", "使用 DeepSeek API Key（运行环境）"]] : [["chatgpt", "使用 ChatGPT 登录（OAuth）"], ["api-key", "使用 API Key（运行环境）"]])
       : [["codex-local", "使用 Worker 本机 Codex 登录"], ["codex-plane", "使用 Plane 保存的 Codex 凭证"], ["chatgpt", "使用 ChatGPT 登录（OAuth）"], ["api-key", "使用 API Key（运行环境）"]]) mode.add(new Option(t(name), value));
-    mode.disabled = !runtime.value;
+    mode.disabled = !runtime.value || runtime.value === "openai-agents" && !apiProvider.value;
     mode.value = chosen;
   }
   function showModel(id = "", asManual = false) {
@@ -76,13 +78,13 @@
   }
   function efforts() {
     const item = models.find(value => value.id === modelInput.value), current = form.elements.effort.value;
-    const allowed = item?.efforts?.length ? item.efforts : runtime.value === "codex-app-server"
+    const allowed = apiProvider.value === "deepseek" && runtime.value === "openai-agents" ? ["none", "low", "high", "max"] : item?.efforts?.length ? item.efforts : runtime.value === "codex-app-server"
       ? ["none", "minimal", "low", "medium", "high", "xhigh"] : ["none", "minimal", "low", "medium", "high"];
     form.elements.effort.replaceChildren(...allowed.map(value => new Option(value, value)));
     form.elements.effort.value = allowed.includes(current) ? current : allowed.includes(item?.defaultEffort) ? item.defaultEffort : allowed.includes("medium") ? "medium" : allowed[0];
-    byId("factory-effort-help").textContent = t(item?.efforts?.length ? "推理强度来自所选模型的目录信息。" : "目录未提供此模型的推理强度信息；这里显示执行方式的通用选项。实际支持情况以模型响应为准。");
+    byId("factory-effort-help").textContent = t(apiProvider.value === "deepseek" && runtime.value === "openai-agents" ? "推理选项依据 DeepSeek 协议声明；Chat Completions 使用完整消息回传适配。尚未对当前模型执行真实验证。" : item?.efforts?.length ? "推理强度来自所选模型的目录信息。" : "目录未提供此模型的推理强度信息；这里显示执行方式的通用选项。实际支持情况以模型响应为准。");
   }
-  function sourceReady() { return Boolean(runtime.value && mode.value && (!plane() || selected()?.state === "READY")); }
+  function sourceReady() { return Boolean(runtime.value && mode.value && (runtime.value !== "openai-agents" || apiProvider.value) && (!plane() || selected()?.state === "READY")); }
   function loginBlocker() {
     if (vault === null) return authError ? t("无法检查登录配置：") + authError + t(" 请重新检查，成功后才能登录或导入。") : t("正在检查 Plane 凭证加密存储，检查完成后才能登录或导入。");
     if (vault !== true) return t(errors[storage?.vaultState] || errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
@@ -93,6 +95,16 @@
   function synchronize({ requestedRef, preserveModel = false, auto = true } = {}) {
     const previous = requestedRef === undefined ? credential.value : requestedRef;
     const usePlane = plane(), codex = runtime.value === "codex-app-server";
+    const python = runtime.value === "openai-agents", deepseek = python && apiProvider.value === "deepseek";
+    byId("factory-api-provider-field").hidden = !python;apiProvider.disabled = !python;apiProvider.required = python;
+    byId("factory-api-protocol-field").hidden = !python;apiProtocol.disabled = !python || mode.value === "chatgpt";
+    if (mode.value === "chatgpt") apiProtocol.value = "responses";
+    byId("factory-api-protocol-help").hidden = !deepseek;
+    const capability = environment?.capabilities?.[[apiProvider.value, apiProtocol.value, mode.value].join("|")];
+    byId("factory-capabilities").hidden = !python || !capability;
+    byId("factory-capabilities").textContent = capability ? [["循环", capability.loop], ["历史", capability.history], ["工具", capability.tools],
+      ["推理", capability.reasoning], ["图片", capability.images], ["Files", capability.files], ["事件", capability.streaming], ["证据", capability.verification]]
+      .map(([label, value]) => t(label) + "：" + t(value)).join("；") + (environment?.imageTransport === "files" ? t("；Plane 当前配置临时 Files 传输；外部 Worker 使用自己的配置。") : environment?.imageTransport === "inline" ? t("；Plane 当前配置内联图片；外部 Worker 使用自己的配置。") : t("；AIW_MODEL_IMAGE_TRANSPORT 配置无效，图片请求会被拒绝，请修正执行环境。")) : "";
     byId("factory-plane-settings").hidden = !usePlane;credential.disabled = !usePlane;credential.required = usePlane;
     const matching = connections.filter(value => usePlane && value.kind === kind());
     credential.replaceChildren(new Option(t(matching.length ? "请选择已保存的连接" : vault === null
@@ -121,7 +133,7 @@
     byId("factory-local-settings").hidden = mode.value !== "codex-local";
     byId("factory-local-settings").textContent = t("复用 Worker 本机的 Codex 登录。模型目录查询使用 Plane 本机的相同程序路径；外部 Worker 的模型可用性可能不同。");
     byId("factory-api-settings").hidden = mode.value !== "api-key";
-    byId("factory-api-settings").textContent = t(environment === null ? "无法读取本机 API Key 配置状态，可重新读取连接状态后重试。" : environment.apiKeyConfigured
+    byId("factory-api-settings").textContent = deepseek ? t(environment === null ? "无法读取本机 DeepSeek API Key 配置状态，请重新读取连接状态。" : environment.deepseekKeyConfigured ? "本机已配置 DEEPSEEK_API_KEY。Python Worker 使用 DeepSeek 官方接口，页面不显示密钥。" : "本机尚未配置 DEEPSEEK_API_KEY。请配置后重启 Plane；外部 Worker 使用自己的环境时，可手动填写模型。") : t(environment === null ? "无法读取本机 API Key 配置状态，可重新读取连接状态后重试。" : environment.apiKeyConfigured
       ? (environment.customEndpoint ? "本机运行环境已配置 API Key 和自定义 API 地址。密钥不会显示在页面中；Python Worker 使用 OpenAI Agents SDK 执行。" : "本机运行环境已配置 OPENAI_API_KEY。密钥不会显示在页面中；Python Worker 使用 OpenAI Agents SDK 执行。")
       : "本机尚未配置 OPENAI_API_KEY。请在运行环境中配置，或改用 ChatGPT 登录。外部 Worker 使用自己的环境时，可手动填写模型。");
     byId("factory-codex-executable").hidden = !codex;form.elements.executable.disabled = !codex;
@@ -129,7 +141,7 @@
     byId("factory-auth-help").textContent = t(!mode.value ? "先选择执行方式，再选择对应的登录方式。" : usePlane
       ? (vault === false ? errors[storage?.vaultState] || errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED : authError || (mode.value === "chatgpt" ? "选择已有 ChatGPT 连接，或展开下方区域登录新账户。无需 Codex 或 API Key。" : "选择已有 Codex 连接，或展开下方区域导入新连接。仍需本机安装 Codex。"))
       : mode.value === "api-key" ? "API Key 来自 Worker 运行环境，本页不录入或保存 API Key。" : "此方式使用 Worker 自己的 Codex 登录，不从 Plane 领取凭证。");
-    const next = [runtime.value, mode.value, credential.value, form.elements.credentialVersion.value].join("|");
+    const next = [runtime.value, apiProvider.value, apiProtocol.value, mode.value, credential.value, form.elements.credentialVersion.value].join("|");
     const changed = contextKey !== next, ready = sourceReady();
     if (changed) {
       revision++;contextKey = next;catalogEpoch++;catalogController?.abort();clearTimeout(catalogTimer);models = [];
@@ -146,13 +158,13 @@
     modelStatus.textContent = t("正在读取当前登录来源的模型目录…");
     const chosen = selected();
     try {
-      const result = await call(authRoot, "models", { runtime: runtime.value, mode: mode.value, credentialRef: plane() ? chosen.id : null,
+      const result = await call(authRoot, "models", { runtime: runtime.value, apiProvider: runtime.value === "openai-agents" ? apiProvider.value : "openai", mode: mode.value, credentialRef: plane() ? chosen.id : null,
         credentialVersion: plane() ? chosen.version : null, force }, catalogController.signal);
       if (epoch !== catalogEpoch || expected !== contextKey) return;
       models = result.models;const id = modelInput.value;
       showModel(id, manual || Boolean(id && !models.some(item => item.id === id)));
       const notice = result.source === "CODEX_RPC" ? "Codex 返回的目录可能来自内置或缓存信息，不代表逐个模型已验证账户权限。"
-        : result.source === "OPENAI_API_ACCOUNT" ? "这是 API Key 账户的模型目录，可能包含其他用途的模型；尚未逐项验证 Responses 支持。"
+        : ["OPENAI_API_ACCOUNT", "DEEPSEEK_API_ACCOUNT"].includes(result.source) ? "这是所选服务商 API Key 账户的模型目录；尚未逐项验证所选协议与工具调用支持。"
         : "这是所选 ChatGPT 账户的可见模型目录，实际推理和额度尚未验证。";
       modelStatus.textContent = t("已读取模型目录：") + models.length + t(" 个。") + t(notice) + (result.cached ? t("（目录缓存，60 秒内有效）") : "");
     } catch (error) {
@@ -266,11 +278,14 @@
   }
   function settingsInput() {
     return { runtime: runtime.value, model: modelInput.value.trim(), effort: form.elements.effort.value,
+      apiProvider: runtime.value === "openai-agents" ? apiProvider.value : "openai", apiProtocol: runtime.value === "openai-agents" ? apiProtocol.value : "responses",
       automaticWorkers: form.elements.automaticWorkers.checked, python: form.elements.python.value,
       executable: runtime.value === "codex-app-server" ? form.elements.executable.value : "", guardHome: mode.value === "codex-local" ? form.elements.guardHome.value : "",
       credentialRef: plane() ? credential.value || null : null, credentialVersion: plane() ? Number(form.elements.credentialVersion.value) || null : null };
   }
-  runtime.addEventListener("change", () => { modes();synchronize(); });
+  runtime.addEventListener("change", () => { apiProvider.value = "";apiProtocol.value = "responses";modes();synchronize(); });
+  apiProvider.addEventListener("change", () => { apiProtocol.value = "responses";modes(apiProvider.value === "deepseek" ? "api-key" : "");synchronize(); });
+  apiProtocol.addEventListener("change", () => synchronize());
   mode.addEventListener("change", () => synchronize());credential.addEventListener("change", () => synchronize());
   modelChoice.addEventListener("change", () => { revision++;showModel(modelChoice.value === "__manual__" ? modelInput.value : modelChoice.value, modelChoice.value === "__manual__"); });
   modelInput.addEventListener("input", () => { revision++;efforts(); });
@@ -304,7 +319,7 @@
     event.preventDefault(); if (save.disabled || !form.reportValidity()) return;
     const input = settingsInput(), snapshot = JSON.stringify(input), chosen = selected();save.disabled = true;fields.disabled = true;
     try {
-      const detail = runtime.selectedOptions[0].textContent + "\n" + mode.selectedOptions[0].textContent + (chosen && plane() ? " · " + chosen.label : "") + "\n" + input.model + " / " + input.effort;
+      const detail = runtime.selectedOptions[0].textContent + (runtime.value === "openai-agents" ? " · " + input.apiProvider + " / " + input.apiProtocol : "") + "\n" + mode.selectedOptions[0].textContent + (chosen && plane() ? " · " + chosen.label : "") + "\n" + input.model + " / " + input.effort;
       if (!await window.aiwConfirm(t("保存以下工厂设置？") + "\n" + detail)) return;
       if (JSON.stringify(settingsInput()) !== snapshot) throw new Error(t("设置在确认期间发生变化，请重新核对后保存。"));
       const result = await call(factoryRoot, "settings", input);saved = result.settings || input;renderWorkers(result.managedWorkers || []);
@@ -336,8 +351,10 @@
     for (const name of ["runtime", "model", "effort", "python", "executable", "guardHome"]) {
       const value = saved?.[name] ?? (["runtime", "model", "effort"].includes(name) ? params.get(name) : null);
       if (name === "effort" && value === "xhigh" && runtime.value === "codex-app-server") form.elements.effort.add(new Option("xhigh", "xhigh"));
+      if (name === "effort" && value === "max" && saved?.apiProvider === "deepseek") form.elements.effort.add(new Option("max", "max"));
       if (value != null) form.elements[name].value = value;
     }
+    apiProvider.value = saved?.apiProvider || (saved?.runtime === "openai-agents" ? "openai" : "");apiProtocol.value = saved?.apiProtocol || "responses";
     form.elements.automaticWorkers.checked = saved?.automaticWorkers ?? true;
     modes(saved?.runtime ? saved.credentialRef ? (saved.runtime === "codex-app-server" ? "codex-plane" : "chatgpt") : (saved.runtime === "codex-app-server" ? "codex-local" : "api-key") : "");
     fields.disabled = false;save.disabled = false;showModel(modelInput.value);synchronize({ requestedRef: saved?.credentialRef || "", preserveModel: true });

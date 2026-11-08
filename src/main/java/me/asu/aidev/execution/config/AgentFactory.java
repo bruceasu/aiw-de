@@ -28,9 +28,9 @@ public class AgentFactory {
     }
     public record Details(List<String> missing,List<String> recoveryActions) {}
     public List<AiProfileCatalog.NamedProfile> supportedProfiles() {
-        return (factorySettings==null?ai.approved(TaskType.EXTERNAL_WORK):factorySettings.profiles()).stream().filter(p->p.profile().provider().equals("openai") && !p.profile().fast()
-                && Set.of("openai-agents","codex-app-server").contains(p.profile().runtime())
-                && (p.profile().runtime().equals("codex-app-server")?Set.of("none","minimal","low","medium","high","xhigh"):Set.of("none","minimal","low","medium","high")).contains(p.profile().effort())).toList();
+        return (factorySettings==null?ai.approved(TaskType.EXTERNAL_WORK):factorySettings.profiles()).stream()
+                .filter(p->Set.of("openai-agents","codex-app-server").contains(p.profile().runtime())
+                    && me.asu.aidev.workflow.application.RecommendationProfiles.compatible(p.profile())).toList();
     }
     @Transactional public Preparation prepare(Intent intent) {
         boundary.lock();String owner=configurations.currentOwner();return prepareAuthorized(intent,owner);
@@ -73,7 +73,8 @@ public class AgentFactory {
         var approved=supportedProfiles().stream().filter(p->p.id().equals(intent.aiProfileId()) && p.profile().runtime().equals(intent.runtime())).findFirst();
         if(approved.isEmpty()) return blocked(intent,Error.UNSUPPORTED_RUNTIME,"Configure an approved, supported AI profile for the exact requested runtime",next);
         var guidance=new AiProfileCatalog.Guidance(factorySettings==null?ai.version():factorySettings.version(),List.of(approved.get()),null,approved.get().id());
-        var binding=new Binding(owner,ref,intent.runtime(),guidance);
+        var saved=factorySettings==null?null:factorySettings.current();
+        var binding=new Binding(owner,ref,intent.runtime(),guidance,saved!=null&&intent.runtime().equals("openai-agents")?saved.apiProtocol():null);
         var capabilities=ConfigurationContract.requiredCapabilities(intent.repositoryRef());
         boolean available=repo.jdbc().queryForList("SELECT id FROM worker WHERE status='ACTIVE' AND last_heartbeat_at_epoch_ms>=?",String.class,java.time.Instant.now().minus(me.asu.aidev.worker.domain.WorkerLiveness.HEARTBEAT_WINDOW).toEpochMilli()).stream()
                 .map(id->workers.find(new me.asu.aidev.worker.domain.WorkerId(id)).orElseThrow())

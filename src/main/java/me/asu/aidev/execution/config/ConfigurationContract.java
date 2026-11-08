@@ -86,6 +86,12 @@ public final class ConfigurationContract {
         }
     }
     public record Proposal(String strategy,PreparedConfigRef reused,Candidate candidate) {}
-    public record Binding(String configOwner,PreparedConfigRef ref,String runtime,AiProfileCatalog.Guidance guidance) {}
+    public record Binding(String configOwner,PreparedConfigRef ref,String runtime,AiProfileCatalog.Guidance guidance,String apiProtocol) {
+        public Binding(String configOwner,PreparedConfigRef ref,String runtime,AiProfileCatalog.Guidance guidance) {this(configOwner,ref,runtime,guidance,null);}
+        public Binding {
+            if(apiProtocol==null&&runtime.equals("openai-agents")&&guidance!=null&&guidance.version().startsWith("factory-"))apiProtocol="responses";
+            if(apiProtocol!=null&&!Set.of("responses","chat-completions").contains(apiProtocol))throw new IllegalArgumentException("Unsupported API protocol");
+        }
+    }
     public static void id(String value) { if(value==null || !value.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,95}")) throw new IllegalArgumentException("Registered identifier required"); }
 }

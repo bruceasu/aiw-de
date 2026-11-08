@@ -19,6 +19,8 @@ class ResponsesConversation:
     runtime = "openai-agents"
 
     def __init__(self, request, on_session):
+        if request.model_images:
+            raise RuntimeError("MODEL_IMAGES_OAUTH_NOT_CONNECTED")
         if request.credential_provider is None:
             raise RuntimeError("MODEL_CONNECTION_REQUIRED")
         self.request, self.on_session = request, on_session
