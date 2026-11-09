@@ -56,7 +56,7 @@
   const selected = () => connections.find(item => item.id === credential.value);
   const plane = () => ["chatgpt", "codex-plane"].includes(mode.value);
   const kind = () => mode.value === "chatgpt" ? "CHATGPT_RESPONSES" : "CODEX_APP_SERVER";
-  const kindName = value => t(value === "CHATGPT_RESPONSES" ? "ChatGPT OAuth（Python Worker）" : "Codex 登录凭证（Codex App Server）");
+  const kindName = value => t(value === "CHATGPT_RESPONSES" ? "ChatGPT OAuth（OpenAI 兼容 API）" : "Codex 登录凭证（Codex App Server）");
   function modes(chosen = "") {
     mode.replaceChildren(new Option(t(runtime.value ? "请选择登录方式" : "请先选择执行方式"), ""));
     for (const [value, name] of runtime.value === "codex-app-server"
@@ -138,8 +138,8 @@
     byId("factory-local-settings").hidden = mode.value !== "codex-local";
     byId("factory-local-settings").textContent = t("复用 Worker 本机的 Codex 登录。模型目录查询使用 Plane 本机的相同程序路径；外部 Worker 的模型可用性可能不同。");
     byId("factory-api-settings").hidden = mode.value !== "api-key";
-    byId("factory-api-settings").textContent = deepseek ? t(environment === null ? "无法读取本机 DeepSeek API Key 配置状态，请重新读取连接状态。" : environment.deepseekKeyConfigured ? "本机已配置 DEEPSEEK_API_KEY。Python Worker 使用 DeepSeek 官方接口，页面不显示密钥。" : "本机尚未配置 DEEPSEEK_API_KEY。请配置后重启 Plane；外部 Worker 使用自己的环境时，可手动填写模型。") : t(environment === null ? "无法读取本机 API Key 配置状态，可重新读取连接状态后重试。" : environment.apiKeyConfigured
-      ? (environment.customEndpoint ? "本机运行环境已配置 API Key 和自定义 API 地址。密钥不会显示在页面中；Python Worker 使用 OpenAI Agents SDK 执行。" : "本机运行环境已配置 OPENAI_API_KEY。密钥不会显示在页面中；Python Worker 使用 OpenAI Agents SDK 执行。")
+    byId("factory-api-settings").textContent = deepseek ? t(environment === null ? "无法读取本机 DeepSeek API Key 配置状态，请重新读取连接状态。" : environment.deepseekKeyConfigured ? "本机已配置 DEEPSEEK_API_KEY。将使用 DeepSeek 官方接口，页面不显示密钥。" : "本机尚未配置 DEEPSEEK_API_KEY。请配置后重启 Plane；外部 Worker 使用自己的环境时，可手动填写模型。") : t(environment === null ? "无法读取本机 API Key 配置状态，可重新读取连接状态后重试。" : environment.apiKeyConfigured
+      ? (environment.customEndpoint ? "本机运行环境已配置 API Key 和自定义 API 地址。密钥不会显示在页面中。" : "本机运行环境已配置 OPENAI_API_KEY。密钥不会显示在页面中。")
       : "本机尚未配置 OPENAI_API_KEY。请在运行环境中配置，或改用 ChatGPT 登录。外部 Worker 使用自己的环境时，可手动填写模型。");
     byId("factory-codex-executable").hidden = !codex;form.elements.executable.disabled = !codex;
     byId("factory-codex-home").hidden = mode.value !== "codex-local";form.elements.guardHome.disabled = mode.value !== "codex-local";

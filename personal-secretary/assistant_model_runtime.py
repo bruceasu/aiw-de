@@ -151,14 +151,16 @@ async def _complete_openai(settings, request):
         access = settings["_connections"].access(settings["connectionId"], settings["connectionVersion"], "api-key")
         api_key, base_url = access["token"], access["baseUrl"]
     else:
-        api_key, base_url = settings.get("key") or os.environ.get("OPENAI_API_KEY", "").strip(), settings.get("endpoint")
+        from secretary_credentials import api_key_environment
+        api_key, base_url = settings.get("key") or (os.environ.get(api_key_environment(settings.get("endpoint")), "").strip()
+            if settings.get("credentialSource") == "environment" else ""), settings.get("endpoint")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY_REQUIRED")
     client = AsyncOpenAI(api_key=api_key, base_url=base_url or "https://api.openai.com/v1",
                          timeout=ATTEMPT_TIMEOUT_SECONDS, max_retries=0, http_client=DefaultAsyncHttpxClient(follow_redirects=False))
     parameters = {"model": request.model, "instructions": HOST_ACTION_INSTRUCTIONS + "\n" + request.instruction,
         "input": [{"role": "user", "content": "Return only the requested text. Do not use tools."}], "tools": [], "store": False, "stream": False}
-    if request.reasoning_effort and request.reasoning_effort != "none":
+    if request.reasoning_effort:
         parameters["reasoning"] = {"effort": request.reasoning_effort}
     loop = asyncio.get_running_loop()
     execution_task = asyncio.current_task()

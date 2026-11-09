@@ -37,7 +37,7 @@ class LocalCase(unittest.TestCase):
         self.addCleanup(self.store.close)
         self.settings = SimpleNamespace(directory=self.store.path.parent, value={"roots": [str(self.work)],
             "provider": "openai-agents", "authMode": "api-key", "model": "test"}, knowledge_available=lambda: False)
-        self.tools = DailyTools(self.settings, "", store=self.store)
+        self.tools = DailyTools(self.settings, "请创建文件", store=self.store)
         self.runtime = SimpleNamespace(store=self.store, settings=self.settings, cancelled=threading.Event())
         work = self.store.put("work", "work", {"title": "test", "state": "OPEN"}, 0)
         self.job = self.store.put("decision", "job", {"kind": "DAILY_PLAN", "workId": work["id"], "userText": "request", "steps": []}, 0)
@@ -72,6 +72,59 @@ class LocalCase(unittest.TestCase):
         self.assertEqual(result["status"], "CREATED")
         self.assertEqual(path.read_bytes(), b"hello")
         self.assertTrue(result["saved"])
+
+    def test_weather_question_does_not_create_a_file(self):
+        tools = DailyTools(self.settings, "明天东京的天气如何？是否晴天。", store=self.store)
+        path = self.work / "weather.md"
+        result = tools.perform({"action": "create_file", "path": str(path), "text": "weather"})
+        self.assertEqual(result["status"], "NOT_EXECUTED")
+        self.assertFalse(path.exists())
+
+    def test_requested_output_path_allows_file_creation(self):
+        path = self.work / "requested.md"
+        tools = DailyTools(self.settings, "整理天气", output_path=str(path), store=self.store)
+        result = tools.perform({"action": "create_file", "path": str(path), "text": "weather"})
+        self.assertEqual(result["status"], "CREATED")
+
+    def test_old_file_request_does_not_authorize_new_weather_question(self):
+        tools = DailyTools(self.settings, "之前请创建文件\n明天东京的天气如何？", store=self.store,
+                           user_message="明天东京的天气如何？", file_request_text="明天东京的天气如何？")
+        path = self.work / "weather.md"
+        result = tools.perform({"action": "create_file", "path": str(path), "text": "weather"})
+        self.assertEqual(result["status"], "NOT_EXECUTED")
+        self.assertFalse(path.exists())
+
+    def test_negative_instruction_overrides_output_path(self):
+        path = self.work / "cancelled.md"
+        tools = DailyTools(self.settings, "不要写文件", output_path=str(path), store=self.store)
+        result = tools.perform({"action": "create_file", "path": str(path), "text": "weather"})
+        self.assertEqual(result["status"], "NOT_EXECUTED")
+        self.assertFalse(path.exists())
+
+    def test_original_file_intent_is_available_without_reading_target(self):
+        identity = self.start()
+        action = {"action": "create_file", "path": "C:/example/weather.md", "text": "original proposed content"}
+        self.store.put("runtime", "receipt-test", {"kind": "SECRETARY_TOOL", "runId": identity,
+            "state": "UNKNOWN", "action": action}, 0)
+        result = self.journal.file_intents(identity)
+        self.assertEqual(result["files"][0]["path"], action["path"])
+        self.assertEqual(result["files"][0]["text"], action["text"])
+        self.assertEqual(result["files"][0]["state"], "UNKNOWN")
+
+    def test_saved_model_interactions_are_bounded_and_exclude_binding(self):
+        identity = self.start()
+        run = self.journal.get(identity)
+        self.journal.save(run, history=[{"role": "user", "content": "weather?"},
+            {"type": "function_call", "name": "search", "call_id": "call-1", "arguments": '{"query":"weather"}'},
+            {"type": "function_call_output", "call_id": "call-1", "output": "x" * 7000}])
+        self.store.put("runtime", "receipt-interaction", {"kind": "SECRETARY_TOOL", "runId": identity,
+            "callId": "call-1", "state": "SUCCEEDED", "action": {"action": "search"}}, 0)
+        result = self.journal.interaction_history(identity)
+        self.assertEqual([item["kind"] for item in result["items"]], ["message", "function_call", "function_call_output"])
+        self.assertEqual(result["items"][1]["receiptState"], "SUCCEEDED")
+        self.assertEqual(len(result["items"][2]["text"]), 6000)
+        self.assertTrue(result["truncated"])
+        self.assertNotIn("binding", json.dumps(result))
 
     def test_draft_preserves_original_bom_and_newlines(self):
         path = self.work / "note.md"
@@ -257,6 +310,35 @@ class LocalCase(unittest.TestCase):
             self.journal.check(identity)
         self.journal.admitted(key, lambda: {"text": "approved result"})
         self.assertEqual(self.store.get("runtime", key)["result"]["text"], "approved result")
+
+    def test_approved_file_result_replaces_waiting_model_output(self):
+        from assistant_tools import ConfirmationRequired
+        identity = self.start()
+        action = {"action": "create_file", "path": str(self.work / "approved.md"), "text": "draft"}
+        self.journal.save(self.journal.get(identity), history=[
+            {"type": "function_call", "name": "create_file", "call_id": "file-call", "arguments": json.dumps(action)},
+            {"type": "function_call_output", "call_id": "file-call", "output": '{"status":"WAITING_USER"}'},
+        ])
+        def waiting(_action):
+            raise ConfirmationRequired("confirm", action)
+        with self.assertRaises(ConfirmationRequired):
+            self.journal.invoke(identity, action, waiting, call_id="file-call")
+        key = self.journal.waiting_receipt(identity, action)
+        result = self.journal.admitted(key, lambda: {"status": "CREATED", "path": action["path"]})
+        self.journal.record_approved_output(identity, key, result)
+        outputs = [item for item in self.journal.get(identity)["history"] if item.get("type") == "function_call_output"]
+        self.assertEqual(len(outputs), 1)
+        self.assertEqual(json.loads(outputs[0]["output"]), result)
+        self.assertFalse(self.journal.get(identity)["hasWaitingTool"])
+
+    def test_waiting_receipt_matches_exact_file_request(self):
+        identity = self.start()
+        first = {"action": "create_file", "path": "first.md", "text": "one"}
+        second = {"action": "create_file", "path": "second.md", "text": "two"}
+        for ordinal, action in enumerate((first, second), 1):
+            self.store.put("runtime", "waiting-" + str(ordinal), {"kind": "SECRETARY_TOOL", "runId": identity,
+                "state": "WAITING", "action": action, "ordinal": ordinal}, 0)
+        self.assertEqual(self.journal.waiting_receipt(identity, first), "waiting-1")
 
 
 class ConnectionCase(unittest.TestCase):

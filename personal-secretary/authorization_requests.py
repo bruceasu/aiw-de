@@ -82,7 +82,7 @@ class AuthorizationRequests:
                 if session.get("ownerId") != self.store.owner or session.get("agentId") != self.store.worker:
                     raise AuthorizationRequired("平台身份与原秘书不一致，请重新连接原秘书。", "PLATFORM_IDENTITY_MISMATCH")
                 runtime.platform.session_started = True
-            identity = runtime.platform.request("/connection-state")
+            identity = runtime.platform_actions._read(lambda: runtime.platform.request("/connection-state"))
             runtime.platform_observed = {"enabled": identity.get("enabled") is True, "agentBoot": runtime.platform.boot, "generation": identity.get("generation")}
             if row.get("planId") and row["action"].get("action") in {"professional_options", "delegate_task"}:
                 details = runtime.platform_setup.diagnostics(row["planId"])
@@ -104,7 +104,7 @@ class AuthorizationRequests:
                         raise AuthorizationRequired("此计划缺少固定 Git 基线。请在文件执行范围中选择仓库，准备基线并确认保存。", "BASELINE_REQUIRED")
                 if not options.get("models"):
                     raise AuthorizationRequired("Agent 工厂尚未选择默认模型。请打开“Agent 工厂设置”保存一次模型与自动 Worker 设置，之后由工厂自动准备。", "PROFESSIONAL_MODEL_REQUIRED")
-            elif row["action"].get("action") != "platform_permissions":
+            elif row["action"].get("action") not in {"platform_permissions", "platform_plan_overview"}:
                 permissions = runtime.platform.request("/action-permissions")
                 if not any(item.get("effectiveState") == "ENABLED" and item.get("remaining", 0) > 0
                     and (not row.get("planId") or item.get("scopeKind") == "ALL" or item.get("scopeId") == row["planId"]) for item in permissions):
@@ -159,7 +159,8 @@ class AuthorizationRequests:
             return
         if time.monotonic() - self.last_poll < 5: return
         self.last_poll = time.monotonic()
-        if not self.runtime.platform_setup.public()["connected"] or not self.checking.acquire(blocking=False): return
+        backend = self.runtime.platform.backend
+        if (not self.runtime.platform_setup.public()["connected"] and getattr(backend, "profile", None) != "LOCAL") or not self.checking.acquire(blocking=False): return
         def check():
             try:
                 # Only pending authorization requests fetch connection/approval state.

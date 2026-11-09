@@ -22,8 +22,10 @@ class PlatformAgentActions:
                 if not status["enabled"]: raise AuthorizationRequired("需要你确认当前秘书进程及代理范围。", "PLATFORM_PERMISSION_REQUIRED", work.get("planId"))
             business = BusinessActions(self.runtime)
             kind = action.get("action")
+            if kind == "platform_plan_overview":
+                return self._read(lambda: self.runtime.platform.request("/plan-overview"))
             if kind == "platform_permissions":
-                available = business.permissions()
+                available = self._read(business.permissions)
                 active = [item for item in available["permissions"] if item.get("effectiveState") == "ENABLED" and item.get("remaining", 0) > 0][:30]
                 return {"permissions": active}
             if kind == "platform_questions":
@@ -54,13 +56,31 @@ class PlatformAgentActions:
                 raise error
             return result
         except PlatformError as error:
-            if error.status in {401, 403, "PLATFORM_NOT_CONNECTED"}:
-                raise AuthorizationRequired("平台连接或当前操作尚未获准，请确认连接和代理范围。", "PLATFORM_PERMISSION_REQUIRED", work.get("planId")) from None
+            if error.status == 401:
+                raise AuthorizationRequired("平台连接会话未获确认，请检查秘书连接状态。", "PLATFORM_SESSION_REQUIRED", work.get("planId")) from None
+            if error.status == 403:
+                raise AuthorizationRequired("平台拒绝了当前操作，请核对秘书身份和该操作的授权范围。", "PLATFORM_PERMISSION_REQUIRED", work.get("planId")) from None
+            if error.status == "PLATFORM_NOT_CONNECTED":
+                raise AuthorizationRequired("秘书尚未连接平台，请在设置中检查连接。", "PLATFORM_CONNECTION_REQUIRED", work.get("planId")) from None
             raise
         except ValueError as error:
             if not self.runtime.platform_setup.public()["connected"]:
                 raise AuthorizationRequired("请先在设置中连接专业平台，原任务会保留。", "PLATFORM_CONNECTION_REQUIRED") from None
             raise
+
+    def _read(self, operation):
+        """Retry a read once after restoring an authenticated local process session."""
+        try:
+            return operation()
+        except PlatformError as error:
+            backend = self.runtime.platform.backend
+            if error.status != 401 or getattr(backend, "profile", None) != "LOCAL":
+                raise
+            backend.session_started = False
+            state = self.runtime.platform_setup.check()
+            if not state.get("enabled"):
+                raise AuthorizationRequired("本机秘书会话尚未启用，请检查连接状态。", "PLATFORM_SESSION_REQUIRED") from None
+            return operation()
 
     def wait(self, work, job, action, result):
         if action.get("action") not in {"platform_action", "platform_answer"} or not result.get("requestId"): return False

@@ -205,12 +205,14 @@ def create_model(client, model, config, attempt):
                 declarations.append({"type": "function", "function": {"name": tool.name,
                     "description": tool.description, "parameters": tool.params_json_schema, "strict": False}})
             extra = model_settings.extra_args or {}
-            effort = extra.get("reasoning_effort", "none")
-            if effort not in {"none", "low", "high", "max"}:
+            effort = extra.get("reasoning_effort")
+            if effort is not None and effort not in {"none", "low", "high", "max"}:
                 raise RuntimeError("DEEPSEEK_REASONING_EFFORT_INVALID")
             params = {"model": model, "messages": messages(system_instructions, input), "stream": True,
-                      "stream_options": {"include_usage": True}, "reasoning_effort": effort,
-                      "extra_body": {"thinking": {"type": "disabled" if effort == "none" else "enabled"}}}
+                      "stream_options": {"include_usage": True}}
+            if effort is not None:
+                params["reasoning_effort"] = effort
+                params["extra_body"] = {"thinking": {"type": "disabled" if effort == "none" else "enabled"}}
             if declarations:
                 params["tools"] = declarations
             choice = model_settings.tool_choice

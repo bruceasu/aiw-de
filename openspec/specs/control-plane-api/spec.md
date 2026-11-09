@@ -136,6 +136,12 @@ For a `REMOTE` Agent profile, the Control Plane SHALL require HTTPS and a client
 - **THEN** the Control Plane enables that current session and ensures the configured administrator Owner's existing Plan and Task defaults
 - **AND** a revoked identity remains revoked and is not recreated by the session request
 
+### Scenario: Agent reads current Plan overview
+- **WHEN** an enabled Agent requests the bounded Plan overview through its authenticated process session
+- **THEN** LOCAL sees only Plans and tasks belonging to its configured administrator Owner
+- **AND** REMOTE sees only owned Plans covered by its active Plan action scope
+- **AND** the response distinguishes Plan state from task state and marks truncated results
+
 #### Scenario: Untrusted or unpinned client certificate
 - **WHEN** a remote Agent request has no client certificate, an untrusted chain, or an unapproved fingerprint
 - **THEN** the Control Plane rejects the request before business authorization

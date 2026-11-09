@@ -558,7 +558,8 @@ function renderChat() {
     page.hasMore = true;
   }
   const messages = page ? page.messages.slice(-visible) : [];
-  const key = JSON.stringify({ workId, messages, visible, more: page?.hasMore, loaded: page?.loaded, loading: page?.loading, error: page?.error, locale: window.aiwI18n?.locale });
+  const waitingConfirmations = rows("decisions").filter(item => item.kind === "DAILY_CONFIRMATION" && item.state === "WAITING" && item.workId === workId);
+  const key = JSON.stringify({ workId, messages, waitingConfirmations: waitingConfirmations.map(item => [item.id, item.revision]), visible, more: page?.hasMore, loaded: page?.loaded, loading: page?.loading, error: page?.error, locale: window.aiwI18n?.locale });
   if (key === chatRenderKey) return;
   const follow = renderedChatWork !== workId || target.scrollHeight - target.scrollTop - target.clientHeight < 48;
   const previousScroll = target.scrollTop;
@@ -595,6 +596,9 @@ function renderChat() {
       bubble.dataset.i18nSkip = "";
       if (kind === "assistant") bubble.append(markdownContent(text)); else bubble.textContent = text;
       item.append(node("small", "", label + (message.createdAt ? " · " + dateLabel(message.createdAt) : "")), bubble);
+      if (kind === "assistant" && waitingConfirmations.some(decision => decision.messageId === message.id)) {
+        item.append(button("查看待确认的文件操作", () => switchView("confirmations", true)));
+      }
       target.append(item);
     }
   }
@@ -785,20 +789,70 @@ let modelAuthorizationUrl = "";
 const secretaryRunDrafts = new Map();
 const secretaryRunDetails = new Map();
 const secretaryControlRequests = new Map();
+let modelCatalogGeneration = 0;
+let modelCatalogTimer = null;
+
+function scheduleModelCatalog() {
+  const generation = ++modelCatalogGeneration;
+  clearTimeout(modelCatalogTimer);
+  byId("available-models").replaceChildren();
+  const choice = byId("model-catalog-choice");
+  choice.replaceChildren(new Option("获取列表后选择，也可直接输入", ""));
+  choice.disabled = true;
+  const service = byId("model-service").value;
+  if (!["openai", "deepseek", "responses", "chat", "chatgpt"].includes(service)) {
+    byId("model-catalog-status").textContent = "当前方式请手动填写模型。";
+    return;
+  }
+  const form = formFor("settings");
+  const source = form.elements.credentialSource.value;
+  const key = source === "environment" ? "" : form.elements.key.value.trim();
+  const connectionId = key || source === "environment" ? "" : form.elements.connectionId.value;
+  const base = form.elements.endpoint.value.trim();
+  const savedKeyMatches = snapshot?.assistant?.hasKey && snapshot.assistant.credentialSource !== "environment"
+    && (snapshot.assistant.endpoint || "").replace(/\/$/, "") === base.replace(/\/$/, "");
+  if (service === "chatgpt" && !connectionId || ["responses", "chat"].includes(service) && !base
+      || ["openai", "deepseek"].includes(service) && source !== "environment" && !key && !connectionId && !savedKeyMatches) {
+    byId("model-catalog-status").textContent = "选择连接或填写所需信息后自动获取；也可手动填写。";
+    return;
+  }
+  byId("model-catalog-status").textContent = "正在获取模型列表……";
+  modelCatalogTimer = setTimeout(async () => {
+    try {
+      const { result } = await post("model/catalog", { service, endpoint: base, connectionId, key, credentialSource: source }, false);
+      if (generation !== modelCatalogGeneration) return;
+      const list = byId("available-models");
+      list.replaceChildren(...result.models.map(value => new Option(value, value)));
+      choice.replaceChildren(new Option("请选择模型，或直接输入模型名称", ""), ...result.models.map(value => new Option(value, value)));
+      choice.disabled = !result.models.length;
+      choice.value = result.models.includes(form.elements.model.value) ? form.elements.model.value : "";
+      byId("model-catalog-status").textContent = result.models.length
+        ? result.truncated ? "模型列表已获取部分结果；可选择或手动填写。" : "模型列表已获取；可选择或手动填写。目录不保证模型支持工具调用。"
+        : "模型目录为空；可手动填写模型。";
+    } catch (error) {
+      if (generation !== modelCatalogGeneration) return;
+      byId("model-catalog-status").textContent = errorMessage(error) || "无法获取模型列表；可手动填写模型。";
+    }
+  }, 250);
+}
 
 function renderSecretaryModels() {
   const form = formFor("settings");
   if (!form || !snapshot?.assistant) return;
-  const sdk = form.elements.provider.value === "openai-agents";
+  const service = byId("model-service").value;
+  const sdk = form.elements.provider.value === "openai-agents" && !!service;
   const mode = form.elements.authMode.value;
+  const environmentKey = sdk && mode === "api-key" && form.elements.credentialSource.value === "environment";
   const models = snapshot.assistant.models || {};
   const select = form.elements.connectionId;
   const selected = select.value || select.dataset.savedId || "";
-  const signature = JSON.stringify([mode, models.connections]);
+  const signature = JSON.stringify([mode, service, models.connections]);
   if (select.dataset.signature !== signature) {
     select.replaceChildren(new Option("请选择连接，或创建新连接", ""));
     for (const connection of models.connections || []) {
       if (connection.kind !== mode) continue;
+      if (mode === "api-key" && service === "deepseek" && !/^https:\/\/api\.deepseek\.com(?:\/v1)?\/?$/i.test(connection.baseUrl || "")) continue;
+      if (mode === "api-key" && service === "openai" && !/^https:\/\/api\.openai\.com\/v1\/?$/i.test(connection.baseUrl || "")) continue;
       const status = connection.status === "READY" ? connection.kind === "api-key" ? "密钥已保存，模型待检查" : "已授权，模型待检查"
         : ({ REAUTH_REQUIRED: "需要重新登录", REFRESHING: "刷新结果待确认", DISCONNECTED: "本机已停用" })[connection.status] || connection.status;
       const option = new Option(`${connection.label || connection.kind} · ${connection.account || connection.id} · ${status}`, connection.id);
@@ -808,14 +862,45 @@ function renderSecretaryModels() {
     select.dataset.signature = signature;
   }
   for (const element of document.querySelectorAll("[data-sdk-auth]")) element.hidden = !sdk;
-  form.elements.authMode.disabled = !sdk;
-  select.disabled = !sdk;
-  form.elements.key.disabled = form.elements.provider.value === "codex-app-server" || sdk && mode !== "api-key";
-  form.elements.endpoint.disabled = form.elements.provider.value === "codex-app-server" || sdk && mode === "chatgpt";
+  document.querySelector("[data-api-key-source]").hidden = !sdk || mode !== "api-key";
+  form.elements.credentialSource.disabled = !sdk || mode !== "api-key";
+  document.querySelector("[data-connection-field]").hidden = !sdk || environmentKey;
+  select.disabled = !sdk || environmentKey;
+  const showKey = service === "openai" || service === "responses" || service === "deepseek" || service === "chat";
+  const showEndpoint = showKey;
+  const showModel = !!service && service !== "command";
+  const showEffort = sdk || service === "codex";
+  for (const option of form.elements.effort.options) {
+    const supported = service !== "deepseek" || ["", "none", "low", "high", "max"].includes(option.value);
+    option.hidden = !supported && option.value !== form.elements.effort.value;
+    option.disabled = !supported && option.value !== form.elements.effort.value;
+  }
+  for (const element of document.querySelectorAll("[data-chatgpt-only]")) element.hidden = service !== "chatgpt";
+  for (const element of document.querySelectorAll("[data-codex-only]")) element.hidden = service !== "codex";
+  for (const element of document.querySelectorAll("[data-command-only]")) element.hidden = service !== "command";
+  document.querySelector("[data-key-field]").hidden = !showKey || environmentKey;
+  document.querySelector("[data-endpoint-field]").hidden = !showEndpoint;
+  for (const element of document.querySelectorAll("[data-model-field]")) element.hidden = !showModel;
+  document.querySelector("[data-effort-field]").hidden = !showEffort;
+  form.elements.key.disabled = !showKey || environmentKey;
+  form.elements.endpoint.disabled = !showEndpoint;
+  byId("model-login").hidden = service !== "chatgpt";
+  byId("model-login-cancel").hidden = service !== "chatgpt";
+  const descriptions = {
+    chatgpt: "使用秘书本机的 ChatGPT 登录和 Responses 接口；首次登录需要在秘书主机打开浏览器。",
+    openai: "使用 OpenAI API Key 和 Responses 接口；按 API 用量计费。",
+    deepseek: "使用 DeepSeek API Key 和 Responses 接口，由秘书的 Agents SDK 循环处理工具。",
+    responses: "使用支持 Responses 接口的兼容服务和 API Key；服务须支持所选模型和工具调用。",
+    chat: "使用兼容 Chat Completions 的服务。当前采用秘书原有文本处理路径，尚不是 SDK 原生工具调用。",
+    codex: "使用本机已登录的 Codex，作为备用方式。",
+    command: "使用已配置的自定义程序处理模型请求。"
+  };
+  byId("model-service-help").textContent = descriptions[service] || "请选择服务，再填写所需的登录和模型信息。";
   const loginActive = ["WAITING", "EXCHANGING"].includes(models.login?.state);
   byId("model-login").disabled = modelLoginBusy || !sdk || mode !== "chatgpt" || !models.persistentOAuth || !snapshot.localOAuth || loginActive;
   byId("model-login-cancel").disabled = !loginActive || modelLoginBusy;
-  byId("model-disconnect").disabled = !select.value || modelLoginBusy;
+  byId("model-disconnect").hidden = environmentKey;
+  byId("model-disconnect").disabled = !select.value || modelLoginBusy || environmentKey;
   let message = "秘书使用本机独立连接，Control Plane 不需要在线。";
   if (models.error) message = models.error;
   else if (sdk && !mode) message = "请明确选择使用 ChatGPT 套餐登录或 API Key，再选择连接和模型。";
@@ -824,9 +909,17 @@ function renderSecretaryModels() {
   else if (models.login?.message && mode === "chatgpt") message = models.login.message;
   else if (sdk && mode === "chatgpt" && !select.value) message = "还没有选择 ChatGPT 连接。先登录，再选择返回的本机连接；登录不代表已选择模型。";
   else if (sdk && mode === "api-key" && !select.value) message = snapshot.assistant.hasKey ? "当前沿用此前保存的本机密钥；可重新填写密钥后保存，迁入本机连接管理。" : "选择已保存的 API Key 连接，或填写 API Key 后保存以创建连接。";
+  else if (service === "chat") message = "填写服务地址、模型和 API Key 后保存。该路径使用秘书原有的文本处理方式。";
   else if (!sdk && form.elements.provider.value === "codex-app-server") message = "明确使用本机 Codex 备用通道；沿用本机登录，不自动切换到其它账户或付费方式。";
   byId("model-connection-status").textContent = message;
-  if (sdk && snapshot.assistant.credentialSource === "environment" && !select.value) byId("model-connection-status").textContent = "当前沿用此前明确配置的 OPENAI_API_KEY 启动环境来源；可填写密钥或选择连接后迁入本机连接管理。";
+  if (environmentKey) {
+    let name = "OPENAI_API_KEY";
+    try { if (new URL(form.elements.endpoint.value).hostname.toLowerCase() === "api.deepseek.com") name = "DEEPSEEK_API_KEY"; } catch (_) { /* Server validates the address. */ }
+    const available = snapshot.assistant.environmentKeyAvailable?.[name];
+    byId("model-connection-status").textContent = available === false
+      ? name === "DEEPSEEK_API_KEY" ? "秘书进程未读取到 DEEPSEEK_API_KEY；请设置后重启秘书，或选择本机保存的连接。" : "秘书进程未读取到 OPENAI_API_KEY；请设置后重启秘书，或选择本机保存的连接。"
+      : name === "DEEPSEEK_API_KEY" ? "使用秘书进程的 DEEPSEEK_API_KEY 环境变量。" : "使用秘书进程的 OPENAI_API_KEY 环境变量。";
+  }
   if (loginActive && modelAuthorizationUrl) {
     const link = node("a", "", "打开 ChatGPT 登录页"); link.href = modelAuthorizationUrl; link.target = "_blank"; link.rel = "noopener noreferrer";
     byId("model-connection-status").append(document.createTextNode(" "), link);
@@ -888,10 +981,27 @@ function renderSecretaryRuns() {
       try { const { result } = await post("run/reconcile", { runId: run.id, revision: current.revision }); feedback(result.note); }
       catch (error) { feedback(errorMessage(error), "error"); }
     }));
+    if (run.hasUnknownEffect || run.state === "RECONCILING") actions.append(button("查看拟创建的文件", async () => {
+      try {
+        const { result } = await post("run/file-intents", { runId: run.id }, false);
+        const details = result.files.length ? result.files.map(file =>
+          `拟创建位置：${file.path}\n工具回执：${file.state || "未知"}\n文件操作记录：${file.operationState || "无记录"}\n\n拟写入内容：\n${file.text}${file.truncated ? "\n（内容已截断）" : ""}`).join("\n\n---\n\n")
+          : "此运行没有可显示的文件创建请求。";
+        secretaryRunDetails.set(run.id, details);
+        renderSecretaryRuns();
+      } catch (error) { feedback(errorMessage(error), "error"); }
+    }));
     actions.append(button("查看执行事件", async () => {
       try {
         const { result } = await post("run/events", { runId: run.id }, false);
         secretaryRunDetails.set(run.id, result.map(event => `${event.sequence}. ${event.type} ${event.tool || event.control || ""} ${event.status || event.state || ""}`).join("\n"));
+        renderSecretaryRuns();
+      } catch (error) { feedback(errorMessage(error), "error"); }
+    }));
+    actions.append(button("查看模型交互", async () => {
+      try {
+        const { result } = await post("run/interactions", { runId: run.id }, false);
+        secretaryRunDetails.set(run.id, { kind: "interactions", ...result });
         renderSecretaryRuns();
       } catch (error) { feedback(errorMessage(error), "error"); }
     }));
@@ -907,7 +1017,28 @@ function renderSecretaryRuns() {
       commands.append(button("完成后再处理", () => send("follow-up", text.value)));
       section.append(commands, node("p", "help", "调整在安全边界生效。暂停或取消不会撤销已完成或已受理的操作。"));
     }
-    if (secretaryRunDetails.has(run.id)) section.append(node("pre", "", secretaryRunDetails.get(run.id)));
+    if (secretaryRunDetails.has(run.id)) {
+      const detail = secretaryRunDetails.get(run.id);
+      if (detail?.kind === "interactions") {
+        const viewer = node("div", "record-list");
+        viewer.append(node("p", "help", "以下是本地保存的交互记录，不是每次 API 请求的完整原文；工具结果可能包含中断后的占位信息。内容可能包含私人资料。"));
+        if (!detail.items.length) viewer.append(node("p", "help", "这次运行没有保存可显示的模型交互。"));
+        detail.items.forEach((item, index) => {
+          const label = item.kind === "function_call" ? "工具请求" : item.kind === "function_call_output" ? "工具结果"
+            : item.kind === "reasoning" ? "模型返回的推理内容" : item.role === "user" ? "发送给模型的内容"
+            : item.role === "assistant" ? "模型回复" : "其他记录";
+          const block = node("details", "record-item");
+          const summary = node("summary");
+          summary.append(document.createTextNode(`${index + 1}. `), node("span", "", label));
+          if (item.name || item.receiptState) summary.append(document.createTextNode(` · ${[item.name, item.receiptState].filter(Boolean).join(" · ")}`));
+          if (item.text) summary.append(node("span", "interaction-preview", item.text.replace(/\s+/g, " ").slice(0, 180)));
+          block.append(summary, node("pre", "", item.text + (item.truncated ? "\n（内容已截断）" : "")));
+          viewer.append(block);
+        });
+        if (detail.truncated) viewer.append(node("p", "help", "部分历史或内容已截断；原始记录仍保存在本机。"));
+        section.append(viewer);
+      } else section.append(node("pre", "", detail));
+    }
     panel.append(section);
   }
 }
@@ -922,6 +1053,14 @@ function renderAssistant() {
     const form = formFor("settings");
     form.elements.provider.value = settings.provider;
     form.elements.authMode.value = settings.authMode || "";
+    form.elements.credentialSource.value = settings.credentialSource || "";
+    const endpoint = (settings.endpoint || "").replace(/\/$/, "");
+    byId("model-service").value = settings.provider === "codex-app-server" ? "codex"
+      : settings.provider === "command" ? "command"
+      : settings.provider === "chat" ? "chat"
+      : settings.authMode === "chatgpt" ? "chatgpt"
+      : settings.authMode === "api-key" ? (!endpoint || endpoint === "https://api.openai.com/v1" ? "openai"
+        : endpoint === "https://api.deepseek.com" || endpoint === "https://api.deepseek.com/v1" ? "deepseek" : "responses") : "";
     form.elements.connectionId.dataset.savedId = settings.connectionId || "";
     form.elements.endpoint.value = settings.endpoint;
     form.elements.model.value = settings.model;
@@ -947,6 +1086,7 @@ function renderAssistant() {
     }
     form.elements.key.placeholder = settings.hasKey ? "密钥已保存；留空保持原值" : "本机无认证模型可留空";
     settingsLoaded = true;
+    setTimeout(scheduleModelCatalog, 0);
     if (!settings.configured) {
       feedback("首次使用请打开“设置”连接模型。保存后可直接聊天、查询和安排工作。", "warn");
       switchView("setup");
@@ -1035,11 +1175,16 @@ function renderAssistant() {
     const item = node("article", "record-item");
     item.append(node("h3", "", decision.message));
     const action = decision.action;
-    const names = { read_file: "读取文件", write_file: "写入文件", delete_file: "不可恢复删除" };
+    const names = { read_file: "读取文件", create_file: "创建文件", write_file: "写入文件", prepare_edit: "准备文件修订副本", apply_edit: "修改文件", restore_file: "恢复文件副本", delete_file: "不可恢复删除" };
     item.append(node("p", "", (names[action.action] || action.action) + "：" + (action.path || "")));
     if (typeof action.text === "string") {
       const preview = node("details", "raw-details");
       preview.append(node("summary", "", "查看将写入的完整内容"), node("pre", "", action.text));
+      item.append(preview);
+    }
+    if (Array.isArray(action.edits)) {
+      const preview = node("details", "raw-details");
+      preview.append(node("summary", "", "查看拟修改的内容"), node("pre", "", JSON.stringify(action.edits, null, 2)));
       item.append(preview);
     }
     const controls = node("div", "record-actions");
@@ -1303,6 +1448,19 @@ async function chatSubmission(data) {
   return key;
 }
 
+const chatComposerForm = formFor("chat");
+const chatComposer = chatComposerForm.elements.text;
+const chatShortcutHint = node("span", "help", "Ctrl+Enter / ⌘+Enter 发送，Enter 换行");
+chatShortcutHint.id = "chat-shortcut-hint";
+chatComposer.insertAdjacentElement("afterend", chatShortcutHint);
+chatComposer.setAttribute("aria-describedby", chatShortcutHint.id);
+chatComposerForm.querySelector('[type="submit"]').setAttribute("aria-keyshortcuts", "Control+Enter Meta+Enter");
+chatComposer.addEventListener("keydown", event => {
+  if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey) || event.altKey || event.isComposing || event.keyCode === 229 || event.repeat) return;
+  event.preventDefault();
+  if (chatComposerForm.getAttribute("aria-busy") !== "true" && !chatComposerForm.querySelector('[type="submit"]').disabled) chatComposerForm.requestSubmit();
+});
+
 document.querySelectorAll("form[data-route]").forEach(form => form.addEventListener("submit", async event => {
   event.preventDefault();
   if (form.getAttribute("aria-busy") === "true") return;
@@ -1393,18 +1551,58 @@ byId("check-model").addEventListener("click", async event => {
   const button = event.currentTarget;
   button.disabled = true;
   feedback("正在检查模型连接，请稍候……");
-  try { await assistantOperation("settings/check", {}, "模型连接正常。"); }
+  try {
+    await post("settings/check", {});
+    feedback("已保存的模型配置连接正常；表单中尚未保存的修改没有参与检查。", "ok");
+  } catch (error) { feedback(errorMessage(error), "error"); }
   finally { button.disabled = false; }
 });
 byId("check-model").textContent = "检查已保存的模型配置";
-for (const name of ["provider", "authMode"]) formFor("settings").elements[name].addEventListener("change", () => {
-  const select = formFor("settings").elements.connectionId;
+byId("model-service").addEventListener("change", event => {
+  const form = formFor("settings");
+  const service = event.target.value;
+  form.elements.provider.value = service === "codex" ? "codex-app-server" : service === "command" ? "command"
+    : service === "chat" ? "chat" : "openai-agents";
+  form.elements.authMode.value = service === "chatgpt" ? "chatgpt" : ["openai", "deepseek", "responses"].includes(service) ? "api-key" : "";
+  form.elements.credentialSource.value = "";
+  form.elements.endpoint.value = service === "deepseek" ? "https://api.deepseek.com" : service === "openai" ? "https://api.openai.com/v1" : "";
+  form.elements.model.value = "";
+  form.elements.key.value = "";
+  form.elements.effort.value = "";
+  const select = form.elements.connectionId;
   select.value = ""; select.dataset.savedId = ""; delete select.dataset.signature;
   renderSecretaryModels();
+  scheduleModelCatalog();
 });
 formFor("settings").elements.connectionId.addEventListener("change", event => {
   event.target.dataset.savedId = event.target.value;
+  const connection = (snapshot.assistant.models.connections || []).find(item => item.id === event.target.value);
+  if (connection?.kind === "api-key" && connection.baseUrl) formFor("settings").elements.endpoint.value = connection.baseUrl;
   renderSecretaryModels();
+  scheduleModelCatalog();
+});
+for (const name of ["endpoint", "key"]) {
+  formFor("settings").elements[name].addEventListener("input", () => {
+    ++modelCatalogGeneration;
+    clearTimeout(modelCatalogTimer);
+    byId("available-models").replaceChildren();
+    byId("model-catalog-choice").replaceChildren(new Option("获取列表后选择，也可直接输入", ""));
+    byId("model-catalog-choice").disabled = true;
+    if (name === "endpoint") renderSecretaryModels();
+  });
+  formFor("settings").elements[name].addEventListener("change", scheduleModelCatalog);
+}
+byId("model-catalog-refresh").addEventListener("click", scheduleModelCatalog);
+byId("model-catalog-choice").addEventListener("change", event => {
+  if (event.target.value) formFor("settings").elements.model.value = event.target.value;
+});
+formFor("settings").elements.credentialSource.addEventListener("change", () => {
+  const form = formFor("settings");
+  form.elements.connectionId.value = "";
+  form.elements.connectionId.dataset.savedId = "";
+  form.elements.key.value = "";
+  renderSecretaryModels();
+  scheduleModelCatalog();
 });
 byId("model-login").addEventListener("click", async () => {
   if (modelLoginBusy) return;

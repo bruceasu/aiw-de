@@ -521,36 +521,36 @@ def _context_tools(request, sources):
 def _create_tools(context: ToolContext) -> list[Any]:
     timeout = context.tool_timeout_ms / 1000
 
-    @function_tool(name_override="read", timeout_seconds=timeout, failure_error_function=None)
+    @function_tool(name_override="read", timeout=timeout, failure_error_function=None)
     async def read_tool(ctx: RunContextWrapper[ToolContext], path: str, offset: int, limit: int) -> str:
         """Read a bounded UTF-8 file range in the assigned workspace; line numbers start at 1."""
         return await _invoke_tool(ctx.context, "read", path, {"path": path, "offset": offset, "limit": limit}, _call_id(ctx),
                                   lambda: _read(ctx.context, path, offset, limit))
 
-    @function_tool(name_override="ls", timeout_seconds=timeout, failure_error_function=None)
+    @function_tool(name_override="ls", timeout=timeout, failure_error_function=None)
     async def list_tool(ctx: RunContextWrapper[ToolContext], path: str) -> str:
         """List visible files and folders under a workspace directory."""
         return await _invoke_tool(ctx.context, "ls", path, {"path": path}, _call_id(ctx), lambda: _list(ctx.context, path))
 
-    @function_tool(name_override="grep", timeout_seconds=timeout, failure_error_function=None)
+    @function_tool(name_override="grep", timeout=timeout, failure_error_function=None)
     async def grep_tool(ctx: RunContextWrapper[ToolContext], path: str, text: str) -> str:
         """Search literal text in bounded visible UTF-8 workspace files."""
         return await _invoke_tool(ctx.context, "grep", path, {"path": path, "text": text}, _call_id(ctx),
                                   lambda: _grep(ctx.context, path, text))
 
-    @function_tool(name_override="write", timeout_seconds=timeout, failure_error_function=None)
+    @function_tool(name_override="write", timeout=timeout, failure_error_function=None)
     async def write_tool(ctx: RunContextWrapper[ToolContext], path: str, content: str) -> str:
         """Create or replace one UTF-8 workspace file atomically; unavailable to read-only roles."""
         return await _invoke_tool(ctx.context, "write", path, {"path": path, "content": content}, _call_id(ctx),
                                   lambda: _write(ctx.context, path, content))
 
-    @function_tool(name_override="edit", timeout_seconds=timeout, failure_error_function=None)
+    @function_tool(name_override="edit", timeout=timeout, failure_error_function=None)
     async def edit_tool(ctx: RunContextWrapper[ToolContext], path: str, old_text: str, new_text: str) -> str:
         """Replace one exact unique occurrence in a workspace file; unavailable to read-only roles."""
         return await _invoke_tool(ctx.context, "edit", path, {"path": path, "oldText": old_text, "newText": new_text}, _call_id(ctx),
                                   lambda: _edit(ctx.context, path, old_text, new_text))
 
-    @function_tool(name_override="edit_many", timeout_seconds=timeout, failure_error_function=None)
+    @function_tool(name_override="edit_many", timeout=timeout, failure_error_function=None)
     async def edit_many_tool(ctx: RunContextWrapper[ToolContext], path: str, old_texts: list[str], new_texts: list[str]) -> str:
         """Apply exact unique, non-overlapping replacements against one file baseline; unavailable to read-only roles."""
         if len(old_texts) != len(new_texts):

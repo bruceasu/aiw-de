@@ -90,12 +90,14 @@
         <a class="btn primary full-btn" href="#plan-draft-actions">Review draft and start execution</a>
       </section>
     </div>
+    <label class="field" data-plan-decision-reason>Decision reason<input data-control-reason maxlength="2000" aria-label="Decision reason" placeholder="Reason required"></label>
+    <div class="mission-utility-toolbar"><button class="btn danger" type="button" data-stop-plan>Stop plan early</button><a class="btn danger" data-factory-stop hidden>Stop factory execution</a></div>
+    <p class="help" data-factory-stop-note hidden>Factory control stops new controlled work and requests the active execution to stop. Check its stop acknowledgement in the control page.</p>
     <details class="mission-utilities"><summary>Other mission controls</summary>
       <div class="mission-utility-toolbar"><button class="btn ghost" type="button" data-copy>Copy into editor</button><span class="help">Start a new plan from this mission.</span></div>
-      <label class="field">Decision reason<input data-control-reason maxlength="2000" aria-label="Decision reason" placeholder="Reason required"></label>
       <div class="manager-action-groups">
         <section class="manager-action-group"><h3>Step control</h3><div class="manager-action-controls"><label>Jump to step <select data-jump-target aria-label="Target step"></select></label><button class="btn ghost" type="button" data-jump>Skip to step</button></div></section>
-        <section class="manager-action-group"><h3>Plan control</h3><div class="manager-action-controls"><button class="btn danger" type="button" data-stop-plan>Stop plan early</button><button class="btn ghost" type="button" data-complete-plan>Complete by human decision</button><button class="btn danger" type="button" data-cancel-plan>Cancel and discard local Git branches</button><button class="btn ghost" type="button" data-resolve-stop>Resolve stale stop request</button></div></section>
+        <section class="manager-action-group"><h3>Plan control</h3><div class="manager-action-controls"><button class="btn ghost" type="button" data-complete-plan>Complete by human decision</button><button class="btn danger" type="button" data-cancel-plan>Cancel and discard local Git branches</button><button class="btn ghost" type="button" data-resolve-stop>Resolve stale stop request</button></div></section>
         <section class="manager-action-group"><h3>Withdraw inactive work</h3><div class="manager-action-controls"><input data-withdraw-reason aria-label="Withdrawal reason" placeholder="Withdrawal reason"><button class="btn ghost" type="button" data-withdraw>Withdraw inactive work</button></div></section>
       </div>
       <p class="help">Active Worker tasks receive a stop request first. Human completion waits for Worker acknowledgement. Cancellation needs all Workers to finish or stop; it deletes only verified local isolated branches. Published results or direct shared work require manual reversal.</p>

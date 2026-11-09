@@ -26,6 +26,17 @@ def endpoint(value):
     return value
 
 
+def api_key_environment(base_url):
+    host = urllib.parse.urlsplit(endpoint(base_url)).hostname
+    return "DEEPSEEK_API_KEY" if host == "api.deepseek.com" else "OPENAI_API_KEY"
+
+
+def missing_api_key_environment(base_url):
+    return ("秘书进程中没有 " + api_key_environment(base_url)
+            + "。请在秘书程序目录的 .env 或启动环境中设置该变量后重启秘书服务，或选择本机保存的连接。"
+              "“检查已保存的模型配置”只检查之前保存的设置。")
+
+
 class ModelConnections:
     def __init__(self, directory):
         self.directory = Path(directory)

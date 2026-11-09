@@ -154,7 +154,7 @@ class PlatformClient:
         if professional_continue:
             identity = operation.removeprefix("/professional-tasks/").removesuffix("/continue")
             professional_continue = identity == str(uuid.UUID(identity)) and body == {}
-        if operation not in {"/professional-tasks", "/professional-tasks/options", "/professional-tasks/diagnostics", "/sessions", "/connection-state", "/identity", "/grants", "/action-permissions", "/permission-questions", "/permission-actions/prepare", "/state", "/management-state", "/actions", "/coordination", "/restrictions", "/questions", "/question-replies", "/goal-proposals", "/personal-plans", "/messages"} and not operation.startswith("/receipts/") and not permission_receipt and not goal_receipt and not plan_receipt and not professional_receipt and not professional_continue and not message_ack and not certificate_rotation:
+        if operation not in {"/professional-tasks", "/professional-tasks/options", "/professional-tasks/diagnostics", "/sessions", "/connection-state", "/identity", "/grants", "/action-permissions", "/plan-overview", "/permission-questions", "/permission-actions/prepare", "/state", "/management-state", "/actions", "/coordination", "/restrictions", "/questions", "/question-replies", "/goal-proposals", "/personal-plans", "/messages"} and not operation.startswith("/receipts/") and not permission_receipt and not goal_receipt and not plan_receipt and not professional_receipt and not professional_continue and not message_ack and not certificate_rotation:
             raise ValueError("Unknown platform operation")
         payload = None if body is None else encode(body).encode()
         if payload is not None and len(payload) > 32768:

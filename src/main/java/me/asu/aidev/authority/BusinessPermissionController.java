@@ -14,6 +14,8 @@ import static me.asu.aidev.authority.ActionPermissionContract.*;
 public class BusinessPermissionController {
     @org.springframework.beans.factory.annotation.Autowired
     private ObjectProvider<me.asu.aidev.questions.FormalQuestions> questions;
+    @org.springframework.beans.factory.annotation.Autowired
+    private ObjectProvider<me.asu.aidev.work.port.WorkTaskRepository> workTasks;
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final AuthorityGrantService grants;
     private final BusinessActionPermissions permissions;private final PermissionActionPreparer preparer;private final PermissionTargetResolver targets;
     private final ObjectProvider<WorkflowPlanService> plans;private final ObjectProvider<ActionAdmissionService> admission;
@@ -29,6 +31,45 @@ public class BusinessPermissionController {
     @GetMapping("/action-permissions") public Object list(HttpServletRequest request) {
         // This is a read-only pull of this Agent's own authority, also available while execution is disabled.
         var p=principal(request);return permissions.list(p.owner()).stream().filter(v->v.workerId().equals(p.worker())).map(permissions::view).toList();
+    }
+    /** A bounded read of current owned plans, independent of action admission and counters. */
+    @org.springframework.transaction.annotation.Transactional
+    @GetMapping("/plan-overview") public Object planOverview(HttpServletRequest request) {
+        boundary.lock();var actor=principal(request);admission.getObject().enabled(actor);
+        String profile=repo.jdbc().queryForObject("SELECT connection_profile FROM authority_identity WHERE worker_id=? AND owner_id=? AND identity_kind='AGENT'",String.class,actor.worker(),actor.owner());
+        boolean local="LOCAL".equals(profile);
+        var allowed=permissions.list(actor.owner()).stream().filter(p->p.workerId().equals(actor.worker())
+                && p.action().name().matches("A0[1-9]|A10") && permissions.active(p)
+                && (p.scopeKind()==Scope.ALL || p.scopeKind()==Scope.PLAN)).toList();
+        var visible=new ArrayList<Map<String,Object>>();
+        var candidates=repo.jdbc().queryForList("""
+                SELECT p.id FROM flexible_workflow_plan p
+                 WHERE NOT EXISTS (SELECT 1 FROM web_console_plan_archive a WHERE a.plan_id=p.id)
+                   AND (p.created_by=? OR EXISTS (SELECT 1 FROM execution_policy e WHERE e.plan_id=p.id AND e.owner_id=?)
+                        OR EXISTS (SELECT 1 FROM authority_target t WHERE t.target_key='PLAN:'||p.id AND t.owner_id=?))
+                 ORDER BY p.created_at_epoch_ms DESC,p.id LIMIT 101
+                """,String.class,repo.actor(actor.owner()),actor.owner(),actor.owner());
+        for(String planId:candidates.stream().limit(100).toList()) {
+            var plan=plans.getObject().get(planId);
+            try {targets.plan(actor.owner(),plan.id());} catch(SecurityException denied) {continue;}
+            if(!local && allowed.stream().noneMatch(p->p.scopeKind()==Scope.ALL || Objects.equals(p.scopeId(),plan.id())))continue;
+            var tasks=new ArrayList<me.asu.aidev.work.domain.WorkTask>();
+            tasks.addAll(workTasks.getObject().findBySubject("flexible-plan",plan.id()));
+            tasks.addAll(workTasks.getObject().findBySubject("configured-plan",plan.id()));
+            var ongoing=tasks.stream().filter(t->Set.of("READY","BLOCKED","CLAIMED","RUNNING","YIELDING","WAITING_INPUT").contains(t.state().name()))
+                    .filter(t->ownedTask(actor.owner(),plan.id(),t.id().value())).toList();
+            if(!plan.state().name().equals("CONFIRMED") && ongoing.stream().noneMatch(t->Set.of("CLAIMED","RUNNING","YIELDING").contains(t.state().name())))continue;
+            visible.add(Map.of("id",plan.id(),"title",title(plan.spec().goal()),"state",plan.state().name(),
+                    "tasks",ongoing.stream().limit(20).map(t->Map.of("id",t.id().value(),"state",t.state().name())).toList(),
+                    "runningCount",ongoing.stream().filter(t->t.state().name().equals("RUNNING")).count(),
+                    "claimedCount",ongoing.stream().filter(t->t.state().name().equals("CLAIMED")).count(),
+                    "tasksTruncated",ongoing.size()>20));
+        }
+        return Map.of("plans",visible.stream().limit(50).toList(),"truncated",candidates.size()>100 || visible.size()>50,
+                "visibility",local?"OWNER":"AUTHORIZED_PLAN_SCOPE");
+    }
+    private boolean ownedTask(String owner,String plan,String task) {
+        try {return plan.equals(targets.task(owner,task));} catch(SecurityException denied) {return false;}
     }
     @PostMapping("/permission-actions/prepare") public Object prepare(HttpServletRequest request,@RequestBody String raw) {return preparer.prepare(principal(request),read(raw,Selection.class));}
     @GetMapping("/permission-actions/{requestId}") public Object preparation(HttpServletRequest request,@PathVariable String requestId) {return preparer.read(principal(request),requestId);}

@@ -84,11 +84,30 @@ def explicit_paths(text):
     return [match.rstrip(".,;，。；）)") for match in re.findall(r"(?:[A-Za-z]:[\\/][^\s\"<>|，。；]+|(?<![:/])/(?!/)[^\s\"<>|，。；]+)", text)]
 
 
+def explicit_file_write(text, output_path=False):
+    """Require a user file request, rather than treating a writable root as one."""
+    for clause in reversed(re.split(r"[\n。！？!?]", text)):
+        if re.search(r"不要|不用|别再|停止|取消|不要作成|作成しない|保存しない|\b(?:do not|don't|never|stop)\b", clause, re.I) and re.search(r"文件|文档|保存|写|修改|编辑|修订|创建|file|save|write|edit|modify|ファイル|保存|作成|編集", clause, re.I):
+            return False
+    if output_path:
+        return True
+    for clause in reversed(re.split(r"[\n。！？!?]", text)):
+        if re.search(r"^(?:请|麻烦|请问|想知道|我想知道|我想了解|能否|可以)?(?:告诉我|解释|说明|教我|如何|怎么|怎样)|^(?:how|what|explain)\b", clause.strip(), re.I):
+            continue
+        operation = re.search(r"保存|另存|存入|写入|写到|写进|创建|新建|生成|导出|输出|整理到|修改|编辑|修订|恢复|\b(?:save|store|write|create|generate|export|edit|modify|update|restore)\b|保存|作成|書き出|編集", clause, re.I)
+        destination = re.search(r"文件|文档|文書|报告|报表|日报|周报|表格|磁盘|路径|副本|\.(?:md|txt|csv|json|yaml|yml|toml|py|js|java|ts)\b|\b(?:file|document|report|spreadsheet|readme)\b|ファイル|文書", clause, re.I)
+        if operation and destination:
+            return True
+    return False
+
+
 class DailyTools:
-    def __init__(self, settings, user_text, output_path=None, store=None, user_message=None):
+    def __init__(self, settings, user_text, output_path=None, store=None, user_message=None, file_request_text=None):
         self.settings = settings
         self.store = store
         self.user_message = user_message if isinstance(user_message, str) else user_text
+        self.request_text = file_request_text if isinstance(file_request_text, str) else self.user_message
+        self.explicit_output_path = bool(output_path)
         self.selected = {Path(item).expanduser().resolve() for item in explicit_paths(user_text)}
         if output_path: self.selected.add(Path(output_path).expanduser().resolve())
         self.written, self.sources = [], []
@@ -131,6 +150,9 @@ class DailyTools:
         kind = action.get("action")
         if kind in {"knowledge_search", "knowledge_read", "knowledge_save_note", "knowledge_note_status"}:
             return self.knowledge(action)
+        if kind in {"create_file", "write_file", "prepare_edit", "apply_edit", "restore_file"} and not approved and not explicit_file_write(
+                self.request_text + "\n" + self.user_message, self.explicit_output_path):
+            return {"status": "NOT_EXECUTED", "note": "A request to write a file could not be confirmed. Answer in the conversation if no file is needed; otherwise ask the user to clarify."}
         if kind in {"read_file", "write_file", "create_file", "prepare_edit", "apply_edit", "restore_file"}:
             return self.files.perform(action, approved)
         if kind == "search":

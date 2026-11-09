@@ -188,7 +188,8 @@ class RunJournal:
     def binding(settings):
         result = {key: settings.get(key, "") for key in ("provider", "authMode", "connectionId", "connectionVersion", "endpoint", "model", "effort",
             "knowledgeEnabled", "knowledgeServiceId", "knowledgeCredentialRef", "knowledgeBaseUrl", "knowledgePublicBaseUrl")}
-        key = settings.get("key") or (os.environ.get("OPENAI_API_KEY", "").strip() if settings.get("credentialSource") == "environment" else None)
+        from secretary_credentials import api_key_environment
+        key = settings.get("key") or (os.environ.get(api_key_environment(settings.get("endpoint")), "").strip() if settings.get("credentialSource") == "environment" else None)
         if key:
             result["legacyKeyDigest"] = hashlib.sha256(key.encode()).hexdigest()
         return result
@@ -242,7 +243,7 @@ class RunJournal:
 
     def waiting_receipt(self, identity, action):
         candidates = [row for row in self.records("SECRETARY_TOOL", identity) if row.get("state") in {"STARTED", "WAITING"}
-                      and row.get("action", {}).get("action") == action.get("action")]
+                      and row.get("action") == action]
         if not candidates:
             raise ValueError("找不到原工具的待确认记录，未创建替代授权。")
         return max(candidates, key=lambda row: row.get("ordinal", 0))["id"]
@@ -285,6 +286,32 @@ class RunJournal:
             if row.get("kind") != "SECRETARY_TOOL" or row.get("state") != "WAITING":
                 raise ValueError("原授权操作不再等待，未重复执行。")
             return self.save(row, state="STARTED")
+
+    def record_approved_output(self, identity, key, result):
+        if not key:
+            return  # Historical confirmations may not have a run receipt.
+        with self.lock:
+            receipt = self.store.get("runtime", key)
+            if receipt is None:
+                return  # The legacy admission path has no run receipt to update.
+            if receipt.get("kind") != "SECRETARY_TOOL" or receipt.get("runId") != identity or receipt.get("state") != "SUCCEEDED":
+                raise ValueError("原工具结果尚未确认，不能恢复模型会话。")
+            call_id = receipt.get("callId")
+            if not call_id:
+                return  # Legacy drivers did not record an SDK call ID.
+            run = self.get(identity)
+            history = list(run.get("history", []))
+            if not any(item.get("type") == "function_call" and item.get("call_id") == call_id for item in history):
+                raise ValueError("找不到原模型工具请求，不能自动续接。")
+            output = json.dumps(result, ensure_ascii=False, allow_nan=False)
+            matches = [i for i, item in enumerate(history) if item.get("type") == "function_call_output" and item.get("call_id") == call_id]
+            if len(matches) > 1:
+                raise ValueError("原模型工具结果重复，不能自动续接。")
+            if matches:
+                history[matches[0]] = {"type": "function_call_output", "call_id": call_id, "output": output}
+            else:
+                history.append({"type": "function_call_output", "call_id": call_id, "output": output})
+            self.save(run, history=history)
 
     def finish(self, identity, state, note=""):
         with self.lock:
@@ -427,6 +454,63 @@ class RunJournal:
     def events(self, identity):
         self.get(identity)
         return self.records("SECRETARY_EVENT", identity)[-100:]
+
+    def interaction_history(self, identity):
+        """Return a bounded view of saved items, not reconstructed API requests."""
+        row = self.get(identity)
+        history = row.get("history", [])
+        if not isinstance(history, list):
+            raise ValueError("这次运行的模型记录格式不受支持。")
+        receipts = {item.get("callId"): item.get("state") for item in self.records("SECRETARY_TOOL", identity)
+                    if item.get("callId")}
+        items, remaining = [], 160000
+        truncated = len(history) > 120
+        for entry in history[-120:]:
+            if not isinstance(entry, dict):
+                continue
+            kind = entry.get("type") or ("message" if entry.get("role") else "unknown")
+            if kind == "function_call":
+                payload = entry.get("arguments", "")
+            elif kind == "function_call_output":
+                payload = entry.get("output", "")
+            elif kind in {"message", "reasoning"}:
+                payload = entry.get("content") or entry.get("summary") or ""
+                if isinstance(payload, list):
+                    parts = [part.get("text") for part in payload if isinstance(part, dict) and isinstance(part.get("text"), str)]
+                    payload = "\n".join(parts) if parts else payload
+            else:
+                payload = {key: entry[key] for key in ("type", "role", "content", "output") if key in entry}
+            if not isinstance(payload, str):
+                payload = json.dumps(payload, ensure_ascii=False, default=str)
+            limit = min(6000, remaining)
+            if limit <= 0:
+                truncated = True
+                break
+            shortened = len(payload) > limit
+            items.append({"kind": kind, "role": entry.get("role"), "name": entry.get("name"),
+                          "callId": entry.get("call_id"), "receiptState": receipts.get(entry.get("call_id")),
+                          "text": payload[:limit], "truncated": shortened})
+            remaining -= min(len(payload), limit)
+            truncated = truncated or shortened
+        return {"items": items, "truncated": truncated}
+
+    def file_intents(self, identity):
+        """Project the original local create requests without accessing the filesystem."""
+        self.get(identity)
+        result = []
+        for receipt in self.records("SECRETARY_TOOL", identity):
+            action = receipt.get("action") or {}
+            if action.get("action") != "create_file":
+                continue
+            path, content = action.get("path"), action.get("text")
+            if not isinstance(path, str) or not isinstance(content, str):
+                continue
+            operations = [row for row in self.store.list("decision")
+                          if row.get("kind") == "FILE_OPERATION" and row.get("receiptKey") == receipt["id"]]
+            result.append({"path": path, "text": content[:100000], "truncated": len(content) > 100000,
+                           "state": receipt.get("state"),
+                           "operationState": operations[0].get("state") if len(operations) == 1 else None})
+        return {"files": result}
 
     def records(self, kind, identity=None, view=False):
         if hasattr(self.store, "runtime_records"):

@@ -188,6 +188,7 @@ textarea { min-height: 112px; resize: vertical; line-height: 1.8; }
 .collaboration-group .form-grid { margin-top: 20px; }
 .projection { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
 pre { margin: 12px 0 0; padding: 16px; max-height: 340px; overflow: auto; border: 1px solid var(--line); border-radius: 7px; background: var(--nav); color: var(--muted); font: 12px/1.8 Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.interaction-preview { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .raw-details { margin-top: 18px; font-size: 12px; color: var(--muted); }
 .card > .raw-details:first-child { margin-top: 0; }
 .raw-details > summary { width: fit-content; padding: 4px 0; }

@@ -7,12 +7,12 @@
 <p id="factory-status" class="callout" role="status" aria-live="polite">正在读取…</p>
 <form id="factory-settings"><fieldset id="factory-fields" disabled>
 <h3>1. 执行与登录</h3><div class="form-grid">
-<label class="field">模型执行方式<select name="runtime" required><option value="" disabled selected>请选择模型执行方式</option><option value="codex-app-server">Codex App Server（通过本机 Codex）</option><option value="openai-agents">Python Worker（OpenAI Agents SDK）</option></select></label>
+<label class="field">模型执行方式<select name="runtime" required><option value="" disabled selected>请选择模型执行方式</option><option value="codex-app-server">Codex App Server（通过本机 Codex）</option><option value="openai-agents">OpenAI 兼容 API</option></select></label>
 <label class="field" id="factory-api-provider-field" hidden>模型服务商<select name="apiProvider" id="factory-api-provider"><option value="" disabled selected>请选择模型服务商</option><option value="openai">OpenAI</option><option value="deepseek">DeepSeek</option></select></label>
 <label class="field" id="factory-api-protocol-field" hidden>API 协议<select name="apiProtocol" id="factory-api-protocol"><option value="responses">Responses</option><option value="chat-completions">Chat Completions</option></select></label>
 <label class="field">登录方式<select id="factory-auth-mode" required><option value="" disabled selected>请选择对应的登录方式</option>
 <optgroup label="Codex App Server"><option value="codex-local" data-runtime="codex-app-server">使用 Worker 本机 Codex 登录</option><option value="codex-plane" data-runtime="codex-app-server">使用 Plane 保存的 Codex 凭证</option></optgroup>
-<optgroup label="Python Worker"><option value="chatgpt" data-runtime="openai-agents">使用 ChatGPT 登录（OAuth）</option><option value="api-key" data-runtime="openai-agents">使用 API Key（运行环境）</option></optgroup></select></label>
+<optgroup label="OpenAI 兼容 API"><option value="chatgpt" data-runtime="openai-agents">使用 ChatGPT 登录（OAuth）</option><option value="api-key" data-runtime="openai-agents">使用 API Key（运行环境）</option></optgroup></select></label>
 </div><p id="factory-auth-help" class="help" role="status"></p>
 <div id="factory-plane-settings" hidden>
 <label class="field">使用已保存的连接<select name="credentialRef" id="factory-credential"><option value="">请选择连接</option></select><input name="credentialVersion" type="hidden"></label>

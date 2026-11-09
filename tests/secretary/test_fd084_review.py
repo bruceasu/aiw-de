@@ -15,6 +15,7 @@ from platform_agent_actions import PlatformAgentActions
 from professional_tasks import ProfessionalTasks
 from runtime import Runtime, PersonalChatError
 from secretary_host import SecretaryHost
+from assistant_tools import ConfirmationRequired
 from pet.desktop_client import PersonalClient, PersonalError
 
 
@@ -63,6 +64,33 @@ class ReviewCase(unittest.TestCase):
         self.assertEqual(self.store.get("message", "msg")["state"], "FAILED")
         self.assertEqual(self.journal.records("SECRETARY_TOOL"), [])
         self.assertFalse(any(row.get("kind") == "DAILY_CONFIRMATION" for row in self.store.list("decision")))
+
+    def test_file_permission_request_is_visible_and_approval_keeps_original_action(self):
+        daily = self.daily()
+        message = self.store.put("message", "msg-confirm", {"workId": "work", "text": "创建文件", "state": "PENDING"}, 0)
+        job = daily._decision(self.job, messageId=message["id"], userText="请创建文件")
+        host = SecretaryHost(daily, self.store.get("work", "work"), job, self.tools, SimpleNamespace())
+        action = {"action": "create_file", "path": str(self.root / "outside" / "report.md"), "text": "draft"}
+        def waiting(request):
+            raise ConfirmationRequired("这项文件操作需要确认。", request)
+        try:
+            self.journal.invoke(host.identity, action, waiting, call_id="file-call")
+        except ConfirmationRequired as error:
+            host.waiting_confirmation(error, action)
+        else:
+            self.fail("confirmation was not requested")
+        decisions = [row for row in self.store.list("decision") if row.get("kind") == "DAILY_CONFIRMATION"]
+        self.assertEqual(len(decisions), 1)
+        pending = decisions[0]
+        self.assertEqual(pending["action"], action)
+        self.assertEqual(self.store.get("runtime", pending["receiptKey"])["state"], "WAITING")
+        self.assertIn(action["path"], self.store.get("message", message["id"])["reply"])
+        with patch("daily_assistant.threading.Thread") as thread:
+            result = daily.confirm(pending["id"], pending["revision"], True)
+        self.assertEqual(result["state"], "ACCEPTED")
+        self.assertEqual(self.store.get("decision", job["id"])["approvedAction"], action)
+        thread.return_value.start.assert_called_once()
+        self.assertFalse((self.root / "outside" / "report.md").exists())
 
     def runtime_chat(self):
         self.daily()

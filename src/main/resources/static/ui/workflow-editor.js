@@ -762,6 +762,10 @@
         const withdraw = detail.querySelector('[data-withdraw]'); if (withdraw) withdraw.hidden = formalFactory || plan.state !== 'CONFIRMED';
         const jump = detail.querySelector('[data-jump]'); if (jump) jump.hidden = formalFactory || plan.state !== 'CONFIRMED' || !!pendingControl || !target?.options.length;
         const stop = detail.querySelector('[data-stop-plan]'); if (stop) stop.hidden = formalFactory || plan.state !== 'CONFIRMED' || !!pendingControl || finalReview?.verdict === 'PASS';
+        const controlReason = detail.querySelector('[data-plan-decision-reason]'); if (controlReason) controlReason.hidden = formalFactory;
+        const factoryStop = detail.querySelector('[data-factory-stop]');
+        if (factoryStop) { factoryStop.hidden = !formalFactory || plan.state !== 'CONFIRMED'; factoryStop.href = `/ui/questions?planId=${encodeURIComponent(id)}&tab=controls`; }
+        const factoryStopNote = detail.querySelector('[data-factory-stop-note]'); if (factoryStopNote) factoryStopNote.hidden = !formalFactory || plan.state !== 'CONFIRMED';
         const complete = detail.querySelector('[data-complete-plan]'); if (complete) complete.hidden = formalFactory || plan.state !== 'CONFIRMED' || !!pendingControl || !!data.humanOutcome || finalReview?.verdict === 'PASS';
         const cancel = detail.querySelector('[data-cancel-plan]'); if (cancel) cancel.hidden = formalFactory || !['CONFIRMED', 'STOPPED'].includes(plan.state) || !!pendingControl || !!data.humanOutcome;
         const resolve = detail.querySelector('[data-resolve-stop]');

@@ -61,13 +61,19 @@ dependency injection, and build-tool conventions unless explicitly changed.
 
 ## Resource and Validation Budget
 
-Follow the shared resource-budget and validation files for authorization,
-command scope, and retry rules. The default is static analysis and editing.
+Follow the shared resource-budget and validation files for command scope and
+retry rules. This repository's focused test allowance below overrides the
+shared prompts' default prohibition on tests; their external-service, network,
+and retry limits still apply. The default is static analysis and editing.
 
-- Tests, final-artifact builds, formatters, linters, type checks, verification
-  scripts, permission probes, privilege
+- Final-artifact builds, formatters, linters, type checks, verification scripts,
+  permission probes, privilege
   escalation, `codex-auto-review`, and sub-agents have a default budget of zero.
-- Implementation alone does not authorize these restricted actions.
+- After implementation, run at most one narrow, relevant existing test command
+  by default when it covers the changed behavior. Ask before widening test scope
+  or using tests that need external services, network access, or persistent data.
+- Implementation alone does not authorize final-artifact builds or the other
+  restricted actions listed above.
 - Use at most four targeted discovery batches for ordinary tasks. Continue one
   focused batch at a time only to resolve a concrete uncertainty, and stop when
   there is enough evidence to make the scoped change.
@@ -78,7 +84,9 @@ command scope, and retry rules. The default is static analysis and editing.
   Gradle compile goal. Do not retain a final distributable artifact. Dependency
   resolution follows the shared resource-budget rules. Docs-only edits do not
   need compilation.
-- Do not automatically run `scripts/verify.sh`, `build*`, tests, or smoke checks.
+- Do not automatically run `scripts/verify.sh`, `build*`, or smoke checks.
+- Run no more than one focused existing test command by default; ask before
+  package, module, integration, or repository-wide test runs.
 - Do not repeat an unchanged failed command. A compile-only check may be retried
   once after a relevant source fix; follow the shared rules for other retries.
 - When runtime validation is authorized, run one smallest relevant command.

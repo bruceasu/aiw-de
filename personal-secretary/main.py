@@ -251,6 +251,17 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                 if stop.is_set():
                     self.respond(503, {"error": "Personal service is stopping"})
                     return
+                if self.path == "/api/model/catalog":
+                    session = self.session()
+                    if session is None or not hmac.compare_digest(self.headers.get("X-CSRF-Token", ""), session["csrf"]):
+                        self.respond(403, {"error": "Current personal session and CSRF token required"})
+                        return
+                    try:
+                        from model_catalog import list_models
+                        self.respond(200, list_models(runtime.settings, data))
+                    except ValueError as error:
+                        self.respond(422, {"code": "MODEL_CATALOG_UNAVAILABLE", "message": str(error)})
+                    return
                 with lock:
                     if stop.is_set():
                         self.respond(503, {"error": "Personal service is stopping"})
@@ -275,7 +286,7 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                         pairing_expiry = time.monotonic() + 300
                         attempts = 0
                         result = {"code": pairing, "expiresIn": 300}
-                    elif self.path in {"/api/model/login", "/api/model/cancel", "/api/model/disconnect", "/api/model/import", "/api/run/control", "/api/run/events", "/api/run/reconcile", "/api/file/diff"}:
+                    elif self.path in {"/api/model/login", "/api/model/cancel", "/api/model/disconnect", "/api/model/import", "/api/run/control", "/api/run/events", "/api/run/interactions", "/api/run/file-intents", "/api/run/reconcile", "/api/file/diff"}:
                         try:
                             if self.path == "/api/model/login":
                                 if not self.local_request():
@@ -291,6 +302,10 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                                 result = runtime.runs.control(data)
                             elif self.path == "/api/run/reconcile":
                                 result = runtime.runs.reconcile(data)
+                            elif self.path == "/api/run/file-intents":
+                                result = runtime.runs.file_intents(data.get("runId"))
+                            elif self.path == "/api/run/interactions":
+                                result = runtime.runs.interaction_history(data.get("runId"))
                             elif self.path == "/api/file/diff":
                                 from secretary_files import operation_diff
                                 result = operation_diff(runtime.store, runtime.settings.directory, data.get("id"))

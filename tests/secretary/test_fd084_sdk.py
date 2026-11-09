@@ -1,4 +1,5 @@
 """SDK boundary doubles, not evidence of a real installed SDK or model."""
+import asyncio
 import json
 from pathlib import Path
 import sys
@@ -45,7 +46,7 @@ class SdkCase(unittest.TestCase):
     setUp = core.LocalCase.setUp
     start = core.LocalCase.start
 
-    def sdk(self, response=None, error=None, swallow_errors=False):
+    def sdk(self, response=None, error=None, swallow_errors=False, concurrent=False):
         calls, clients = [], []
         class Client:
             def __init__(self, **kwargs):
@@ -75,6 +76,17 @@ class SdkCase(unittest.TestCase):
                 result = await starting_agent.model.get_response(starting_agent.instructions, input,
                     starting_agent.model_settings, starting_agent.tools, None, [], None,
                     previous_response_id=None, conversation_id=None, prompt=None)
+                if concurrent:
+                    async def call_tool(item):
+                        data = item.model_dump()
+                        tool = next(t for t in starting_agent.tools if t.name == data["name"])
+                        return await tool.on_invoke_tool(SimpleNamespace(tool_call_id=data["call_id"]), data["arguments"])
+                    results = await asyncio.gather(*(call_tool(item) for item in result.output
+                        if item.model_dump()["type"] == "function_call"), return_exceptions=True)
+                    failure = next((item for item in results if isinstance(item, BaseException)), None)
+                    if failure:
+                        raise failure
+                    return SimpleNamespace(final_output='{"action":"finish","completed":true,"text":"done"}')
                 for item in result.output:
                     data = item.model_dump()
                     if data["type"] == "function_call":
@@ -124,6 +136,39 @@ class SdkCase(unittest.TestCase):
 
     def test_incomplete_tool_item_never_executes(self):
         identity, execute, calls, _clients = self.sdk(self.response(status="incomplete"))
+        with self.assertRaises(ValueError):
+            run(self.settings, "instruction", {}, execute, self.journal, identity)
+        self.assertEqual(calls, [])
+
+    def test_concurrent_sdk_batch_is_recorded_with_distinct_call_ids(self):
+        response = self.response(call_id="first")
+        response.output.append(self.response(call_id="second").output[0])
+        identity, execute, calls, _clients = self.sdk(response, concurrent=True)
+        run(self.settings, "instruction", {}, execute, self.journal, identity)
+        self.assertEqual(len(calls), 2)
+        history = self.journal.get(identity)["history"]
+        results = [item for item in history if item.get("type") == "function_call_output"]
+        self.assertEqual({item["call_id"] for item in results}, {"first", "second"})
+
+    def test_waiting_first_tool_stops_remaining_batch(self):
+        response = self.response(call_id="first")
+        response.output.append(self.response(arguments={"path": "C:/test/second.md"}, call_id="second").output[0])
+        identity, _execute, _calls, _clients = self.sdk(response, concurrent=True)
+        calls = []
+        def waiting(action):
+            calls.append(action)
+            raise ConfirmationRequired("confirm this exact action", action)
+        with self.assertRaises(ConfirmationRequired):
+            run(self.settings, "instruction", {}, waiting, self.journal, identity)
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(self.journal.get(identity)["hasWaitingTool"])
+        history = self.journal.get(identity)["history"]
+        self.assertEqual({item["call_id"] for item in history if item.get("type") == "function_call_output"}, {"first", "second"})
+
+    def test_invalid_second_tool_rejects_batch_before_first_executes(self):
+        response = self.response(call_id="first")
+        response.output.append(self.response(arguments={"path": "target", "approved": True}, call_id="second").output[0])
+        identity, execute, calls, _clients = self.sdk(response, concurrent=True)
         with self.assertRaises(ValueError):
             run(self.settings, "instruction", {}, execute, self.journal, identity)
         self.assertEqual(calls, [])
@@ -179,6 +224,24 @@ class SdkCase(unittest.TestCase):
         with self.assertRaises(RunYield):
             run(self.settings, "instruction", {}, waiting, self.journal, identity)
         self.assertEqual(self.journal.get(identity)["modelCalls"], 1)
+        self.assertTrue(self.journal.get(identity)["hasWaitingTool"])
+
+    def test_confirmation_callback_receives_the_original_waiting_receipt(self):
+        response = ModelResponse(output=[Item(type="function_call", name="create_file", call_id="file-call", status="completed",
+            arguments=json.dumps({"path": "C:/outside/report.md", "text": "draft"}))],
+            usage=SimpleNamespace(input_tokens=1, output_tokens=1), response_id="response")
+        identity, _execute, _calls, _clients = self.sdk(response)
+        requested = []
+        def waiting(action):
+            raise ConfirmationRequired("confirm this file", action)
+        def confirm(error, action):
+            receipt = self.store.get("runtime", self.journal.waiting_receipt(identity, action))
+            requested.append((error.action, receipt["state"], receipt["callId"]))
+        with self.assertRaises(RunYield) as caught:
+            run(self.settings, "instruction", {}, waiting, self.journal, identity, on_confirmation=confirm)
+        self.assertEqual(caught.exception.reason, "confirmation")
+        self.assertEqual(requested[0][1:], ("WAITING", "file-call"))
+        self.assertEqual(requested[0][0]["text"], "draft")
         self.assertTrue(self.journal.get(identity)["hasWaitingTool"])
 
     def test_swallowed_pause_does_not_start_another_model_request(self):

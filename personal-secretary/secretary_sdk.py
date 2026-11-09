@@ -14,7 +14,9 @@ import importlib.metadata
 import hashlib
 
 from secretary_runs import RunYield
-from secretary_credentials import ModelAuthRequired
+from secretary_credentials import ModelAuthRequired, api_key_environment
+from assistant_tools import ConfirmationRequired
+from authorization_requests import AuthorizationRequired
 
 
 MAX_INPUT = 240_000
@@ -85,7 +87,7 @@ def definitions(knowledge=False):
         "apply_edit": ({"editId": short, "expectedVersion": short}, ["editId", "expectedVersion"]),
         "restore_file": ({"operationId": short, "expectedCurrentVersion": short}, ["operationId", "expectedCurrentVersion"]),
         "list_skills": ({}, []), "read_skill": ({"name": short, "path": short, "offset": number, "limit": number}, ["name", "path"]),
-        "professional_options": ({}, []), "platform_permissions": ({}, []),
+        "professional_options": ({}, []), "platform_permissions": ({}, []), "platform_plan_overview": ({}, []),
         "platform_questions": ({"permissionId": short, "planId": short}, ["permissionId", "planId"]),
         "platform_action": ({"permissionId": short, "targetId": short, "parameters": obj}, ["permissionId", "targetId", "parameters"]),
         "platform_answer": ({"permissionId": short, "targetId": short, "questionId": short, "requestVersion": number, "answer": text},
@@ -167,7 +169,7 @@ def oauth_text(token, model, instruction, history, check, on_completed=None, rea
     from secretary_oauth import NoRedirect
     payload = {"model": model, "instructions": instruction, "input": [{"role": "user", "content": json.dumps(history, ensure_ascii=False)}],
                "store": False, "stream": True}
-    if reasoning_effort and reasoning_effort != "none":
+    if reasoning_effort:
         payload["reasoning"] = {"effort": reasoning_effort}
     raw = json.dumps(payload, ensure_ascii=False).encode()
     if len(raw) > MAX_INPUT:
@@ -200,11 +202,11 @@ def oauth_text(token, model, instruction, history, check, on_completed=None, rea
         raise ValueError("模型请求被拒绝（HTTP " + str(status) + "）。请检查登录、组织许可、模型和额度；未切换账户。") from None
 
 
-def run(settings, instructions, context, execute, journal, identity, after_tool=None):
-    return asyncio.run(_run(settings, instructions, context, execute, journal, identity, after_tool))
+def run(settings, instructions, context, execute, journal, identity, after_tool=None, on_confirmation=None):
+    return asyncio.run(_run(settings, instructions, context, execute, journal, identity, after_tool, on_confirmation))
 
 
-async def _run(settings, instructions, context, execute, journal, identity, after_tool):
+async def _run(settings, instructions, context, execute, journal, identity, after_tool, on_confirmation):
     os.environ.setdefault("OPENAI_AGENTS_DONT_LOG_MODEL_DATA", "1")
     os.environ.setdefault("OPENAI_AGENTS_DONT_LOG_TOOL_DATA", "1")
     try:
@@ -233,6 +235,8 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
         if capability not in capabilities:
             schemas.pop(name, None)
     pending, client, client_binding = [], None, None
+    tool_lock = asyncio.Lock()
+    batch_failure = None
 
     def save_history(history):
         row = journal.get(identity)
@@ -242,6 +246,8 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
         async def get_response(self, system_instructions, input, model_settings, tools, output_schema, handoffs, tracing, **kwargs):
             nonlocal client, client_binding
             journal.check(identity)
+            if batch_failure is not None:
+                raise ValueError("上一批工具未完整执行，请核对已记录的结果后继续。")
             if kwargs.get("previous_response_id") or kwargs.get("conversation_id"):
                 raise ValueError("本地会话不能同时使用服务端历史续接。")
             journal.count(identity, "modelCalls", 12)
@@ -285,7 +291,7 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
                     access = settings.connections.access(config["connectionId"], config["connectionVersion"], "api-key")
                     key, base = access["token"], access["baseUrl"]
                 else:
-                    key = config.get("key") or (os.environ.get("OPENAI_API_KEY", "").strip() if config.get("credentialSource") == "environment" else None)
+                    key = config.get("key") or (os.environ.get(api_key_environment(config.get("endpoint")), "").strip() if config.get("credentialSource") == "environment" else None)
                     base = config.get("endpoint")
                 if not key:
                     raise ValueError("请明确配置 API Key 连接。")
@@ -300,8 +306,8 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
                     parameters = {"model": config["model"], "instructions": system_instructions, "input": history,
                         "tools": [{"type": "function", "name": name, "description": "Use the declared secretary tool within the current request.",
                                    "parameters": schema, "strict": False} for name, schema in schemas.items()],
-                        "store": False, "stream": False, "parallel_tool_calls": False}
-                    if config.get("effort") and config["effort"] != "none":
+                        "store": False, "stream": False}
+                    if config.get("effort"):
                         parameters["reasoning"] = {"effort": config["effort"]}
                     actual = await asyncio.wait_for(client.responses.create(**parameters), timeout=120)
                 except Exception as error:
@@ -326,9 +332,10 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
             output = normalized(response.output)
             if not isinstance(output, list):
                 raise ValueError("模型输出无效。")
-            if sum(item.get("type") == "function_call" for item in output) > 1:
-                raise ValueError("当前秘书每回合只接受一个工具调用，以保留可靠的暂停和确认边界；本批工具未执行。")
+            if sum(item.get("type") == "function_call" for item in output) > 12:
+                raise ValueError("模型请求的工具数量超过本次运行上限；本批工具未执行。")
             call_ids = {item.get("call_id") for item in history if item.get("type") == "function_call"}
+            validated = []
             for item in output:
                 if item.get("type") not in {"message", "reasoning", "function_call"}:
                     raise ValueError("模型返回了未声明的工具或输出类型。")
@@ -341,8 +348,9 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
                     if name not in schemas or not matches(args, schemas[name]) or not isinstance(call_id, str) or not 1 <= len(call_id) <= 200 or call_id in call_ids:
                         raise ValueError("模型工具参数无效，没有执行。")
                     call_ids.add(call_id)
-                    pending.append({**item, "parsed": args})
+                    validated.append({**item, "parsed": args})
             save_history(normalized(input) + output if not isinstance(input, str) else history + output)
+            pending.extend(validated)
             return response
 
         async def stream_response(self, *args, **kwargs):
@@ -351,13 +359,27 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
 
     def make_tool(name, schema):
         async def invoke(_context, raw):
+            nonlocal batch_failure
+            async with tool_lock:
+                if batch_failure is not None:
+                    raise batch_failure
+                try:
+                    return invoke_one(_context, raw)
+                except BaseException as error:
+                    batch_failure = error
+                    raise
+
+        def invoke_one(_context, raw):
             journal.check(identity)
             arguments = object_json(raw)
             if not matches(arguments, schema):
                 raise ValueError("工具参数与接口不一致。")
-            call = next((c for c in pending if c["name"] == name and c["parsed"] == arguments), None)
-            if call is None:
+            context_call_id = getattr(_context, "tool_call_id", None)
+            candidates = [c for c in pending if c["name"] == name and c["parsed"] == arguments
+                          and (not context_call_id or c["call_id"] == context_call_id)]
+            if len(candidates) != 1:
                 raise ValueError("工具调用没有完整模型响应依据。")
+            call = candidates[0]
             pending.remove(call)
             action = {"action": name, **arguments}
             if name == "read_run_source":
@@ -374,7 +396,13 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
                 journal.count(identity, "toolCalls", 12)
                 journal.event(identity, "tool-end", tool=name, status="completed")
             else:
-                result = journal.invoke(identity, action, execute, call_id=call["call_id"])
+                try:
+                    result = journal.invoke(identity, action, execute, call_id=call["call_id"])
+                except (ConfirmationRequired, AuthorizationRequired) as error:
+                    if on_confirmation is None:
+                        raise
+                    on_confirmation(error, action)
+                    raise RunYield("confirmation" if isinstance(error, ConfirmationRequired) else "authorization") from None
             text = json.dumps(result, ensure_ascii=False, allow_nan=False)
             source_id = identity + ":source:" + call["call_id"]
             journal.store.put("runtime", source_id, {"kind": "SECRETARY_SOURCE", "runId": identity, "result": result}, 0)
@@ -391,8 +419,8 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
     history.append({"role": "user", "content": json.dumps(context, ensure_ascii=False)})
     if row.get("notes"):
         history.append({"role": "user", "content": "Current user updates, in order:\n" + "\n".join(row["notes"])})
-    preferences = {"parallel_tool_calls": False, "store": False}
-    if config.get("effort") and config["effort"] != "none":
+    preferences = {"store": False}
+    if config.get("effort"):
         preferences["reasoning"] = {"effort": config["effort"]}
     agent = Agent(name="Personal Secretary", instructions=instructions, model=GuardedModel(), tools=[make_tool(n, s) for n, s in schemas.items()],
         model_settings=ModelSettings(**preferences))

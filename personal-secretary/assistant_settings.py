@@ -6,7 +6,7 @@ import urllib.parse
 
 from private_config import read_private, write_private
 from knowledge_client import KNOWLEDGE_AVAILABLE, KnowledgeError, KnowledgeSettings
-from secretary_credentials import ModelConnections
+from secretary_credentials import ModelConnections, api_key_environment, missing_api_key_environment
 
 
 class AssistantSettings:
@@ -32,6 +32,7 @@ class AssistantSettings:
                 "roots": self.value.get("roots", []), "scope": "daily-assistant-v1",
                 "knowledge": self.knowledge.public(), "authMode": self.value.get("authMode", ""),
                 "credentialSource": self.value.get("credentialSource", ""),
+                "environmentKeyAvailable": {name: bool(os.environ.get(name, "").strip()) for name in ("OPENAI_API_KEY", "DEEPSEEK_API_KEY")},
                 "connectionId": self.value.get("connectionId", ""), "models": self.connections.public()}
 
     def knowledge_available(self):
@@ -72,7 +73,7 @@ class AssistantSettings:
         if self.value.get("provider") == "openai-agents":
             return bool(self.value.get("model") and self.value.get("authMode") in {"api-key", "chatgpt"}
                         and (self.value.get("connectionId") or self.value.get("key") or
-                             self.value.get("credentialSource") == "environment" and os.environ.get("OPENAI_API_KEY", "").strip()))
+                             self.value.get("credentialSource") == "environment" and os.environ.get(api_key_environment(self.value.get("endpoint")), "").strip()))
         return bool(self.legacy_command or self.value.get("command") or
                     self.value.get("endpoint") and self.value.get("model"))
 
@@ -99,13 +100,25 @@ class AssistantSettings:
                 mode = data.get("authMode", self.value.get("authMode", ""))
                 if mode not in {"api-key", "chatgpt"}:
                     raise ValueError("请明确选择使用 ChatGPT 套餐登录或 API Key。")
-                identity = data.get("connectionId") or self.value.get("connectionId")
+                source = data.get("credentialSource", self.value.get("credentialSource", ""))
+                if source not in {"", "environment"}:
+                    raise ValueError("请选择有效的 API Key 来源。")
+                identity = data.get("connectionId") if "connectionId" in data else self.value.get("connectionId")
+                if mode == "api-key" and source == "environment":
+                    if not os.environ.get(api_key_environment(endpoint), "").strip():
+                        raise ValueError(missing_api_key_environment(endpoint))
+                    identity = None
+                    key = ""
+                    value.pop("key", None)
+                    value["credentialSource"] = "environment"
                 if mode == "api-key" and data.get("key"):
+                    if source == "environment":
+                        raise ValueError("请选择环境变量或填写 API Key，不要同时使用。")
                     identity = self.connections.create_api_key(data["key"], endpoint)["id"]
                 if identity:
                     value.update(self.connections.binding(identity, mode))
                     value.pop("key", None)
-                elif mode == "api-key" and self.value.get("credentialSource") == "environment" and endpoint == self.value.get("endpoint") and os.environ.get("OPENAI_API_KEY", "").strip():
+                elif mode == "api-key" and value.get("credentialSource") == "environment":
                     value["credentialSource"] = "environment"
                 elif mode == "chatgpt" or not key:
                     raise ValueError("请先登录并选择本机连接，或填写 API Key。")
@@ -126,7 +139,7 @@ class AssistantSettings:
         else:
             raise ValueError("请选择可用的模型连接方式。")
         effort = data.get("effort", "")
-        if effort not in {"", "none", "minimal", "low", "medium", "high", "xhigh"}:
+        if effort not in {"", "none", "minimal", "low", "medium", "high", "xhigh", "max"}:
             raise ValueError("请选择可用的推理强度。")
         value["effort"] = effort
         roots = data.get("roots", [])
