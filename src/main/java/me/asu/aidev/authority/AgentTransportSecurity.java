@@ -31,6 +31,14 @@ public class AgentTransportSecurity {
         return certificateFingerprint(request);
     }
 
+    /** Unauthenticated enrollment is restricted to a native direct-loopback request, never a browser or proxy. */
+    public void requireLocalEnrollment(HttpServletRequest request) {
+        requireLocalProfileEnabled();
+        requireLoopback(request);
+        if (request.getHeader("Origin") != null || request.getHeader("Sec-Fetch-Site") != null)
+            throw new SecurityException("Local Agent enrollment accepts direct native requests only");
+    }
+
     public String certificateFingerprint(HttpServletRequest request) {
         if (!request.isSecure()) throw new SecurityException("Remote Agent requests require TLS");
         Object value = request.getAttribute(CERTIFICATE_ATTRIBUTE);

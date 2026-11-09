@@ -62,6 +62,10 @@ public class AuthorityController {
         if(raw.length()>4096) throw new IllegalArgumentException("Pairing request too large");
         return agentIdentities.pair(repo.decode(raw,AgentIdentityService.PairInput.class),request);
     }
+    @PostMapping("/agents/local/register") public Object registerLocalAgent(HttpServletRequest request,@RequestBody String raw) {
+        if(raw.length()>8192) throw new IllegalArgumentException("Local Agent enrollment request too large");
+        return agentIdentities.registerLocal(repo.decode(raw,AgentIdentityService.LocalRegistrationInput.class),request);
+    }
     @PostMapping("/agents/{id}/approve-pairing") public Object approvePairing(@PathVariable String id,@RequestBody String raw) {
         if(raw.length()>8192) throw new IllegalArgumentException("Pairing approval request too large");
         return agentIdentities.approvePairing(id,repo.decode(raw,AgentIdentityService.PairingApprovalInput.class),human());

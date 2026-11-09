@@ -836,11 +836,12 @@ function renderSecretaryModels() {
 function renderSecretaryRuns() {
   let panel = byId("secretary-runs");
   if (!panel) {
-    panel = node("section", "card"); panel.id = "secretary-runs";
+    panel = node("details", "card"); panel.id = "secretary-runs";
+    panel.append(node("summary", "", "运行过程与控制"));
     byId("view-chat").append(panel);
   }
   if (document.activeElement?.tagName === "TEXTAREA" && panel.contains(document.activeElement)) return;
-  panel.replaceChildren(node("h2", "", "运行过程与控制"));
+  while (panel.childNodes.length > 1) panel.lastChild.remove();
   const runs = snapshot?.runs || [];
   if (!runs.length) { panel.append(node("p", "help", "开始处理请求后，这里显示真实运行与工具记录。")); return; }
   const labels = { QUEUED: "等待处理", RUNNING: "正在处理", PAUSE_REQUESTED: "暂停待生效", PAUSED: "已暂停", WAITING_USER: "等待确认或专业任务结果", WAITING_AUTH: "等待登录", RECONCILING: "结果待核对", SUCCEEDED: "已完成", FAILED: "未完成", CANCELLED: "已取消" };
@@ -955,7 +956,10 @@ function renderAssistant() {
   const connection = snapshot.platformConnection;
   if (connection) {
     if (!platformSetupLoaded) { byId("platform-origin").value = connection.platform; platformSetupLoaded = true; }
-    byId("platform-connection-status").textContent = !connection.connected ? "尚未连接 Control Plane"
+    updatePlatformSetupMode();
+    byId("platform-connection-status").textContent = !connection.connected
+      ? connection.profile === "LOCAL" ? "本机 Plane 尚未连接；确认 Plane 正在此设备运行后可自动连接。" : "尚未连接 Control Plane"
+      : connection.profile === "LOCAL" && connection.enabled ? "本机 Plane 已自动登记并授权计划与任务管理。"
       : connection.approvalState === "PENDING" ? "Agent 已配对，等待在 Control Plane 一次确认身份、初始授权并启用当前进程"
       : connection.approvalState === "APPROVED" && connection.enabled ? "Control Plane 已批准 Agent 并启用当前进程"
       : connection.approvalState === "APPROVED" ? "Agent 已批准；当前进程尚未启用，请在 Control Plane 启用"
@@ -963,6 +967,7 @@ function renderAssistant() {
       if (snapshot.backgroundError) byId("platform-connection-status").textContent = window.aiwI18n?.t("后台处理发生异常，已停止本地平台操作；这不表示平台撤销了进程授权。") || "后台处理发生异常，已停止本地平台操作；这不表示平台撤销了进程授权。";
     byId("platform-next").hidden = !connection.connected;
     if (connection.connected) byId("platform-next").href = connection.setupUrl;
+    if (connection.profile === "LOCAL") byId("platform-next").hidden = true;
     byId("platform-rotate-certificate").hidden = !connection.connected || connection.profile !== "REMOTE";
     if (connection.connected && !platformInitialChecked) {
       platformInitialChecked = true;
@@ -1169,11 +1174,32 @@ byId("chat-new").addEventListener("click", () => {
   formFor("chat").elements.workId.value = "";
   renderedChatWork = null; renderChat(); formFor("chat").elements.text.focus();
 });
+function isLocalPlatformOrigin(value) {
+  try {
+    const origin = new URL(value);
+    return origin.protocol === "http:" && !origin.username && !origin.password && !origin.search && !origin.hash
+      && origin.pathname === "/" && ["127.0.0.1", "localhost", "[::1]"].includes(origin.hostname);
+  } catch (_) { return false; }
+}
+function updatePlatformSetupMode() {
+  const local = isLocalPlatformOrigin(byId("platform-origin").value);
+  byId("platform-code-field").hidden = local;
+  byId("platform-code").required = !local;
+  if (local) byId("platform-code").value = "";
+  byId("platform-wizard").hidden = local;
+  byId("platform-connect-submit").textContent = local ? "自动连接本机 Plane" : "连接远程 Plane";
+  byId("platform-connect-proposal").textContent = local
+    ? "Plane 需配置管理员账号与管理员角色；秘书无需再次登录。登记仅发送到明确的本机 loopback 地址。"
+    : "远程连接需要 HTTPS、mTLS 客户端证书和一次性配对邀请。";
+}
+byId("platform-origin").addEventListener("input", updatePlatformSetupMode);
+updatePlatformSetupMode();
 byId("platform-wizard").addEventListener("click", () => {
   try {
     const origin = new URL(byId("platform-origin").value);
     if (origin.username || origin.password || origin.search || origin.hash || origin.pathname !== "/" || !["http:", "https:"].includes(origin.protocol)) throw new Error("请输入完整的平台地址。");
     if (origin.protocol === "http:" && !["127.0.0.1", "localhost", "[::1]"].includes(origin.hostname)) throw new Error("远程平台请使用 HTTPS，HTTP 仅支持本机地址。");
+    if (origin.protocol !== "https:") throw new Error("远程配对页面需要 HTTPS。");
     const url = new URL("/ui/agents", origin.origin);
     platformWindow = window.open(url.href, "_blank");
     if (!platformWindow) feedback("浏览器拦截了向导窗口，请允许打开后再试。", "warn");
@@ -1207,17 +1233,24 @@ byId("platform-connect-form").addEventListener("submit", async event => {
   if (control.disabled) return;
   control.disabled = true;
   try {
-    const { result } = await post("platform/connect", { code: byId("platform-code").value });
+    const origin = new URL(byId("platform-origin").value);
+    if (origin.username || origin.password || origin.search || origin.hash || origin.pathname !== "/") throw new Error("请输入完整的 Control Plane 地址。");
+    const local = isLocalPlatformOrigin(origin.href);
+    if (!local && origin.protocol !== "https:") throw new Error("远程 Control Plane 必须使用 HTTPS。");
+    const { result } = await post(local ? "platform/connect-local" : "platform/connect", local
+      ? { platform: origin.origin } : { code: byId("platform-code").value });
     platformNeedsRepair = false;
     byId("platform-code").value = "";
     if (platformSender) platformSender.source.postMessage({ type: "aiw:agent:connected", ownerId: result.ownerId, agentId: result.agentId }, platformSender.origin);
-    byId("platform-next").href = result.nextUrl; byId("platform-next").hidden = false;
-    const message = result.approvalState === "PENDING"
-      ? "Agent 已配对但仍处于禁用状态。请在 Control Plane 一次确认 Agent 身份、精确初始授权并启用当前进程。"
-      : result.approvalState === "APPROVED"
-        ? "Agent 已连接。若当前进程尚未启用，请在 Control Plane 明确启用。"
-        : "Agent 已连接，请在 Control Plane 的 Agent 页面检查配对状态。";
-    feedback(message, result.approvalState === "APPROVED" ? "ok" : "warn");
+    byId("platform-next").href = result.nextUrl;
+    byId("platform-next").hidden = local;
+    const message = local ? "本机秘书已自动登记到默认管理员，并获得计划与任务管理权限。"
+      : result.approvalState === "PENDING"
+        ? "Agent 已配对但仍处于禁用状态。请在 Control Plane 确认身份、选择是否设置初始授权，并启用当前进程。"
+        : result.approvalState === "APPROVED"
+          ? "Agent 已连接。若当前进程尚未启用，请在 Control Plane 明确启用。"
+          : "Agent 已连接，请在 Control Plane 的 Agent 页面检查配对状态。";
+    feedback(message, local || result.approvalState === "APPROVED" ? "ok" : "warn");
   } catch (error) { feedback(errorMessage(error), "error"); }
   finally { control.disabled = false; }
 });

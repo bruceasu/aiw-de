@@ -35,7 +35,7 @@ document.getElementById("agent-invitation").addEventListener("submit", async eve
     const value = await post("/agents/invitations", { profile: profile.value, serverOrigin: origin.value.trim() });
     document.getElementById("agent-pairing-code").value = value.connectionCode;
     document.getElementById("agent-copy-code").disabled = false;
-    show("配对码已生成，5 分钟后失效。请仅交给目标 Agent 客户端；Agent 建立受限会话后，在此页一次确认精确授权。");
+    show("配对码已生成，5 分钟后失效。请仅交给目标 Agent 客户端；秘书连接成功后，点击“刷新待确认 Agent”，再确认身份并启用当前进程。");
   } catch (error) { show(error.message, true); }
   finally { button.disabled = false; }
 });
@@ -45,34 +45,17 @@ document.getElementById("agent-copy-code").addEventListener("click", async () =>
   try { await navigator.clipboard.writeText(code.value); show("配对码已复制。"); }
   catch (_) { code.focus(); code.select(); show("无法访问剪贴板，配对码已选中，请手动复制。", true); }
 });
+document.getElementById("agent-refresh-pending").addEventListener("click", () => window.location.reload());
 document.querySelectorAll("[data-approve-agent]").forEach(form => form.addEventListener("submit", async event => {
   event.preventDefault();
   const button = form.querySelector('[type="submit"]');
   const value = Object.fromEntries(new FormData(form));
-  let parameters;
-  try { parameters = JSON.parse(value.parameters || "{}"); }
-  catch (_) { show("动作参数必须是有效 JSON。", true); return; }
-  if (!parameters || typeof parameters !== "object" || Array.isArray(parameters)) {
-    show("动作参数必须是 JSON 对象。", true); return;
-  }
-  const expiresAt = new Date(value.expiresAt).getTime();
-  if (!Number.isFinite(expiresAt)) { show("请选择有效的 Grant 到期时间。", true); return; }
-  const scope = {
-    action: value.action,
-    targetId: value.targetId.trim(),
-    step: value.step === "" ? null : Number(value.step),
-    effect: "ALLOW",
-    states: value.states.split(",").map(state => state.trim()).filter(Boolean),
-    minimumRounds: Number(value.minimumRounds),
-    maximumUses: Number(value.maximumUses),
-    parameters
-  };
   button.disabled = true;
   try {
-    const result = await post(`/agents/${encodeURIComponent(form.closest("[data-agent-id]").dataset.agentId)}/approve-pairing`, {
-      generation: Number(value.generation), agentBoot: value.agentBoot, scope, expiresAt
+    await post(`/agents/${encodeURIComponent(form.closest("[data-agent-id]").dataset.agentId)}/approve-pairing`, {
+      generation: Number(value.generation), agentBoot: value.agentBoot
     });
-    show(`Agent 已注册；Grant ${result.grantId} 已批准，当前进程已启用。重启后仍需重新启用。`);
+    show("秘书身份已确认，当前进程已启用；具体业务动作仍需单独授权。重启后仍需重新启用。");
     window.location.reload();
   } catch (error) { show(error.message, true); button.disabled = false; }
 }));
@@ -102,11 +85,15 @@ async function loadRotations(card) {
     }
   } catch (error) { host.textContent = error.message; }
 }
-document.querySelectorAll('[data-agent-id][data-agent-active="true"]').forEach(loadRotations);
+document.querySelectorAll('[data-agent-id][data-agent-active="true"][data-agent-remote="true"]').forEach(loadRotations);
 document.querySelectorAll("[data-revoke-agent]").forEach(button => button.addEventListener("click", async () => {
   const card = button.closest("[data-agent-id]");
   const agentId = card?.dataset.agentId;
-  if (!agentId || !window.confirm(`撤销 Agent ${agentId} 的凭据？当前会话将失效，身份及授权历史会保留；重新连接必须重新配对。`)) return;
+  if (!agentId) return;
+  if (typeof window.aiwConfirm !== "function") { show("确认弹窗尚未就绪，请刷新页面后重试。", true); return; }
+  if (!await window.aiwConfirm("当前会话将失效，身份及授权历史会保留；重新连接必须重新配对。", {
+    title: "撤销 Agent 凭据", target: agentId, acceptLabel: "确认撤销", danger: true
+  })) return;
   button.disabled = true;
   try {
     await post(`/agents/${encodeURIComponent(agentId)}/credential/revoke`);

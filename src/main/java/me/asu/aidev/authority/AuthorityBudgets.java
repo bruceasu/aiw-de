@@ -38,7 +38,8 @@ public class AuthorityBudgets {
     public void consume(Grant grant, String request, boolean reserved) {
         businessPermissions.getObject().consume(grant,request);
         Budget budget = current(grant.rule());
-        long limit = Math.min(budget.limit(), grant.rule().maximumUses());
+        boolean defaultPlanTask = businessPermissions.getObject().defaultGrant(grant);
+        long limit = defaultPlanTask ? Long.MAX_VALUE : Math.min(budget.limit(), grant.rule().maximumUses());
         if (enforced() && budget.used() >= limit) throw new IllegalStateException("Cumulative target/action budget is exhausted");
         if (jdbc.update("UPDATE authority_budget SET used_value=used_value+1,reserved_value=reserved_value+? WHERE target_key=? AND action=? AND (? OR used_value<?)",
                 reserved ? 1 : 0, budget.target(), budget.action(), !enforced(), limit) != 1)

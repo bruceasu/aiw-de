@@ -37,7 +37,6 @@ public class AgentPageController {
             row.put("revoked", "REVOKED_AGENT".equals(row.get("identity_kind")));
         });
         model.addAttribute("agents", identities);
-        model.addAttribute("actions", ActionScope.Action.values());
         return "ui/agents";
     }
 }

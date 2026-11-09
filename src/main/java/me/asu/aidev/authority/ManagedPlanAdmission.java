@@ -9,6 +9,10 @@ import org.springframework.stereotype.Component;
 /** Generic platform Plan ownership and admission; no personal-store references. */
 @Component
 public class ManagedPlanAdmission {
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<BusinessActionPermissions> businessPermissions;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<PermissionTargetResolver> permissionTargets;
     private final AuthorityRepository repo;
     private final AuthorityBoundary boundary;
     private final org.springframework.beans.factory.ObjectProvider<WorkflowPlanService> plans;
@@ -73,6 +77,20 @@ public class ManagedPlanAdmission {
         String previous=allowed.get();allowed.set(plan);
         try { return operation.get(); }
         finally { if(previous==null) allowed.remove();else allowed.set(previous); }
+    }
+    /** Routine default actions can operate on an owned ordinary plan without adopting it for execution. */
+    public <T> T delegatedActionAdmission(String plan,String worker,String grantId,Supplier<T> operation) {
+        if(managed(plan)||!businessPermissions.getObject().defaultGrant(repo.get(grantId)))
+            return delegatedAdmission(plan,worker,operation);
+        var principal=boundary.principal();
+        var grant=repo.get(grantId);
+        if(!principal.worker().equals(worker)||!grant.owner().equals(principal.owner())||!grant.workerId().equals(worker))
+            throw new SecurityException("Current owner and Agent action required");
+        permissionTargets.getObject().plan(principal.owner(),plan);
+        boundary.lock();
+        String previous=allowed.get();allowed.set(plan);
+        try {return operation.get();}
+        finally {if(previous==null)allowed.remove();else allowed.set(previous);}
     }
     public void admitTask(String plan,String task) {
         if(!managed(plan)) return;

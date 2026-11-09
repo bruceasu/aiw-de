@@ -68,7 +68,8 @@ public class BusinessPermissionController {
         for(var action:ActionScope.Action.values()) {
             boolean allowed;
             try {grants.human(actor,action.name());allowed=true;}catch(SecurityException error){allowed=false;}
-            result.add(Map.of("action",action.name(),"label",label(action),"group",group(action),"scopes",scopes(action),"allowed",allowed));
+            result.add(Map.of("action",action.name(),"label",label(action),"group",group(action),"scopes",scopes(action),"allowed",allowed&&!BusinessActionPermissions.isDefaultAction(action),
+                    "defaultPermission",BusinessActionPermissions.isDefaultAction(action)));
         }
         return result;
     }

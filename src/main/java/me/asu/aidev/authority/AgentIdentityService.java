@@ -21,7 +21,15 @@ public class AgentIdentityService {
 
     public record InvitationInput(String profile, String serverOrigin) {}
     public record PairInput(String invitation) {}
-    public record PairingApprovalInput(long generation, String agentBoot, ActionScope scope, long expiresAt) {}
+    public record LocalRegistrationInput(String agentId, String credential) {}
+    public record PairingApprovalInput(long generation, String agentBoot, ActionScope scope, Long expiresAt) {}
+
+    private static boolean validLocalAgentId(String value) {
+        if (value == null || !value.startsWith("a-local-")) return false;
+        String suffix = value.substring("a-local-".length());
+        try { return UUID.fromString(suffix).toString().equalsIgnoreCase(suffix); }
+        catch (IllegalArgumentException error) { return false; }
+    }
 
     public AgentIdentityService(AuthorityRepository repo, AuthorityBoundary boundary, AuthorityGrantService grants,
             AgentTransportSecurity transport) {
@@ -82,10 +90,45 @@ public class AgentIdentityService {
     }
 
     @Transactional
+    public Map<String, Object> registerLocal(LocalRegistrationInput input, HttpServletRequest request) {
+        transport.requireLocalEnrollment(request);
+        if (input == null || !validLocalAgentId(input.agentId())
+                || input.credential() == null || !input.credential().matches("[A-Za-z0-9_-]{43,128}"))
+            throw new IllegalArgumentException("Local Agent identity or credential is invalid");
+        boundary.lock();
+        String actor=grants.configuredAdministratorActor();
+        String owner=grants.bind(actor);
+        String agentId=input.agentId();
+        String credentialHash=AuthorityRepository.hash(input.credential());
+        var existing=repo.jdbc().queryForList("SELECT owner_id,key_hash,identity_kind,connection_profile,approval_state FROM authority_identity WHERE worker_id=?",agentId);
+        if(!existing.isEmpty()) {
+            var identity=existing.getFirst();
+            if(!Objects.equals(owner,identity.get("owner_id")) || !Objects.equals(credentialHash,identity.get("key_hash"))
+                    || !"AGENT".equals(identity.get("identity_kind")) || !"LOCAL".equals(identity.get("connection_profile"))
+                    || !"APPROVED".equals(identity.get("approval_state")))
+                throw new SecurityException("Local Agent identity is already bound or revoked; create a new local identity");
+        } else {
+            long now=System.currentTimeMillis();
+            repo.jdbc().update("""
+                    INSERT INTO authority_identity(worker_id,owner_id,key_hash,generation,enabled_boot,changed_by,changed_ms,read_scope,worker_boot,identity_kind,connection_profile,client_cert_sha256,approval_state)
+                    VALUES(?,?,?,1,NULL,?,?,?,NULL,'AGENT','LOCAL',NULL,'APPROVED')
+                    """,agentId,owner,credentialHash,actor,now,repo.encode(List.of()));
+            repo.audit("OWNER:"+owner,null,null,actor,"LOCAL_AGENT_AUTO_ENROLLED",
+                    "Direct loopback enrollment; Plan and Task defaults enabled for configured administrator");
+        }
+        grants.ensurePlanTaskDefaults(owner,agentId,actor);
+        return Map.of("ownerId",owner,"agentId",agentId,"profile","LOCAL","approvalState","APPROVED");
+    }
+
+    @Transactional
     public Map<String, Object> approvePairing(String agentId, PairingApprovalInput input, String actor) {
         grants.identityHuman(actor);
-        if (input == null || input.scope() == null || input.agentBoot() == null || input.agentBoot().isBlank())
-            throw new IllegalArgumentException("Current Agent session and exact initial Grant are required");
+        if (input == null || input.agentBoot() == null || input.agentBoot().isBlank())
+            throw new IllegalArgumentException("Current Agent session is required");
+        if ((input.scope() == null) != (input.expiresAt() == null))
+            throw new IllegalArgumentException("Grant scope and expiry must be supplied together");
+        if (input.scope() != null && BusinessActionPermissions.isDefaultAction(input.scope().action()))
+            throw new IllegalArgumentException("Routine plan/task actions are enabled with the Agent process; omit the initial Grant");
         boundary.lock();
         var rows = repo.jdbc().queryForList("SELECT owner_id,approval_state,generation,worker_boot,enabled_boot FROM authority_identity WHERE worker_id=? AND identity_kind='AGENT'", agentId);
         if (rows.size() != 1) throw new IllegalArgumentException("Pending Agent identity not found");
@@ -98,15 +141,19 @@ public class AgentIdentityService {
                 || identity.get("enabled_boot") != null)
             throw new IllegalStateException("Agent process session changed; refresh before approving");
 
-        var grant = grants.issueForPendingPairing(owner, agentId, input.scope(), input.expiresAt(), actor);
+        var grant = input.scope() == null ? null : grants.issueForPendingPairing(owner, agentId, input.scope(), input.expiresAt(), actor);
         long now = System.currentTimeMillis();
         if (repo.jdbc().update("UPDATE authority_identity SET approval_state='APPROVED',enabled_boot=?,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND identity_kind='AGENT' AND approval_state='PENDING' AND generation=? AND worker_boot=? AND enabled_boot IS NULL",
                 boundary.boot(), actor, now, agentId, input.generation(), input.agentBoot()) != 1)
             throw new IllegalStateException("Agent process changed during approval");
         repo.jdbc().update("UPDATE authority_metadata SET human_auth_required=TRUE WHERE id=1");
-        repo.audit(grant.targetKey(), grant.id(), null, actor, "AGENT_PAIRING_APPROVED",
-                "Agent=" + agentId + "; exact initial Grant approved and current process enabled; restart requires human re-enable");
-        return Map.of("state", "APPROVED_ENABLED", "agentId", agentId, "grantId", grant.id(), "generation", input.generation() + 1);
+        grants.ensurePlanTaskDefaults(owner, agentId, actor);
+        repo.audit(grant == null ? null : grant.targetKey(), grant == null ? null : grant.id(), null, actor, "AGENT_PAIRING_APPROVED",
+                "Agent=" + agentId + (grant == null ? "; no initial Grant" : "; exact initial Grant approved")
+                        + "; current process enabled; restart requires human re-enable");
+        return grant == null
+                ? Map.of("state", "APPROVED_ENABLED", "agentId", agentId, "generation", input.generation() + 1)
+                : Map.of("state", "APPROVED_ENABLED", "agentId", agentId, "grantId", grant.id(), "generation", input.generation() + 1);
     }
 
     @Transactional

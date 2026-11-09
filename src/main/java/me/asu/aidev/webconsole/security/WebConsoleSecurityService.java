@@ -85,6 +85,13 @@ public class WebConsoleSecurityService {
         return "web:" + username(session);
     }
 
+    /** Local Agent enrollment uses the configured administrator identity without creating a browser session. */
+    public String configuredAdministratorActor() {
+        if (!loginConfigured() || !configuredRole.canAdmin())
+            throw new SecurityException("Configured Control Plane administrator is required for local Agent enrollment");
+        return "web:" + configuredUsername;
+    }
+
     /** Re-evaluate durable human delegations against current configuration, not an old session. */
     public String currentOperatorAuthority(String actor) {
         boolean identified = ("web:" + configuredUsername).equals(actor);

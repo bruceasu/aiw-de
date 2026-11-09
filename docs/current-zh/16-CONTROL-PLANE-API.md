@@ -18,7 +18,7 @@
 | `/api/r1/worker-protocol/v1/**` 中的注册、心跳、领取、启动、结果上报和输出操作 | `AIW_WORKER_TOKEN` 非空时需 `Authorization: Bearer <token>`。已登记的代理 ID 另需 `X-AIW-Delegate-Key`，Worker/lease 校验保留；这些机器操作不要求浏览器 session。 |
 | `/api/r1/worker-protocol/v1/workers/{workerId}` 下的 Drain/Offline | 原 Worker bearer 和专用身份校验仍适用；它们属于管理写入，首次代理启用后另受下述持久人工认证要求保护。 |
 | External Workflow `/api/r1/workflows/**` | 仅 `aidev.external-workflow.enabled=true` 时注册。使用 `X-Workflow-Token`；intake request 使用单独的 request token，其余使用 submission token；写入同时适用下述通用管理写入规则。 |
-| Agent API：`/api/r1/authority/**` | 人类路由要求已认证 session、CSRF 和当前动作角色；Agent 机器路由要求专属 Agent 凭据、声明的进程 boot、所有者/目标范围。一次性配对使用 Agent 邀请；REMOTE 另要求 HTTPS/mTLS；LOCAL 仅允许显式 loopback。 |
+| Agent API：`/api/r1/authority/**` | 人类路由要求已认证 session、CSRF 和当前动作角色；Agent 机器路由要求专属 Agent 凭据、声明的进程 boot、所有者/目标范围。LOCAL 通过本机 loopback 自动登记；REMOTE 使用 Agent 邀请并要求 HTTPS/mTLS。 |
 | 控制台 JSON/文件 API：`/api/r1/goals`、`/api/r1/secretary`、`/api/r1/delegation`、`/api/r1/task-outputs`、`/api/r1/workflow-plans`、`/api/r1/plan-editor` 及其子路径 | 保留控制台 session 边界及认证关闭时原共享本地模式。启用登录时需已认证 session cookie；非 GET/HEAD 请求需 `_csrf`，并校验当前动作角色和所有者。首次代理启用要求已配置人工登录，启用后不能通过停用代理或重启取消此持久认证要求。 |
 | 其余 `/api/r1/` 管理写入，包括 Fleet、审批、工程及知识操作 | 首次代理启用前保留原本地信任策略；首次启用后持久要求人工 session 与 CSRF（`X-CSRF-Token` 或 `_csrf`）：审批决定需 Approver，删除需 Admin，其余写入需 Operator。该写入规则不额外改变普通旧 GET 的读取认证策略。 |
 
@@ -28,9 +28,11 @@ Worker 协议和 Worker output 的错误格式：`{"code":"bad_request|state_con
 
 Control Plane 将秘书等外部程序作为通用 Agent 管理，路由、身份和审计记录不使用“秘书”概念。Agent 通过 `/ui/agents` 建立一次性配对；Control Plane 不保存 Agent 回调地址，也不主动连接 Agent。人类权限管理和 Agent 授权控制位于 `/ui/authority`。
 
-新配对的 Agent 先处于 `PENDING` 且禁用，只能建立禁用进程会话并读取连接状态。一次受登录、CSRF 和角色保护的 Control Plane 确认会在同一事务中绑定 Agent 身份、批准精确的初始 Grant 并启用当前进程；任何失败都保持待批准和禁用。待批准身份不能调用其它 Agent API。Agent 重启后会声明新的进程 boot，默认禁用，必须由人类在 Control Plane 重新启用；证书轮换也须人工批准新指纹后建立新会话并重新启用。已撤销的凭据不能恢复，需重新配对并批准新的 Grant。
+REMOTE 配对的 Agent 先处于 `PENDING` 且禁用，只能建立禁用进程会话并读取连接状态。一次受登录、CSRF 和角色保护的 Control Plane 确认会在同一事务中批准身份并启用当前进程；初始 Grant 可选。任何失败都保持待批准和禁用。待批准身份不能调用其它 Agent API。REMOTE Agent 重启后会声明新的进程 boot，默认禁用，必须由人类在 Control Plane 重新启用；证书轮换也须人工批准新指纹后建立新会话并重新启用。
 
-LOCAL 档案只允许 loopback，且不得通过公网反向代理发布。REMOTE 档案要求 HTTPS、受信任的 Agent 客户端证书、配对时固定的证书指纹，以及 Agent 对 Control Plane 服务端证书的校验；不得降级为 HTTP。配对/轮换/部署步骤见[远程 Agent mTLS 部署说明](../features/archive/FD-072/AGENT_MTLS_DEPLOYMENT.md)。
+LOCAL Secretary 无须交互式 Owner 登录或配对码。Plane 需预先配置管理员密码及 `ADMIN` 角色（默认用户名 `admin`）；秘书不会请求或保存该密码。它通过 `POST /api/r1/authority/agents/local/register` 直接从 loopback 登记，Control Plane 将其绑定到配置的管理员 Owner，并在新进程会话确认后自动启用当前进程及计划/任务默认权限。此端点拒绝浏览器来源和转发代理请求，不得经反向代理发布。LOCAL 的每个进程重启会重新确认会话；REMOTE 的手动审批流程不变。已撤销的凭据不能恢复；后续管理动作仍受对应权限控制。
+
+LOCAL 自动登记只接受直接 loopback HTTP，不配置客户端证书，也不得通过任何反向代理发布。REMOTE 档案要求 HTTPS、受信任的 Agent 客户端证书、配对时固定的证书指纹，以及 Agent 对 Control Plane 服务端证书的校验；不得降级为 HTTP。服务器 keystore/truststore、Agent 证书环境变量和轮换边界见[远程 Agent mTLS 部署说明](../features/archive/FD-072/AGENT_MTLS_DEPLOYMENT.md)。指南含 Windows PowerShell、Linux/macOS 的自建私有 CA 和证书签发示例；生产环境应使用组织 PKI。
 
 Agent 状态变更消息仅包含固定事件类型、资源 ID、版本和投递元数据；Agent 使用当前授权的 API 拉取最新资源后确认消息。消息不携带可执行任务、私人对话、完整提示词、密钥或资源快照，也不会自行授权或执行动作。稳定契约见 [Control Plane API OpenSpec](../../openspec/specs/control-plane-api/spec.md) 与 [Secretary Agent OpenSpec](../../openspec/specs/secretary/spec.md)。
 

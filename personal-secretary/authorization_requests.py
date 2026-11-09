@@ -104,7 +104,7 @@ class AuthorizationRequests:
                         raise AuthorizationRequired("此计划缺少固定 Git 基线。请在文件执行范围中选择仓库，准备基线并确认保存。", "BASELINE_REQUIRED")
                 if not options.get("models"):
                     raise AuthorizationRequired("Agent 工厂尚未选择默认模型。请打开“Agent 工厂设置”保存一次模型与自动 Worker 设置，之后由工厂自动准备。", "PROFESSIONAL_MODEL_REQUIRED")
-            else:
+            elif row["action"].get("action") != "platform_permissions":
                 permissions = runtime.platform.request("/action-permissions")
                 if not any(item.get("effectiveState") == "ENABLED" and item.get("remaining", 0) > 0
                     and (not row.get("planId") or item.get("scopeKind") == "ALL" or item.get("scopeId") == row["planId"]) for item in permissions):

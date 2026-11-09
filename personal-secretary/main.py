@@ -328,9 +328,11 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                             raise PersonalChatError("CONFIRMATION_INVALID", str(error)) from None
                     elif self.path == "/api/work":
                         result = runtime.create_work(data["title"], data["body"], data.get("planId") or None, data.get("outputPath") or None)
-                    elif self.path in {"/api/platform/connect", "/api/platform/check", "/api/platform/certificate-rotation", "/api/authorization/decide"}:
+                    elif self.path in {"/api/platform/connect", "/api/platform/connect-local", "/api/platform/check", "/api/platform/certificate-rotation", "/api/authorization/decide"}:
                         try:
-                            if self.path.endswith("/connect"):
+                            if self.path.endswith("/connect-local"):
+                                result = runtime.platform_setup.connect_local(data.get("platform"))
+                            elif self.path.endswith("/connect"):
                                 result = runtime.platform_setup.connect(data.get("code"))
                             elif self.path.endswith("/check"):
                                 result = runtime.platform_setup.check()

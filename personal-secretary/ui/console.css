@@ -151,6 +151,9 @@ textarea { min-height: 112px; resize: vertical; line-height: 1.8; }
 .view-chat { display: flex; flex-direction: column; }
 .view-chat > * { width: 100%; }
 .view-chat .panel-heading { flex-shrink: 0; margin-bottom: 20px; }
+#secretary-runs { flex: 0 0 auto; }
+#secretary-runs > summary { cursor: pointer; font-size: 17px; font-weight: 600; line-height: 1.4; }
+#secretary-runs[open] > summary { margin-bottom: 20px; }
 .chat-card { display: flex; flex: 1; min-height: 340px; margin-top: 0 !important; padding: 20px 24px; }
 .chat-form { display: flex; flex-direction: column; gap: 16px; width: 100%; min-height: 0; }
 .chat-form > .field:first-child { max-width: 520px; }

@@ -26,8 +26,12 @@ public class AuthorityGrantService {
         if(security.currentDelegationAuthority(actor,"A05").isBlank()
                 && security.currentDelegationAuthority(actor,"A11_APPROVE").isBlank()) throw new SecurityException("Current identified human role required");
     }
+    public String configuredAdministratorActor() { return security.configuredAdministratorActor(); }
     public void owns(String owner,String actor) {
         if(!Objects.equals(repo.actor(owner),actor)) throw new SecurityException("Owner binding does not match the authenticated human");
+    }
+    public void ensurePlanTaskDefaults(String owner,String worker,String actor) {
+        businessPermissions.getObject().ensurePlanTaskDefaults(owner,worker,actor);
     }
     @Transactional public String bind(String actor) {
         identityHuman(actor);boundary.lock();boundary.instance();
@@ -52,32 +56,68 @@ public class AuthorityGrantService {
             throw new IllegalStateException("The personal process must start a disabled session before explicit human enablement");
         if(repo.jdbc().update("UPDATE authority_identity SET enabled_boot=?,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND generation=?",
                 enabled?boundary.boot():null,actor,System.currentTimeMillis(),worker,generation)!=1) throw new IllegalStateException("Identity generation changed; confirm the exact current process");
-        if(enabled) repo.jdbc().update("UPDATE authority_metadata SET human_auth_required=TRUE WHERE id=1");
+        if(enabled) {
+            repo.jdbc().update("UPDATE authority_metadata SET human_auth_required=TRUE WHERE id=1");
+            ensurePlanTaskDefaults(owner,worker,actor);
+        }
         repo.audit("AGENT:"+worker,null,null,actor,enabled?"AGENT_ENABLED":"AGENT_DISABLED",worker+"; earlier admissions invalidated");
     }
     @Transactional public Map<String,Object> session(AuthorityBoundary.Principal principal,String boot) {
         boundary.lock();
         if(boot==null || !UUID.fromString(boot).toString().equals(boot)) throw new IllegalArgumentException("Fresh canonical process UUID required");
-        String previous=repo.jdbc().queryForObject("SELECT worker_boot FROM authority_identity WHERE worker_id=? AND identity_kind='AGENT'",String.class,principal.worker());
-        if(!boot.equals(previous)) {
-            if(repo.jdbc().update("UPDATE authority_identity SET worker_boot=?,enabled_boot=NULL,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND identity_kind='AGENT' AND generation=?",
-                    boot,"agent:"+principal.worker(),System.currentTimeMillis(),principal.worker(),principal.generation())!=1)
+        var rows=repo.jdbc().queryForList("SELECT owner_id,connection_profile,approval_state,worker_boot,enabled_boot FROM authority_identity WHERE worker_id=? AND identity_kind='AGENT'",principal.worker());
+        if(rows.size()!=1) throw new SecurityException("Registered Agent identity required");
+        var identity=rows.getFirst();
+        String owner=String.valueOf(identity.get("owner_id"));
+        boolean local="LOCAL".equals(identity.get("connection_profile"));
+        String previous=(String)identity.get("worker_boot");
+        String previousEnabledBoot=(String)identity.get("enabled_boot");
+        String approvalState=String.valueOf(identity.get("approval_state"));
+        long now=System.currentTimeMillis();
+        if(local && "PENDING".equals(approvalState)) {
+            if(repo.jdbc().update("UPDATE authority_identity SET approval_state='APPROVED',worker_boot=?,enabled_boot=?,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND identity_kind='AGENT' AND approval_state='PENDING' AND generation=?",
+                    boot,boundary.boot(),"local-agent:"+principal.worker(),now,principal.worker(),principal.generation())!=1)
+                throw new IllegalStateException("Local Agent identity changed; reload session state");
+            repo.audit("OWNER:"+owner,null,null,"local-agent:"+principal.worker(),"LOCAL_AGENT_AUTO_APPROVED",
+                    "Direct loopback session; configured local administrator owns Plan and Task permissions");
+        } else if(!boot.equals(previous)) {
+            if(repo.jdbc().update("UPDATE authority_identity SET worker_boot=?,enabled_boot=?,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND identity_kind='AGENT' AND generation=?",
+                    boot,local?boundary.boot():null,local?"local-agent:"+principal.worker():"agent:"+principal.worker(),now,principal.worker(),principal.generation())!=1)
                 throw new IllegalStateException("Agent generation changed; reload session state");
-            repo.audit("AGENT:"+principal.worker(),null,null,"agent:"+principal.worker(),"AGENT_SESSION_STARTED",
-                    "New process boot; explicit human enablement required");
+            repo.audit((local?"OWNER:"+owner:"AGENT:"+principal.worker()),null,null,(local?"local-agent:":"agent:")+principal.worker(),
+                    local?"LOCAL_AGENT_SESSION_STARTED":"AGENT_SESSION_STARTED",
+                    local?"Direct loopback process boot; local auto-enrollment policy enabled this process"
+                            :"New process boot; explicit human enablement required");
+        } else if(local && previousEnabledBoot!=null && !boundary.boot().equals(previousEnabledBoot)) {
+            if(repo.jdbc().update("UPDATE authority_identity SET enabled_boot=?,generation=generation+1,changed_by=?,changed_ms=? WHERE worker_id=? AND identity_kind='AGENT' AND generation=? AND worker_boot=? AND enabled_boot=?",
+                    boundary.boot(),"local-agent:"+principal.worker(),now,principal.worker(),principal.generation(),boot,previousEnabledBoot)!=1)
+                throw new IllegalStateException("Local Agent session changed; reload connection state");
+            repo.audit("OWNER:"+owner,null,null,"local-agent:"+principal.worker(),"LOCAL_AGENT_SESSION_RESTORED",
+                    "Previously enabled LOCAL Agent resumed after Control Plane restart");
         }
         boolean enabled=boundary.boot().equals(repo.jdbc().queryForObject("SELECT enabled_boot FROM authority_identity WHERE worker_id=? AND identity_kind='AGENT'",String.class,principal.worker()));
+        if(local && enabled) {
+            String actor=security.configuredAdministratorActor();
+            if(!Objects.equals(actor,repo.actor(owner))) throw new SecurityException("Local Agent no longer matches the configured administrator Owner");
+            repo.jdbc().update("UPDATE authority_metadata SET human_auth_required=TRUE WHERE id=1");
+            ensurePlanTaskDefaults(owner,principal.worker(),actor);
+        }
         return Map.of("ownerId",principal.owner(),"agentId",principal.worker(),"agentBoot",boot,"state",enabled?"ENABLED":"DISABLED_UNTIL_HUMAN_ENABLE");
     }
     @Transactional public AuthorityRepository.Grant issue(String owner,String worker,ActionScope scope,long expiry,String actor) {
-        return issue(owner,worker,scope,expiry,actor,false);
+        return issue(owner,worker,scope,expiry,actor,false,false);
     }
     @Transactional public AuthorityRepository.Grant issueForPendingPairing(String owner,String worker,ActionScope scope,long expiry,String actor) {
-        return issue(owner,worker,scope,expiry,actor,true);
+        return issue(owner,worker,scope,expiry,actor,true,false);
     }
-    private AuthorityRepository.Grant issue(String owner,String worker,ActionScope scope,long expiry,String actor,boolean pairingApproval) {
+    AuthorityRepository.Grant issueForPermission(BusinessActionPermissions.Permission permission,ActionScope scope,String actor) {
+        if(permission.action()!=scope.action()||!businessPermissions.getObject().active(permission)
+                ||permission.usedUses()>=permission.maximumUses())throw new SecurityException("Current parent permission required");
+        return issue(permission.ownerId(),permission.workerId(),scope,permission.expiresMs(),actor,false,true);
+    }
+    private AuthorityRepository.Grant issue(String owner,String worker,ActionScope scope,long expiry,String actor,boolean pairingApproval,boolean permissionChild) {
         Objects.requireNonNull(scope);human(actor,scope.action().name());owns(owner,actor);boundary.lock();
-        if(businessPermissions.getObject().regime(owner,worker,scope.action()))throw new IllegalStateException("This action uses business permissions; legacy parallel grants are disabled");
+        if(!permissionChild&&businessPermissions.getObject().regime(owner,worker,scope.action()))throw new IllegalStateException("This action uses business permissions; legacy parallel grants are disabled");
         boundary.requireMigrationSafeInstallation();
         if(!scope.effect().equals("ALLOW") || expiry<=System.currentTimeMillis())
             throw new IllegalArgumentException("Explicit minimal ALLOW scope, expiry and separate restriction controls required");

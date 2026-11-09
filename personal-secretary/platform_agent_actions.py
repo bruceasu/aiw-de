@@ -25,7 +25,6 @@ class PlatformAgentActions:
             if kind == "platform_permissions":
                 available = business.permissions()
                 active = [item for item in available["permissions"] if item.get("effectiveState") == "ENABLED" and item.get("remaining", 0) > 0][:30]
-                if not active: raise AuthorizationRequired("尚未配置可用的代理范围，请选择计划、动作、有效期和次数。", "ACTION_PERMISSION_REQUIRED", work.get("planId"))
                 return {"permissions": active}
             if kind == "platform_questions":
                 return business.questions(action.get("permissionId"), action.get("planId"))

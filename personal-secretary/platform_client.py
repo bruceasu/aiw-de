@@ -1,6 +1,7 @@
 """A closed HTTP boundary; no shared database, redirects or automatic effect retries."""
 
 import json
+import re
 import ssl
 import urllib.error
 import urllib.parse
@@ -53,11 +54,15 @@ class PlatformClient:
             raise ValueError("Both Agent client certificate and private key are required")
         self.boot = str(uuid.uuid4())
         self.session_started = False
-        self.transport = self._transport(client_cert, client_key, server_ca)
+        direct = (allow_loopback_http and parsed.scheme == "http"
+                  and parsed.hostname in {"127.0.0.1", "::1", "localhost"})
+        self.transport = self._transport(client_cert, client_key, server_ca, direct=direct)
 
     @staticmethod
-    def _transport(client_cert=None, client_key=None, server_ca=None):
+    def _transport(client_cert=None, client_key=None, server_ca=None, direct=False):
         handlers = [NoRedirect()]
+        if direct:
+            handlers.insert(0, urllib.request.ProxyHandler({}))
         if client_cert or server_ca:
             context = ssl.create_default_context()
             if server_ca:
@@ -88,7 +93,7 @@ class PlatformClient:
             raise ValueError("Agent invitation exceeds the fixed request limit")
         request = urllib.request.Request(base_url.rstrip("/") + "/api/r1/authority/agents/pair", data=payload,
             headers={"Content-Type": "application/json"}, method="POST")
-        transport = PlatformClient._transport(client_cert, client_key, server_ca)
+        transport = PlatformClient._transport(client_cert, client_key, server_ca, direct=profile == "LOCAL")
         try:
             with transport.open(request, timeout=20) as response:
                 raw = response.read(32769)
@@ -103,6 +108,35 @@ class PlatformClient:
                 not isinstance(result.get("agentId"), str) or not isinstance(result.get("ownerId"), str) or
                 not isinstance(result.get("credential"), str)):
             raise PlatformError("invalid-pairing-response")
+        return result
+
+    @staticmethod
+    def register_local(base_url, agent_id, credential):
+        parsed = urllib.parse.urlsplit(base_url)
+        if (parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in ("", "/")
+                or parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "::1", "localhost"}):
+            raise ValueError("Automatic Agent enrollment requires an explicit loopback HTTP Control Plane origin")
+        if (not isinstance(agent_id, str) or not agent_id.startswith("a-local-")
+                or not isinstance(credential, str) or not re.fullmatch(r"[A-Za-z0-9_-]{43,128}", credential)):
+            raise ValueError("Local Agent identity or credential is invalid")
+        payload = encode({"agentId": agent_id, "credential": credential}).encode()
+        if len(payload) > 8192:
+            raise ValueError("Local Agent enrollment request too large")
+        request = urllib.request.Request(base_url.rstrip("/") + "/api/r1/authority/agents/local/register", data=payload,
+            headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            with PlatformClient._transport(direct=True).open(request, timeout=20) as response:
+                raw = response.read(32769)
+                if len(raw) > 32768:
+                    raise ValueError("Local Agent enrollment response too large")
+                result = json.loads(raw)
+        except urllib.error.HTTPError as error:
+            raise PlatformError(error.code) from None
+        except (urllib.error.URLError, TimeoutError, OSError):
+            raise PlatformError("local-enrollment-unconfirmed") from None
+        if (not isinstance(result, dict) or result.get("profile") != "LOCAL" or result.get("agentId") != agent_id
+                or not isinstance(result.get("ownerId"), str) or result.get("approvalState") != "APPROVED"):
+            raise PlatformError("invalid-local-enrollment-response")
         return result
 
     def request(self, path, body=None):

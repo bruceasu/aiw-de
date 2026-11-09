@@ -53,6 +53,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 if(path.startsWith("/api/r1/authority/")) {
                     String operation=path.substring("/api/r1/authority".length());
                     if(method.equals("POST") && operation.equals("/agents/pair")) return true;
+                    if(method.equals("POST") && operation.equals("/agents/local/register")) return true;
                     if(agentMachine(method,operation)) {
                         String authorization=request.getHeader("Authorization");String agent=request.getHeader("X-AIW-Agent");
                         if(authorization==null || !authorization.startsWith("Bearer ")) { response.sendError(401,"Dedicated Agent credential required");return false; }

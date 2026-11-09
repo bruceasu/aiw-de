@@ -11,6 +11,12 @@ import static me.asu.aidev.authority.ActionPermissionContract.*;
 /** One hard, human-confirmed counter across all concrete targets of a permission period. */
 @Service
 public class BusinessActionPermissions {
+    private static final Set<ActionScope.Action> DEFAULT_PLAN_TASK_ACTIONS = EnumSet.of(
+            ActionScope.Action.A01, ActionScope.Action.A02, ActionScope.Action.A03, ActionScope.Action.A04,
+            ActionScope.Action.A05, ActionScope.Action.A06, ActionScope.Action.A07, ActionScope.Action.A08,
+            ActionScope.Action.A09, ActionScope.Action.A10, ActionScope.Action.A19_ANSWER);
+    private static final String DEFAULT_DIGEST = AuthorityRepository.hash("DEFAULT_PLAN_TASK_V1");
+    private static final long DEFAULT_EXPIRY_MS = 253402300799000L;
     private final AuthorityRepository repo;
     private final AuthorityBoundary boundary;
     private final AuthorityGrantService grants;
@@ -64,8 +70,38 @@ public class BusinessActionPermissions {
         grants.human(actor,action.name());
         if(!Objects.equals(repo.actor(owner),actor))throw new SecurityException("Current permission owner required");
     }
+    public static boolean isDefaultAction(ActionScope.Action action) {return DEFAULT_PLAN_TASK_ACTIONS.contains(action);}
+    private static boolean isDefault(Permission p) {return DEFAULT_DIGEST.equals(p.creationDigest());}
+    public boolean defaultGrant(AuthorityRepository.Grant grant) {
+        return child(grant.id()).map(c->isDefault(get(c.permissionId()))).orElse(false);
+    }
+    /** Provision owner-wide routine plan/task actions when a human enables this exact Agent process. */
+    @Transactional public void ensurePlanTaskDefaults(String owner,String worker,String actor) {
+        boundary.lock();grants.owns(owner,actor);boundary.requireMigrationSafeInstallation();
+        if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=? AND identity_kind='AGENT' AND approval_state='APPROVED'",Long.class,owner,worker)!=1)
+            throw new SecurityException("Approved owner/Agent binding required");
+        for(var action:DEFAULT_PLAN_TASK_ACTIONS) {
+            String authority=security.currentDelegationAuthority(actor,action.name());
+            var current=list(owner).stream().filter(p->p.workerId().equals(worker)&&p.action()==action&&p.state().equals("ENABLED")).findFirst();
+            if(current.isPresent()&&isDefault(current.get())&&current.get().authority().equals(authority)
+                    &&current.get().usedUses()<current.get().maximumUses()&&current.get().expiresMs()>System.currentTimeMillis())continue;
+            if(current.isPresent()) {
+                var old=current.get();
+                if(repo.jdbc().update("UPDATE authority_action_permission SET state='REPLACED',revision=revision+1 WHERE id=? AND state='ENABLED'",old.id())!=1)
+                    throw new IllegalStateException("Previous permission changed");
+                agentMessages.stateChanged(worker,"PERMISSION_CHANGED",old.id(),old.revision()+1);
+            }
+            if(authority.isBlank())continue;
+            String id="AP-"+UUID.randomUUID(),requestId=UUID.randomUUID().toString();
+            repo.jdbc().update("INSERT INTO authority_action_permission(id,owner_id,worker_id,action,scope_kind,scope_id,maximum_uses,used_uses,state,authority,effective_ms,expires_ms,creation_request,creation_digest) VALUES(?,?,?,?,?,NULL,?,0,'ENABLED',?,?,?,?,?)",
+                    id,owner,worker,action.name(),Scope.ALL.name(),Integer.MAX_VALUE,authority,System.currentTimeMillis(),DEFAULT_EXPIRY_MS,requestId,DEFAULT_DIGEST);
+            repo.audit(null,id,requestId,actor,"DEFAULT_PLAN_TASK_PERMISSION_ENABLED","Owner-wide routine action="+action+"; prior period retained");
+            agentMessages.stateChanged(worker,"PERMISSION_CHANGED",id,1);
+        }
+    }
     @Transactional public Permission issue(Issue input,String actor) {
         boundary.lock();human(input.ownerId(),input.action(),actor);boundary.requireMigrationSafeInstallation();
+        if(isDefaultAction(input.action()))throw new IllegalArgumentException("Routine plan/task action is enabled with the Agent process");
         if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM authority_identity WHERE owner_id=? AND worker_id=? AND identity_kind='AGENT' AND approval_state='APPROVED'",Long.class,input.ownerId(),input.agentId())!=1)
             throw new SecurityException("Approved owner/Agent binding required");
         String digest=AuthorityRepository.hash(repo.encode(input));
@@ -98,6 +134,7 @@ public class BusinessActionPermissions {
     }
     @Transactional public void revoke(String id,String actor) {
         boundary.lock();var p=get(id);human(p.ownerId(),p.action(),actor);
+        if(isDefault(p))throw new IllegalArgumentException("Disable or revoke the Agent identity to stop default plan/task actions");
         if(repo.jdbc().update("UPDATE authority_action_permission SET state='REVOKED',revision=revision+1 WHERE id=? AND state='ENABLED'",id)!=1) throw new IllegalStateException("Permission already changed");
         repo.audit(null,id,null,actor,"ACTION_PERMISSION_REVOKED","Past consumption, candidates and receipts retained");
         agentMessages.stateChanged(p.workerId(),"PERMISSION_CHANGED",id,p.revision()+1);
@@ -114,8 +151,8 @@ public class BusinessActionPermissions {
                 && p.action() == ActionScope.Action.A05 && active(p) && p.usedUses() < p.maximumUses()
                 && (p.scopeKind() == Scope.ALL || p.scopeKind() == Scope.PLAN && plan.equals(p.scopeId())))
                 .findFirst().orElseThrow(() -> new SecurityException("PLAN_CONFIRMATION_REQUIRED: authorize plan confirmation before factory execution"));
-        var rule = new ActionScope(ActionScope.Action.A05, plan, null, "ALLOW", Set.of("DRAFT"), 0, 1, Map.of());
-        var grant = grants.issue(permission.ownerId(), permission.workerId(), rule, permission.expiresMs(), repo.actor(permission.ownerId()));
+        var rule = new ActionScope(ActionScope.Action.A05, plan, null, "ALLOW", Set.of("DRAFT"), 0, permission.maximumUses(), Map.of());
+        var grant = grants.issueForPermission(permission, rule, repo.actor(permission.ownerId()));
         targets.getObject().check(permission, rule, null, null);
         repo.jdbc().update("INSERT INTO authority_permission_child(grant_id,permission_id,request_id,source_plan,source_task,question_id) VALUES(?,?,?,?,NULL,NULL)",
                 grant.id(), permission.id(), requestId, plan);
@@ -143,6 +180,6 @@ public class BusinessActionPermissions {
         result.put("scopeKind",p.scopeKind());result.put("scopeId",p.scopeId());result.put("maximumUses",p.maximumUses());result.put("usedUses",p.usedUses());
         result.put("remaining",p.maximumUses()-p.usedUses());result.put("state",p.state());result.put("expiresAt",p.expiresMs());
         result.put("effectiveState",!p.state().equals("ENABLED")?p.state():p.expiresMs()<=System.currentTimeMillis()?"EXPIRED":!active(p)?"ROLE_CHANGED":p.usedUses()>=p.maximumUses()?"EXHAUSTED":"ENABLED");
-        result.put("creationRequestId",p.creationRequest());result.put("revision",p.revision());return result;
+        result.put("creationRequestId",p.creationRequest());result.put("defaultPermission",isDefault(p));result.put("revision",p.revision());return result;
     }
 }

@@ -317,9 +317,9 @@ public class AuthorityActions implements AuthorityTargets {
             case A09 -> plans.complete(rule.targetId(),plans.get(rule.targetId()).version(),actor,required(rule,"reason")).state().name();
             case A08 -> plans.withdraw(rule.targetId(),plans.get(rule.targetId()).version(),actor,required(rule,"reason")).state().name();
             case A07 -> plans.stop(rule.targetId(),plans.get(rule.targetId()).version(),actor,required(rule,"reason")).state().name();
-            case A06 -> coordinator.delegatedAdmission(rule.targetId(),repo.get(grant).workerId(),()->plans.jump(rule.targetId(),plans.get(rule.targetId()).version(),Integer.parseInt(required(rule,"targetStep")),actor,required(rule,"reason")).state().name());
-            case A05 -> coordinator.delegatedAdmission(rule.targetId(),repo.get(grant).workerId(),()->plans.confirm(rule.targetId(),plans.get(rule.targetId()).version(),actor).state().name());
-            case A04 -> coordinator.delegatedAdmission(rule.targetId(),repo.get(grant).workerId(),()->{
+            case A06 -> coordinator.delegatedActionAdmission(rule.targetId(),repo.get(grant).workerId(),grant,()->plans.jump(rule.targetId(),plans.get(rule.targetId()).version(),Integer.parseInt(required(rule,"targetStep")),actor,required(rule,"reason")).state().name());
+            case A05 -> coordinator.delegatedActionAdmission(rule.targetId(),repo.get(grant).workerId(),grant,()->plans.confirm(rule.targetId(),plans.get(rule.targetId()).version(),actor).state().name());
+            case A04 -> coordinator.delegatedActionAdmission(rule.targetId(),repo.get(grant).workerId(),grant,()->{
                 if(!required(rule,"warningConfirmed").equals("true")) throw new IllegalArgumentException("Explicit review-only recovery confirmation is required");
                 var recovery=plans.reviewRecovery(rule.targetId());var plan=plans.get(rule.targetId());
                 if(recovery.taskId()==null || WorkflowTaskPosition.parse(plan,new TaskId(recovery.taskId())).orElseThrow().step()!=rule.step())
@@ -327,7 +327,7 @@ public class AuthorityActions implements AuthorityTargets {
                 plans.resumeReview(plan.id(),recovery.taskId(),recovery.planVersion(),recovery.taskVersion(),actor,required(rule,"reason"),true);
                 return "Review-only recovery admitted; execution round was not repeated";
             });
-            case A03 -> coordinator.delegatedAdmission(rule.targetId(),repo.get(grant).workerId(),()->{
+            case A03 -> coordinator.delegatedActionAdmission(rule.targetId(),repo.get(grant).workerId(),grant,()->{
                 var plan=plans.get(rule.targetId());
                 var source=retrySource(rule);
                 var failure=jdbc.queryForList("SELECT failure_category FROM execution_attempt WHERE task_id=? ORDER BY attempt_no DESC LIMIT 1",String.class,source.id().value());
@@ -345,7 +345,7 @@ public class AuthorityActions implements AuthorityTargets {
                 return source.id().value();
             });
             case A02 -> configureModels(rule,grant,revision);
-            case A01 -> coordinator.delegatedAdmission(rule.targetId(),repo.get(grant).workerId(),()->{
+            case A01 -> coordinator.delegatedActionAdmission(rule.targetId(),repo.get(grant).workerId(),grant,()->{
                 var recovery=plans.reviewRecovery(rule.targetId());
                 var plan=plans.get(rule.targetId());
                 var position=WorkflowTaskPosition.parse(plan,new TaskId(recovery.taskId())).orElseThrow();
