@@ -35,7 +35,7 @@ def capabilities(config):
         # source attempt, including when OAuth changes the model transport.
         modules += ("openai_api_runtime.py", "chatgpt_responses_runtime.py", "api_connection.py",
                     "deepseek_chat.py", "model_images.py", "automation_loop.py", "tool_arguments.py",
-                    "context_window.py", "completion_validation.py")
+                    "context_window.py", "completion_validation.py", "progress_monitor.py")
     value = {"runtime": config.runtime, "role": config.process_role, "modelPolicy": config.model,
              "credentialRef": os.environ.get("AIW_MODEL_CREDENTIAL_REF"), "credentialVersion": os.environ.get("AIW_MODEL_CREDENTIAL_VERSION"),
              "effort": config.reasoning_effort, "sandbox": config.sandbox, "approval": config.approval_mode,

@@ -10,7 +10,7 @@ import time
 
 PROTOCOL = "aiw.worker.loop.v1"
 EVENTS = {"context-projected", "context-component", "guard-intent", "guard-start", "guard-finished", "native-turn-started",
-          "host-batch-validated", "validation-failed", "validation-passed", "execution-quiescent", "delivery-pending"}
+          "host-batch-validated", "validation-failed", "validation-passed", "execution-quiescent", "delivery-pending", "progress-stalled", "progress-review"}
 FIELDS = set("bytes inputBytes outputBytes count durationMs inputTokens outputTokens cachedTokens complete truncated changed usageKnown visibility requestScope purpose status phase tool digest operation callId parentCallId sourceKind code".split())
 SOURCE_KINDS = set("instructions messages tools fixed_header observations new_observations task knowledge upstream skill configuration".split())
 
@@ -24,6 +24,8 @@ class RunChannel:
         self.broker, self.attempt = broker, broker.attempt
         self.capabilities = capabilities
         self.configuration_digest = None
+        self.progress_events_supported = False
+        self.progress_review_supported = False
         self.quiescent_sequence = None
         self.client = copy.copy(broker.client)
         self.client.timeout = min(self.client.timeout, 2)
@@ -63,6 +65,8 @@ class RunChannel:
         if value.get("protocol") != PROTOCOL or value.get("attemptId") != self.broker.lease["attemptId"]:
             raise RuntimeError("RUN_IDENTITY_CHANGED")
         with self.lock:
+            self.progress_events_supported = value.get("progressEventsSupported") is True
+            self.progress_review_supported = value.get("progressReviewSupported") is True
             self.revision = value["revision"]
             self.phase = value["phase"]
             self.configuration_digest = value.get("configurationDigest", self.configuration_digest)
@@ -98,6 +102,10 @@ class RunChannel:
             payload.pop("sourceKind", None)
         # Never copy path, instruction, model output, arguments, credentials or free-form errors.
         with self.lock:
+            if event == "progress-stalled" and not self.progress_events_supported:
+                return
+            if event == "progress-review" and not self.progress_review_supported:
+                return
             if self.phase == "FINALIZING":
                 return
             if len(self.queue) >= 512:

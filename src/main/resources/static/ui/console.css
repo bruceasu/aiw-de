@@ -118,6 +118,7 @@
 @media(max-width:760px){.workflow-page .workflow-step{padding:15px}.workflow-page .workflow-node{width:100%}}
 .workflow-page .workflow-request{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px;margin-top:8px;border:1px solid var(--line);background:#0c1623;font:11px Consolas,monospace}
 .workflow-page .workflow-request span{margin-right:auto;overflow-wrap:anywhere}
+@media(min-width:761px){.sidebar{overflow-y:auto;overscroll-behavior:contain}.sidebar>a,.sidebar-footer{flex-shrink:0}}
 .sidebar-footer{margin-top:auto;padding:16px 8px 0;border-top:1px solid var(--line)}
 .sidebar-footer .sidebar-note{margin-top:0;padding:0 0 12px;border-top:0}
 .sidebar-clock{display:grid;gap:3px;padding-top:12px;font-variant-numeric:tabular-nums}

@@ -48,6 +48,8 @@ public class ExecutionRuns {
     private Map<String,Object> view(Map<String,Object> run) {
         var attempt=repo.jdbc().queryForMap("SELECT state,stop_requested_at_epoch_ms,stop_acknowledged_at_epoch_ms FROM execution_attempt WHERE id=?",run.get("attempt_id"));
         var result=new LinkedHashMap<String,Object>();result.put("protocol",PROTOCOL);
+        result.put("progressEventsSupported",true);
+        result.put("progressReviewSupported",true);
         result.put("taskId",run.get("task_id"));result.put("attemptId",run.get("attempt_id"));result.put("instructionRevision",run.get("instruction_revision"));
         result.put("revision",run.get("revision"));result.put("acknowledgedSequence",run.get("ack_sequence"));result.put("lastContact",run.get("last_contact_ms"));
         String phase=(String)run.get("phase");
@@ -99,7 +101,7 @@ public class ExecutionRuns {
             if(event.sequence()<=previousSequence)throw new IllegalArgumentException("Events must be strictly ordered");
             previousSequence=event.sequence();
         }
-        var allowed=Set.of("context-projected","context-component","guard-intent","guard-start","guard-finished","host-batch-validated","validation-failed","validation-passed","native-turn-started","execution-quiescent","delivery-pending");
+        var allowed=Set.of("context-projected","context-component","guard-intent","guard-start","guard-finished","host-batch-validated","validation-failed","validation-passed","native-turn-started","execution-quiescent","delivery-pending","progress-stalled","progress-review");
         for(var event:input.events()) {
             if(event.sequence()<1||event.occurredAt()<1||!allowed.contains(event.eventType()))throw new IllegalArgumentException("Invalid run event");
             metadata(event.payload());String json=repo.encode(event.payload());

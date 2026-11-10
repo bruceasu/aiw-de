@@ -27,6 +27,11 @@ public class BusinessPermissionController {
     private <T>T read(String raw,Class<T> type) {if(raw.length()>32768)throw new IllegalArgumentException("Bounded request required");return repo.decode(raw,type);}
     private AuthorityBoundary.Principal principal(HttpServletRequest request) {return Objects.requireNonNull((AuthorityBoundary.Principal)request.getAttribute("authorityPrincipal"));}
     @PostMapping("/action-permissions") public Object issue(@RequestBody String raw) {return permissions.view(permissions.issue(read(raw,Issue.class),boundary.human()));}
+    @PostMapping("/action-permissions/batch") public Object issueBatch(@RequestBody String raw) {
+        BatchIssue batch=read(raw,BatchIssue.class);
+        if(batch==null)throw new IllegalArgumentException("Bounded non-empty permission batch is required");
+        return permissions.issueBatch(batch,boundary.human()).stream().map(permissions::view).toList();
+    }
     @PostMapping("/action-permissions/{id}/revoke") public Object revoke(@PathVariable String id) {permissions.revoke(id,boundary.human());return Map.of("state","REVOKED");}
     @GetMapping("/action-permissions") public Object list(HttpServletRequest request) {
         // This is a read-only pull of this Agent's own authority, also available while execution is disabled.

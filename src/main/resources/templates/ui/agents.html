@@ -11,23 +11,29 @@
   <header th:replace="~{ui/fragments :: topbar('Agent 身份与证书','配对独立 Agent，并管理远程客户端证书信任')} "></header>
   <div class="content">
     <p id="agent-feedback" class="authority-feedback" role="status" aria-live="polite" hidden></p>
-    <section class="card">
+    <section class="card agent-invitation-section">
       <h2>创建一次性配对邀请</h2>
       <p>本机档案只接受回环连接和一次性邀请。远程档案要求 HTTPS、Control Plane TLS 服务端证书和 Agent 客户端 mTLS 证书；证书由部署的 CA 签发，Control Plane 固定配对时的客户端证书指纹。Agent 配对后先进入待批准状态；随后可在此页一次确认注册、精确 Grant 和当前进程启用。</p>
       <form id="agent-invitation" class="form-grid authority-form">
         <label class="field">连接档案<select name="profile" id="agent-profile"><option value="LOCAL">本机（loopback）</option><option value="REMOTE">远程（强制 mTLS）</option></select></label>
         <label class="field full">Control Plane 来源<input name="serverOrigin" id="agent-origin" type="url" required></label>
         <p class="help full">远程部署需启用 agent-mtls Spring 配置并装载服务端 PKCS#12 密钥库与仅信任 Agent CA 的 truststore。Agent 主动连接；Control Plane 不保存 Agent 地址。</p>
-        <button class="btn primary" type="submit">生成配对码</button>
+        <div class="agent-pairing-actions full">
+          <button class="btn primary" type="submit">生成配对码</button>
+          <button class="btn ghost" id="agent-refresh-pending" type="button">刷新待确认 Agent</button>
+        </div>
       </form>
-      <label class="field full" for="agent-pairing-code">一次性配对码（5 分钟有效）</label>
-      <textarea id="agent-pairing-code" readonly rows="4" autocomplete="off"></textarea>
-      <button class="btn ghost" id="agent-copy-code" type="button" disabled>复制配对码</button>
-      <button class="btn ghost" id="agent-refresh-pending" type="button">刷新待确认 Agent</button>
+      <section id="agent-pairing-result" class="agent-pairing-result" aria-live="polite" hidden>
+        <div class="agent-pairing-result__header">
+          <div><h3>一次性配对码</h3><p>请尽快交给目标 Agent 客户端；配对码将在 5 分钟后失效。</p></div>
+          <button class="btn ghost" id="agent-copy-code" type="button" disabled>复制配对码</button>
+        </div>
+        <pre class="agent-pairing-code"><code id="agent-pairing-code"></code></pre>
+      </section>
     </section>
-    <section class="card">
-      <h2>已配对秘书</h2>
-      <p>秘书连接后，只需确认身份并启用当前进程。此步骤不授予具体业务动作；后续授权在明确任务和目标时单独设置。Agent 重启或远程证书轮换后，仍需重新启用当前进程。</p>
+    <section class="card agent-paired-section">
+      <h2>已配对的代理</h2>
+      <p>Agent 连接后，只需确认身份并启用当前进程。此步骤不授予具体业务动作；后续授权在明确任务和目标时单独设置。Agent 重启或远程证书轮换后，仍需重新启用当前进程。</p>
       <div id="agent-list" class="record-list">
         <article class="authority-record" th:each="agent : ${agents}" th:attr="data-agent-id=${agent['agent_id']},data-agent-active=${agent['identity_kind'] == 'AGENT' and agent['approval_state'] == 'APPROVED'},data-agent-remote=${agent['connection_profile'] == 'REMOTE'}">
           <h3 th:text="${agent['agent_id']}"></h3>
@@ -37,7 +43,7 @@
             <input type="hidden" name="generation" th:value="${agent['generation']}">
             <input type="hidden" name="agentBoot" th:value="${agent['worker_boot']}">
             <p class="help full" th:if="${agent['worker_boot'] == null}">等待 Agent 完成受限握手后，才能确认当前进程。</p>
-            <button class="btn primary" type="submit" th:disabled="${agent['worker_boot'] == null}">确认秘书身份并启用当前进程</button>
+            <button class="btn primary" type="submit" th:disabled="${agent['worker_boot'] == null}">确认 Agent 身份并启用当前进程</button>
           </form>
           <div data-agent-rotations th:if="${agent['connection_profile'] == 'REMOTE'}"></div>
           <button class="btn danger" type="button" data-revoke-agent th:if="${agent['identity_kind'] == 'AGENT'}">撤销 Agent 凭据</button>
@@ -46,6 +52,6 @@
         <p class="authority-empty" th:if="${agents.empty}">尚无已配对 Agent。</p>
       </div>
     </section>
-    <p class="help"><a href="/ui/authority">返回 Control Plane 授权管理</a></p>
+    <p class="help"><a href="/ui/authority">打开 Agent 权限</a></p>
   </div>
 </main></div></body></html>

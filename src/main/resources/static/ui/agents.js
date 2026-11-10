@@ -33,17 +33,26 @@ document.getElementById("agent-invitation").addEventListener("submit", async eve
   button.disabled = true;
   try {
     const value = await post("/agents/invitations", { profile: profile.value, serverOrigin: origin.value.trim() });
-    document.getElementById("agent-pairing-code").value = value.connectionCode;
+    document.getElementById("agent-pairing-code").textContent = value.connectionCode;
+    document.getElementById("agent-pairing-result").hidden = false;
     document.getElementById("agent-copy-code").disabled = false;
-    show("配对码已生成，5 分钟后失效。请仅交给目标 Agent 客户端；秘书连接成功后，点击“刷新待确认 Agent”，再确认身份并启用当前进程。");
+    show("配对码已生成，5 分钟后失效。请仅交给目标 Agent 客户端；Agent 连接成功后，点击“刷新待确认 Agent”，再确认身份并启用当前进程。");
   } catch (error) { show(error.message, true); }
   finally { button.disabled = false; }
 });
 document.getElementById("agent-copy-code").addEventListener("click", async () => {
   const code = document.getElementById("agent-pairing-code");
-  if (!code.value) return;
-  try { await navigator.clipboard.writeText(code.value); show("配对码已复制。"); }
-  catch (_) { code.focus(); code.select(); show("无法访问剪贴板，配对码已选中，请手动复制。", true); }
+  const text = code.textContent.trim();
+  if (!text) return;
+  try { await navigator.clipboard.writeText(text); show("配对码已复制。"); }
+  catch (_) {
+    const range = document.createRange();
+    range.selectNodeContents(code);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    show("无法访问剪贴板，配对码已选中，请手动复制。", true);
+  }
 });
 document.getElementById("agent-refresh-pending").addEventListener("click", () => window.location.reload());
 document.querySelectorAll("[data-approve-agent]").forEach(form => form.addEventListener("submit", async event => {

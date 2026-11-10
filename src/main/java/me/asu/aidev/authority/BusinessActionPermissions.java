@@ -132,6 +132,12 @@ public class BusinessActionPermissions {
         agentMessages.stateChanged(input.agentId(),"PERMISSION_CHANGED",id,1);
         return get(id);
     }
+    @Transactional public List<Permission> issueBatch(ActionPermissionContract.BatchIssue input,String actor) {
+        boundary.lock();
+        var issued=new ArrayList<Permission>(input.permissions().size());
+        for(var permission:input.permissions()) issued.add(issue(permission,actor));
+        return List.copyOf(issued);
+    }
     @Transactional public void revoke(String id,String actor) {
         boundary.lock();var p=get(id);human(p.ownerId(),p.action(),actor);
         if(isDefault(p))throw new IllegalArgumentException("Disable or revoke the Agent identity to stop default plan/task actions");

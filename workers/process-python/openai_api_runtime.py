@@ -227,6 +227,12 @@ class OpenAIApiRuntime:
                 if feedback:
                     run_input = [*history, {"role": "user", "content": feedback}]
                     continue
+                if (candidate.validate is not None and not getattr(request, "model_only", False)
+                        and guarded_model.calls < self.config.max_turns):
+                    feedback = guarded_model.progress.delivery_feedback(request.profile.writable, candidate.last_verdict)
+                    if feedback:
+                        run_input = [*history, {"role": "user", "content": feedback}]
+                        continue
                 if not guarded_model.inputs or not guarded_model.inputs.continue_or_seal(): break
                 # Continue this same Attempt, Agent, original instructions, deadline and total model-call count.
                 run_input = result.to_input_list()
@@ -256,6 +262,8 @@ class _GuardedModel(Model):
         self.history = HistoryWindow(self.sources, config.max_input_bytes, request.attempt.evidence)
         self.inputs = None
         self.calls = 0
+        from progress_monitor import ProgressMonitor
+        self.progress = ProgressMonitor(request.attempt.evidence)
 
     def _count(self):
         self._request.attempt.check()
@@ -276,8 +284,12 @@ class _GuardedModel(Model):
             input = self.inputs.project(_json_value(input))
             self.history.protected = self.inputs.protected_messages()
         else: input = _json_value(input)
+        remind = self.progress.observe(input)
         input = await self.history.prepare(instructions, input,
             [_json_value(getattr(tool, "params_json_schema", {})) for tool in tools], self._summarize)
+        if remind and isinstance(input, list):
+            from progress_monitor import REMINDER
+            input = [*input, {"role": "user", "content": REMINDER}]
         self._request_check(instructions, input, tools)
         return input
 

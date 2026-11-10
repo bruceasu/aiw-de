@@ -1,6 +1,8 @@
 // UI copy only. Rows are English, Chinese and Japanese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["No change was observed. The Worker will ask the model to recheck the delivery conditions.","尚未观察到修改。Worker 将请模型重新核对交付条件。","変更が確認されませんでした。Worker はモデルに納品条件の再確認を求めます。"],
+  ["Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.","检测到重复读取且结果相同。Worker 将请模型重新考虑下一步。","同じ読み取り結果が繰り返されました。Worker はモデルに次の手順を再検討するよう求めます。"],
   ["Set Plan location explicitly: the goal declares a workspace, but an empty location uses a temporary directory.","目标中声明了工作空间，请明确填写 Plan location；留空会使用临时目录。","目標に作業場所が指定されています。Plan locationを入力してください。空欄では一時ディレクトリを使用します。"],
   ["A workspace path in the goal does not set Plan location. To work in an existing project, enter its folder here.","目标文字中的工作空间路径不会自动设置执行位置。要修改现有项目，请在这里填写项目目录。","目標文に書いたパスはPlan locationに反映されません。既存プロジェクトを変更する場合は、ここにフォルダーを入力してください。"],
   ["Code implementation","编码实现","コード実装"],

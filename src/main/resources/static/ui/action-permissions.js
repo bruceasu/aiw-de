@@ -3,23 +3,28 @@
   const $=id=>document.getElementById(id),form=$('issue-action-permission');if(!form)return;
   const scopes={ALL:'当前账号全部适用目标',PLAN:'指定计划',TASK:'指定任务',WORKER:'指定普通 Worker（同时确认归属）'};
   const states={ENABLED:'有效',EXHAUSTED:'次数已用尽',EXPIRED:'已到期',REVOKED:'已撤销',REPLACED:'已被新授权期替代',ROLE_CHANGED:'当前角色已变化'};
-  let data=null,ready=false,reading=false,busy=false,pending=null,confirmation=null,recent=null,sequence=0,initialized=false;
+  let data=null,ready=false,reading=false,busy=false,pending=null,confirmation=null,recent=null,sequence=0;
   const fields=$('permission-fields'),agent=()=>form.elements.namedItem('agentId').value;
-  const action=()=>data?.catalogue.find(a=>a.action===$('permission-action').value);
+  const selectedActions=()=>[...document.querySelectorAll('[data-permission-action]:checked')].map(input=>data?.catalogue.find(a=>a.action===input.value)).filter(Boolean);
+  const commonScopes=()=>{const selected=selectedActions();return selected.length?selected.map(a=>a.scopes).reduce((all,scopes)=>all.filter(scope=>scopes.includes(scope)),['ALL','PLAN','TASK','WORKER']):[];};
   const safe=value=>Number.isSafeInteger(value)&&value>=0;
   const node=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
   const key=()=>data?.ownerId?'aiw.action-permission.pending.'+data.ownerId:null;
+  const fingerprint=items=>JSON.stringify(items.map(({requestId,expectedPriorId,...value})=>value).sort((a,b)=>a.action.localeCompare(b.action)));
   function message(text,tone='info'){$('permission-feedback').textContent=text;$('permission-feedback').dataset.tone=tone;$('permission-feedback').hidden=!text;}
   function persist(){try{if(key()){if(pending)sessionStorage.setItem(key(),JSON.stringify(pending));else sessionStorage.removeItem(key());}}catch(_){/* In-memory originals remain authoritative for this open page. */}}
-  function restore(){try{const raw=key()&&sessionStorage.getItem(key());if(raw){const saved=JSON.parse(raw);if(saved.ownerId===data.ownerId&&['issue','revoke'].includes(saved.kind)){pending=saved;pending.checked=false;}}}catch(_){message('无法读取本页保留的原操作，请先核对现有授权记录。','warn');}}
+  function restore(){try{const raw=key()&&sessionStorage.getItem(key());if(raw){const saved=JSON.parse(raw),validBatch=saved.kind!=='batch'||Array.isArray(saved.body?.permissions)&&saved.body.permissions.length>0&&saved.body.permissions.length<=32;if(saved.ownerId===data.ownerId&&validBatch&&['issue','batch','revoke'].includes(saved.kind)){pending=saved;pending.checked=false;}}}catch(_){message('无法读取本页保留的原操作，请先核对现有授权记录。','warn');}}
   function canWrite(){return ready&&!reading&&!busy&&!pending;}
   function sync(){
     fields.disabled=!canWrite()||!data?.ownerId;
     $('permission-refresh').disabled=busy||reading;
-    $('permission-submit').disabled=!canWrite()||!action()?.allowed;
+    const selected=selectedActions();
+    $('permission-submit').disabled=!canWrite()||!selected.length||selected.some(a=>!a.allowed)||!commonScopes().includes($('permission-scope-kind').value);
     $('permission-new-period').disabled=!canWrite();
+    $('permission-clear-selection').disabled=!canWrite()||!selected.length;
     $('permission-pending').hidden=!pending;
-    if(pending)$('permission-pending-note').textContent=(pending.kind==='issue'?'创建授权期':'撤销原授权')+'的结果尚未确认。保留原标识与范围，请先刷新核对；未找到记录不代表失败。'+(pending.checked?'已读取记录，可明确重试同一个原操作。':'');
+    if(pending){const subject=pending.kind==='batch'?`创建 ${pending.body.permissions.length} 项授权批次`:pending.kind==='issue'?'创建授权期':'撤销原授权';$('permission-pending-note').textContent=subject+'的结果尚未确认。保留原标识与范围，请先刷新核对；未找到记录不代表失败。'+(pending.checked?'已读取记录，可明确重试同一个原操作。':'');}
+    $('permission-retry').textContent=pending?.kind==='batch'?'重试同一批授权':'重试同一个原请求';
     $('permission-retry').disabled=!pending?.checked||!ready||busy||reading;
     $('permission-confirm-submit').disabled=!ready||busy||reading||Boolean(pending);
     document.querySelectorAll('[data-revoke-permission]').forEach(button=>{button.disabled=!canWrite();});
@@ -32,37 +37,46 @@
     if(!response.ok){const error=new Error(result.message||'授权操作未确认，请先刷新状态。');error.uncertain=write&&response.status>=500;throw error;}return result;
   }
   function selectedFields(){
-    const maximum=Number($('permission-maximum').value),expiry=new Date($('permission-expiry').value).getTime(),a=action(),kind=$('permission-scope-kind').value;
-    if(!data?.ownerId||!agent()||!a?.allowed)throw new Error('请明确选择 Agent、功能分组及当前角色可授予的动作。');
+    const maximum=Number($('permission-maximum').value),expiry=new Date($('permission-expiry').value).getTime(),selected=selectedActions(),kind=$('permission-scope-kind').value;
+    if(!data?.ownerId||!agent()||!selected.length||selected.some(a=>!a.allowed))throw new Error('请选择 Agent 和至少一项当前身份可以授予的操作。');
     if(!Number.isSafeInteger(maximum)||maximum<1||maximum>2147483647||!Number.isSafeInteger(expiry)||expiry<=Date.now())throw new Error('请设置未来的到期时间和有效的正整数累计次数。');
-    if(!a.scopes.includes(kind))throw new Error('原范围已不适用于此动作，请重新核对选择。');
+    if(!commonScopes().includes(kind))throw new Error('所选操作不支持当前范围，请重新核对操作和范围。');
     const id=kind==='ALL'?null:$('permission-scope-id').value;
     if(kind!=='ALL'&&!choices(kind).some(item=>item.id===id))throw new Error('请选择当前可用的范围；原范围不可用时不会改为全部目标。');
     const boundOwner=form.elements.namedItem('ownerId').value;
     if(boundOwner&&boundOwner!==data.ownerId)throw new Error('登录身份已变化，请重新打开页面后核对Agent。');
-    return {ownerId:data.ownerId,agentId:agent(),action:a.action,scopeKind:kind,scopeId:id,maximumUses:maximum,expiresAt:expiry};
+    return {ownerId:data.ownerId,agentId:agent(),scopeKind:kind,scopeId:id,maximumUses:maximum,expiresAt:expiry};
   }
   function choices(kind){return kind==='PLAN'?data?.plans||[]:kind==='TASK'?data?.tasks||[]:kind==='WORKER'?(data?.workers||[]).map(w=>({id:w.id,title:w.id+' · '+w.runtime_type+(w.owner_id?'':' · 尚未确认归属')})):[];}
-  function populateActions(keep=false){
-    const selected=keep?$('permission-action').value:'';$('permission-action').replaceChildren(new Option('请选择一个动作',''));
-    for(const a of data.catalogue.filter(a=>a.group===$('permission-group').value)){const option=new Option(a.label+(a.allowed?'':'（当前角色不可授予）'),a.action);option.disabled=!a.allowed;$('permission-action').add(option);}
-    $('permission-action').value=selected;populateScope(keep);
+  function renderActionGroups(keep=false){
+    const host=$('permission-action-groups'),selected=new Set(keep?selectedActions().map(a=>a.action):[]);host.replaceChildren();
+    for(const group of [...new Set(data.catalogue.map(a=>a.group))]){
+      const section=node('fieldset',undefined,'permission-action-group');section.append(node('legend',group));
+      for(const a of data.catalogue.filter(item=>item.group===group)){
+        const label=node('label',undefined,'permission-action-option'+(a.allowed?'':' is-disabled')),input=document.createElement('input');
+        input.type='checkbox';input.value=a.action;input.dataset.permissionAction='true';input.disabled=!a.allowed;input.checked=a.allowed&&selected.has(a.action);
+        input.addEventListener('change',()=>{populateScope(true);updateSelection();sync();});
+        label.append(input,node('span',a.label),node('code',a.action));section.append(label);
+      }
+      host.append(section);
+    }
+    populateScope(keep);updateSelection();
   }
+  function updateSelection(){const selected=selectedActions();$('permission-selection-count').textContent=selected.length?`已选 ${selected.length} 项；每项会建立独立授权`:'尚未选择操作';}
   function populateScope(keep=false){
-    const previous=keep?$('permission-scope-kind').value:'ALL',a=action();$('permission-scope-kind').replaceChildren();
-    for(const kind of ['ALL','PLAN','TASK','WORKER'].filter(kind=>!a?kind==='ALL':a.scopes.includes(kind)))$('permission-scope-kind').add(new Option(scopes[kind],kind));
-    if([...$('permission-scope-kind').options].some(o=>o.value===previous))$('permission-scope-kind').value=previous;
-    else if(keep&&previous){$('permission-scope-kind').add(new Option('原范围（当前不可用）',previous));$('permission-scope-kind').value=previous;}
+    const previous=keep?$('permission-scope-kind').value:'',available=commonScopes();$('permission-scope-kind').replaceChildren(new Option(selectedActions().length?'请选择适用范围':'请先选择操作',''));
+    for(const kind of ['ALL','PLAN','TASK','WORKER'].filter(kind=>available.includes(kind)))$('permission-scope-kind').add(new Option(scopes[kind],kind));
+    if(available.includes(previous))$('permission-scope-kind').value=previous;
     populateScopeId(keep);
   }
   function populateScopeId(keep=false){
     const kind=$('permission-scope-kind').value,selected=keep?$('permission-scope-id').value:'';
-    $('permission-scope-field').hidden=kind==='ALL';$('permission-scope-id').required=kind!=='ALL';$('permission-scope-label').textContent=scopes[kind]||'原范围';
+    const actions=selectedActions();$('permission-scope-field').hidden=!kind||kind==='ALL';$('permission-scope-id').required=Boolean(kind&&kind!=='ALL');$('permission-scope-label').textContent=scopes[kind]||'选择具体对象';
     $('permission-scope-id').replaceChildren(new Option('请选择范围',''));
     for(const item of choices(kind))$('permission-scope-id').add(new Option(item.title===item.id?item.id:item.title+' · '+item.id,item.id));
     if(selected&&!choices(kind).some(item=>item.id===selected))$('permission-scope-id').add(new Option('原选择（当前不可用）',selected));
     $('permission-scope-id').value=selected;
-    $('permission-scope-note').textContent=action()?.action==='A13'?'此动作影响平台全局运行并发；确认授权时会核对并确认其归属，不能操作已属于其它账号的全局对象。':kind==='WORKER'?'明确选择这个普通 Worker 并确认归属；不能接管其它账号的 Worker。':kind==='TASK'?'仅列出最近 100 个可选任务。该动作必须能核对精确任务来源，不会扩展到同计划的其它任务。':['A14','A15'].includes(action()?.action)?'不指定时仅适用于已经确认归属的普通 Worker。首次使用可选择一个普通 Worker，在授权确认时明确其归属。':'不指定范围时，覆盖当前账号现有及以后新增的全部适用事务/任务；多个目标共用累计次数。';
+    $('permission-scope-note').textContent=!actions.length?'先选择操作，再选择这些操作共同支持的范围。':!commonScopes().length?'所选操作没有共同适用范围，请减少选择后再授权。':actions.some(a=>a.action==='A13')?'包含平台全局操作；授权时会核对全局对象归属，不能操作属于其他账号的对象。':kind==='WORKER'?'将操作限定到所选普通 Worker；系统会核对归属，不能接管其他账号的 Worker。':kind==='TASK'?'只作用于所选任务，不会扩展到同计划的其他任务。':kind==='ALL'?'覆盖每项操作各自适用的全部目标，包括以后新增的目标。每项操作的次数单独计算。':kind==='PLAN'?'只作用于所选计划。每项操作的次数单独计算。':'所选操作的适用范围不一致，请重新选择。';
   }
   function scopeLabel(p){
     if(p.action==='A13')return '平台全局运行并发';
@@ -90,10 +104,16 @@
   async function load(){
     const token=++sequence;reading=true;ready=false;sync();
     try{const current=await call('/action-permissions/state');if(token!==sequence)return;data=current;
-      if(!initialized){$('permission-group').replaceChildren(new Option('请选择功能分组',''));for(const group of [...new Set(data.catalogue.map(a=>a.group))])$('permission-group').add(new Option(group,group));initialized=true;restore();}
-      else populateActions(true);
-      if(pending){pending.checked=true;const found=pending.kind==='issue'?data.permissions.find(p=>p.creationRequestId===pending.body.requestId):data.permissions.find(p=>p.id===pending.id&&p.state!=='ENABLED');
-        if(found&&(pending.kind!=='issue'||samePermission(found,pending.body))){recent=pending.kind==='issue'?JSON.stringify(Object.fromEntries(Object.entries(pending.body).filter(([k])=>!['requestId','expectedPriorId'].includes(k)))):recent;pending=null;persist();message('已查到原操作的正式记录，请以当前授权效力与剩余次数为准。');}
+      restore();renderActionGroups(true);
+      if(pending){pending.checked=true;
+        if(pending.kind==='batch'){
+          const items=pending.body.permissions,matched=items.filter(item=>{const found=data.permissions.find(p=>p.creationRequestId===item.requestId);return found&&samePermission(found,item);});
+          if(matched.length===items.length){recent=fingerprint(items);pending=null;persist();message(`已查到整批 ${items.length} 项授权记录；请核对各项当前效力和剩余次数。`);}
+          else message(matched.length?`已查到 ${matched.length}/${items.length} 项。整批重试会复用已登记记录，只补齐原批次中未登记的项。`:'暂未查到原批次记录；请确认重试同一批请求，不要重新创建新请求。','warn');
+        }else{
+          const found=pending.kind==='issue'?data.permissions.find(p=>p.creationRequestId===pending.body.requestId):data.permissions.find(p=>p.id===pending.id&&p.state!=='ENABLED');
+          if(found&&(pending.kind!=='issue'||samePermission(found,pending.body))){recent=pending.kind==='issue'?JSON.stringify(Object.fromEntries(Object.entries(pending.body).filter(([k])=>!['requestId','expectedPriorId'].includes(k)))):recent;pending=null;persist();message('已查到原操作的正式记录，请以当前授权效力与剩余次数为准。');}
+        }
       }
       ready=true;renderRecords();persist();
     }catch(error){ready=false;message(error.message,'error');}
@@ -102,24 +122,29 @@
   function ask(op,title,note,target){if(!canWrite())return;confirmation=op;$('permission-confirm-title').textContent=title;$('permission-confirm-note').textContent=note;$('permission-confirm-target').textContent=target;$('permission-confirm').showModal();}
   async function perform(op){
     if(busy||reading||!ready)return;busy=true;pending={...op,checked:false};persist();sync();
-    try{const result=await call(op.kind==='issue'?'/action-permissions':'/action-permissions/'+encodeURIComponent(op.id)+'/revoke',op.kind==='issue'?op.body:{},true);
-      pending=null;persist();if(op.kind==='issue'){recent=JSON.stringify(Object.fromEntries(Object.entries(op.body).filter(([k])=>!['requestId','expectedPriorId'].includes(k))));if(samePermission(result,op.body))message('原授权期已登记，请核对当前效力和剩余次数；不会因重试重新计数。');}
+    try{const path=op.kind==='batch'?'/action-permissions/batch':op.kind==='issue'?'/action-permissions':'/action-permissions/'+encodeURIComponent(op.id)+'/revoke';
+      const result=await call(path,op.kind==='batch'||op.kind==='issue'?op.body:{},true);
+      if(op.kind==='batch'&&(!Array.isArray(result)||result.length!==op.body.permissions.length||result.some((permission,index)=>!samePermission(permission,op.body.permissions[index])))){const error=new Error('服务器已响应，但批次结果与原请求不一致；请刷新核对原批次。');error.uncertain=true;throw error;}
+      pending=null;persist();if(op.kind==='batch'){recent=fingerprint(op.body.permissions);message(`已创建 ${op.body.permissions.length} 项独立授权；请核对各项当前效力和剩余次数。`);}
+      else if(op.kind==='issue'){recent=JSON.stringify(Object.fromEntries(Object.entries(op.body).filter(([k])=>!['requestId','expectedPriorId'].includes(k))));if(samePermission(result,op.body))message('原授权期已登记，请核对当前效力和剩余次数；不会因重试重新计数。');}
       else message('撤销操作已返回，正在读取当前授权效力。');
       await load();if(!ready)message('操作已返回成功，但列表刷新失败。请先刷新核对，不要重建授权期。','warn');
     }catch(error){if(!error.uncertain){pending=null;persist();ready=false;}message(error.message,'error');}
     finally{busy=false;renderRecords();sync();}
   }
   form.addEventListener('submit',event=>{event.preventDefault();if(!canWrite()||!form.reportValidity())return;
-    try{const values=selectedFields(),fingerprint=JSON.stringify(values);if(recent===fingerprint){message('此内容已经登记。若需要新的授权期，请明确点击“另建一个授权期”后再核对。','warn');return;}
-      const prior=data.permissions.find(p=>p.agentId===values.agentId&&p.action===values.action&&p.state==='ENABLED');
-      const body={requestId:crypto.randomUUID(),...values,expectedPriorId:prior?.id||null};
-      ask({kind:'issue',body,ownerId:data.ownerId},'确认授予一种动作','仅授予选中的动作，所有适用目标共用次数。创建新授权期将替代这位Agent同动作的旧授权；新期从零计数，历史保留，旧在途按现有撤销规则处理。'+(values.scopeKind==='WORKER'?'同时为本账号确认所选普通 Worker 的归属。':''),action().label+' · '+agent()+'\n'+scopeLabel(body)+'\n累计 '+values.maximumUses+' 次 · 至 '+new Date(values.expiresAt).toLocaleString('zh-CN',{hour12:false}));
+    try{const values=selectedFields(),selected=selectedActions();
+      const permissions=selected.map(action=>{const prior=data.permissions.find(p=>p.agentId===values.agentId&&p.action===action.action&&p.state==='ENABLED');return {requestId:crypto.randomUUID(),...values,action:action.action,expectedPriorId:prior?.id||null};});
+      const body={permissions},batchFingerprint=fingerprint(permissions);if(recent===batchFingerprint){message('这批授权已经登记。若确实需要新的授权期，请明确点击“重新创建相同授权”后再核对。','warn');return;}
+      const summary=permissions.map((permission,index)=>`${index+1}. ${data.catalogue.find(a=>a.action===permission.action)?.label||permission.action} · ${scopeLabel(permission)} · 最多 ${permission.maximumUses} 次`).join('\n');
+      ask({kind:'batch',body,ownerId:data.ownerId},`确认创建 ${permissions.length} 项独立授权`,`每项操作会各自建立授权、次数上限和审计记录。若某项与现有授权冲突，整批都会失败；同动作旧授权会按原规则替代，其他动作不受影响。`,`${agent()}\n${summary}\n到期：${new Date(values.expiresAt).toLocaleString('zh-CN',{hour12:false})}`);
     }catch(error){message(error.message,'error');}
   });
   $('permission-confirm-dismiss').addEventListener('click',()=>$('permission-confirm').close());
   $('permission-confirm').addEventListener('close',()=>{confirmation=null;});
   $('permission-confirm-submit').addEventListener('click',()=>{const op=confirmation;$('permission-confirm').close();confirmation=null;if(op&&canWrite())perform(op);});
-  $('permission-group').addEventListener('change',()=>{populateActions();sync();});$('permission-action').addEventListener('change',()=>{populateScope();sync();});$('permission-scope-kind').addEventListener('change',()=>populateScopeId());
+  $('permission-clear-selection').addEventListener('click',()=>{document.querySelectorAll('[data-permission-action]').forEach(input=>input.checked=false);populateScope(false);updateSelection();sync();});
+  $('permission-scope-kind').addEventListener('change',()=>{populateScopeId();sync();});
   $('permission-refresh').addEventListener('click',load);$('permission-retry').addEventListener('click',()=>{if(pending?.checked&&ready)perform(pending);});
   $('permission-new-period').addEventListener('click',()=>{if(!canWrite())return;recent=null;message('将创建一个新的授权期。请重新核对动作、范围、次数和到期时间；原记录仍保留。','warn');});
   const expiry=new Date(Date.now()+7*86400000);expiry.setMinutes(expiry.getMinutes()-expiry.getTimezoneOffset());$('permission-expiry').value=expiry.toISOString().slice(0,16);

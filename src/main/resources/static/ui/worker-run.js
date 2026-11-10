@@ -51,6 +51,14 @@
     host.append(node('strong',labels[state.phase]||state.phase),node('p',(state.stale?'联系已过期；不能确认实时控制。':'最近联系：'+new Date(state.lastContact).toLocaleTimeString())+' · 指令版本 '+state.instructionRevision,'help'));
     const cap=state.capabilities;host.append(node('p','工具执行：'+(cap.toolExecutor==='HOST'?'Worker':'后端')+' · 暂停粒度：'+(cap.pauseBoundary==='TURN'?'后端回合结束并确认停止活动后':'单个宿主动作结束后')+' · 上下文：Worker 提交投影','help'));
     const context=$('wr-context');context.replaceChildren();
+    for(const event of events.filter(e=>e.event_type==='progress-stalled').slice(-3)) {
+      const notice=node('p',window.aiwI18n?.t('Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.') || 'Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.','help');
+      notice.append(document.createTextNode(' · '+new Date(event.occurred_ms).toLocaleTimeString(window.aiwI18n?.locale || 'en')));context.append(notice);
+    }
+    for(const event of events.filter(e=>e.event_type==='progress-review').slice(-3)) {
+      const notice=node('p',window.aiwI18n?.t('No change was observed. The Worker will ask the model to recheck the delivery conditions.') || 'No change was observed. The Worker will ask the model to recheck the delivery conditions.','help');
+      notice.append(document.createTextNode(' · '+new Date(event.occurred_ms).toLocaleTimeString(window.aiwI18n?.locale || 'en')));context.append(notice);
+    }
     for(const event of events.filter(e=>e.event_type==='context-component').slice(-12)) {
       const item=JSON.parse(event.payload_json);context.append(node('p',(item.sourceKind||'输入组成')+'：'+item.bytes+' UTF-8 字节 · '+(item.changed?'内容有变化':'与上次相同')+' · '+item.digest.slice(0,12),'help'));
     }

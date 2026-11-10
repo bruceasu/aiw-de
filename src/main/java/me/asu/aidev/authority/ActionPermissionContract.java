@@ -17,6 +17,24 @@ public final class ActionPermissionContract {
             if(scopeId!=null)text(scopeId,128);
         }
     }
+    public record BatchIssue(List<Issue> permissions) {
+        public BatchIssue {
+            if(permissions==null||permissions.isEmpty()||permissions.size()>32||permissions.stream().anyMatch(Objects::isNull))
+                throw new IllegalArgumentException("A bounded non-empty permission batch is required");
+            permissions=List.copyOf(permissions);
+            Issue first=permissions.getFirst();
+            Set<ActionScope.Action> actions=EnumSet.noneOf(ActionScope.Action.class);
+            Set<String> requestIds=new HashSet<>();
+            for(Issue permission:permissions) {
+                if(!Objects.equals(permission.ownerId(),first.ownerId())||!Objects.equals(permission.agentId(),first.agentId())
+                        ||permission.scopeKind()!=first.scopeKind()||!Objects.equals(permission.scopeId(),first.scopeId())
+                        ||permission.maximumUses()!=first.maximumUses()||permission.expiresAt()!=first.expiresAt())
+                    throw new IllegalArgumentException("Batch permissions must share one Agent, scope, expiry, and per-action count");
+                if(!actions.add(permission.action())||!requestIds.add(permission.requestId()))
+                    throw new IllegalArgumentException("Batch actions and request IDs must be distinct");
+            }
+        }
+    }
     public record Selection(String requestId,String permissionId,String targetId,Integer step,String sourceTaskId,
                             Map<String,String> parameters,String projectionJson) {
         public Selection {
