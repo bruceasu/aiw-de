@@ -1,8 +1,10 @@
-# AI Worker R9 — Current Documentation
+# AI Worker — English Reference Manuals
+
+Start with the [documentation index](../README.md) and [system overview](../SYSTEM-OVERVIEW.md) (Chinese). This collection originated with R8/R9 and has not been fully reconciled with current code. The versions below describe its original baseline. This English collection is not guaranteed to be synchronized with newer topic guides.
 
 **Execution-platform baseline:** R8-S13 Fix2 (`me.asu.aidev`)
 **Current product layer:** R9 consolidated Web Console  
-**Java:** 21  
+**Original Java baseline:** 21; the current root project declares Java 25
 **Spring Boot:** 4.0.8  
 **Persistence:** JDBC + Flyway, SQLite local / PostgreSQL shared  
 **Worker model:** external, pull-based Worker Protocol v1  
@@ -10,7 +12,7 @@
 
 Chinese edition: [`../current-zh/README.md`](../current-zh/README.md).
 
-This directory is the current operational and user documentation for AI Worker R9. The older `docs/R3-*` through staged `docs/R9-*` files remain useful design/history records, but they are not the recommended starting point for operating the current system.
+This directory retains the R9 reference collection. Stage records are under `docs/archive/`; they are not the recommended starting point for operating the current system.
 
 ## Start here
 
@@ -36,9 +38,9 @@ This directory is the current operational and user documentation for AI Worker R
 
 ## What is authoritative
 
-The current Java Control Plane and its database state are authoritative for lifecycle, ownership, scheduling, gates and approvals. Workers execute bounded tasks but do not directly mutate Control Plane database state. Git commit revisions are the immutable code-result identity. Human approval remains a separate authority.
+The Java Control Plane and database are authoritative for lifecycle, ownership, scheduling, gates and approvals. Workers do not directly mutate that database. Git revisions identify results in the corresponding engineering paths; not every Plan requires Git. See [Plan locations and handoffs](../PLAN-LOCATIONS-AND-HANDOFFS.md). Human approval remains separate.
 
 ## Historical documentation
 
-The parent `docs/` directory contains stage-by-stage design records such as R6 review/repair, R7 approval and R8 scheduling milestones. Those files explain why the system evolved as it did. When a historical note conflicts with this directory or the current code, the current code and this documentation baseline take precedence.
+Stage records are in `docs/archive/`. When documents conflict, check their scope against current code and the relevant FD; this collection is not automatically the newest authority. See the [documentation baseline](../DOCUMENTATION-BASELINE.md).
 

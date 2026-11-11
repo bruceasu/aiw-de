@@ -1,14 +1,16 @@
-# AI Worker: Digital Employee — 当前正式文档
+# AI Worker — 中文参考手册
+
+当前统一入口为 [文档导航](../README.md)，建议先读 [系统如何工作](../SYSTEM-OVERVIEW.md)。本目录保留 R8/R9 起形成的成套手册，尚未逐篇完成当前实现核对；下列版本描述原始阶段，不代表整个当前系统。较新的专题由统一入口导航。
 
 **执行平台基线：** R8-S13 Fix2（`me.asu.aidev`）
 **当前产品层：** R9 Web Console consolidated  
-**Java：** 21  
+**原始 Java 基线：** 21；当前根项目声明 Java 25
 **Spring Boot：** 4.0.8  
 **持久化：** JDBC + Flyway；本地 SQLite / 共享 PostgreSQL  
 **Worker 模型：** 外部 Worker、Pull 模式、Worker Protocol v1  
 **环境变量前缀：** `AIW_`
 
-本目录是当前代码版本的中文正式文档入口。原有 `docs/R3-*` ～阶段性 `docs/R9-*` 文件保留为阶段设计与历史记录，但不再建议新用户通过拼接历史文档来理解当前系统。
+历史阶段资料位于 `docs/archive/`。使用本目录的命令与契约前，请按 [文档基线](../DOCUMENTATION-BASELINE.md) 核对对应专题与源码。
 
 ## 推荐阅读顺序
 
@@ -34,5 +36,5 @@
 
 ## Authority 原则
 
-当前系统中，Java Control Plane 与数据库拥有生命周期、任务归属、调度、Engineering Gate 与 Approval 的权威状态。Worker 只执行被租约约束的工作，不直接修改 Control Plane 数据库。代码结果使用不可变 Git commit 作为身份；Human Approval 是独立 Authority。
+Java Control Plane 与数据库拥有生命周期、任务归属、调度、Engineering Gate 与 Approval 的权威状态。Worker 不直接修改 Control Plane 数据库。原手册的不可变 Git commit 交付描述适用于对应工程路径，不代表所有 Plan 必须使用 Git；当前交接见 [Plan 位置与交接](../PLAN-LOCATIONS-AND-HANDOFFS.md)。Human Approval 是独立 Authority。
 

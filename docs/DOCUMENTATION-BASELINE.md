@@ -1,25 +1,29 @@
-# Documentation Baseline
+# 文档基线与维护规则
 
-Current product baseline: **AI Worker R9 Web Console consolidated**, built on the accepted **R8-S13 Fix2 execution platform** (`me.asu.aidev`).
+统一入口：[文档导航](README.md)。模块关系：[系统如何工作](SYSTEM-OVERVIEW.md)。
 
-Canonical current documentation:
+## 已核对的事实
 
-- English: `docs/current/`
-- Chinese: `docs/current-zh/`
+- 根 `pom.xml` 声明 Java 25、Spring Boot 4.0.8，包根为 `me.asu.aidev`。
+- 实现包含工厂、模型认证、Plan、独立秘书配套接口、受控执行和工作台；R8/R9 的版本、表数和测试数不再代表整个系统。
+- `current/` 与 `current-zh/` 保留旧手册路径，部分内容属于早期阶段；本次没有逐篇重验全部命令和契约。
 
-Historical stage notes remain in the parent `docs/` directory for design traceability.
+## 文档职责
 
-Current engineering baseline:
+| 位置 | 职责 |
+| --- | --- |
+| `docs/README.md` | 按用户目标导航，不复制生命周期状态 |
+| `docs/SYSTEM-OVERVIEW.md` | 模块关系、执行路径与边界 |
+| `docs/` 专题说明 | 对应功能的配置、使用与限制；设计文档保留状态标记 |
+| `current-zh/`、`current/` | 保留路径的参考手册，不保证逐篇最新或双语同步 |
+| 组件 README | 组件的依赖、安装与启动 |
+| `features/` | FD 设计、Work Items、状态与验证；索引可重建 |
+| `issues/`、`research/`、`archive/` | 需求、调研和历史依据 |
 
-```text
-Java 21
-Spring Boot 4.0.8
-Maven groupId me.asu
-Package root me.asu.aidev
-Flyway V1-V14
-9 persisted business/authority/audit tables
-33 expected Failsafe integration-test methods
-R9 Web Console: monitoring + operations + optional session auth/CSRF
-```
+## 冲突与维护
 
-R9 does not add a second business authority or a WebUI-specific database schema. Browser mutations delegate to the same application services used by the existing adapters.
+1. 解释当前行为时核对源码与配置；解释设计原因时查 FD。差异应明确记录，不能把设计描述当作已实现。
+2. 行为改变时更新相关专题与导航，不能只增加 FD 而继续宣称旧手册完整最新。
+3. 一个操作在一处维护详细步骤，其他入口链接过去；不同执行路径明确适用范围。
+4. 保留旧路径，避免随意移动文件破坏引用；过时入口标明阶段并链接替代文档。
+5. 区分源码存在、静态核对、离线测试与真实服务验证，未执行的流程不能写为已通过。
