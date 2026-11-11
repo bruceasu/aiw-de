@@ -12,6 +12,10 @@ public class ConfigurationController {
     private final ConfigurationUiOptions uiOptions;
     @org.springframework.beans.factory.annotation.Autowired private ExecutionWorkbench workbench;
     @org.springframework.beans.factory.annotation.Autowired private CapabilityPacks capabilityPacks;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.pricing.ModelUsageView modelUsage;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.pricing.ModelPriceCatalog modelPrices;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.pricing.ModelPriceCollectionState modelPriceCollection;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.pricing.ModelPriceRepairReview modelPriceRepairReview;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.workflow.application.FactoryPlanLifecycle planLifecycle;
     @PostMapping("/api/r1/authority/execution-configurations/reconcile-plan")
     public Object reconcilePlan(@RequestBody me.asu.aidev.workflow.application.FactoryPlanLifecycle.Reconcile input) {
@@ -29,12 +33,21 @@ public class ConfigurationController {
     public Object propose(String raw) { return propose(raw,"method"); }
     public Object state(String raw) { return state(raw,"method"); }
     @PostMapping("/api/r1/authority/execution-configurations/candidates") public Object save(@RequestBody String raw,@RequestParam(defaultValue="method") String kind) {
+        if("model-price-snapshot".equals(kind)) {
+            configs.currentOwner();
+            var snapshot=read(raw,me.asu.aidev.execution.pricing.ModelPriceCatalog.Snapshot.class);
+            modelPrices.publish(snapshot);
+            return Map.of("snapshotId",snapshot.id(),"state","PUBLISHED");
+        }
         if("capability-pack".equals(kind)) return capabilityPacks.save(read(raw,CapabilityPacks.Save.class));
         if("workbench".equals(kind)) return workbench.command(read(raw,WorkbenchContract.HumanCommand.class));
         return role(kind)?configs.saveRole(read(raw,ComposedRoles.Definition.class)):configs.save(read(raw,Candidate.class));
     }
     @PostMapping("/api/r1/authority/execution-configurations/propose") public Object propose(@RequestBody String raw,@RequestParam(defaultValue="method") String kind) {
         return role(kind)?configs.proposeRole(read(raw,ComposedRoles.Definition.class)):configs.propose(read(raw,Assembly.class));
+    }
+    @PostMapping("/api/r1/authority/execution-configurations/price-repair-decision") public Object priceRepairDecision(@RequestBody String raw) {
+        return modelPriceRepairReview.decide(configs.currentOwner(),read(raw,me.asu.aidev.execution.pricing.ModelPriceRepairReview.Decision.class));
     }
     @PostMapping("/api/r1/authority/execution-configurations/prepare") public Object prepare(@RequestBody String raw) { return factory.prepare(read(raw,Intent.class)); }
     @PostMapping("/api/r1/authority/execution-configurations/state") public Object state(@RequestBody String raw,@RequestParam(defaultValue="method") String kind) {
@@ -44,6 +57,9 @@ public class ConfigurationController {
         if("workbench-receipt".equals(kind)) return workbench.receipt(read(raw,WorkbenchContract.ReceiptQuery.class));
         if("branch-history".equals(kind)) return workbench.branchHistory(read(raw,WorkbenchContract.BranchQuery.class));
         if("observations".equals(kind)) { read(raw,Empty.class);return configs.observations(); }
+        if("model-usage".equals(kind)) return modelUsage.read(configs.currentOwner(),read(raw,me.asu.aidev.execution.pricing.ModelUsageView.Query.class));
+        if("model-price-status".equals(kind)) { read(raw,Empty.class);configs.currentOwner();return Map.of("protocol","aiw.model-price-status.v1","sources",modelPriceCollection.status()); }
+        if("model-price-repair-review".equals(kind)) { read(raw,Empty.class);return modelPriceRepairReview.read(configs.currentOwner()); }
         if(role(kind)) return configs.role(read(raw,PreparedConfigRef.class));
         read(raw,Empty.class);String owner=configs.currentOwner();
         return Map.of("protocol",PROTOCOL,"categories",configs.categories(),"methods",configs.catalogue().methods(),

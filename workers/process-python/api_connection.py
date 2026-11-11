@@ -1,5 +1,6 @@
 """Explicit API identity and protocol. Never infer a provider from a model name."""
 import os
+from urllib.parse import urlsplit
 
 
 def provider(runtime="openai-agents"):
@@ -20,6 +21,32 @@ def protocol():
 
 def key_name():
     return "DEEPSEEK_API_KEY" if provider() == "deepseek" else "OPENAI_API_KEY"
+
+
+def pricing_scope(provider_name, base_url, has_images):
+    """Only standard official text endpoints can use the standard price table."""
+    if has_images:
+        return "UNSUPPORTED"
+    if provider_name == "openai" and not base_url:
+        return "TEXT_ONLY"
+    hosts = {"openai": "api.openai.com", "deepseek": "api.deepseek.com"}
+    if provider_name not in hosts or not base_url:
+        return "UNSUPPORTED"
+    try:
+        url = urlsplit(base_url)
+        allowed_path = {"/v1", "/v1/"} if provider_name == "openai" else {"", "/", "/v1", "/v1/"}
+        if (url.scheme == "https" and url.hostname == hosts[provider_name] and url.port in (None, 443)
+                and not url.username and not url.password and not url.query and not url.fragment
+                and url.path in allowed_path):
+            return "TEXT_ONLY"
+    except (TypeError, ValueError):
+        pass
+    return "UNSUPPORTED"
+
+
+def effective_service_tier(value):
+    """Only a concrete provider-reported tier is eligible for cost matching."""
+    return value if isinstance(value, str) and value in {"default", "flex", "priority", "fast", "ultrafast"} else None
 
 
 def check_auth():

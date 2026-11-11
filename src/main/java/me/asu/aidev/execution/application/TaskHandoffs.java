@@ -47,7 +47,8 @@ public class TaskHandoffs {
         }
         var work=tasks.find(new TaskId(task)).orElseThrow();
         jdbc.update("INSERT INTO execution_handoff(attempt_id,task_id,location,manifest_path,sha256) VALUES(?,?,?,?,?)",
-                attempt,task,locations.forTask(work),ref.manifest(),ref.sha256());
+                attempt,task,me.asu.aidev.execution.pricing.ModelPriceRepairDispatch.SUBJECT.equals(work.subjectType())
+                        ? "worker-local:" + worker : locations.forTask(work),ref.manifest(),ref.sha256());
     }
     public Input input(String attempt) {
         if(attempt==null) return null;

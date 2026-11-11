@@ -19,7 +19,7 @@ from agents import RunContextWrapper, function_tool
 from ai_preferences import preference_rejected
 from agent_runtime import AgentRunRequest, HOST_ACTION_INSTRUCTIONS
 from agents.models.interface import Model
-from api_connection import provider as api_provider, protocol as api_protocol, key_name, check_auth, efforts as api_efforts
+from api_connection import provider as api_provider, protocol as api_protocol, key_name, check_auth, efforts as api_efforts, pricing_scope, effective_service_tier
 
 
 @dataclass
@@ -302,13 +302,16 @@ class _GuardedModel(Model):
         input = [{"role": "user", "content": original}]
         self._request_check(instructions, input, [], purpose="history-summary")
         operation = None
+        usage_ticket = None
         try:
             operation = self._begin(include_inputs=False, purpose="history-summary")
+            usage_ticket = self._usage_begin("history-summary")
             settings = _model_preferences(self._request, self._config)
             settings.update(max_tokens=2048, tool_choice="none", parallel_tool_calls=False)
             response = await self._model.get_response(instructions, input,
                 ModelSettings(**settings), [], None, [], self._summary_tracing,
                 previous_response_id=None, conversation_id=None, prompt=None)
+            self._usage_end(usage_ticket, response); usage_ticket = None
             self._request.attempt.check(); self._validate(response)
             self._finish(operation, response); operation = None
             items = _json_value(_field(response, "output"))
@@ -316,6 +319,7 @@ class _GuardedModel(Model):
             return "\n".join(part.get("text", "") for item in items if item.get("type") == "message"
                              for part in item.get("content", []) if part.get("type") == "output_text")
         finally:
+            self._usage_end(usage_ticket, None)
             self._unknown(operation)
 
     def _request_check(self, system_instructions: str | None, input: Any, tools: list[Any], purpose="task") -> None:
@@ -388,6 +392,47 @@ class _GuardedModel(Model):
         raw = getattr(self._model, "last_usage", None)
         return raw if raw is not None else _field(response, "usage")
 
+    def _usage_begin(self, purpose="task"):
+        outbox = getattr(self._request, "usage_outbox", None)
+        task = getattr(self._request, "usage_task", None)
+        if task is None:
+            return None
+        if outbox is None:
+            self._request.attempt.evidence.record("model-usage-outbox", status="unknown", code="USAGE_OUTBOX_UNAVAILABLE")
+            return None
+        try:
+            return outbox.begin(task, self._config.provider, self._request.model or self._config.model,
+                self._config.protocol, purpose, "CHATGPT" if self._request.credential_provider is not None else "API_KEY",
+                "unknown" if self._config.provider == "openai" else self._request.service_tier or "default",
+                pricing_scope(self._config.provider, self._config.base_url, self._request.model_images))
+        except (OSError, ValueError, RuntimeError):
+            self._request.attempt.evidence.record("model-usage-outbox", status="unknown", code="USAGE_OUTBOX_WRITE_FAILED")
+            return None
+
+    def _usage_end(self, ticket, response):
+        if ticket is None:
+            return
+        outbox = self._request.usage_outbox
+        raw = self._usage(response) if response is not None else None
+        details = _field(raw, "input_tokens_details")
+        def count(value):
+            return value if type(value) is int and value >= 0 else None
+        input_tokens = count(_field(raw, "input_tokens"))
+        cached = count(_field(details, "cached_tokens"))
+        writes = count(_field(details, "cache_write_tokens"))
+        if input_tokens is not None and cached is not None and cached > input_tokens:
+            cached = None
+        if input_tokens is not None and writes is not None and writes > input_tokens - (cached or 0):
+            writes = None
+        usage = {"inputTokens": input_tokens, "cachedTokens": cached,
+                 "outputTokens": count(_field(raw, "output_tokens")), "cacheWriteTokens": writes}
+        try:
+            status = _field(response, "status") if response is not None else None
+            tier = effective_service_tier(_field(response, "service_tier")) if self._config.provider == "openai" and response is not None else None
+            outbox.finish(ticket, "COMPLETED" if response is not None and status in (None, "completed") else "UNKNOWN", usage, tier)
+        except (OSError, ValueError, RuntimeError):
+            self._request.attempt.evidence.record("model-usage-outbox", status="unknown", code="USAGE_OUTBOX_WRITE_FAILED")
+
     def _begin(self, include_inputs=True, purpose="task"):
         broker = self._request.broker
         if not broker: return None
@@ -419,13 +464,16 @@ class _GuardedModel(Model):
                            tools: list[Any], output_schema: Any, handoffs: list[Any], tracing: Any, *,
                            previous_response_id: str | None, conversation_id: str | None, prompt: Any) -> Any:
         operation = None
+        usage_ticket = None
         try:
             input = await self._prepare(system_instructions, input, tools, previous_response_id, conversation_id, tracing)
             self._count()
             operation = self._begin()
+            usage_ticket = self._usage_begin()
             response = await self._model.get_response(system_instructions, input, model_settings, tools, output_schema,
                                                       handoffs, tracing, previous_response_id=previous_response_id,
                                                       conversation_id=conversation_id, prompt=prompt)
+            self._usage_end(usage_ticket, response); usage_ticket = None
             self._request.attempt.check()
             self._validate(response)
             completed_operation = operation
@@ -437,6 +485,7 @@ class _GuardedModel(Model):
             self._record_model_error(error)
             raise
         finally:
+            self._usage_end(usage_ticket, None)
             self._unknown(operation)
 
     def stream_response(self, system_instructions: str | None, input: Any, model_settings: Any,
@@ -446,10 +495,12 @@ class _GuardedModel(Model):
             terminal_seen = False
             wire_bytes = 0
             operation = None
+            usage_ticket = None
             try:
                 prepared = await self._prepare(system_instructions, input, tools, previous_response_id, conversation_id, tracing)
                 self._count()
                 operation = self._begin()
+                usage_ticket = self._usage_begin()
                 async for event in self._model.stream_response(
                     system_instructions, prepared, model_settings, tools, output_schema, handoffs, tracing,
                     previous_response_id=previous_response_id, conversation_id=conversation_id, prompt=prompt,
@@ -465,6 +516,7 @@ class _GuardedModel(Model):
                         if terminal_seen:
                             raise RuntimeError("RESPONSES_DUPLICATE_TERMINAL")
                         response = _field(event, "response")
+                        self._usage_end(usage_ticket, response); usage_ticket = None
                         self._validate(response)
                         completed_operation = operation
                         self._finish(operation, response)
@@ -478,6 +530,7 @@ class _GuardedModel(Model):
                 self._record_model_error(error)
                 raise
             finally:
+                self._usage_end(usage_ticket, None)
                 self._unknown(operation)
 
         return guarded_stream()

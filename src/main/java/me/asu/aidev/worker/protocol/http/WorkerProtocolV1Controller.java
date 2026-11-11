@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class WorkerProtocolV1Controller {
     @Autowired private me.asu.aidev.workflow.application.PlanLocations locations;
     @Autowired private me.asu.aidev.execution.application.TaskHandoffs handoffs;
+    @Autowired private me.asu.aidev.execution.pricing.ModelPriceRepairResults priceRepairResults;
     private me.asu.aidev.execution.skills.SkillFiles skillFiles;
     @Autowired public void setSkillFiles(me.asu.aidev.execution.skills.SkillFiles value) { skillFiles=value; }
     private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
@@ -170,6 +171,8 @@ public class WorkerProtocolV1Controller {
         if(request.report()==null) throw new IllegalArgumentException("Completion report required");
         if(executions.replayedGuardedCompletion(new TaskId(taskId),new WorkerId(required(request.workerId(),"workerId")),new LeaseToken(required(request.leaseToken(),"leaseToken")),workspaceResult,report))
         { handoffs.verifyReplay(request.leaseToken(),request.handoff()); return new CompletionResponse(taskId,List.of(),List.of()); }
+        if (report.verdict() == CompletionVerdict.PASS && priceRepairResults != null)
+            priceRepairResults.requireSubmittedIfRepair(taskId, request.workerId(), request.leaseToken());
         handoffs.record(taskId,request.workerId(),request.leaseToken(),request.handoff());
         TaskCompletionResult result = executions.complete(
                 new TaskId(taskId), new WorkerId(required(request.workerId(), "workerId")),
@@ -195,7 +198,7 @@ public class WorkerProtocolV1Controller {
         return new ClaimedTaskResponse(task.id().value(),task.type().name(),task.subjectType(),task.subjectId(),
                 task.requiredCapabilities(),task.skillRef(),task.instruction(),task.instructionRevision(),task.priority().value(),
                 claimed.attemptId().value(),claimed.attemptNo(),lease.token().value(),lease.acquiredAt(),lease.expiresAt(),
-                task.subjectId(),locations.forTask(task),"aiw.handoff.v1",
+                task.subjectId(),me.asu.aidev.execution.pricing.ModelPriceRepairDispatch.SUBJECT.equals(task.subjectType()) ? null : locations.forTask(task),"aiw.handoff.v1",
                 claimed.inputs().stream().map(input->new TaskInputResponse(input.taskId().value(),input.taskType().name(),
                     input.completionVerdict()==null?null:input.completionVerdict().name(),input.completionSummary(),input.attemptId(),handoffs.input(input.attemptId()))).toList(),
                 configurations!=null && configurations.managed(task.id().value())?configurations.binding(task.id().value()).guidance()

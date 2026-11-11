@@ -54,6 +54,14 @@ When the Control Plane requests a cooperative stop, the Worker interrupts the cu
 | `integration-verifier` | `EXTERNAL_WORK` | `software-test-verifier` | read-only |
 | `repairer` | `EXTERNAL_WORK` | `coding-work-package-executor` | writable |
 
+The coder advertises `price-repair-v1` for public pricing collector repair. It
+downloads lease-bound, hash-checked diagnostic inputs into a Worker-local
+temporary directory and returns an untrusted collector proposal plus the exact
+official page URL used for the repair. Plane fetches the latest page at that URL
+for administrator review and fetches it again before accepting the decision.
+Approval runs the candidate once with Plane process account permissions; no OS
+sandbox is provided.
+
 Two additional frozen R2 profiles are preserved in `profiles/advisory/` and their Skills in `skills/advisory/`; they are not executable in R9:
 
 - `release-readiness` -> `release-readiness-manager`

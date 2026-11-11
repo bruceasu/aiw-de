@@ -102,9 +102,11 @@ class WorkerConfig:
         profile = get_profile(process_role)
         capabilities = {part.strip() for part in os.getenv("AIW_WORKER_CAPABILITIES", "").split(",") if part.strip()}
         role_capabilities = {"goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
-        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "model-images-v1", "worker-loop-turn-v1", "questions-v2"} or part.startswith(("repo:", "native-config:", "handoff-store:")) or part in role_capabilities for part in capabilities):
+        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "model-images-v1", "worker-loop-turn-v1", "questions-v2", "price-repair-v1"} or part.startswith(("repo:", "native-config:", "handoff-store:")) or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
+        if process_role == "coder":
+            capabilities.add("price-repair-v1")
         if runtime == "openai-agents" and not os.getenv("AIW_MODEL_CREDENTIAL_REF"):
             capabilities.add("model-images-v1")
         if os.getenv("AIW_MODEL_CREDENTIAL_REF"):
@@ -176,6 +178,7 @@ class ControlPlaneClient:
         self.model_proof = os.getenv("AIW_MODEL_WORKER_PROOF", "") if os.getenv("AIW_MODEL_CREDENTIAL_REF") else ""
         self.timeout = config.http_timeout
         self.capabilities_digest = hashlib.sha256(json.dumps(sorted(config.capabilities), ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+        self.usage_outbox = None
 
     def register(self, config: WorkerConfig) -> dict[str, Any]:
         result = self._post("/workers/register", {
@@ -203,6 +206,12 @@ class ControlPlaneClient:
     def pin_baseline(self, task, worker_id, revision):
         return self._post(f"/tasks/{_quote(task['taskId'])}/workspace-baseline", {
             "workerId": worker_id, "leaseToken": task["leaseToken"], "baseRevision": revision})
+    def price_repair_materials(self, task, worker_id):
+        return self._post(f"/tasks/{_quote(task['taskId'])}/price-repair/materials", {
+            "lease": {"workerId": worker_id, "attemptId": task["attemptId"], "leaseToken": task["leaseToken"]}},
+            max_response_bytes=7_000_000)
+    def submit_price_repair(self, task, proposal):
+        return self._post(f"/tasks/{_quote(task['taskId'])}/price-repair/result", proposal)
     def fail(self, task: dict[str, Any], worker_id: str, session_id: str | None,
              reason: str | None = None, category: str = "UNKNOWN") -> None:
         self._post(f"/tasks/{_quote(task['taskId'])}/fail", {
@@ -226,7 +235,7 @@ class ControlPlaneClient:
             "workerId": worker_id, "leaseToken": task["leaseToken"], "externalSessionId": session_id,
         })
 
-    def _post(self, path: str, payload: dict[str, Any] | None, allow_no_content: bool = False):
+    def _post(self, path: str, payload: dict[str, Any] | None, allow_no_content: bool = False, max_response_bytes: int | None = None):
         data = None if payload is None else json.dumps(payload).encode("utf-8")
         headers = {"Accept": "application/json"}
         if data is not None: headers["Content-Type"] = "application/json"
@@ -238,7 +247,9 @@ class ControlPlaneClient:
             timeout = min(self.timeout, active.remaining()) if active else self.timeout
             with urllib.request.urlopen(req, timeout=timeout) as response:
                 if response.status == 204: return None if allow_no_content else {}
-                body = response.read()
+                body = response.read(max_response_bytes + 1) if max_response_bytes is not None else response.read()
+                if max_response_bytes is not None and len(body) > max_response_bytes:
+                    raise ProtocolError(response.status, "RESPONSE_LIMIT_EXCEEDED")
                 return json.loads(body.decode("utf-8")) if body else {}
         except urllib.error.HTTPError as error:
             raise ProtocolError(error.code, "REQUEST_REJECTED") from error
@@ -507,6 +518,14 @@ class ProcessSlot:
                     raise RuntimeError("ROLE_SKILL_DENIED")
                 if broker:
                     broker.prepare_approved_inputs(task)
+                repair_id = None
+                if task.get("subjectType") == "price-source-repair":
+                    from price_repair_materials import materialize
+                    repair = self.client.price_repair_materials(task, self.config.worker_id)
+                    if repair.get("repairId") != task.get("subjectId"):
+                        raise RuntimeError("PRICE_REPAIR_TARGET_MISMATCH")
+                    task["location"] = str(materialize(repair))
+                    repair_id = repair["repairId"]
                 # Location preparation is a Worker decision; no Control Plane Git assignment.
                 instruction = prepared.prompt(task, skill_reader) if prepared else _prompt(task, self.config, skill_reader)
                 if broker is None:
@@ -573,6 +592,7 @@ class ProcessSlot:
                     model_only=self.config.process_role == "goal-discussion" or task.get("subjectType") == "workflow-recommendation",
                     candidate_validator=lambda text: _completion_report(profile.result_kind, text),
                     model_images=tuple(task.get("modelImages") or ()),
+                    usage_outbox=getattr(self.client, "usage_outbox", None), usage_task=task,
                 )
                 if os.getenv("AIW_MODEL_CREDENTIAL_REF"):
                     from model_credentials import ModelCredentialProvider
@@ -624,6 +644,12 @@ class ProcessSlot:
                 if native:
                     native.maybe_question(workspace, report, final_response)
                 phase = "TOOL_ERROR"
+                if repair_id and report["verdict"] == "PASS":
+                    from price_repair_materials import submission
+                    attempt.check()
+                    if heartbeat.ownership_lost.is_set(): raise RuntimeError("LEASE_LOST")
+                    proposal = submission(workspace.cwd, task, self.config.worker_id, repair_id, report["summary"])
+                    self.client.submit_price_repair(task, proposal)
                 workspace_result = workspace.finalize(task, read_only=not profile.writable)
                 if broker: broker.record_delivery(workspace_result, report)
                 task["_handoff"] = workspace.handoff(task, report, workspace_result)
@@ -809,6 +835,12 @@ def _bool_env(name: str, default: bool) -> bool:
 
 def main() -> int:
     config = WorkerConfig.from_env(); client = ControlPlaneClient(config); stop_event = threading.Event()
+    if config.runtime == "openai-agents":
+        try:
+            from model_usage_outbox import UsageOutbox
+            client.usage_outbox = UsageOutbox(config, client)
+        except (OSError, ValueError, RuntimeError):
+            print("MODEL_USAGE_OUTBOX_UNAVAILABLE", file=sys.stderr, flush=True)
     force_event = threading.Event()
     def stop(_signum=None, _frame=None):
         if stop_event.is_set(): force_event.set()
@@ -817,6 +849,7 @@ def main() -> int:
     profile = _profile(config)
     slots = [ProcessSlot(i + 1, config, client, stop_event, force_event) for i in range(config.max_concurrency)]
     client.register(config)
+    if client.usage_outbox: client.usage_outbox.start()
     print(f"registered worker={config.worker_id} role={profile.name} primarySkill={profile.primary_skill} capabilities={','.join(config.capabilities)} concurrency={config.max_concurrency}", flush=True)
     for slot in slots: slot.start()
     try:
@@ -826,6 +859,7 @@ def main() -> int:
         try: client.drain(config.worker_id)
         except ProtocolError: pass
         for slot in slots: slot.join()
+        if client.usage_outbox: client.usage_outbox.close()
         try: client.offline(config.worker_id)
         except ProtocolError: pass
     return 0

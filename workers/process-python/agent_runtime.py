@@ -45,6 +45,9 @@ class AgentRunRequest:
     credential_provider: Any = None
     # Frozen, explicitly selected task inputs. No local paths or renewable credentials.
     model_images: tuple[dict[str, str], ...] = ()
+    # Owner-private metadata outbox and original lease; never part of model input.
+    usage_outbox: Any = None
+    usage_task: Any = None
 
 
 class AgentRuntime(Protocol):

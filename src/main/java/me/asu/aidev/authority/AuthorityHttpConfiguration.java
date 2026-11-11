@@ -21,6 +21,8 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/configuration")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/questions/(source|open|ack|checkpoints|receipt)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/execution-run/(availability|open|events|control|seal)")
+                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/model-usage/(start|finish)")
+                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/price-repair/(materials|result)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/(begin|finish|approval|approved|approved-begin|approved-discard)|operations/[^/]+/receipt|yield/(prepare|ack)|delivery)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|workspace-baseline|heartbeat|complete|fail|stop-acknowledgement|handoff|outputs|outputs/read)");
     }
@@ -92,6 +94,8 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                     String csrf=request.getHeader("X-CSRF-Token");if(csrf==null) csrf=request.getParameter("_csrf");
                     if(!security.validCsrf(session,csrf)) { response.sendError(403,"Current human CSRF token required");return false; }
                     try {
+                        if(path.equals("/api/r1/authority/execution-configurations/candidates") && "model-price-snapshot".equals(request.getParameter("kind"))) security.requireAdmin(session);
+                        else
                         if(path.equals("/api/r1/authority/execution-tool-approvals/decide") || path.matches("/api/r1/approvals/[^/]+/decision") || path.matches("/api/r1/authority/execution-(effects|meters)/reconcile") || path.matches("/api/r1/authority/execution-tasks/[^/]+/stopped") || path.equals("/api/r1/authority/execution-budgets/increment")) security.requireApprover(session);
                         else if(path.equals("/api/r1/authority/execution-tool-approvals/read")) {
                             if(!security.role(session).canOperate() && !security.role(session).canApprove())throw new SecurityException("Operation or approval role required");
