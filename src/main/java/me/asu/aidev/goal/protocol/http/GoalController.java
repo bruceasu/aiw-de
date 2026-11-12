@@ -25,7 +25,6 @@ public class GoalController {
     }
     private String actor(HttpSession session) { security.requireOperator(session); return security.actor(session); }
     public record Revision(long revision, boolean confirmed) {}
-    public record EditorRequest(long revision, Map<String,Object> editor) {}
     public record WorkflowRequest(long revision,boolean restart) {}
     // Spring MVC uses Jackson 3. Expose plain JSON values instead of Jackson 2 tree beans.
     public record VersionResponse(String id, String goalId, long sourceRevision, Map<String,Object> snapshot,
@@ -85,26 +84,11 @@ public class GoalController {
     @PostMapping("/api/r1/goals/{id}/formalize") @ResponseBody public Object formalize(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
         return response(plans.formalize(id, actor(session), request.revision(), request.confirmed()));
     }
-    @PostMapping("/api/r1/goals/versions/{id}/editor") @ResponseBody public Object editor(@PathVariable String id, @RequestBody EditorRequest request, HttpSession session) {
-        return response(plans.saveEditor(id, actor(session), request.revision(), repo.json().valueToTree(request.editor())));
-    }
     @PostMapping("/api/r1/goals/versions/{id}/workflow") @ResponseBody public Object workflow(@PathVariable String id,@RequestBody WorkflowRequest request,HttpSession session) {
         return plans.workflowDraft(id,actor(session),request.revision(),request.restart());
     }
     @PostMapping("/api/r1/goals/versions/{id}/workflow/read") @ResponseBody public Object workflow(@PathVariable String id,HttpSession session) {
         return plans.readWorkflowDraft(id,actor(session));
-    }
-    @PostMapping("/api/r1/goals/versions/{id}/analyze") @ResponseBody public Object analyze(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
-        return response(plans.analyze(id, actor(session), request.revision()));
-    }
-    @GetMapping("/api/r1/goals/versions/{id}/analysis") @ResponseBody public Object analysis(@PathVariable String id, HttpSession session) {
-        return plans.analysis(id, actor(session));
-    }
-    @PostMapping("/api/r1/goals/versions/{id}/apply") @ResponseBody public Object apply(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
-        return response(plans.applyAnalysis(id, actor(session), request.revision()));
-    }
-    @PostMapping("/api/r1/goals/versions/{id}/prepare") @ResponseBody public Object prepare(@PathVariable String id, @RequestBody Revision request, HttpSession session) {
-        return response(plans.prepare(id, actor(session), request.revision(), request.confirmed()));
     }
     @ExceptionHandler(SecurityException.class) public ResponseEntity<?> denied(SecurityException e) { return ResponseEntity.status(403).body(Map.of("error", e.getMessage())); }
     @ExceptionHandler(IllegalArgumentException.class) public ResponseEntity<?> invalid(IllegalArgumentException e) { return ResponseEntity.badRequest().body(Map.of("error", e.getMessage())); }
