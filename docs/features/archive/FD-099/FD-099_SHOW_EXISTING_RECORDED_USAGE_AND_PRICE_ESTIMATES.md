@@ -44,3 +44,5 @@ WorkflowRuns.view 在原 actor 归属校验后，使用当前 Owner、Plan ID �
 ## Sources
 
 - docs/FUNCTION-INVENTORY.md 第 13、20、27 项；FD-088 原用量账本与 ModelUsageView。
+
+**Completed:** 2026-11-12
