@@ -52,6 +52,7 @@ public class WorkflowWorkerProvisioning {
                     case "software-requirements-analyst" -> "requirements";
                     case "solution-architect" -> "architect";
                     case "implementation-planner" -> "planner";
+                    case "general-work" -> "general";
                     case "coding-work-package-executor" -> "coder";
                     case "workflow-stage-reviewer" -> "stage-reviewer";
                     default -> null;
@@ -81,6 +82,6 @@ public class WorkflowWorkerProvisioning {
         }
     }
     private String roleCapability(String role) {
-        return switch(role) {case "requirements"->"requirement-analysis";case "architect"->"solution-architecture";case "planner"->"implementation-planning";case "coder"->"coding";default->"workflow-review";};
+        return switch(role) {case "general"->"general-work";case "requirements"->"requirement-analysis";case "architect"->"solution-architecture";case "planner"->"implementation-planning";case "coder"->"coding";default->"workflow-review";};
     }
 }

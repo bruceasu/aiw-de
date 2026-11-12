@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" th:content="${csrfToken}">
+  <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css">
+  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js" defer></script>
+</head>
+<body><div class="app"><aside th:replace="~{ui/fragments :: nav('workflows')}"></aside><main class="main">
+  <header th:replace="~{ui/fragments :: topbar('Workflows','Describe a simple task or run a reusable workflow.')}"></header>
+  <div class="content"><p class="help" data-wf-status role="status" aria-live="polite"></p>
+  <div class="wf-layout">
+    <section class="card wf-library"><h2 data-wf-label="Library">Library</h2>
+      <div class="wf-actions"><button class="btn primary" data-wf-new="task">Simple task</button><button class="btn ghost" data-wf-new="workflow">New workflow</button></div>
+      <button class="btn ghost" data-wf-sample>After-sales example</button>
+      <h3 data-wf-label="Saved workflows">Saved workflows</h3><div data-wf-definitions></div>
+      <h3 data-wf-label="Executions">Executions</h3><div data-wf-executions></div>
+      <button class="btn ghost" data-wf-refresh>Refresh</button>
+    </section>
+    <section class="wf-content">
+      <section class="card" data-wf-task hidden><h2 data-wf-label="Simple task">Simple task</h2>
+        <p class="help" data-wf-label="Text tasks use the same executor as workflow nodes. No Git repository is required.">Text tasks use the same executor as workflow nodes. No Git repository is required.</p>
+        <form data-wf-task-form><label class="field"><span data-wf-label="What should be done?">What should be done?</span><textarea name="instruction" required maxlength="8000" rows="6"></textarea></label>
+          <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input name="location" maxlength="4096"></label>
+          <button class="btn primary" data-wf-label="Run task">Run task</button></form>
+      </section>
+      <section class="card" data-wf-editor hidden><h2 data-wf-label="Workflow definition">Workflow definition</h2>
+        <label class="field"><span data-wf-label="Name">Name</span><input data-wf-title maxlength="160"></label>
+        <label class="field"><span data-wf-label="Goal and completion conditions">Goal and completion conditions</span><textarea data-wf-goal maxlength="8000" rows="3"></textarea></label>
+        <div data-wf-definition-graph class="wf-graph"></div>
+        <details><summary data-wf-label="Edit steps">Edit steps</summary><div data-wf-nodes></div><button class="btn ghost" data-wf-add-node>Add step</button></details>
+        <div class="wf-actions"><button class="btn primary" data-wf-save>Save workflow</button></div>
+        <hr><label class="field"><span data-wf-label="Input and reference material">Input and reference material</span><textarea data-wf-input maxlength="32000" rows="6"></textarea></label>
+        <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input data-wf-location maxlength="4096"></label>
+        <p class="help" data-wf-label="Starting freezes this definition for this execution. Later edits do not change existing executions.">Starting freezes this definition for this execution. Later edits do not change existing executions.</p>
+        <button class="btn primary" data-wf-start>Start execution</button>
+      </section>
+      <section class="card" data-wf-run hidden><div class="wf-actions"><h2 data-wf-run-title></h2><span class="pill neutral" data-wf-run-state></span></div>
+        <p data-wf-run-current></p><div data-wf-run-graph class="wf-graph"></div>
+        <div class="wf-actions"><button class="btn ghost" data-wf-control="pause">Pause</button><button class="btn primary" data-wf-control="resume">Continue</button><button class="btn ghost" data-wf-control="retry">Retry this step</button><button class="btn ghost" data-wf-control="stop">Stop execution</button></div>
+        <section data-wf-answer hidden><h3 data-wf-question></h3><div data-wf-answer-options class="wf-actions"></div>
+          <form data-wf-answer-form><label class="field"><span data-wf-label="Your answer">Your answer</span><textarea name="answer" required maxlength="8000" rows="3"></textarea></label><button class="btn primary" data-wf-label="Answer and continue">Answer and continue</button></form>
+        </section>
+        <p class="help" data-wf-preparation></p><p><a data-wf-worker-detail data-wf-label="Worker execution details">Worker execution details</a></p>
+        <h3 data-wf-label="Execution timeline">Execution timeline</h3><div data-wf-timeline></div>
+      </section>
+    </section>
+  </div>
+</div></main></div></body></html>

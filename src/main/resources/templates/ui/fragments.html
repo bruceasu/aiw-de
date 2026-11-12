@@ -2,8 +2,8 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org"><body>
 <nav class="sidebar" th:fragment="nav(active)">
   <div class="brand" data-i18n-skip><div class="brand-mark" title="AI Worker" aria-label="AI Worker">AIW</div><span>Digital Employee</span></div>
-  <a th:if="${canOperate}" th:classappend="${active == 'new-plan' ? 'active' : ''}" href="/ui/plans/new">New Plan</a>
-  <a th:classappend="${active == 'plans' ? 'active' : ''}" href="/ui/plans">Plans</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'new-plan' ? 'active' : ''}" href="/ui/workflows">Simple task</a>
+  <a th:classappend="${active == 'workflows' ? 'active' : ''}" href="/ui/workflows">Workflows</a>
   <a th:if="${canOperate}" th:classappend="${active == 'goals' ? 'active' : ''}" href="/ui/goals">Wish Pool</a>
   <a th:if="${canOperate}" th:classappend="${active == 'agent-factory' ? 'active' : ''}" href="/ui/agent-factory">Agent 工厂设置</a>
   <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Workers</a>

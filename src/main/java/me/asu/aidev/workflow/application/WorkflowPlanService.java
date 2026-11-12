@@ -673,6 +673,15 @@ public class WorkflowPlanService {
         createExecution(plan, stepIndex, attempt, dependencies, "");
     }
 
+    /** The unified workflow router supplies the frozen business input for this existing task slot. */
+    void createWorkflowExecution(WorkflowPlan plan,int stepIndex,int round,String instruction) {
+        var step=plan.spec().steps().get(stepIndex);
+        TaskId id=executionId(plan,stepIndex,round);
+        taskService.createIfAbsent(new CreateWorkTaskCommand(id,TaskType.EXTERNAL_WORK,SUBJECT,plan.id(),
+                step.requiredSkills(),step.skillRef(),instruction,step.repositoryRef(),step.baseRevision(),TaskPriority.NORMAL,Set.of()));
+        if(delegation!=null)delegation.allowHumanTask(id.value());
+    }
+
     private void createExecution(WorkflowPlan plan, int stepIndex, int attempt, Set<TaskId> dependencies, String authorization) {
         managedAdmission(plan.id());
         var step = plan.spec().steps().get(stepIndex);

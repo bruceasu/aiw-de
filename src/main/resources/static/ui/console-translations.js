@@ -1,6 +1,9 @@
 // UI copy only. Rows are English, Chinese and Japanese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["Workflows","工作流","ワークフロー"],
+  ["Simple task","简单任务","単一タスク"],
+  ["Describe a simple task or run a reusable workflow.","直接处理简单任务，或运行可复用的工作流。","単一タスクを依頼するか、ワークフローを実行します。"],
   ["No change was observed. The Worker will ask the model to recheck the delivery conditions.","尚未观察到修改。Worker 将请模型重新核对交付条件。","変更が確認されませんでした。Worker はモデルに納品条件の再確認を求めます。"],
   ["Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.","检测到重复读取且结果相同。Worker 将请模型重新考虑下一步。","同じ読み取り結果が繰り返されました。Worker はモデルに次の手順を再検討するよう求めます。"],
   ["Set Plan location explicitly: the goal declares a workspace, but an empty location uses a temporary directory.","目标中声明了工作空间，请明确填写 Plan location；留空会使用临时目录。","目標に作業場所が指定されています。Plan locationを入力してください。空欄では一時ディレクトリを使用します。"],

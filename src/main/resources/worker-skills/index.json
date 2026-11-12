@@ -119,6 +119,7 @@
     ]
   },
   "profiles": {
+    "general-work": ["engineering-artifact-protocol"],
     "software-code-reviewer": [
       "engineering-artifact-protocol",
       "software-code-reviewer"

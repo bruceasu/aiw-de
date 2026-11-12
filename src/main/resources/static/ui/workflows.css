@@ -1,0 +1,8 @@
+.wf-layout{display:grid;grid-template-columns:minmax(220px,280px) minmax(0,1fr);gap:var(--space-4,20px);align-items:start}
+.wf-library{position:sticky;top:20px}.wf-content{min-width:0}.wf-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0}.wf-actions h2{margin:0;flex:1}
+.wf-library h3{margin-top:24px}.wf-library .wf-item{display:block;width:100%;text-align:left;margin:7px 0;overflow-wrap:anywhere}
+.wf-graph{overflow:auto;margin:18px 0;max-height:560px;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wf-graph svg{display:block;min-width:100%}.wf-graph rect{fill:var(--panel);stroke:var(--line);stroke-width:1.5}.wf-graph text{fill:var(--text);font-family:inherit;font-size:13px}
+.wf-graph path{stroke:var(--muted);stroke-width:1.5;fill:none}.wf-graph marker path{fill:var(--muted);stroke:none}.wf-graph .wf-current rect{stroke:var(--accent);stroke-width:3}.wf-graph .wf-visited rect{stroke:var(--ok);stroke-width:2}
+.wf-node-editor{padding:16px 0;border-bottom:1px solid var(--border,rgba(127,127,127,.2))}.wf-node-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wf-event{border-left:2px solid var(--border,#c4c9d3);padding:0 0 16px 14px;margin-left:6px}.wf-event pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;margin:8px 0;max-height:320px;overflow:auto}.wf-event summary{cursor:pointer}.wf-content [hidden]{display:none!important}
+@media(max-width:900px){.wf-layout{grid-template-columns:1fr}.wf-library{position:static}.wf-node-fields{grid-template-columns:1fr}}

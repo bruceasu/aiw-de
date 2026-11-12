@@ -46,7 +46,7 @@ public class ManagedWorkerProvisioner {
         return request(null,runtime,false,"planner");
     }
     public synchronized Result requestNative(String repository,String runtime,String role) {
-        if(!Set.of("requirements","architect","planner","coder","stage-reviewer").contains(role))
+        if(!Set.of("general","requirements","architect","planner","coder","stage-reviewer").contains(role))
             throw new IllegalArgumentException("Unsupported workflow role");
         return request(repository,runtime,false,role,false);
     }
@@ -109,6 +109,7 @@ public class ManagedWorkerProvisioner {
                 case "requirements" -> "software-requirements-analyst";
                 case "architect" -> "solution-architect";
                 case "planner" -> "implementation-planner";
+                case "general" -> "general-work";
                 case "stage-reviewer" -> "workflow-stage-reviewer";
                 case "coder" -> "coding-work-package-executor";
                 default -> null;

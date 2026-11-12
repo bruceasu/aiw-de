@@ -49,11 +49,11 @@ public class WebConsoleController {
     }
 
     @GetMapping("/")
-    public String root() { return "redirect:/ui/plans"; }
+    public String root() { return "redirect:/ui/workflows"; }
 
     @GetMapping("/ui")
     public String dashboard(Model model) {
-        return "redirect:/ui/plans";
+        return "redirect:/ui/workflows";
     }
 
     @GetMapping("/ui/runs")

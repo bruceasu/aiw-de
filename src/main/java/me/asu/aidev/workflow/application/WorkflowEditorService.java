@@ -44,6 +44,7 @@ public class WorkflowEditorService {
                              List<JdbcWorkflowTaskReadRepository.RetryEvent> retries) {}
 
     private static final List<Role> ROLES = List.of(
+            new Role("general-work", "general-work", "REPORT", false),
             new Role("requirement-analysis", "software-requirements-analyst", "REPORT", false),
             new Role("solution-architecture", "solution-architect", "REPORT", false),
             new Role("implementation-planning", "implementation-planner", "REPORT", false),

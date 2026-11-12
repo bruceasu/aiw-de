@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
     @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<WorkflowRuns> workflowRuns;
+    @org.springframework.beans.factory.annotation.Autowired
     private me.asu.aidev.authority.ManagedPlanAdmission personal;
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<FactoryPlanLifecycle> factoryPlans;
@@ -39,6 +41,11 @@ public class WorkflowStepCompletedHandler implements TaskCompletionHandler {
     }
 
     @Override public List<TaskId> onCompleted(TaskCompletionContext context) {
+        var router=workflowRuns==null?null:workflowRuns.getIfAvailable();
+        if(router!=null && router.manages(context.completedTask().subjectId())) {
+            router.completed(context.completedTask(),context.completionReport());
+            return List.of();
+        }
         if ("configured-plan".equals(context.completedTask().subjectType())) {
             factoryPlans.getObject().completed(context.completedTask(),context.completionReport());
             return List.of();
