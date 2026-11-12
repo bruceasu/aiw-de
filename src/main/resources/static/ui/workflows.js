@@ -189,7 +189,7 @@
   async function refreshRun() {
     if(!selectedRun)return;
     const id=selectedRun,data=await api('/executions/'+encodeURIComponent(id));if(id!==selectedRun)return;
-    currentView=data;renderActivity(data);const run=data.run,stamp=JSON.stringify([run,data.task,data.report,data.preparation]);if(stamp===signature)return;signature=stamp;
+    currentView=data;renderActivity(data);const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.report,data.preparation]);if(stamp===signature)return;signature=stamp;
     $('[data-wf-run-title]').textContent=run.spec.title;
     $('[data-wf-run-state]').textContent=t(run.state);
     const node=run.spec.nodes.find(n=>n.key===run.current),task=data.task;

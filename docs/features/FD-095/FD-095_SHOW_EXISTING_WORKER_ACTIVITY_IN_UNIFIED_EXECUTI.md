@@ -1,7 +1,7 @@
 # FD-095: Show existing Worker activity in unified execution details
 
 **Status:** In Progress
-**Revision:** 1
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -36,8 +36,10 @@
 - 仅离线 Java/Python/JS 编译与独立静态审查，不运行服务、测试或模型。
 - 2026-11-13：离线 Maven compile、Python 内置 compile（run_channel.py/openai_api_runtime.py）和 node --check workflows.js 通过。
 - 工具提议仅投影工具名称和校验状态，去除原 callId/参数；SDK 活动名称用独立安全字段，模型终态状态枚举与双方白名单同步。现有 metadata 大小、来源及摘要校验继续保留。
-- 新详情沿用 ExecutionRuns.read 归属校验，最近 64 条活动独立刷新；已结束记录不因心跳过期误报仍需确认停止。独立静态审查待进行，未运行浏览器或真实 SDK。
+- 新详情沿用 ExecutionRuns.read 归属校验，最近 64 条活动独立刷新；已结束记录不因心跳过期误报仍需确认停止。独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 b6236b4 对 15dcf98，来源事件 FD-095-000002-review-requested，Reviewer codex-review-fd095-20261113。P2：业务 stamp 仍包含完整 task 的心跳 version/updatedAt，导致节点时间线重建；未运行浏览器或真实 SDK。
 
 ## Sources
+
+- P2 修复：业务刷新签名仅保留 task.id/state/instruction，排除心跳 version/updatedAt；活动区仍独立刷新。使用 node --check 编译检查，未执行浏览器或运行时测试。
 
 - docs/FUNCTION-INVENTORY.md 第 13、27 项；FD-079、FD-091、FD-092。
