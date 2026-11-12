@@ -32,12 +32,19 @@
   };
   const number=value=>value==null?words().unknown:Number.isSafeInteger(value)?value.toLocaleString(window.aiwI18n?.locale||'en'):words().unknown;
   const amount=(value,currency)=>Number.isSafeInteger(value)?(value/1000000).toLocaleString(window.aiwI18n?.locale||'en',{maximumFractionDigits:6})+' '+currency:null;
-  let snapshot=null, generation=0, busy=false, sources=null, sourceError=false, sourceGeneration=0;
+  const actionWords={
+    en:{retry:'Collect again',repair:'Start repair',failed:'Request failed. Refresh the status and try again.',reason:'Reason',QUEUED:'Collection queued.',RUNNING:'Collection is already in progress.',DISABLED:'Price collection is disabled in configuration.',UNAVAILABLE:'Collection process is unavailable.',REPAIR_REQUESTED:'Repair task requested. Running its candidate still requires administrator approval.',REPAIR_UNAVAILABLE:'Repair cannot start: the current repair path requires a previous successful page and a repeated source-structure failure with the same collector.'},
+    zh:{retry:'重新采集',repair:'启动修复',failed:'请求失败，请刷新状态后重试。',reason:'原因',QUEUED:'已安排重新采集。',RUNNING:'已有采集正在进行。',DISABLED:'配置中已关闭价格采集。',UNAVAILABLE:'采集进程不可用。',REPAIR_REQUESTED:'已申请修复任务；运行候选程序仍须管理员批准。',REPAIR_UNAVAILABLE:'暂不能启动修复：现有修复路径需要曾成功采集的页面，以及同一采集程序连续发生的来源结构变化。'},
+    ja:{retry:'再取得',repair:'修復を開始',failed:'要求に失敗しました。状態を更新して再試行してください。',reason:'理由',QUEUED:'再取得を予約しました。',RUNNING:'取得は既に実行中です。',DISABLED:'設定で価格取得が無効です。',UNAVAILABLE:'取得プロセスを利用できません。',REPAIR_REQUESTED:'修復タスクを要求しました。候補の実行には管理者の承認が必要です。',REPAIR_UNAVAILABLE:'修復を開始できません。現在の修復処理には、過去に取得できたページと、同じ収集プログラムで繰り返し発生した構造変更が必要です。'}
+  };
+  let snapshot=null, generation=0, busy=false, sources=null, sourceError=false, sourceGeneration=0, actionBusy=false, actionResult=null;
   function renderSources(){
     const w=sourceWords[window.aiwI18n?.locale]||sourceWords.en,host=$('model-price-status');
     if(sourceError){host.textContent=w.title+' · '+w.unavailable;return;}
-    if(!sources||!sources.length){host.textContent=w.title+' · '+w.pending;return;}
-    host.textContent=sources.map(row=>{
+    if(!sources){host.textContent=w.title+' · '+w.pending;return;}
+    const a=actionWords[window.aiwI18n?.locale]||actionWords.en;
+    host.replaceChildren();
+    for(const row of sources.length?sources:[{provider:'openai',status:'PENDING'},{provider:'deepseek',status:'PENDING'}]){
       const locale=window.aiwI18n?.locale||'en';
       const repair=(repairWords[locale]||repairWords.en)[row.repair_stage]
         ||(reviewStageWords[locale]||reviewStageWords.en)[row.repair_stage];
@@ -45,8 +52,25 @@
       const status=row.repair_needed||repairStatus?(repair||w.repair):({PENDING:w.pending,RUNNING:w.running,OBSERVED_INCOMPLETE:w.observed,FAILED:w.failed}[row.status]||w.unavailable);
       const last=row.last_success_ms?' · '+w.last+': '+new Date(row.last_success_ms).toLocaleString(window.aiwI18n?.locale||'en'):'';
       const published=Number.isSafeInteger(row.published_rule_count)&&row.published_rule_count>0?w.published.replace('{count}',number(row.published_rule_count)):'';
-      return row.provider+' · '+status+published+last;
-    }).join(' | ');
+      const line=node('div',null,'observations-heading'),label=node('span',row.provider+' · '+status+published+last);
+      if(row.status==='FAILED'&&row.failure_code)label.append(node('small',' · '+a.reason+': '+(row.structure_reason||row.failure_code)));
+      line.append(label);
+      for(const action of ['retry','repair']){
+        if(action==='repair'&&row.status!=='FAILED')continue;
+        const button=node('button',a[action],'btn ghost');button.type='button';button.disabled=actionBusy||row.status==='RUNNING';
+        button.addEventListener('click',()=>priceAction(row.provider,action));line.append(button);
+      }
+      host.append(line);
+    }
+    if(actionResult)host.append(node('span',a[actionResult]||a.failed));
+  }
+  async function priceAction(provider,action){
+    if(actionBusy)return;actionBusy=true;actionResult=null;renderSources();
+    try{
+      const response=await fetch('/api/r1/authority/execution-configurations/price-action',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({provider,action})});
+      if(!response.ok)throw new Error('failed');const result=await response.json();actionResult=result.state;
+    }catch(error){actionResult='failed';}
+    finally{actionBusy=false;await loadSources();renderSources();}
   }
   async function loadSources(){
     const current=++sourceGeneration;

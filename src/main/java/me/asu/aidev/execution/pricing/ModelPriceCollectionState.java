@@ -25,12 +25,22 @@ public class ModelPriceCollectionState {
 
     @Transactional
     public String claim(String provider, long now) {
+        return claim(provider, now, false);
+    }
+
+    /** An explicit retry skips the timer cooldown, but never takes an active lease. */
+    @Transactional
+    public String claimManual(String provider, long now) {
+        return claim(provider, now, true);
+    }
+
+    private String claim(String provider, long now, boolean manual) {
         provider(provider);
         boundary.lock();
         repo.jdbc().update("INSERT INTO model_price_collection_state(provider,status) VALUES(?,'PENDING') ON CONFLICT(provider) DO NOTHING", provider);
         var row = repo.jdbc().queryForMap("SELECT lease_until_ms,last_attempt_ms FROM model_price_collection_state WHERE provider=?", provider);
         Long lease = number(row.get("lease_until_ms")), previous = number(row.get("last_attempt_ms"));
-        if (lease != null && lease > now || previous != null && previous > now - DEDUP_MS) return null;
+        if (lease != null && lease > now || !manual && previous != null && previous > now - DEDUP_MS) return null;
         String token = UUID.randomUUID().toString();
         repo.jdbc().update("""
             UPDATE model_price_collection_state SET lease_token=?,lease_until_ms=?,last_attempt_ms=?,

@@ -18,8 +18,6 @@ public class ModelPriceCollectionScheduler {
     private static final Logger LOG = LoggerFactory.getLogger(ModelPriceCollectionScheduler.class);
     private final ModelPriceCollectorProcess collector;
     private final ModelPriceCollectionState state;
-    private final ModelPriceRepairMaterials repairs;
-    private final ModelPriceRepairDispatch dispatch;
     private final ModelPriceObservationPublisher publisher;
     private final boolean enabled;
     private final AtomicBoolean started = new AtomicBoolean();
@@ -27,10 +25,10 @@ public class ModelPriceCollectionScheduler {
         var thread = new Thread(task, "model-price-collection"); thread.setDaemon(true); return thread;
     });
 
-    public ModelPriceCollectionScheduler(ModelPriceCollectorProcess collector, ModelPriceCollectionState state, ModelPriceRepairMaterials repairs, ModelPriceRepairDispatch dispatch,
+    public ModelPriceCollectionScheduler(ModelPriceCollectorProcess collector, ModelPriceCollectionState state,
             ModelPriceObservationPublisher publisher,
             @Value("${aidev.model-pricing.enabled:true}") boolean enabled) {
-        this.collector = collector; this.state = state; this.repairs = repairs; this.dispatch = dispatch; this.publisher = publisher; this.enabled = enabled;
+        this.collector = collector; this.state = state; this.publisher = publisher; this.enabled = enabled;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -40,14 +38,26 @@ public class ModelPriceCollectionScheduler {
     }
 
     private void run() {
-        for (String provider : java.util.List.of("openai", "deepseek")) collect(provider);
+        for (String provider : java.util.List.of("openai", "deepseek")) {
+            try { String token = state.claim(provider, System.currentTimeMillis()); if (token != null) collect(provider, token); }
+            catch (RuntimeException failure) { LOG.warn("Price collection could not start for {} ({})", provider, failure.getClass().getSimpleName()); }
+        }
     }
 
-    private void collect(String provider) {
-        String token = null;
+    public String retry(String provider) {
+        if (!enabled) return "DISABLED";
+        String token = state.claimManual(provider, System.currentTimeMillis());
+        if (token == null) return "RUNNING";
+        try { executor.execute(() -> collect(provider, token)); }
+        catch (java.util.concurrent.RejectedExecutionException stopped) {
+            state.failed(provider, token, "COLLECTOR_UNAVAILABLE");
+            return "UNAVAILABLE";
+        }
+        return "QUEUED";
+    }
+
+    private void collect(String provider, String token) {
         try {
-            token = state.claim(provider, System.currentTimeMillis());
-            if (token == null) return;
             var collected = collector.collectDetails(provider);
             state.observed(token, collected);
             try {
@@ -62,8 +72,6 @@ public class ModelPriceCollectionScheduler {
                     LOG.warn("Price source change could not be recorded ({})", unavailable.getClass().getSimpleName());
                     return;
                 }
-                try { String material = repairs.prepare(provider); if (material != null) dispatch.enqueue(material); }
-                catch (RuntimeException unavailable) { LOG.warn("Price repair inputs could not be prepared ({})", unavailable.getClass().getSimpleName()); }
             }
             LOG.warn("Public price source structure changed");
         } catch (RuntimeException failure) {

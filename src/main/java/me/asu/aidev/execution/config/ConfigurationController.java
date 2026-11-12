@@ -16,6 +16,9 @@ public class ConfigurationController {
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.pricing.ModelPriceCatalog modelPrices;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.pricing.ModelPriceCollectionState modelPriceCollection;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.pricing.ModelPriceRepairReview modelPriceRepairReview;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.pricing.ModelPriceCollectionScheduler priceCollectionScheduler;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.pricing.ModelPriceRepairMaterials priceRepairMaterials;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.pricing.ModelPriceRepairDispatch priceRepairDispatch;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.workflow.application.FactoryPlanLifecycle planLifecycle;
     @PostMapping("/api/r1/authority/execution-configurations/reconcile-plan")
     public Object reconcilePlan(@RequestBody me.asu.aidev.workflow.application.FactoryPlanLifecycle.Reconcile input) {
@@ -24,6 +27,17 @@ public class ConfigurationController {
     public ConfigurationController(AuthorityRepository repo,ExecutionConfigurations configs,AgentFactory factory,ConfigurationUiOptions uiOptions) { this.repo=repo;this.configs=configs;this.factory=factory;this.uiOptions=uiOptions; }
     private <T> T read(String raw,Class<T> type) { if(raw.length()>32768) throw new IllegalArgumentException("Bounded declarative request required");return repo.decode(raw,type); }
     public record Empty() {}
+    public record PriceAction(String provider, String action) {}
+    @PostMapping("/api/r1/authority/execution-configurations/price-action") public Object priceAction(@RequestBody String raw) {
+        configs.currentOwner();
+        var input=read(raw,PriceAction.class);
+        if(input==null || !Set.of("openai","deepseek").contains(input.provider())) throw new IllegalArgumentException("PRICE_PROVIDER_INVALID");
+        if("retry".equals(input.action())) return Map.of("state",priceCollectionScheduler.retry(input.provider()));
+        if(!"repair".equals(input.action())) throw new IllegalArgumentException("PRICE_ACTION_INVALID");
+        String material=priceRepairMaterials.prepare(input.provider());
+        String task=material==null?null:priceRepairDispatch.enqueue(material);
+        return task==null?Map.of("state","REPAIR_UNAVAILABLE"):Map.of("state","REPAIR_REQUESTED","taskId",task);
+    }
     @PostMapping("/api/r1/authority/execution-configurations/assets") public Object asset(@RequestBody String raw) { return configs.registerAsset(read(raw,Asset.class)); }
     private boolean role(String kind) {
         if(!Set.of("method","role").contains(kind)) throw new IllegalArgumentException("Unknown composition kind");
