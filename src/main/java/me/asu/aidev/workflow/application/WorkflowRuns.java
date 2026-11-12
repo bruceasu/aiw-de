@@ -10,6 +10,7 @@ import me.asu.aidev.execution.port.ExecutionAttemptRepository;
 import me.asu.aidev.execution.run.NativePlanOwners;
 import me.asu.aidev.execution.run.ExecutionRuns;
 import me.asu.aidev.execution.run.RunContract;
+import me.asu.aidev.execution.pricing.ModelUsageView;
 import me.asu.aidev.work.domain.*;
 import me.asu.aidev.work.port.WorkTaskRepository;
 import me.asu.aidev.workflow.domain.*;
@@ -72,7 +73,8 @@ public class WorkflowRuns {
         public String sealedTaskId,sealedAttemptId;
         public Run() {}
     }
-    public record View(Run run,WorkTask task,String report,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity) {}
+    public record View(Run run,WorkTask task,String report,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity,ModelUsageView.Snapshot usage) {}
+    @org.springframework.beans.factory.annotation.Autowired private ModelUsageView modelUsage;
     @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<ExecutionRuns> executionRuns;
     private final AuthorityRepository db;
     private final AuthorityBoundary boundary;
@@ -297,7 +299,8 @@ public class WorkflowRuns {
                 activity=executionRuns.getObject().read(new RunContract.Query(activityTask.id().value(),sessions.getFirst(),Math.max(0,last-64)));
             }
         }
-        return new View(run,task,report,provisioner.getObject().pending(run.id),activity);
+        return new View(run,task,report,provisioner.getObject().pending(run.id),activity,
+                modelUsage.summary(owners.currentOwner(),new ModelUsageView.Query(run.id,null)));
     }
     @Transactional public Run control(String id,long version,String action,String answer) {
         var run=load(id,true);

@@ -2,6 +2,12 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'Recorded usage':['已记录用量','記録済み使用量'], 'Model calls':['模型调用次数','モデル呼び出し数'],
+    'Input tokens':['输入 Token','入力トークン'], 'Cached input tokens':['其中缓存 Token','キャッシュ入力トークン'], 'Output tokens':['输出 Token','出力トークン'],
+    'Not recorded':['未记录','未記録'], 'Recorded estimates':['已知估算费用','既知の推定費用'], 'Missing estimates':['尚无估算的调用（含订阅或价格缺失）','推定額のない呼び出し（サブスクリプション等を含む）'],
+    'calls missing this value':['次调用未记录该值','件でこの値が未記録'], 'View recorded calls':['查看调用记录','呼び出し記録を表示'],
+    'No calls recorded; this does not mean no calls occurred.':['暂无调用记录；不代表没有发生调用。','呼び出しは未記録です。呼び出しがなかったことを意味しません。'],
+    'Recorded calls include retries and summaries. Calls are not rounds. Cached input is part of input. Costs are estimates, not invoices.':['包含已记录的重试和摘要调用。调用次数不等于轮数，缓存已包含在输入中。费用是估算，并非实际账单。','記録済みの再試行・要約呼び出しを含みます。呼び出し数はラウンド数ではなく、キャッシュ入力は入力に含まれます。費用は推定です。'],
     'Describe the work and follow its execution.':['说清要做的事，直接查看执行进展。','依頼を伝え、実行状況を確認します。'],
     'Edit a reusable workflow and follow each execution.':['编辑可复用的工作流，查看每次执行的进展。','再利用できるワークフローを編集し、各実行の状況を確認します。'],
     'Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.':['暂停只阻止后续步骤启动，当前 Worker 工作可能继续。停止执行需要等待 Worker 确认。','一時停止は後続ステップの開始を止めます。現在の Worker 作業は続く場合があります。実行停止は Worker の確認を待ちます。'],
@@ -191,10 +197,28 @@
       entry.append(element('summary',new Date(event.occurred_ms).toLocaleTimeString()+' · '+t(event.event_type)),element('pre',event.payload_json));list.append(entry);
     }
   }
+  function renderUsage(data) {
+    const usage=data.usage,totals=usage?.totals,host=$('[data-wf-usage]');
+    $('[data-wf-usage-link]').href='/ui/configurations?view=observations&planId='+encodeURIComponent(data.run.id);
+    const stamp=JSON.stringify([data.run.id,totals,usage?.currencies]);if(host.dataset.stamp===stamp)return;host.dataset.stamp=stamp;
+    host.replaceChildren();
+    const number=value=>Number.isSafeInteger(value)?value.toLocaleString(window.aiwI18n?.locale||undefined):t('Not recorded');
+    if(!totals){host.append(element('p',t('Not recorded')));return;}
+    host.append(element('p',t('Model calls')+': '+number(totals.calls)));
+    if(totals.calls===0)host.append(element('p',t('No calls recorded; this does not mean no calls occurred.'),'help'));
+    for(const [label,key,missing] of [['Input tokens','known_input','missing_input'],['Cached input tokens','known_cached','missing_cached'],['Output tokens','known_output','missing_output']])
+      host.append(element('p',t(label)+': '+number(totals[key])+(totals[missing]>0?' · '+number(totals[missing])+' '+t('calls missing this value'):'')));
+    for(const currency of usage.currencies||[]){
+      const amount=Number.isSafeInteger(currency.known_cost_micros)?(currency.known_cost_micros/1000000).toLocaleString(window.aiwI18n?.locale||undefined,{maximumFractionDigits:6}):t('Not recorded');
+      host.append(element('p',t('Recorded estimates')+': '+amount+' '+currency.currency));
+    }
+    if(!usage.currencies?.length)host.append(element('p',t('Recorded estimates')+': '+t('Not recorded')));
+    host.append(element('p',t('Missing estimates')+': '+number(totals.without_estimate)));
+  }
   async function refreshRun() {
     if(!selectedRun)return;
     const id=selectedRun,data=await api('/executions/'+encodeURIComponent(id));if(id!==selectedRun)return;
-    currentView=data;renderActivity(data);const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.report,data.preparation]);if(stamp===signature)return;signature=stamp;
+    currentView=data;renderActivity(data);renderUsage(data);const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.report,data.preparation]);if(stamp===signature)return;signature=stamp;
     $('[data-wf-run-title]').textContent=run.spec.title;
     $('[data-wf-run-state]').textContent=t(run.state);
     const node=run.spec.nodes.find(n=>n.key===run.current),task=data.task;
@@ -266,7 +290,7 @@
     await api('/executions/'+encodeURIComponent(selectedRun)+'/inputs',{requestId:inputRequest,text:form.get('text'),mode:form.get('mode')});
     inputRequest=newRequest();e.target.reset();signature='';await refreshRun();status(t('Input received'));
   });};
-  window.addEventListener('aiw:locale-changed',()=>{translate();signature='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
+  window.addEventListener('aiw:locale-changed',()=>{translate();signature='';$('[data-wf-usage]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
   translate();if(pageMode==='tasks')panel('task');else showEditor();act(async()=>{
     await library();
     if(route.get('execution'))await openRun(route.get('execution'));

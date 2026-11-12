@@ -57,6 +57,10 @@ class ModelUsageViewTest {
         assertEquals(1, count(snapshot.totals().get("without_estimate")));
         assertEquals(2000, count(snapshot.currencies().getFirst().get("known_cost_micros")));
         assertEquals(2, snapshot.calls().size());
+        var summary = view.summary("owner-a", new ModelUsageView.Query("plan-a", null));
+        assertEquals(snapshot.totals(), summary.totals());
+        assertEquals(snapshot.currencies(), summary.currencies());
+        assertTrue(summary.calls().isEmpty());
     }
 
     @Test void taskFilterCannotReadAnotherOwnersPlan() {
@@ -65,5 +69,8 @@ class ModelUsageViewTest {
         assertTrue(snapshot.calls().isEmpty());
         assertNull(snapshot.totals().get("known_input"));
         assertTrue(snapshot.currencies().isEmpty());
+        var summary = view.summary("owner-a", new ModelUsageView.Query("plan-b", "task-b"));
+        assertEquals(0, count(summary.totals().get("calls")));
+        assertTrue(summary.currencies().isEmpty());
     }
 }

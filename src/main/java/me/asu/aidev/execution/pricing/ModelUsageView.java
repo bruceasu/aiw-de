@@ -16,6 +16,14 @@ public class ModelUsageView {
     public ModelUsageView(AuthorityRepository repo) { this.repo = repo; }
 
     public Snapshot read(String owner, Query query) {
+        return read(owner,query,true);
+    }
+
+    public Snapshot summary(String owner, Query query) {
+        return read(owner,query,false);
+    }
+
+    private Snapshot read(String owner, Query query, boolean detailed) {
         String actor = repo.actor(owner);
         if (query == null) throw new IllegalArgumentException("MODEL_USAGE_QUERY_REQUIRED");
         String plan = filter(query.planId()), task = filter(query.taskId());
@@ -42,14 +50,14 @@ public class ModelUsageView {
         var currencies = repo.jdbc().queryForList("""
             SELECT e.currency, SUM(e.cost_micros) AS known_cost_micros, COUNT(*) AS estimated_calls
             """ + scope + " AND e.cost_micros IS NOT NULL GROUP BY e.currency ORDER BY e.currency", args.toArray());
-        var rows = repo.jdbc().queryForList("""
+        List<Map<String,Object>> rows = detailed?repo.jdbc().queryForList("""
             SELECT u.attempt_id,u.request_id,u.task_id,u.worker_id,u.provider,u.model,u.protocol,u.purpose,
                    u.connection_kind,u.price_scope,u.service_tier,u.started_ms,u.finished_ms,u.state,
                    u.input_tokens,u.cached_tokens,u.output_tokens,u.cache_write_tokens,
                    e.currency,e.cost_micros,e.snapshot_id,e.rule_id,e.calculated_ms,
                    COALESCE(p.plan_id,f.id) AS plan_id
-            """ + scope + " ORDER BY u.started_ms DESC,u.attempt_id,u.request_id LIMIT 100", args.toArray());
-        return new Snapshot("aiw.model-usage.v1", owner, System.currentTimeMillis(), 100, totals, List.copyOf(currencies), List.copyOf(rows));
+            """ + scope + " ORDER BY u.started_ms DESC,u.attempt_id,u.request_id LIMIT 100", args.toArray()):List.of();
+        return new Snapshot("aiw.model-usage.v1", owner, System.currentTimeMillis(), detailed?100:0, totals, List.copyOf(currencies), List.copyOf(rows));
     }
 
     private static String filter(String value) {
