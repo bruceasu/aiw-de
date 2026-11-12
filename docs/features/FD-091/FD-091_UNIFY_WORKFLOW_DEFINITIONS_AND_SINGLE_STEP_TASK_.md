@@ -1,7 +1,7 @@
 # FD-091: Unify workflow definitions and single-step task execution
 
 **Status:** In Progress
-**Revision:** 1
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -42,7 +42,10 @@
 - 2026-11-13：离线 Maven `-o -s .ai/fd/FD-081/offline-maven-settings.xml -Dmaven.repo.local=D:/.m2/repository -DskipTests compile` 首次发现 Run 字段误写为方法调用，修正后重试通过，编译 363 个生产源。
 - 同一编译命令批次中，通过 Python 内置 `compile()` 编译受影响的 process_profiles.py，解析新增 TOML 和 Skill 索引，通过 `node --check src/main/resources/static/ui/workflows.js`。
 - 未运行测试、服务、数据库迁移、浏览器或真实模型。售后示例仅是内置模拟输入，未宣称运行通过。完整知识库、动态流程修改和写文件任务不在本次交付范围。
-- 独立静态审查待进行。
+- 2026-11-13：独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 997818c 与 bb2e380，来源事件 FD-091-000002-review-requested，Reviewer codex-review-fd091-20261113。阻塞项：停止 ACK 会将任务重新置为 READY，可能重复执行；另需补充页面的只读文本执行说明。
+- 修复 P1：在现有 `acknowledgeStop` 事务中、资源与租约释放后，由统一路由取消刚释放的 READY 任务并结束对应执行，原子保留 STOPPED 事件；不允许任务在事务提交后重新进入队列。完成与停止竞态继续保留真实结果，由状态查询收敛。
+- 修复 P2：页面共用位置明确说明只读文本能力，不写文件、不实际退款或发送消息，提供中英日文案。
+- 两项修复后离线 Maven compile 与新页面 JS 编译再次通过；未扩大到测试或运行验证。待独立 Reviewer 聚焦复核。
 
 ## Sources
 

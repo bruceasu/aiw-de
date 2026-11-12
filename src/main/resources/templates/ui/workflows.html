@@ -7,6 +7,7 @@
 <body><div class="app"><aside th:replace="~{ui/fragments :: nav('workflows')}"></aside><main class="main">
   <header th:replace="~{ui/fragments :: topbar('Workflows','Describe a simple task or run a reusable workflow.')}"></header>
   <div class="content"><p class="help" data-wf-status role="status" aria-live="polite"></p>
+  <p class="help" data-wf-label="This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.">This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.</p>
   <div class="wf-layout">
     <section class="card wf-library"><h2 data-wf-label="Library">Library</h2>
       <div class="wf-actions"><button class="btn primary" data-wf-new="task">Simple task</button><button class="btn ghost" data-wf-new="workflow">New workflow</button></div>

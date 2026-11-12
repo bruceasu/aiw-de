@@ -239,6 +239,16 @@ public class WorkflowRuns {
                 t.id().value().startsWith(run.id+"~"+run.current+"~work-"))
                 .max(Comparator.comparing(WorkTask::createdAt).thenComparing(t->t.id().value())).orElse(original);
     }
+    /** Called in the existing stop-ACK transaction, after resources and the lease were released. */
+    @Transactional public void stopped(TaskId taskId) {
+        var task=tasks.find(taskId).orElseThrow();
+        if(!manages(task.subjectId()))return;
+        var run=load(task.subjectId(),false);
+        if(!run.state.equals("STOPPING") || run.taskId==null || !currentTask(run).id().equals(taskId))return;
+        if(!tasks.cancelInactive(taskId,TaskState.READY,Instant.now()))throw new IllegalStateException("Stopped task changed before cancellation");
+        run.state="STOPPED";event(run,"STOPPED","Worker confirmed stop; task will not be queued again");
+        endPlan(run,WorkflowPlan.State.STOPPED);persist(run);
+    }
     @Transactional public View view(String id) {
         var run=load(id,true);var task=currentTask(run);
         if(run.state.equals("RUNNING") && task!=null && Set.of(TaskState.FAILED,TaskState.CANCELLED).contains(task.state())) {
@@ -300,6 +310,7 @@ public class WorkflowRuns {
     }
     private void endPlan(Run run,WorkflowPlan.State state) {
         var plan=plans.getObject().get(run.id);
+        if(plan.state()==state)return;
         if(!planStore.transition(plan.id(),plan.version(),WorkflowPlan.State.CONFIRMED,state,run.actor,"Workflow execution "+run.state,Instant.now()))
             throw new IllegalStateException("Underlying execution changed");
     }

@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskExecutionService {
+    @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> unifiedWorkflows;
     private me.asu.aidev.execution.run.NativeRunLifecycle nativeRuns;
     @Autowired public void setNativeRuns(me.asu.aidev.execution.run.NativeRunLifecycle runs) { this.nativeRuns=runs; }
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.NativeQuestions> nativeQuestions;
@@ -308,6 +309,8 @@ public class TaskExecutionService {
                 "worker:" + workerId.value(), "Worker acknowledged stop request", false, now);
         if (workspaceReplacements != null) workspaceReplacements.afterStopAcknowledged(taskId, workerId, leaseToken);
         if (workflowPlans != null) workflowPlans.afterStopAcknowledged(taskId, workerId.value(), leaseToken.value());
+        var router=unifiedWorkflows==null?null:unifiedWorkflows.getIfAvailable();
+        if(router!=null)router.stopped(taskId);
         if(nativeRuns!=null&&nativeRuns.managed(taskId.value(),attemptId.value()))nativeRuns.settled(attemptId.value());
     }
 

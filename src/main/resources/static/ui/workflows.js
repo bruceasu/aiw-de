@@ -2,6 +2,7 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.':['当前版本处理只读文本任务与判断，不修改文件、不实际退款或发送消息。','この版は読み取り専用のテキスト処理と判断に対応します。ファイル変更、返金、メッセージ送信は行いません。'],
     'Library':['工作区','ライブラリ'], 'Simple task':['简单任务','単一タスク'], 'New workflow':['新建工作流','新規ワークフロー'],
     'After-sales example':['售后示例','アフターサービス例'], 'Saved workflows':['已保存工作流','保存済みワークフロー'],
     'Executions':['执行记录','実行履歴'], 'Refresh':['刷新','更新'], 'Workflow definition':['工作流定义','ワークフロー定義'],
