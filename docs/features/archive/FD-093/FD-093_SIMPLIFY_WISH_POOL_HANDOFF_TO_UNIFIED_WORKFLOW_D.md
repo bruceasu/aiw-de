@@ -1,7 +1,7 @@
 # FD-093: Simplify Wish Pool handoff to unified workflow drafts
 
-**Status:** In Progress
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -39,8 +39,12 @@
 - 生成仅发送已确认正文、标题、缺项和 ready 状态，不发送快照中的附件/知识元数据或私有原文。输入超出当前整理任务上限时明确拒绝，不截断需求。模型草稿保留完整原需求，不采纳模型改写的目标。
 - 工作流定义可通过自身 ID 直接读取，不依赖最近 100 项列表；生成任务完成后只导入草稿，业务启动仍需用户操作。独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 43edac8 对 3c44755，来源事件 FD-093-000002-review-requested，Reviewer codex-review-fd093-20261113。发现：草稿导入失败后 importAttempted/signature 阻断现有 Refresh 恢复，后续请求失败前清除来源且轮询清掉错误提示。
 
-- 首轮独立审查发现前端导入失败后无法重试；已修复：显式 Refresh 重置导入状态并复用同一幂等读取，真正打开编辑器后才清来源；失败后停止导入自动轮询并保留错误。切换到其他执行不再携带原愿望导入意图。JS 编译通过，待聚焦复核。
+- 首轮独立审查发现前端导入失败后无法重试；已修复：显式 Refresh 重置导入状态并复用同一幂等读取，真正打开编辑器后才清来源；失败后停止导入自动轮询并保留错误。切换到其他执行不再携带原愿望导入意图。JS 编译通过，聚焦静态复核已通过。
+
+- 2026-11-13：独立静态复核通过（verification-passed），首轮 P2 已解决，无剩余阻塞。报告 [review-20261113-recheck.md](reviews/review-20261113-recheck.md)，覆盖修复提交 4767242，来源事件 FD-093-000004-implementation-ready，Reviewer codex-review-fd093-20261113。未运行测试、服务、浏览器、网络或模型，不宣称运行验收通过。
 
 ## Sources
 
 - docs/FUNCTION-INVENTORY.md 第 01、02、03、06 项；FD-091、FD-092。
+
+**Completed:** 2026-11-12
