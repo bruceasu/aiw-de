@@ -1,7 +1,7 @@
 # FD-096: Make price collection retry and repair explicit user actions
 
 **Status:** In Progress
-**Revision:** 1
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -39,6 +39,10 @@
 - 静态追踪 currentOwner 拒绝未认证／代理身份；claimManual 的同一数据库锁保留有效租约排他性；材料／派发仍使用原校验与任务去重。
 - 未运行测试、服务、数据库迁移、浏览器或真实网络采集。未处理旧历史修复前置条件，不将第 22 项标记全面完成。
 
+- 2026-11-13：独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 b68737e 对 b01ea1c，来源事件 FD-096-000002-review-requested，Reviewer codex-review-fd096-20261113。两项 P2：空 provider 导致 NPE；动作已确认后状态刷新失败会隐藏回执。已有任务关联文案应明确不自动重做终态任务。
+
 ## Sources
+
+- 复核修复：空 provider 显式返回既有无效请求响应；状态读取失败仍保留已接受的操作回执。显示关联修复任务 ID，并明确可能复用已有任务、不重做终态；状态容器改为合法块容器。
 
 - docs/FUNCTION-INVENTORY.md 第 21、22 项；用户明确失败后自行决定重做或修复。

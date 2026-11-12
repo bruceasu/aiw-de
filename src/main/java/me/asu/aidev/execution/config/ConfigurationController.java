@@ -31,7 +31,7 @@ public class ConfigurationController {
     @PostMapping("/api/r1/authority/execution-configurations/price-action") public Object priceAction(@RequestBody String raw) {
         configs.currentOwner();
         var input=read(raw,PriceAction.class);
-        if(input==null || !Set.of("openai","deepseek").contains(input.provider())) throw new IllegalArgumentException("PRICE_PROVIDER_INVALID");
+        if(input==null || input.provider()==null || !Set.of("openai","deepseek").contains(input.provider())) throw new IllegalArgumentException("PRICE_PROVIDER_INVALID");
         if("retry".equals(input.action())) return Map.of("state",priceCollectionScheduler.retry(input.provider()));
         if(!"repair".equals(input.action())) throw new IllegalArgumentException("PRICE_ACTION_INVALID");
         String material=priceRepairMaterials.prepare(input.provider());

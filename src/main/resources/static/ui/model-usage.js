@@ -37,10 +37,16 @@
     zh:{retry:'重新采集',repair:'启动修复',failed:'请求失败，请刷新状态后重试。',reason:'原因',QUEUED:'已安排重新采集。',RUNNING:'已有采集正在进行。',DISABLED:'配置中已关闭价格采集。',UNAVAILABLE:'采集进程不可用。',REPAIR_REQUESTED:'已申请修复任务；运行候选程序仍须管理员批准。',REPAIR_UNAVAILABLE:'暂不能启动修复：现有修复路径需要曾成功采集的页面，以及同一采集程序连续发生的来源结构变化。'},
     ja:{retry:'再取得',repair:'修復を開始',failed:'要求に失敗しました。状態を更新して再試行してください。',reason:'理由',QUEUED:'再取得を予約しました。',RUNNING:'取得は既に実行中です。',DISABLED:'設定で価格取得が無効です。',UNAVAILABLE:'取得プロセスを利用できません。',REPAIR_REQUESTED:'修復タスクを要求しました。候補の実行には管理者の承認が必要です。',REPAIR_UNAVAILABLE:'修復を開始できません。現在の修復処理には、過去に取得できたページと、同じ収集プログラムで繰り返し発生した構造変更が必要です。'}
   };
-  let snapshot=null, generation=0, busy=false, sources=null, sourceError=false, sourceGeneration=0, actionBusy=false, actionResult=null;
+  const linkedTaskWords={en:'Linked repair task (may already exist); completed tasks are not restarted',zh:'已关联修复任务（可能已有）；不会重做已结束的任务',ja:'修復タスクに関連付けました（既存の場合もあります）。終了済みタスクは再実行しません'};
+  let snapshot=null, generation=0, busy=false, sources=null, sourceError=false, sourceGeneration=0, actionBusy=false, actionResult=null, actionTask=null;
+  function renderActionResult(host){
+    const a=actionWords[window.aiwI18n?.locale]||actionWords.en;
+    if(actionResult)host.append(node('p',actionResult==='REPAIR_REQUESTED'?(linkedTaskWords[window.aiwI18n?.locale]||linkedTaskWords.en):(a[actionResult]||a.failed)));
+    if(actionTask)host.append(node('code',actionTask));
+  }
   function renderSources(){
     const w=sourceWords[window.aiwI18n?.locale]||sourceWords.en,host=$('model-price-status');
-    if(sourceError){host.textContent=w.title+' · '+w.unavailable;return;}
+    if(sourceError){host.textContent=w.title+' · '+w.unavailable;renderActionResult(host);return;}
     if(!sources){host.textContent=w.title+' · '+w.pending;return;}
     const a=actionWords[window.aiwI18n?.locale]||actionWords.en;
     host.replaceChildren();
@@ -62,13 +68,13 @@
       }
       host.append(line);
     }
-    if(actionResult)host.append(node('span',a[actionResult]||a.failed));
+    renderActionResult(host);
   }
   async function priceAction(provider,action){
-    if(actionBusy)return;actionBusy=true;actionResult=null;renderSources();
+    if(actionBusy)return;actionBusy=true;actionResult=null;actionTask=null;renderSources();
     try{
       const response=await fetch('/api/r1/authority/execution-configurations/price-action',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({provider,action})});
-      if(!response.ok)throw new Error('failed');const result=await response.json();actionResult=result.state;
+      if(!response.ok)throw new Error('failed');const result=await response.json();actionResult=result.state;actionTask=typeof result.taskId==='string'?result.taskId:null;
     }catch(error){actionResult='failed';}
     finally{actionBusy=false;await loadSources();renderSources();}
   }
