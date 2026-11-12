@@ -26,6 +26,9 @@ public class WorkflowConsole {
     @PostMapping("/api/r1/workflows/definitions") @ResponseBody public Object save(@RequestBody Save input,HttpSession session) {
         security.requireOperator(session);return workflows.save(input.id(),input.version(),input.spec());
     }
+    @GetMapping("/api/r1/workflows/definitions/{id}") @ResponseBody public Object definition(@PathVariable String id,HttpSession session) {
+        security.requireOperator(session);return workflows.definition(id);
+    }
     @PostMapping("/api/r1/workflows/start") @ResponseBody public Object start(@RequestBody Start input,HttpSession session) {
         security.requireOperator(session);return workflows.start(input.requestId(),input.definitionId(),input.version(),input.input(),input.location());
     }

@@ -2,6 +2,7 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'Workflow draft is not ready yet':['工作流草稿尚未就绪','ワークフロー案はまだ準備中です'],
     'Add context':['补充内容','情報を追加'], 'Additional content':['补充资料或方向','追加情報・方針'],
     'When to use':['生效方式','適用方法'], 'Add to context':['加入处理上下文','コンテキストに追加'],
     'Use next turn':['下一轮生效','次のターンで適用'], 'Send context':['发送补充','追加情報を送信'],
@@ -48,6 +49,8 @@
   let definitions=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='';
   const newRequest = () => crypto.randomUUID();
   let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest();
+  const route=new URLSearchParams(location.search);
+  let preparingGoal=route.get('goalVersion'), importAttempted=false;
   async function api(path, data) {
     const response = await fetch('/api/r1/workflows'+path, {method:data===undefined?'GET':'POST', credentials:'same-origin',
       headers:{'Content-Type':'application/json','X-CSRF-Token':$('meta[name="csrf-token"]').content}, body:data===undefined?undefined:JSON.stringify(data)});
@@ -182,6 +185,15 @@
       section.append(element('summary',new Date(event.time).toLocaleTimeString()+' · '+(run.spec.nodes.find(n=>n.key===event.node)?.title||'')+' · '+t(event.type)),element('pre',event.content));timeline.append(section);
     }
     if(data.report&&!run.events.some(e=>e.type==='RESULT'&&e.content===data.report)){const section=element('details',undefined,'wf-event');section.append(element('summary',t('RESULT')),element('pre',data.report));timeline.append(section);}
+    if(run.state==='COMPLETED'&&preparingGoal&&!importAttempted) {
+      importAttempted=true;
+      const response=await fetch('/api/r1/goals/versions/'+encodeURIComponent(preparingGoal)+'/workflow/read',{
+        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':$('meta[name="csrf-token"]').content},body:'{}'});
+      const result=await response.json();if(!response.ok)throw new Error(result.error||response.statusText);
+      if(!result.workflowId)throw new Error(t('Workflow draft is not ready yet'));
+      preparingGoal=null;await library();showEditor(await api('/definitions/'+encodeURIComponent(result.workflowId)));
+      history.replaceState(null,'','/ui/workflows?definition='+encodeURIComponent(result.workflowId));
+    }
   }
   async function control(action,answer) {
     if(action==='stop'&&!window.confirm(t('Stop this execution? Existing results will be retained.')))return;
@@ -219,6 +231,10 @@
     inputRequest=newRequest();e.target.reset();signature='';await refreshRun();status(t('Input received'));
   });};
   window.addEventListener('aiw:locale-changed',()=>{translate();signature='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
-  translate();panel('task');act(library);
+  translate();panel('task');act(async()=>{
+    await library();
+    if(route.get('execution'))await openRun(route.get('execution'));
+    else if(route.get('definition'))showEditor(await api('/definitions/'+encodeURIComponent(route.get('definition'))));
+  });
   setInterval(()=>{if(selectedRun&&!busy&&!document.hidden)act(refreshRun);},4000);
 })();

@@ -5,7 +5,6 @@
   let current = null, data = null, dirty = false, selectedSources = new Set(), busy = false;
   let goals = [], showDeleted = false;
   let pendingDeletion = null;
-  const editorDirty = new Set();
   let activeStatus = null, replyTimer = null, replyPolls = 0;
   const text = message => window.aiwI18n?.t(message) || message;
   const status = message => {
@@ -53,7 +52,7 @@
     } finally { busy = false; activeStatus = null; renderList(); }
   }
   function clean() {
-    if (dirty || editorDirty.size) throw new Error('Save your goal and plan editing changes before continuing, or reload the saved version.');
+    if (dirty) throw new Error('Save your goal and plan editing changes before continuing, or reload the saved version.');
   }
   async function list() {
     goals = await api(''); renderList();
@@ -80,7 +79,7 @@
   }
   function clearSelection() {
     if ($('goal-discussion-dialog').open) $('goal-discussion-dialog').close();
-    current = null; data = null; dirty = false; editorDirty.clear();
+    current = null; data = null; dirty = false;
     $('goal-detail').hidden = true; $('goal-empty').hidden = false;
     $('goal-message').value = '';
   }
@@ -187,8 +186,8 @@
   async function load(id, preserveEdits = false) {
     clearTimeout(replyTimer);
     const latest = await api(`/${encodeURIComponent(id)}`);
-    if (preserveEdits && (dirty || editorDirty.size || current?.id !== id)) { scheduleReplies(); return; }
-    data = latest; current = data.draft; dirty = false; editorDirty.clear();
+    if (preserveEdits && (dirty || current?.id !== id)) { scheduleReplies(); return; }
+    data = latest; current = data.draft; dirty = false;
     showDeleted = current.deleted;
     $('goal-detail').hidden = false; $('goal-empty').hidden = true;
     $('goal-title').value = current.title; $('goal-body').value = current.content.body;
@@ -219,7 +218,7 @@
     const id = current.id;
     replyTimer = setTimeout(async () => {
       if (current?.id !== id) return;
-      if (busy || dirty || editorDirty.size) { scheduleReplies(); return; }
+      if (busy || dirty) { scheduleReplies(); return; }
       replyPolls++;
       await run(async () => {
         const results = [];
@@ -236,11 +235,10 @@
   ['goal-title','goal-body','goal-missing','goal-backend'].forEach(id => $(id).addEventListener('input', () => { dirty = true; }));
   $('goal-new').onclick = () => run(async () => { clean(); const draft = await api('', {}); await load(draft.id); status('A new wish is ready. What would you like to make real?'); });
   $('goal-reload').onclick = () => run(async () => {
-    if ((dirty || editorDirty.size) && !await window.aiwConfirm('放弃尚未保存的目标和计划编辑，重新加载已保存版本？', {title:'重新加载目标', danger:true})) return;
+    if ((dirty) && !await window.aiwConfirm('放弃尚未保存的目标和计划编辑，重新加载已保存版本？', {title:'重新加载目标', danger:true})) return;
     await load(current.id); status('Your saved wish is back in the pool.');
   });
   $('goal-save').onclick = () => run(async () => {
-    if (editorDirty.size) throw new Error('Save plan editing changes first.');
     await api(`/${current.id}/edit`, {revision:current.revision,title:$('goal-title').value,body:$('goal-body').value,
       missing:$('goal-missing').value,backend:$('goal-backend').value,knowledgeIds:[...selectedSources]});
     await load(current.id); status('Your wish is saved. Existing wish snapshots and plans are unchanged.');
@@ -292,40 +290,33 @@
     }
     const version=await api(`/${current.id}/formalize`,{revision:current.revision,confirmed});
     let message=text('Goal version saved. Execution has not started.');
-    if($('goal-plan-now').checked){try{await api(`/versions/${version.id}/analyze`,{revision:version.editorRevision,confirmed:false});message+=' '+text('AI Steps requested.');}catch(e){message+=' '+text('Plan editing draft retained:')+' '+e.message;}}
+    if($('goal-plan-now').checked){const prepared=await api(`/versions/${version.id}/workflow`,{revision:version.editorRevision,restart:false});location.href=workflowLocation(prepared,version.id);return;}
     await load(current.id);status(message);
     const saved=[...$('goal-versions').children].find(el=>el.dataset.versionId===version.id);
     saved?.scrollIntoView({block:'start',behavior:'smooth'});
   }, 'goal-formalize-status');
-  const roles=[['requirement-analysis','software-requirements-analyst','Clarify requirements'],['solution-architecture','solution-architect','Design solution'],['implementation-planning','implementation-planner','Plan implementation'],['coding','coding-work-package-executor','Implement'],['integration','coding-work-package-executor','Integrate'],['repair','coding-work-package-executor','Repair']];
-  function field(parent,label,value,change,multiline=false){
-    const wrapper=node('label',null,'field');wrapper.append(node('span',label));const input=node(multiline?'textarea':'input');input.value=value||'';if(multiline)input.rows=3;input.oninput=()=>change(input.value);wrapper.append(input);parent.append(wrapper);return input;
+  function workflowLocation(result, version) {
+    if(result.workflowId)return '/ui/workflows?definition='+encodeURIComponent(result.workflowId);
+    return '/ui/workflows?execution='+encodeURIComponent(result.executionId)+'&goalVersion='+encodeURIComponent(version);
   }
   function renderVersions(){
-    $('goal-versions').replaceChildren();data.versions.forEach(v=>{
-      const box=node('section',null,'goal-version');box.dataset.versionId=v.id;box.append(node('h3',`${v.snapshot.title} · Goal version ${v.sourceRevision}`),node('p',v.snapshot.ready?'Ready':'Not ready · Missing information accepted'),node('pre',v.snapshot.goal));
-      if(v.planId){const link=node('a','View or edit execution plan','btn primary');link.href=`/ui/plans/${encodeURIComponent(v.planId)}`;box.append(link,node('p','Open plan details to edit an unstarted draft or confirm and start execution.','help'));$('goal-versions').append(box);return;}
-      const spec=structuredClone(v.editor);const steps=node('div');
-      const changed=()=>editorDirty.add(v.id);
-      function renderSteps(){steps.replaceChildren();spec.steps.forEach((s,index)=>{
-        const row=node('div',null,'goal-step');row.append(node('h4',`Step ${index+1}`));
-        field(row,'Step key',s.key,value=>{s.key=value;changed();});
-        const select=node('select');roles.forEach(([cap,skill,title])=>{const o=node('option',title);o.value=cap;select.append(o);});select.value=roles.find(([cap,skill])=>skill===s.skillRef&&s.requiredSkills?.includes(cap))?.[0]||'requirement-analysis';
-        select.onchange=()=>{const r=roles.find(r=>r[0]===select.value);s.requiredSkills=[r[0]];s.skillRef=r[1];changed();};const label=node('label',null,'field');label.append(node('span','Role'),select);row.append(label);
-        field(row,'Instruction',s.instruction,value=>{s.instruction=value;changed();},true);
-        field(row,'Required skills (comma separated)',(s.requiredSkills||[]).join(','),value=>{s.requiredSkills=value.split(',').map(x=>x.trim()).filter(Boolean);changed();});
-        field(row,'Depends on step keys (comma separated)',(s.dependsOn||[]).join(','),value=>{s.dependsOn=value.split(',').map(x=>x.trim()).filter(Boolean);changed();});
-        field(row,'Workspace target (optional, e.g. workspace/root)',s.repositoryRef,value=>{s.repositoryRef=value.trim()||null;changed();});
-        const remove=node('button','Remove step','btn ghost');remove.onclick=()=>{spec.steps.splice(index,1);changed();renderSteps();};row.append(remove);steps.append(row);
-      });}
-      renderSteps();box.append(steps);const actions=node('div',null,'form-actions');
-      function button(title,action){const b=node('button',title,'btn ghost');b.onclick=()=>run(action);actions.append(b);}
-      button('Add step',async()=>{if(spec.steps.length>=32)throw new Error('At most 32 steps.');let n=spec.steps.length+1;while(spec.steps.some(s=>s.key===`step${n}`))n++;spec.steps.push({key:`step${n}`,requiredSkills:['requirement-analysis'],preferredSkills:[],skillRef:'software-requirements-analyst',instruction:'',repositoryRef:null,baseRevision:null,dependsOn:[]});changed();renderSteps();});
-      button('Save editing draft',async()=>{if(dirty||[...editorDirty].some(id=>id!==v.id))throw new Error('Save other goal or editing changes first.');await api(`/versions/${v.id}/editor`,{revision:v.editorRevision,editor:spec});editorDirty.delete(v.id);await load(current.id);status('Editing draft saved, including incomplete steps.');});
-      button('Analyze Steps',async()=>{clean();await api(`/versions/${v.id}/analyze`,{revision:v.editorRevision,confirmed:false});await load(current.id);status('AI Steps requested. Your saved editing draft remains available.');});
-      button('Check / apply AI Steps',async()=>{clean();const result=await api(`/versions/${v.id}/analysis`);if(result.state!=='READY_TO_APPLY'){status(`${result.state}: ${result.error||'Waiting for analysis; manual editing remains available.'}`);return;}await api(`/versions/${v.id}/apply`,{revision:v.editorRevision,confirmed:false});await load(current.id);status('AI Steps applied to the editing draft. Review before preparing execution.');});
-      button('Generate execution draft',async()=>{clean();if(!await window.aiwConfirm(text('Generate an execution draft from these steps? This does not start work. Review its workspace and confirm execution on the plan page.'), {title:text('Generate execution draft')}))return;const saved=await api(`/versions/${v.id}/prepare`,{revision:v.editorRevision,confirmed:true});location.href=`/ui/plans/${encodeURIComponent(saved.planId)}`;});
-      box.append(actions);$('goal-versions').append(box);
+    $('goal-versions').replaceChildren();
+    data.versions.forEach(v=>{
+      const box=node('section',null,'goal-version');box.dataset.versionId=v.id;
+      box.append(node('h3',`${v.snapshot.title} ? ${text('Goal version')} ${v.sourceRevision}`),
+        node('p',text(v.snapshot.ready?'Ready':'Not ready ? Missing information accepted')),node('pre',v.snapshot.goal));
+      if(v.planId){const link=node('a',text('View execution plan'),'btn primary');link.href='/ui/plans/'+encodeURIComponent(v.planId);box.append(link);}
+      else {
+        const existing=v.editor.workflowGenerationId;
+        const generate=node('button',text(existing?'View workflow draft':'Generate workflow draft'),'btn primary');
+        generate.onclick=()=>run(async()=>{clean();const result=await api(`/versions/${v.id}/workflow`,{revision:v.editorRevision,restart:false});location.href=workflowLocation(result,v.id);});
+        box.append(node('p',text('A Worker organizes these requirements into a workflow draft. Review it before starting business work.'),'help'),generate);
+        if(existing&&!v.editor.workflowId){
+          const retry=node('button',text('Regenerate workflow draft'),'btn ghost');
+          retry.onclick=()=>run(async()=>{clean();const result=await api(`/versions/${v.id}/workflow`,{revision:v.editorRevision,restart:true});location.href=workflowLocation(result,v.id);});box.append(retry);
+        }
+      }
+      $('goal-versions').append(box);
     });
   }
   run(list);

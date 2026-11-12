@@ -1,6 +1,15 @@
 // UI copy only. Rows are English, Chinese and Japanese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["From wish to workflow","从愿望到工作流","願いからワークフローへ"],
+  ["Save confirmed requirements, generate a workflow draft, then review it before running business steps.","保存已确认的需求，生成工作流草稿，检查后再启动实际业务步骤。","確定した要件を保存し、ワークフロー案を作成します。業務の実行前に内容を確認してください。"],
+  ["Save wish snapshot","保存愿望快照","願いのスナップショットを保存"],
+  ["Also generate a workflow draft","同时生成工作流草稿","ワークフロー案も作成する"],
+  ["Generate workflow draft","生成工作流草稿","ワークフロー案を作成"],
+  ["View workflow draft","查看工作流草稿","ワークフロー案を表示"],
+  ["Regenerate workflow draft","重新生成工作流草稿","ワークフロー案を再作成"],
+  ["View execution plan","查看执行计划","実行計画を表示"],
+  ["A Worker organizes these requirements into a workflow draft. Review it before starting business work.","Worker 会将这些需求整理为工作流草稿；检查后再启动实际业务。","Worker が要件をワークフロー案に整理します。業務の実行前に確認してください。"],
   ["Workflows","工作流","ワークフロー"],
   ["Simple task","简单任务","単一タスク"],
   ["Describe a simple task or run a reusable workflow.","直接处理简单任务，或运行可复用的工作流。","単一タスクを依頼するか、ワークフローを実行します。"],
