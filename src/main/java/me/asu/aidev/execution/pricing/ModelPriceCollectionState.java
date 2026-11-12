@@ -62,7 +62,7 @@ public class ModelPriceCollectionState {
              WHERE m.id=? AND m.status='PREPARED' AND f.active=TRUE
                AND (s.status='FAILED' OR (s.status='RUNNING' AND s.lease_until_ms<=?))
                AND f.fingerprint=m.failure_fingerprint AND f.collector_sha256=m.collector_sha256
-               AND s.collector_sha256=m.collector_sha256 AND s.content_sha256=m.last_success_sha256
+               AND f.content_sha256=m.changed_page_sha256 AND f.source_url=m.source_url
             """, materialId, now);
         if (rows.size() != 1) return null;
         var row = rows.getFirst();
@@ -158,14 +158,13 @@ public class ModelPriceCollectionState {
         return repo.jdbc().queryForList("""
             SELECT s.provider,s.status,s.failure_code,s.last_attempt_ms,s.last_success_ms,s.source_url,s.content_sha256,s.collector_version,s.collector_sha256,
                    f.reason AS structure_reason,f.failure_count,
-                   CASE WHEN s.last_success_ms IS NOT NULL AND f.active=TRUE AND f.failure_count>=2 THEN TRUE ELSE FALSE END AS repair_needed,
+                   CASE WHEN s.status='FAILED' AND s.failure_code='STRUCTURE_CHANGED' AND f.active=TRUE THEN TRUE ELSE FALSE END AS repair_needed,
                    (SELECT COUNT(*) FROM model_price_rule r JOIN model_price_head h ON h.snapshot_id=r.snapshot_id
                       WHERE h.provider=s.provider AND r.provider=s.provider) AS published_rule_count,
                    (SELECT snapshot_id FROM model_price_head WHERE provider=s.provider) AS published_snapshot_id,
                    CASE WHEN m.id IS NULL THEN NULL
                         WHEN v.state='INSTALLED' THEN 'INSTALLED'
                         WHEN NOT (m.failure_fingerprint=f.fingerprint AND m.collector_sha256=f.collector_sha256
-                            AND m.collector_sha256=s.collector_sha256 AND m.last_success_sha256=s.content_sha256
                             AND m.changed_page_sha256=f.content_sha256 AND m.source_url=f.source_url) THEN 'STALE'
                         WHEN v.state='FAILED' AND v.failure_code='ADMIN_REJECTED'
                           AND v.reviewed_candidate_sha256=(SELECT r3.module_sha256 FROM model_price_repair_result r3

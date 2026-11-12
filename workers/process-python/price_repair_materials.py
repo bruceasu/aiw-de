@@ -9,13 +9,13 @@ import re
 import stat
 import tempfile
 
-_FILES = {"collector.py": 1_000_000, "last-success.page": 2_000_000, "changed.page": 2_000_000}
+_FILES = {"collector.py": 1_000_000, "changed.page": 2_000_000}
 _PAGE_URL_FILE = "latest-page.url"
 _SHA = re.compile(r"[a-f0-9]{64}\Z")
 
 
 def materialize(payload, parent=None):
-    if not isinstance(payload, dict) or payload.get("protocol") != "aiw.price-repair-material.v1":
+    if not isinstance(payload, dict) or payload.get("protocol") != "aiw.price-repair-material.v2":
         raise ValueError("PRICE_REPAIR_MATERIAL_INVALID")
     if not isinstance(payload.get("provider"), str) or payload["provider"] not in {"openai", "deepseek"}:
         raise ValueError("PRICE_REPAIR_MATERIAL_INVALID")

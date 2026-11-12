@@ -15,9 +15,9 @@
     ja:{heading:'この範囲の記録済み合計',calls:'呼び出し数',known:'既知',missing:'件でこの値が不明',estimated:'既知の推定額',unpriced:'件に推定額がありません',coverage:'合計は記録済みの呼び出しのみを含み、不完全な場合があります。'}
   };
   const sourceWords={
-    en:{title:'Price source',pending:'Not yet observed',running:'Refreshing',observed:'Observed; some pricing conditions remain unknown',published:' · {count} rules published',failed:'Refresh failed; previous observation retained',repair:'Repeated source change; repair needed',unavailable:'Status unavailable',last:'Last observation'},
-    zh:{title:'价格来源',pending:'尚未采集',running:'正在更新',observed:'已观察；部分计价条件仍未知',published:' · 已发布 {count} 条价格规则',failed:'更新失败，保留上次观察',repair:'来源结构持续变化，需要修复',unavailable:'无法读取状态',last:'上次观察'},
-    ja:{title:'価格情報源',pending:'未取得',running:'更新中',observed:'観測済み・一部の料金条件は不明',published:' · {count} 件の料金ルールを公開済み',failed:'更新失敗・前回の観測を保持',repair:'情報源の構造変更が続いており、修復が必要です',unavailable:'状態を取得できません',last:'前回の観測'}
+    en:{title:'Price source',pending:'Not yet observed',running:'Refreshing',observed:'Observed; some pricing conditions remain unknown',published:' · {count} rules published',failed:'Refresh failed; any previous observation is retained',repair:'Source structure changed; you can start a repair',unavailable:'Status unavailable',last:'Last observation'},
+    zh:{title:'价格来源',pending:'尚未采集',running:'正在更新',observed:'已观察；部分计价条件仍未知',published:' · 已发布 {count} 条价格规则',failed:'更新失败；如有历史观察则保留',repair:'来源结构变化，可主动启动修复',unavailable:'无法读取状态',last:'上次观察'},
+    ja:{title:'価格情報源',pending:'未取得',running:'更新中',observed:'観測済み・一部の料金条件は不明',published:' · {count} 件の料金ルールを公開済み',failed:'更新失敗・過去の観測があれば保持',repair:'情報源の構造が変わりました。修復を開始できます',unavailable:'状態を取得できません',last:'前回の観測'}
   };
   const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;};
   const repairWords={
@@ -33,9 +33,9 @@
   const number=value=>value==null?words().unknown:Number.isSafeInteger(value)?value.toLocaleString(window.aiwI18n?.locale||'en'):words().unknown;
   const amount=(value,currency)=>Number.isSafeInteger(value)?(value/1000000).toLocaleString(window.aiwI18n?.locale||'en',{maximumFractionDigits:6})+' '+currency:null;
   const actionWords={
-    en:{retry:'Collect again',repair:'Start repair',failed:'Request failed. Refresh the status and try again.',reason:'Reason',QUEUED:'Collection queued.',RUNNING:'Collection is already in progress.',DISABLED:'Price collection is disabled in configuration.',UNAVAILABLE:'Collection process is unavailable.',REPAIR_REQUESTED:'Repair task requested. Running its candidate still requires administrator approval.',REPAIR_UNAVAILABLE:'Repair cannot start: the current repair path requires a previous successful page and a repeated source-structure failure with the same collector.'},
-    zh:{retry:'重新采集',repair:'启动修复',failed:'请求失败，请刷新状态后重试。',reason:'原因',QUEUED:'已安排重新采集。',RUNNING:'已有采集正在进行。',DISABLED:'配置中已关闭价格采集。',UNAVAILABLE:'采集进程不可用。',REPAIR_REQUESTED:'已申请修复任务；运行候选程序仍须管理员批准。',REPAIR_UNAVAILABLE:'暂不能启动修复：现有修复路径需要曾成功采集的页面，以及同一采集程序连续发生的来源结构变化。'},
-    ja:{retry:'再取得',repair:'修復を開始',failed:'要求に失敗しました。状態を更新して再試行してください。',reason:'理由',QUEUED:'再取得を予約しました。',RUNNING:'取得は既に実行中です。',DISABLED:'設定で価格取得が無効です。',UNAVAILABLE:'取得プロセスを利用できません。',REPAIR_REQUESTED:'修復タスクを要求しました。候補の実行には管理者の承認が必要です。',REPAIR_UNAVAILABLE:'修復を開始できません。現在の修復処理には、過去に取得できたページと、同じ収集プログラムで繰り返し発生した構造変更が必要です。'}
+    en:{retry:'Collect again',repair:'Start repair',failed:'Request failed. Refresh the status and try again.',reason:'Reason',QUEUED:'Collection queued.',RUNNING:'Collection is already in progress.',DISABLED:'Price collection is disabled in configuration.',UNAVAILABLE:'Collection process is unavailable.',REPAIR_UNAVAILABLE:'No repair task was started. The failure must have a valid page and matching installed collector. Existing rejected or failed candidates may require review again. Refresh the status or collect again.'},
+    zh:{retry:'重新采集',repair:'启动修复',failed:'请求失败，请刷新状态后重试。',reason:'原因',QUEUED:'已安排重新采集。',RUNNING:'已有采集正在进行。',DISABLED:'配置中已关闭价格采集。',UNAVAILABLE:'采集进程不可用。',REPAIR_UNAVAILABLE:'未启动修复。需要有效的失败页面和对应的已安装采集脚本；已拒绝或运行失败的候选可能需要重新审阅。请刷新状态或重新采集。'},
+    ja:{retry:'再取得',repair:'修復を開始',failed:'要求に失敗しました。状態を更新して再試行してください。',reason:'理由',QUEUED:'再取得を予約しました。',RUNNING:'取得は既に実行中です。',DISABLED:'設定で価格取得が無効です。',UNAVAILABLE:'取得プロセスを利用できません。',REPAIR_UNAVAILABLE:'修復は開始されていません。有効な失敗ページと対応するインストール済みコードが必要です。却下・実行失敗の候補には再確認が必要な場合があります。状態を更新するか再取得してください。'}
   };
   const linkedTaskWords={en:'Linked repair task (may already exist); completed tasks are not restarted',zh:'已关联修复任务（可能已有）；不会重做已结束的任务',ja:'修復タスクに関連付けました（既存の場合もあります）。終了済みタスクは再実行しません'};
   let snapshot=null, generation=0, busy=false, sources=null, sourceError=false, sourceGeneration=0, actionBusy=false, actionResult=null, actionTask=null;

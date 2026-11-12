@@ -16,9 +16,9 @@ def item(name, content):
 
 
 def payload():
-    return {"protocol": "aiw.price-repair-material.v1", "repairId": "price-repair-11111111-1111-1111-1111-111111111111",
+    return {"protocol": "aiw.price-repair-material.v2", "repairId": "price-repair-11111111-1111-1111-1111-111111111111",
             "provider": "deepseek", "failureFingerprint": "a" * 64,
-            "files": [item("collector.py", b"module"), item("last-success.page", b"old"), item("changed.page", b"new")]}
+            "files": [item("collector.py", b"module"), item("changed.page", b"new")]}
 
 
 class PriceRepairMaterialCases(unittest.TestCase):
@@ -27,7 +27,7 @@ class PriceRepairMaterialCases(unittest.TestCase):
             root = materialize(payload(), parent)
             self.assertEqual(Path(parent).resolve(), root.parent)
             self.assertEqual(b"module", (root / "collector.py").read_bytes())
-            self.assertEqual(b"old", (root / "last-success.page").read_bytes())
+            self.assertFalse((root / "last-success.page").exists())
             self.assertEqual(b"new", (root / "changed.page").read_bytes())
 
     def test_rejects_tampering_and_extra_paths_before_creating_directory(self):

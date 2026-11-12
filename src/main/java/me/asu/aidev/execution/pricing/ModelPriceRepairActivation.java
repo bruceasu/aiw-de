@@ -97,10 +97,9 @@ public class ModelPriceRepairActivation {
                   JOIN model_price_repair_result r ON r.material_id=m.id AND r.task_id=t.id
                   JOIN execution_attempt a ON a.id=r.attempt_id AND a.task_id=t.id AND a.state='COMPLETED'
                   JOIN model_price_repair_activation v ON v.material_id=m.id
-                 WHERE m.status='PREPARED' AND f.active=TRUE AND f.failure_count>=2
+                 WHERE m.status='PREPARED' AND f.active=TRUE
                    AND f.fingerprint=m.failure_fingerprint AND f.collector_sha256=m.collector_sha256
                    AND f.content_sha256=m.changed_page_sha256 AND f.source_url=m.source_url
-                   AND s.collector_sha256=m.collector_sha256 AND s.content_sha256=m.last_success_sha256
                    AND v.approved_by IS NOT NULL AND v.approved_candidate_sha256=r.module_sha256
                    AND v.approved_page_sha256 IS NOT NULL AND v.approved_source_url=r.source_url
                    AND v.state='VERIFYING' AND v.execution_started_ms IS NULL
@@ -182,7 +181,6 @@ public class ModelPriceRepairActivation {
                  WHERE m.id=? AND m.status='PREPARED' AND s.status='RUNNING' AND s.lease_token=?
                    AND f.active=TRUE AND f.fingerprint=m.failure_fingerprint AND f.collector_sha256=m.collector_sha256
                    AND f.content_sha256=m.changed_page_sha256 AND f.source_url=m.source_url
-                   AND s.collector_sha256=m.collector_sha256 AND s.content_sha256=m.last_success_sha256
                    AND a.stop_requested_at_epoch_ms IS NULL
                    AND v.lease_token=? AND v.state='VERIFYING' AND v.execution_started_ms IS NOT NULL
                    AND v.approved_by IS NOT NULL AND v.approved_candidate_sha256=?

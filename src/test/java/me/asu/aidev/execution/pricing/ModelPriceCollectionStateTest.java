@@ -65,14 +65,12 @@ class ModelPriceCollectionStateTest {
         assertEquals("OBSERVED_INCOMPLETE", state.status().getFirst().get("status"));
     }
 
-    @Test void onlyPreviouslyWorkingSourceWithRepeatedStructureFailureNeedsRepair() {
-        String first = state.claimDeepSeek(1_000_000);
-        state.observed(first, observation(1_000_002));
+    @Test void firstStructureFailureMakesRepairAvailable() {
         var change = new ModelPriceCollectorProcess.SourceChange("https://api-docs.deepseek.com/pricing", 1_400_001,
                 "v1", "PRICE_ROWS_CHANGED", "f".repeat(64), "a".repeat(64), "cHVibGlj");
         String second = state.claimDeepSeek(1_400_000);
         state.structureChanged(second, change);
-        assertEquals(0, ((Number)state.status().getFirst().get("repair_needed")).intValue());
+        assertEquals(1, ((Number)state.status().getFirst().get("repair_needed")).intValue());
         String third = state.claimDeepSeek(1_800_000);
         state.structureChanged(third, change);
         assertEquals(1, ((Number)state.status().getFirst().get("repair_needed")).intValue());
@@ -82,7 +80,7 @@ class ModelPriceCollectionStateTest {
         assertEquals(0, ((Number)state.status().getFirst().get("repair_needed")).intValue());
     }
 
-    @Test void firstInstallAndNetworkFailuresDoNotRequestRepair() {
+    @Test void networkFailureDoesNotReportStructureRepair() {
         var change = new ModelPriceCollectorProcess.SourceChange("https://api-docs.deepseek.com/pricing", 1_000_001,
                 "v1", "PRICE_ROWS_CHANGED", "f".repeat(64), "a".repeat(64), "cHVibGlj");
         state.structureChanged(state.claimDeepSeek(1_000_000), change);

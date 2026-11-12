@@ -45,7 +45,8 @@ class ModelPriceRepairMaterialsTest {
                 new ClassPathResource("db/migration/V40__price_repair_material.sql"),
                 new ClassPathResource("db/migration/V41__price_repair_result.sql"),
                 new ClassPathResource("db/migration/V42__price_repair_activation.sql"),
-                new ClassPathResource("db/migration/V43__price_repair_admin_approval.sql")).execute(datasource);
+                new ClassPathResource("db/migration/V43__price_repair_admin_approval.sql"),
+                new ClassPathResource("db/migration/V45__price_repair_without_success_baseline.sql")).execute(datasource);
         var repo = new AuthorityRepository(db);
         var boundary = new AuthorityBoundary(repo);
         state = new ModelPriceCollectionState(repo, boundary);
@@ -66,16 +67,9 @@ class ModelPriceRepairMaterialsTest {
     private static String b64(byte[] value) { return Base64.getEncoder().encodeToString(value); }
 
     private void makeCandidate() throws Exception {
-        var observation = new ModelPriceCollectorProcess.Observation("aiw.price-observation.v1", "deepseek",
-                "https://api-docs.deepseek.com/pricing", hash(oldPage), "v1", 1_000_001, "USD",
-                "micro-currency-per-million-tokens", "OBSERVED_ONLY", false,
-                List.of("TRUSTED_EFFECTIVE_INTERVAL", "CHINESE_PUBLIC_HOLIDAY_CALENDAR"), Map.of("source", "fixture"),
-                List.of(Map.of("model", "fixture")), hash(module));
-        state.observed(state.claim("deepseek", 1_000_000), new ModelPriceCollectorProcess.Collected(observation, b64(oldPage)));
         var change = new ModelPriceCollectorProcess.SourceChange("deepseek", "https://api-docs.deepseek.com/pricing",
                 1_400_001, "v1", hash(module), "PRICE_ROWS_CHANGED", "f".repeat(64), hash(changedPage), b64(changedPage));
         state.structureChanged(state.claim("deepseek", 1_400_000), change);
-        state.structureChanged(state.claim("deepseek", 1_800_000), change);
     }
 
     @Test void freezesInputsOnceWithoutCreatingAWorkerTask() throws Exception {
@@ -86,7 +80,7 @@ class ModelPriceRepairMaterialsTest {
         var row = db.queryForMap("SELECT * FROM model_price_repair_material WHERE id=?", id);
         assertEquals("PREPARED", row.get("status"));
         assertArrayEquals(module, Base64.getDecoder().decode((String)row.get("original_module_base64")));
-        assertArrayEquals(oldPage, Base64.getDecoder().decode((String)row.get("last_success_sample_base64")));
+        assertNull(db.queryForMap("SELECT last_success_ms FROM model_price_collection_state WHERE provider='deepseek'").get("last_success_ms"));
         assertArrayEquals(changedPage, Base64.getDecoder().decode((String)row.get("changed_page_base64")));
         assertEquals(1L, db.queryForObject("SELECT COUNT(*) FROM model_price_repair_material", Long.class));
     }
@@ -106,7 +100,7 @@ class ModelPriceRepairMaterialsTest {
         var lease = new Lease("worker", "attempt", "lease");
         var payload = repairs.read("task", lease);
         assertEquals(id, payload.repairId());
-        assertEquals(3, payload.files().size());
+        assertEquals(2, payload.files().size());
         assertThrows(SecurityException.class, () -> repairs.read("task", new Lease("other", "attempt", "lease")));
         db.update("UPDATE execution_attempt SET stop_requested_at_epoch_ms=1 WHERE id='attempt'");
         assertThrows(SecurityException.class, () -> repairs.read("task", lease));

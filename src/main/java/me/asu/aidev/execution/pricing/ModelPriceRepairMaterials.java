@@ -37,31 +37,31 @@ public class ModelPriceRepairMaterials {
         if (!List.of("deepseek", "openai").contains(provider)) throw new IllegalArgumentException("PRICE_PROVIDER_INVALID");
         boundary.lock();
         var rows = repo.jdbc().queryForList("""
-            SELECT s.last_success_ms,s.content_sha256 AS success_sha,s.last_success_sample_base64,
-                   s.collector_sha256 AS success_collector_sha,f.fingerprint,f.collector_sha256,
+            SELECT f.fingerprint,f.collector_sha256,
                    f.collector_version,f.reason,f.source_url,f.content_sha256 AS failure_sha,f.sample_base64
               FROM model_price_collection_state s JOIN model_price_collection_failure f ON f.provider=s.provider
-             WHERE s.provider=? AND s.status='FAILED' AND s.last_success_ms IS NOT NULL
-               AND f.active=TRUE AND f.failure_count>=2 AND s.last_success_sample_base64 IS NOT NULL
+             WHERE s.provider=? AND s.status='FAILED' AND f.active=TRUE
             """, provider);
         if (rows.size() != 1) return null;
         Map<String,Object> row = rows.getFirst();
-        String codeSha = string(row, "collector_sha256"), successCodeSha = string(row, "success_collector_sha");
-        if (codeSha == null || !codeSha.matches("[a-f0-9]{64}") || !codeSha.equals(successCodeSha)) return null;
+        String codeSha = string(row, "collector_sha256");
+        if (codeSha == null || !codeSha.matches("[a-f0-9]{64}")) return null;
+        byte[] module = readInstalled(provider);
+        if (!hash(module).equals(codeSha)) return null;
         String fingerprint = string(row, "fingerprint");
         if (fingerprint == null || !fingerprint.matches("[a-f0-9]{64}")) return null;
         var active = repo.jdbc().queryForList("""
-            SELECT m.id,m.failure_fingerprint,m.collector_sha256,m.last_success_sha256,m.changed_page_sha256,
-                   f.content_sha256 AS current_failure_sha,v.state AS activation_state,v.verified_page_sha256
+            SELECT m.id,m.failure_fingerprint,m.collector_sha256,m.changed_page_sha256,m.source_url,
+                   v.state AS activation_state,v.verified_page_sha256
               FROM model_price_repair_material m
-              LEFT JOIN model_price_collection_failure f ON f.provider=m.provider
               LEFT JOIN model_price_repair_activation v ON v.material_id=m.id
              WHERE m.provider=? AND m.status='PREPARED'
             """, provider);
         if (!active.isEmpty()) {
             var previous = active.getFirst();
             if (fingerprint.equals(previous.get("failure_fingerprint")) && codeSha.equals(previous.get("collector_sha256"))
-                    && java.util.Objects.equals(row.get("success_sha"), previous.get("last_success_sha256"))) {
+                    && java.util.Objects.equals(row.get("failure_sha"), previous.get("changed_page_sha256"))
+                    && java.util.Objects.equals(row.get("source_url"), previous.get("source_url"))) {
                 if (!"FAILED".equals(previous.get("activation_state"))) return string(previous, "id");
                 Object verifiedPage = previous.get("verified_page_sha256");
                 Object blockedPage = verifiedPage == null ? previous.get("changed_page_sha256") : verifiedPage;
@@ -70,18 +70,16 @@ public class ModelPriceRepairMaterials {
             repo.jdbc().update("UPDATE model_price_repair_material SET status='SUPERSEDED' WHERE id=? AND status='PREPARED'", previous.get("id"));
         }
         String id = "price-repair-" + java.util.UUID.randomUUID();
-        byte[] module = readInstalled(provider);
-        if (!hash(module).equals(codeSha)) return null;
-        String oldPage = string(row, "last_success_sample_base64"), newPage = string(row, "sample_base64");
-        if (!verifiedPage(oldPage, string(row, "success_sha")) || !verifiedPage(newPage, string(row, "failure_sha")))
+        String newPage = string(row, "sample_base64");
+        if (!verifiedPage(newPage, string(row, "failure_sha")))
             throw new IllegalStateException("PRICE_REPAIR_SAMPLE_INVALID");
         repo.jdbc().update("""
             INSERT INTO model_price_repair_material(id,provider,failure_fingerprint,collector_sha256,collector_version,
-              source_url,reason,original_module_base64,last_success_sha256,last_success_sample_base64,
+              source_url,reason,original_module_base64,
               changed_page_sha256,changed_page_base64,created_ms,status)
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,'PREPARED')
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,'PREPARED')
             """, id, provider, fingerprint, codeSha, row.get("collector_version"), row.get("source_url"), row.get("reason"),
-                Base64.getEncoder().encodeToString(module), row.get("success_sha"), oldPage, row.get("failure_sha"), newPage,
+                Base64.getEncoder().encodeToString(module), row.get("failure_sha"), newPage,
                 System.currentTimeMillis());
         return id;
     }
@@ -99,19 +97,17 @@ public class ModelPriceRepairMaterials {
              WHERE t.id=? AND t.state='RUNNING' AND t.current_worker_id=? AND t.lease_token=?
                AND t.lease_expires_at_epoch_ms>? AND a.state='RUNNING' AND a.worker_id=? AND a.lease_token=?
                AND a.stop_requested_at_epoch_ms IS NULL AND m.status='PREPARED' AND s.status='FAILED'
-               AND f.active=TRUE AND f.failure_count>=2 AND f.fingerprint=m.failure_fingerprint
-               AND f.collector_sha256=m.collector_sha256 AND s.collector_sha256=m.collector_sha256
-               AND s.content_sha256=m.last_success_sha256
+               AND f.active=TRUE AND f.fingerprint=m.failure_fingerprint AND f.collector_sha256=m.collector_sha256
+               AND f.content_sha256=m.changed_page_sha256 AND f.source_url=m.source_url
             """, lease.attemptId(), task, lease.workerId(), lease.leaseToken(), System.currentTimeMillis(),
                 lease.workerId(), lease.leaseToken());
         if (rows.size() != 1) throw new SecurityException("PRICE_REPAIR_LEASE_REQUIRED");
         var row = rows.getFirst();
         File module = file("collector.py", string(row, "collector_sha256"), string(row, "original_module_base64"), MAX_MODULE);
-        File oldPage = file("last-success.page", string(row, "last_success_sha256"), string(row, "last_success_sample_base64"), MAX_PAGE);
         File newPage = file("changed.page", string(row, "changed_page_sha256"), string(row, "changed_page_base64"), MAX_PAGE);
-        return new Payload("aiw.price-repair-material.v1", string(row, "id"), string(row, "provider"),
+        return new Payload("aiw.price-repair-material.v2", string(row, "id"), string(row, "provider"),
                 string(row, "source_url"), string(row, "reason"), string(row, "collector_version"),
-                string(row, "failure_fingerprint"), List.of(module, oldPage, newPage));
+                string(row, "failure_fingerprint"), List.of(module, newPage));
     }
 
     private static File file(String name, String expected, String encoded, int limit) {
