@@ -1,7 +1,7 @@
 # FD-092: Expose live user input in unified workflow executions
 
-**Status:** In Progress
-**Revision:** 3
+**Status:** Pending Verification
+**Revision:** 4
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -42,6 +42,8 @@
 - 当前仅证明编译和静态调用链；未运行真实 SDK、模型、数据库迁移或浏览器。独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 705f9df 对 9d305a0，来源事件 FD-092-000002-review-requested，Reviewer codex-review-fd092-20261113。阻塞项：停止请求会拒绝原批次 ACK/UNKNOWN/DRAIN，Python 将确定拒绝误标资源结果未知并跳过停止 ACK。
 
 - 已修复停止竞态：ACK/UNKNOWN/DRAIN 保留精确原租约校验但允许停止后的事实记录；停止态不预留新输入，DRAIN 不启动额外调用；补充元数据失败只阻止重放，不将执行资源误标为未知。修复后 Java/Python 编译通过，待聚焦复核。
+
+- 复核进一步发现 Python 的能力注册与 open_run 入口也误限 Codex；已与 Java 两处入口一起支持 openai-agents，并保留 execution-guard 分流。Python 编译通过；本次入口修复纳入同一聚焦复核。
 
 ## Sources
 

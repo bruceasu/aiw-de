@@ -165,7 +165,7 @@ class WorkerConfig:
             heartbeat_interval=float(os.getenv("AIW_WORKER_HEARTBEAT_SECONDS", "20")),
             http_timeout=float(os.getenv("AIW_WORKER_HTTP_TIMEOUT_SECONDS", "15")),
         )
-        if runtime == "codex-app-server" and not _bool_env("AIW_EXECUTION_GUARD", False):
+        if runtime in {"codex-app-server", "openai-agents"} and not _bool_env("AIW_EXECUTION_GUARD", False):
             from native_run import capabilities as native_capabilities
             result = replace(result, capabilities=tuple(sorted(set(result.capabilities) | native_capabilities(result))))
         return result

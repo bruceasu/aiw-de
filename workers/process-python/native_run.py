@@ -225,7 +225,7 @@ class NativeRun:
 
 
 def open_run(config, client, task, attempt):
-    if config.runtime != "codex-app-server" or "execution-guard-v1" in task.get("requiredCapabilities", []):
+    if config.runtime not in {"codex-app-server", "openai-agents"} or "execution-guard-v1" in task.get("requiredCapabilities", []):
         return None
     lease = {"workerId": config.worker_id, "attemptId": task["attemptId"], "leaseToken": task["leaseToken"]}
     availability = client._post("/tasks/" + task["taskId"] + "/execution-run/availability", lease)
