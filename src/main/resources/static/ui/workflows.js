@@ -109,10 +109,12 @@
     svg.setAttribute('role','img');svg.setAttribute('aria-label',spec.title);
     const marker=make('marker',{id:container.hasAttribute('data-wf-run-graph')?'wf-arrow-run':'wf-arrow-definition',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6,markerHeight:6,orient:'auto'});
     marker.append(make('path',{d:'M 0 0 L 10 5 L 0 10 z'}));const defs=make('defs',{});defs.append(marker);svg.append(defs);
+    const taken=new Set();let previous=null;
+    for(const event of run?.events||[]){if(previous&&previous!==event.node)taken.add(previous+'\n'+event.node);previous=event.node;}
     for(const n of nodes) {
       const from=positions.get(n.key),edges=n.next?[[t('Next step'),n.next]]:Object.entries(n.branches);
       edges.forEach(([choice,key],i)=>{const to=positions.get(key);if(!to)return;
-        const path=make('path',{d:`M ${from.x+110} ${from.y+60} C ${from.x+110+35*i} ${from.y+105}, ${to.x+110-35*i} ${to.y-45}, ${to.x+110} ${to.y}`,'marker-end':`url(#${marker.id})`});svg.append(path);
+        const path=make('path',{d:`M ${from.x+110} ${from.y+60} C ${from.x+110+35*i} ${from.y+105}, ${to.x+110-35*i} ${to.y-45}, ${to.x+110} ${to.y}`,'marker-end':`url(#${marker.id})`,class:taken.has(n.key+'\n'+key)?'wf-taken':''});svg.append(path);
         if(n.branches&&Object.keys(n.branches).length){const label=make('text',{x:(from.x+to.x)/2+120,y:(from.y+to.y)/2+82+i*15});label.textContent=choice;svg.append(label);}
       });
     }
