@@ -1,7 +1,7 @@
 # FD-092: Expose live user input in unified workflow executions
 
-**Status:** Pending Verification
-**Revision:** 4
+**Status:** Complete
+**Revision:** 7
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -41,10 +41,16 @@
 - 用户输入仅在模型调用边界投影到既有 SDK history；返回模型终态后 ACK。失败批次不自动重用；最终输出前 DRAIN 与用户输入写入共用原事务锁。不增加外部协议依赖。
 - 当前仅证明编译和静态调用链；未运行真实 SDK、模型、数据库迁移或浏览器。独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 705f9df 对 9d305a0，来源事件 FD-092-000002-review-requested，Reviewer codex-review-fd092-20261113。阻塞项：停止请求会拒绝原批次 ACK/UNKNOWN/DRAIN，Python 将确定拒绝误标资源结果未知并跳过停止 ACK。
 
-- 已修复停止竞态：ACK/UNKNOWN/DRAIN 保留精确原租约校验但允许停止后的事实记录；停止态不预留新输入，DRAIN 不启动额外调用；补充元数据失败只阻止重放，不将执行资源误标为未知。修复后 Java/Python 编译通过，待聚焦复核。
+- 已修复停止竞态：ACK/UNKNOWN/DRAIN 保留精确原租约校验但允许停止后的事实记录；停止态不预留新输入，DRAIN 不启动额外调用；补充元数据失败只阻止重放，不将执行资源误标为未知。修复后 Java/Python 编译通过；首轮停止竞态修复已通过聚焦静态复核。
 
 - 复核进一步发现 Python 的能力注册与 open_run 入口也误限 Codex；已与 Java 两处入口一起支持 openai-agents，并保留 execution-guard 分流。Python 编译通过；本次入口修复纳入同一聚焦复核。
+
+- 2026-11-13：第二轮独立静态复核结果为 changes-requested；报告 [review-20261113-recheck.md](reviews/review-20261113-recheck.md)，覆盖 e5d6d86，来源事件 FD-092-000004-implementation-ready，Reviewer codex-review-fd092-20261113。阻塞项：Python Config 能力注册和 open_run 两处仍仅允许 Codex，OpenAI 原生与补充输入链实际不可达。
+
+- 2026-11-13：最终独立静态复核通过（verification-passed），两轮阻塞项均已修复，无剩余阻塞。报告 [review-20261113-final.md](reviews/review-20261113-final.md)，覆盖入口补丁 6f9a87b 及前述实现与修复，来源事件 FD-092-000006-implementation-ready，Reviewer codex-review-fd092-20261113。未运行真实 SDK、测试、服务、迁移、浏览器、网络或模型，不宣称运行验收通过。
 
 ## Sources
 
 - docs/FUNCTION-INVENTORY.md 第 16、17、27 项；FD-091 静态复核及后续接入检查。
+
+**Completed:** 2026-11-12
