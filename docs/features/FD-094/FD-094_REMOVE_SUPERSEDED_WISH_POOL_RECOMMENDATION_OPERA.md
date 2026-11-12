@@ -1,7 +1,7 @@
 # FD-094: Remove superseded Wish Pool recommendation operations and settings
 
 **Status:** In Progress
-**Revision:** 1
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -34,8 +34,10 @@ GoalPlans 只保留快照和统一草稿交接，删除对旧编辑器、推荐�
 ## Verification
 
 - 仅离线编译和独立静态审查；不运行测试、模型、网络或数据库迁移。
-- 2026-11-13：离线 Maven compile 通过。定向引用检查未发现 GoalPlans 构造器测试引用或被删控制器引用；未运行测试。新 formalize/workflow/workflow-read 与旧 Plan 查看路由保留。
-- 许愿池使用说明更新为直接交接当前工作流；旧历史迁移和表数据未修改。独立静态审查待进行。
+- 2026-11-13：离线 Maven compile 通过。初始引用检查仅覆盖 src/main/java 与 src/test/java，未覆盖外置 tests，不能据此声称全部测试无旧引用；未运行测试。新 formalize/workflow/workflow-read 与旧 Plan 查看路由保留。
+- 许愿池使用说明更新为直接交接当前工作流；旧历史迁移和表数据未修改。独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 5055ee7 对 eff01cd，来源事件 FD-094-000002-review-requested，Reviewer codex-review-fd094-20261113。发现两项：中文说明被实际问号覆盖；tests/fd018 的 A07 仍直接引用已删除 RecommendationConsoleController，与上述引用检查记录不符。
+
+- 首轮审查发现中文说明被 PowerShell→Python 管道编码替换为问号，已改用 UTF-8 文件补丁重写，同时修复 goals.js 两处中点字符。外置 tests/fd018 的 A07 仍引用被删设置控制器，已仅删除该退休页面的断言，其他推荐服务验收保留。JS 编译通过，未执行测试；待聚焦复核。
 
 ## Sources
 

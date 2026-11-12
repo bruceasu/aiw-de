@@ -303,8 +303,8 @@
     $('goal-versions').replaceChildren();
     data.versions.forEach(v=>{
       const box=node('section',null,'goal-version');box.dataset.versionId=v.id;
-      box.append(node('h3',`${v.snapshot.title} ? ${text('Goal version')} ${v.sourceRevision}`),
-        node('p',text(v.snapshot.ready?'Ready':'Not ready ? Missing information accepted')),node('pre',v.snapshot.goal));
+      box.append(node('h3',`${v.snapshot.title} · ${text('Goal version')} ${v.sourceRevision}`),
+        node('p',text(v.snapshot.ready?'Ready':'Not ready · Missing information accepted')),node('pre',v.snapshot.goal));
       if(v.planId){const link=node('a',text('View execution plan'),'btn primary');link.href='/ui/plans/'+encodeURIComponent(v.planId);box.append(link);}
       else {
         const existing=v.editor.workflowGenerationId;

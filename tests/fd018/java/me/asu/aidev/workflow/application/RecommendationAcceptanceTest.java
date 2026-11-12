@@ -196,18 +196,6 @@ class RecommendationAcceptanceTest {
         assertThat(tx(() -> execution.recoverExpiredLeases(10))).isZero();
         verify(budget, times(2)).release(any(), any());
     }
-    @Test void A07_httpRejectsOperatorSettingsWrite() throws Exception {
-        var security = new me.asu.aidev.webconsole.security.WebConsoleSecurityService(true, "operator", "fixture", "OPERATOR");
-        var session = new org.springframework.mock.web.MockHttpSession();
-        security.login(session);
-        var controller = new me.asu.aidev.workflow.protocol.http.RecommendationConsoleController(service, security);
-        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller).build();
-        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/ui/system/recommendations")
-                .session(session).param("enabled", "false").param("revision", "0"))
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
-        assertThat(service.settings().enabled()).isTrue();
-        assertThat(count("workflow_recommendation_audit")).isZero();
-    }
     @Test void A08_deletingPlanPreservesRecoveryContextWithoutDanglingPlan() {
         var context = tx(() -> service.createContext("alice"));
         jdbc.update("INSERT INTO flexible_workflow_plan(id,state,version,spec_json,created_by,updated_by,reason,created_at_epoch_ms,updated_at_epoch_ms) VALUES (?,'DRAFT',0,'{}','alice','alice','fixture',0,0)", "deletable-plan");
