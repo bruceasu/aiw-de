@@ -1,7 +1,7 @@
 # FD-097: Repair pricing collectors from the first failed page without historical baselines
 
-**Status:** In Progress
-**Revision:** 1
+**Status:** Complete
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -40,6 +40,10 @@
 - 静态检查价格生产链中没有 last_success_sha256、last-success.page、failure_count>=2 或旧材料协议引用；旧 V40/V39 历史迁移原样保留，新 V45 单独删除两列。
 - 既有材料与租约/停止/篡改用例改为无成功记录、仅一次失败的夹具；Java/Python 用例只编译，未运行。未执行迁移、服务、浏览器或真实 API。
 
+- 2026-11-13：独立静态审查通过（verification-passed），未发现阻塞项。报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 dddf01c 对 07d3130，来源事件 FD-097-000002-review-requested，Reviewer codex-review-fd097-20261113。仅静态核对迁移引用、v2材料与首次失败链路；未运行测试、迁移、服务、浏览器、网络或模型，不宣称运行验收通过。
+
 ## Sources
 
 - docs/FUNCTION-INVENTORY.md 第 21、22 项；FD-096 的历史材料限制待办。
+
+**Completed:** 2026-11-12
