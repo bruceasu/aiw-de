@@ -1,7 +1,7 @@
 # FD-096: Make price collection retry and repair explicit user actions
 
-**Status:** In Progress
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -41,8 +41,12 @@
 
 - 2026-11-13：独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 b68737e 对 b01ea1c，来源事件 FD-096-000002-review-requested，Reviewer codex-review-fd096-20261113。两项 P2：空 provider 导致 NPE；动作已确认后状态刷新失败会隐藏回执。已有任务关联文案应明确不自动重做终态任务。
 
+- 2026-11-13：独立静态复核通过（verification-passed），两项 P2 已修复，无剩余阻塞。报告 [review-20261113-recheck.md](reviews/review-20261113-recheck.md)，覆盖修复提交 59699e6，来源事件 FD-096-000004-implementation-ready，Reviewer codex-review-fd096-20261113。未运行测试、服务、浏览器、网络或模型，不宣称运行验收通过。
+
 ## Sources
 
 - 复核修复：空 provider 显式返回既有无效请求响应；状态读取失败仍保留已接受的操作回执。显示关联修复任务 ID，并明确可能复用已有任务、不重做终态；状态容器改为合法块容器。
 
 - docs/FUNCTION-INVENTORY.md 第 21、22 项；用户明确失败后自行决定重做或修复。
+
+**Completed:** 2026-11-12
