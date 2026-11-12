@@ -152,7 +152,7 @@
     if(!data.executions.length)runs.append(element('p',t('No executions yet'),'help'));
     data.executions.forEach(r=>{const b=button(t(r.state)+' · '+new Date(r.updated_ms).toLocaleString(),()=>act(()=>openRun(r.id)));b.classList.add('wf-item');runs.append(b);});
   }
-  async function openRun(id) {selectedRun=id;signature='';panel('run');await refreshRun();}
+  async function openRun(id) {if(id!==route.get('execution'))preparingGoal=null;selectedRun=id;signature='';panel('run');await refreshRun();}
   function controlButtons(run) {
     const allowed={pause:run.state==='RUNNING',resume:run.state==='PAUSED',retry:run.state==='FAILED',stop:!['COMPLETED','STOPPED','STOPPING'].includes(run.state)};
     $$('[data-wf-control]').forEach(b=>{b.hidden=!allowed[b.dataset.wfControl];b.disabled=busy;});
@@ -191,7 +191,8 @@
         method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':$('meta[name="csrf-token"]').content},body:'{}'});
       const result=await response.json();if(!response.ok)throw new Error(result.error||response.statusText);
       if(!result.workflowId)throw new Error(t('Workflow draft is not ready yet'));
-      preparingGoal=null;await library();showEditor(await api('/definitions/'+encodeURIComponent(result.workflowId)));
+      await library();const definition=await api('/definitions/'+encodeURIComponent(result.workflowId));
+      showEditor(definition);preparingGoal=null;
       history.replaceState(null,'','/ui/workflows?definition='+encodeURIComponent(result.workflowId));
     }
   }
@@ -214,7 +215,7 @@
   $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null});taskRequest=newRequest();await library();await openRun(run.id);});};
   $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
-  $('[data-wf-refresh]').onclick=()=>act(async()=>{await library();await refreshRun();});
+  $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
   $('[data-wf-add-node]').onclick=()=>{const key='step'+newRequest().replaceAll('-','').slice(0,8);editing.spec.nodes.splice(-1,0,{key,title:t('Task'),kind:'TASK',instruction:'',next:'end',branches:{}});renderNodes();redraw();};
   $('[data-wf-save]').onclick=()=>act(async()=>{editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing=await api('/definitions',editing);savedSpec=JSON.stringify(editing.spec);startRequest=newRequest();await library();status(t('Workflow saved'));});
   $('[data-wf-start]').onclick=()=>act(async()=>{
@@ -236,5 +237,5 @@
     if(route.get('execution'))await openRun(route.get('execution'));
     else if(route.get('definition'))showEditor(await api('/definitions/'+encodeURIComponent(route.get('definition'))));
   });
-  setInterval(()=>{if(selectedRun&&!busy&&!document.hidden)act(refreshRun);},4000);
+  setInterval(()=>{if(selectedRun&&!busy&&!document.hidden&&!(preparingGoal&&importAttempted))act(refreshRun);},4000);
 })();
