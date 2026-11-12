@@ -1,7 +1,7 @@
 # FD-091: Unify workflow definitions and single-step task execution
 
-**Status:** In Progress
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -45,8 +45,12 @@
 - 2026-11-13：独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 997818c 与 bb2e380，来源事件 FD-091-000002-review-requested，Reviewer codex-review-fd091-20261113。阻塞项：停止 ACK 会将任务重新置为 READY，可能重复执行；另需补充页面的只读文本执行说明。
 - 修复 P1：在现有 `acknowledgeStop` 事务中、资源与租约释放后，由统一路由取消刚释放的 READY 任务并结束对应执行，原子保留 STOPPED 事件；不允许任务在事务提交后重新进入队列。完成与停止竞态继续保留真实结果，由状态查询收敛。
 - 修复 P2：页面共用位置明确说明只读文本能力，不写文件、不实际退款或发送消息，提供中英日文案。
-- 两项修复后离线 Maven compile 与新页面 JS 编译再次通过；未扩大到测试或运行验证。待独立 Reviewer 聚焦复核。
+- 两项修复后离线 Maven compile 与新页面 JS 编译再次通过；未扩大到测试或运行验证。独立 Reviewer 聚焦复核已完成。
+
+- 2026-11-13：独立静态复核通过（verification-passed）；P1/P2 已修复，无剩余阻塞项。报告 [review-20261113-recheck.md](reviews/review-20261113-recheck.md)，覆盖修复提交 c3e16b9，来源事件 FD-091-000004-implementation-ready，Reviewer codex-review-fd091-20261113。未运行测试、服务、迁移、浏览器或模型；不宣称运行验收通过。
 
 ## Sources
 
 - [已确认功能清单](../../FUNCTION-INVENTORY.md)，重点为 03–05、07、12–16。
+
+**Completed:** 2026-11-12
