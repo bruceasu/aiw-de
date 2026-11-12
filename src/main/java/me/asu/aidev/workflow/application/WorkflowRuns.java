@@ -8,6 +8,8 @@ import me.asu.aidev.execution.domain.CompletionReport;
 import me.asu.aidev.execution.domain.CompletionVerdict;
 import me.asu.aidev.execution.port.ExecutionAttemptRepository;
 import me.asu.aidev.execution.run.NativePlanOwners;
+import me.asu.aidev.execution.run.ExecutionRuns;
+import me.asu.aidev.execution.run.RunContract;
 import me.asu.aidev.work.domain.*;
 import me.asu.aidev.work.port.WorkTaskRepository;
 import me.asu.aidev.workflow.domain.*;
@@ -70,7 +72,8 @@ public class WorkflowRuns {
         public String sealedTaskId,sealedAttemptId;
         public Run() {}
     }
-    public record View(Run run,WorkTask task,String report,List<WorkflowWorkerProvisioning.Preparation> preparation) {}
+    public record View(Run run,WorkTask task,String report,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity) {}
+    @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<ExecutionRuns> executionRuns;
     private final AuthorityRepository db;
     private final AuthorityBoundary boundary;
     private final WorkflowPlanRepository planStore;
@@ -278,7 +281,17 @@ public class WorkflowRuns {
             run.state="STOPPED";event(run,"STOPPED","Worker execution has ended");endPlan(run,WorkflowPlan.State.STOPPED);persist(run);
         }
         String report=task==null?null:attempts.findCompletionReport(task.id()).map(CompletionReport::summary).orElse(null);
-        return new View(run,task,report,provisioner.getObject().pending(run.id));
+        var activityTask=task==null?plans.getObject().effectiveSteps(run.id).stream()
+                .max(Comparator.comparing(WorkTask::createdAt).thenComparing(t->t.id().value())).orElse(null):task;
+        Object activity=Map.of();
+        if(activityTask!=null) {
+            var sessions=db.jdbc().queryForList("SELECT s.attempt_id FROM execution_run_session s JOIN execution_attempt a ON a.id=s.attempt_id WHERE s.task_id=? ORDER BY a.attempt_no DESC LIMIT 1",String.class,activityTask.id().value());
+            if(!sessions.isEmpty()) {
+                long last=db.jdbc().queryForObject("SELECT COALESCE(MAX(sequence_no),0) FROM execution_run_event WHERE attempt_id=?",Long.class,sessions.getFirst());
+                activity=executionRuns.getObject().read(new RunContract.Query(activityTask.id().value(),sessions.getFirst(),Math.max(0,last-64)));
+            }
+        }
+        return new View(run,task,report,provisioner.getObject().pending(run.id),activity);
     }
     @Transactional public Run control(String id,long version,String action,String answer) {
         var run=load(id,true);

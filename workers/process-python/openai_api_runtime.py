@@ -346,6 +346,7 @@ class _GuardedModel(Model):
         }, request_scope="REQUEST", purpose=purpose)
         prefix = hashlib.sha256(json.dumps({"model": self._request.model,"instructions": system_instructions, "tools": payload["tools"]}, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
         self._request.attempt.evidence.record("model-request", inputBytes=size, usageKnown=False,
+                                              model=self._request.model or self._config.model, effort=self._request.reasoning_effort,
                                               provider=self._config.provider, protocol=self._config.protocol, prefixDigest=prefix,
                                               unknown="model-window-and-input-tokens")
 

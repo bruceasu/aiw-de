@@ -9,9 +9,9 @@ import threading
 import time
 
 PROTOCOL = "aiw.worker.loop.v1"
-EVENTS = {"context-projected", "context-component", "guard-intent", "guard-start", "guard-finished", "native-turn-started",
+EVENTS = {"model-request", "model-terminal", "tool-proposed", "runtime-event", "ai-settings", "context-projected", "context-component", "guard-intent", "guard-start", "guard-finished", "native-turn-started",
           "host-batch-validated", "validation-failed", "validation-passed", "execution-quiescent", "delivery-pending", "progress-stalled", "progress-review"}
-FIELDS = set("bytes inputBytes outputBytes count durationMs inputTokens outputTokens cachedTokens complete truncated changed usageKnown visibility requestScope purpose status phase tool digest operation callId parentCallId sourceKind code".split())
+FIELDS = set("bytes inputBytes outputBytes count durationMs inputTokens outputTokens cachedTokens complete truncated changed usageKnown visibility requestScope purpose status phase tool digest operation callId parentCallId sourceKind code model effort toolName runtimeEvent".split())
 SOURCE_KINDS = set("instructions messages tools fixed_header observations new_observations task knowledge upstream skill configuration".split())
 
 
@@ -97,7 +97,12 @@ class RunChannel:
     def observe(self, event, values):
         if event not in EVENTS:
             return
-        payload = {key: value for key, value in values.items() if key in FIELDS}
+        if event == "runtime-event":
+            values = {"runtimeEvent": values.get("status")}
+        elif event == "tool-proposed":
+            values = {"toolName": values.get("tool"), "status": values.get("status")}
+        payload = {key: value for key, value in values.items() if key in FIELDS and value is not None
+                   and not (isinstance(value, str) and not value.strip())}
         if payload.get("sourceKind") not in SOURCE_KINDS:
             payload.pop("sourceKind", None)
         # Never copy path, instruction, model output, arguments, credentials or free-form errors.

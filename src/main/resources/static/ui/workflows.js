@@ -2,6 +2,16 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'SETTLED':['本次执行已结束','実行終了'], 'FINALIZING':['正在确认结果','結果を確定中'],
+    'PAUSING':['等待暂停确认','一時停止確認待ち'], 'BROKEN':['执行通道异常','実行チャネル異常'],
+    'Worker activity':['Worker 实时活动','Worker の実行状況'],
+    'Recent model and tool metadata. This is not the complete model conversation.':['展示最近的模型与工具活动概况，并非完整模型对话原文。','最近のモデル・ツール活動の概要です。モデルとの会話全文ではありません。'],
+    'Current task instructions':['当前任务内容','現在のタスク内容'], 'Recent activity (up to 64 events)':['最近活动（最多 64 条）','最近の活動（最大64件）'],
+    'No Worker activity recorded yet':['尚未记录 Worker 活动','Worker の活動はまだ記録されていません'],
+    'Last contact':['最后联系','最終通信'], 'Connection delayed; execution state is not confirmed':['连接更新延迟，不能据此确认执行已停止','通信更新が遅れています。実行停止を意味しません'],
+    'Model not recorded':['模型未记录','モデル未記録'], 'model-request':['模型请求','モデル要求'], 'model-terminal':['模型响应终态','モデル応答完了状態'],
+    'tool-proposed':['工具调用已校验','ツール呼び出し検証済み'], 'runtime-event':['运行活动','実行イベント'], 'ai-settings':['模型设置','モデル設定'],
+    'native-turn-started':['Worker 开始处理','Worker が処理を開始'], 'execution-quiescent':['执行资源已静止','実行リソース停止確認'],
     'Workflow draft is not ready yet':['工作流草稿尚未就绪','ワークフロー案はまだ準備中です'],
     'Add context':['补充内容','情報を追加'], 'Additional content':['补充资料或方向','追加情報・方針'],
     'When to use':['生效方式','適用方法'], 'Add to context':['加入处理上下文','コンテキストに追加'],
@@ -157,10 +167,29 @@
     const allowed={pause:run.state==='RUNNING',resume:run.state==='PAUSED',retry:run.state==='FAILED',stop:!['COMPLETED','STOPPED','STOPPING'].includes(run.state)};
     $$('[data-wf-control]').forEach(b=>{b.hidden=!allowed[b.dataset.wfControl];b.disabled=busy;});
   }
+  function renderActivity(data) {
+    const activity=data.activity||{}, events=activity.events||[], connection=$('[data-wf-connection]');
+    if(!activity.attemptId)connection.textContent=t('No Worker activity recorded yet');
+    else connection.textContent=t(activity.phase)+' · '+t('Last contact')+': '+new Date(activity.lastContact).toLocaleString(window.aiwI18n?.locale||undefined)
+      +(activity.stale&&activity.phase!=='SETTLED'?' · '+t('Connection delayed; execution state is not confirmed'):'');
+    let model=null,effort=null;
+    for(const event of events){try{const payload=JSON.parse(event.payload_json);if(payload.model)model=payload.model;if(payload.effort)effort=payload.effort;}catch(_){/* Preserve other recorded activity. */}}
+    $('[data-wf-model]').textContent=model?(model+(effort?' · '+effort:'')):t('Model not recorded');
+    $('[data-wf-instructions]').textContent=data.task?.instruction||data.run.spec.goal;
+    const list=$('[data-wf-activity-events]');
+    if(list.dataset.attempt!==activity.attemptId){list.replaceChildren();list.dataset.attempt=activity.attemptId||'';}
+    const valid=new Set(events.map(e=>String(e.sequence_no)));
+    [...list.children].forEach(e=>{if(!valid.has(e.dataset.sequence))e.remove();});
+    for(const event of events){
+      if([...list.children].some(e=>e.dataset.sequence===String(event.sequence_no)))continue;
+      const entry=element('details',undefined,'wf-event');entry.dataset.sequence=String(event.sequence_no);
+      entry.append(element('summary',new Date(event.occurred_ms).toLocaleTimeString()+' · '+t(event.event_type)),element('pre',event.payload_json));list.append(entry);
+    }
+  }
   async function refreshRun() {
     if(!selectedRun)return;
     const id=selectedRun,data=await api('/executions/'+encodeURIComponent(id));if(id!==selectedRun)return;
-    currentView=data;const run=data.run,stamp=JSON.stringify(data);if(stamp===signature)return;signature=stamp;
+    currentView=data;renderActivity(data);const run=data.run,stamp=JSON.stringify([run,data.task,data.report,data.preparation]);if(stamp===signature)return;signature=stamp;
     $('[data-wf-run-title]').textContent=run.spec.title;
     $('[data-wf-run-state]').textContent=t(run.state);
     const node=run.spec.nodes.find(n=>n.key===run.current),task=data.task;
@@ -178,7 +207,8 @@
     if(!answer.hidden)Object.keys(node.branches).forEach(choice=>options.append(button(choice,()=>act(()=>control('answer',choice)))));
     $('[data-wf-answer-form]').hidden=!!Object.keys(node?.branches||{}).length;
     $('[data-wf-preparation]').textContent=data.preparation.map(p=>p.message).join('\n') || (task?.state==='READY'?t('Waiting for a compatible Worker'):'');
-    const detail=$('[data-wf-worker-detail]');detail.hidden=!task;detail.href=task?'/ui/plans/'+encodeURIComponent(run.id)+'/tasks/'+encodeURIComponent(task.id.value):'#';
+    const detail=$('[data-wf-worker-detail]'), activityTask=task?.id.value||data.activity?.taskId;
+    detail.hidden=!activityTask;detail.href=activityTask?'/ui/plans/'+encodeURIComponent(run.id)+'/tasks/'+encodeURIComponent(activityTask):'#';
     const timeline=$('[data-wf-timeline]');timeline.replaceChildren();
     for(const event of run.events) {
       const section=element('details',undefined,'wf-event');section.open=['RESULT','FAILED','QUESTION'].includes(event.type);

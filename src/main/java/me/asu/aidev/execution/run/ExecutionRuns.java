@@ -105,7 +105,7 @@ public class ExecutionRuns {
             if(event.sequence()<=previousSequence)throw new IllegalArgumentException("Events must be strictly ordered");
             previousSequence=event.sequence();
         }
-        var allowed=Set.of("context-projected","context-component","guard-intent","guard-start","guard-finished","host-batch-validated","validation-failed","validation-passed","native-turn-started","execution-quiescent","delivery-pending","progress-stalled","progress-review");
+        var allowed=Set.of("model-request","model-terminal","tool-proposed","runtime-event","ai-settings","context-projected","context-component","guard-intent","guard-start","guard-finished","host-batch-validated","validation-failed","validation-passed","native-turn-started","execution-quiescent","delivery-pending","progress-stalled","progress-review");
         for(var event:input.events()) {
             if(event.sequence()<1||event.occurredAt()<1||!allowed.contains(event.eventType()))throw new IllegalArgumentException("Invalid run event");
             metadata(event.payload());String json=repo.encode(event.payload());

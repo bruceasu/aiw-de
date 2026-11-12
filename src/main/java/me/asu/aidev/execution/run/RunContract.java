@@ -42,7 +42,7 @@ public final class RunContract {
             Map.entry("visibility",Set.of("WORKER_PROJECTION","BACKEND_OPAQUE")),
             Map.entry("requestScope",Set.of("REQUEST","BACKEND_TURN","UNKNOWN")),
             Map.entry("purpose",Set.of("task","host-action","history-summary")),
-            Map.entry("status",Set.of("running","pending","authorized","serial","parallel","correctable","valid","succeeded","failed","unknown","possible")),
+            Map.entry("status",Set.of("running","pending","authorized","serial","parallel","correctable","valid","validated","completed","error","succeeded","failed","unknown","possible")),
             Map.entry("phase",Set.of("host-action","candidate")),
             Map.entry("tool",Set.of("MODEL","READ","SEARCH","WRITE","GIT","COMMAND","QUESTION")));
         for(var e:payload.entrySet()) {
@@ -50,6 +50,7 @@ public final class RunContract {
             if(numbers.contains(key)&&(value instanceof Integer||value instanceof Long)&&((Number)value).longValue()>=0&&((Number)value).longValue()<=Long.MAX_VALUE/2)continue;
             if(booleans.contains(key)&&value instanceof Boolean)continue;
             if(strings.containsKey(key)&&value instanceof String s&&strings.get(key).contains(s))continue;
+            if(Set.of("model","effort","toolName","runtimeEvent").contains(key)&&value instanceof String s&&s.length()<=160&&!s.isBlank()&&s.chars().noneMatch(Character::isISOControl))continue;
             if(Set.of("digest","operation").contains(key)&&value instanceof String s&&s.matches(key.equals("digest")?"[0-9a-f]{64}":"OP-[0-9a-f]{32,64}"))continue;
             if(Set.of("callId","parentCallId").contains(key)&&value instanceof String s&&s.matches("context-[0-9]{1,10}"))continue;
             if(key.equals("sourceKind")&&value instanceof String s&&Set.of("instructions","messages","tools","fixed_header","observations","new_observations","task","knowledge","upstream","skill","configuration").contains(s))continue;
