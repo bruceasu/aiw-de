@@ -120,8 +120,14 @@ public class WorkflowRuns {
         return db.jdbc().query("SELECT id,version,spec_json FROM workflow_definition WHERE id=? AND actor=?",
                 (rs,i)->new Definition(rs.getString(1),rs.getLong(2),db.decode(rs.getString(3),Spec.class)),id,actor()).stream().findFirst().orElseThrow();
     }
-    public List<Map<String,Object>> executions() {
-        return db.jdbc().queryForList("SELECT id,definition_id,version,state,updated_ms FROM workflow_execution WHERE actor=? ORDER BY updated_ms DESC LIMIT 100",actor());
+    public List<Map<String,Object>> executions(String kind) {
+        String scope=switch(kind) {
+            case "all" -> "";
+            case "tasks" -> " AND definition_id IS NULL";
+            case "workflows" -> " AND definition_id IS NOT NULL";
+            default -> throw new IllegalArgumentException("Unknown execution kind");
+        };
+        return db.jdbc().queryForList("SELECT id,definition_id,version,state,updated_ms,json_extract(run_json,'$.spec.title') AS title FROM workflow_execution WHERE actor=?"+scope+" ORDER BY updated_ms DESC LIMIT 100",actor());
     }
     private Run replay(String request,String digest) {
         text(request,80);boundary.lock();

@@ -19,9 +19,16 @@ public class WorkflowConsole {
     public record Simple(String requestId,String instruction,String location) {}
     public record Control(long version,String action,String answer) {}
     public record Supplement(String requestId,String text,String mode) {}
-    @GetMapping("/ui/workflows") public String page(Model model) {model.addAttribute("page","workflows");return "ui/workflows";}
-    @GetMapping("/api/r1/workflows") @ResponseBody public Object list(HttpSession session) {
-        security.requireOperator(session);return Map.of("definitions",workflows.definitions(),"executions",workflows.executions());
+    @GetMapping("/ui/workflows") public String page(Model model) {return page(model,"workflows");}
+    @GetMapping("/ui/tasks") public String tasks(Model model) {return page(model,"tasks");}
+    private String page(Model model,String mode) {
+        model.addAttribute("page",mode);model.addAttribute("workflowMode",mode);
+        model.addAttribute("workflowTitle",mode.equals("tasks")?"Simple task":"Workflows");
+        model.addAttribute("workflowSubtitle",mode.equals("tasks")?"Describe the work and follow its execution.":"Edit a reusable workflow and follow each execution.");
+        return "ui/workflows";
+    }
+    @GetMapping("/api/r1/workflows") @ResponseBody public Object list(HttpSession session,@RequestParam(defaultValue="all") String kind) {
+        security.requireOperator(session);return Map.of("definitions",workflows.definitions(),"executions",workflows.executions(kind));
     }
     @PostMapping("/api/r1/workflows/definitions") @ResponseBody public Object save(@RequestBody Save input,HttpSession session) {
         security.requireOperator(session);return workflows.save(input.id(),input.version(),input.spec());

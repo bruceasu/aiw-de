@@ -2,6 +2,9 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'Describe the work and follow its execution.':['说清要做的事，直接查看执行进展。','依頼を伝え、実行状況を確認します。'],
+    'Edit a reusable workflow and follow each execution.':['编辑可复用的工作流，查看每次执行的进展。','再利用できるワークフローを編集し、各実行の状況を確認します。'],
+    'Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.':['暂停只阻止后续步骤启动，当前 Worker 工作可能继续。停止执行需要等待 Worker 确认。','一時停止は後続ステップの開始を止めます。現在の Worker 作業は続く場合があります。実行停止は Worker の確認を待ちます。'],
     'SETTLED':['本次执行已结束','実行終了'], 'FINALIZING':['正在确认结果','結果を確定中'],
     'PAUSING':['等待暂停确认','一時停止確認待ち'], 'BROKEN':['执行通道异常','実行チャネル異常'],
     'Worker activity':['Worker 实时活动','Worker の実行状況'],
@@ -33,7 +36,7 @@
     'Edit steps':['编辑步骤','ステップを編集'], 'Add step':['添加步骤','ステップを追加'], 'Save workflow':['保存工作流','保存'],
     'Input and reference material':['输入与参考资料','入力と参考資料'], 'Start execution':['启动执行','実行を開始'],
     'Starting freezes this definition for this execution. Later edits do not change existing executions.':['每次执行保存独立的流程副本，后续编辑不影响已有执行。','実行時の定義を保存します。後の編集は既存の実行に影響しません。'],
-    'Pause':['暂停','一時停止'], 'Continue':['继续','再開'], 'Retry this step':['重试本步骤','このステップを再試行'], 'Stop execution':['停止本次执行','実行を停止'],
+    'Pause following steps':['暂停后续步骤','後続ステップを一時停止'], 'Resume workflow':['继续工作流','ワークフローを再開'], 'Retry this step':['重试本步骤','このステップを再試行'], 'Stop execution':['停止本次执行','実行を停止'],
     'Your answer':['你的回答','回答'], 'Answer and continue':['回答并继续','回答して続行'],
     'Worker execution details':['Worker 执行详情','Worker の実行詳細'], 'Execution timeline':['执行时间线','実行タイムライン'],
     'Task':['执行任务','タスク'], 'LLM decision':['LLM 判断','LLM 判断'], 'Ask user':['询问用户','ユーザーに質問'], 'Done':['结束','終了'],
@@ -44,7 +47,7 @@
     'Stop this execution? Existing results will be retained.':['停止本次执行？已有结果将保留。','この実行を停止しますか？既存の結果は保持されます。'],
     'Waiting for a compatible Worker':['等待兼容 Worker 接单','対応する Worker を待機中'], 'Waiting for user input':['等待用户补充','ユーザーの回答待ち'],
     'Request outcome is unknown. Check execution history before submitting again.':['请求结果尚未确认，请先检查执行记录，不要重复提交。','リクエストの結果が不明です。再送信する前に実行履歴を確認してください。'],
-    'RUNNING':['执行中','実行中'], 'WAITING_USER':['待你回答','回答待ち'], 'PAUSED':['已暂停','一時停止中'], 'STOPPING':['等待 Worker 停止确认','Worker の停止確認待ち'],
+    'RUNNING':['执行中','実行中'], 'WAITING_USER':['待你回答','回答待ち'], 'PAUSED':['后续步骤已暂停','後続ステップは一時停止中'], 'STOPPING':['等待 Worker 停止确认','Worker の停止確認待ち'],
     'STOPPED':['已停止','停止済み'], 'COMPLETED':['已完成','完了'], 'FAILED':['需要处理','対応が必要'], 'READY':['等待接单','待機中'],
     'CLAIMED':['已领取','取得済み'], 'WAITING_INPUT':['等待 Worker 问题答复','Worker の質問への回答待ち'], 'STARTED':['开始','開始'],
     'DISPATCHED':['已派发','割り当て済み'], 'QUESTION':['需要补充','質問'], 'ANSWER':['用户回答','ユーザーの回答'],
@@ -60,6 +63,7 @@
   const newRequest = () => crypto.randomUUID();
   let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest();
   const route=new URLSearchParams(location.search);
+  const pageMode=document.body.dataset.wfMode==='tasks'?'tasks':'workflows';
   let preparingGoal=route.get('goalVersion'), importAttempted=false;
   async function api(path, data) {
     const response = await fetch('/api/r1/workflows'+path, {method:data===undefined?'GET':'POST', credentials:'same-origin',
@@ -76,6 +80,7 @@
   function element(tag,text,className) {const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;}
   function button(label,callback) {const b=element('button',t(label),'btn ghost');b.type='button';b.onclick=callback;return b;}
   function translate() {
+    document.title=t(pageMode==='tasks'?'Simple task':'Workflows');
     $$('[data-wf-label]').forEach(e=>e.textContent=t(e.dataset.wfLabel));
     $$('[data-wf-new], [data-wf-sample], [data-wf-refresh], [data-wf-add-node], [data-wf-save], [data-wf-start], [data-wf-control]').forEach(e=>{
       e.dataset.wfOriginal ||= e.textContent;e.textContent=t(e.dataset.wfOriginal);
@@ -154,13 +159,13 @@
     container.append(svg);
   }
   async function library() {
-    const data=await api('');definitions=data.definitions;
+    const data=await api('?kind='+pageMode);definitions=data.definitions;
     const list=$('[data-wf-definitions]');list.replaceChildren();
     if(!definitions.length)list.append(element('p',t('No saved workflows'),'help'));
-    definitions.forEach(d=>{const b=button(d.spec.title,()=>showEditor(d));b.classList.add('wf-item');list.append(b);});
+    definitions.forEach(d=>{const b=button('',()=>showEditor(d));b.textContent=d.spec.title;b.dataset.i18nSkip='';b.classList.add('wf-item');list.append(b);});
     const runs=$('[data-wf-executions]');runs.replaceChildren();
     if(!data.executions.length)runs.append(element('p',t('No executions yet'),'help'));
-    data.executions.forEach(r=>{const b=button(t(r.state)+' · '+new Date(r.updated_ms).toLocaleString(),()=>act(()=>openRun(r.id)));b.classList.add('wf-item');runs.append(b);});
+    data.executions.forEach(r=>{const b=button('',()=>act(()=>openRun(r.id)));b.textContent=r.title||r.id;b.dataset.i18nSkip='';b.classList.add('wf-item');b.append(element('small',t(r.state)+' · '+new Date(r.updated_ms).toLocaleString()));runs.append(b);});
   }
   async function openRun(id) {if(id!==route.get('execution'))preparingGoal=null;selectedRun=id;signature='';panel('run');await refreshRun();}
   function controlButtons(run) {
@@ -262,7 +267,7 @@
     inputRequest=newRequest();e.target.reset();signature='';await refreshRun();status(t('Input received'));
   });};
   window.addEventListener('aiw:locale-changed',()=>{translate();signature='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
-  translate();panel('task');act(async()=>{
+  translate();if(pageMode==='tasks')panel('task');else showEditor();act(async()=>{
     await library();
     if(route.get('execution'))await openRun(route.get('execution'));
     else if(route.get('definition'))showEditor(await api('/definitions/'+encodeURIComponent(route.get('definition'))));

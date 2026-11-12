@@ -4,15 +4,17 @@
   <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css">
   <script src="/ui/appearance.js"></script><script src="/ui/workflows.js" defer></script>
 </head>
-<body><div class="app"><aside th:replace="~{ui/fragments :: nav('workflows')}"></aside><main class="main">
-  <header th:replace="~{ui/fragments :: topbar('Workflows','Describe a simple task or run a reusable workflow.')}"></header>
+<body th:attr="data-wf-mode=${workflowMode}"><div class="app"><aside th:replace="~{ui/fragments :: nav(${workflowMode})}"></aside><main class="main">
+  <header th:replace="~{ui/fragments :: topbar(${workflowTitle},${workflowSubtitle})}"></header>
   <div class="content"><p class="help" data-wf-status role="status" aria-live="polite"></p>
   <p class="help" data-wf-label="This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.">This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.</p>
   <div class="wf-layout">
     <section class="card wf-library"><h2 data-wf-label="Library">Library</h2>
-      <div class="wf-actions"><button class="btn primary" data-wf-new="task">Simple task</button><button class="btn ghost" data-wf-new="workflow">New workflow</button></div>
+      <div class="wf-actions"><button class="btn primary" data-wf-new="task" th:hidden="${workflowMode != 'tasks'}">Simple task</button><button class="btn primary" data-wf-new="workflow" th:hidden="${workflowMode == 'tasks'}">New workflow</button></div>
+      <div th:hidden="${workflowMode == 'tasks'}">
       <button class="btn ghost" data-wf-sample>After-sales example</button>
       <h3 data-wf-label="Saved workflows">Saved workflows</h3><div data-wf-definitions></div>
+      </div>
       <h3 data-wf-label="Executions">Executions</h3><div data-wf-executions></div>
       <button class="btn ghost" data-wf-refresh>Refresh</button>
     </section>
@@ -43,7 +45,8 @@
           <details><summary data-wf-label="Current task instructions">Current task instructions</summary><pre class="wf-instructions" data-wf-instructions data-i18n-skip></pre></details>
           <details><summary data-wf-label="Recent activity (up to 64 events)">Recent activity (up to 64 events)</summary><div data-wf-activity-events></div></details>
         </section>
-        <div class="wf-actions"><button class="btn ghost" data-wf-control="pause">Pause</button><button class="btn primary" data-wf-control="resume">Continue</button><button class="btn ghost" data-wf-control="retry">Retry this step</button><button class="btn ghost" data-wf-control="stop">Stop execution</button></div>
+        <div class="wf-actions"><button class="btn ghost" data-wf-control="pause">Pause following steps</button><button class="btn primary" data-wf-control="resume">Resume workflow</button><button class="btn ghost" data-wf-control="retry">Retry this step</button><button class="btn ghost" data-wf-control="stop">Stop execution</button></div>
+        <p class="help" data-wf-label="Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.">Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.</p>
         <section data-wf-supplement>
           <h3 data-wf-label="Add context">Add context</h3>
           <p class="help" data-wf-label="New content is used at the next model call. It cannot change an in-flight request or grant new permissions.">New content is used at the next model call. It cannot change an in-flight request or grant new permissions.</p>

@@ -12,6 +12,8 @@ window.aiwConsoleCatalog = [
   ["A Worker organizes these requirements into a workflow draft. Review it before starting business work.","Worker 会将这些需求整理为工作流草稿；检查后再启动实际业务。","Worker が要件をワークフロー案に整理します。業務の実行前に確認してください。"],
   ["Workflows","工作流","ワークフロー"],
   ["Simple task","简单任务","単一タスク"],
+  ["Describe the work and follow its execution.","说清要做的事，直接查看执行进展。","依頼を伝え、実行状況を確認します。"],
+  ["Edit a reusable workflow and follow each execution.","编辑可复用的工作流，查看每次执行的进展。","再利用できるワークフローを編集し、各実行の状況を確認します。"],
   ["Describe a simple task or run a reusable workflow.","直接处理简单任务，或运行可复用的工作流。","単一タスクを依頼するか、ワークフローを実行します。"],
   ["No change was observed. The Worker will ask the model to recheck the delivery conditions.","尚未观察到修改。Worker 将请模型重新核对交付条件。","変更が確認されませんでした。Worker はモデルに納品条件の再確認を求めます。"],
   ["Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.","检测到重复读取且结果相同。Worker 将请模型重新考虑下一步。","同じ読み取り結果が繰り返されました。Worker はモデルに次の手順を再検討するよう求めます。"],
