@@ -2,6 +2,15 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'Add context':['补充内容','情報を追加'], 'Additional content':['补充资料或方向','追加情報・方針'],
+    'When to use':['生效方式','適用方法'], 'Add to context':['加入处理上下文','コンテキストに追加'],
+    'Use next turn':['下一轮生效','次のターンで適用'], 'Send context':['发送补充','追加情報を送信'],
+    'New content is used at the next model call. It cannot change an in-flight request or grant new permissions.':['内容最早在下一次模型调用生效，不会修改在途请求或增加权限。','追加情報は次のモデル呼び出しから適用されます。進行中のリクエストや権限は変更しません。'],
+    'QUEUED':['已收到，等待生效','受信済み・適用待ち'], 'RESERVED':['等待模型调用回执','モデル応答の確認待ち'],
+    'APPLIED':['已用于模型调用','モデル呼び出しに適用済み'], 'CONTEXT':['已加入后续上下文','後続コンテキストに追加済み'],
+    'UNKNOWN':['是否生效尚未确认','適用結果が不明'], 'Input received':['补充内容已收到','追加情報を受信しました'],
+    'INPUT_RECEIVED':['收到补充','追加情報を受信'], 'INPUT_CONTEXT':['加入上下文','コンテキストに追加'],
+    'INPUT_RESERVED':['准备使用补充','追加情報を使用準備'], 'INPUT_APPLIED':['补充已生效','追加情報を適用'], 'INPUT_UNKNOWN':['补充生效结果未确认','追加情報の適用結果が不明'],
     'This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.':['当前版本处理只读文本任务与判断，不修改文件、不实际退款或发送消息。','この版は読み取り専用のテキスト処理と判断に対応します。ファイル変更、返金、メッセージ送信は行いません。'],
     'Library':['工作区','ライブラリ'], 'Simple task':['简单任务','単一タスク'], 'New workflow':['新建工作流','新規ワークフロー'],
     'After-sales example':['售后示例','アフターサービス例'], 'Saved workflows':['已保存工作流','保存済みワークフロー'],
@@ -38,7 +47,7 @@
   const status = message => { $('[data-wf-status]').textContent = message; };
   let definitions=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='';
   const newRequest = () => crypto.randomUUID();
-  let taskRequest=newRequest(), startRequest=newRequest();
+  let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest();
   async function api(path, data) {
     const response = await fetch('/api/r1/workflows'+path, {method:data===undefined?'GET':'POST', credentials:'same-origin',
       headers:{'Content-Type':'application/json','X-CSRF-Token':$('meta[name="csrf-token"]').content}, body:data===undefined?undefined:JSON.stringify(data)});
@@ -154,6 +163,13 @@
     const node=run.spec.nodes.find(n=>n.key===run.current),task=data.task;
     $('[data-wf-run-current]').textContent=(node?.title||'')+(task?' · '+t(task.state):'');
     graph($('[data-wf-run-graph]'),run.spec,run);controlButtons(run);
+    $('[data-wf-supplement]').hidden=!['RUNNING','PAUSED','WAITING_USER'].includes(run.state);
+    const inputReceipts=$('[data-wf-input-receipts]');inputReceipts.replaceChildren();
+    for(const input of run.inputs||[]) {
+      const receipt=element('details',undefined,'wf-event');
+      receipt.append(element('summary',new Date(input.receivedAt).toLocaleTimeString()+' · '+t(input.state)),element('pre',input.text));
+      inputReceipts.append(receipt);
+    }
     const answer=$('[data-wf-answer]');answer.hidden=run.state!=='WAITING_USER';$('[data-wf-question]').textContent=node?.instruction||'';
     const options=$('[data-wf-answer-options]');options.replaceChildren();
     if(!answer.hidden)Object.keys(node.branches).forEach(choice=>options.append(button(choice,()=>act(()=>control('answer',choice)))));
@@ -197,6 +213,11 @@
   });
   $$('[data-wf-control]').forEach(b=>b.onclick=()=>act(()=>control(b.dataset.wfControl)));
   $('[data-wf-answer-form]').onsubmit=e=>{e.preventDefault();act(()=>control('answer',new FormData(e.target).get('answer')));};
+  $('[data-wf-supplement-form]').onsubmit=e=>{e.preventDefault();act(async()=>{
+    const form=new FormData(e.target);
+    await api('/executions/'+encodeURIComponent(selectedRun)+'/inputs',{requestId:inputRequest,text:form.get('text'),mode:form.get('mode')});
+    inputRequest=newRequest();e.target.reset();signature='';await refreshRun();status(t('Input received'));
+  });};
   window.addEventListener('aiw:locale-changed',()=>{translate();signature='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
   translate();panel('task');act(library);
   setInterval(()=>{if(selectedRun&&!busy&&!document.hidden)act(refreshRun);},4000);

@@ -35,7 +35,7 @@ def capabilities(config):
         # source attempt, including when OAuth changes the model transport.
         modules += ("openai_api_runtime.py", "chatgpt_responses_runtime.py", "api_connection.py",
                     "deepseek_chat.py", "model_images.py", "automation_loop.py", "tool_arguments.py",
-                    "context_window.py", "completion_validation.py", "model_usage_outbox.py", "progress_monitor.py")
+                    "context_window.py", "completion_validation.py", "model_usage_outbox.py", "progress_monitor.py", "workflow_inputs.py")
     value = {"runtime": config.runtime, "role": config.process_role, "modelPolicy": config.model,
              "credentialRef": os.environ.get("AIW_MODEL_CREDENTIAL_REF"), "credentialVersion": os.environ.get("AIW_MODEL_CREDENTIAL_VERSION"),
              "effort": config.reasoning_effort, "sandbox": config.sandbox, "approval": config.approval_mode,
@@ -43,7 +43,10 @@ def capabilities(config):
              "codexPath": os.environ.get("AIW_CODEX_PATH", "codex"),
              "codexHome": str(Path(os.environ.get("CODEX_HOME", "~/.codex")).expanduser().absolute()),
              "code": {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in modules}}
-    return {CAPABILITY, QUESTION_CAPABILITY, storage_capability(), "native-config:" + hashlib.sha256(encoded(value)).hexdigest()}
+    result = {CAPABILITY, QUESTION_CAPABILITY, storage_capability(), "native-config:" + hashlib.sha256(encoded(value)).hexdigest()}
+    if config.runtime == "openai-agents":
+        result.add("workflow-inputs-v1")
+    return result
 
 
 def _json_report(text):
@@ -100,7 +103,11 @@ class NativeRun:
         if self.configuration is None:
             raise RuntimeError("NATIVE_CONFIGURATION_CAPABILITY_MISSING")
         broker = SimpleNamespace(client=client, task=task, attempt=attempt, base=self.base, lease=self.lease)
-        caps = RuntimeCapabilities("BACKEND", "BACKEND", "WORKER_PROJECTION", "TURN", "NONE", "NONE", "TURN", "BEST_EFFORT", "UNKNOWN", "BACKEND_TURN")
+        live = availability.get("workflowInputs") is True and config.runtime == "openai-agents"
+        caps = RuntimeCapabilities("BACKEND", "BACKEND", "WORKER_PROJECTION", "TURN", "REQUEST" if live else "NONE", "NONE", "TURN", "BEST_EFFORT", "UNKNOWN", "BACKEND_TURN")
+        if live:
+            from workflow_inputs import WorkflowInputs
+            attempt.workflow_inputs = WorkflowInputs(client, self.base, self.lease, attempt)
         self.channel = RunChannel(broker, caps, self.configuration)
         attempt.run_channel = self.channel
         self.active = False

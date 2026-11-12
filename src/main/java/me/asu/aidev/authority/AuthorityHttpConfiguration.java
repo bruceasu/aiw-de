@@ -20,7 +20,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/heartbeat")
                 || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/configuration")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/questions/(source|open|ack|checkpoints|receipt)")
-                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/execution-run/(availability|open|events|control|seal)")
+                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/execution-run/(availability|open|events|control|seal|inputs)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/model-usage/(start|finish)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/price-repair/(materials|result)")
                 || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/(begin|finish|approval|approved|approved-begin|approved-discard)|operations/[^/]+/receipt|yield/(prepare|ack)|delivery)")

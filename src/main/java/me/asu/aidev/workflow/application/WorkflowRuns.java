@@ -54,6 +54,11 @@ public class WorkflowRuns {
     }
     public record Definition(String id,long version,Spec spec) {}
     public record Event(long time,String node,String type,String content) {}
+    public static class Supplement {
+        public String id,text,mode,state,taskId,attemptId,batchId;
+        public long receivedAt,appliedAt;
+        public Supplement() {}
+    }
     public static class Run {
         public String id,definitionId,actor,state,current,taskId,context,location;
         public long version,definitionVersion;
@@ -61,6 +66,8 @@ public class WorkflowRuns {
         public int sequence;
         public Map<String,Integer> visits=new LinkedHashMap<>();
         public List<Event> events=new ArrayList<>();
+        public List<Supplement> inputs=new ArrayList<>();
+        public String sealedTaskId,sealedAttemptId;
         public Run() {}
     }
     public record View(Run run,WorkTask task,String report,List<WorkflowWorkerProvisioning.Preparation> preparation) {}
@@ -184,6 +191,11 @@ public class WorkflowRuns {
             run.state="COMPLETED";event(run,"COMPLETED","Workflow finished");endPlan(run,WorkflowPlan.State.COMPLETED);return;
         }
         if(node.kind()==Kind.ASK) {run.state="WAITING_USER";event(run,"QUESTION",node.instruction());return;}
+        for(var input:run.inputs)if(input.state.equals("QUEUED")) {
+            append(run,"User supplement: "+input.text);input.state="CONTEXT";
+            event(run,"INPUT_CONTEXT",input.id);
+        }
+        run.sealedTaskId=null;run.sealedAttemptId=null;
         if(run.sequence>=64) {run.state="FAILED";event(run,"LIMIT","Workflow reached 64 working steps; no further work was dispatched");return;}
         var plan=plans.getObject().get(run.id);
         if(plan.state()!=WorkflowPlan.State.CONFIRMED) {run.state="FAILED";event(run,"FAILED","Underlying execution is not active; no following work was dispatched");return;}
@@ -209,6 +221,10 @@ public class WorkflowRuns {
         consume(run,report);persist(run);
     }
     private void consume(Run run,CompletionReport report) {
+        String actualTask=currentTask(run)==null?null:currentTask(run).id().value();
+        if(run.inputs.stream().anyMatch(i->i.state.equals("QUEUED") || Objects.equals(i.taskId,actualTask)&&Set.of("RESERVED","UNKNOWN").contains(i.state))) {
+            run.state="FAILED";event(run,"FAILED","Supplemental input was not consumed by this runtime. The result is retained; explicitly retry to use the new context.");return;
+        }
         if(report==null || report.verdict()!=CompletionVerdict.PASS) {
             run.state="FAILED";event(run,"FAILED",report==null?"Completion report missing":report.summary());return;
         }
@@ -280,7 +296,13 @@ public class WorkflowRuns {
                 run.state="RUNNING";event(run,"RESUMED","Workflow resumed");
                 var task=currentTask(run);
                 if(task==null)advance(run);
-                else if(task.state()==TaskState.COMPLETED)consume(run,attempts.findCompletionReport(task.id()).orElse(null));
+                else if(task.state()==TaskState.COMPLETED) {
+                    if(run.inputs.stream().anyMatch(i->i.state.equals("QUEUED"))) {
+                        var draft=attempts.findCompletionReport(task.id()).map(CompletionReport::summary).orElse("Result report unavailable");
+                        event(run,"RESULT",draft);append(run,"Prior draft before the user supplement:\n"+draft);
+                        run.taskId=null;advance(run);
+                    } else consume(run,attempts.findCompletionReport(task.id()).orElse(null));
+                }
             }
             case "stop" -> {
                 if(Set.of("COMPLETED","STOPPED","STOPPING").contains(run.state))throw new IllegalStateException("Workflow has already ended or is stopping");
@@ -298,7 +320,8 @@ public class WorkflowRuns {
                 if(!run.state.equals("FAILED"))throw new IllegalStateException("Only a failed step can retry");
                 var task=currentTask(run);
                 if(task!=null && tasks.findLease(task.id()).isPresent())throw new IllegalStateException("Wait for the original execution to end");
-                if(task!=null && task.state()==TaskState.FAILED) {
+                run.sealedTaskId=null;run.sealedAttemptId=null;
+                if(task!=null && task.state()==TaskState.FAILED && run.inputs.isEmpty()) {
                     if(!tasks.retryFailed(task.id(),Instant.now()))throw new IllegalStateException("Task changed; reload");
                     run.state="RUNNING";
                 } else {run.state="RUNNING";run.taskId=null;advance(run);}
@@ -313,5 +336,73 @@ public class WorkflowRuns {
         if(plan.state()==state)return;
         if(!planStore.transition(plan.id(),plan.version(),WorkflowPlan.State.CONFIRMED,state,run.actor,"Workflow execution "+run.state,Instant.now()))
             throw new IllegalStateException("Underlying execution changed");
+    }
+    @Transactional public Run supplement(String id,String request,String content,String mode) {
+        boundary.lock();var run=load(id,true);request=text(request,80);content=text(content,4000);
+        if(mode==null||!Set.of("CONTEXT","NEXT_TURN").contains(mode))throw new IllegalArgumentException("Unknown input mode");
+        for(var prior:run.inputs)if(prior.id.equals(request)) {
+            if(!prior.text.equals(content)||!prior.mode.equals(mode))throw new IllegalStateException("Input request has different content");
+            return run;
+        }
+        if(!Set.of("RUNNING","PAUSED","WAITING_USER").contains(run.state))throw new IllegalStateException("This execution is not accepting new input");
+        var task=currentTask(run);
+        if(task!=null && Set.of(TaskState.RUNNING,TaskState.YIELDING,TaskState.CLAIMED).contains(task.state())) {
+            var lease=tasks.findLease(task.id());
+            String attempt=lease.flatMap(l->attempts.findAttemptId(l.token())).map(a->a.value()).orElse(null);
+            if(task.id().value().equals(run.sealedTaskId)&&Objects.equals(attempt,run.sealedAttemptId))
+                throw new IllegalStateException("The current step is finalizing; wait for the next step");
+            var caps=db.jdbc().queryForList("SELECT capabilities_json FROM execution_run_session WHERE attempt_id=?",String.class,attempt);
+            if(!caps.isEmpty()&&!"REQUEST".equals(db.decode(caps.getFirst(),Map.class).get("supplementBoundary")))
+                throw new IllegalStateException("This runtime does not support live input; pause and retry with new context");
+        }
+        if(run.inputs.size()>=64)throw new IllegalStateException("This execution already has 64 supplemental inputs");
+        int pending=run.inputs.stream().filter(i->Set.of("QUEUED","RESERVED").contains(i.state)).mapToInt(i->i.text.length()+40).sum();
+        if(run.context.length()+pending+content.length()+40>64000)throw new IllegalStateException("Workflow context is full");
+        var input=new Supplement();input.id=request;input.text=content;input.mode=mode;input.state="QUEUED";input.receivedAt=System.currentTimeMillis();
+        run.inputs.add(input);event(run,"INPUT_RECEIVED",content);
+        if(task==null) {append(run,"User supplement: "+content);input.state="CONTEXT";event(run,"INPUT_CONTEXT",request);}
+        persist(run);return run;
+    }
+    /** Called only after the existing machine lease and native owner checks. */
+    @Transactional public Object exchangeInputs(String taskId,String attempt,String action,String batch) {
+        var task=tasks.find(new TaskId(taskId)).orElseThrow();
+        var run=load(task.subjectId(),false);
+        if(!Set.of("RUNNING","PAUSED").contains(run.state)||run.taskId==null||!currentTask(run).id().value().equals(taskId))
+            throw new IllegalStateException("Input task changed or execution stopped");
+        batch=text(batch,80);action=text(action,16);
+        var reserved=new ArrayList<Supplement>();
+        for(var input:run.inputs)if(Objects.equals(input.attemptId,attempt)&&Objects.equals(input.taskId,taskId)&&Objects.equals(input.batchId,batch))reserved.add(input);
+        switch(action) {
+            case "RESERVE" -> {
+                if(run.state.equals("PAUSED"))return Map.of("protocol","aiw.workflow.inputs.v1","messages",List.of());
+                if(taskId.equals(run.sealedTaskId)&&attempt.equals(run.sealedAttemptId))throw new IllegalStateException("The input window is sealed");
+                if(reserved.isEmpty()) {
+                    for(var input:run.inputs)if(input.state.equals("QUEUED")&&reserved.size()<8) {
+                        input.state="RESERVED";input.attemptId=attempt;input.taskId=taskId;input.batchId=batch;reserved.add(input);
+                    }
+                    if(!reserved.isEmpty()){event(run,"INPUT_RESERVED",batch);persist(run);}
+                }
+                if(reserved.stream().anyMatch(i->!i.state.equals("RESERVED")))throw new IllegalStateException("This input batch was already used");
+                return Map.of("protocol","aiw.workflow.inputs.v1","messages",reserved);
+            }
+            case "ACK","UNKNOWN" -> {
+                if(reserved.isEmpty())throw new IllegalStateException("Original input batch not found");
+                String state=action.equals("ACK")?"APPLIED":"UNKNOWN";
+                if(reserved.stream().allMatch(i->i.state.equals(state)))return Map.of("protocol","aiw.workflow.inputs.v1","state",state);
+                if(reserved.stream().anyMatch(i->!i.state.equals("RESERVED")))throw new IllegalStateException("Input receipt conflicts with original state");
+                for(var input:reserved) {
+                    input.state=state;
+                    if(state.equals("APPLIED")){append(run,"User supplement: "+input.text);input.appliedAt=System.currentTimeMillis();}
+                }
+                event(run,state.equals("APPLIED")?"INPUT_APPLIED":"INPUT_UNKNOWN",batch);persist(run);
+                return Map.of("protocol","aiw.workflow.inputs.v1","state",state);
+            }
+            case "DRAIN" -> {
+                boolean pending=run.state.equals("RUNNING")&&run.inputs.stream().anyMatch(i->i.state.equals("QUEUED"));
+                if(!pending){run.sealedTaskId=taskId;run.sealedAttemptId=attempt;persist(run);}
+                return Map.of("protocol","aiw.workflow.inputs.v1","hasPending",pending);
+            }
+            default -> throw new IllegalArgumentException("Unknown input exchange operation");
+        }
     }
 }

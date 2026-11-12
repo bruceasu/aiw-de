@@ -21,6 +21,7 @@ public final class RunContract {
         public Query(String taskId,String attemptId,long afterSequence) { this(taskId,attemptId,afterSequence,null); }
     }
     public record ReceiptQuery(String requestId) {}
+    public record WorkflowInput(Lease lease,String action,String batchId) {}
 
     public static void capabilities(Map<String,String> value) {
         var choices=Map.ofEntries(

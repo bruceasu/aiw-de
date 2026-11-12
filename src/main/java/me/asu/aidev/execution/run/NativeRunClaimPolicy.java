@@ -26,7 +26,7 @@ public class NativeRunClaimPolicy implements WorkerTaskClaimPolicy {
                 current=policy.getObject().guidance(task,worker.runtimeType(),current);
                 questions.getObject().pinGuidance(task,worker.runtimeType(),current);
             }
-            return worker==null||worker.capabilities().containsAll(java.util.Set.of(NativePlanOwners.CAPABILITY,me.asu.aidev.questions.QuestionContract.LOCATION_CAPABILITY))&&worker.capabilities().stream().anyMatch(c->c.matches("native-config:[0-9a-f]{64}"))&&worker.capabilities().stream().anyMatch(c->c.matches("handoff-store:[0-9a-f]{64}"))&&worker.runtimeType().startsWith("codex-app-server:");
+            return worker==null||worker.capabilities().containsAll(java.util.Set.of(NativePlanOwners.CAPABILITY,me.asu.aidev.questions.QuestionContract.LOCATION_CAPABILITY))&&worker.capabilities().stream().anyMatch(c->c.matches("native-config:[0-9a-f]{64}"))&&worker.capabilities().stream().anyMatch(c->c.matches("handoff-store:[0-9a-f]{64}"))&&(worker.runtimeType().startsWith("codex-app-server:")||worker.runtimeType().startsWith("openai-agents:"));
         }catch(IllegalArgumentException|IllegalStateException|SecurityException|java.util.NoSuchElementException error) { return false; }
     }
 }

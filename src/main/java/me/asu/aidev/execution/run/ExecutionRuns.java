@@ -22,6 +22,7 @@ public class ExecutionRuns {
     private final ObjectProvider<TaskExecutionService> tasks;
     @org.springframework.beans.factory.annotation.Autowired private NativePlanOwners nativeOwners;
     @org.springframework.beans.factory.annotation.Autowired private NativeRunLifecycle nativeLifecycle;
+    @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> workflows;
     public ExecutionRuns(AuthorityRepository repo,AuthorityBoundary boundary,ExecutionGuard guard,ExecutionWorkbench workbench,ObjectProvider<TaskExecutionService> tasks) {
         this.repo=repo;this.boundary=boundary;this.guard=guard;this.workbench=workbench;this.tasks=tasks;
     }
@@ -77,8 +78,11 @@ public class ExecutionRuns {
             var basis=nativeOwners.task(task,true);owner=basis.ownerId();revision=basis.task().instructionRevision();
             var worker=repo.jdbc().queryForMap("SELECT runtime_type,capabilities FROM worker WHERE id=?",input.lease().workerId());
             var registered=me.asu.aidev.work.domain.CapabilitySetCodec.decode((String)worker.get("capabilities"));
-            if(!String.valueOf(worker.get("runtime_type")).startsWith("codex-app-server:")||!registered.contains(NativePlanOwners.CAPABILITY)||input.configurationCapability()==null||!input.configurationCapability().matches("native-config:[0-9a-f]{64}")||!registered.contains(input.configurationCapability()))throw new SecurityException("Registered native turn adapter and fixed configuration required");
-            if(!"TURN".equals(input.capabilities().get("pauseBoundary"))||!"TURN".equals(input.capabilities().get("dispatchBoundary"))||!"BACKEND".equals(input.capabilities().get("toolExecutor"))||!"BACKEND".equals(input.capabilities().get("requestLoopOwner"))||!"NONE".equals(input.capabilities().get("supplementBoundary"))||!"NONE".equals(input.capabilities().get("sessionReuse"))||!"UNKNOWN".equals(input.capabilities().get("usageScope"))||!"BACKEND_TURN".equals(input.capabilities().get("requestAccountingScope")))throw new IllegalArgumentException("Native turn limits must be explicit");
+            String runtime=String.valueOf(worker.get("runtime_type"));
+            boolean api=runtime.startsWith("openai-agents:");
+            if(!(api||runtime.startsWith("codex-app-server:"))||!registered.contains(NativePlanOwners.CAPABILITY)||input.configurationCapability()==null||!input.configurationCapability().matches("native-config:[0-9a-f]{64}")||!registered.contains(input.configurationCapability()))throw new SecurityException("Registered native turn adapter and fixed configuration required");
+            boolean live=api&&registered.contains("workflow-inputs-v1")&&workflows.getObject().manages(basis.planId());
+            if(!"TURN".equals(input.capabilities().get("pauseBoundary"))||!"TURN".equals(input.capabilities().get("dispatchBoundary"))||!"BACKEND".equals(input.capabilities().get("toolExecutor"))||!"BACKEND".equals(input.capabilities().get("requestLoopOwner"))||!(live?Set.of("NONE","REQUEST"):Set.of("NONE")).contains(input.capabilities().get("supplementBoundary"))||!"NONE".equals(input.capabilities().get("sessionReuse"))||!"UNKNOWN".equals(input.capabilities().get("usageScope"))||!"BACKEND_TURN".equals(input.capabilities().get("requestAccountingScope")))throw new IllegalArgumentException("Native turn limits must be explicit");
         }
         if(input.instructionRevision()!=revision)throw new IllegalStateException("Frozen task revision changed");
         String digest=AuthorityRepository.hash(repo.encode(input)),attempt=input.lease().attemptId();
@@ -219,7 +223,17 @@ public class ExecutionRuns {
         var basis=nativeOwners.task(task,true);
         long checkpoints=repo.jdbc().queryForObject("SELECT COUNT(*) FROM formal_question_slot WHERE successor_task_id=?",Long.class,task);
         if(checkpoints>1)throw new IllegalStateException("One exact continuation source required");
-        return Map.of("supported",true,"planId",basis.planId(),"sourceVersion",basis.sourceVersion(),"sourceDigest",basis.sourceDigest(),"checkpointRequired",checkpoints==1);
+        var worker=repo.jdbc().queryForMap("SELECT runtime_type,capabilities FROM worker WHERE id=?",lease.workerId());
+        boolean live=String.valueOf(worker.get("runtime_type")).startsWith("openai-agents:")&&
+                me.asu.aidev.work.domain.CapabilitySetCodec.decode((String)worker.get("capabilities")).contains("workflow-inputs-v1")&&workflows.getObject().manages(basis.planId());
+        return Map.of("supported",true,"planId",basis.planId(),"sourceVersion",basis.sourceVersion(),"sourceDigest",basis.sourceDigest(),"checkpointRequired",checkpoints==1,"workflowInputs",live);
+    }
+    @Transactional public Object workflowInputs(String task,WorkflowInput input) {
+        boundary.lock();machine(task,input.lease(),true);
+        var run=session(task,input.lease().attemptId());
+        var caps=repo.decode((String)run.get("capabilities_json"),Map.class);
+        if(guard.managed(task)||!"REQUEST".equals(caps.get("supplementBoundary")))throw new SecurityException("This runtime does not support workflow inputs");
+        return workflows.getObject().exchangeInputs(task,input.lease().attemptId(),input.action(),input.batchId());
     }
     @Transactional public Object humanNativeStopped(String task,GuardContract.StopEvidence input) {
         boundary.lock();String current=owner();var basis=nativeOwners.task(task,false);

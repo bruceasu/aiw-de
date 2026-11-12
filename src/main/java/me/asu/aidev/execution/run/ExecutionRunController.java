@@ -17,6 +17,7 @@ public class ExecutionRunController {
     }
     @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/execution-run/open") public Object open(@PathVariable String task,@RequestBody String raw) { return runs.open(task,read(raw,Open.class)); }
     @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/execution-run/availability") public Object availability(@PathVariable String task,@RequestBody String raw) { return runs.availability(task,read(raw,me.asu.aidev.execution.guard.GuardContract.Lease.class)); }
+    @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/execution-run/inputs") public Object workflowInputs(@PathVariable String task,@RequestBody String raw) {return runs.workflowInputs(task,read(raw,WorkflowInput.class));}
     @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/execution-run/events") public Object events(@PathVariable String task,@RequestBody String raw) { return runs.events(task,read(raw,Events.class)); }
     @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/execution-run/control") public Object poll(@PathVariable String task,@RequestBody String raw) { return runs.poll(task,read(raw,Poll.class)); }
     @PostMapping("/api/r1/worker-protocol/v1/tasks/{task}/execution-run/seal") public Object seal(@PathVariable String task,@RequestBody String raw) { return runs.seal(task,read(raw,Seal.class)); }

@@ -18,6 +18,7 @@ public class WorkflowConsole {
     public record Start(String requestId,String definitionId,long version,String input,String location) {}
     public record Simple(String requestId,String instruction,String location) {}
     public record Control(long version,String action,String answer) {}
+    public record Supplement(String requestId,String text,String mode) {}
     @GetMapping("/ui/workflows") public String page(Model model) {model.addAttribute("page","workflows");return "ui/workflows";}
     @GetMapping("/api/r1/workflows") @ResponseBody public Object list(HttpSession session) {
         security.requireOperator(session);return Map.of("definitions",workflows.definitions(),"executions",workflows.executions());
@@ -36,6 +37,9 @@ public class WorkflowConsole {
     }
     @PostMapping("/api/r1/workflows/executions/{id}/control") @ResponseBody public Object control(@PathVariable String id,@RequestBody Control input,HttpSession session) {
         security.requireOperator(session);return workflows.control(id,input.version(),input.action(),input.answer());
+    }
+    @PostMapping("/api/r1/workflows/executions/{id}/inputs") @ResponseBody public Object supplement(@PathVariable String id,@RequestBody Supplement input,HttpSession session) {
+        security.requireOperator(session);return workflows.supplement(id,input.requestId(),input.text(),input.mode());
     }
     @ExceptionHandler(SecurityException.class) @ResponseBody public ResponseEntity<?> denied() {
         return ResponseEntity.status(403).body(Map.of("error","This workflow belongs to another user or needs a current login."));
