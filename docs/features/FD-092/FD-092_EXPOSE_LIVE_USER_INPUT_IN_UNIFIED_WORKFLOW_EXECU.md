@@ -1,7 +1,7 @@
 # FD-092: Expose live user input in unified workflow executions
 
 **Status:** In Progress
-**Revision:** 1
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -39,7 +39,9 @@
 - 仅计划离线编译 Java、Python 和页面脚本；不运行测试、真实服务、数据库迁移、模型或网络。
 - 2026-11-13：使用 JDK25，离线 Maven `-o -s .ai/fd/FD-081/offline-maven-settings.xml -Dmaven.repo.local=D:/.m2/repository -DskipTests compile` 通过。Python 内置 compile 编译 native_run.py、openai_api_runtime.py、workflow_inputs.py；`node --check src/main/resources/static/ui/workflows.js` 通过。
 - 用户输入仅在模型调用边界投影到既有 SDK history；返回模型终态后 ACK。失败批次不自动重用；最终输出前 DRAIN 与用户输入写入共用原事务锁。不增加外部协议依赖。
-- 当前仅证明编译和静态调用链；未运行真实 SDK、模型、数据库迁移或浏览器。独立静态审查待进行。
+- 当前仅证明编译和静态调用链；未运行真实 SDK、模型、数据库迁移或浏览器。独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 705f9df 对 9d305a0，来源事件 FD-092-000002-review-requested，Reviewer codex-review-fd092-20261113。阻塞项：停止请求会拒绝原批次 ACK/UNKNOWN/DRAIN，Python 将确定拒绝误标资源结果未知并跳过停止 ACK。
+
+- 已修复停止竞态：ACK/UNKNOWN/DRAIN 保留精确原租约校验但允许停止后的事实记录；停止态不预留新输入，DRAIN 不启动额外调用；补充元数据失败只阻止重放，不将执行资源误标为未知。修复后 Java/Python 编译通过，待聚焦复核。
 
 ## Sources
 

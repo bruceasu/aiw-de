@@ -549,14 +549,16 @@ class _GuardedModel(Model):
 
     def get_retry_advice(self, request: Any) -> Any:
         workflow_inputs = getattr(self._request.attempt, "workflow_inputs", None)
-        if workflow_inputs is not None and workflow_inputs.pending: return None
+        if workflow_inputs is not None and (workflow_inputs.pending or workflow_inputs.failed): return None
         if getattr(self._request.attempt, "resource_uncertain", False) or self.inputs and self.inputs.pending: return None
         advice = getattr(self._model, "get_retry_advice", None)
         return advice(request) if advice else None
 
     def _record_model_error(self, error: Exception) -> None:
         workflow_inputs = getattr(self._request.attempt, "workflow_inputs", None)
-        if workflow_inputs is not None: workflow_inputs.unknown()
+        if workflow_inputs is not None:
+            workflow_inputs.failed = True
+            workflow_inputs.unknown()
         code = str(error) if str(error).isupper() and len(str(error)) < 80 else "MODEL_REQUEST_FAILED"
         try:
             self._request.attempt.evidence.record("model-terminal", status="error", code=code)

@@ -10,9 +10,11 @@ class WorkflowInputs:
         self.client, self.base, self.lease, self.attempt = client, base, lease, attempt
         self.pending = None
         self.insertions = []
+        self.failed = False
 
     def _post(self, action, batch):
-        self.attempt.check()
+        if action == "RESERVE":
+            self.attempt.check()
         try:
             result = self.client._post(self.base + "/execution-run/inputs", {
                 "lease": self.lease, "action": action, "batchId": batch})
@@ -20,10 +22,12 @@ class WorkflowInputs:
                 raise RuntimeError("WORKFLOW_INPUT_PROTOCOL_INVALID")
             return result
         except Exception:
-            self.attempt.resource_uncertain = True
+            self.failed = True
             raise
 
     def project(self, items):
+        if self.failed:
+            raise RuntimeError("WORKFLOW_INPUT_DELIVERY_UNCONFIRMED")
         if not isinstance(items, list):
             raise RuntimeError("WORKFLOW_INPUT_HISTORY_UNSUPPORTED")
         for insertion in self.insertions:
@@ -69,11 +73,13 @@ class WorkflowInputs:
             try:
                 self._post("UNKNOWN", self.pending)
             except Exception:
-                self.attempt.resource_uncertain = True
+                self.failed = True
 
     def continue_or_seal(self):
         if self.pending is not None:
             raise RuntimeError("WORKFLOW_INPUT_DELIVERY_UNCONFIRMED")
+        if self.attempt.cancelled.is_set():
+            return False
         result = self._post("DRAIN", str(uuid.uuid4()))
         if type(result.get("hasPending")) is not bool:
             raise RuntimeError("WORKFLOW_INPUT_DRAIN_INVALID")

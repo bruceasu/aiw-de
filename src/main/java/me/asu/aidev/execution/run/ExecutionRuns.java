@@ -229,7 +229,9 @@ public class ExecutionRuns {
         return Map.of("supported",true,"planId",basis.planId(),"sourceVersion",basis.sourceVersion(),"sourceDigest",basis.sourceDigest(),"checkpointRequired",checkpoints==1,"workflowInputs",live);
     }
     @Transactional public Object workflowInputs(String task,WorkflowInput input) {
-        boundary.lock();machine(task,input.lease(),true);
+        boundary.lock();
+        boolean receipt=input.action()!=null&&Set.of("ACK","UNKNOWN","DRAIN").contains(input.action());
+        machine(task,input.lease(),!receipt);
         var run=session(task,input.lease().attemptId());
         var caps=repo.decode((String)run.get("capabilities_json"),Map.class);
         if(guard.managed(task)||!"REQUEST".equals(caps.get("supplementBoundary")))throw new SecurityException("This runtime does not support workflow inputs");

@@ -367,14 +367,14 @@ public class WorkflowRuns {
     @Transactional public Object exchangeInputs(String taskId,String attempt,String action,String batch) {
         var task=tasks.find(new TaskId(taskId)).orElseThrow();
         var run=load(task.subjectId(),false);
-        if(!Set.of("RUNNING","PAUSED").contains(run.state)||run.taskId==null||!currentTask(run).id().value().equals(taskId))
+        if(!Set.of("RUNNING","PAUSED","STOPPING").contains(run.state)||run.taskId==null||!currentTask(run).id().value().equals(taskId))
             throw new IllegalStateException("Input task changed or execution stopped");
         batch=text(batch,80);action=text(action,16);
         var reserved=new ArrayList<Supplement>();
         for(var input:run.inputs)if(Objects.equals(input.attemptId,attempt)&&Objects.equals(input.taskId,taskId)&&Objects.equals(input.batchId,batch))reserved.add(input);
         switch(action) {
             case "RESERVE" -> {
-                if(run.state.equals("PAUSED"))return Map.of("protocol","aiw.workflow.inputs.v1","messages",List.of());
+                if(!run.state.equals("RUNNING"))return Map.of("protocol","aiw.workflow.inputs.v1","messages",List.of());
                 if(taskId.equals(run.sealedTaskId)&&attempt.equals(run.sealedAttemptId))throw new IllegalStateException("The input window is sealed");
                 if(reserved.isEmpty()) {
                     for(var input:run.inputs)if(input.state.equals("QUEUED")&&reserved.size()<8) {
