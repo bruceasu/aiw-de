@@ -129,7 +129,12 @@ public class WorkflowRuns {
             case "workflows" -> " AND definition_id IS NOT NULL";
             default -> throw new IllegalArgumentException("Unknown execution kind");
         };
-        return db.jdbc().queryForList("SELECT id,definition_id,version,state,updated_ms,json_extract(run_json,'$.spec.title') AS title FROM workflow_execution WHERE actor=?"+scope+" ORDER BY updated_ms DESC LIMIT 100",actor());
+        var rows=db.jdbc().queryForList("SELECT id,definition_id,version,state,updated_ms,run_json FROM workflow_execution WHERE actor=?"+scope+" ORDER BY updated_ms DESC LIMIT 100",actor());
+        for(var row:rows) {
+            var run=db.decode((String)row.remove("run_json"),Run.class);
+            row.put("title",run.spec.title());
+        }
+        return rows;
     }
     private Run replay(String request,String digest) {
         text(request,80);boundary.lock();

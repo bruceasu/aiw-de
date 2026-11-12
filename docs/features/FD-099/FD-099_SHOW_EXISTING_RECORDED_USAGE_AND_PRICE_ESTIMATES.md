@@ -1,7 +1,7 @@
 # FD-099: Show existing recorded usage and price estimates in unified execution details
 
-**Status:** In Progress
-**Revision:** 1
+**Status:** Complete
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -38,6 +38,8 @@ WorkflowRuns.view 在原 actor 归属校验后，使用当前 Owner、Plan ID �
 - 2026-11-13：离线 Maven `-DskipTests test-compile`（FD-081 settings、D:/.m2/repository）及 `node --check src/main/resources/static/ui/workflows.js` 通过，仅编译生产／测试源。
 - `git diff --check` 通过。静态追踪当前人类 Owner、原 ModelUsageView actor/owner/Plan 查询条件及调用记录页实际路由；摘要与原明细使用同一过滤，不新增价格查询或计算。
 - 既有用量汇总和他人数据隔离用例增加摘要断言，只编译、不执行。未运行测试、浏览器、迁移、服务或真实 API。
+
+- 2026-11-13：与 FD-098 合并独立静态审查，本 FD verification-passed，未发现自身阻塞。报告 [review-20261113.md](reviews/review-20261113.md)，合并基线 2abe39b→3fe1baf，来源事件 FD-099-000002-review-requested，Reviewer codex-review-fd099-20261113。共享页面仍依赖 FD-098 修复 PostgreSQL 列表阻塞，未宣称整批可交付；未运行测试、服务、数据库验证、浏览器、网络或模型。
 
 ## Sources
 
