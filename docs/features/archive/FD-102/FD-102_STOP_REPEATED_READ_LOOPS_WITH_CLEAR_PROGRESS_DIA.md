@@ -1,7 +1,7 @@
 # FD-102: Stop repeated read loops with clear progress diagnostics
 
-**Status:** In Progress
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -58,6 +58,10 @@
 
 - 2026-11-14：独立静态审查结果为 changes-requested；报告 [review-20261114.md](reviews/review-20261114.md)，覆盖 0b02fcb 对 77ddd67，来源事件 FD-102-000002-review-requested，Reviewer codex-review-fd102-20261114。P1：新增 progress-stalled 的小写 tool 与 stopped 状态不符合 Java metadata 白名单，会拒绝通道事件批次，需规范化/同步契约。未执行测试、编译、验证脚本、迁移、浏览器、服务、数据库、网络或模型。
 
+- 2026-11-14：独立静态复核通过（verification-passed），P1 通道字段不匹配已解决，无剩余阻塞。报告 [review-recheck-20261114.md](reviews/review-recheck-20261114.md)，覆盖修复提交 a423e94，来源事件 FD-102-000004-implementation-ready，Reviewer codex-review-fd102-20261114。合法 failed/toolName 映射保留原安全白名单，UI 按 code 区分；仅静态阅读新增组合/ACK用例，未执行测试、编译、脚本、服务、数据库、浏览器、网络或模型。
+
 ## Sources
 
 - docs/FUNCTION-INVENTORY.md 第 12、13、27 项；已确认的失败后由用户决定重做规则。
+
+**Completed:** 2026-11-13
