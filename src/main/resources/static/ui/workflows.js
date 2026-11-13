@@ -219,6 +219,12 @@
   }
   function renderActivity(data) {
     const activity=data.activity||{}, events=activity.events||[], connection=$('[data-wf-connection]');
+    const progress=events.filter(e=>e.event_type==='progress-stalled').at(-1);
+    let progressCode='';try{progressCode=JSON.parse(progress?.payload_json||'{}').code;}catch(_){/* Keep ordinary activity available. */}
+    const progressMessage=progressCode==='MODEL_NO_PROGRESS'
+      ?'Repeated reads produced no new result after a reminder. The Worker stopped further model calls.'
+      :progressCode==='REPEATED_READ_RESULT'?'Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.':'';
+    $('[data-wf-progress]').textContent=progressMessage?(window.aiwI18n?.t(progressMessage)||progressMessage):'';
     if(!activity.attemptId)connection.textContent=t('No Worker activity recorded yet');
     else connection.textContent=t(activity.phase)+' · '+t('Last contact')+': '+new Date(activity.lastContact).toLocaleString(window.aiwI18n?.locale||undefined)
       +(activity.stale&&activity.phase!=='SETTLED'?' · '+t('Connection delayed; execution state is not confirmed'):'');

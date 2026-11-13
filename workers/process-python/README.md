@@ -2,6 +2,17 @@
 
 环境变量的设置方式、默认值和运行时差异见 [Worker 环境变量](../ENVIRONMENT.md)。
 
+## 重复读取保护
+
+OpenAI 兼容 API 与 ChatGPT 连接共用的循环会记录只读工具的参数和结果指纹。
+连续三次重复已有结果时先提醒模型；收到提醒后仍无新结果，重复累计六次时，
+在下一次模型调用或历史摘要前停止，报告 `MODEL_NO_PROGRESS`。
+交替重复同样可识别，历史回放不会重复计数。
+新结果、用户补充内容或可能改变现场的工具会重置判断。
+此机制只判断重复读取，不判断所有回答质量，也不自动重试或撤销已有操作。
+执行详情区分提醒与停止；请先核对已有结果，再决定是否补充说明或重做。
+备用 app-server 路径保持原行为。
+
 ## FD-016 profile transition
 
 Bundled profiles accept only `EXTERNAL_WORK` and require nine fields including `resultKind`: `REPORT`, `VERDICT`, or `WORKSPACE`. Old task types and eight-field profiles are rejected. The launch role fixes the capability, exact `skillRef` and result kind; verifier never switches to integration-verifier. Release-readiness and orchestrator remain non-executable advisory profiles. See the [shared contract](../WORKER_RUNTIME_CONTRACT.md). This is local delivery; runtime checks, model calls and production no-store certification are separate evidence.

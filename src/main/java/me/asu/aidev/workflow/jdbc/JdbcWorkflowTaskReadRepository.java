@@ -44,6 +44,8 @@ public class JdbcWorkflowTaskReadRepository {
             return new Diagnostic(code,"The model runtime raised a classified exception. See the error code for its type; raw error text was omitted.",
                     "Check the Worker runtime and model configuration. Raw exception text is omitted to protect request data.",true);
         String summary=switch(code) {
+            case "MODEL_NO_PROGRESS" -> "Repeated reads produced no new result after a reminder. The Worker stopped further model calls.";
+            case "MODEL_TOTAL_CALL_LIMIT" -> "The execution reached its configured model-call or turn limit.";
             case "MODEL_API_TIMEOUT" -> "The model API request timed out.";
             case "MODEL_API_CONNECTION_ERROR" -> "The Worker could not connect to the model API.";
             case "MODEL_API_AUTHENTICATION_ERROR" -> "The model API rejected authentication.";
@@ -64,6 +66,7 @@ public class JdbcWorkflowTaskReadRepository {
             default -> "The Worker reported an execution failure. Use the recorded code and attempt identity for diagnosis.";
         };
         String action=switch(code) {
+            case "MODEL_NO_PROGRESS", "MODEL_TOTAL_CALL_LIMIT" -> "Review the recorded work and existing results. Then decide whether to clarify the task or retry. No automatic retry was requested by this guard.";
             case "MODEL_API_TIMEOUT" -> "Check the Worker network path and provider response time before retrying.";
             case "MODEL_API_CONNECTION_ERROR" -> "Check network access from the Worker to the configured model endpoint.";
             case "MODEL_API_AUTHENTICATION_ERROR" -> "Check the configured credential and confirm the account can use this model.";

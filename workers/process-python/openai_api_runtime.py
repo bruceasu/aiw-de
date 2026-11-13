@@ -275,6 +275,7 @@ class _GuardedModel(Model):
         self.started_at = time.monotonic()
 
     async def _prepare(self, instructions, input, tools, previous_response_id=None, conversation_id=None, tracing=None):
+        self._request.attempt.check()
         self._summary_tracing = tracing
         if previous_response_id or conversation_id: raise RuntimeError("SERVER_HISTORY_CONTEXT_TRANSFORMS_UNSUPPORTED")
         if self._request.broker is not None:
@@ -292,7 +293,8 @@ class _GuardedModel(Model):
             if workflow_inputs is not None:
                 input = workflow_inputs.project(input)
                 self.history.protected = workflow_inputs.protected_messages()
-        remind = self.progress.observe(input)
+        self._request.attempt.check()
+        remind = self.progress.observe(input, self.history.protected)
         input = await self.history.prepare(instructions, input,
             [_json_value(getattr(tool, "params_json_schema", {})) for tool in tools], self._summarize)
         if remind and isinstance(input, list):

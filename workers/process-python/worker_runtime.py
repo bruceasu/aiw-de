@@ -341,6 +341,7 @@ def failure_code(error, category=None):
             if type(status) is int and 100 <= status <= 599:
                 return f"MODEL_API_HTTP_{status}"
         model_codes = {
+            "MaxTurnsExceeded": "MODEL_TOTAL_CALL_LIMIT",
             "APITimeoutError": "MODEL_API_TIMEOUT", "TimeoutError": "MODEL_API_TIMEOUT",
             "TimeoutException": "MODEL_API_TIMEOUT", "ReadTimeout": "MODEL_API_TIMEOUT",
             "ConnectTimeout": "MODEL_API_TIMEOUT", "APIConnectionError": "MODEL_API_CONNECTION_ERROR",

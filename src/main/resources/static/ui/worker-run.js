@@ -66,7 +66,9 @@
     const cap=state.capabilities;host.append(node('p','工具执行：'+(cap.toolExecutor==='HOST'?'Worker':'后端')+' · 暂停粒度：'+(cap.pauseBoundary==='TURN'?'后端回合结束并确认停止活动后':'单个宿主动作结束后')+' · 上下文：Worker 提交投影','help'));
     const context=$('wr-context');context.replaceChildren();
     for(const event of events.filter(e=>e.event_type==='progress-stalled').slice(-3)) {
-      const notice=node('p',window.aiwI18n?.t('Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.') || 'Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.','help');
+      let code='';try{code=JSON.parse(event.payload_json).code;}catch(_){/* Older events may omit metadata. */}
+      const message=code==='MODEL_NO_PROGRESS'?'Repeated reads produced no new result after a reminder. The Worker stopped further model calls.':'Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.';
+      const notice=node('p',window.aiwI18n?.t(message)||message,'help');
       notice.append(document.createTextNode(' · '+new Date(event.occurred_ms).toLocaleTimeString(window.aiwI18n?.locale || 'en')));context.append(notice);
     }
     for(const event of events.filter(e=>e.event_type==='progress-review').slice(-3)) {
