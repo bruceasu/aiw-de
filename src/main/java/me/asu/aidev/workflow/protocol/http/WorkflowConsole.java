@@ -19,6 +19,14 @@ public class WorkflowConsole {
     public record Simple(String requestId,String instruction,String location,String memberId,WorkflowRuns.Assignment assignment,java.util.List<String> requiredSkills,java.util.List<WorkflowRuns.Material> sources) {}
     public record Control(long version,String action,String answer) {}
     public record Supplement(String requestId,String text,String mode) {}
+    public record Amendment(long version,String requestId,String node,String change) {}
+    public record AmendmentDecision(long version,String proposalId,boolean apply) {}
+    @PostMapping("/api/r1/workflows/executions/{id}/amendments") @ResponseBody public Object propose(@PathVariable String id,@RequestBody Amendment input,HttpSession session) {
+        security.requireOperator(session);return workflows.propose(id,input.version(),input.requestId(),input.node(),input.change());
+    }
+    @PostMapping("/api/r1/workflows/executions/{id}/amendments/decision") @ResponseBody public Object decide(@PathVariable String id,@RequestBody AmendmentDecision input,HttpSession session) {
+        security.requireOperator(session);return workflows.decideProposal(id,input.version(),input.proposalId(),input.apply());
+    }
     @GetMapping("/ui/workflows") public String page(Model model) {return page(model,"workflows");}
     @GetMapping("/ui/tasks") public String tasks(Model model) {return page(model,"tasks");}
     private String page(Model model,String mode) {

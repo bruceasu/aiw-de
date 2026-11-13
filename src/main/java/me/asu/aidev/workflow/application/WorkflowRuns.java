@@ -80,6 +80,8 @@ public class WorkflowRuns {
     }
     public record Definition(String id,long version,Spec spec) {}
     public record Event(long time,String node,String type,String content) {}
+    public record Proposal(String id,String node,String helperRun,String requestDigest,long baseVersion) {}
+    public record ProposalView(String id,String status,String helperRun,Node before,Node candidate,String error) {}
     public static class Supplement {
         public String id,text,mode,state,taskId,attemptId,batchId;
         public long receivedAt,appliedAt;
@@ -95,9 +97,10 @@ public class WorkflowRuns {
         public List<Supplement> inputs=new ArrayList<>();
         public String sealedTaskId,sealedAttemptId;
         public String memberWait;
+        public Proposal proposal;
         public Run() {}
     }
-    public record View(Run run,WorkTask task,String report,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity,ModelUsageView.Snapshot usage,Map<String,Object> member) {}
+    public record View(Run run,WorkTask task,String report,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity,ModelUsageView.Snapshot usage,Map<String,Object> member,ProposalView proposal) {}
     @org.springframework.beans.factory.annotation.Autowired private ModelUsageView modelUsage;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.application.TeamMembers team;
     @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<ExecutionRuns> executionRuns;
@@ -252,6 +255,78 @@ public class WorkflowRuns {
         if(run.context.length()+content.length()+2>64000) throw new IllegalStateException("Workflow context is full; preserve results and start a new execution");
         run.context+="\n\n"+content;
     }
+    private Node pendingNode(Run run,String key) {
+        if(!run.state.equals("PAUSED"))throw new IllegalStateException("Pause following steps before requesting a change");
+        var node=run.spec.nodes().stream().filter(n->n.key().equals(key)).findFirst().orElseThrow();
+        if(node.kind()==Kind.END||run.visits.getOrDefault(key,0)>0||run.events.stream().anyMatch(e->e.node().equals(key)&&Set.of("DISPATCHED","QUESTION").contains(e.type())))
+            throw new IllegalStateException("Only an undispatched node can change");
+        return node;
+    }
+    @Transactional public Run propose(String id,long version,String request,String key,String change) {
+        var run=load(id,true);request=text(request,64);key=text(key,32);change=text(change,2000);
+        String digest=AuthorityRepository.hash(db.encode(List.of(key,change)));
+        if(run.proposal!=null&&run.proposal.id().equals(request)) {
+            if(!run.proposal.requestDigest().equals(digest))throw new IllegalStateException("Request identifier has different content");
+            return run;
+        }
+        if(run.version!=version)throw new IllegalStateException("Execution changed; reload");
+        if(run.proposal!=null)throw new IllegalStateException("Discard the current suggestion before requesting another");
+        var node=pendingNode(run,key);
+        String basis=db.encode(Map.of("goal",run.spec.goal(),"node",node,"destinations",run.spec.nodes().stream().map(n->Map.of("key",n.key(),"title",n.title())).toList()));
+        String instruction="Suggest a change to ONE existing workflow node using the supplied basis. Do not execute the proposed work. "
+                +"Read the basis, keep the original goal and node key, and use only its existing destination keys. Return one JSON object with exactly "
+                +"key, title, instruction, next, branches. Preserve the existing node kind: TASK uses next and empty branches; DECISION uses next=null and at least two branches; "
+                +"ASK uses either next and empty branches or next=null and options. Do not add nodes, tools, members, Skills, permissions or sources. "
+                +"Match the original node language. Do not claim the suggestion is approved. Requested change:\n"+change;
+        var helper=simple("amend-"+UUID.randomUUID(),instruction,null,null,Assignment.GENERAL,List.of(),List.of(new Material("knowledge","Workflow change basis",basis,null)));
+        run.proposal=new Proposal(request,key,helper.id,digest,run.version+1);
+        event(run,"AMENDMENT_REQUESTED",helper.id);persist(run);return run;
+    }
+    private Spec amended(Run run,Node node) {
+        return new Spec(run.spec.title(),run.spec.goal(),run.spec.entry(),run.spec.nodes().stream().map(n->n.key().equals(node.key())?node:n).toList(),run.spec.sources());
+    }
+    private ProposalView proposalView(Run run) {
+        var p=run.proposal;if(p==null)return null;
+        var before=run.spec.nodes().stream().filter(n->n.key().equals(p.node())).findFirst().orElseThrow();
+        var helper=db.jdbc().query("SELECT run_json FROM workflow_execution WHERE id=? AND actor=?",(rs,i)->db.decode(rs.getString(1),Run.class),p.helperRun(),run.actor).stream().findFirst().orElseThrow();
+        if(run.state.equals("STOPPING")||Set.of("STOPPING","STOPPED").contains(helper.state))return new ProposalView(p.id(),helper.state.equals("STOPPED")?"STOPPED":"STOPPING",p.helperRun(),before,null,null);
+        if(p.baseVersion()!=run.version)return new ProposalView(p.id(),"STALE",p.helperRun(),before,null,"Execution changed; request a new suggestion");
+        if(!helper.state.equals("COMPLETED"))return new ProposalView(p.id(),helper.state,p.helperRun(),before,null,null);
+        try {
+            var task=plans.getObject().effectiveSteps(helper.id).stream().max(Comparator.comparing(WorkTask::createdAt).thenComparing(t->t.id().value())).orElseThrow();
+            String summary=attempts.findCompletionReport(task.id()).orElseThrow().summary().strip();
+            if(summary.startsWith("```json\n")&&summary.endsWith("```"))summary=summary.substring(8,summary.length()-3).strip();
+            var raw=db.decode(summary,Map.class);
+            if(raw==null||!raw.keySet().equals(Set.of("key","title","instruction","next","branches"))||!Objects.equals(raw.get("key"),before.key())
+                    ||!(raw.get("title") instanceof String)||!(raw.get("instruction") instanceof String)
+                    ||raw.get("next")!=null&&!(raw.get("next") instanceof String)||!(raw.get("branches") instanceof Map<?,?> branches))throw new IllegalArgumentException();
+            var exits=new LinkedHashMap<String,String>();
+            for(var branch:branches.entrySet()){if(!(branch.getKey() instanceof String choice)||!(branch.getValue() instanceof String next))throw new IllegalArgumentException();exits.put(choice,next);}
+            var candidate=new Node(before.key(),(String)raw.get("title"),before.kind(),(String)raw.get("instruction"),(String)raw.get("next"),exits,before.memberId(),before.assignment(),before.requiredSkills());
+            amended(run,candidate);
+            return new ProposalView(p.id(),"READY",p.helperRun(),before,candidate,null);
+        } catch(IllegalArgumentException invalid) {
+            return new ProposalView(p.id(),"INVALID",p.helperRun(),before,null,"The suggestion is invalid; nothing was changed");
+        }
+    }
+    private boolean discardProposal(Run run) {
+        if(run.proposal==null)return true;
+        var helper=load(run.proposal.helperRun(),false);
+        if(!Set.of("COMPLETED","STOPPED","STOPPING").contains(helper.state))helper=control(helper.id,helper.version,"stop",null);
+        if(finishStopped(helper,currentTask(helper)))persist(helper);
+        if(!Set.of("COMPLETED","STOPPED").contains(helper.state))return false;
+        event(run,"AMENDMENT_DISCARDED",run.proposal.helperRun());run.proposal=null;
+        return true;
+    }
+    @Transactional public Run decideProposal(String id,long version,String proposal,boolean apply) {
+        var run=load(id,true);
+        if(run.version!=version||run.proposal==null||!run.proposal.id().equals(proposal))throw new IllegalStateException("Execution changed; reload");
+        if(!apply){discardProposal(run);persist(run);return run;}
+        var view=proposalView(run);pendingNode(run,run.proposal.node());
+        if(!view.status().equals("READY"))throw new IllegalStateException("A current valid suggestion is required");
+        run.spec=amended(run,view.candidate());event(run,"AMENDMENT_APPLIED",db.encode(List.of(view.before(),view.candidate())));
+        run.proposal=null;persist(run);return run;
+    }
     private void advance(Run run) {
         if(!run.state.equals("RUNNING")) return;
         var node=node(run);
@@ -351,17 +426,20 @@ public class WorkflowRuns {
         var run=load(task.subjectId(),false);
         if(!run.state.equals("STOPPING") || run.taskId==null || !currentTask(run).id().equals(taskId))return;
         if(!tasks.cancelInactive(taskId,TaskState.READY,Instant.now()))throw new IllegalStateException("Stopped task changed before cancellation");
-        run.state="STOPPED";event(run,"STOPPED","Worker confirmed stop; task will not be queued again");
-        endPlan(run,WorkflowPlan.State.STOPPED);persist(run);
+        finishStopped(run,currentTask(run));persist(run);
+    }
+    private boolean finishStopped(Run run,WorkTask task) {
+        if(!run.state.equals("STOPPING")||task!=null&&(tasks.findLease(task.id()).isPresent()||!Set.of(TaskState.CANCELLED,TaskState.COMPLETED,TaskState.FAILED).contains(task.state())))return false;
+        if(!discardProposal(run))return false;
+        run.state="STOPPED";event(run,"STOPPED","No active Worker execution remains");endPlan(run,WorkflowPlan.State.STOPPED);return true;
     }
     @Transactional public View view(String id) {
         var run=load(id,true);var task=currentTask(run);
+        if(run.proposal!=null&&proposalView(run).status().equals("STOPPED")&&discardProposal(run))persist(run);
         if(run.state.equals("RUNNING") && task!=null && Set.of(TaskState.FAILED,TaskState.CANCELLED).contains(task.state())) {
             run.state="FAILED";event(run,"FAILED","Worker task "+task.id().value()+" is "+task.state()+"; inspect its execution details");persist(run);
         }
-        if(run.state.equals("STOPPING") && (task==null || tasks.findLease(task.id()).isEmpty() && Set.of(TaskState.CANCELLED,TaskState.COMPLETED,TaskState.FAILED).contains(task.state()))) {
-            run.state="STOPPED";event(run,"STOPPED","Worker execution has ended");endPlan(run,WorkflowPlan.State.STOPPED);persist(run);
-        }
+        if(finishStopped(run,task))persist(run);
         String report=task==null?null:attempts.findCompletionReport(task.id()).map(CompletionReport::summary).orElse(null);
         var activityTask=task==null?plans.getObject().effectiveSteps(run.id).stream()
                 .max(Comparator.comparing(WorkTask::createdAt).thenComparing(t->t.id().value())).orElse(null):task;
@@ -374,7 +452,7 @@ public class WorkflowRuns {
             }
         }
         return new View(run,task,report,provisioner.getObject().pending(run.id),activity,
-                modelUsage.summary(owners.currentOwner(),new ModelUsageView.Query(run.id,null)),team.identity(run.memberWait!=null||activityTask==null?null:activityTask.id().value()));
+                modelUsage.summary(owners.currentOwner(),new ModelUsageView.Query(run.id,null)),team.identity(run.memberWait!=null||activityTask==null?null:activityTask.id().value()),proposalView(run));
     }
     @Transactional public Run control(String id,long version,String action,String answer) {
         var run=load(id,true);
@@ -393,6 +471,7 @@ public class WorkflowRuns {
             }
             case "resume" -> {
                 if(!run.state.equals("PAUSED"))throw new IllegalStateException("Workflow is not paused");
+                if(!discardProposal(run))break;
                 run.state="RUNNING";run.memberWait=null;event(run,"RESUMED","Workflow resumed");
                 var task=currentTask(run);
                 if(task==null)advance(run);
@@ -406,6 +485,7 @@ public class WorkflowRuns {
             }
             case "stop" -> {
                 if(Set.of("COMPLETED","STOPPED","STOPPING").contains(run.state))throw new IllegalStateException("Workflow has already ended or is stopping");
+                discardProposal(run);
                 var task=currentTask(run);run.state="STOPPING";event(run,"STOP_REQUESTED","Waiting for actual Worker stop confirmation");
                 if(task!=null && !Set.of(TaskState.COMPLETED,TaskState.CANCELLED,TaskState.FAILED,TaskState.CONTINUED).contains(task.state())) {
                     tasks.lock(task.id());
@@ -414,7 +494,7 @@ public class WorkflowRuns {
                         if(!attempts.requestStop(lease.get().token(),lease.get().workerId(),Instant.now()))throw new IllegalStateException("Stop request changed; reload");
                     } else if(!tasks.cancelInactive(task.id(),task.state(),Instant.now()))throw new IllegalStateException("Task changed; reload before stopping");
                 }
-                if(task==null) {run.state="STOPPED";endPlan(run,WorkflowPlan.State.STOPPED);}
+                finishStopped(run,currentTask(run));
             }
             case "retry" -> {
                 if(!run.state.equals("FAILED"))throw new IllegalStateException("Only a failed step can retry");

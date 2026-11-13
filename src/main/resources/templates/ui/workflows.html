@@ -59,6 +59,16 @@
         </section>
         <div class="wf-actions"><button class="btn ghost" data-wf-control="pause">Pause following steps</button><button class="btn primary" data-wf-control="resume">Resume workflow</button><button class="btn ghost" data-wf-control="retry">Retry this step</button><button class="btn ghost" data-wf-control="stop">Stop execution</button></div>
         <p class="help" data-wf-label="Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.">Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.</p>
+        <section data-wf-amendment>
+          <h3 data-wf-label="Adjust a future step">Adjust a future step</h3>
+          <p class="help" data-wf-label="Pause following steps first. A read-only Worker suggests a change to one undispatched node. Review it before applying. Resuming or stopping discards the suggestion.">Pause following steps first. A read-only Worker suggests a change to one undispatched node. Review it before applying. Resuming or stopping discards the suggestion.</p>
+          <form data-wf-amendment-form hidden>
+            <label class="field"><span data-wf-label="Future step">Future step</span><select name="node" data-wf-amendment-node data-i18n-skip></select></label>
+            <label class="field"><span data-wf-label="Requested change">Requested change</span><textarea name="change" required maxlength="2000" rows="3"></textarea></label>
+            <button class="btn primary" data-wf-label="Generate suggestion">Generate suggestion</button>
+          </form>
+          <div data-wf-amendment-result></div>
+        </section>
         <section data-wf-supplement>
           <h3 data-wf-label="Add context">Add context</h3>
           <p class="help" data-wf-label="New content is used at the next model call. It cannot change an in-flight request or grant new permissions.">New content is used at the next model call. It cannot change an in-flight request or grant new permissions.</p>

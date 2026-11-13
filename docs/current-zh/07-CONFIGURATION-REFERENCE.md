@@ -104,3 +104,5 @@ Goal Workshop（`/ui/goals`）同样要求真实登录，使用当前账号的ac
 `/ui/authority`、`/ui/configurations` 和 `/ui/questions` 始终要求真实登录会话，不接受 `local-console`。未登录时进入登录页，登录成功后返回原目标页面。在根目录 `.env` 中配置 `AIW_WEB_CONSOLE_USERNAME` 和非空的 `AIW_WEB_CONSOLE_PASSWORD`，再通过启动脚本重启；其他启动方式需将这些值设置为环境变量。无需设置登录启用开关。相关 API 继续检查真实登录、CSRF、当前角色及所有者权限，首次代理启用后的持久认证要求仍然有效。
 
 旧独立图页面 `/ui/workflow-graphs` 和旧软件开发工作台 `/ui/software-development` 已退役，不提供兼容页面或跳转。统一使用 `/ui/workflows` 查看、编辑和执行工作流，简单任务使用 `/ui/tasks`。旧 authority API 与历史记录的进一步清理单独实施；页面退役不代表已删除历史结果。
+
+在工作流执行详情中，可先暂停后续步骤，再选择尚未派发的节点，填写调整要求并生成建议。建议由一项独立可见的只读任务生成，需要支持任务资料读取的 Python SDK Worker；用量记录在该任务。审阅原说明、建议说明和流程图预览后，点击确认才修改本次执行。目标、资料、成员、Skills、权限和已派发节点不改；执行版本变化后旧建议失效。继续或停止会先请求停止尚在生成的建议，必须等待实际结束证据，不能把请求当作已完成。

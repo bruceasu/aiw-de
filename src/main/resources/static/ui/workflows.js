@@ -2,6 +2,21 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'If suggestion generation is still running, wait for its stop acknowledgement before resuming.':['建议仍在生成时，先等待其停止确认，再继续流程。','提案作成中の場合は、その停止確認後にフローを再開してください。'],
+    'Adjust a future step':['调整后续步骤','後続ステップを調整'],
+    'Pause following steps first. A read-only Worker suggests a change to one undispatched node. Review it before applying. Resuming or stopping discards the suggestion.':['先暂停后续步骤，再让只读 Worker 为一个尚未派发节点生成建议，审阅确认后才应用。继续或停止流程会放弃建议。','先に後続ステップを一時停止してください。未割り当てノード1件の変更案を読み取り専用 Worker が作成します。確認後に適用してください。再開・停止すると提案を破棄します。'],
+    'Future step':['尚未派发的步骤','未割り当てのステップ'],'Requested change':['希望如何调整','変更したい内容'],'Generate suggestion':['生成调整建议','変更案を作成'],
+    'Suggestion generation task (usage is recorded separately)':['查看建议生成任务（用量单独记录）','提案作成タスクを表示（使用量は別に記録）'],
+    'Current instruction':['原说明','現在の指示'],'Suggested instruction':['建议说明','変更案の指示'],
+    'Preview the changed workflow':['预览调整后的流程','変更後のフローをプレビュー'],'Confirm and apply':['确认应用','確認して適用'],'Discard suggestion':['放弃建议','提案を破棄'],
+    'Pause following steps before requesting a change':['请先暂停后续步骤，再请求调整。','変更依頼の前に後続ステップを一時停止してください。'],
+    'Only an undispatched node can change':['只能调整尚未派发或提问的节点。','未割り当て・未質問のノードのみ変更できます。'],
+    'Discard the current suggestion before requesting another':['请先放弃当前建议，再生成新建议。','新しい提案の前に現在の提案を破棄してください。'],
+    'Execution changed; request a new suggestion':['执行状态已变化，请放弃旧建议后重新生成。','実行が変わりました。提案を破棄して再作成してください。'],
+    'The suggestion is invalid; nothing was changed':['建议格式或分支无效，未修改流程。请查看生成任务的结果。','提案の形式または分岐が無効です。フローは変更されていません。作成タスクの結果を確認してください。'],
+    'A current valid suggestion is required':['需要当前版本的有效建议。','現在のバージョンに対応する有効な提案が必要です。'],
+    'STALE':['建议已过期','期限切れの提案'],'INVALID':['建议无效','無効な提案'],
+    'AMENDMENT_REQUESTED':['已请求调整建议','変更案を依頼済み'],'AMENDMENT_APPLIED':['已确认并应用调整','変更を確認・適用済み'],'AMENDMENT_DISCARDED':['已放弃调整建议','提案を破棄済み'],
     'Task sources':['任务资料','タスク資料'],
     'Source type':['资料类型','資料の種類'],
     'Choose UTF-8 text files':['请选择 UTF-8 文本文件','UTF-8 テキストファイルを選択してください'],
@@ -94,7 +109,7 @@
   const status = message => { $('[data-wf-status]').textContent = message; };
   let definitions=[], teamSkills=[], teamMembers=[], taskSources=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='';
   const newRequest = () => crypto.randomUUID();
-  let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest();
+  let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest(), amendmentRequest=newRequest();
   const route=new URLSearchParams(location.search);
   const pageMode=document.body.dataset.wfMode==='tasks'?'tasks':'workflows';
   let preparingGoal=route.get('goalVersion'), importAttempted=false;
@@ -291,10 +306,37 @@
     if(!usage.currencies?.length)host.append(element('p',t('Recorded estimates')+': '+t('Not recorded')));
     host.append(element('p',t('Missing estimates')+': '+number(totals.without_estimate)));
   }
+  function renderAmendment(data){
+    const run=data.run,proposal=data.proposal,host=$('[data-wf-amendment]'),result=$('[data-wf-amendment-result]'),form=$('[data-wf-amendment-form]'),select=$('[data-wf-amendment-node]');
+    host.hidden=['COMPLETED','STOPPED'].includes(run.state)&&!proposal;
+    const stamp=JSON.stringify([run.id,run.version,proposal]);if(host.dataset.stamp===stamp)return;
+    const changedRun=host.dataset.run!==run.id;host.dataset.run=run.id;host.dataset.stamp=stamp;
+    if(changedRun){form.reset();amendmentRequest=newRequest();}
+    const previous=select.value;select.replaceChildren();
+    run.spec.nodes.filter(n=>n.kind!=='END'&&!(run.visits?.[n.key])&&!run.events.some(e=>e.node===n.key&&['DISPATCHED','QUESTION'].includes(e.type))).forEach(n=>select.add(new Option(n.title,n.key)));
+    if([...select.options].some(o=>o.value===previous))select.value=previous;
+    form.hidden=run.state!=='PAUSED'||!!proposal||!select.options.length;result.replaceChildren();
+    if(!proposal)return;
+    result.append(element('p',t(proposal.status),'help'));
+    if(proposal.status==='STOPPING')result.append(element('p',t('If suggestion generation is still running, wait for its stop acknowledgement before resuming.'),'help'));
+    const link=element('a',t('Suggestion generation task (usage is recorded separately)'));link.href='/ui/tasks?execution='+encodeURIComponent(proposal.helperRun);result.append(link);
+    if(proposal.error)result.append(element('p',t(proposal.error),'help'));
+    if(proposal.candidate){
+      result.append(element('h4',t('Current instruction')),element('pre',proposal.before.instruction),element('h4',t('Suggested instruction')),element('pre',proposal.candidate.instruction));
+      const preview=element('details'),canvas=element('div',undefined,'wf-graph');preview.append(element('summary',t('Preview the changed workflow')),canvas);result.append(preview);
+      graph(canvas,{...run.spec,nodes:run.spec.nodes.map(n=>n.key===proposal.candidate.key?proposal.candidate:n)});
+      if(run.state==='PAUSED'&&proposal.status==='READY')result.append(button('Confirm and apply',()=>act(()=>decideAmendment(true))));
+    }
+    result.append(button('Discard suggestion',()=>act(()=>decideAmendment(false))));
+  }
+  async function decideAmendment(apply){
+    await api('/executions/'+encodeURIComponent(selectedRun)+'/amendments/decision',{version:currentView.run.version,proposalId:currentView.proposal.id,apply});
+    amendmentRequest=newRequest();signature='';await refreshRun();await library();
+  }
   async function refreshRun() {
     if(!selectedRun)return;
     const id=selectedRun,data=await api('/executions/'+encodeURIComponent(id));if(id!==selectedRun)return;
-    currentView=data;renderActivity(data);renderUsage(data);
+    currentView=data;renderActivity(data);renderUsage(data);renderAmendment(data);
     const member=data.member||{};$('[data-wf-assigned-member]').textContent=member.id?t('Assigned member snapshot')+': '+member.name+' · v'+member.revision+(member.state==='DRAINING'?' · '+t(['READY','BLOCKED'].includes(data.task?.state)?'Resume the selected member to claim this work.':'Current work continues.'):''):'';
     const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.report,data.preparation]);if(stamp===signature)return;signature=stamp;
     $('[data-wf-run-title]').textContent=run.spec.title;
@@ -368,7 +410,12 @@
     await api('/executions/'+encodeURIComponent(selectedRun)+'/inputs',{requestId:inputRequest,text:form.get('text'),mode:form.get('mode')});
     inputRequest=newRequest();e.target.reset();signature='';await refreshRun();status(t('Input received'));
   });};
-  window.addEventListener('aiw:locale-changed',()=>{translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(editing)renderSources($('[data-wf-definition-sources]'),editing.spec.sources||[],values=>editing.spec.sources=values);signature='';$('[data-wf-usage]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
+  $('[data-wf-amendment-form]').onsubmit=e=>{e.preventDefault();act(async()=>{
+    const form=new FormData(e.target);
+    await api('/executions/'+encodeURIComponent(selectedRun)+'/amendments',{version:currentView.run.version,requestId:amendmentRequest,node:form.get('node'),change:form.get('change')});
+    signature='';await refreshRun();await library();
+  });};
+  window.addEventListener('aiw:locale-changed',()=>{translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(editing)renderSources($('[data-wf-definition-sources]'),editing.spec.sources||[],values=>editing.spec.sources=values);signature='';$('[data-wf-usage]').dataset.stamp='';$('[data-wf-amendment]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
   translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(pageMode==='tasks')panel('task');else showEditor();act(async()=>{
     await library();
     if(route.get('execution'))await openRun(route.get('execution'));
