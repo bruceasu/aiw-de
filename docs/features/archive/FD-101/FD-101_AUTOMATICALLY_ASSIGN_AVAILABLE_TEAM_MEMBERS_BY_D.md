@@ -1,7 +1,7 @@
 # FD-101: Automatically assign available team members by declared Skills
 
-**Status:** In Progress
-**Revision:** 1
+**Status:** Complete
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -48,6 +48,10 @@ FD-100 提供稳定成员与手动分配，但新任务默认匿名执行，团�
 - 原 `WorkflowWorkerProvisioningTest` 的 SQL mock 与断言更新，以区分独立于进程自动启动设置的成员匹配扫描；仅编译，不声称测试通过。
 - V47 索引迁移、实际数据库锁竞争、浏览器操作和自动分配运行效果尚未执行验证。没有新增权限或依赖。
 
+- 2026-11-13：独立静态审查通过（verification-passed），未发现阻塞项。报告 [review-20261113.md](reviews/review-20261113.md)，基线 ac83db0、实现 3dbdae4、最终审查头 6d4668a，来源事件 FD-101-000002-review-requested，Reviewer codex-review-fd101-20261113。静态核对自动分配、无 human 上下文的周期恢复、冻结/锁序、暂停停止及旧定义 UI；未运行测试、编译、验证脚本、迁移、浏览器、服务、数据库、网络或模型。
+
 ## Sources
 
 - 用户确认的稳定成员与按需复用进程；docs/FUNCTION-INVENTORY.md 第 11 项；FD-100。
+
+**Completed:** 2026-11-13
