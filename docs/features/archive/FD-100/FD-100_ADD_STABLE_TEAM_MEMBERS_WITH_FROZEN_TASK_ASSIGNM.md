@@ -1,7 +1,7 @@
 # FD-100: Add stable team members with frozen task assignments and controlled lifecycle
 
-**Status:** In Progress
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -44,8 +44,12 @@ V46 只增加三张表，不迁移或重写旧任务；未选成员的任务继�
 
 - 2026-11-13：最终独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 b49a737 对 2de6bbe，来源事件 FD-100-000002-review-requested，Reviewer codex-review-fd100-20261113。P1：简单任务 FormData 省略已选但 disabled 的停接单成员 option，使提交静默变成未指定成员；应显式提交保留 ID 并由 forRun 拒绝非 ACTIVE。未运行测试、迁移、浏览器、服务、数据库、网络或模型验证。
 
+- 2026-11-13：独立静态复核通过（verification-passed），成员 ID 保留 finding 已解决，无剩余阻塞。报告 [review-20261113-recheck.md](reviews/review-20261113-recheck.md)，覆盖修复提交 321bf3e，来源事件 FD-100-000004-implementation-ready，Reviewer codex-review-fd100-20261113。仅聚焦显式选人提交及不自动改派契约；未运行测试、迁移、浏览器、服务、数据库、网络或模型。
+
 ## Sources
 
 - P1 修复：简单任务从成员 select.value 显式读取保留的成员 ID，不使用 FormData 对 disabled 选项的省略结果；成员停接单或已解散时仍交由 forRun 拒绝，不变为匿名执行。对应拒绝说明覆盖中英日。修复后仅 node --check 编译，不执行浏览器或测试。
 
 - docs/FUNCTION-INVENTORY.md 第 06、09、10、11 项；用户明确“采用稳定成员、进程按需复用”。
+
+**Completed:** 2026-11-13
