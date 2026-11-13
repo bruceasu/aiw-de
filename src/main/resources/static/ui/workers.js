@@ -3,6 +3,7 @@
   const $=s=>document.querySelector(s),dialog=$('[data-workers-detail]');
   const words={
     'Workers':['Worker 团队','Worker チーム'],'Agent factory':['Agent 工厂','Agent ファクトリー'],'Refresh':['刷新','更新'],
+    'Execution processes':['执行进程','実行プロセス'],'Team member':['团队成员','チームメンバー'],
     'model-request':['调用模型','モデルを呼び出し'],'model-terminal':['模型调用结束','モデル呼び出し終了'],
     'tool-proposed':['准备使用工具','ツール実行準備'],'tool-start':['开始使用工具','ツール実行開始'],'tool-end':['工具操作结束','ツール操作終了'],
     'read_file':['读取文件','ファイル読み込み'],'apply_patch':['修改文件','ファイル編集'],'shell':['执行命令','コマンド実行'],
@@ -63,12 +64,12 @@
     $('[data-workers-scope]').textContent=t('Loaded Workers')+': '+snapshot.members.length+' / '+snapshot.totalWorkers+' · '+t('Linked work')+': '+snapshot.members.reduce((n,m)=>n+m.work.length,0)+' / '+snapshot.totalVisibleWork+' · '+t('Overview and filters cover loaded Workers only.')+' '+t(document.body.dataset.canOperate==='true'?'Other accounts work is hidden.':'Work details require an operator account.');
     const term=$('[data-workers-search]').value.toLocaleLowerCase(),filter=$('[data-workers-status]').value,source=$('[data-workers-source]').value;
     const priority={PENDING:0,DISCONNECTED:1,RUNNING:2,IDLE:3,OFFLINE:4};
-    const members=snapshot.members.filter(m=>(!filter||category(m)===filter)&&(!source||m.source===source)&&(!term||[m.mark,m.worker.workerId,m.worker.runtimeType,...m.work.flatMap(w=>[w.title,w.task_id,w.plan_id,w.plan_title,w.skill_ref,w.ai_model])].filter(Boolean).join(' ').toLocaleLowerCase().includes(term)))
+    const members=snapshot.members.filter(m=>(!filter||category(m)===filter)&&(!source||m.source===source)&&(!term||[m.mark,m.worker.workerId,m.worker.runtimeType,...m.work.flatMap(w=>[w.title,w.task_id,w.plan_id,w.plan_title,w.skill_ref,w.ai_model,w.member_name])].filter(Boolean).join(' ').toLocaleLowerCase().includes(term)))
       .sort((a,b)=>priority[category(a)]-priority[category(b)]||a.worker.workerId.localeCompare(b.worker.workerId));
     const list=$('[data-workers-list]');list.replaceChildren();
     for(const m of members){
       const tr=text('tr'),name=text('td'),person=text('div',null,'workers-person');person.append(text('span',m.mark,'workers-mark'),text('strong','Worker '+m.mark));name.append(person,text('small',t(label[m.source]||'Unknown')));
-      const work=text('td');for(const w of m.work.slice(0,3)){work.append(text('strong',w.title),text('small',(w.plan_title||w.plan_id||t('Not recorded'))+' · '+(w.skill_ref||t('Not recorded'))),text('small',w.ai_model||t('Not recorded')));}
+      const work=text('td');for(const w of m.work.slice(0,3)){work.append(text('strong',w.title),text('small',(w.plan_title||w.plan_id||t('Not recorded'))+' · '+(w.skill_ref||t('Not recorded'))),text('small',w.ai_model||t('Not recorded')));if(w.member_name)work.append(text('small',t('Team member')+': '+w.member_name));}
       if(!m.work.length)work.append(text('span',t('No visible current work')));
       if(m.visibleWorkCount>3||m.visibleWorkCount>m.work.length)work.append(text('small',t('Active work shown')+': '+m.work.length+' / '+m.visibleWorkCount));
       const events=m.work.flatMap(w=>w.events||[]).sort((a,b)=>b.time-a.time),recent=text('td');recent.append(text('span',events.length?t(events[0].toolName||events[0].runtimeEvent||events[0].type):t('Last heartbeat')),text('small',date(events[0]?.time||m.worker.lastHeartbeatAt)));
@@ -98,7 +99,7 @@
     if(selectedAttempt&&!current)notice.textContent=t('The selected execution changed. No command was sent.');
     const opened=new Set([...host.querySelectorAll('details[open]')].map(n=>n.dataset.section));host.replaceChildren();
     if(current){
-      host.append(text('h3',t('Current work')));facts(host,[['Task',current.title],['Plan',current.plan_title||current.plan_id],['Status',t(current.phase||current.task_state)]]);
+      host.append(text('h3',t('Current work')));facts(host,[['Team member',current.member_name],['Task',current.title],['Plan',current.plan_title||current.plan_id],['Status',t(current.phase||current.task_state)]]);
       const instruction=text('details');instruction.dataset.section='instruction';instruction.open=opened.has('instruction');instruction.append(text('summary',t('Task')),text('pre',current.instruction));if(current.instruction_truncated)instruction.append(text('p',t('Instruction truncated for this view.'),'help'));host.append(instruction);
       const links=text('div',null,'workers-links'),params=new URLSearchParams({view:'workbench',source:current.workbench_source,plan:current.plan_id,task:current.task_id,attempt:current.attempt_id});
       link(links,'Open full workbench','/ui/configurations?'+params);

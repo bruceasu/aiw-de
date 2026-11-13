@@ -19,8 +19,11 @@ class WorkflowWorkerProvisioningTest {
     JdbcRecommendationRepository workers=mock(JdbcRecommendationRepository.class);
     AgentFactorySettings settings=mock(AgentFactorySettings.class);
     ManagedWorkerProvisioner provisioner=mock(ManagedWorkerProvisioner.class);
+    me.asu.aidev.worker.application.TeamMembers team=mock(me.asu.aidev.worker.application.TeamMembers.class);
     WorkflowWorkerProvisioning service=new WorkflowWorkerProvisioning(db,tasks,workers,settings,provisioner);
     @BeforeEach void setup() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"team",team);
+        when(team.canClaim(any())).thenReturn(true);
         when(settings.current()).thenReturn(new AgentFactorySettings.Settings("codex-app-server","model","medium",true,"python","", ""));
         when(db.queryForList(anyString(),eq(String.class),anyString())).thenReturn(List.of("task"));
         when(provisioner.requestNative(anyString(),anyString(),anyString())).thenReturn(new ManagedWorkerProvisioner.Result(true,"Starting"));

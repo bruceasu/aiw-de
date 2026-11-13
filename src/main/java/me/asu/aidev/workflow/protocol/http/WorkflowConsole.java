@@ -16,7 +16,7 @@ public class WorkflowConsole {
     public WorkflowConsole(WorkflowRuns workflows,WebConsoleSecurityService security) {this.workflows=workflows;this.security=security;}
     public record Save(String id,long version,WorkflowRuns.Spec spec) {}
     public record Start(String requestId,String definitionId,long version,String input,String location) {}
-    public record Simple(String requestId,String instruction,String location) {}
+    public record Simple(String requestId,String instruction,String location,String memberId) {}
     public record Control(long version,String action,String answer) {}
     public record Supplement(String requestId,String text,String mode) {}
     @GetMapping("/ui/workflows") public String page(Model model) {return page(model,"workflows");}
@@ -40,7 +40,7 @@ public class WorkflowConsole {
         security.requireOperator(session);return workflows.start(input.requestId(),input.definitionId(),input.version(),input.input(),input.location());
     }
     @PostMapping("/api/r1/workflows/tasks") @ResponseBody public Object simple(@RequestBody Simple input,HttpSession session) {
-        security.requireOperator(session);return workflows.simple(input.requestId(),input.instruction(),input.location());
+        security.requireOperator(session);return workflows.simple(input.requestId(),input.instruction(),input.location(),input.memberId());
     }
     @GetMapping("/api/r1/workflows/executions/{id}") @ResponseBody public Object view(@PathVariable String id,HttpSession session) {
         security.requireOperator(session);return workflows.view(id);

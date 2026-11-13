@@ -33,6 +33,9 @@ public class WorkerWorkView {
         LEFT JOIN flexible_workflow_plan f ON t.subject_type='flexible-plan' AND f.id=t.subject_id
         LEFT JOIN workflow_execution w ON w.id=f.id
         LEFT JOIN execution_run_session s ON s.attempt_id=a.id
+        LEFT JOIN worker_team_task mt ON mt.task_id=t.id
+        LEFT JOIN worker_team_assignment ma ON ma.run_id=mt.run_id AND ma.node_key=mt.node_key
+        LEFT JOIN worker_team_member tm ON tm.id=ma.member_id
         WHERE a.worker_id IN (%s) AND (o.actor=? OR f.created_by=?)
           AND ((t.current_worker_id=a.worker_id AND t.lease_token=a.lease_token)
             OR t.state='WAITING_INPUT')
@@ -54,6 +57,7 @@ public class WorkerWorkView {
             SELECT a.id AS attempt_id,a.worker_id,a.state AS attempt_state,a.attempt_no,
               a.ai_runtime,a.ai_provider,a.ai_model,a.ai_effort,t.id AS task_id,t.instruction,t.skill_ref,
               t.state AS task_state,COALESCE(x.plan_id,f.id) AS plan_id,w.run_json,f.spec_json AS plan_spec_json,
+              tm.id AS member_id,tm.name AS member_name,
               s.phase,s.instruction_revision,s.revision AS run_revision,s.last_contact_ms,
               CASE WHEN x.task_id IS NULL THEN 'native' ELSE 'guarded' END AS workbench_source,
             """+PENDING+" AS pending "+scope+" ORDER BY pending DESC,a.created_at_epoch_ms DESC,a.id LIMIT 200",args.toArray());

@@ -18,6 +18,8 @@ public class WorkTaskService {
     @org.springframework.beans.factory.annotation.Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.modelauth.ModelConnections> modelConnections;
     private me.asu.aidev.execution.skills.SkillFiles skillFiles;
     @Autowired public void setSkillFiles(me.asu.aidev.execution.skills.SkillFiles value) { skillFiles=value; }
+    private me.asu.aidev.worker.application.TeamMembers teamMembers;
+    @Autowired public void setTeamMembers(me.asu.aidev.worker.application.TeamMembers value) { teamMembers=value; }
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.execution.guard.ExecutionGuard> executionGuard;
     @Autowired
     public void setExecutionGuard(org.springframework.beans.factory.ObjectProvider<me.asu.aidev.execution.guard.ExecutionGuard> guard) { this.executionGuard=guard; }
@@ -98,6 +100,7 @@ public class WorkTaskService {
         if(inserted && skillFiles!=null) {
             if(source==null) skillFiles.created(task);else skillFiles.inherit(source.value(),task.id().value());
         }
+        if(inserted&&source!=null&&teamMembers!=null)teamMembers.inherit(source.value(),task.id().value());
 
         command.dependencies().stream().sorted((a, b) -> a.value().compareTo(b.value()))
                 .forEach(dependsOn -> {

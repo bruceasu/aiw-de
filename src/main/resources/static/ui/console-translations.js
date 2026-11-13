@@ -1,6 +1,9 @@
 // UI copy only. Rows are English, Chinese and Japanese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["Agent factory","Agent 工厂","Agent ファクトリー"],
+  ["Create team members and configure shared models and execution settings.","创建团队成员，设置共用模型和执行环境。","チームメンバーを作成し、共有モデルと実行環境を設定します。"],
+  ["Shared model and execution settings","共用模型与执行环境","共有モデルと実行環境"],
   ["Current work, attention needed and connection status","当前工作、待处理事项与连接状态","現在の作業・対応事項・接続状態"],
   ["Stop accepting new tasks","停止领取新任务","新規タスクの取得を停止"],
   ["Mark offline","标记离线","オフラインに指定"],

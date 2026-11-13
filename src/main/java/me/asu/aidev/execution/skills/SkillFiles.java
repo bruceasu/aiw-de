@@ -74,6 +74,13 @@ public class SkillFiles {
         repo.jdbc().update("INSERT INTO execution_task_skills(task_id,binding_json,digest,configured) VALUES(?,?,?,?)",task,json,digest,replaceDefault?1:0);
     }
     public boolean managed(String task) { return repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_task_skills WHERE task_id=?",Long.class,task)>0; }
+    public List<String> available() { return builtin.keySet().stream().sorted().toList(); }
+    public void member(String task,List<String> selected) {
+        var original=payload(task,null);var packages=new LinkedHashMap<String,Bundle>();
+        if(original!=null)original.packages().forEach(b->packages.put(b.ref(),b));
+        for(String name:selected){var value=builtin.get(name);if(value==null)throw new IllegalArgumentException("Unknown platform Skill");packages.put(name,value);}
+        store(task,new Frozen(List.copyOf(packages.values())),true);
+    }
     public Payload payload(String task,String attempt) {
         if(!managed(task)) return null;var row=repo.jdbc().queryForMap("SELECT binding_json,digest FROM execution_task_skills WHERE task_id=?",task);
         String json=String.valueOf(row.get("binding_json"));if(!AuthorityRepository.hash(json).equals(row.get("digest"))) throw new IllegalStateException("Task Skill binding corrupted");

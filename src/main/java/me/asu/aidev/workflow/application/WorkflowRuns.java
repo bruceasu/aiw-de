@@ -24,10 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class WorkflowRuns {
     public enum Kind { TASK, DECISION, ASK, END }
     public record Node(String key, String title, Kind kind, String instruction, String next,
-                       Map<String,String> branches) {
+                       Map<String,String> branches,String memberId) {
         public Node {
             if(key==null || !key.matches("[a-z][a-z0-9_-]{0,31}")) throw new IllegalArgumentException("Invalid node key");
             title=text(title,160); Objects.requireNonNull(kind,"Node kind required");
+            memberId=memberId==null||memberId.isBlank()?null:text(memberId,80);
+            if(memberId!=null&&kind!=Kind.TASK&&kind!=Kind.DECISION)throw new IllegalArgumentException("Only task and decision nodes can select a member");
             instruction=instruction==null || instruction.isBlank()?"":text(instruction,8000);
             if(kind!=Kind.END && instruction.isEmpty())throw new IllegalArgumentException("A working node needs an instruction");
             branches=branches==null?Map.of():Collections.unmodifiableMap(new LinkedHashMap<>(branches));
@@ -73,8 +75,9 @@ public class WorkflowRuns {
         public String sealedTaskId,sealedAttemptId;
         public Run() {}
     }
-    public record View(Run run,WorkTask task,String report,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity,ModelUsageView.Snapshot usage) {}
+    public record View(Run run,WorkTask task,String report,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity,ModelUsageView.Snapshot usage,Map<String,Object> member) {}
     @org.springframework.beans.factory.annotation.Autowired private ModelUsageView modelUsage;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.application.TeamMembers team;
     @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<ExecutionRuns> executionRuns;
     private final AuthorityRepository db;
     private final AuthorityBoundary boundary;
@@ -104,6 +107,7 @@ public class WorkflowRuns {
     }
     @Transactional public Definition save(String id,long version,Spec spec) {
         String actor=actor();Objects.requireNonNull(spec,"Workflow required");
+        for(var node:spec.nodes())if(node.memberId()!=null)team.get(actor,node.memberId());
         if(id==null) {
             if(version!=0) throw new IllegalArgumentException("New workflow has version zero");
             id="WF-"+UUID.randomUUID();
@@ -150,16 +154,18 @@ public class WorkflowRuns {
         if(definition.version()!=expectedVersion) throw new IllegalStateException("Workflow changed; reload before starting");
         return start(request,digest,definitionId,expectedVersion,definition.spec(),input,location);
     }
-    @Transactional public Run simple(String request,String instruction,String location) {
-        String digest=AuthorityRepository.hash(db.encode(Arrays.asList("task",instruction,location)));
+    @Transactional public Run simple(String request,String instruction,String location,String memberId) {
+        String digest=AuthorityRepository.hash(db.encode(Arrays.asList("task",instruction,location,memberId)));
         var previous=replay(request,digest);if(previous!=null)return previous;
         instruction=text(instruction,8000);
         var spec=new Spec(instruction.substring(0,Math.min(80,instruction.length())),instruction,"task",List.of(
-                new Node("task","Task",Kind.TASK,instruction,"end",Map.of()),new Node("end","Done",Kind.END,"",null,Map.of())));
+                new Node("task","Task",Kind.TASK,instruction,"end",Map.of(),memberId),new Node("end","Done",Kind.END,"",null,Map.of(),null)));
         return start(request,digest,null,0,spec,"",location);
     }
     private Run start(String request,String digest,String definition,long definitionVersion,Spec spec,String input,String declaredLocation) {
         String actor=actor();input=input==null?"":input;
+        var assigned=new LinkedHashMap<String,me.asu.aidev.worker.application.TeamMembers.Profile>();
+        for(var node:spec.nodes())if(node.memberId()!=null)assigned.put(node.key(),team.forRun(actor,node.memberId()));
         if(input.length()>32000) throw new IllegalArgumentException("Input exceeds 32000 characters");
         var steps=spec.nodes().stream().filter(n->n.kind()==Kind.TASK || n.kind()==Kind.DECISION).map(n->
                 new WorkflowPlanSpec.Step(n.key(),Set.of("general-work"),Set.of(),"general-work",instruction(spec,n),null,null,Set.of(),null,null,
@@ -173,6 +179,7 @@ public class WorkflowRuns {
         run.spec=spec;run.current=spec.entry();run.state="RUNNING";run.context=input;run.location=locations.allocate(run.id,declaredLocation);
         event(run,"STARTED",input);
         db.jdbc().update("INSERT INTO workflow_execution VALUES(?,?,?,?,?,?,?,?,?)",run.id,definition,actor,0,run.state,db.encode(run),System.currentTimeMillis(),request,digest);
+        assigned.forEach((key,member)->team.freeze(run.id,key,member));
         advance(run);persist(run);return run;
     }
     private String instruction(Spec spec,Node node) {
@@ -229,9 +236,11 @@ public class WorkflowRuns {
         String context=run.context;
         var taskId=new TaskId(plan.id()+"~"+node.key()+"~work-"+round);
         var instruction=instruction(run.spec,node)+"\nExecution input and prior results:\n"+context;
+        var member=team.assigned(run.id,node.key());if(member!=null)instruction=team.context(member)+instruction;
         if(instruction.length()>16384) {run.state="FAILED";event(run,"LIMIT","Node input exceeds the current Worker instruction limit; no work was dispatched");return;}
         // createExecution uses the original slot; append the execution input through the same task creation path.
         plans.getObject().createWorkflowExecution(plan,index,round,instruction);
+        if(member!=null)team.bind(run.id,node.key(),taskId.value(),member);
         run.taskId=taskId.value();event(run,"DISPATCHED",node.title());
     }
     @Transactional public void completed(WorkTask task,CompletionReport report) {
@@ -305,7 +314,7 @@ public class WorkflowRuns {
             }
         }
         return new View(run,task,report,provisioner.getObject().pending(run.id),activity,
-                modelUsage.summary(owners.currentOwner(),new ModelUsageView.Query(run.id,null)));
+                modelUsage.summary(owners.currentOwner(),new ModelUsageView.Query(run.id,null)),team.identity(activityTask==null?null:activityTask.id().value()));
     }
     @Transactional public Run control(String id,long version,String action,String answer) {
         var run=load(id,true);

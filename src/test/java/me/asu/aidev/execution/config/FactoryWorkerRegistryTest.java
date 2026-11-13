@@ -17,6 +17,9 @@ class FactoryWorkerRegistryTest {
         db.execute("CREATE TABLE worker(id TEXT PRIMARY KEY,status TEXT,active_leases INTEGER,last_heartbeat_at_epoch_ms BIGINT,updated_at_epoch_ms BIGINT DEFAULT 0)");
         db.execute("CREATE TABLE work_task(id TEXT PRIMARY KEY,current_worker_id TEXT,state TEXT,skill_ref TEXT,repository_ref TEXT)");
         db.execute("CREATE TABLE execution_attempt(id TEXT PRIMARY KEY,worker_id TEXT,state TEXT)");
+        db.execute("CREATE TABLE worker_team_member(id TEXT PRIMARY KEY,state TEXT)");
+        db.execute("CREATE TABLE worker_team_assignment(run_id TEXT,node_key TEXT,member_id TEXT)");
+        db.execute("CREATE TABLE worker_team_task(task_id TEXT PRIMARY KEY,run_id TEXT,node_key TEXT)");
         db.execute(Files.readString(Path.of("src/main/resources/db/migration/V22__factory_worker_registration.sql")));
         registry=new FactoryWorkerRegistry(db,new DataSourceTransactionManager(source));
     }

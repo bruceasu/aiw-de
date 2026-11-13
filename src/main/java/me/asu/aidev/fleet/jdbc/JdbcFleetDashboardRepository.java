@@ -76,7 +76,11 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
                        wt.required_capabilities,wt.priority,wt.current_worker_id,wt.attempt_no,
                        wt.lease_expires_at_epoch_ms,wt.created_at_epoch_ms,
                        NULL AS run_status,NULL AS run_control_state,
-                       0 AS run_max_parallelism,0 AS run_active_slots
+                       0 AS run_max_parallelism,0 AS run_active_slots,
+                       CASE WHEN EXISTS(SELECT 1 FROM worker_team_task mt
+                         JOIN worker_team_assignment ma ON ma.run_id=mt.run_id AND ma.node_key=mt.node_key
+                         JOIN worker_team_member tm ON tm.id=ma.member_id
+                         WHERE mt.task_id=wt.id AND tm.state<>'ACTIVE') THEN FALSE ELSE TRUE END AS team_allowed
                   FROM work_task wt
                  WHERE wt.state NOT IN ('COMPLETED','CANCELLED')
                  ORDER BY wt.priority DESC,wt.created_at_epoch_ms,wt.id
@@ -86,7 +90,7 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
                 CapabilitySetCodec.decode(rs.getString("required_capabilities")), rs.getInt("priority"),
                 rs.getString("current_worker_id"), rs.getInt("attempt_no"), instant(rs, "lease_expires_at_epoch_ms"),
                 Instant.ofEpochMilli(rs.getLong("created_at_epoch_ms")), rs.getString("run_status"),
-                rs.getString("run_control_state"), rs.getInt("run_max_parallelism"), rs.getInt("run_active_slots")));
+                rs.getString("run_control_state"), rs.getInt("run_max_parallelism"), rs.getInt("run_active_slots"),rs.getBoolean("team_allowed")));
     }
 
     private RunCounts runCounts() {
@@ -308,6 +312,7 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
     }
 
     private static boolean policyAllowed(TaskRow task) {
+        if(!task.teamAllowed())return false;
         if (!AUTONOMOUS_SUBJECT.equals(task.subjectType())) return true;
         return "RUNNING".equals(task.runStatus()) && "ACTIVE".equals(task.runControlState());
     }
@@ -364,7 +369,7 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
     private record TaskRow(String id, String taskType, String state, String subjectType, String subjectId,
                            Set<String> requiredCapabilities, int priority, String currentWorkerId, int attemptNo,
                            Instant leaseExpiresAt, Instant createdAt, String runStatus, String runControlState,
-                           int runMaxParallelism, int runActiveSlots) {}
+                           int runMaxParallelism, int runActiveSlots,boolean teamAllowed) {}
 
     private record CountRow(String status, String controlState, int count, int activeSlots) {}
     private record RunCounts(int total, Map<String, Integer> lifecycle, Map<String, Integer> control, int activeSlots) {}

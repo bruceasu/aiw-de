@@ -8,6 +8,7 @@
   <header th:replace="~{ui/fragments :: topbar(${workflowTitle},${workflowSubtitle})}"></header>
   <div class="content"><p class="help" data-wf-status role="status" aria-live="polite"></p>
   <p class="help" data-wf-label="This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.">This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.</p>
+  <p class="help" data-wf-member-status role="status"></p>
   <div class="wf-layout">
     <section class="card wf-library"><h2 data-wf-label="Library">Library</h2>
       <div class="wf-actions"><button class="btn primary" data-wf-new="task" th:hidden="${workflowMode != 'tasks'}">Simple task</button><button class="btn primary" data-wf-new="workflow" th:hidden="${workflowMode == 'tasks'}">New workflow</button></div>
@@ -22,6 +23,7 @@
       <section class="card" data-wf-task hidden><h2 data-wf-label="Simple task">Simple task</h2>
         <p class="help" data-wf-label="Text tasks use the same executor as workflow nodes. No Git repository is required.">Text tasks use the same executor as workflow nodes. No Git repository is required.</p>
         <form data-wf-task-form><label class="field"><span data-wf-label="What should be done?">What should be done?</span><textarea name="instruction" required maxlength="8000" rows="6"></textarea></label>
+          <label class="field"><span data-wf-label="Team member (optional)">Team member (optional)</span><select name="memberId" data-wf-member data-i18n-skip><option value="">No assigned member</option></select></label>
           <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input name="location" maxlength="4096"></label>
           <button class="btn primary" data-wf-label="Run task">Run task</button></form>
       </section>
@@ -38,6 +40,7 @@
       </section>
       <section class="card" data-wf-run hidden><div class="wf-actions"><h2 data-wf-run-title></h2><span class="pill neutral" data-wf-run-state></span></div>
         <p data-wf-run-current></p><div data-wf-run-graph class="wf-graph"></div>
+        <p class="help" data-wf-assigned-member data-i18n-skip></p>
         <section class="card">
           <h3 data-wf-label="Worker activity">Worker activity</h3>
           <p class="help" data-wf-label="Recent model and tool metadata. This is not the complete model conversation.">Recent model and tool metadata. This is not the complete model conversation.</p>

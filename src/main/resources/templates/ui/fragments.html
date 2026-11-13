@@ -5,7 +5,7 @@
   <a th:if="${canOperate}" th:classappend="${active == 'tasks' ? 'active' : ''}" href="/ui/tasks">Simple task</a>
   <a th:classappend="${active == 'workflows' ? 'active' : ''}" href="/ui/workflows">Workflows</a>
   <a th:if="${canOperate}" th:classappend="${active == 'goals' ? 'active' : ''}" href="/ui/goals">Wish Pool</a>
-  <a th:if="${canOperate}" th:classappend="${active == 'agent-factory' ? 'active' : ''}" href="/ui/agent-factory">Agent 工厂设置</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'agent-factory' ? 'active' : ''}" href="/ui/agent-factory">Agent factory</a>
   <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Workers</a>
   <a th:if="${canOperate}" th:classappend="${active == 'configurations' ? 'active' : ''}" href="/ui/configurations">专业 Worker 任务配置（高级）</a>
   <a th:classappend="${active == 'agents' ? 'active' : ''}" href="/ui/agents">Agent 管理</a>

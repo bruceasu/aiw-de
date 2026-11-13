@@ -1,0 +1,18 @@
+<!doctype html><html lang="en" xmlns:th="http://www.thymeleaf.org"><body>
+<section th:fragment="manager(mode)" th:if="${canOperate}" class="card section team-members" data-team-members th:attr="data-team-mode=${mode}">
+  <div class="workers-heading"><h2 data-team-label="Team members">Team members</h2><a class="btn ghost" href="/ui/agent-factory" data-team-label="Create in Agent factory">Create in Agent factory</a><button class="btn primary" type="button" data-team-new data-team-label="Create member">Create member</button><button class="btn ghost" type="button" data-team-refresh data-team-label="Refresh members">Refresh members</button></div>
+  <p class="help" data-team-label="Member identities survive process restarts. Processes are shared; member settings do not grant tools or permissions.">Member identities survive process restarts. Processes are shared; member settings do not grant tools or permissions.</p>
+  <p class="help" data-team-label="Member work currently uses the read-only text runtime. Skills do not enable file edits.">Member work currently uses the read-only text runtime. Skills do not enable file edits.</p>
+  <p data-team-status class="help" role="status"></p>
+  <label class="field" data-team-archive-filter><span data-team-label="Member list">Member list</span><select data-team-archived><option value="false" data-team-label="Current members">Current members</option><option value="true" data-team-label="Dissolved members (read-only)">Dissolved members (read-only)</option></select></label>
+  <form data-team-form hidden><fieldset data-team-fields>
+    <label class="field"><span data-team-label="Member name">Member name</span><input name="name" required maxlength="80"></label>
+    <label class="field"><span data-team-label="Responsibilities and strengths">Responsibilities and strengths</span><textarea name="purpose" required maxlength="4000" rows="3"></textarea></label>
+    <label class="field"><span data-team-label="Built-in Skills (up to 8)">Built-in Skills (up to 8)</span><select name="skills" multiple size="6" data-team-skills></select></label>
+    <label class="field"><span data-team-label="Human-maintained experience">Human-maintained experience</span><textarea name="notes" maxlength="8000" rows="4"></textarea></label>
+    <p class="help" data-team-label="Notes are unverified context sent with assigned work. Do not enter passwords or API keys. Saving affects newly started executions only.">Notes are unverified context sent with assigned work. Do not enter passwords or API keys. Saving affects newly started executions only.</p>
+    <div class="workers-heading"><button class="btn primary" type="submit" data-team-label="Save member">Save member</button><button class="btn ghost" type="button" data-team-cancel data-team-label="Cancel edit">Cancel edit</button></div>
+  </fieldset></form>
+  <p class="help" data-team-label="Up to 100 members and 200 linked work or workflow records are shown. Export includes profile and human notes; shared knowledge and model credentials are not included.">Up to 100 members and 200 linked work or workflow records are shown. Export includes profile and human notes; shared knowledge and model credentials are not included.</p>
+  <div data-team-list></div>
+</section></body></html>

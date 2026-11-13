@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" th:content="${csrfToken}"><title>Agent 工厂设置 · AIW:DE</title>
-<link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/authority.css"></head>
-<body><div class="app authority-page"><nav th:replace="~{ui/fragments :: nav('agent-factory')}"></nav><main class="main"><header th:replace="~{ui/fragments :: topbar('Agent 工厂设置','统一选择模型，自动准备 Worker')}"></header>
-<div class="content"><section class="card"><h2>配置默认 Worker</h2><p>按顺序选择执行方式、登录方式和模型。保存后用于准备新 Worker；已有任务保留原账户绑定。</p>
+<link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/authority.css"><link rel="stylesheet" href="/ui/workers.css"><script src="/ui/team-members.js" defer></script></head>
+<body><div class="app authority-page"><nav th:replace="~{ui/fragments :: nav('agent-factory')}"></nav><main class="main"><header th:replace="~{ui/fragments :: topbar('Agent factory','Create team members and configure shared models and execution settings.')}"></header>
+<div class="content"><div th:replace="~{ui/team-members :: manager('factory')}"></div><section class="card"><h2>Shared model and execution settings</h2><p>按顺序选择执行方式、登录方式和模型。保存后用于准备新 Worker；已有任务保留原账户绑定。</p>
 <p id="factory-status" class="callout" role="status" aria-live="polite">正在读取…</p>
 <form id="factory-settings"><fieldset id="factory-fields" disabled>
 <h3>1. 执行与登录</h3><div class="form-grid">

@@ -50,7 +50,10 @@ public class FactoryWorkerRegistry {
                  AND NOT EXISTS (SELECT 1 FROM work_task t WHERE t.current_worker_id=worker.id AND t.state IN ('CLAIMED','RUNNING'))
                  AND NOT EXISTS (SELECT 1 FROM execution_attempt a WHERE a.worker_id=worker.id AND a.state IN ('CLAIMED','RUNNING'))
                  AND NOT EXISTS (SELECT 1 FROM work_task t WHERE t.state='READY' AND t.skill_ref=?
-                      AND (t.repository_ref=? OR t.repository_ref IS NULL))
+                      AND (t.repository_ref=? OR t.repository_ref IS NULL)
+                      AND NOT EXISTS (SELECT 1 FROM worker_team_task mt
+                        JOIN worker_team_assignment ma ON ma.run_id=mt.run_id AND ma.node_key=mt.node_key
+                        JOIN worker_team_member tm ON tm.id=ma.member_id WHERE mt.task_id=t.id AND tm.state<>'ACTIVE'))
                 """,id,skill,repository)==1));
     }
     public void stopped(String id) {

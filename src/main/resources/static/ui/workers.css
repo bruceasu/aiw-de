@@ -5,6 +5,8 @@
 .workers-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow:auto;font:inherit}
 .workers-detail dl{display:grid;grid-template-columns:minmax(110px,1fr) minmax(0,2fr);gap:8px 16px}.workers-detail dd{margin:0;overflow-wrap:anywhere}.workers-detail dt{color:var(--muted)}
 .workers-person{display:flex;align-items:center;gap:10px}.workers-mark{display:grid;place-items:center;min-width:42px;height:42px;border:1px solid var(--line);border-radius:50%;color:var(--accent);font-size:12px}
+.team-card{padding:16px 0;border-bottom:1px solid var(--line)}.team-card>p{white-space:pre-wrap;overflow-wrap:anywhere}.team-card>a{display:block;margin:7px 0}.team-card h3{flex:1;margin:0}.team-avatar{display:grid;place-items:center;min-width:44px;height:44px;border:1px solid var(--accent);color:var(--accent)}.team-avatar[data-shape="0"]{border-radius:50%}.team-avatar[data-shape="1"]{border-radius:10px}.team-avatar[data-shape="2"]{border-radius:50% 10px}.team-avatar[data-shape="3"]{border-radius:10px 50%}
+.team-members [hidden]{display:none!important}.team-members form{margin:20px 0}.team-members select[multiple]{min-height:140px}
 [data-workers-list] small{display:block;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}[data-workers-list] td{vertical-align:top}
 [data-workers-list] .pill{display:inline-block;margin:3px}.workers-detail .workers-links{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
 @media(max-width:800px){.workers-filters{grid-template-columns:1fr}.workers-detail dl{grid-template-columns:1fr}.workers-detail dd{margin-bottom:8px}}

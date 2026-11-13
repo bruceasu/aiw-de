@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 /** Supplies role-specialized processes only for already-confirmed native workflow tasks. */
 @Service
 public class WorkflowWorkerProvisioning {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.application.TeamMembers team;
     @org.springframework.beans.factory.annotation.Autowired private WorkflowReviewClaimPolicy stageReviewPolicy;
     @org.springframework.beans.factory.annotation.Autowired private FactoryReviewClaimPolicy factoryReviewPolicy;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.run.NativeRunClaimPolicy nativeRuns;
@@ -48,6 +49,9 @@ public class WorkflowWorkerProvisioning {
             me.asu.aidev.work.domain.WorkTask task=null;
             try {
                 task=tasks.find(new TaskId(id)).orElseThrow();
+                if(!team.canClaim(task)) {
+                    pending.put(id,new Preparation(id,task.subjectId(),"WAITING_MEMBER","The selected team member has stopped accepting work. Resume that member to continue."));continue;
+                }
                 String role=switch(task.skillRef()) {
                     case "software-requirements-analyst" -> "requirements";
                     case "solution-architect" -> "architect";

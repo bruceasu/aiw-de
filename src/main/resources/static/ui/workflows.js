@@ -2,6 +2,10 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'Team member (optional)':['团队成员（可选）','チームメンバー（任意）'],'No assigned member':['不指定成员','メンバーを指定しない'],'Member unavailable':['成员未加载或已解散','未表示または解散済みのメンバー'],
+    'Member stopped accepting work':['成员已停止接单','メンバーは受付を停止しています'],
+    'Assigned member snapshot':['本次执行的成员设定','この実行のメンバー設定'],'Resume the selected member to claim this work.':['该工作正在等待成员恢复接单。','この作業の取得にはメンバーの受付再開が必要です。'],'Current work continues.':['当前工作会继续。','現在の作業は継続します。'],
+    'Member catalog unavailable; existing assignments are preserved.':['暂时无法读取成员目录；已有成员选择会保留，不会自动改派。','メンバー一覧を取得できません。既存の割り当てを保持し、自動変更しません。'],
     'Recorded usage':['已记录用量','記録済み使用量'], 'Model calls':['模型调用次数','モデル呼び出し数'],
     'Input tokens':['输入 Token','入力トークン'], 'Cached input tokens':['其中缓存 Token','キャッシュ入力トークン'], 'Output tokens':['输出 Token','出力トークン'],
     'Not recorded':['未记录','未記録'], 'Recorded estimates':['已知估算费用','既知の推定費用'], 'Missing estimates':['尚无估算的调用（含订阅或价格缺失）','推定額のない呼び出し（サブスクリプション等を含む）'],
@@ -65,7 +69,7 @@
     return words[value]?.[locale?.startsWith('zh') ? 0 : locale?.startsWith('ja') ? 1 : -1] || value;
   };
   const status = message => { $('[data-wf-status]').textContent = message; };
-  let definitions=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='';
+  let definitions=[], teamMembers=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='';
   const newRequest = () => crypto.randomUUID();
   let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest();
   const route=new URLSearchParams(location.search);
@@ -116,11 +120,12 @@
       const section=element('section',undefined,'wf-node-editor');section.id='wf-node-'+node.key;
       const row=element('div',undefined,'wf-node-fields'),kind=element('select');
       for(const [value,label] of [['TASK','Task'],['DECISION','LLM decision'],['ASK','Ask user'],['END','Done']])kind.append(new Option(t(label),value));
-      kind.value=node.kind;kind.onchange=()=>{node.kind=kind.value;node.branches={};node.next=node.kind==='END'||node.kind==='DECISION'?null:'end';if(node.kind==='DECISION')node.branches={'yes':'end','no':'end'};renderNodes();redraw();};
+      kind.value=node.kind;kind.onchange=()=>{node.kind=kind.value;if(!['TASK','DECISION'].includes(node.kind))node.memberId=null;node.branches={};node.next=node.kind==='END'||node.kind==='DECISION'?null:'end';if(node.kind==='DECISION')node.branches={'yes':'end','no':'end'};renderNodes();redraw();};
       row.append(field('Title',input(node.title,v=>{node.title=v;redraw();},160)),field('Type',kind));section.append(row);
       if(node.kind!=='END') {
         const instruction=element('textarea');instruction.value=node.instruction;instruction.rows=3;instruction.maxLength=8000;instruction.oninput=()=>node.instruction=instruction.value;
         section.append(field('Instruction',instruction));
+        if(['TASK','DECISION'].includes(node.kind)){const select=element('select');select.dataset.i18nSkip='';memberOptions(select,node.memberId);select.onchange=()=>node.memberId=select.value||null;section.append(field('Team member (optional)',select));}
         if(node.kind==='DECISION'||node.kind==='ASK') {
           for(const [choice,next] of Object.entries(node.branches)) {
             const branch=element('div',undefined,'wf-node-fields');let currentChoice=choice;
@@ -172,6 +177,24 @@
     const runs=$('[data-wf-executions]');runs.replaceChildren();
     if(!data.executions.length)runs.append(element('p',t('No executions yet'),'help'));
     data.executions.forEach(r=>{const b=button('',()=>act(()=>openRun(r.id)));b.textContent=r.title||r.id;b.dataset.i18nSkip='';b.classList.add('wf-item');b.append(element('small',t(r.state)+' · '+new Date(r.updated_ms).toLocaleString()));runs.append(b);});
+    loadMembers();
+  }
+  let teamLoading=false;
+  async function loadMembers(){
+    if(teamLoading)return;teamLoading=true;
+    try{
+      const response=await fetch('/api/r1/team-members',{credentials:'same-origin'});if(!response.ok||response.redirected)throw new Error();
+      const team=await response.json();if(!Array.isArray(team.members))throw new Error();teamMembers=team.members;
+      memberOptions($('[data-wf-member]'),$('[data-wf-member]').value);if(editing&&!$('[data-wf-editor]').hidden)renderNodes();
+      $('[data-wf-member-status]').textContent='';
+    }catch(_){$('[data-wf-member-status]').textContent=t('Member catalog unavailable; existing assignments are preserved.');}
+    finally{teamLoading=false;}
+  }
+  function memberOptions(select,value){
+    select.replaceChildren(new Option(t('No assigned member'),''));
+    for(const member of teamMembers){const option=new Option(member.name+(member.state!=='ACTIVE'?' · '+t('Member stopped accepting work'):''),member.id);option.disabled=member.state!=='ACTIVE';select.add(option);}
+    if(value&&![...select.options].some(o=>o.value===value))select.add(new Option(t('Member unavailable')+' · '+value,value));
+    select.value=value||'';
   }
   async function openRun(id) {if(id!==route.get('execution'))preparingGoal=null;selectedRun=id;signature='';panel('run');await refreshRun();}
   function controlButtons(run) {
@@ -218,7 +241,9 @@
   async function refreshRun() {
     if(!selectedRun)return;
     const id=selectedRun,data=await api('/executions/'+encodeURIComponent(id));if(id!==selectedRun)return;
-    currentView=data;renderActivity(data);renderUsage(data);const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.report,data.preparation]);if(stamp===signature)return;signature=stamp;
+    currentView=data;renderActivity(data);renderUsage(data);
+    const member=data.member||{};$('[data-wf-assigned-member]').textContent=member.id?t('Assigned member snapshot')+': '+member.name+' · v'+member.revision+(member.state==='DRAINING'?' · '+t(['READY','BLOCKED'].includes(data.task?.state)?'Resume the selected member to claim this work.':'Current work continues.'):''):'';
+    const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.report,data.preparation]);if(stamp===signature)return;signature=stamp;
     $('[data-wf-run-title]').textContent=run.spec.title;
     $('[data-wf-run-state]').textContent=t(run.state);
     const node=run.spec.nodes.find(n=>n.key===run.current),task=data.task;
@@ -271,7 +296,7 @@
     ]}});
     savedSpec='';$('[data-wf-input]').value='模拟售后规则 v1：签收后30天内产品故障可建议换货，超期转人工决定；需购买记录、签收日期、故障说明；实物损坏需照片。疑似运输损伤须核实包装和签收情况。本流程不实际退款、换货或发送消息。\n\n处理日期：2026-11-12。\n购买记录：已提供，订单 DEMO-001。\n签收日期：2026-11-09。\n客户说明：通电后无法启动，希望换货。\n\n以上全部是模拟资料。';
   }
-  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null});taskRequest=newRequest();await library();await openRun(run.id);});};
+  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,memberId:form.get('memberId')||null});taskRequest=newRequest();await library();await openRun(run.id);});};
   $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
