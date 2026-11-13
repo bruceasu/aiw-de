@@ -23,7 +23,8 @@
       <section class="card" data-wf-task hidden><h2 data-wf-label="Simple task">Simple task</h2>
         <p class="help" data-wf-label="Text tasks use the same executor as workflow nodes. No Git repository is required.">Text tasks use the same executor as workflow nodes. No Git repository is required.</p>
         <form data-wf-task-form><label class="field"><span data-wf-label="What should be done?">What should be done?</span><textarea name="instruction" required maxlength="8000" rows="6"></textarea></label>
-          <label class="field"><span data-wf-label="Team member (optional)">Team member (optional)</span><select name="memberId" data-wf-member data-i18n-skip><option value="">No assigned member</option></select></label>
+          <label class="field"><span data-wf-label="Team member">Team member</span><select name="memberId" data-wf-member data-i18n-skip><option value="AUTO">Automatically choose member</option><option value="GENERAL">General execution (no team member)</option></select></label>
+          <label class="field"><span data-wf-label="Required Skills (optional, up to 8)">Required Skills (optional, up to 8)</span><select multiple size="4" data-wf-skills data-i18n-skip></select></label>
           <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input name="location" maxlength="4096"></label>
           <button class="btn primary" data-wf-label="Run task">Run task</button></form>
       </section>

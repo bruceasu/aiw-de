@@ -11,7 +11,7 @@
     'Member list':['成员列表','メンバー一覧'],'Current members':['当前成员','現在のメンバー'],'Dissolved members (read-only)':['已解散成员（只读）','解散済みメンバー（読み取り専用）'],
     'Member name':['成员名称','メンバー名'],'Responsibilities and strengths':['职责与专长','役割と得意分野'],'Built-in Skills (up to 8)':['内置 Skills（最多 8 项）','組み込み Skills（最大8件）'],
     'Human-maintained experience':['人工维护的经验','人が管理する経験メモ'],'Save member':['保存成员','メンバーを保存'],'Cancel edit':['取消编辑','編集をキャンセル'],
-    'Notes are unverified context sent with assigned work. Do not enter passwords or API keys. Saving affects newly started executions only.':['经验未经自动核实，会随成员任务发送给模型。请勿填写密码或 API Key。保存仅影响之后启动的执行。','メモは未検証の参考情報としてタスクとともに送信されます。パスワードや API キーを入力しないでください。保存は新たに開始する実行に適用されます。'],
+    'Notes are unverified context sent with assigned work. Do not enter passwords or API keys. Changes affect future assignments; frozen assignments stay unchanged.':['经验未经自动核实，会随成员任务发送给模型。请勿填写密码或 API Key。修改影响之后的分配；已冻结的成员设定保持不变。','メモは未検証の参考情報として送信されます。パスワードや API キーを入力しないでください。変更は今後の割り当てに適用され、確定済みの設定は変わりません。'],
     'Up to 100 members and 200 linked work or workflow records are shown. Export includes profile and human notes; shared knowledge and model credentials are not included.':['最多显示 100 个成员和 200 条关联工作／流程记录。导出只含成员资料与人工经验，不含共享知识库或模型凭据。','最大100名と関連する作業・ワークフロー200件を表示します。エクスポートは設定と経験メモのみで、共有知識や認証情報は含みません。'],
     'ACTIVE':['可接单','受付可能'],'DRAINING':['已停止接单','受付停止'],'ARCHIVED':['已解散（只读）','解散済み（読み取り専用）'],
     'Edit':['修改设定与经验','設定・経験を編集'],'Export profile and notes':['导出资料与经验','設定・メモをエクスポート'],'Stop accepting work':['停止接单','受付を停止'],'Resume accepting work':['恢复接单','受付を再開'],'Dissolve member':['解散成员','メンバーを解散'],

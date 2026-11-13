@@ -99,11 +99,46 @@ public class TeamMembers implements TaskClaimPolicy {
             throw new IllegalStateException("Member changed; refresh");
         return get(actor,member);
     }
-    public Profile forRun(String actor,String member) {
+    public List<String> requirements(List<String> selected) {
+        if(selected==null)return List.of();
+        if(selected.size()>8||new HashSet<>(selected).size()!=selected.size()||!skills.available().containsAll(selected))
+            throw new IllegalArgumentException("Select up to eight registered platform Skills");
+        return List.copyOf(selected);
+    }
+    private boolean supports(Profile member,List<String> required) {
+        var available=new HashSet<>(member.skills());available.add("general-work");return available.containsAll(required);
+    }
+    public Profile forRun(String actor,String member,List<String> required) {
         var result=get(actor,member);
         if(!result.state().equals("ACTIVE"))throw new IllegalStateException("Selected member is not accepting new work");
+        if(!supports(result,required))throw new IllegalArgumentException("Selected member lacks required Skills");
         return result;
     }
+    public record Selection(Profile member,String reason) {}
+    /** Caller holds authority_lock until the selected snapshot and task are committed. */
+    public Selection choose(String actor,List<String> required) {
+        var candidates=db.jdbc().queryForList("SELECT * FROM worker_team_member WHERE actor=? AND state<>'ARCHIVED' ORDER BY id LIMIT 100",actor)
+                .stream().map(this::profile).toList();
+        if(candidates.isEmpty())return new Selection(null,"No team members exist. Create one in Agent factory.");
+        var matching=candidates.stream().filter(m->supports(m,required)).toList();
+        if(matching.isEmpty())return new Selection(null,"No member has all required Skills. Update the requirements or member settings.");
+        var load=db.jdbc().queryForList("""
+            SELECT a.member_id,
+              SUM(CASE WHEN w.state IN ('READY','BLOCKED','CLAIMED','RUNNING','YIELDING','WAITING_INPUT') THEN 1 ELSE 0 END) AS pending,
+              MAX(w.created_at_epoch_ms) AS last_work
+            FROM worker_team_assignment a JOIN worker_team_member m ON m.id=a.member_id
+              LEFT JOIN worker_team_task t ON t.run_id=a.run_id AND t.node_key=a.node_key
+              LEFT JOIN work_task w ON w.id=t.task_id WHERE m.actor=? GROUP BY a.member_id
+            """,actor);
+        var pending=new HashMap<String,Long>();var last=new HashMap<String,Long>();
+        for(var row:load){String id=(String)row.get("member_id");pending.put(id,((Number)row.get("pending")).longValue());
+            if(row.get("last_work") instanceof Number time)last.put(id,time.longValue());}
+        var chosen=matching.stream().filter(m->m.state().equals("ACTIVE"))
+                .min(Comparator.comparingLong((Profile m)->pending.getOrDefault(m.id(),0L))
+                        .thenComparingLong(m->last.getOrDefault(m.id(),0L)).thenComparing(Profile::id)).orElse(null);
+        return new Selection(chosen,chosen==null?"Matching members have stopped accepting work. Resume a matching member.":null);
+    }
+    public void attachSkills(String task,List<String> required) {if(!required.isEmpty())skills.member(task,required);}
     public void freeze(String run,String node,Profile member) {
         db.jdbc().update("INSERT INTO worker_team_assignment VALUES(?,?,?,?)",run,node,member.id(),db.encode(member));
     }

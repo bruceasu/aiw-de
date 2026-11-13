@@ -25,7 +25,8 @@ class WorkflowWorkerProvisioningTest {
         org.springframework.test.util.ReflectionTestUtils.setField(service,"team",team);
         when(team.canClaim(any())).thenReturn(true);
         when(settings.current()).thenReturn(new AgentFactorySettings.Settings("codex-app-server","model","medium",true,"python","", ""));
-        when(db.queryForList(anyString(),eq(String.class),anyString())).thenReturn(List.of("task"));
+        when(db.queryForList(contains("FROM work_task t"),eq(String.class),anyString())).thenReturn(List.of("task"));
+        when(db.queryForList(startsWith("SELECT id FROM workflow_execution"),eq(String.class),anyString())).thenReturn(List.of());
         when(provisioner.requestNative(anyString(),anyString(),anyString())).thenReturn(new ManagedWorkerProvisioner.Result(true,"Starting"));
         when(tasks.find(new TaskId("task"))).thenReturn(Optional.of(new WorkTask(new TaskId("task"),TaskType.EXTERNAL_WORK,TaskState.READY,
                 "flexible-plan","plan",Set.of("coding"),"coding-work-package-executor","Implement","repo",null,TaskPriority.NORMAL,0,Instant.EPOCH,Instant.EPOCH)));
@@ -47,7 +48,8 @@ class WorkflowWorkerProvisioningTest {
     }
     @Test void disabledAutomaticWorkersDoNotStartProcesses() {
         when(settings.current()).thenReturn(new AgentFactorySettings.Settings("codex-app-server","model","medium",false,"python","", ""));
-        service.supply();verifyNoInteractions(db,provisioner);
+        service.supply();verifyNoInteractions(provisioner);
+        verify(db).queryForList(startsWith("SELECT id FROM workflow_execution"),eq(String.class),eq(""));
     }
     @Test void blockedPreparationIsVisibleInOriginalPlan() {
         when(provisioner.requestNative("repo","codex-app-server","coder"))
@@ -57,9 +59,9 @@ class WorkflowWorkerProvisioningTest {
         assertThat(service.pending("other")).isEmpty();
     }
     @Test void scanAdvancesPastBlockedTasksAndWraps() {
-        when(db.queryForList(anyString(),eq(String.class),eq("task"))).thenReturn(List.of());
+        when(db.queryForList(contains("FROM work_task t"),eq(String.class),eq("task"))).thenReturn(List.of());
         service.supply();service.supply();service.supply();
-        verify(db,times(2)).queryForList(anyString(),eq(String.class),eq(""));
-        verify(db).queryForList(anyString(),eq(String.class),eq("task"));
+        verify(db,times(2)).queryForList(contains("FROM work_task t"),eq(String.class),eq(""));
+        verify(db).queryForList(contains("FROM work_task t"),eq(String.class),eq("task"));
     }
 }

@@ -2,6 +2,18 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'Team member':['团队成员','チームメンバー'],
+    'Automatically choose member':['自动选择成员','メンバーを自動選択'],
+    'General execution (no team member)':['通用执行（不使用团队成员）','汎用実行（メンバーなし）'],
+    'Required Skills (optional, up to 8)':['所需 Skills（可选，最多 8 项）','必要な Skills（任意、最大8件）'],
+    'WAITING_MEMBER':['等待合适成员','適切なメンバーを待機中','Waiting for a suitable member'],
+    'MEMBER_ASSIGNED':['已选择成员','メンバー選択済み','Member selected'],
+    'No team members exist. Create one in Agent factory.':['尚未创建团队成员，请到 Agent 工厂创建。','メンバーがいません。Agent ファクトリーで作成してください。'],
+    'No member has all required Skills. Update the requirements or member settings.':['当前没有成员拥有全部所需 Skills，请调整条件或成员设定。','必要な Skills をすべて持つメンバーがいません。条件または設定を変更してください。'],
+    'Matching members have stopped accepting work. Resume a matching member.':['匹配的成员均已停止接单，请恢复成员。','条件に合うメンバーは受付停止中です。受付を再開してください。'],
+    'Assignment resumes automatically when a matching member is available.':['有合适成员后会自动继续；可暂停或停止本次执行。','適切なメンバーが利用可能になると自動で続行します。一時停止・停止も可能です。'],
+    'Selected member lacks required Skills':['所选成员缺少所需 Skills，请调整条件或成员设定。','選択したメンバーに必要な Skills がありません。'],
+    'Select up to eight registered platform Skills':['请选择最多 8 项已注册的内置 Skills。','登録済みの Skills を最大8件まで選択してください。'],
     'Team member (optional)':['团队成员（可选）','チームメンバー（任意）'],'No assigned member':['不指定成员','メンバーを指定しない'],'Member unavailable':['成员未加载或已解散','未表示または解散済みのメンバー'],
     'Member stopped accepting work':['成员已停止接单','メンバーは受付を停止しています'],
     'Selected member is not accepting new work':['所选成员已停止接单，请恢复该成员或明确重新选择。','選択したメンバーは受付を停止しています。受付を再開するか、明示的に選び直してください。'],
@@ -67,10 +79,10 @@
   };
   const t = value => {
     const locale = window.aiwI18n?.locale || document.documentElement.lang;
-    return words[value]?.[locale?.startsWith('zh') ? 0 : locale?.startsWith('ja') ? 1 : -1] || value;
+    return words[value]?.[locale?.startsWith('zh') ? 0 : locale?.startsWith('ja') ? 1 : 2] || value;
   };
   const status = message => { $('[data-wf-status]').textContent = message; };
-  let definitions=[], teamMembers=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='';
+  let definitions=[], teamSkills=[], teamMembers=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='';
   const newRequest = () => crypto.randomUUID();
   let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest();
   const route=new URLSearchParams(location.search);
@@ -99,10 +111,11 @@
   }
   function panel(name) {['task','editor','run'].forEach(p=>$(`[data-wf-${p}]`).hidden=p!==name);}
   function singleSpec() {return {title:t('New workflow'),goal:'',entry:'task',nodes:[
-    {key:'task',title:t('Task'),kind:'TASK',instruction:'',next:'end',branches:{}},
+    {key:'task',title:t('Task'),kind:'TASK',instruction:'',next:'end',branches:{},assignment:'AUTO',requiredSkills:[]},
     {key:'end',title:t('Done'),kind:'END',instruction:'',next:null,branches:{}}]};}
   function showEditor(definition) {
     selectedRun=null;editing=structuredClone(definition || {id:null,version:0,spec:singleSpec()});
+    for(const n of editing.spec.nodes)if(['TASK','DECISION'].includes(n.kind))n.assignment ||= n.memberId?'MEMBER':definition?.id?'GENERAL':'AUTO';
     $('[data-wf-title]').value=editing.spec.title;$('[data-wf-goal]').value=editing.spec.goal;
     $('[data-wf-input]').value='';startRequest=newRequest();savedSpec=definition?JSON.stringify(editing.spec):'';
     panel('editor');renderNodes();graph($('[data-wf-definition-graph]'),editing.spec);status('');
@@ -121,12 +134,12 @@
       const section=element('section',undefined,'wf-node-editor');section.id='wf-node-'+node.key;
       const row=element('div',undefined,'wf-node-fields'),kind=element('select');
       for(const [value,label] of [['TASK','Task'],['DECISION','LLM decision'],['ASK','Ask user'],['END','Done']])kind.append(new Option(t(label),value));
-      kind.value=node.kind;kind.onchange=()=>{node.kind=kind.value;if(!['TASK','DECISION'].includes(node.kind))node.memberId=null;node.branches={};node.next=node.kind==='END'||node.kind==='DECISION'?null:'end';if(node.kind==='DECISION')node.branches={'yes':'end','no':'end'};renderNodes();redraw();};
+      kind.value=node.kind;kind.onchange=()=>{node.kind=kind.value;if(!['TASK','DECISION'].includes(node.kind)){node.memberId=null;node.assignment=null;node.requiredSkills=[];}else node.assignment ||= 'AUTO';node.branches={};node.next=node.kind==='END'||node.kind==='DECISION'?null:'end';if(node.kind==='DECISION')node.branches={'yes':'end','no':'end'};renderNodes();redraw();};
       row.append(field('Title',input(node.title,v=>{node.title=v;redraw();},160)),field('Type',kind));section.append(row);
       if(node.kind!=='END') {
         const instruction=element('textarea');instruction.value=node.instruction;instruction.rows=3;instruction.maxLength=8000;instruction.oninput=()=>node.instruction=instruction.value;
         section.append(field('Instruction',instruction));
-        if(['TASK','DECISION'].includes(node.kind)){const select=element('select');select.dataset.i18nSkip='';memberOptions(select,node.memberId);select.onchange=()=>node.memberId=select.value||null;section.append(field('Team member (optional)',select));}
+        if(['TASK','DECISION'].includes(node.kind)){const select=element('select');select.dataset.i18nSkip='';memberOptions(select,node.memberId||node.assignment||'GENERAL');select.onchange=()=>Object.assign(node,assignment(select.value));section.append(field('Team member',select));const required=element('select');required.multiple=true;required.size=4;required.dataset.i18nSkip='';skillOptions(required,node.requiredSkills||[]);required.onchange=()=>node.requiredSkills=[...required.selectedOptions].map(o=>o.value);section.append(field('Required Skills (optional, up to 8)',required));}
         if(node.kind==='DECISION'||node.kind==='ASK') {
           for(const [choice,next] of Object.entries(node.branches)) {
             const branch=element('div',undefined,'wf-node-fields');let currentChoice=choice;
@@ -185,21 +198,23 @@
     if(teamLoading)return;teamLoading=true;
     try{
       const response=await fetch('/api/r1/team-members',{credentials:'same-origin'});if(!response.ok||response.redirected)throw new Error();
-      const team=await response.json();if(!Array.isArray(team.members))throw new Error();teamMembers=team.members;
-      memberOptions($('[data-wf-member]'),$('[data-wf-member]').value);if(editing&&!$('[data-wf-editor]').hidden)renderNodes();
+      const team=await response.json();if(!Array.isArray(team.members))throw new Error();teamMembers=team.members;teamSkills=team.skills||[];
+      memberOptions($('[data-wf-member]'),$('[data-wf-member]').value);skillOptions($('[data-wf-skills]'),[...$('[data-wf-skills]').selectedOptions].map(o=>o.value));if(editing&&!$('[data-wf-editor]').hidden)renderNodes();
       $('[data-wf-member-status]').textContent='';
     }catch(_){$('[data-wf-member-status]').textContent=t('Member catalog unavailable; existing assignments are preserved.');}
     finally{teamLoading=false;}
   }
   function memberOptions(select,value){
-    select.replaceChildren(new Option(t('No assigned member'),''));
+    select.replaceChildren(new Option(t('Automatically choose member'),'AUTO'),new Option(t('General execution (no team member)'),'GENERAL'));
     for(const member of teamMembers){const option=new Option(member.name+(member.state!=='ACTIVE'?' · '+t('Member stopped accepting work'):''),member.id);option.disabled=member.state!=='ACTIVE';select.add(option);}
     if(value&&![...select.options].some(o=>o.value===value))select.add(new Option(t('Member unavailable')+' · '+value,value));
-    select.value=value||'';
+    select.value=value||'AUTO';
   }
+  function assignment(value){return {assignment:['AUTO','GENERAL'].includes(value)?value:'MEMBER',memberId:['AUTO','GENERAL'].includes(value)?null:value};}
+  function skillOptions(select,values){select.replaceChildren();for(const skill of new Set([...teamSkills,...values]))select.add(new Option(skill,skill,false,values.includes(skill)));}
   async function openRun(id) {if(id!==route.get('execution'))preparingGoal=null;selectedRun=id;signature='';panel('run');await refreshRun();}
   function controlButtons(run) {
-    const allowed={pause:run.state==='RUNNING',resume:run.state==='PAUSED',retry:run.state==='FAILED',stop:!['COMPLETED','STOPPED','STOPPING'].includes(run.state)};
+    const allowed={pause:['RUNNING','WAITING_MEMBER'].includes(run.state),resume:run.state==='PAUSED',retry:run.state==='FAILED',stop:!['COMPLETED','STOPPED','STOPPING'].includes(run.state)};
     $$('[data-wf-control]').forEach(b=>{b.hidden=!allowed[b.dataset.wfControl];b.disabled=busy;});
   }
   function renderActivity(data) {
@@ -250,7 +265,7 @@
     const node=run.spec.nodes.find(n=>n.key===run.current),task=data.task;
     $('[data-wf-run-current]').textContent=(node?.title||'')+(task?' · '+t(task.state):'');
     graph($('[data-wf-run-graph]'),run.spec,run);controlButtons(run);
-    $('[data-wf-supplement]').hidden=!['RUNNING','PAUSED','WAITING_USER'].includes(run.state);
+    $('[data-wf-supplement]').hidden=!['RUNNING','PAUSED','WAITING_USER','WAITING_MEMBER'].includes(run.state);
     const inputReceipts=$('[data-wf-input-receipts]');inputReceipts.replaceChildren();
     for(const input of run.inputs||[]) {
       const receipt=element('details',undefined,'wf-event');
@@ -261,7 +276,7 @@
     const options=$('[data-wf-answer-options]');options.replaceChildren();
     if(!answer.hidden)Object.keys(node.branches).forEach(choice=>options.append(button(choice,()=>act(()=>control('answer',choice)))));
     $('[data-wf-answer-form]').hidden=!!Object.keys(node?.branches||{}).length;
-    $('[data-wf-preparation]').textContent=data.preparation.map(p=>p.message).join('\n') || (task?.state==='READY'?t('Waiting for a compatible Worker'):'');
+    $('[data-wf-preparation]').textContent=(run.memberWait&&['WAITING_MEMBER','PAUSED'].includes(run.state)?t(run.memberWait)+(node?.requiredSkills?.length?' ('+node.requiredSkills.join(', ')+')':'')+(run.state==='WAITING_MEMBER'?' '+t('Assignment resumes automatically when a matching member is available.'):''):'') || data.preparation.map(p=>p.message).join('\n') || (task?.state==='READY'?t('Waiting for a compatible Worker'):'');
     const detail=$('[data-wf-worker-detail]'), activityTask=task?.id.value||data.activity?.taskId;
     detail.hidden=!activityTask;detail.href=activityTask?'/ui/plans/'+encodeURIComponent(run.id)+'/tasks/'+encodeURIComponent(activityTask):'#';
     const timeline=$('[data-wf-timeline]');timeline.replaceChildren();
@@ -297,11 +312,11 @@
     ]}});
     savedSpec='';$('[data-wf-input]').value='模拟售后规则 v1：签收后30天内产品故障可建议换货，超期转人工决定；需购买记录、签收日期、故障说明；实物损坏需照片。疑似运输损伤须核实包装和签收情况。本流程不实际退款、换货或发送消息。\n\n处理日期：2026-11-12。\n购买记录：已提供，订单 DEMO-001。\n签收日期：2026-11-09。\n客户说明：通电后无法启动，希望换货。\n\n以上全部是模拟资料。';
   }
-  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,memberId:$('[data-wf-member]').value||null});taskRequest=newRequest();await library();await openRun(run.id);});};
+  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,...assignment($('[data-wf-member]').value),requiredSkills:[...$('[data-wf-skills]').selectedOptions].map(o=>o.value)});taskRequest=newRequest();await library();await openRun(run.id);});};
   $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
-  $('[data-wf-add-node]').onclick=()=>{const key='step'+newRequest().replaceAll('-','').slice(0,8);editing.spec.nodes.splice(-1,0,{key,title:t('Task'),kind:'TASK',instruction:'',next:'end',branches:{}});renderNodes();redraw();};
+  $('[data-wf-add-node]').onclick=()=>{const key='step'+newRequest().replaceAll('-','').slice(0,8);editing.spec.nodes.splice(-1,0,{key,title:t('Task'),kind:'TASK',instruction:'',next:'end',branches:{},assignment:'AUTO',requiredSkills:[]});renderNodes();redraw();};
   $('[data-wf-save]').onclick=()=>act(async()=>{editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing=await api('/definitions',editing);savedSpec=JSON.stringify(editing.spec);startRequest=newRequest();await library();status(t('Workflow saved'));});
   $('[data-wf-start]').onclick=()=>act(async()=>{
     editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;

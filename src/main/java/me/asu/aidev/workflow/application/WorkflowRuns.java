@@ -23,12 +23,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class WorkflowRuns {
     public enum Kind { TASK, DECISION, ASK, END }
+    public enum Assignment { AUTO, MEMBER, GENERAL }
     public record Node(String key, String title, Kind kind, String instruction, String next,
-                       Map<String,String> branches,String memberId) {
+                       Map<String,String> branches,String memberId,Assignment assignment,List<String> requiredSkills) {
         public Node {
             if(key==null || !key.matches("[a-z][a-z0-9_-]{0,31}")) throw new IllegalArgumentException("Invalid node key");
             title=text(title,160); Objects.requireNonNull(kind,"Node kind required");
             memberId=memberId==null||memberId.isBlank()?null:text(memberId,80);
+            requiredSkills=requiredSkills==null?List.of():List.copyOf(requiredSkills);
+            if(requiredSkills.size()>8||new HashSet<>(requiredSkills).size()!=requiredSkills.size())throw new IllegalArgumentException("Select up to eight registered platform Skills");
+            if(assignment==Assignment.MEMBER&&memberId==null||memberId!=null&&assignment!=null&&assignment!=Assignment.MEMBER)
+                throw new IllegalArgumentException("Member selection does not match assignment mode");
+            if((assignment!=null||!requiredSkills.isEmpty())&&kind!=Kind.TASK&&kind!=Kind.DECISION)
+                throw new IllegalArgumentException("Only task and decision nodes can select a member");
             if(memberId!=null&&kind!=Kind.TASK&&kind!=Kind.DECISION)throw new IllegalArgumentException("Only task and decision nodes can select a member");
             instruction=instruction==null || instruction.isBlank()?"":text(instruction,8000);
             if(kind!=Kind.END && instruction.isEmpty())throw new IllegalArgumentException("A working node needs an instruction");
@@ -73,6 +80,7 @@ public class WorkflowRuns {
         public List<Event> events=new ArrayList<>();
         public List<Supplement> inputs=new ArrayList<>();
         public String sealedTaskId,sealedAttemptId;
+        public String memberWait;
         public Run() {}
     }
     public record View(Run run,WorkTask task,String report,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity,ModelUsageView.Snapshot usage,Map<String,Object> member) {}
@@ -107,7 +115,12 @@ public class WorkflowRuns {
     }
     @Transactional public Definition save(String id,long version,Spec spec) {
         String actor=actor();Objects.requireNonNull(spec,"Workflow required");
-        for(var node:spec.nodes())if(node.memberId()!=null)team.get(actor,node.memberId());
+        spec=new Spec(spec.title(),spec.goal(),spec.entry(),spec.nodes().stream().map(n->{
+            if(n.assignment()!=null||n.kind()!=Kind.TASK&&n.kind()!=Kind.DECISION)return n;
+            return new Node(n.key(),n.title(),n.kind(),n.instruction(),n.next(),n.branches(),n.memberId(),
+                    n.memberId()==null?Assignment.AUTO:Assignment.MEMBER,n.requiredSkills());
+        }).toList());
+        for(var node:spec.nodes()){team.requirements(node.requiredSkills());if(node.memberId()!=null)team.get(actor,node.memberId());}
         if(id==null) {
             if(version!=0) throw new IllegalArgumentException("New workflow has version zero");
             id="WF-"+UUID.randomUUID();
@@ -154,18 +167,23 @@ public class WorkflowRuns {
         if(definition.version()!=expectedVersion) throw new IllegalStateException("Workflow changed; reload before starting");
         return start(request,digest,definitionId,expectedVersion,definition.spec(),input,location);
     }
-    @Transactional public Run simple(String request,String instruction,String location,String memberId) {
-        String digest=AuthorityRepository.hash(db.encode(Arrays.asList("task",instruction,location,memberId)));
+    @Transactional public Run simple(String request,String instruction,String location,String memberId,Assignment assignment,List<String> requiredSkills) {
+        if(assignment==null)assignment=memberId==null?Assignment.AUTO:Assignment.MEMBER;
+        requiredSkills=team.requirements(requiredSkills);
+        String digest=AuthorityRepository.hash(db.encode(Arrays.asList("task",instruction,location,memberId,assignment,requiredSkills)));
         var previous=replay(request,digest);if(previous!=null)return previous;
         instruction=text(instruction,8000);
         var spec=new Spec(instruction.substring(0,Math.min(80,instruction.length())),instruction,"task",List.of(
-                new Node("task","Task",Kind.TASK,instruction,"end",Map.of(),memberId),new Node("end","Done",Kind.END,"",null,Map.of(),null)));
+                new Node("task","Task",Kind.TASK,instruction,"end",Map.of(),memberId,assignment,requiredSkills),new Node("end","Done",Kind.END,"",null,Map.of(),null,null,List.of())));
         return start(request,digest,null,0,spec,"",location);
     }
     private Run start(String request,String digest,String definition,long definitionVersion,Spec spec,String input,String declaredLocation) {
         String actor=actor();input=input==null?"":input;
         var assigned=new LinkedHashMap<String,me.asu.aidev.worker.application.TeamMembers.Profile>();
-        for(var node:spec.nodes())if(node.memberId()!=null)assigned.put(node.key(),team.forRun(actor,node.memberId()));
+        for(var node:spec.nodes()){
+            team.requirements(node.requiredSkills());
+            if(node.memberId()!=null)assigned.put(node.key(),team.forRun(actor,node.memberId(),node.requiredSkills()));
+        }
         if(input.length()>32000) throw new IllegalArgumentException("Input exceeds 32000 characters");
         var steps=spec.nodes().stream().filter(n->n.kind()==Kind.TASK || n.kind()==Kind.DECISION).map(n->
                 new WorkflowPlanSpec.Step(n.key(),Set.of("general-work"),Set.of(),"general-work",instruction(spec,n),null,null,Set.of(),null,null,
@@ -193,6 +211,8 @@ public class WorkflowRuns {
         return db.jdbc().queryForObject("SELECT COUNT(*) FROM workflow_execution WHERE id=?",Long.class,plan)>0;
     }
     private Run load(String id,boolean human) {
+        // Member edits and task claims already use this lock. Keep a single lock order.
+        boundary.lock();
         if(human) {
             db.jdbc().update("UPDATE workflow_execution SET version=version WHERE id=? AND actor=?",id,actor());
             return db.jdbc().query("SELECT run_json FROM workflow_execution WHERE id=? AND actor=?",(rs,i)->db.decode(rs.getString(1),Run.class),id,actor()).stream().findFirst().orElseThrow();
@@ -218,14 +238,25 @@ public class WorkflowRuns {
             run.state="COMPLETED";event(run,"COMPLETED","Workflow finished");endPlan(run,WorkflowPlan.State.COMPLETED);return;
         }
         if(node.kind()==Kind.ASK) {run.state="WAITING_USER";event(run,"QUESTION",node.instruction());return;}
+        if(run.sequence>=64) {run.state="FAILED";event(run,"LIMIT","Workflow reached 64 working steps; no further work was dispatched");return;}
+        var plan=plans.getObject().get(run.id);
+        if(plan.state()!=WorkflowPlan.State.CONFIRMED) {run.state="FAILED";event(run,"FAILED","Underlying execution is not active; no following work was dispatched");return;}
+        var member=team.assigned(run.id,node.key());
+        if(member==null&&node.assignment()==Assignment.AUTO) {
+            var choice=team.choose(run.actor,node.requiredSkills());
+            if(choice.member()==null) {
+                run.state="WAITING_MEMBER";
+                if(!Objects.equals(run.memberWait,choice.reason()))event(run,"WAITING_MEMBER",choice.reason());
+                run.memberWait=choice.reason();return;
+            }
+            member=choice.member();team.freeze(run.id,node.key(),member);event(run,"MEMBER_ASSIGNED",member.name());
+        }
+        run.memberWait=null;
         for(var input:run.inputs)if(input.state.equals("QUEUED")) {
             append(run,"User supplement: "+input.text);input.state="CONTEXT";
             event(run,"INPUT_CONTEXT",input.id);
         }
         run.sealedTaskId=null;run.sealedAttemptId=null;
-        if(run.sequence>=64) {run.state="FAILED";event(run,"LIMIT","Workflow reached 64 working steps; no further work was dispatched");return;}
-        var plan=plans.getObject().get(run.id);
-        if(plan.state()!=WorkflowPlan.State.CONFIRMED) {run.state="FAILED";event(run,"FAILED","Underlying execution is not active; no following work was dispatched");return;}
         int previousRound=plans.getObject().steps(run.id).stream().map(t->WorkflowTaskPosition.parse(plan,t.id()).orElse(null))
                 .filter(p->p!=null && !p.review() && plan.spec().steps().get(p.step()).key().equals(node.key()))
                 .mapToInt(WorkflowTaskPosition::round).max().orElse(0);
@@ -236,12 +267,20 @@ public class WorkflowRuns {
         String context=run.context;
         var taskId=new TaskId(plan.id()+"~"+node.key()+"~work-"+round);
         var instruction=instruction(run.spec,node)+"\nExecution input and prior results:\n"+context;
-        var member=team.assigned(run.id,node.key());if(member!=null)instruction=team.context(member)+instruction;
+        if(member!=null)instruction=team.context(member)+instruction;
         if(instruction.length()>16384) {run.state="FAILED";event(run,"LIMIT","Node input exceeds the current Worker instruction limit; no work was dispatched");return;}
         // createExecution uses the original slot; append the execution input through the same task creation path.
         plans.getObject().createWorkflowExecution(plan,index,round,instruction);
         if(member!=null)team.bind(run.id,node.key(),taskId.value(),member);
+        else team.attachSkills(taskId.value(),node.requiredSkills());
         run.taskId=taskId.value();event(run,"DISPATCHED",node.title());
+    }
+    /** One transaction per waiter; the existing scheduler supplies a bounded rotating batch. */
+    @Transactional public void assignPending(String id) {
+        var run=load(id,false);if(!run.state.equals("WAITING_MEMBER"))return;
+        String previousReason=run.memberWait;int previousEvents=run.events.size();
+        run.state="RUNNING";advance(run);
+        if(!run.state.equals("WAITING_MEMBER")||!Objects.equals(previousReason,run.memberWait)||previousEvents!=run.events.size())persist(run);
     }
     @Transactional public void completed(WorkTask task,CompletionReport report) {
         var run=load(task.subjectId(),false);
@@ -314,7 +353,7 @@ public class WorkflowRuns {
             }
         }
         return new View(run,task,report,provisioner.getObject().pending(run.id),activity,
-                modelUsage.summary(owners.currentOwner(),new ModelUsageView.Query(run.id,null)),team.identity(activityTask==null?null:activityTask.id().value()));
+                modelUsage.summary(owners.currentOwner(),new ModelUsageView.Query(run.id,null)),team.identity(run.memberWait!=null||activityTask==null?null:activityTask.id().value()));
     }
     @Transactional public Run control(String id,long version,String action,String answer) {
         var run=load(id,true);
@@ -328,12 +367,12 @@ public class WorkflowRuns {
                 run.current=node.branches().isEmpty()?node.next():node.branches().get(answer);run.state="RUNNING";advance(run);
             }
             case "pause" -> {
-                if(!run.state.equals("RUNNING"))throw new IllegalStateException("Only a running workflow can pause");
+                if(!Set.of("RUNNING","WAITING_MEMBER").contains(run.state))throw new IllegalStateException("Only a running workflow can pause");
                 run.state="PAUSED";event(run,"PAUSED","Current dispatched work may finish; no following step will start");
             }
             case "resume" -> {
                 if(!run.state.equals("PAUSED"))throw new IllegalStateException("Workflow is not paused");
-                run.state="RUNNING";event(run,"RESUMED","Workflow resumed");
+                run.state="RUNNING";run.memberWait=null;event(run,"RESUMED","Workflow resumed");
                 var task=currentTask(run);
                 if(task==null)advance(run);
                 else if(task.state()==TaskState.COMPLETED) {
@@ -384,7 +423,7 @@ public class WorkflowRuns {
             if(!prior.text.equals(content)||!prior.mode.equals(mode))throw new IllegalStateException("Input request has different content");
             return run;
         }
-        if(!Set.of("RUNNING","PAUSED","WAITING_USER").contains(run.state))throw new IllegalStateException("This execution is not accepting new input");
+        if(!Set.of("RUNNING","PAUSED","WAITING_USER","WAITING_MEMBER").contains(run.state))throw new IllegalStateException("This execution is not accepting new input");
         var task=currentTask(run);
         if(task!=null && Set.of(TaskState.RUNNING,TaskState.YIELDING,TaskState.CLAIMED).contains(task.state())) {
             var lease=tasks.findLease(task.id());

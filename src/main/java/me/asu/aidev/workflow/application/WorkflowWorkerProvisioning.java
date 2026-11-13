@@ -15,12 +15,14 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkflowWorkerProvisioning {
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.application.TeamMembers team;
+    @org.springframework.beans.factory.annotation.Autowired private org.springframework.beans.factory.ObjectProvider<WorkflowRuns> workflows;
     @org.springframework.beans.factory.annotation.Autowired private WorkflowReviewClaimPolicy stageReviewPolicy;
     @org.springframework.beans.factory.annotation.Autowired private FactoryReviewClaimPolicy factoryReviewPolicy;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.run.NativeRunClaimPolicy nativeRuns;
     public record Preparation(String taskId,String planId,String state,String message) {}
     private final Map<String,Preparation> pending=new java.util.concurrent.ConcurrentHashMap<>();
     private String after="";
+    private String memberAfter="";
     public List<Preparation> pending(String planId) {return pending.values().stream().filter(p -> p.planId().equals(planId)).toList();}
     private final JdbcTemplate jdbc;
     private final WorkTaskRepository tasks;
@@ -33,6 +35,10 @@ public class WorkflowWorkerProvisioning {
     }
     @org.springframework.scheduling.annotation.Scheduled(fixedDelayString="${aidev.workflow.worker-poll-ms:5000}")
     public void supply() {
+        var waiting=jdbc.queryForList("SELECT id FROM workflow_execution WHERE state='WAITING_MEMBER' AND id>? ORDER BY id LIMIT 20",String.class,memberAfter);
+        memberAfter=waiting.isEmpty()?"":waiting.getLast();
+        for(var id:waiting)try {workflows.getObject().assignPending(id);}
+        catch(RuntimeException error) {System.getLogger(getClass().getName()).log(System.Logger.Level.WARNING,"Team assignment remains pending for "+id+" ("+error.getClass().getSimpleName()+")");}
         var config=settings.current();
         if(config==null || !config.automaticWorkers()) return;
         var ready=jdbc.queryForList("""
