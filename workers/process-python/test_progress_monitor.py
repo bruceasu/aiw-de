@@ -28,7 +28,7 @@ class ProgressMonitorTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "^MODEL_NO_PROGRESS$"):
             self.monitor.observe(read(6))
         self.assertEqual(self.evidence.record.call_args.kwargs,
-                         {"status": "stopped", "count": 6, "tool": "read", "code": "MODEL_NO_PROGRESS"})
+                         {"status": "failed", "count": 6, "tool": "read", "code": "MODEL_NO_PROGRESS"})
 
     def test_alternating_known_results_do_not_evade_the_limit(self):
         self.assertFalse(self.monitor.observe(read(0, "a")))

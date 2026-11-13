@@ -29,6 +29,26 @@ class RunChannelTest(unittest.TestCase):
         self.addCleanup(channel.close)
         return channel
 
+    def test_progress_warning_and_stop_use_safe_channel_metadata(self):
+        from progress_monitor import ProgressMonitor
+        channel = self.channel()
+        channel.progress_events_supported = True
+        evidence = SimpleNamespace(record=lambda event, **values: channel.observe(event, values))
+        monitor = ProgressMonitor(evidence)
+        def observe(call):
+            return monitor.observe([
+                {"type": "function_call", "call_id": str(call), "name": "read", "arguments": {"path": "private"}},
+                {"type": "function_call_output", "call_id": str(call), "output": "private content"}])
+        for call in range(6):
+            observe(call)
+        with self.assertRaisesRegex(RuntimeError, "MODEL_NO_PROGRESS"):
+            observe(6)
+        payloads = [event["payload"] for event in channel.queue]
+        self.assertEqual(payloads, [
+            {"status": "possible", "count": 3, "toolName": "read", "code": "REPEATED_READ_RESULT"},
+            {"status": "failed", "count": 6, "toolName": "read", "code": "MODEL_NO_PROGRESS"}])
+        self.assertNotIn("private", str(payloads))
+
     def test_pause_is_acknowledged_only_after_the_admitted_unit_finishes(self):
         channel = self.channel()
         channel.enter()

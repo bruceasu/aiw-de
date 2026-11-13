@@ -101,6 +101,9 @@ class RunChannel:
             values = {"runtimeEvent": values.get("status")}
         elif event == "tool-proposed":
             values = {"toolName": values.get("tool"), "status": values.get("status")}
+        elif event == "progress-stalled" and "tool" in values:
+            values = {**values, "toolName": values["tool"]}
+            values.pop("tool")
         payload = {key: value for key, value in values.items() if key in FIELDS and value is not None
                    and not (isinstance(value, str) and not value.strip())}
         if payload.get("sourceKind") not in SOURCE_KINDS:

@@ -107,6 +107,13 @@ class ExecutionRunsTest {
         assertThat(response.get("batch")).isEqualTo(inputBatch);assertThat(phase()).isEqualTo("RUNNING");
         verify(workbench).machine("task",new WorkbenchContract.MachineCommand(lease,"DRAIN","boundary",null,null,null));
     }
+    @Test void progressWarningsAndStopsAreAcceptedWithoutWideningMetadata() {
+        nativeEvent(1,"progress-stalled",Map.of("status","possible","count",3,"toolName","read","code","REPEATED_READ_RESULT"));
+        nativeEvent(2,"progress-stalled",Map.of("status","failed","count",6,"toolName","read","code","MODEL_NO_PROGRESS"));
+        assertThat(jdbc.queryForObject("SELECT ack_sequence FROM execution_run_session",Long.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM execution_run_event",Long.class)).isEqualTo(2);
+        assertThat(phase()).isEqualTo("RUNNING");
+    }
     @Test void rawContentAndUnorderedEventsAreRejected() {
         assertThatThrownBy(()->metadata(Map.of("prompt","private"))).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(()->metadata(Map.of("inputBytes",1.2))).isInstanceOf(IllegalArgumentException.class);

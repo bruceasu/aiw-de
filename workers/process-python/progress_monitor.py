@@ -81,7 +81,7 @@ class ProgressMonitor:
         if not observed or self.repetitions < self.threshold:
             return False
         if warned_before and self.repetitions >= 2 * self.threshold:
-            self.evidence.record("progress-stalled", status="stopped", count=self.repetitions,
+            self.evidence.record("progress-stalled", status="failed", count=self.repetitions,
                                  tool=last_tool, code="MODEL_NO_PROGRESS")
             raise RuntimeError("MODEL_NO_PROGRESS")
         if not self.warned:
