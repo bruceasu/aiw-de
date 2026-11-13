@@ -50,6 +50,7 @@ public class WorkerProtocolV1Controller {
     private final WorkerService workers;
     @Autowired private me.asu.aidev.authority.AuthorityRepository authorityRepository;
     @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.NativeQuestions> nativeQuestions;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> workflowRuns;
     private final TaskClaimService claims;
     private final TaskExecutionService executions;
     private final ExecutionAttemptRepository attempts;
@@ -208,7 +209,8 @@ public class WorkerProtocolV1Controller {
                 configurations!=null && configurations.managed(task.id().value())?null:workflowAiPreferences==null?null:workflowAiPreferences.forTask(task),
                 configurations==null?null:configurations.payload(task.id().value(),claimed.attemptId().value()),
                 skillFiles==null?null:skillFiles.payload(task.id().value(),claimed.attemptId().value()),
-                goalPolicy!=null&&goalPolicy.managed(task)?goalPolicy.frozen(task).images():List.of());
+                goalPolicy!=null&&goalPolicy.managed(task)?goalPolicy.frozen(task).images():List.of(),
+                workflowRuns.getObject().sources(task));
     }
 
     private AiProfileCatalog.Guidance delegatedGuidance(me.asu.aidev.work.domain.WorkTask task,String runtime,int attempt) {
@@ -266,5 +268,6 @@ public class WorkerProtocolV1Controller {
             me.asu.aidev.execution.config.ConfigurationContract.Payload executionConfiguration,
             me.asu.aidev.execution.skills.SkillFileContract.Payload skillFiles,
             @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
-            List<me.asu.aidev.goal.application.GoalImages.Image> modelImages) {}
+            List<me.asu.aidev.goal.application.GoalImages.Image> modelImages,
+            List<me.asu.aidev.workflow.application.WorkflowRuns.Material> referenceMaterials) {}
 }

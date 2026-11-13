@@ -41,6 +41,11 @@ class PlanLocationProtocolTest {
         controller = new WorkerProtocolV1Controller(workers, claims, executions, attempts, mock(AiProfileCatalog.class));
         ReflectionTestUtils.setField(controller, "locations", locations);
         ReflectionTestUtils.setField(controller, "handoffs", handoffs);
+        var workflows = mock(me.asu.aidev.workflow.application.WorkflowRuns.class);
+        when(workflows.sources(any())).thenReturn(List.of());
+        var provider = mock(org.springframework.beans.factory.ObjectProvider.class);
+        when(provider.getObject()).thenReturn(workflows);
+        ReflectionTestUtils.setField(controller, "workflowRuns", provider);
     }
 
     @Test void claimCarriesLocationAndPinnedUpstreamHandoffWithoutWorkspaceAssignment() {
@@ -67,6 +72,7 @@ class PlanLocationProtocolTest {
         assertThat(body).isNotNull();
         assertThat(body.planId()).isEqualTo("plan-1");
         assertThat(body.location()).isEqualTo("not-yet-existing-location");
+        assertThat(body.referenceMaterials()).isEmpty();
         assertThat(body.handoffProtocol()).isEqualTo("aiw.handoff.v1");
         assertThat(body.inputs().getFirst().attemptId()).isEqualTo("source-attempt");
         assertThat(body.inputs().getFirst().handoff()).isEqualTo(upstream);

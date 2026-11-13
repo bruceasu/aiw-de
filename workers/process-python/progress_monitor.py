@@ -5,7 +5,7 @@ import hashlib
 import json
 
 
-READ_TOOLS = frozenset({"read", "ls", "grep", "search", "read_context_source", "read_skill_file", "read_skill_text", "git_status", "git_diff"})
+READ_TOOLS = frozenset({"read", "ls", "grep", "search", "read_context_source", "search_context_sources", "read_skill_file", "read_skill_text", "git_status", "git_diff"})
 REMINDER = (
     "Several identical read operations returned the same result. Reconsider the next step "
     "using the evidence already collected. If more investigation is needed, explain what "

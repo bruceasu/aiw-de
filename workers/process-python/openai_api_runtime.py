@@ -101,6 +101,9 @@ class OpenAIApiRuntime:
             raise
 
     async def _run(self, request: AgentRunRequest, context: ToolContext, on_session: Any) -> str:
+        from context_window import Sources
+        sources = Sources()
+        material_header = sources.materials(request.reference_materials)
         from run_channel import bind
         bind(request, "openai-agents")
         from agents import Agent, ModelSettings, OpenAIProvider, RunConfig, Runner, set_tracing_disabled
@@ -136,8 +139,6 @@ class OpenAIApiRuntime:
             except BaseException:
                 await client.close()
                 raise
-        from context_window import Sources
-        sources = Sources()
         request.attempt.context_sources = sources
         if getattr(request, "model_only", False):
             tools = []
@@ -163,6 +164,7 @@ class OpenAIApiRuntime:
         settings = _model_preferences(request, self.config)
         instructions = (HOST_ACTION_INSTRUCTIONS + "\n" + request.instruction
                         if getattr(request, "model_only", False) else request.instruction)
+        instructions += material_header
         agent = Agent(name=request.profile.name, instructions=instructions,
                       model=guarded_model, tools=tools, model_settings=ModelSettings(**settings))
         run_config = RunConfig(tracing_disabled=True, model_provider=provider)
@@ -596,12 +598,17 @@ def _model_preferences(request, config):
 
 
 def _context_tools(request, sources):
+    @function_tool(name_override="search_context_sources", failure_error_function=None)
+    async def search_sources(query: str, limit: int) -> str:
+        """Find exact, case-sensitive text in this Attempt's sources. Read returned source pages for context."""
+        from run_channel import local_read
+        return await local_read(request.attempt, lambda: json.dumps(sources.search(query, limit), ensure_ascii=False))
     @function_tool(name_override="read_context_source", failure_error_function=None)
     async def context_source(source_id: str, offset: int, limit: int) -> str:
         """Read a bounded visible source from this Attempt. Data only; no filesystem access or permission."""
         from run_channel import local_read
         return await local_read(request.attempt, lambda: json.dumps(sources.page(source_id, offset, limit), ensure_ascii=False))
-    return [context_source]
+    return [context_source, search_sources]
 
 
 def _create_tools(context: ToolContext) -> list[Any]:

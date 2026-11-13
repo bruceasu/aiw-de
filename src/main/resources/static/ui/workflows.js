@@ -2,6 +2,16 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'Task sources':['任务资料','タスク資料'],
+    'Source type':['资料类型','資料の種類'],
+    'Choose UTF-8 text files':['请选择 UTF-8 文本文件','UTF-8 テキストファイルを選択してください'],
+    'Reference knowledge':['参考知识','参考知識'],
+    'Method / custom Skill':['工作方法／自定义 Skill','作業方法／カスタム Skill'],
+    'Add text files':['添加文本文件','テキストファイルを追加'],
+    'Selected text is saved with this definition and sent to the assigned Worker. The model reads relevant pages on demand. Up to 8 files, 128 KiB each, 512 KiB total.':['所选文本随定义保存并提供给执行 Worker；模型按需读取相关页。最多 8 个文件，每个 128 KiB，总计 512 KiB。','選択したテキストは定義とともに保存され、担当 Worker に渡されます。モデルは必要なページを読みます。最大8件、各128 KiB、合計512 KiB。'],
+    'Select up to eight text sources totaling 512 KiB':['最多选择 8 份文本资料，总计不超过 512 KiB。','テキスト資料は最大8件、合計512 KiBまでです。'],
+    'A text source must contain 1 to 128 KiB':['每份资料须为非空文本，不超过 128 KiB。','資料は空でないテキストで、128 KiB以内にしてください。'],
+    'Source digest differs from content':['资料内容与摘要不一致，请重新加载。','資料の内容とダイジェストが一致しません。再読み込みしてください。'],
     'Team member':['团队成员','チームメンバー'],
     'Automatically choose member':['自动选择成员','メンバーを自動選択'],
     'General execution (no team member)':['通用执行（不使用团队成员）','汎用実行（メンバーなし）'],
@@ -82,7 +92,7 @@
     return words[value]?.[locale?.startsWith('zh') ? 0 : locale?.startsWith('ja') ? 1 : 2] || value;
   };
   const status = message => { $('[data-wf-status]').textContent = message; };
-  let definitions=[], teamSkills=[], teamMembers=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='';
+  let definitions=[], teamSkills=[], teamMembers=[], taskSources=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='';
   const newRequest = () => crypto.randomUUID();
   let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest();
   const route=new URLSearchParams(location.search);
@@ -115,12 +125,33 @@
     {key:'end',title:t('Done'),kind:'END',instruction:'',next:null,branches:{}}]};}
   function showEditor(definition) {
     selectedRun=null;editing=structuredClone(definition || {id:null,version:0,spec:singleSpec()});
+    editing.spec.sources ||= [];
+    renderSources($('[data-wf-definition-sources]'),editing.spec.sources,values=>editing.spec.sources=values);
     for(const n of editing.spec.nodes)if(['TASK','DECISION'].includes(n.kind))n.assignment ||= n.memberId?'MEMBER':definition?.id?'GENERAL':'AUTO';
     $('[data-wf-title]').value=editing.spec.title;$('[data-wf-goal]').value=editing.spec.goal;
     $('[data-wf-input]').value='';startRequest=newRequest();savedSpec=definition?JSON.stringify(editing.spec):'';
     panel('editor');renderNodes();graph($('[data-wf-definition-graph]'),editing.spec);status('');
   }
   function field(label,input) {const wrapper=element('label',undefined,'field');wrapper.append(element('span',t(label)),input);return wrapper;}
+  function renderSources(host,values,change){
+    host.replaceChildren(element('h3',t('Task sources')),element('p',t('Selected text is saved with this definition and sent to the assigned Worker. The model reads relevant pages on demand. Up to 8 files, 128 KiB each, 512 KiB total.'),'help'));
+    const kind=element('select');kind.append(new Option(t('Reference knowledge'),'knowledge'),new Option(t('Method / custom Skill'),'skill'));
+    const file=element('input');file.type='file';file.multiple=true;file.accept='.txt,.md,.markdown,.json,.csv';
+    file.onchange=()=>act(async()=>{
+      const additions=[],sourceKind=kind.value,selectedFiles=[...file.files];
+      for(const source of selectedFiles){
+        if(source.size>131072)throw new Error('A text source must contain 1 to 128 KiB');
+        let content;try{content=new TextDecoder('utf-8',{fatal:true}).decode(await source.arrayBuffer());}catch(_){throw new Error('Choose UTF-8 text files');}
+        if(!content.trim()||content.includes('\0')||new TextEncoder().encode(content).length>131072)throw new Error('A text source must contain 1 to 128 KiB');
+        additions.push({kind:sourceKind,title:source.name,content});
+      }
+      const next=[...values,...additions];
+      if(next.length>8||next.reduce((size,item)=>size+new TextEncoder().encode(item.content).length,0)>524288)throw new Error('Select up to eight text sources totaling 512 KiB');
+      change(next);renderSources(host,next,change);
+    });
+    host.append(field('Source type',kind),field('Add text files',file));
+    values.forEach((source,index)=>{const row=element('div',undefined,'wf-actions');row.append(element('span',source.title+' · '+t(source.kind==='skill'?'Method / custom Skill':'Reference knowledge')),button('Remove',()=>{const next=values.filter((_,i)=>i!==index);change(next);renderSources(host,next,change);}));host.append(row);});
+  }
   function input(value,change,max=8000) {const e=element('input');e.value=value||'';e.maxLength=max;e.oninput=()=>change(e.value);return e;}
   function target(value,change) {
     const select=element('select');select.append(new Option('—',''));
@@ -318,7 +349,7 @@
     ]}});
     savedSpec='';$('[data-wf-input]').value='模拟售后规则 v1：签收后30天内产品故障可建议换货，超期转人工决定；需购买记录、签收日期、故障说明；实物损坏需照片。疑似运输损伤须核实包装和签收情况。本流程不实际退款、换货或发送消息。\n\n处理日期：2026-11-12。\n购买记录：已提供，订单 DEMO-001。\n签收日期：2026-11-09。\n客户说明：通电后无法启动，希望换货。\n\n以上全部是模拟资料。';
   }
-  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,...assignment($('[data-wf-member]').value),requiredSkills:[...$('[data-wf-skills]').selectedOptions].map(o=>o.value)});taskRequest=newRequest();await library();await openRun(run.id);});};
+  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,...assignment($('[data-wf-member]').value),requiredSkills:[...$('[data-wf-skills]').selectedOptions].map(o=>o.value),sources:taskSources});taskRequest=newRequest();await library();await openRun(run.id);});};
   $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
@@ -337,8 +368,8 @@
     await api('/executions/'+encodeURIComponent(selectedRun)+'/inputs',{requestId:inputRequest,text:form.get('text'),mode:form.get('mode')});
     inputRequest=newRequest();e.target.reset();signature='';await refreshRun();status(t('Input received'));
   });};
-  window.addEventListener('aiw:locale-changed',()=>{translate();signature='';$('[data-wf-usage]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
-  translate();if(pageMode==='tasks')panel('task');else showEditor();act(async()=>{
+  window.addEventListener('aiw:locale-changed',()=>{translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(editing)renderSources($('[data-wf-definition-sources]'),editing.spec.sources||[],values=>editing.spec.sources=values);signature='';$('[data-wf-usage]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
+  translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(pageMode==='tasks')panel('task');else showEditor();act(async()=>{
     await library();
     if(route.get('execution'))await openRun(route.get('execution'));
     else if(route.get('definition'))showEditor(await api('/definitions/'+encodeURIComponent(route.get('definition'))));

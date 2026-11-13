@@ -45,6 +45,8 @@ def capabilities(config):
              "code": {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in modules}}
     result = {CAPABILITY, QUESTION_CAPABILITY, storage_capability(), "native-config:" + hashlib.sha256(encoded(value)).hexdigest()}
     if config.runtime == "openai-agents":
+        result.add("task-materials-v1")
+    if config.runtime == "openai-agents":
         result.add("workflow-inputs-v1")
     return result
 

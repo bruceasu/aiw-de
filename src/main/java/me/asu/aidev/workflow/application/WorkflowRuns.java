@@ -48,9 +48,23 @@ public class WorkflowRuns {
             if(kind==Kind.ASK && next!=null && !branches.isEmpty()) throw new IllegalArgumentException("Choose a text answer or explicit options");
         }
     }
-    public record Spec(String title,String goal,String entry,List<Node> nodes) {
+    public record Material(String kind,String title,String content,String digest) {
+        public Material {
+            if(!Set.of("skill","knowledge").contains(kind))throw new IllegalArgumentException("Choose a method or reference source");
+            title=text(title,160);
+            if(content==null||content.isBlank()||content.indexOf(0)>=0||content.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>131072)
+                throw new IllegalArgumentException("A text source must contain 1 to 128 KiB");
+            String actual=AuthorityRepository.hash(content);
+            if(digest!=null&&!digest.equals(actual))throw new IllegalArgumentException("Source digest differs from content");
+            digest=actual;
+        }
+    }
+    public record Spec(String title,String goal,String entry,List<Node> nodes,List<Material> sources) {
         public Spec {
             title=text(title,160);goal=text(goal,8000);
+            sources=sources==null?List.of():List.copyOf(sources);
+            if(sources.size()>8||sources.stream().mapToInt(s->s.content().getBytes(java.nio.charset.StandardCharsets.UTF_8).length).sum()>524288)
+                throw new IllegalArgumentException("Select up to eight text sources totaling 512 KiB");
             if(nodes==null || nodes.isEmpty() || nodes.size()>32) throw new IllegalArgumentException("A workflow needs 1 to 32 nodes");
             nodes=List.copyOf(nodes);var keys=new HashSet<String>();
             for(var node:nodes) if(!keys.add(node.key())) throw new IllegalArgumentException("Duplicate node key");
@@ -119,7 +133,7 @@ public class WorkflowRuns {
             if(n.assignment()!=null||n.kind()!=Kind.TASK&&n.kind()!=Kind.DECISION)return n;
             return new Node(n.key(),n.title(),n.kind(),n.instruction(),n.next(),n.branches(),n.memberId(),
                     n.memberId()==null?Assignment.AUTO:Assignment.MEMBER,n.requiredSkills());
-        }).toList());
+        }).toList(),spec.sources());
         for(var node:spec.nodes()){team.requirements(node.requiredSkills());if(node.memberId()!=null)team.get(actor,node.memberId());}
         if(id==null) {
             if(version!=0) throw new IllegalArgumentException("New workflow has version zero");
@@ -167,14 +181,15 @@ public class WorkflowRuns {
         if(definition.version()!=expectedVersion) throw new IllegalStateException("Workflow changed; reload before starting");
         return start(request,digest,definitionId,expectedVersion,definition.spec(),input,location);
     }
-    @Transactional public Run simple(String request,String instruction,String location,String memberId,Assignment assignment,List<String> requiredSkills) {
+    @Transactional public Run simple(String request,String instruction,String location,String memberId,Assignment assignment,List<String> requiredSkills,List<Material> sources) {
         if(assignment==null)assignment=memberId==null?Assignment.AUTO:Assignment.MEMBER;
         requiredSkills=team.requirements(requiredSkills);
-        String digest=AuthorityRepository.hash(db.encode(Arrays.asList("task",instruction,location,memberId,assignment,requiredSkills)));
+        sources=sources==null?List.of():List.copyOf(sources);
+        String digest=AuthorityRepository.hash(db.encode(Arrays.asList("task",instruction,location,memberId,assignment,requiredSkills,sources)));
         var previous=replay(request,digest);if(previous!=null)return previous;
         instruction=text(instruction,8000);
         var spec=new Spec(instruction.substring(0,Math.min(80,instruction.length())),instruction,"task",List.of(
-                new Node("task","Task",Kind.TASK,instruction,"end",Map.of(),memberId,assignment,requiredSkills),new Node("end","Done",Kind.END,"",null,Map.of(),null,null,List.of())));
+                new Node("task","Task",Kind.TASK,instruction,"end",Map.of(),memberId,assignment,requiredSkills),new Node("end","Done",Kind.END,"",null,Map.of(),null,null,List.of())),sources);
         return start(request,digest,null,0,spec,"",location);
     }
     private Run start(String request,String digest,String definition,long definitionVersion,Spec spec,String input,String declaredLocation) {
@@ -186,7 +201,7 @@ public class WorkflowRuns {
         }
         if(input.length()>32000) throw new IllegalArgumentException("Input exceeds 32000 characters");
         var steps=spec.nodes().stream().filter(n->n.kind()==Kind.TASK || n.kind()==Kind.DECISION).map(n->
-                new WorkflowPlanSpec.Step(n.key(),Set.of("general-work"),Set.of(),"general-work",instruction(spec,n),null,null,Set.of(),null,null,
+                new WorkflowPlanSpec.Step(n.key(),spec.sources().isEmpty()?Set.of("general-work"):Set.of("general-work","task-materials-v1"),Set.of(),"general-work",instruction(spec,n),null,null,Set.of(),null,null,
                         WorkflowPlanSpec.ReviewMode.SELF,WorkflowPlanSpec.ReviewRisk.LOW)).toList();
         if(steps.isEmpty()) throw new IllegalArgumentException("A working node is required");
         var plan=plans.getObject().draft(new WorkflowPlanSpec(spec.goal(),WorkflowPlanSpec.Source.MANAGER,steps,declaredLocation),actor);
@@ -209,6 +224,12 @@ public class WorkflowRuns {
     }
     public boolean manages(String plan) {
         return db.jdbc().queryForObject("SELECT COUNT(*) FROM workflow_execution WHERE id=?",Long.class,plan)>0;
+    }
+    /** Only called while building the already-authorized claim response for this exact task. */
+    public List<Material> sources(WorkTask task) {
+        if(!task.subjectType().equals("flexible-plan"))return List.of();
+        return db.jdbc().queryForList("SELECT run_json FROM workflow_execution WHERE id=?",String.class,task.subjectId())
+                .stream().findFirst().map(json->db.decode(json,Run.class).spec.sources()).orElse(List.of());
     }
     private Run load(String id,boolean human) {
         // Member edits and task claims already use this lock. Keep a single lock order.

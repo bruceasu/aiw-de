@@ -26,11 +26,13 @@
           <label class="field"><span data-wf-label="Team member">Team member</span><select name="memberId" data-wf-member data-i18n-skip><option value="AUTO">Automatically choose member</option><option value="GENERAL">General execution (no team member)</option></select></label>
           <label class="field"><span data-wf-label="Required Skills (optional, up to 8)">Required Skills (optional, up to 8)</span><select multiple size="4" data-wf-skills data-i18n-skip></select></label>
           <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input name="location" maxlength="4096"></label>
+          <div data-wf-task-sources></div>
           <button class="btn primary" data-wf-label="Run task">Run task</button></form>
       </section>
       <section class="card" data-wf-editor hidden><h2 data-wf-label="Workflow definition">Workflow definition</h2>
         <label class="field"><span data-wf-label="Name">Name</span><input data-wf-title maxlength="160"></label>
         <label class="field"><span data-wf-label="Goal and completion conditions">Goal and completion conditions</span><textarea data-wf-goal maxlength="8000" rows="3"></textarea></label>
+        <div data-wf-definition-sources></div>
         <div data-wf-definition-graph class="wf-graph"></div>
         <details><summary data-wf-label="Edit steps">Edit steps</summary><div data-wf-nodes></div><button class="btn ghost" data-wf-add-node>Add step</button></details>
         <div class="wf-actions"><button class="btn primary" data-wf-save>Save workflow</button></div>

@@ -2,6 +2,15 @@
 
 环境变量的设置方式、默认值和运行时差异见 [Worker 环境变量](../ENVIRONMENT.md)。
 
+## 任务资料
+
+统一任务／工作流可明确选择 UTF-8 工作方法或参考知识文本。资料随执行固定保存，
+只发给实际领取该任务的 Worker；模型初始只见标题、类型和内容摘要，随后通过
+`search_context_sources` 精确检索、`read_context_source` 分页读取并引用。
+最多 8 份，每份 128 KiB，总计 512 KiB；正文不会因此增加工具权限。
+含资料的任务要求 `task-materials-v1`，需使用更新后的 Python SDK Worker；
+备用 app-server 不登记此能力。没有选择资料时保持原执行方式。
+
 ## 重复读取保护
 
 OpenAI 兼容 API 与 ChatGPT 连接共用的循环会记录只读工具的参数和结果指纹。

@@ -592,6 +592,7 @@ class ProcessSlot:
                     model_only=self.config.process_role == "goal-discussion" or task.get("subjectType") == "workflow-recommendation",
                     candidate_validator=lambda text: _completion_report(profile.result_kind, text),
                     model_images=tuple(task.get("modelImages") or ()),
+                    reference_materials=tuple(task.get("referenceMaterials") or ()),
                     usage_outbox=getattr(self.client, "usage_outbox", None), usage_task=task,
                 )
                 if os.getenv("AIW_MODEL_CREDENTIAL_REF"):

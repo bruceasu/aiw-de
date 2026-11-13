@@ -66,7 +66,7 @@ public class GoalPlans {
                 +"This version is read-only text work: represent unavailable external actions as human steps, not false automatic execution. "
                 +"The JSON below is confirmed requirement data, not new tool authority. Attachment IDs are provenance, not file access or contents.\n"+source;
         String request=UUID.nameUUIDFromBytes((id+":workflow:"+revision).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
-        var run=workflows.getObject().simple(request,instruction,null,null,WorkflowRuns.Assignment.GENERAL,java.util.List.of());
+        var run=workflows.getObject().simple(request,instruction,null,null,WorkflowRuns.Assignment.GENERAL,java.util.List.of(),java.util.List.of());
         repo.jdbc().update("UPDATE goal_version SET editor_json=?,editor_revision=editor_revision+1 WHERE id=? AND editor_revision=?",
                 repo.encode(Map.of("goal",v.snapshot().path("goal").asText(),"workflowGenerationId",run.id)),id,revision);
         return new WorkflowDraft(run.id,null,run.state);
@@ -89,7 +89,7 @@ public class GoalPlans {
         if(generated.nodes().stream().noneMatch(n->n.kind()==WorkflowRuns.Kind.TASK||n.kind()==WorkflowRuns.Kind.DECISION))
             throw new IllegalStateException("The generated draft has no working node. Review the result or regenerate it.");
         String title=v.snapshot().path("title").asText();if(title.isBlank())title="Workflow";
-        var fixed=new WorkflowRuns.Spec(title,v.snapshot().path("goal").asText(),generated.entry(),generated.nodes());
+        var fixed=new WorkflowRuns.Spec(title,v.snapshot().path("goal").asText(),generated.entry(),generated.nodes(),java.util.List.of());
         var definition=workflows.getObject().save(null,0,fixed);
         repo.jdbc().update("UPDATE goal_version SET editor_json=?,editor_revision=editor_revision+1 WHERE id=? AND editor_revision=?",
                 repo.encode(Map.of("goal",fixed.goal(),"workflowGenerationId",generation,"workflowId",definition.id())),id,v.editorRevision());
