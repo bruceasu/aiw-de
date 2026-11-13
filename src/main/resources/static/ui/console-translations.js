@@ -1,6 +1,9 @@
 // UI copy only. Rows are English, Chinese and Japanese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["Current work, attention needed and connection status","当前工作、待处理事项与连接状态","現在の作業・対応事項・接続状態"],
+  ["Stop accepting new tasks","停止领取新任务","新規タスクの取得を停止"],
+  ["Mark offline","标记离线","オフラインに指定"],
   ["From wish to workflow","从愿望到工作流","願いからワークフローへ"],
   ["Save confirmed requirements, generate a workflow draft, then review it before running business steps.","保存已确认的需求，生成工作流草稿，检查后再启动实际业务步骤。","確定した要件を保存し、ワークフロー案を作成します。業務の実行前に内容を確認してください。"],
   ["Save wish snapshot","保存愿望快照","願いのスナップショットを保存"],

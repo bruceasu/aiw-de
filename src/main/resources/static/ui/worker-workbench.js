@@ -5,7 +5,7 @@
   const labels={RUNNING:'执行中',CLAIMED:'已领取',COMPLETED:'已完成',SUCCEEDED:'成功',FAILED:'失败',EXPIRED:'已过期',CANCELLED:'已撤回',WAITING_INPUT:'等待人工',UNKNOWN:'结果未知',STARTED:'进行中',REJECTED:'未获准',QUEUED:'等待领取',RESERVED:'已领取，等待模型结果确认',DELIVERED:'已递交模型',FINALIZING:'正在收尾'};
   const label=value=>labels[value]||value||'未记录';
   const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;};
-  let state=null,epoch=0,loading=false,busy=false,pending=null,task=initial.get('task')||null,attempt=null;
+  let state=null,epoch=0,loading=false,busy=false,pending=null,task=initial.get('source')==='native'?null:initial.get('task')||null,attempt=initial.get('source')==='native'?null:initial.get('attempt')||null;
   const compare=new Set(),reasons=new Map();
   function feedback(text,tone='info'){const n=$('wb-feedback');n.textContent=text;n.dataset.tone=tone;n.hidden=!text;}
   function entry(){return state?.attempts.find(e=>e.attemptId===state.attemptId);}

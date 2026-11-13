@@ -2,6 +2,9 @@
 (() => {
   const $=id=>document.getElementById(id), csrf=document.querySelector('meta[name="csrf-token"]').content;
   const owner=document.querySelector('meta[name="configuration-owner"]').content;
+  const initial=new URLSearchParams(location.search);
+  let initialNative=initial.get('source')==='native';
+  if(initialNative)$('wr-source').value='native';
   const labels={RUNNING:'执行中',PAUSING:'等待安全边界',PAUSED:'已暂停',YIELDING:'正在保留交接并等待输入',STOPPING:'正在停止',FINALIZING:'正在收尾',SETTLED:'尝试已结束',BROKEN:'通道冲突，需核对'};
   const statuses={ACCEPTED:'已受理',RECEIVED:'Worker 已收到',APPLIED:'已生效',REJECTED:'已被停止请求取代',UNKNOWN:'结果未知'};
   const node=(tag,text,cls)=>{const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
@@ -17,12 +20,23 @@
     if([...host.options].some(o=>o.value===previous))host.value=previous;
   }
   async function catalog() {
-    const planId=$('wr-plan').value;
+    const planId=$('wr-plan').value||(initialNative?initial.get('plan'):null);
     if(catalogPlan===planId&&Date.now()-catalogAt<10000)return;
     const result=await request('read',{taskId:null,attemptId:null,afterSequence:0,planId:planId||null});
     plans=result.plans;attempts=result.nativeTasks;
     options('wr-plan',plans,p=>p.id,p=>p.title+' · '+p.id,'请选择计划');
     options('wr-attempt',attempts,a=>a.attempt_id,a=>a.task_id+' · '+a.state+' · '+a.attempt_id,'请选择执行尝试');
+    if(planId&&attempts.length&&![...$('wr-plan').options].some(o=>o.value===planId)){
+      $('wr-plan').add(new Option(planId,planId));$('wr-plan').value=planId;
+    }
+    if(initialNative){
+      const target=attempts.find(a=>a.attempt_id===initial.get('attempt')&&a.task_id===initial.get('task'));
+      if(target){
+        if(![...$('wr-plan').options].some(o=>o.value===planId))$('wr-plan').add(new Option(planId,planId));
+        $('wr-plan').value=planId;$('wr-attempt').value=target.attempt_id;
+      }else{$('wr-attempt').value='';$('wr-feedback').textContent=({zh:'所选任务和尝试不在当前可见记录中，未自动选择其它执行。',ja:'指定したタスクと試行は表示可能な記録にありません。別の実行は自動選択していません。'})[window.aiwI18n?.locale]||'The requested task and attempt are not visible. No other execution was selected.';}
+      initialNative=false;
+    }
     catalogPlan=planId;catalogAt=Date.now();
   }
   async function request(action,body) {
