@@ -4,6 +4,7 @@
   const words = {
     'Team member (optional)':['团队成员（可选）','チームメンバー（任意）'],'No assigned member':['不指定成员','メンバーを指定しない'],'Member unavailable':['成员未加载或已解散','未表示または解散済みのメンバー'],
     'Member stopped accepting work':['成员已停止接单','メンバーは受付を停止しています'],
+    'Selected member is not accepting new work':['所选成员已停止接单，请恢复该成员或明确重新选择。','選択したメンバーは受付を停止しています。受付を再開するか、明示的に選び直してください。'],
     'Assigned member snapshot':['本次执行的成员设定','この実行のメンバー設定'],'Resume the selected member to claim this work.':['该工作正在等待成员恢复接单。','この作業の取得にはメンバーの受付再開が必要です。'],'Current work continues.':['当前工作会继续。','現在の作業は継続します。'],
     'Member catalog unavailable; existing assignments are preserved.':['暂时无法读取成员目录；已有成员选择会保留，不会自动改派。','メンバー一覧を取得できません。既存の割り当てを保持し、自動変更しません。'],
     'Recorded usage':['已记录用量','記録済み使用量'], 'Model calls':['模型调用次数','モデル呼び出し数'],
@@ -84,7 +85,7 @@
   async function act(work) {
     if(busy)return;busy=true;status('');
     const buttons=$$('button');buttons.forEach(b=>b.disabled=true);
-    try {await work();} catch(error) {status(error instanceof TypeError?t('Request outcome is unknown. Check execution history before submitting again.'):error.message);}
+    try {await work();} catch(error) {status(error instanceof TypeError?t('Request outcome is unknown. Check execution history before submitting again.'):t(error.message));}
     finally {busy=false;buttons.forEach(b=>{if(b.isConnected)b.disabled=false;});if(currentView)controlButtons(currentView.run);}
   }
   function element(tag,text,className) {const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;}
@@ -296,7 +297,7 @@
     ]}});
     savedSpec='';$('[data-wf-input]').value='模拟售后规则 v1：签收后30天内产品故障可建议换货，超期转人工决定；需购买记录、签收日期、故障说明；实物损坏需照片。疑似运输损伤须核实包装和签收情况。本流程不实际退款、换货或发送消息。\n\n处理日期：2026-11-12。\n购买记录：已提供，订单 DEMO-001。\n签收日期：2026-11-09。\n客户说明：通电后无法启动，希望换货。\n\n以上全部是模拟资料。';
   }
-  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,memberId:form.get('memberId')||null});taskRequest=newRequest();await library();await openRun(run.id);});};
+  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,memberId:$('[data-wf-member]').value||null});taskRequest=newRequest();await library();await openRun(run.id);});};
   $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});

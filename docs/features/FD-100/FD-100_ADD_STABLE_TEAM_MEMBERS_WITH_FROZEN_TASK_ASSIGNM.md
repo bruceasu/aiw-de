@@ -1,7 +1,7 @@
 # FD-100: Add stable team members with frozen task assignments and controlled lifecycle
 
 **Status:** In Progress
-**Revision:** 1
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -42,6 +42,10 @@ V46 只增加三张表，不迁移或重写旧任务；未选成员的任务继�
 - 人工问答的 NativeQuestions 后继说明保留 old.instruction；WorkTaskService.createReplacing 同事务继承原 Skill 字节和成员归属，避免后继任务绕开停止接单或丢失身份。
 - 工厂不为停止接单的成员准备新进程；空闲退出检查也不把此类 READY 工作当作可领取需求。既有 FactoryWorkerRegistryTest 最小夹具补充三张空成员关联表，只编译、不执行。
 
+- 2026-11-13：最终独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 b49a737 对 2de6bbe，来源事件 FD-100-000002-review-requested，Reviewer codex-review-fd100-20261113。P1：简单任务 FormData 省略已选但 disabled 的停接单成员 option，使提交静默变成未指定成员；应显式提交保留 ID 并由 forRun 拒绝非 ACTIVE。未运行测试、迁移、浏览器、服务、数据库、网络或模型验证。
+
 ## Sources
+
+- P1 修复：简单任务从成员 select.value 显式读取保留的成员 ID，不使用 FormData 对 disabled 选项的省略结果；成员停接单或已解散时仍交由 forRun 拒绝，不变为匿名执行。对应拒绝说明覆盖中英日。修复后仅 node --check 编译，不执行浏览器或测试。
 
 - docs/FUNCTION-INVENTORY.md 第 06、09、10、11 项；用户明确“采用稳定成员、进程按需复用”。
