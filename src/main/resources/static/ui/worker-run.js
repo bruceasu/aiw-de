@@ -4,7 +4,7 @@
   const owner=document.querySelector('meta[name="configuration-owner"]').content;
   const initial=new URLSearchParams(location.search);
   let initialNative=initial.get('source')==='native';
-  if(initialNative)$('wr-source').value='native';
+  if(['native','guarded'].includes(initial.get('source')))$('wr-source').value=initial.get('source');
   const labels={RUNNING:'执行中',PAUSING:'等待安全边界',PAUSED:'已暂停',YIELDING:'正在保留交接并等待输入',STOPPING:'正在停止',FINALIZING:'正在收尾',SETTLED:'尝试已结束',BROKEN:'通道冲突，需核对'};
   const statuses={ACCEPTED:'已受理',RECEIVED:'Worker 已收到',APPLIED:'已生效',REJECTED:'已被停止请求取代',UNKNOWN:'结果未知'};
   const node=(tag,text,cls)=>{const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};

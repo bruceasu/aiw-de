@@ -2,6 +2,7 @@
 (() => {
   const $=id=>document.getElementById(id),owner=document.querySelector('meta[name="configuration-owner"]').content;
   const csrf=document.querySelector('meta[name="csrf-token"]').content,initial=new URLSearchParams(location.search);
+  let deferGuarded=initial.get('source')==='native';
   const labels={RUNNING:'执行中',CLAIMED:'已领取',COMPLETED:'已完成',SUCCEEDED:'成功',FAILED:'失败',EXPIRED:'已过期',CANCELLED:'已撤回',WAITING_INPUT:'等待人工',UNKNOWN:'结果未知',STARTED:'进行中',REJECTED:'未获准',QUEUED:'等待领取',RESERVED:'已领取，等待模型结果确认',DELIVERED:'已递交模型',FINALIZING:'正在收尾'};
   const label=value=>labels[value]||value||'未记录';
   const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -94,6 +95,10 @@
     if(!host.childElementCount)host.append(node('p','尚未记录探索方案。','empty'));
   }
   async function refresh(internal=false){
+    if(deferGuarded){
+      const message=({zh:'当前查看指定的原生执行。只有明确切换到专业任务来源后，才读取专业任务区；不会自动选择其它工作。',ja:'指定したネイティブ実行を表示中です。別の作業は自動選択しません。専門タスクを表示するには接続元を明示的に切り替えてください。'})[window.aiwI18n?.locale]||'Viewing the requested native execution. Switch explicitly to professional tasks to load that area; no other work is selected automatically.';
+      $('wb-task').replaceChildren(new Option(message,''));$('wb-attempt').replaceChildren(new Option('—',''));feedback(message);sync();return;
+    }
     if(loading||busy&&!internal)return;const generation=++epoch;loading=true;sync();
     for(const id of ['wb-summary','wb-operations','wb-messages','wb-branches','wb-comparison'])$(id).replaceChildren();$('wb-comparison').hidden=true;
     try{
@@ -112,6 +117,7 @@
   $('wb-refresh').addEventListener('click',()=>refresh());
   $('wb-task').addEventListener('change',()=>{task=$('wb-task').value;attempt=null;compare.clear();reasons.clear();$('wb-input-text').value='';$('wb-branch-text').value='';$('wb-branch-title').value='';refresh();});
   $('wb-attempt').addEventListener('change',()=>{attempt=$('wb-attempt').value;refresh();});
+  $('wr-source').addEventListener('change',()=>{if(deferGuarded&&$('wr-source').value==='guarded'){deferGuarded=false;refresh();}});
   $('wb-input-form').addEventListener('submit',event=>{event.preventDefault();const text=$('wb-input-text').value;if(!canInput()||!text.trim()||text.length>4000){feedback('请核对当前尝试，并将补充内容限制在 4000 字以内。','warn');return;}submit(command('SEND',{mode:$('wb-mode').value,text}));});
   $('wb-branch-form').addEventListener('submit',event=>{event.preventDefault();submit(command('BRANCH',{title:$('wb-branch-title').value,text:$('wb-branch-text').value,parentId:$('wb-parent').value||null,resultRevision:$('wb-branch-result').checked?entry().resultRevision:null}));});
   $('wb-retry').addEventListener('click',async()=>{if(!pending?.checked||busy||loading)return;const captured=pending;busy=true;sync();try{await request('candidates?kind=workbench',captured.body,true);if(pending===captured)pending=null;feedback('原请求已确认。');await refresh(true);}catch(e){feedback(e.message,'error');}finally{busy=false;sync();}});

@@ -128,7 +128,7 @@
     catch(_){loadFailed=true;$('[data-workers-feedback]').textContent=t('Refresh failed; the previous snapshot is retained.');if(selected)renderDetail();}
     finally{busy=false;$('[data-workers-refresh]').disabled=false;}
   }
-  $('[data-workers-close]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{const id=selected;selected=null;[...document.querySelectorAll('[data-worker-id]')].find(n=>n.dataset.workerId===id)?.focus();});
+  $('[data-workers-close]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{const id=selected;selected=null;([...document.querySelectorAll('[data-worker-id]')].find(n=>n.dataset.workerId===id)||$('[data-workers-search]')).focus();});
   $('[data-workers-work]').onchange=e=>{selectedAttempt=e.target.value||null;renderDetail();};
   for(const key of ['search','status','source'])$('[data-workers-'+key+']').addEventListener(key==='search'?'input':'change',render);
   $('[data-workers-refresh]').onclick=refresh;window.addEventListener('aiw:locale-changed',()=>{translate();render();});

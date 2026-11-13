@@ -1,7 +1,7 @@
 # FD-090: Implement the confirmed Workers page design
 
 **Status:** In Progress
-**Revision:** 1
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -100,7 +100,11 @@ READY 匹配、容量、租约及准入限制保留在“调度诊断：有 N �
 - 默认源码编译和静态检查。额外测试、依赖安装和真实服务调用沿用用户此前的单独授权限制。
 - Independent：后端投影、工作台定位和控制回执涉及跨模块及账号可见范围，最终实现交付前需独立评审。
 
+- 2026-11-13：最终独立静态审查结果为 changes-requested；报告 [review-20261113.md](reviews/review-20261113.md)，覆盖 06ff53c 对 6acdb6e，来源事件 FD-090-000002-review-requested，Reviewer codex-review-fd090-20261113。P1：原生直达仍使专业区默认选择其它任务；P2：guarded 来源未初始化控制区、本人旧 Plan 超目录100项被误作无权。未运行测试、浏览器、服务、迁移、网络或模型。
+
 ## Sources
+
+- 2026-11-13 审查修复：native 深链接不再自动读取/选择专业任务区，只有明确切回 guarded 才开启原流程；guarded 来源同步到控制区。Plan 精确读取通过 currentOwner + 实际 createdBy 验证，独立于最近 100 条目录；返回已核验 Plan 的摘要，既有任务/Attempt 与控制权限校验不变。对话关闭时若原行已被筛掉，焦点返回搜索框。
 
 - Issue: none
 - 用户 2026-11-11 请求：“创建新的FD：按已确认方案实现 Workers 页面”。

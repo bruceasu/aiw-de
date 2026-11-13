@@ -71,9 +71,18 @@ public class NativePlanOwners {
         String owner=currentOwner();var result=new ArrayList<Map<String,Object>>();
         for(var row:repo.jdbc().queryForList("SELECT id FROM flexible_workflow_plan WHERE created_by=? ORDER BY created_at_epoch_ms DESC LIMIT 100",boundary.human())) {
             var plan=plans.find((String)row.get("id")).orElseThrow();
-            var item=new LinkedHashMap<String,Object>();item.put("id",plan.id());item.put("version",plan.version());item.put("state",plan.state());
-            String title=plan.spec().goal().lines().findFirst().orElse(plan.id());
-            item.put("title",title.substring(0,title.offsetByCodePoints(0,Math.min(160,title.codePointCount(0,title.length())))));item.put("bound",bound(plan.id()));item.put("ownerId",owner);result.add(item);
+            result.add(describe(plan,owner));
         }return result;
+    }
+    public Map<String,Object> visiblePlan(String id) {
+        String owner=currentOwner();text(id,128);
+        var plan=plans.find(id).orElseThrow();
+        if(!boundary.human().equals(plan.createdBy()))throw new SecurityException("Owned Plan required");
+        return describe(plan,owner);
+    }
+    private Map<String,Object> describe(WorkflowPlan plan,String owner) {
+        var item=new LinkedHashMap<String,Object>();item.put("id",plan.id());item.put("version",plan.version());item.put("state",plan.state());
+        String title=plan.spec().goal().lines().findFirst().orElse(plan.id());
+        item.put("title",title.substring(0,title.offsetByCodePoints(0,Math.min(160,title.codePointCount(0,title.length())))));item.put("bound",bound(plan.id()));item.put("ownerId",owner);return item;
     }
 }

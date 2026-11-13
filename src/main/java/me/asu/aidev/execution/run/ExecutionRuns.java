@@ -200,13 +200,13 @@ public class ExecutionRuns {
         if(input.attemptId()==null) {
             var result=new LinkedHashMap<String,Object>();result.put("protocol",PROTOCOL);result.put("ownerId",owner);
             result.put("runs",repo.jdbc().queryForList("SELECT task_id,attempt_id,instruction_revision,phase,last_contact_ms FROM execution_run_session WHERE owner_id=? ORDER BY last_contact_ms DESC LIMIT 100",owner));
-            result.put("plans",nativeOwners.visiblePlans());
+            var visiblePlans=new ArrayList<>(nativeOwners.visiblePlans());
             if(input.planId()!=null) {
-                var visible=nativeOwners.visiblePlans().stream().anyMatch(p->input.planId().equals(p.get("id")));
-                if(!visible)throw new SecurityException("Owned Plan required");
+                var selected=nativeOwners.visiblePlan(input.planId());
+                if(visiblePlans.stream().noneMatch(p->input.planId().equals(p.get("id"))))visiblePlans.add(selected);
                 result.put("nativeTasks",repo.jdbc().queryForList("SELECT t.id AS task_id,a.id AS attempt_id,a.state FROM work_task t JOIN execution_attempt a ON a.task_id=t.id WHERE t.subject_type='flexible-plan' AND t.subject_id=? ORDER BY a.created_at_epoch_ms DESC LIMIT 100",input.planId()));
             } else result.put("nativeTasks",List.of());
-            return result;
+            result.put("plans",visiblePlans);return result;
         }
         if(input.afterSequence()<0)throw new IllegalArgumentException("Invalid cursor");var run=session(input.taskId(),input.attemptId());owned(owner,run);
         var result=new LinkedHashMap<>(view(run));result.put("events",repo.jdbc().queryForList("SELECT sequence_no,event_type,occurred_ms,payload_json FROM execution_run_event WHERE attempt_id=? AND sequence_no>? ORDER BY sequence_no LIMIT 64",input.attemptId(),input.afterSequence()));return result;
