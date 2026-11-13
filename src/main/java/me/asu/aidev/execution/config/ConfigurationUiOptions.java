@@ -59,7 +59,7 @@ public class ConfigurationUiOptions {
             }
             choices.add(new PlanChoice(policy.planId(),plan==null?policy.planId():title(plan.spec().goal()),policy.revision(),
                     AuthorityRepository.flag(row.get("paused")),AuthorityRepository.flag(row.get("revoked")),policy.expiresAt(),
-                    plan==null?"/ui/software-development":"/ui/plans/"+java.net.URLEncoder.encode(plan.id(),java.nio.charset.StandardCharsets.UTF_8),List.copyOf(repositories)));
+                    plan==null?"/ui/workflows":"/ui/plans/"+java.net.URLEncoder.encode(plan.id(),java.nio.charset.StandardCharsets.UTF_8),List.copyOf(repositories)));
         }
         var assets=new ArrayList<AssetChoice>();
         configs.catalogue().assets().stream().filter(a->a.kind().equals("skill"))

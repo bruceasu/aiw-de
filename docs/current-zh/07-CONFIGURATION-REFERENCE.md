@@ -101,4 +101,6 @@ Goal Workshop（`/ui/goals`）同样要求真实登录，使用当前账号的ac
 
 回退到旧可选认证版本前，必须对旧版本显式设置 `AIW_WEB_CONSOLE_AUTH_ENABLED=true`，保留用户名及非空密码，并确认匿名访问被拒绝。不能沿用false或缺省后暴露服务；本次没有执行回退或重启。
 
-`/ui/authority`、`/ui/configurations`、`/ui/questions`、`/ui/workflow-graphs` 和 `/ui/software-development` 始终要求真实登录会话，不接受 `local-console`。未登录时进入登录页，登录成功后返回原目标页面。在根目录 `.env` 中配置 `AIW_WEB_CONSOLE_USERNAME` 和非空的 `AIW_WEB_CONSOLE_PASSWORD`，再通过启动脚本重启；其他启动方式需将这些值设置为环境变量。无需设置登录启用开关。相关 API 继续检查真实登录、CSRF、当前角色及所有者权限，首次代理启用后的持久认证要求仍然有效。
+`/ui/authority`、`/ui/configurations` 和 `/ui/questions` 始终要求真实登录会话，不接受 `local-console`。未登录时进入登录页，登录成功后返回原目标页面。在根目录 `.env` 中配置 `AIW_WEB_CONSOLE_USERNAME` 和非空的 `AIW_WEB_CONSOLE_PASSWORD`，再通过启动脚本重启；其他启动方式需将这些值设置为环境变量。无需设置登录启用开关。相关 API 继续检查真实登录、CSRF、当前角色及所有者权限，首次代理启用后的持久认证要求仍然有效。
+
+旧独立图页面 `/ui/workflow-graphs` 和旧软件开发工作台 `/ui/software-development` 已退役，不提供兼容页面或跳转。统一使用 `/ui/workflows` 查看、编辑和执行工作流，简单任务使用 `/ui/tasks`。旧 authority API 与历史记录的进一步清理单独实施；页面退役不代表已删除历史结果。

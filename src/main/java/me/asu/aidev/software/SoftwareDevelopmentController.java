@@ -3,20 +3,16 @@ package me.asu.aidev.software;
 import java.util.*;
 import jakarta.servlet.http.HttpServletRequest;
 import me.asu.aidev.authority.*;
-import me.asu.aidev.webconsole.security.WebConsoleSecurityService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 @Controller
 public class SoftwareDevelopmentController {
     public record Read(String ownerId,String planId) {}
-    private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final GoalProposals goals;private final SoftwareDelivery delivery;private final WebConsoleSecurityService security;
-    public SoftwareDevelopmentController(AuthorityRepository repo,AuthorityBoundary boundary,GoalProposals goals,SoftwareDelivery delivery,WebConsoleSecurityService security){this.repo=repo;this.boundary=boundary;this.goals=goals;this.delivery=delivery;this.security=security;}
+    private final AuthorityRepository repo;private final GoalProposals goals;private final SoftwareDelivery delivery;
+    public SoftwareDevelopmentController(AuthorityRepository repo,GoalProposals goals,SoftwareDelivery delivery){this.repo=repo;this.goals=goals;this.delivery=delivery;}
     private <T> T read(String raw,Class<T> type){if(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>32768)throw new IllegalArgumentException("Selected envelope limit");return repo.decode(raw,type);}
-    @GetMapping("/ui/software-development") public String page(Model model){String actor=Objects.requireNonNull(boundary.human());boolean op=!security.currentDelegationAuthority(actor,"A19_ANSWER").isEmpty();if(!op&&security.currentDelegationAuthority(actor,"A18_BUDGET").isEmpty())throw new SecurityException("Current read role required");
-        model.addAttribute("softwareOwners",repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor));model.addAttribute("softwareCanOperate",op);return "ui/software-development";}
     @PostMapping("/api/r1/authority/goal-proposals") @ResponseBody public Object propose(HttpServletRequest request,@RequestBody String raw){return goals.submit((AuthorityBoundary.Principal)request.getAttribute("authorityPrincipal"),request.getHeader("X-AIW-Agent-Boot"),read(raw,GoalProposals.Proposal.class));}
     @GetMapping("/api/r1/authority/goal-proposals/{id}") @ResponseBody public Object receipt(HttpServletRequest request,@PathVariable String id){return goals.receipt((AuthorityBoundary.Principal)request.getAttribute("authorityPrincipal"),request.getHeader("X-AIW-Agent-Boot"),id);}
     @PostMapping("/api/r1/authority/software-development/proposals") @ResponseBody public Object proposals(@RequestBody String raw){return goals.list(read(raw,Read.class).ownerId());}

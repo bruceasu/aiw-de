@@ -78,7 +78,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                     if(!humanRoute(method,operation)) { response.sendError(403,"Authority route not allowed");return false; }
                 } else {
                     if(leaseMachine(path)) return true;
-                    if(!Set.of("/ui/authority","/ui/agents","/ui/delegation","/ui/agent-factory","/ui/configurations","/ui/questions","/ui/workflow-graphs","/ui/software-development").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
+                    if(!Set.of("/ui/authority","/ui/agents","/ui/delegation","/ui/agent-factory","/ui/configurations","/ui/questions").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
                     // The earlier console interceptor already checks local-session CSRF and the persistent auth requirement.
                     if(WebConsoleApiRoutes.matches(path) && !security.enabled() && !security.signedIn(request.getSession(false)) && !boundary.humanAuthRequired()) return true;
                 }
@@ -109,6 +109,6 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 boundary.human(security.actor(session));return true;
             }
             @Override public void afterCompletion(HttpServletRequest request,HttpServletResponse response,Object handler,Exception error) { boundary.human(null); }
-        }).addPathPatterns("/api/r1/**","/ui/authority","/ui/agents","/ui/delegation","/ui/configurations","/ui/questions","/ui/workflow-graphs","/ui/software-development").order(10);
+        }).addPathPatterns("/api/r1/**","/ui/authority","/ui/agents","/ui/delegation","/ui/configurations","/ui/questions").order(10);
     }
 }
