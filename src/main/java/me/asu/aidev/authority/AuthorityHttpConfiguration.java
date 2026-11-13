@@ -40,7 +40,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.matches("/execution-runs/(bind|read|command|receipt)")
                 || path.matches("/execution-tool-approvals/(read|decide)")
                 || path.equals("/action-permissions") || path.equals("/action-permissions/batch") || path.equals("/action-permissions/state") || Set.of("/agent-factory/state","/agent-factory/settings").contains(path) || path.matches("/action-permissions/[^/]+/revoke")
-                || path.matches("/questions/(read|reply|budget|control|progress|telegram)")
+                || path.matches("/questions/(read|reply|budget|control|progress|telegram|inbox)")
                 || path.matches("/workflow-graphs/(read|change|decide|recommend)")
                 || path.matches("/software-development/(proposals|adopt|read)")
                 || path.matches("/agents/[^/]+/(approve-pairing|enable|disable)") || path.matches("/agents/[^/]+/credential/revoke") || path.matches("/agents/[^/]+/certificate-rotations/[^/]+/(approve|reject)") || path.matches("/grants/[^/]+/revoke")

@@ -37,6 +37,7 @@ public class ToolApprovals {
         public Discard {text(approvalId,128);hash(bindingDigest);if(!"TARGET_VERSION_CHANGED".equals(reason))throw new IllegalArgumentException("Supported invalidation reason required");}
     }
     public record View(String id,String taskId,String ownerId,Binding binding,String bindingDigest,String state,long revision,boolean quiescent,String successorTaskId) {}
+    public record Pending(String planId,View approval,long createdAt) {}
     public record Consume(String approvalId,String bindingDigest,Begin operation,Action action,String workspaceDigest,String targetVersion) {
         public Consume {
             text(approvalId,128);hash(bindingDigest);Objects.requireNonNull(operation);Objects.requireNonNull(action);
@@ -95,6 +96,19 @@ public class ToolApprovals {
         boundary.lock();guard.owner(String.valueOf(guard.policyRow(plan).get("owner_id")));
         return repo.jdbc().queryForList("SELECT * FROM execution_tool_approval WHERE plan_id=? ORDER BY created_ms,id",plan)
                 .stream().map(this::refresh).map(this::view).toList();
+    }
+    @Transactional public List<Pending> inbox() {
+        String actor=boundary.human();
+        if(actor==null||boundary.delegated())throw new SecurityException("Current human required");
+        boundary.lock();
+        return repo.jdbc().queryForList("""
+            SELECT a.* FROM execution_tool_approval a JOIN authority_owner o ON o.id=a.owner_id
+             WHERE o.actor=? AND a.state IN ('PENDING','APPROVED') AND a.expires_ms>?
+             ORDER BY CASE WHEN a.state='PENDING' THEN 0 ELSE 1 END,a.created_ms DESC,a.id LIMIT 100
+            """,actor,System.currentTimeMillis()).stream().map(row->{
+                guard.owner((String)row.get("owner_id"));var approval=view(refresh(row));
+                return new Pending((String)row.get("plan_id"),approval,((Number)row.get("created_ms")).longValue());
+            }).filter(p->Set.of("PENDING","APPROVED").contains(p.approval().state())).toList();
     }
     @Transactional public View decide(Decision input) {
         boundary.lock();var row=row(input.approvalId());guard.owner(String.valueOf(row.get("owner_id")));

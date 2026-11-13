@@ -4,7 +4,7 @@
   const canApprove=document.querySelector('meta[name="tool-can-approve"]')?.content==='true';
   const states={PENDING:'待审批',APPROVED:'已批准，尚未执行',REJECTED:'已拒绝',EXPIRED:'已过期',INVALIDATED:'已失效',CONSUMED:'授权已使用，执行结果请查操作记录'};
   const actions={REPLACE_FILE:'整体替换文件',DELETE_FILE:'删除单个文件',EXECUTE_COMMAND:'执行固定命令'};
-  let rows=null,loadedPlan='',busy=false,confirmation=null,pending=null,hidden=false;
+  let rows=null,loadedPlan='',busy=false,confirmation=null,pending=null,hidden=false,focusApproval=new URLSearchParams(location.search).get('approvalId');
   const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
   const message=text=>{$('ta-status').textContent=text;};
   const current=()=>rows!==null&&loadedPlan===$('ta-plan').value;
@@ -43,7 +43,7 @@
     if(!current()){sync();return;}
     const visible=rows.filter(r=>$('ta-filter').value==='all'||r.state==='PENDING');
     for(const row of visible) {
-      const binding=row.binding,operation=binding.operation,card=node('article',undefined,'workbench-record');
+      const binding=row.binding,operation=binding.operation,card=node('article',undefined,'workbench-record');card.id='tool-approval-'+row.id;
       card.append(node('h3',(actions[binding.action]||'未知操作')+' · '+(states[row.state]||'未知状态')),
         node('p',(binding.action==='EXECUTE_COMMAND'?'命令编号：':'目标路径：')+operation.resource),node('p','所属任务：'+row.taskId),
         node('p','有效期至：'+new Date(binding.expiresAt).toLocaleString(),'help'));
@@ -72,6 +72,8 @@
       host.append(card);
     }
     if(!visible.length)host.append(node('p',rows.length?'当前没有待审批操作。可切换为全部记录查看历史。':'此计划尚无工具审批申请。Worker 在遇到需要确认的文件操作时会自动提交申请。','empty'));
+    const target=focusApproval?document.getElementById('tool-approval-'+focusApproval):null;
+    if(target){target.tabIndex=-1;target.focus({preventScroll:true});target.scrollIntoView({block:'center'});focusApproval=null;}
     sync();
   }
   async function refresh() {
@@ -124,7 +126,8 @@
   $('ta-refresh').addEventListener('click',refresh);
   $('ta-filter').addEventListener('change',render);
   $('ta-plan').addEventListener('change',()=>{rows=null;loadedPlan='';render();if($('ta-plan').value)refresh();else message('选择计划后读取审批记录。');});
-  const initial=new URLSearchParams(location.search).get('planId');
+  const params=new URLSearchParams(location.search),initial=params.get('planId');
+  if(params.get('approvalId'))$('ta-filter').value='all';
   if(initial&&[...$('ta-plan').options].some(option=>option.value===initial))$('ta-plan').value=initial;
   const timer=setInterval(sync,1000);
   window.addEventListener('pagehide',()=>{hidden=true;clearInterval(timer);rows=null;confirmation=null;sync();});

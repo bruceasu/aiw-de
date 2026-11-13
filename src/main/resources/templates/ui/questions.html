@@ -1,10 +1,17 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" th:content="${csrfToken}"><meta name="question-can-operate" th:content="${questionCanOperate}"><meta name="question-can-approve" th:content="${questionCanApprove}"><meta name="question-accounting-enforced" th:content="${questionAccountingEnforced}">
-<title>工作问题与人工控制 · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/questions.css?v=inbox-1"><script src="/ui/questions.js?v=inbox-1" defer></script><script src="/ui/question-controls.js?v=inbox-1" defer></script></head>
+<title>Pending work · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/questions.css?v=inbox-1"><script src="/ui/pending-inbox.js" defer></script><script src="/ui/questions.js?v=inbox-1" defer></script><script src="/ui/question-controls.js?v=inbox-1" defer></script></head>
 <body><div class="app question-page"><nav th:replace="~{ui/fragments :: nav('questions')}"></nav><main class="main">
-<header th:replace="~{ui/fragments :: topbar('工作问题与人工控制','集中回答 Worker 的问题，查看工作状态，必要时人工介入。')}"></header>
+<header th:replace="~{ui/fragments :: topbar('Pending work','Review requests and open the exact execution record.')}"></header>
 <div class="content question-content">
+<section class="card" data-pending-inbox>
+  <h2>Pending decisions and replies</h2>
+  <p class="help">Workflow questions, Worker questions and fixed-operation requests are shown together. Each source shows up to 100 records. Opening a record does not approve or execute anything.</p>
+  <div class="form-grid"><label class="field"><span>Show pending records</span><select data-pending-filter><option value="all">All visible records</option><option value="action">I can respond</option><option value="waiting">Decided or waiting for acknowledgement</option></select></label><label class="field"><span>Search pending records</span><input type="search" data-pending-search></label><button class="btn ghost" type="button" data-pending-refresh>Refresh pending records</button></div>
+  <p class="help" data-pending-status role="status" data-i18n-skip></p><div class="question-content" data-pending-records data-i18n-skip></div>
+</section>
+<details id="question-workbench"><summary>Question details and execution controls</summary><div class="question-content">
 <section class="question-heading"><div><span class="question-eyebrow">人工协作</span><h2>先处理需要你决定的事</h2><p>控制台、秘书和已绑定的私聊共用同一问题。回答会保留原文，是否继续工作以正式状态为准。</p></div><a href="/ui/configurations" class="btn ghost">准备新任务</a></section>
 <section class="card question-plan-bar"><label class="field">当前计划<select id="question-plan"><option value="">请选择要查看的计划</option><option th:each="plan:${questionPlanChoices}" th:value="${plan.id}" th:text="${plan.title == plan.id ? plan.id : plan.title + ' · ' + plan.id}"></option></select></label><button id="question-refresh" class="btn ghost" type="button">刷新当前状态</button><span id="question-read-state" class="help">选择计划后读取</span></section>
 <p th:if="${#lists.isEmpty(questionPlanChoices)}" class="callout warn-callout">暂无已确认执行范围的计划。先到<a href="/ui/authority">秘书平台授权（高级）</a>确认计划范围，再返回此页。</p>
@@ -29,6 +36,6 @@
 <section class="card section"><h2>当前账号最近的送达记录</h2><p class="help">最多显示最近 100 条，包含其它计划；记录不完整时暂停新发送，避免重复消息。</p><div id="question-deliveries"><p class="empty">尚未读取通知状态。</p></div></section>
 </section>
 <p class="footer-note">刷新保留本页未提交的回答草稿。浏览器关闭后的草稿恢复不在本页提供；问题与已提交回答以平台正式记录为准。</p>
-</div></main></div>
+</div></details></div></main></div>
 <dialog id="question-confirm-dialog" class="workspace-confirm" aria-labelledby="question-confirm-title"><div class="workspace-confirm__top">人工操作确认</div><div class="workspace-confirm__body"><h2 id="question-confirm-title"></h2><p id="question-confirm-description"></p></div><div class="workspace-confirm__target"><span>本次操作对象</span><strong id="question-confirm-target"></strong></div><div class="workspace-confirm__footer"><button id="question-confirm-dismiss" type="button" class="btn ghost">返回</button><button id="question-confirm-submit" type="button" class="btn warn-btn">确认操作</button></div></dialog>
 <script src="/ui/console.js"></script></body></html>

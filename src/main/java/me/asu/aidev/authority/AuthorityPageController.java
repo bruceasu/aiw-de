@@ -4,10 +4,43 @@ import java.util.*;
 import me.asu.aidev.execution.guard.ExecutionAccounting;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.*;
 
 @Controller
 public class AuthorityPageController {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.guard.ToolApprovals toolApprovals;
+    public record PendingItem(String id,String kind,String state,String summary,String href,long recordedAt,boolean needsHuman,boolean canAct) {}
+    private static String url(String value){return java.net.URLEncoder.encode(value,java.nio.charset.StandardCharsets.UTF_8);}
+    private static String preview(String value){return value.substring(0,Math.min(240,value.length()));}
+    @PostMapping("/api/r1/authority/questions/inbox") @ResponseBody public Object inbox() {
+        String actor=boundary.human();
+        if(actor==null||boundary.delegated())return org.springframework.http.ResponseEntity.status(403).body(Map.of("error","Current human required"));
+        boolean operate=!consoleSecurity.currentDelegationAuthority(actor,"A19_ANSWER").isEmpty(),approve=!consoleSecurity.currentDelegationAuthority(actor,"A18_BUDGET").isEmpty();
+        if(!operate&&!approve)return org.springframework.http.ResponseEntity.status(403).body(Map.of("error","Operation or approval role required"));
+        var items=new ArrayList<PendingItem>();
+        if(operate)items.addAll(repo.jdbc().query("SELECT id,updated_ms,run_json FROM workflow_execution WHERE actor=? AND state='WAITING_USER' ORDER BY updated_ms DESC,id LIMIT 100",(rs,i)->{
+            var run=repo.decode(rs.getString("run_json"),me.asu.aidev.workflow.application.WorkflowRuns.Run.class);
+            var node=run.spec.nodes().stream().filter(n->n.key().equals(run.current)).findFirst().orElseThrow();
+            return new PendingItem(run.id,"WORKFLOW","WAITING_USER",preview(node.instruction()),"/ui/workflows?execution="+url(run.id),rs.getLong("updated_ms"),true,true);
+        },actor));
+        items.addAll(repo.jdbc().query("""
+            SELECT q.id,q.plan_id,q.state,q.payload_json,q.updated_ms FROM formal_question q
+              JOIN authority_owner o ON o.id=q.owner_id WHERE o.actor=? AND q.state IN ('OPEN','ANSWERED')
+             ORDER BY CASE WHEN q.state='OPEN' THEN 0 ELSE 1 END,q.updated_ms DESC,q.id LIMIT 100
+            """,(rs,i)->{
+                var q=repo.decode(rs.getString("payload_json"),me.asu.aidev.questions.QuestionContract.Question.class);
+                boolean authorization=q.kind()==me.asu.aidev.questions.QuestionContract.Kind.AUTHORIZATION;
+                return new PendingItem(rs.getString("id"),authorization?"AUTHORIZATION":"QUESTION",rs.getString("state"),preview(q.question()),
+                        "/ui/questions?planId="+url(rs.getString("plan_id"))+"&questionId="+url(rs.getString("id")),rs.getLong("updated_ms"),rs.getString("state").equals("OPEN"),authorization?approve:operate);
+            },actor));
+        for(var item:toolApprovals.inbox()) {
+            var a=item.approval();
+            items.add(new PendingItem(a.id(),"TOOL_APPROVAL",a.state(),a.binding().action().name(),
+                    "/ui/configurations?view=workbench&planId="+url(item.planId())+"&approvalId="+url(a.id()),item.createdAt(),a.state().equals("PENDING")&&a.quiescent(),approve));
+        }
+        items.sort(Comparator.comparing(PendingItem::needsHuman).reversed().thenComparing(Comparator.comparingLong(PendingItem::recordedAt).reversed()).thenComparing(PendingItem::id));
+        return Map.of("items",items,"perSourceLimit",100,"observedAt",System.currentTimeMillis());
+    }
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.webconsole.security.WebConsoleSecurityService consoleSecurity;
     @GetMapping("/ui/questions") public String questions(Model model) {
         String actor=Objects.requireNonNull(boundary.human(),"Authenticated human required");

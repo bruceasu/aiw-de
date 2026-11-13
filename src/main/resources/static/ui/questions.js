@@ -165,6 +165,6 @@
   if(requestedParams.get('tab')==='controls')showTab('controls');
   if(requestedPlan&&[...$('question-plan').options].some(option=>option.value===requestedPlan)){
     $('question-plan').value=requestedPlan;
-    readCurrent();
+    readCurrent().then(()=>{if(requestedParams.get('questionId'))openQuestion(requestedParams.get('questionId'));});
   }
 })();

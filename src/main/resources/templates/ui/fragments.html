@@ -10,7 +10,7 @@
   <a th:if="${canOperate}" th:classappend="${active == 'configurations' ? 'active' : ''}" href="/ui/configurations">专业 Worker 任务配置（高级）</a>
   <a th:classappend="${active == 'agents' ? 'active' : ''}" href="/ui/agents">Agent 管理</a>
   <a th:classappend="${active == 'authority' ? 'active' : ''}" href="/ui/authority">Agent 权限</a>
-  <a th:if="${canOperate or canApprove}" th:classappend="${active == 'questions' ? 'active' : ''}" href="/ui/questions">工作问题与人工控制</a>
+  <a th:if="${canOperate or canApprove}" th:classappend="${active == 'questions' ? 'active' : ''}" href="/ui/questions">Pending work</a>
   <a th:classappend="${active == 'system' ? 'active' : ''}" href="/ui/system">System</a>
   <div class="sidebar-footer">
     <div class="sidebar-note"><strong th:text="${consolePrincipal}">local-console</strong><br/><span th:text="${consoleAuthEnabled ? consoleRole : '未登录'}">未登录</span><br/>Authority remains in the Control Plane.</div>
