@@ -81,9 +81,11 @@
         <p class="help" data-wf-label="Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.">Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.</p>
         <section data-wf-amendment>
           <h3 data-wf-label="Adjust future steps">Adjust future steps</h3>
-          <p class="help" data-wf-label="Pause following steps first. A read-only Worker can coordinate changes to up to eight undispatched nodes. Review every change before applying. Resuming or stopping discards the suggestion.">Pause following steps first. A read-only Worker can coordinate changes to up to eight undispatched nodes. Review every change before applying. Resuming or stopping discards the suggestion.</p>
+          <p class="help" data-wf-label="Pause the workflow first. A read-only Worker can suggest content or structural changes. Review the full diff and graph before applying. Resuming or stopping discards the suggestion.">Pause the workflow first. A read-only Worker can suggest content or structural changes. Review the full diff and graph before applying. Resuming or stopping discards the suggestion.</p>
           <form data-wf-amendment-form hidden>
-            <label class="field"><span data-wf-label="Future steps">Future steps</span><select name="nodes" data-wf-amendment-node data-i18n-skip multiple size="4" required></select></label>
+            <label class="field"><span data-wf-label="Suggestion type">Suggestion type</span><select name="proposalMode" data-wf-amendment-mode><option value="CONTENT" data-wf-label="Change existing steps">Change existing steps</option><option value="STRUCTURE" data-wf-label="Restructure future steps">Restructure future steps</option></select></label>
+            <p class="help" data-wf-amendment-structure-note hidden data-wf-label="Diagram order affects display only; routes control execution order. Added steps use automatic assignment and have no file or command tools.">Diagram order affects display only; routes control execution order. Added steps use automatic assignment and have no file or command tools.</p>
+            <div data-wf-amendment-nodes><label class="field"><span data-wf-label="Future steps">Future steps</span><select name="nodes" data-wf-amendment-node data-i18n-skip multiple size="4" required></select></label></div>
             <label class="field"><span data-wf-label="Requested change">Requested change</span><textarea name="change" required maxlength="2000" rows="3"></textarea></label>
             <button class="btn primary" data-wf-label="Generate suggestion">Generate suggestion</button>
           </form>

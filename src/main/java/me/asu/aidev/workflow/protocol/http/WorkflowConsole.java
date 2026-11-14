@@ -19,12 +19,16 @@ public class WorkflowConsole {
     public record Simple(String requestId,String instruction,String location,String memberId,WorkflowRuns.Assignment assignment,java.util.List<String> requiredSkills,java.util.List<WorkflowRuns.Material> sources,boolean workspaceTools,java.util.List<me.asu.aidev.execution.guard.GuardContract.Command> commands) {}
     public record Control(long version,String action,String answer) {}
     public record Supplement(String requestId,String text,String mode) {}
-    public record Amendment(long version,String requestId,String node,List<String> nodes,String change) {
-        public Amendment(long version,String requestId,String node,String change) { this(version,requestId,node,null,change); }
+    public record Amendment(long version,String requestId,String node,List<String> nodes,String change,String mode) {
+        public Amendment(long version,String requestId,String node,List<String> nodes,String change) { this(version,requestId,node,nodes,change,null); }
+        public Amendment(long version,String requestId,String node,String change) { this(version,requestId,node,null,change,null); }
     }
     public record AmendmentDecision(long version,String proposalId,boolean apply) {}
     @PostMapping("/api/r1/workflows/executions/{id}/amendments") @ResponseBody public Object propose(@PathVariable String id,@RequestBody Amendment input,HttpSession session) {
-        security.requireOperator(session);var nodes=input.nodes();
+        security.requireOperator(session);
+        if("STRUCTURE".equals(input.mode()))return workflows.proposeStructure(id,input.version(),input.requestId(),input.change());
+        if(input.mode()!=null&&!input.mode().isBlank()&&!"CONTENT".equals(input.mode()))throw new IllegalArgumentException("Unknown amendment mode");
+        var nodes=input.nodes();
         if(nodes!=null&&!nodes.isEmpty())return workflows.propose(id,input.version(),input.requestId(),nodes,input.change());
         return input.node()==null?workflows.propose(id,input.version(),input.requestId(),List.of(),input.change())
                 :workflows.propose(id,input.version(),input.requestId(),input.node(),input.change());

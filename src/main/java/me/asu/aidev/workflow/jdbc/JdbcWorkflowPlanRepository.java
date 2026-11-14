@@ -79,6 +79,14 @@ public class JdbcWorkflowPlanRepository implements WorkflowPlanRepository {
     @Override public boolean editDraft(String id,long version,WorkflowPlanSpec spec,String actor,Instant now) {
         return writeDraft(id,version,spec,actor,"Edited unstarted execution draft",now);
     }
+    @Override public boolean appendWorkflowSteps(String id,long version,WorkflowPlanSpec spec,String actor,Instant now) {
+        String encoded;
+        try {encoded=json.writeValueAsString(spec);} catch(Exception error) {throw new IllegalArgumentException("Invalid plan specification",error);}
+        return jdbc.update("""
+                UPDATE flexible_workflow_plan SET spec_json=?,version=version+1,updated_by=?,reason=?,updated_at_epoch_ms=?
+                 WHERE id=? AND state='CONFIRMED' AND version=?
+                """,encoded,actor,"Appended task slots for a confirmed workflow structure change",now.toEpochMilli(),id,version)==1;
+    }
     private boolean writeDraft(String id,long version,WorkflowPlanSpec spec,String actor,String reason,Instant now) {
         String encoded;
         try {encoded=json.writeValueAsString(spec);} catch(Exception error) {throw new IllegalArgumentException("Invalid plan specification",error);}

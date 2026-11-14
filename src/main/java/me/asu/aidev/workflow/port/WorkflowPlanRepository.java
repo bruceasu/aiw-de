@@ -17,6 +17,7 @@ public interface WorkflowPlanRepository {
                        String actor, String reason, Instant now);
     boolean retargetDraft(String id,long version,me.asu.aidev.workflow.domain.WorkflowPlanSpec spec,String actor,Instant now);
     boolean editDraft(String id,long version,me.asu.aidev.workflow.domain.WorkflowPlanSpec spec,String actor,Instant now);
+    boolean appendWorkflowSteps(String id,long version,me.asu.aidev.workflow.domain.WorkflowPlanSpec spec,String actor,Instant now);
     void savePreferences(TaskId task, Set<String> skills);
     Map<TaskId, Set<String>> preferences();
 }

@@ -56,6 +56,35 @@ public class WorkflowPlanService {
         if(!plans.editDraft(id,version,spec,actor,Instant.now())) throw new IllegalStateException("Draft changed; reload before saving");
         return get(id);
     }
+    /** Appends stable execution slots for newly confirmed graph nodes; existing task indices never move. */
+    @Transactional public WorkflowPlan appendWorkflowSteps(String id,long version,List<WorkflowPlanSpec.Step> additions,String actor) {
+        humanChange(id);managedAdmission(id);actor=actor(actor);
+        var original=get(id);
+        if(!original.createdBy().equals(actor)||delegation!=null&&delegation.delegated())
+            throw new SecurityException("The human Plan owner is required");
+        if(original.state()!=WorkflowPlan.State.CONFIRMED||archives.archived(id)||outcomes.find(id).isPresent()
+                ||controls.pending(id).isPresent())
+            throw new IllegalStateException("Only an active confirmed Plan can receive workflow task slots");
+        if(original.version()!=version)throw new IllegalStateException("Plan changed; refresh the structural suggestion");
+        if(additions==null||additions.isEmpty())return original;
+        if(original.spec().steps().size()+additions.size()>32)throw new IllegalArgumentException("The Plan has no remaining task slots");
+        var keys=new java.util.HashSet<String>();original.spec().steps().forEach(step->keys.add(step.key()));
+        for(var step:additions) {
+            if(!keys.add(step.key())||!step.requiredSkills().equals(Set.of("general-work"))
+                    ||!step.preferredSkills().isEmpty()||!step.skillRef().equals("general-work")
+                    ||step.repositoryRef()!=null||step.baseRevision()!=null||!step.dependsOn().isEmpty()
+                    ||step.model()!=null||step.effort()!=null
+                    ||step.effectiveReviewMode()!=WorkflowPlanSpec.ReviewMode.SELF
+                    ||step.effectiveReviewRisk()!=WorkflowPlanSpec.ReviewRisk.LOW)
+                throw new IllegalArgumentException("A new workflow slot may only use ordinary general work");
+        }
+        var steps=new java.util.ArrayList<>(original.spec().steps());steps.addAll(additions);
+        var updatedSpec=new WorkflowPlanSpec(original.spec().goal(),original.spec().source(),steps,original.spec().location());
+        WorkflowEditorService.validateSpec(updatedSpec,false);
+        if(!plans.appendWorkflowSteps(id,version,updatedSpec,actor,Instant.now()))
+            throw new IllegalStateException("Plan changed; refresh the structural suggestion");
+        return get(id);
+    }
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<WorkflowGitDeliveryService> gitDelivery;
 

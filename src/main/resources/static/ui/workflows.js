@@ -49,8 +49,15 @@
     'Use the recorded successful result and continue the workflow?':['使用已记录的成功结果，并继续工作流？','記録済みの成功結果を使用してワークフローを続けますか？'],
     'If suggestion generation is still running, wait for its stop acknowledgement before resuming.':['建议仍在生成时，先等待其停止确认，再继续流程。','提案作成中の場合は、その停止確認後にフローを再開してください。'],
     'Adjust future steps':['调整后续步骤','後続ステップを調整'],
-    'Pause following steps first. A read-only Worker can coordinate changes to up to eight undispatched nodes. Review every change before applying. Resuming or stopping discards the suggestion.':['先暂停后续步骤，再让只读 Worker 协调调整最多八个尚未派发的节点。请逐项审阅后再应用。继续或停止流程会放弃建议。','先に後続ステップを一時停止してください。読み取り専用 Worker が未割り当てノード最大8件の変更をまとめて提案します。すべて確認してから適用してください。再開・停止すると提案を破棄します。'],
+    'Pause the workflow first. A read-only Worker can suggest content or structural changes. Review the full diff and graph before applying. Resuming or stopping discards the suggestion.':['先暂停工作流，再由只读 Worker 提议修改步骤内容或流程结构。请检查完整差异和流程图后再应用。继续或停止会放弃建议。','先にワークフローを一時停止し、読み取り専用 Worker に内容または構造の変更を提案させます。差分とフロー図全体を確認してから適用してください。再開・停止すると提案は破棄されます。'],
+    'Suggestion type':['建议类型','提案の種類'], 'Change existing steps':['调整现有步骤内容','既存ステップの内容を変更'],'Restructure future steps':['调整后续步骤结构','後続ステップの構造を変更'],
+    'Diagram order affects display only; routes control execution order. Added steps use automatic assignment and have no file or command tools.':['图中排列只影响显示，执行顺序由路线决定。新增步骤由系统自动分配，不具有文件或命令工具。','図の並び順は表示のみで、実行順は経路で決まります。追加ステップは自動割り当てとなり、ファイル・コマンドツールは使えません。'],
+    'Pause following steps before requesting a structure change':['请求结构调整前，请先暂停工作流。','構造変更を依頼する前にワークフローを一時停止してください。'],
+    'The workflow has no remaining steps to restructure':['当前工作流没有可调整的后续步骤。','変更できる後続ステップがありません。'],
+    'Workflow graph and context are too large for a structural suggestion':['流程图和上下文过长，暂时无法生成结构建议。','フロー図とコンテキストが長すぎるため、構造案を作成できません。'],
     'Future steps':['尚未派发的步骤（可多选）','未割り当てのステップ（複数選択可）'],'Requested change':['希望如何调整','変更したい内容'],'Generate suggestion':['生成调整建议','変更案を作成'],
+    'Added step':['新增步骤','追加ステップ'],'Removed step':['删除步骤','削除ステップ'],'Route change':['路线调整','経路の変更'],
+    'Current route':['原路线','現在の経路'],'Proposed route':['建议路线','提案された経路'],'Display order':['图中顺序','図の表示順'],'Current order':['原顺序','現在の順序'],'Proposed order':['建议顺序','提案された順序'],
     'Suggestion generation task (usage is recorded separately)':['查看建议生成任务（用量单独记录）','提案作成タスクを表示（使用量は別に記録）'],
     'Current step':['原步骤','現在のステップ'],'Suggested step':['建议步骤','変更案のステップ'],
     'Preview the changed workflow':['预览调整后的流程','変更後のフローをプレビュー'],'Confirm and apply':['确认应用','確認して適用'],'Discard suggestion':['放弃建议','提案を破棄'],
@@ -392,6 +399,12 @@
     if(!usage.currencies?.length)host.append(element('p',t('Recorded estimates')+': '+t('Not recorded')));
     host.append(element('p',t('Missing estimates')+': '+number(totals.without_estimate)));
   }
+  function syncAmendmentMode(){
+    const form=$('[data-wf-amendment-form]'),mode=$('[data-wf-amendment-mode]').value,select=$('[data-wf-amendment-node]');
+    $('[data-wf-amendment-nodes]').hidden=mode==='STRUCTURE';select.required=mode==='CONTENT';
+    $('[data-wf-amendment-structure-note]').hidden=mode!=='STRUCTURE';
+    form.querySelector('button').disabled=mode==='CONTENT'&&!select.options.length;
+  }
   function renderAmendment(data){
     const run=data.run,proposal=data.proposal,host=$('[data-wf-amendment]'),result=$('[data-wf-amendment-result]'),form=$('[data-wf-amendment-form]'),select=$('[data-wf-amendment-node]');
     host.hidden=['COMPLETED','STOPPED'].includes(run.state)&&!proposal;
@@ -401,14 +414,26 @@
     const previous=[...select.selectedOptions].map(option=>option.value);select.replaceChildren();
     run.spec.nodes.filter(n=>n.kind!=='END'&&!(run.visits?.[n.key])&&!run.events.some(e=>e.node===n.key&&['DISPATCHED','QUESTION'].includes(e.type))).forEach(n=>select.add(new Option(n.title,n.key)));
     for(const option of select.options)option.selected=previous.includes(option.value);
-    form.hidden=run.state!=='PAUSED'||!!proposal||!select.options.length;result.replaceChildren();
+    form.hidden=run.state!=='PAUSED'||!!proposal;syncAmendmentMode();result.replaceChildren();
     if(!proposal)return;
     result.append(element('p',t(proposal.status),'help'));
     if(proposal.status==='STOPPING')result.append(element('p',t('If suggestion generation is still running, wait for its stop acknowledgement before resuming.'),'help'));
     const link=element('a',t('Suggestion generation task (usage is recorded separately)'));link.href='/ui/tasks?execution='+encodeURIComponent(proposal.helperRun);result.append(link);
     if(proposal.error)result.append(element('p',t(proposal.error),'help'));
     const changes=proposal.changes?.length?proposal.changes:proposal.candidate?[{before:proposal.before,candidate:proposal.candidate}]:[];
-    if(changes.length){
+    if(proposal.candidateGraph){
+      const original=new Map(run.spec.nodes.map(node=>[node.key,node])),candidate=new Map(proposal.candidateGraph.nodes.map(node=>[node.key,node]));
+      for(const change of changes){
+        const before=change.before,next=change.candidate;
+        if(!before)result.append(element('h4',t('Added step')+': '+next.title),element('pre',JSON.stringify({key:next.key,kind:next.kind,title:next.title,instruction:next.instruction,next:next.next,branches:next.branches},null,2)));
+        else if(!next)result.append(element('h4',t('Removed step')+': '+before.title),element('pre',JSON.stringify({key:before.key,kind:before.kind,title:before.title},null,2)));
+        else result.append(element('h4',t('Route change')+': '+before.title),element('p',t('Current route')),element('pre',JSON.stringify({next:before.next,branches:before.branches},null,2)),element('p',t('Proposed route')),element('pre',JSON.stringify({next:next.next,branches:next.branches},null,2)));
+      }
+      const oldOrder=run.spec.nodes.map(node=>node.key),newOrder=proposal.candidateGraph.nodes.map(node=>node.key);
+      if(JSON.stringify(oldOrder)!==JSON.stringify(newOrder))result.append(element('h4',t('Display order')),element('p',t('Current order')+': '+oldOrder.map(key=>original.get(key)?.title||key).join(' → ')),element('p',t('Proposed order')+': '+newOrder.map(key=>candidate.get(key)?.title||key).join(' → ')));
+      const preview=element('details'),canvas=element('div',undefined,'wf-graph');preview.append(element('summary',t('Preview the changed workflow')),canvas);result.append(preview);graph(canvas,{entry:proposal.candidateGraph.entry,nodes:proposal.candidateGraph.nodes});
+      if(run.state==='PAUSED'&&proposal.status==='READY')result.append(button('Confirm and apply',()=>act(()=>decideAmendment(true))));
+    } else if(changes.length){
       const replacements=new Map();
       for(const change of changes){
         const before=change.before,candidate=change.candidate;replacements.set(candidate.key,candidate);
@@ -509,10 +534,12 @@
   });};
   $('[data-wf-amendment-form]').onsubmit=e=>{e.preventDefault();act(async()=>{
     const form=new FormData(e.target);
-    const nodes=form.getAll('nodes');
-    await api('/executions/'+encodeURIComponent(selectedRun)+'/amendments',{version:currentView.run.version,requestId:amendmentRequest,node:nodes[0],nodes,change:form.get('change')});
+    const mode=form.get('proposalMode'),nodes=form.getAll('nodes'),request={version:currentView.run.version,requestId:amendmentRequest,mode,change:form.get('change')};
+    if(mode==='CONTENT'){request.node=nodes[0];request.nodes=nodes;}
+    await api('/executions/'+encodeURIComponent(selectedRun)+'/amendments',request);
     signature='';await refreshRun();await library();
   });};
+  $('[data-wf-amendment-mode]').onchange=()=>{amendmentRequest=newRequest();syncAmendmentMode();};
   $('[data-wf-schedule-task]').onclick=()=>act(()=>{
     const form=new FormData($('[data-wf-task-form]')),instruction=String(form.get('instruction')||'').trim();
     if(!instruction)throw new Error('Schedule work must have an instruction');

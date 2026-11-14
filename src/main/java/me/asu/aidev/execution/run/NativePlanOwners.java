@@ -30,6 +30,12 @@ public class NativePlanOwners {
         if(rows.size()!=1)throw new SecurityException("Bind exactly one current Owner first");return rows.getFirst();
     }
     private String sourceDigest(String plan) {
+        // Workflow-added execution slots do not change the initial source pin used by formal questions.
+        var executions=repo.jdbc().queryForList("SELECT run_json FROM workflow_execution WHERE id=?",String.class,plan);
+        if(!executions.isEmpty()) {
+            var run=repo.decode(executions.getFirst(),Map.class);
+            if(run.get("planSourceDigest") instanceof String digest)return digest;
+        }
         // Hash persisted bytes; do not reserialize Java sets with a different JVM iteration order.
         return AuthorityRepository.hash(repo.jdbc().queryForObject("SELECT spec_json FROM flexible_workflow_plan WHERE id=?",String.class,plan));
     }
