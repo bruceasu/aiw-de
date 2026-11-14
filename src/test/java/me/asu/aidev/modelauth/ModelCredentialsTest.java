@@ -116,6 +116,17 @@ class ModelCredentialsTest {
         assertThatThrownBy(()->service.save("another",Kind.CHATGPT_RESPONSES,"Other",issued("original",System.currentTimeMillis()+3600000),null))
                 .hasMessage("MODEL_TOKEN_ALREADY_IMPORTED_OR_USED");
     }
+    @Test void replacementRetiresOldFileButFailedSaveOnlyDiscardsAnUnreferencedNewFile(){
+        var c=create(System.currentTimeMillis()+3600000);var original=service.row(c.id());
+        var replacement=issued("replacement",System.currentTimeMillis()+3600000);
+        service.save(actor,Kind.CHATGPT_RESPONSES,"Replacement",replacement,original);
+        verify(oauth).discard((String)original.get("credential_file"));
+        var rejected=issued("rejected",System.currentTimeMillis()+3600000);
+        assertThatThrownBy(()->service.save(actor,Kind.CHATGPT_RESPONSES,"",rejected,null)).isInstanceOf(IllegalArgumentException.class);
+        verify(oauth).discard(rejected.credentialFile());
+        service.discardUnreferenced(replacement.credentialFile());
+        verify(oauth,never()).discard(replacement.credentialFile());
+    }
     @Test void planAndQuestionSuccessorKeepTheirOriginalConnection() {
         var c=create(System.currentTimeMillis()+3600000);var task=mock(WorkTask.class);
         when(task.id()).thenReturn(new TaskId("task"));when(task.subjectType()).thenReturn("flexible-plan");when(task.subjectId()).thenReturn("plan");

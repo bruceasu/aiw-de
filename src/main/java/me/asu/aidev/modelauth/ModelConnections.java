@@ -118,18 +118,20 @@ public class ModelConnections {
         String actor=actor();var storage=vault.status();if(!storage.ready())throw new IllegalStateException("MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED");
         if(input.content()==null||input.content().length()>98304)throw new IllegalArgumentException("MODEL_IMPORT_LIMIT");
         var source=repo.decode(input.content(),com.fasterxml.jackson.databind.JsonNode.class);
+        var prior=input.connectionId()==null?null:owned(input.connectionId(),Objects.requireNonNull(input.expectedVersion()),actor);
         var issued=oauth.importTokens(source);
         Kind kind=issued.kind();
-        var prior=input.connectionId()==null?null:owned(input.connectionId(),Objects.requireNonNull(input.expectedVersion()),actor);
         return save(actor,kind,input.label(),issued,prior,storage.revision());
     }
     Connection save(String actor,Kind kind,String label,Issued issued,Map<String,Object> prior) {
         return save(actor,kind,label,issued,prior,null);
     }
     Connection save(String actor,Kind kind,String label,Issued issued,Map<String,Object> prior,String expectedVaultRevision) {
+        Connection saved;
+        try {
         if(kind!=issued.kind()||issued.credentialFile()==null||!issued.credentialFile().matches("[0-9a-f-]{36}\\.json"))throw new IllegalArgumentException("MODEL_CREDENTIAL_REFERENCE_INVALID");
         if(label==null||label.isBlank()||label.length()>160)throw new IllegalArgumentException("MODEL_CONNECTION_LABEL_REQUIRED");
-        return transaction.execute(status->{
+        saved=transaction.execute(status->{
             if(expectedVaultRevision!=null)vault.requireRevision(expectedVaultRevision);
             String id=prior==null?"MC-"+UUID.randomUUID():(String)prior.get("id");
             long version=prior==null?1:number(prior,"version"),generation=prior==null?1:number(prior,"generation")+1;
@@ -145,6 +147,17 @@ public class ModelConnections {
             repo.audit("MODEL_CONNECTION:"+id,null,null,actor,"MODEL_CREDENTIAL_SAVED","Validated token set; generation "+generation);
             return projection(row(id));
         });
+        }catch(RuntimeException failure){
+            try{discardUnreferenced(issued.credentialFile());}
+            catch(RuntimeException cleanup){throw new IllegalStateException("MODEL_CREDENTIAL_SAVE_AND_CLEANUP_FAILED");}
+            throw failure;
+        }
+        if(prior!=null)try{discardUnreferenced((String)prior.get("credential_file"));}
+        catch(RuntimeException cleanup){throw new IllegalStateException("MODEL_CONNECTION_SAVED_OLD_FILE_CLEANUP_FAILED");}
+        return saved;
+    }
+    void discardUnreferenced(String file){
+        if(file!=null&&repo.jdbc().queryForObject("SELECT COUNT(*) FROM model_connection WHERE credential_file=?",Long.class,file)==0)oauth.discard(file);
     }
     private void rememberToken(String id,String digest) {
         if(digest==null||!digest.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("MODEL_TOKEN_DIGEST_INVALID");

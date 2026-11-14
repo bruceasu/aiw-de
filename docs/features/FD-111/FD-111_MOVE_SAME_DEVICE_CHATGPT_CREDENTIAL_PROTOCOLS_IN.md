@@ -1,7 +1,7 @@
 # FD-111: Move same-device ChatGPT credential protocols into Python
 
-**Status:** Pending Verification
-**Revision:** 2
+**Status:** In Progress
+**Revision:** 4
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -44,11 +44,15 @@ V50 将旧密文列改为凭据文件引用并使旧连接失效，历史执行�
 
 ## Verification
 
+- 独立静态审查（`48e16be → 8435e4b`，替代来源 `FD-111-000003-review-requested`）：Changes requested，1 项 P1——普通重登录/导入替换未退役旧凭据文件，保存/取消失败也会遗留未采用的新文件。详见 [审查报告](reviews/review-20261114.md)。最终 HEAD 的 Java 编译因 JVM 原生内存失败未完成，明确不记为通过；Reviewer 未运行测试、编译、脚本或运行时验证。
+
 独立审查：认证协议、文件持久化与跨模块变更。
 
 Java 与测试源通过 JDK25 离线 test-compile；首次修复删除旧密文兼容测试时误移除的测试 helper 后重编译通过。Python 新协议与离线用例通过 py_compile；git diff --check 通过。新增文件引用、轮换后旧引用失效、刷新不确定不重发、路径拒绝及撤销本地清除的测试源码，未运行。
 
 最终状态限制：上述 Java 通过后，又删除了不再适用的“存在 Token 文件则拒绝初始化 Worker proof 密钥”旧判断，并改写对应测试。对此最终差异的编译因 JVM 原生内存分配失败中止（`Native memory allocation failed`），未获得最终源码编译通过证据；未自动重跑，等待后续有授权且内存恢复的编译。故前述通过只适用于这两处最后修改之前，不能称整个最终 HEAD 已编译通过。
+
+首轮审查修复：成功替换后退役不再被 DB 引用的旧文件；保存失败和回调取消清理未采用的新文件。删除前先查当前引用，避免误删已采用文件；清理失败明确报告。新增替换／失败清理／有效引用保护用例源码。对此实质修复进行一次低内存编译（192 MiB heap、SerialGC），仍因原生内存分配失败中止，未出现源码诊断，不能算通过；本轮停止编译重试，等待用户释放内存。静态复审可继续，归档交付前补齐最终编译证据。
 
 令牌文件采用新旧分开的引用，避免旧数据库 generation 读到新一代 Token。Plane 已有刷新 CAS、账号归属和精确租约仍保留；旧模型密文验钥兼容逻辑删除，Worker proof 密钥逻辑保留。复用的秘书 Python 文件需随同机安装保留。
 

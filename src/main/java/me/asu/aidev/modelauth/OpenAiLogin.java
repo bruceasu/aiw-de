@@ -56,6 +56,7 @@ public class OpenAiLogin {
     }
     private void callback(Pending p,HttpExchange exchange) throws java.io.IOException {
         String result="登录未完成，请返回 AIW 查看状态。";int status=400;
+        Issued issued=null;
         try {
             if(!exchange.getRequestMethod().equals("GET")||!exchange.getRequestURI().getPath().equals("/auth/callback")
                     ||!exchange.getRemoteAddress().getAddress().isLoopbackAddress()
@@ -70,7 +71,7 @@ public class OpenAiLogin {
             String client=query.getOrDefault("client_id",p.client);
             if(p.client.equals("dynamic_agent_client")?client.equals("dynamic_agent_client")||client.isBlank():!p.client.equals(client))throw new SecurityException();
             String code=query.get("code");if(code==null||code.isBlank())throw new IllegalArgumentException();
-            var issued=oauth.exchange(client,p.redirect,code,p.verifier,p.nonce);
+            issued=oauth.exchange(client,p.redirect,code,p.verifier,p.nonce);
             synchronized(p) {
                 if(!authenticated(p)||!p.status.equals("PROCESSING"))throw new SecurityException();
                 var saved=connections.save(p.actor,Kind.CHATGPT_RESPONSES,p.label,issued,p.prior,p.vaultRevision);
@@ -79,6 +80,8 @@ public class OpenAiLogin {
             status=200;result="已连接 ChatGPT，可以关闭此窗口并返回 AIW。";
         }catch(Exception error) {if(p.consumed.get()&&!p.status.equals("CANCELLED"))p.status="FAILED";}
         finally {
+            if(issued!=null&&p.connection==null)try{connections.discardUnreferenced(issued.credentialFile());}
+            catch(RuntimeException cleanup){p.status="FAILED_CLEANUP_REQUIRED";status=500;result="登录没有完成，未采用的凭据文件未能清理。请检查本机凭据目录权限后处理。";}
             exchange.getResponseHeaders().set("Content-Type","text/plain; charset=utf-8");exchange.getResponseHeaders().set("Cache-Control","no-store");
             exchange.getResponseHeaders().set("Content-Security-Policy","default-src 'none'; frame-ancestors 'none'");
             byte[] body=result.getBytes(StandardCharsets.UTF_8);exchange.sendResponseHeaders(status,body.length);try(var output=exchange.getResponseBody()){output.write(body);}
