@@ -1,7 +1,7 @@
 # FD-115: Simplify usage pricing updates and administrator-approved repair
 
-**Status:** In Progress
-**Revision:** 1
+**Status:** Complete
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -46,6 +46,8 @@ Dependencies: none.
 缺失不等于零；旧价格不因失败丢失；分时价可追溯；失败无自动派修；候选未经批准不运行；发布价格与历史补算一致。
 
 ## Verification
+
+- 独立静态审查（`48e16be → 456d9c1`，来源 `FD-115-000002-review-requested`）：静态代码 Pass，限定范围未发现阻塞性 finding。已核对 Python 内部规则、Java 校验发布、候选链及保留回填器；详见 [审查报告](reviews/review-20261114.md)。**本 FD 未编译，归档交付前仍须补齐最终编译证据；本结论不是编译或运行通过。** Reviewer 未运行测试、脚本或运行时验证。
 
 独立审查：计价数据转换及后台扫描调整；保留原校验与发布事务。
 
