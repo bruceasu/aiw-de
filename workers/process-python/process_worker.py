@@ -234,13 +234,16 @@ class ControlPlaneClient:
 
     def complete(self, task: dict[str, Any], worker_id: str, session_id: str | None,
                  workspace_result: dict[str, Any] | None, report: dict[str, str] | None) -> dict[str, Any]:
+        completion = None if report is None else {
+            key: report[key] for key in ("verdict", "summary", "experience") if key in report
+        }
         return self._post(f"/tasks/{_quote(task['taskId'])}/complete", {
             "workerId": worker_id,
             "leaseToken": task["leaseToken"],
             "externalSessionId": session_id,
             "gitResult": workspace_result,
             "handoff": task["_handoff"],
-            "report": None if report is None else {key: report[key] for key in ("verdict", "summary")},
+            "report": completion,
         }) or {}
 
     def _task_action(self, task: dict[str, Any], worker_id: str, action: str, session_id: str | None):
@@ -380,6 +383,21 @@ def _git(cwd: str, *args: str) -> str:
 
 def _completion_report(result_kind: str, final_response: str) -> dict[str, str]:
     summary = final_response.strip()
+    experience = None
+    match = re.search(r"\n<AIW_WORKER_EXPERIENCE>\r?\n(.*?)\r?\n</AIW_WORKER_EXPERIENCE>\s*$",
+                      summary, re.DOTALL | re.IGNORECASE)
+    if match:
+        candidate = match.group(1).strip()
+        summary = summary[:match.start()].rstrip()
+        if candidate and candidate.upper() != "NONE" and len(candidate) <= 2000 and "\0" not in candidate:
+            experience = candidate
+
+    def report(verdict: str) -> dict[str, str]:
+        value = {"verdict": verdict, "summary": summary}
+        if experience is not None:
+            value["experience"] = experience
+        return value
+
     if not summary:
         raise RuntimeError("COMPLETION_REPORT_EMPTY")
     if result_kind in {"REPORT", "DELIVERY"}:
@@ -401,17 +419,17 @@ def _completion_report(result_kind: str, final_response: str) -> dict[str, str]:
                 raise RuntimeError("COMPLETION_VERDICT_INVALID")
             if blocked and verdict == "PASS":
                 raise RuntimeError("COMPLETION_REPORT_CONFLICT")
-            return {"verdict": verdict, "summary": summary}
+            return report(verdict)
         if blocked or status_line:
-            return {"verdict": "REPAIR_REQUIRED", "summary": summary}
-        return {"verdict": "PASS", "summary": summary}
+            return report("REPAIR_REQUIRED")
+        return report("PASS")
     if result_kind != "VERDICT":
         raise RuntimeError("RESULT_KIND_INVALID")
     marker = summary.splitlines()[-1].strip()
     verdict = marker.split(":", 1)[1].strip() if marker.startswith("AIW_VERDICT:") else None
     if verdict not in {"PASS", "REPAIR_REQUIRED"}:
         raise RuntimeError("COMPLETION_VERDICT_INVALID")
-    return {"verdict": verdict, "summary": summary}
+    return report(verdict)
 
 
 class ActiveTurn:
@@ -575,6 +593,15 @@ class ProcessSlot:
                                 + target + " was not applied because its approval expired, was invalidated, "
                                 + "or the target version changed. Reinspect the current target and request new approval if needed; "
                                 + "do not reuse the old approval.\n")
+                instruction += (
+                    "\n\nEnd your final response with a separate metadata block exactly in this form:\n"
+                    "<AIW_WORKER_EXPERIENCE>\n"
+                    "Up to three brief, reusable lessons from the completed work. Include only general methods or verified system facts. "
+                    "Do not include credentials, personal or private facts, raw user content, local paths, or copied file contents. "
+                    "Write NONE if there is no reusable lesson.\n"
+                    "</AIW_WORKER_EXPERIENCE>\n"
+                    "This block is internal learning metadata and will be removed from the task result.\n"
+                )
                 instruction += "\nShared Plan location: " + str(workspace.root) + "\nActual working directory: " + workspace.cwd
                 instruction += "\nVerified handoff manifests:\n" + json.dumps(task.get("handoffInputs", []), ensure_ascii=False)
                 if len(instruction.encode("utf-8")) > setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024): raise RuntimeError("CONTEXT_BUDGET_EXCEEDED")
@@ -651,12 +678,12 @@ class ProcessSlot:
                 phase = "OUTPUT_INVALID"
                 report = _completion_report(profile.result_kind, final_response)
                 if native:
-                    report = native.validate_report(report, final_response)
+                    report = native.validate_report(report, report["summary"])
                 if not profile.writable and not broker and snapshot(workspace.cwd, attempt) != baseline:
                     raise RuntimeError("READ_ONLY_WORKSPACE_CHANGED")
                 attempt.evidence.record("report-validated", status="valid", digest=hashlib.sha256(final_response.encode("utf-8")).hexdigest())
                 if native:
-                    native.maybe_question(workspace, report, final_response)
+                    native.maybe_question(workspace, report, report["summary"])
                 phase = "TOOL_ERROR"
                 if repair_id and report["verdict"] == "PASS":
                     from price_repair_materials import submission

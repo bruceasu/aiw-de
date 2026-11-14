@@ -239,8 +239,20 @@ public class TeamMembers implements TaskClaimPolicy {
     public List<Material> materials(Profile member) {
         if(member==null)return List.of();var result=new ArrayList<>(member.settings().knowledge());
         if(!member.notes().isBlank())result.add(new Material("knowledge","Member notes",member.notes(),null));
-        if(!member.settings().experience().isEmpty())result.add(new Material("knowledge","Human-confirmed member experience",
-            member.settings().experience().stream().map(e->"Source workflow: "+e.sourceRun()+"\nHuman-confirmed lesson:\n"+e.text()).collect(java.util.stream.Collectors.joining("\n\n")),null));
+        var experience=new ArrayList<String>();
+        member.settings().experience().forEach(e->experience.add("Source workflow: "+e.sourceRun()+"\nHuman-confirmed lesson:\n"+e.text()));
+        var shared=db.jdbc().queryForList("""
+            SELECT e.task_id,e.run_id,m.name,e.experience FROM worker_team_experience e
+              JOIN worker_team_member m ON m.id=e.member_id
+             WHERE e.actor=(SELECT actor FROM worker_team_member WHERE id=?)
+             ORDER BY e.created_ms DESC,e.task_id DESC LIMIT 8
+            """,member.id());
+        experience.addAll(shared.stream().map(e->{
+            String summary=(String)e.get("experience");
+            if(summary.length()>2000)summary=summary.substring(0,2000);
+            return "Source task: "+e.get("task_id")+"; Plan: "+e.get("run_id")+"; Worker: "+e.get("name")+"\nShared lesson:\n"+summary;
+        }).toList());
+        if(!experience.isEmpty())result.add(new Material("knowledge","Member and team experience",String.join("\n\n",experience),null));
         return WorkflowRuns.checkedSources(result);
     }
     private boolean matches(AiProfileCatalog.NamedProfile profile,Settings settings) {

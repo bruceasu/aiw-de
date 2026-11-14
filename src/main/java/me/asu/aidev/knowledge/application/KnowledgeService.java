@@ -1,6 +1,7 @@
 package me.asu.aidev.knowledge.application;
 
 import me.asu.aidev.execution.domain.CompletionReport;
+import me.asu.aidev.execution.domain.CompletionVerdict;
 import me.asu.aidev.execution.domain.WorkspaceResult;
 import me.asu.aidev.knowledge.domain.KnowledgeDocument;
 import me.asu.aidev.work.domain.TaskType;
@@ -29,6 +30,17 @@ public class KnowledgeService {
 
     /** Called inside the authoritative task-completion transaction. */
     public void record(WorkTask task, CompletionReport report, WorkspaceResult workspaceResult, Instant completedAt) {
+        if (report != null && report.verdict() == CompletionVerdict.PASS
+                && report.experience() != null) {
+            jdbc.update("""
+                    INSERT INTO worker_team_experience(task_id,actor,member_id,run_id,experience,created_ms)
+                    SELECT t.task_id,m.actor,a.member_id,t.run_id,?,?
+                      FROM worker_team_task t
+                      JOIN worker_team_assignment a ON a.run_id=t.run_id AND a.node_key=t.node_key
+                      JOIN worker_team_member m ON m.id=a.member_id
+                     WHERE t.task_id=?
+                    """, report.experience(), completedAt.toEpochMilli(), task.id().value());
+        }
         if (!isDocumentType(task.type())) return;
         if (report == null) throw new IllegalStateException("knowledge document requires a completion report");
         jdbc.update("""

@@ -1,0 +1,40 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-124",
+  "source_event": "FD-124-000011-review-requested",
+  "human_report": "review-20261114-r3.md",
+  "data": {
+    "reviewer_session": "reviewer-fd124-20261114-001",
+    "comparison_base": "c9153f2f9a92f01742563cb21d1718de6c4498c8",
+    "implementation_commit": null,
+    "reviewed_fd_revision": 11,
+    "reviewed_fd_sha256": "f6262d10115cd17571c87b39ef1cfa6b5d997377aad8b31efb9138065e73ca3d",
+    "recommendation": "verification-passed",
+    "review_type": "independent focused static recheck",
+    "resolved_prior_findings": [
+      {"id": "FD124-R1", "result": "resolved", "evidence": ["separate reusable experience metadata is generated in the existing final model turn, removed from the task result and carried in the experience field"]},
+      {"id": "FD124-R2", "result": "resolved", "evidence": ["KnowledgeService persists only non-null experience when verdict is PASS"]},
+      {"id": "FD124-R3", "result": "resolved", "evidence": ["Native report validation and blocked-question handling now receive the metadata-stripped report.summary"]}
+    ],
+    "findings": [],
+    "acceptance": [
+      {"criteria": ["distinct reusable experience, separate from task result"], "result": "supported statically", "evidence": ["final-response parser removes the trailing metadata block and returns the experience separately"]},
+      {"criteria": ["end-to-end completion field and PASS-only storage"], "result": "supported statically", "evidence": ["Python completion payload includes experience; Java request and domain validation retain it; KnowledgeService filters PASS"]},
+      {"criteria": ["Native blocked-input handling remains intact"], "result": "supported statically", "evidence": ["both Native helper calls receive report.summary after metadata removal"]},
+      {"criteria": ["Owner-isolated future retrieval and bounded Sources"], "result": "supported statically", "evidence": ["actor derives from team task assignment; reads use current member actor; experience joins one checkedSources Material"]}
+    ],
+    "actual_commands": [
+      "aiw fd show FD-124",
+      "aiw fd claim FD-124 FD-124-000011-review-requested --session reviewer-fd124-20261114-001",
+      "targeted rg -n over changed completion, Native and Sources symbols",
+      "targeted Get-Content over process_worker.py, native_run.py, CompletionReport.java, KnowledgeService.java and TeamMembers.java",
+      "git status --short --branch"
+    ],
+    "worker_evidence_not_rerun": {
+      "reported_passes": ["Python py_compile", "offline JDK25 Maven compile", "git diff --check"]
+    },
+    "skipped": ["tests", "migration execution", "application startup", "database transaction runtime", "Native Worker runtime", "real model calls", "network"],
+    "residual_risks": ["Migration, transaction and runtime Native question behavior remain unverified.", "Privacy exclusions rely on the model following the completion instruction; no deterministic sensitive-content scan is present."]
+  }
+}

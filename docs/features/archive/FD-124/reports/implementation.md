@@ -1,0 +1,8 @@
+# FD-124 implementation report
+
+- **FD:** FD-124
+- **Changes:** The existing final model response may append a separate reusable-experience block. Python strips it from the task deliverable and sends it as an optional completion field. PASS reports for assigned team-member tasks are appended to an Owner-scoped table in the task-completion transaction. Future member Sources include the eight latest lessons, combined with existing experience within the current source-count budget. REPAIR_REQUIRED, unassigned tasks, and responses without a valid experience block do not create shared knowledge.
+- **Files:** process_worker.py, CompletionReport.java, WorkerProtocolV1Controller.java, V52__worker_shared_experience.sql, KnowledgeService.java, TeamMembers.java.
+- **Compile:** Passed with JDK 25.0.1 using offline Maven compile and the FD-081 local settings/repository. Python py_compile also passed. A first Maven invocation failed before compilation because PowerShell split an unquoted Maven property; the quoted invocation compiled successfully.
+- **Tests / migration / runtime:** Not run. No tests, migration, application, Worker, or model were executed.
+- **Review:** Review r1 found that a full task answer was stored instead of a separate reusable lesson and that REPAIR_REQUIRED results were shared; both were fixed by extracting a separate metadata block from the existing final model reply and storing only PASS experience. Review r2 found Native app-server question parsing still received the unstripped final response; it now receives the sanitized report summary. Reports: docs/features/FD-124/reviews/review-20261114-r1.md and docs/features/FD-124/reviews/review-20261114-r2.md. Final independent recheck pending.

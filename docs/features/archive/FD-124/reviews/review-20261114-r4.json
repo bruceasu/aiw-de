@@ -1,0 +1,40 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-124",
+  "source_event": "FD-124-000013-review-requested",
+  "human_report": "review-20261114-r4.md",
+  "data": {
+    "reviewer_session": "reviewer-fd124-20261114-001",
+    "comparison_base": "c9153f2f9a92f01742563cb21d1718de6c4498c8",
+    "implementation_commit": null,
+    "reviewed_fd_revision": 13,
+    "reviewed_fd_sha256": "594f328af5a9be70136dec3d65cecf2ad07dbe3cab1f7a26b592a0fa4a360c18",
+    "recommendation": "verification-passed",
+    "review_type": "independent close-gate static review",
+    "findings": [],
+    "resolved_prior_findings": [
+      {"id": "FD124-R1", "result": "resolved", "evidence": ["dedicated reusable experience metadata is stripped from the final task result and propagated separately"]},
+      {"id": "FD124-R2", "result": "resolved", "evidence": ["only PASS reports with valid experience are persisted"]},
+      {"id": "FD124-R3", "result": "resolved", "evidence": ["Native report validation and question handling receive the cleaned report summary"]}
+    ],
+    "acceptance": [
+      {"criteria": ["scope and acceptance are complete and match implementation"], "result": "supported statically", "evidence": ["FD Work Items and Verification are complete; implementation paths match the described experience lifecycle"]},
+      {"criteria": ["owner-isolated, source-backed shared experience"], "result": "supported statically", "evidence": ["migration records actor/member/task/run; insertion joins the assignment; reads filter by actor"]},
+      {"criteria": ["completion metadata and Native path are preserved"], "result": "supported statically", "evidence": ["Python parser removes metadata, Java DTO propagates it, Native helpers receive report.summary"]},
+      {"criteria": ["evidence is accurately reported"], "result": "supported statically", "evidence": ["Worker compile claims are identified as not rerun; tests, migrations and runtime checks remain explicitly unverified"]}
+    ],
+    "actual_commands": [
+      "aiw fd show FD-124",
+      "aiw fd claim FD-124 FD-124-000013-review-requested --session reviewer-fd124-20261114-001",
+      "git status --short --branch",
+      "git diff --stat",
+      "targeted Get-Content over FD-124, V52 migration, KnowledgeService, TeamMembers, CompletionReport, WorkerProtocolV1Controller and process_worker.py"
+    ],
+    "worker_evidence_not_rerun": {
+      "reported_passes": ["Python py_compile", "offline JDK25 Maven compile", "git diff --check"]
+    },
+    "skipped": ["tests", "migration execution", "application startup", "database transaction runtime", "Worker runtime", "Native question runtime", "real model calls", "network"],
+    "residual_risks": ["Migration and runtime behavior remain unverified.", "Model compliance with privacy instructions is not mechanically checked."]
+  }
+}
