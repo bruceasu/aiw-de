@@ -54,13 +54,13 @@ public class FactoryModelCatalog {
                 raw=codex(config,token);source="CODEX_RPC";notice="CODEX_CATALOG_MAY_BE_CACHED";
             } else if(chosen!=null) {
                 var token=connections.catalogAccess(chosen,input.runtime());
-                raw=oauth.models(token.accessToken(),OpenAiOAuth.RESOURCE);source="CHATGPT_ACCOUNT";notice="DIRECTORY_IS_NOT_INFERENCE_VERIFICATION";
+                raw=oauth.models(token.accessToken(),"");source="CHATGPT_ACCOUNT";notice="DIRECTORY_IS_NOT_INFERENCE_VERIFICATION";
             } else {
                 boolean deepseek=input.apiProvider().equals("deepseek");
                 String token=Objects.toString(environment(deepseek?"DEEPSEEK_API_KEY":"OPENAI_API_KEY"),"");
                 if(token.isBlank())throw new IllegalStateException(deepseek?"MODEL_DIRECTORY_DEEPSEEK_KEY_NOT_CONFIGURED":"MODEL_DIRECTORY_API_KEY_NOT_CONFIGURED");
                 String endpoint=Objects.toString(environment("OPENAI_BASE_URL"),"");
-                raw=oauth.models(token,deepseek?"https://api.deepseek.com":endpoint.isBlank()?OpenAiOAuth.RESOURCE:endpoint);source=deepseek?"DEEPSEEK_API_ACCOUNT":"OPENAI_API_ACCOUNT";notice="API_DIRECTORY_INCLUDES_OTHER_MODEL_TYPES";
+                raw=oauth.models(token,deepseek?"https://api.deepseek.com":endpoint);source=deepseek?"DEEPSEEK_API_ACCOUNT":"OPENAI_API_ACCOUNT";notice="API_DIRECTORY_INCLUDES_OTHER_MODEL_TYPES";
             }
             var result=new Catalog(parse(raw,source),source,notice,System.currentTimeMillis(),false);
             // A disconnection or account replacement during the request invalidates late metadata too.
