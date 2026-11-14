@@ -27,7 +27,7 @@ class WorkflowWorkerProvisioningTest {
         when(settings.current()).thenReturn(new AgentFactorySettings.Settings("codex-app-server","model","medium",true,"python","", ""));
         when(db.queryForList(contains("FROM work_task t"),eq(String.class),anyString())).thenReturn(List.of("task"));
         when(db.queryForList(startsWith("SELECT id FROM workflow_execution"),eq(String.class),anyString())).thenReturn(List.of());
-        when(provisioner.requestNative(anyString(),anyString(),anyString())).thenReturn(new ManagedWorkerProvisioner.Result(true,"Starting"));
+        when(provisioner.requestWorkflow(anyString(),anyString(),anyString(),anyBoolean())).thenReturn(new ManagedWorkerProvisioner.Result(true,"Starting"));
         when(tasks.find(new TaskId("task"))).thenReturn(Optional.of(new WorkTask(new TaskId("task"),TaskType.EXTERNAL_WORK,TaskState.READY,
                 "flexible-plan","plan",Set.of("coding"),"coding-work-package-executor","Implement","repo",null,TaskPriority.NORMAL,0,Instant.EPOCH,Instant.EPOCH)));
     }
@@ -36,7 +36,7 @@ class WorkflowWorkerProvisioningTest {
                 Instant.now(),Instant.now(),Instant.now());
     }
     @Test void missingRoleRequestsMatchingNativeWorker() {
-        service.supply();verify(provisioner).requestNative("repo","codex-app-server","coder");
+        service.supply();verify(provisioner).requestWorkflow("repo","codex-app-server","coder",false);
     }
     @Test void compatibleBusyWorkerIsReusedInsteadOfDuplicated() {
         when(workers.online(any())).thenReturn(List.of(online("repo")));
@@ -44,7 +44,7 @@ class WorkflowWorkerProvisioningTest {
     }
     @Test void differentRepositoryDoesNotSatisfyTheTask() {
         when(workers.online(any())).thenReturn(List.of(online("other")));
-        service.supply();verify(provisioner).requestNative("repo","codex-app-server","coder");
+        service.supply();verify(provisioner).requestWorkflow("repo","codex-app-server","coder",false);
     }
     @Test void disabledAutomaticWorkersDoNotStartProcesses() {
         when(settings.current()).thenReturn(new AgentFactorySettings.Settings("codex-app-server","model","medium",false,"python","", ""));
@@ -52,7 +52,7 @@ class WorkflowWorkerProvisioningTest {
         verify(db).queryForList(startsWith("SELECT id FROM workflow_execution"),eq(String.class),eq(""));
     }
     @Test void blockedPreparationIsVisibleInOriginalPlan() {
-        when(provisioner.requestNative("repo","codex-app-server","coder"))
+        when(provisioner.requestWorkflow("repo","codex-app-server","coder",false))
                 .thenReturn(new ManagedWorkerProvisioner.Result(false,"Capacity unavailable"));
         service.supply();
         assertThat(service.pending("plan")).containsExactly(new WorkflowWorkerProvisioning.Preparation("task","plan","BLOCKED","Capacity unavailable"));

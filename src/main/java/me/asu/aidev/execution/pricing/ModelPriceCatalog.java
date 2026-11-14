@@ -157,7 +157,7 @@ public class ModelPriceCatalog {
         return result;
     }
 
-    private void validate(Snapshot snapshot) {
+    void validate(Snapshot snapshot) {
         Objects.requireNonNull(snapshot); text(snapshot.id(), 128); text(snapshot.provider(), 64);
         text(snapshot.sourceUrl(), 2048); text(snapshot.parserVersion(), 128);
         if (snapshot.contentSha256() == null || !snapshot.contentSha256().matches("[0-9a-f]{64}")

@@ -1,5 +1,11 @@
 # Plane 管理 OpenAI 凭证
 
+同机连接的外部 OAuth 协议和 Token 文件由 `workers/process-python/model_auth_protocol.py` 处理。Plane 保存文件引用、归属及状态，原 Worker 证明和精确租约检查保留。默认文件目录为启动账户的 `~/.aiw/model-credentials`，可用 `AIW_MODEL_CREDENTIAL_DIR` 修改；目录只供同机协调，不能把此路径发给异机 Worker。
+
+Windows 文件使用当前账户 DPAPI；其他系统使用账户私有目录和权限为 0600 的文件。安装时保留仓库内 `personal-secretary/private_config.py` 和 `secretary_oauth.py`，脚本直接复用它们的安全存储及成熟验签。Python 需要现有秘书登录依赖 `PyJWT[crypto]`，不会自动安装。不要把凭据目录提交到 Git 或加入普通备份。
+
+刷新使用文件锁；每次旋转产生新文件引用，旧引用不能读到下一代 Token。不确定的刷新停止使用并要求重新登录，不自动重发。V50 保留旧连接元数据和历史，但清空旧 Java 密文并标记需重新登录；需要显式登录或重新导入。异机 Worker 自行管理模型连接。
+
 本机 Plane 的 **Agent 工厂设置 → 执行与登录** 按当前执行方式显示登录来源；**已保存的登录连接** 管理各个连接的更新、重新登录和断开。模型账户不授予工具、计划、审批或文件权限。现有 Worker 本机 Codex 登录和 API Key 路径仍可选择。
 
 页面将“模型执行方式”和“登录与凭证来源”分别设置。两种执行方式的内部标识保持原样，OAuth 是凭证来源，不增加第三个执行方式：

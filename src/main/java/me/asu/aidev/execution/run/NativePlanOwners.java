@@ -26,6 +26,7 @@ public class NativePlanOwners {
     public String currentOwner() {
         if(boundary.human()==null||boundary.delegated())throw new SecurityException("Authenticated human required");
         var rows=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,boundary.human());
+        if(rows.isEmpty())return grants.bind(boundary.human());
         if(rows.size()!=1)throw new SecurityException("Bind exactly one current Owner first");return rows.getFirst();
     }
     private String sourceDigest(String plan) {

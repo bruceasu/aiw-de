@@ -142,6 +142,7 @@ class GuardBroker:
         self.usage = {"inputTokens": 0, "cachedTokens": 0, "outputTokens": 0}
         self.commands_run = []
         self.created_paths = set()
+        self.file_changes = {}
         self._active = set()
         self.allowed_tools = None
         self.accepting_tools = True
@@ -214,13 +215,13 @@ class GuardBroker:
             operation = self.begin(tool, resource, arguments, call_id)
             try:
                 result = action()
-                if tool == "WRITE" and arguments.get("action") == "write" and arguments.get("expectedDigest") == "ABSENT":
+                if tool == "WRITE" and self._file_action(arguments) == "write" and arguments.get("expectedDigest") == "ABSENT":
                     self.created_paths.add(resource)
                 self.finish(operation, "SUCCEEDED", result)
                 return result
             except Exception as error:
                 # A write/process could already have happened. Keep the workspace and task occupied.
-                known = (tool in {"READ", "SEARCH"} or str(error).startswith(("GUARD_PATH_", "GUARD_LINK_", "GUARD_FILE_VERSION_", "GUARD_WRITE_LIMIT", "GUARD_READ_RANGE_", "GUARD_SEARCH_", "GUARD_ROLE_"))) and not self.attempt.resource_uncertain
+                known = (tool in {"READ", "SEARCH"} or str(error).startswith(("GUARD_PATH_", "GUARD_LINK_", "GUARD_FILE_VERSION_", "GUARD_WRITE_LIMIT", "GUARD_READ_RANGE_", "GUARD_SEARCH_", "GUARD_ROLE_", "GUARD_RESTORE_", "GUARD_TRASH_"))) and not self.attempt.resource_uncertain
                 try: self.finish(operation, "FAILED" if known else "UNKNOWN", {"code": "OPERATION_FAILED" if known else "OPERATION_OUTCOME_REQUIRES_RECONCILIATION"})
                 except Exception:
                     self.attempt.resource_uncertain = True
@@ -245,59 +246,41 @@ class GuardBroker:
             return needs_approval
         if tool != "WRITE" or not isinstance(arguments, dict):
             return False
-        name = arguments.get("action")
+        name = self._file_action(arguments)
         if name == "delete":
             path = safe_path(self.root, resource)
-            actual = hashlib.sha256(self._read(path)).hexdigest()
-            if arguments.get("expectedDigest") != actual:
+            if arguments.get("expectedDigest") != hashlib.sha256(self._read(path)).hexdigest():
                 raise RuntimeError("GUARD_FILE_VERSION_CONFLICT")
-            created_here = resource in self.created_paths
-            instruction = self.context["snapshot"]["task"].get("instruction", "").replace("\\", "/")
-            explicit_scope = self._explicitly_requests_deletion(instruction, resource)
-            tracked = False
-            if not created_here and explicit_scope and self.git is not None:
-                try:
-                    tracked = self.git.is_tracked(resource)
-                except RuntimeError as error:
-                    if str(error) != "GUARD_GIT_OPERATION_FAILED":
-                        raise
-            risk_version = self.context.get("originalPolicy", {}).get("riskStrategyVersion", 0)
-            autonomous = created_here or (risk_version == 1 and explicit_scope and tracked)
-            self.attempt.evidence.record("guard-delete-risk", path=resource,
-                classification="AUTONOMOUS_SINGLE_FILE" if autonomous else "OWNER_APPROVAL_REQUIRED")
-            return not autonomous
+            # Every deletion is moved to a protected local trash before it disappears.
+            return self.context.get("originalPolicy", {}).get("riskStrategyVersion", 0) != 1 and resource not in self.created_paths
         if name != "write":
             return False
         path = safe_path(self.root, resource, missing=True)
-        return path.exists()
+        if not path.exists():
+            return False
+        old = self._read(path)
+        if arguments.get("expectedDigest") != hashlib.sha256(old).hexdigest():
+            raise RuntimeError("GUARD_FILE_VERSION_CONFLICT")
+        ordinary = (self.context.get("originalPolicy", {}).get("riskStrategyVersion", 0) == 1
+                    and len(old) <= 65536 and len(arguments["content"].encode()) <= 65536
+                    and (resource in self.file_changes or len(self.file_changes) < 20))
+        self.attempt.evidence.record("guard-write-risk", path=resource,
+            classification="ORDINARY_EXACT_FILE_EDIT" if ordinary else "LARGE_OR_BULK_REPLACEMENT")
+        return not ordinary
 
     @staticmethod
-    def _explicitly_requests_deletion(instruction, resource):
-        target = re.escape(resource)
-        mentions = list(re.finditer(r"(?<![A-Za-z0-9._/-])" + target + r"(?![A-Za-z0-9._/-])", instruction, re.IGNORECASE))
-        if not mentions:
-            return False
-        verbs = r"(?:delete|remove|erase|unlink|discard|删除|移除|删掉|删去|清理|去掉|去除)"
-        boundary = re.compile(r"[!?;；。！？\n]+|\.(?=\s|$)|,\s+")
-        negative = re.compile(r"(?:\b(?:do\s+not|don't|never|must\s+not|should\s+not|avoid|cannot|can't|not|need\s+not|no\s+need\s+to)\b[^.!?;。！？；\n]{0,80}|(?:严禁|绝对不要|千万不要|不要|不得|禁止|勿|切勿|别|不|无须|无需|不必|没必要|不能|不可|无法|不会|不应|不该|尚未|未|没有|没|并非|并未)[^。！？；\n]{0,32})" + verbs, re.IGNORECASE)
-        affirmative = re.compile(verbs + r"[^.!?;。！？；\n]{0,160}$", re.IGNORECASE)
-        if negative.search(instruction):
-            return False
-        for mention in mentions:
-            previous = list(boundary.finditer(instruction, 0, mention.start()))
-            start = previous[-1].end() if previous else 0
-            following = boundary.search(instruction, mention.end())
-            end = following.start() if following else len(instruction)
-            clause = instruction[start:end]
-            if not affirmative.search(clause[:mention.start() - start]):
-                return False
-        return True
+    def _file_action(arguments):
+        # Actions come from the closed host argument schema, not a model-supplied risk label.
+        if "content" in arguments: return "write"
+        if "expectedDigest" in arguments: return "delete"
+        if "trashId" in arguments: return "restore"
+        return "mkdir"
 
     def _request_approval(self, tool, resource, arguments, call_id):
         from formal_questions import YieldRequested
         if self.pending_approval or self.pending_question or self.checkpoint is None or self.workspace is None:
             raise RuntimeError("TOOL_APPROVAL_CHECKPOINT_UNAVAILABLE")
-        name = arguments.get("action") if tool == "WRITE" else "command"
+        name = self._file_action(arguments) if tool == "WRITE" else "command"
         command = None
         if tool == "COMMAND":
             if name != "command" or set(arguments) != {"commandId"} or arguments["commandId"] != resource:
@@ -647,6 +630,7 @@ class GuardBroker:
             "read": ({"path", "offset", "limit"}, "READ"), "ls": ({"path"}, "READ"),
             "grep": ({"path", "text"}, "SEARCH"), "write": ({"path", "content", "expectedDigest"}, "WRITE"),
             "mkdir": ({"path"}, "WRITE"), "delete": ({"path", "expectedDigest"}, "WRITE"),
+            "restore": ({"path", "trashId"}, "WRITE"),
             "git_status": (set(), "GIT"), "git_diff": (set(), "GIT"),
             "git_commit": ({"message", "paths"}, "GIT"), "run_command": ({"commandId"}, "COMMAND"),
             "git_integrate": ({"sourceTaskId"}, "GIT"),
@@ -682,16 +666,44 @@ class GuardBroker:
             result = run_command(self.root, command, self.attempt)
             self.commands_run.append({"commandId": command["id"], "exitCode": result["exitCode"], "outputDigest": digest(result)})
             return result
-        path = safe_path(self.root, args["path"], missing=name in {"write", "mkdir"})
+        path = safe_path(self.root, args["path"], missing=name in {"write", "mkdir", "restore"})
         if name == "mkdir":
             if path.exists():
                 if not path.is_dir(): raise RuntimeError("GUARD_NOT_DIRECTORY")
             else: path.mkdir(mode=0o755)
+            self.file_changes[args["path"]] = {"path": args["path"], "state": "DIRECTORY"}
             return {"createdDirectory": args["path"]}
         if name == "delete":
             if hashlib.sha256(self._read(path)).hexdigest() != args["expectedDigest"]: raise RuntimeError("GUARD_FILE_VERSION_CONFLICT")
-            path.unlink()
-            return {"deletedFile": args["path"]}
+            from plan_workspace import directory
+            trash_id = uuid.uuid4().hex
+            trash = directory(getattr(self, "source_root", self.root), ".ai", "trash", trash_id)
+            metadata = {"path": args["path"], "sha256": args["expectedDigest"], "trashId": trash_id}
+            with (trash / "receipt.json").open("x", encoding="utf-8") as output:
+                json.dump(metadata, output);output.flush();os.fsync(output.fileno())
+            os.replace(path, trash / "content")
+            self.file_changes[args["path"]] = {**metadata, "state": "DELETED"}
+            return {"deletedFile": args["path"], "trashId": trash_id}
+        if name == "restore":
+            trash_id = args["trashId"]
+            if not isinstance(trash_id, str) or not re.fullmatch(r"[0-9a-f]{32}", trash_id):
+                raise RuntimeError("GUARD_TRASH_ID_INVALID")
+            from plan_workspace import directory
+            trash = directory(getattr(self, "source_root", self.root), ".ai", "trash", trash_id)
+            receipt, content = trash / "receipt.json", trash / "content"
+            if receipt.is_symlink() or content.is_symlink() or not receipt.is_file() or receipt.stat().st_size > 16384:
+                raise RuntimeError("GUARD_TRASH_RECEIPT_INVALID")
+            metadata = json.loads(receipt.read_text(encoding="utf-8"))
+            if metadata.get("path") != args["path"] or metadata.get("sha256") != hashlib.sha256(self._read(content)).hexdigest():
+                raise RuntimeError("GUARD_TRASH_CONTENT_CHANGED")
+            if path.exists(): raise RuntimeError("GUARD_RESTORE_TARGET_EXISTS")
+            try:
+                os.link(content, path, follow_symlinks=False)  # Atomic no-clobber publication.
+            except FileExistsError:
+                raise RuntimeError("GUARD_RESTORE_TARGET_EXISTS") from None
+            content.unlink()
+            self.file_changes[args["path"]] = {"path": args["path"], "state": "RESTORED", "sha256": metadata["sha256"]}
+            return {"restoredFile": args["path"], "sha256": metadata["sha256"]}
         if name == "ls":
             if not path.is_dir(): raise RuntimeError("GUARD_NOT_DIRECTORY")
             names = []
@@ -732,7 +744,9 @@ class GuardBroker:
             os.replace(temporary, path)
         finally:
             if temporary.exists(): temporary.unlink()
-        return {"resultDigest": hashlib.sha256(content.encode()).hexdigest()}
+        file_digest = hashlib.sha256(content.encode()).hexdigest()
+        self.file_changes[args["path"]] = {"path": args["path"], "state": "WRITTEN", "sha256": file_digest}
+        return {"resultDigest": file_digest}
 
     def _read(self, path):
         descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
@@ -759,9 +773,10 @@ class GuardBroker:
         if channel and channel.phase != "FINALIZING":
             if channel.seal("final-delivery") is not None:
                 raise RuntimeError("RUN_UNCONSUMED_OPERATOR_INPUT")
-        delivery = {"scope": self.context["snapshot"]["task"]["instruction"],
+        report["outputFiles"] = list(self.file_changes.values())
+        delivery = {"scope": self.context["snapshot"]["task"]["instruction"][:8192],
                     "baseline": self.context["snapshot"]["task"].get("baseRevision"),
-                    "resultRevision": (result or {}).get("resultRevision"), "changes": (result or {}).get("changedFiles", []),
+                    "resultRevision": (result or {}).get("resultRevision"), "changes": (result or {}).get("changedFiles", sorted(self.file_changes)),
                     "commandsRun": [json.dumps(c, sort_keys=True) for c in self.commands_run],
                     "checksNotRun": [] if self.commands_run else ["No verification command was authorized and run"],
                     "unresolved": [] if report.get("verdict") == "PASS" else [report.get("summary", "Review required")],

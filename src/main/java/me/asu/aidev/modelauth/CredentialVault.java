@@ -53,8 +53,6 @@ public class CredentialVault {
     }
     private byte[] material(java.util.Map<String,Object> metadata) {
         String id=(String)metadata.get("key_id"),digest=(String)metadata.get("key_digest");
-        if(digest==null&&repo.jdbc().queryForObject("SELECT COUNT(*) FROM model_connection WHERE secret_cipher IS NOT NULL",Long.class)>0)
-            throw new IllegalStateException("MODEL_LOCAL_KEY_MISSING");
         byte[] material=local.load(id,digest==null);
         String actual=AuthorityRepository.hash(Base64.getEncoder().encodeToString(material));
         if(digest==null) {
@@ -71,9 +69,6 @@ public class CredentialVault {
         String id=(String)metadata.get("key_id"),digest=(String)metadata.get("key_digest");
         String actual=AuthorityRepository.hash(Base64.getEncoder().encodeToString(key));
         if(digest==null) {
-            // An upgrade may contain pre-metadata ciphertext. Verify the supplied key before recording its identity.
-            for(var row:repo.jdbc().queryForList("SELECT id,owner_actor,client_id,generation,secret_cipher FROM model_connection WHERE secret_cipher IS NOT NULL"))
-                cryptWith(key,false,String.join("\n","aiw.model-auth.v1",(String)row.get("id"),(String)row.get("owner_actor"),(String)row.get("client_id"),Long.toString(((Number)row.get("generation")).longValue())),(String)row.get("secret_cipher"));
             repo.jdbc().update("UPDATE model_vault_local SET key_digest=? WHERE id=1 AND key_id=? AND key_digest IS NULL",actual,id);
             digest=actual;
         }

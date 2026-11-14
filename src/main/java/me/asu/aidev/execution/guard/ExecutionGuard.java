@@ -340,7 +340,11 @@ public class ExecutionGuard {
         if(!managed(task)) return;
         var value=repo.jdbc().queryForObject("SELECT delivery_json FROM execution_delivery WHERE attempt_id=? AND task_id=?",String.class,lease.attemptId(),task);
         var delivery=repo.decode(value,Delivery.class);
-        if(result==null || !Objects.equals(delivery.resultRevision(),result.resultRevision()) || !new HashSet<>(delivery.changes()).equals(new HashSet<>(result.changedFiles())))
+        if(result==null){
+            if(delivery.resultRevision()!=null||context(task).snapshot().task().baseRevision()!=null)throw new IllegalStateException("Expected Git delivery is missing");
+            return; // A plain directory reports file metadata in its formal delivery and .ai handoff.
+        }
+        if(!Objects.equals(delivery.resultRevision(),result.resultRevision()) || !new HashSet<>(delivery.changes()).equals(new HashSet<>(result.changedFiles())))
             throw new IllegalStateException("Formal delivery and actual Git result differ");
     }
     public boolean completed(String task,Lease lease,me.asu.aidev.execution.domain.WorkspaceResult result,me.asu.aidev.execution.domain.CompletionReport report) {

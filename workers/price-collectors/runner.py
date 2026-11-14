@@ -40,6 +40,26 @@ def _unique(pairs):
     return result
 
 
+def _prices(module, observation):
+    """Complete the internal schema; provider table interpretation stays in the provider module."""
+    rules, seen = [], set()
+    for row in module.prices(observation):
+        if not isinstance(row, dict) or len(rules) >= 2000:
+            raise ValueError("PRICE_RULES_INVALID")
+        digest = hashlib.sha256(json.dumps(row, sort_keys=True, allow_nan=False).encode()).hexdigest()
+        if digest in seen:
+            continue
+        seen.add(digest)
+        rules.append({"id": "rule-" + digest + "-" + str(observation["observedMs"]),
+                      "currency": observation["currency"], "tier": "default", "fromMs": observation["observedMs"],
+                      "untilMs": None, "zone": "UTC", "days": ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"],
+                      "start": None, "end": None, "onlyDates": [], "excludedDates": [], "calendarFrom": None,
+                      "calendarUntil": None, "cacheWriteIncluded": True, "cacheWrite": None, "minContext": None,
+                      "maxContext": None, **row})
+    observation["priceRules"] = rules
+    return observation
+
+
 def _load(provider):
     if not isinstance(provider, str) or provider not in MODULES:
         raise ValueError("UNSUPPORTED_PROVIDER")
@@ -78,6 +98,7 @@ def execute(request):
         result = module.parse(content, request["observedMs"], request["sourceUrl"])
     else:
         result = module.parse(content, request["observedMs"])
+    result = _prices(module, result)
     result["collectorSha256"] = collector_sha256
     return result
 
@@ -93,7 +114,7 @@ def collect(request):
     except module.SourceFetchError as error:
         raise FetchFailed("PUBLIC_SOURCE_UNAVAILABLE") from error
     try:
-        result = module.parse(content, observed, source)
+        result = _prices(module, module.parse(content, observed, source))
     except module.PriceStructureError as error:
         reason = str(error)
         if not re.fullmatch(r"[A-Z0-9_]{1,80}", reason):

@@ -110,7 +110,7 @@ class ModelPriceRepairMaterialsTest {
                         "https://api-docs.deepseek.com/pricing", hash(oldPage), "v1", 2_200_001, "USD",
                         "micro-currency-per-million-tokens", "OBSERVED_ONLY", false,
                         List.of("TRUSTED_EFFECTIVE_INTERVAL", "CHINESE_PUBLIC_HOLIDAY_CALENDAR"), Map.of("source", "fixture"),
-                        List.of(Map.of("model", "fixture")), hash(module)), b64(oldPage)));
+                        List.of(Map.of("model", "fixture")), hash(module),List.of()), b64(oldPage)));
         assertEquals("SUPERSEDED", db.queryForObject("SELECT status FROM model_price_repair_material WHERE id=?", String.class, id));
         assertThrows(SecurityException.class, () -> repairs.read("task", lease));
     }
@@ -131,7 +131,7 @@ class ModelPriceRepairMaterialsTest {
                 "https://api-docs.deepseek.com/pricing", hash(oldPage), "v1", 2_200_001, "USD",
                 "micro-currency-per-million-tokens", "OBSERVED_ONLY", false,
                 List.of("TRUSTED_EFFECTIVE_INTERVAL", "CHINESE_PUBLIC_HOLIDAY_CALENDAR"), Map.of("source", "fixture"),
-                List.of(Map.of("model", "fixture")), hash(module));
+                List.of(Map.of("model", "fixture")), hash(module),List.of());
         state.observed(state.claim("deepseek", 2_200_000), new ModelPriceCollectorProcess.Collected(success, b64(oldPage)));
         var change = new ModelPriceCollectorProcess.SourceChange("deepseek", "https://api-docs.deepseek.com/pricing",
                 2_600_001, "v1", hash(module), "PRICE_ROWS_CHANGED", "f".repeat(64), hash(changedPage), b64(changedPage));

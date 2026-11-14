@@ -24,13 +24,15 @@ public class ModelPriceCollectorProcess {
     public record Observation(String protocol, String provider, String sourceUrl, String contentSha256,
                               String collectorVersion, long observedMs, String currency, String unit,
                               String validity, boolean accountingReady, List<String> missing,
-                              Map<String,Object> conditions, List<Map<String,Object>> models, String collectorSha256) {
+                              Map<String,Object> conditions, List<Map<String,Object>> models, String collectorSha256,
+                              List<ModelPriceCatalog.Rule> priceRules) {
+        public Observation {priceRules=priceRules==null?List.of():List.copyOf(priceRules);}
         public Observation(String protocol, String provider, String sourceUrl, String contentSha256,
                            String collectorVersion, long observedMs, String currency, String unit,
                            String validity, boolean accountingReady, List<String> missing,
                            Map<String,Object> conditions, List<Map<String,Object>> models) {
             this(protocol, provider, sourceUrl, contentSha256, collectorVersion, observedMs, currency, unit,
-                    validity, accountingReady, missing, conditions, models, "0".repeat(64));
+                    validity, accountingReady, missing, conditions, models, "0".repeat(64),List.of());
         }
     }
     public record Response(String protocol, String state, Observation observation, String contentBase64,

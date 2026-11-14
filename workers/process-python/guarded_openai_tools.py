@@ -7,7 +7,13 @@ from guarded_app_server import definitions
 
 def tools(broker):
     result = []
+    unavailable=set()
+    if not broker.writable:
+        unavailable.update({"write","mkdir","delete","restore","git_commit","git_integrate","run_command"})
+    if not broker.context.get("originalPolicy", {}).get("commands"):
+        unavailable.add("run_command")
     for definition in definitions():
+        if definition["name"] in unavailable: continue
         async def invoke(context, arguments, name=definition["name"]):
             if not isinstance(arguments, str): raise RuntimeError("SDK_TOOL_ARGUMENTS_UNSUPPORTED")
             call_id = getattr(context, "tool_call_id", None)

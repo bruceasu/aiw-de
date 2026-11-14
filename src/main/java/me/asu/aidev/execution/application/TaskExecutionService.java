@@ -341,6 +341,8 @@ public class TaskExecutionService {
         var now = clock.instant();
         revokeAndRequeue(task, task.state(), now, actor, reason,
                 task.state() == TaskState.RUNNING ? "FORCED_REQUEUE" : "REQUEUED", warningConfirmed);
+        var workflow=unifiedWorkflows==null?null:unifiedWorkflows.getIfAvailable();
+        if(workflow!=null)workflow.interrupted(taskId,"An administrator revoked the original lease. Check existing results before explicitly choosing a retry; no work was automatically dispatched.");
     }
 
     private void revokeAndRequeue(me.asu.aidev.work.domain.WorkTask task, TaskState expectedState,
@@ -579,6 +581,11 @@ public class TaskExecutionService {
         var now = clock.instant();
         int recovered = 0;
         for (var lease : tasks.findExpiredLeases(now, limit)) {
+            var workflow=unifiedWorkflows==null?null:unifiedWorkflows.getIfAvailable();
+            if(workflow!=null&&workflow.interrupted(lease.taskId(),"The Worker lease expired. Its process and external effects are not confirmed. Inspect the existing execution and request stop or reconcile it before choosing a retry.")) {
+                if(guard!=null)guard.retainExpired(lease.taskId().value(),attempts.findAttemptId(lease.token()).orElseThrow().value());
+                continue;
+            }
             if(nativeRuns!=null&&nativeRuns.managed(lease.taskId().value(),attempts.findAttemptId(lease.token()).orElseThrow().value()))continue;
             if(guard!=null && guard.retainExpired(lease.taskId().value(),attempts.findAttemptId(lease.token()).orElseThrow().value())) continue;
             if (!tasks.requeueExpired(lease.taskId(), lease.workerId(), lease.token(), now)) continue;

@@ -1,5 +1,11 @@
 # Worker 工作台与上下文能力
 
+普通任务和工作流 TASK 节点可明确勾选“在此工作目录处理文件”；未勾选仍只读。文件任务复用同一执行循环、过程记录、问答和停止协议。它不要求 Git，也不自动授权其他主机路径；实际命令能力仍取决于已有适配器和明确授权。
+
+“受控命令（高级）”填写已有 GuardContract.Command 格式的 JSON 数组；默认 `[]`。例如 `[{"id":"status","argv":["git","status"],"cwd":".","permissionProfile":"workspace","timeoutMs":10000,"outputBytes":65536,"memoryBytes":268435456,"processLimit":16}]`。这会要求已接入的 Linux／WSL 命令适配器，危险命令继续走原确认流程；不会开启 Windows 或本机工厂的命令能力。配置在保存、启动和节点调整时保持冻结，Worker 只能使用这些明确的命令 ID。
+
+Worker 的 `.ai/handoffs/.../manifest.json` 汇报实际 workingDirectory、报告摘要和 deliverables 元数据，不上传修改后的正文。连续节点通过真实上游任务引用读取这些交接；工作区任务的报告也显示实际工作目录。单文件删除保存在共享 Plan 目录的 `.ai/trash/<trashId>`，可用 restore 工具恢复到原相对路径，恢复不能覆盖现有文件。失败保留现场，临时目录沿用原明确清理流程。
+
 FD-044 沿现有 Worker、固定技能、角色编译和受控工具补充 Pi 调研中的九项机制。没有安装 Pi 或增加 Worker 类型，没有新增费用或执行预算门禁。
 
 ## 入口与执行阶段
@@ -71,3 +77,8 @@ V19 仅追加工作台/批次/收据/探索表，不回填旧尝试，不改原�
 算法复用本仓库 [FD-005 context.mjs](../extern-workers/process-typescript/runtime-core/context.mjs) 的安全切点与可见来源思路，原 [Pi 来源记录](../extern-workers/process-typescript/runtime-core/SOURCE-PROVENANCE.md) 及 [Python 参考许可](../workers/process-python/THIRD-PARTY-NOTICES.md) 保留，没有嵌入 Pi SDK。
 
 SDK 概念核对使用 [OpenAI 官方结果与状态](https://developers.openai.com/api/docs/guides/agents/results)、[运行与流式结束](https://developers.openai.com/api/docs/guides/agents/running-agents)：本地续行用 `to_input_list()`，流结束后处理报告。当前环境缺对应 Python SDK 源码，具体 provider/ModelSettings 兼容仍需运行证据，官方文档不等于本系统运行通过。
+## 中断后核对
+
+统一任务／工作流的 Worker 租约过期后，流程显示需要处理，记录“执行中断，结果待核对”，不会自动重新派发。连接中断不代表进程已经结束，原租约和容量保留；先在原执行工作台核对已执行操作、结果与停止回执。
+
+如果后来收到正式成功结果，可选择“使用已记录的结果”继续后续步骤；这不会再次执行原任务。选择“重试本步骤”则明确重新执行，必须先确认原执行结束；旧结果保留。没有自动启动审查 Worker，评审仍由明确配置的步骤决定。

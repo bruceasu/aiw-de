@@ -37,7 +37,7 @@ class LocalModelVaultTest {
     @BeforeEach void setup() {
         var data=new DriverManagerDataSource("jdbc:sqlite:"+temp.resolve("local.db"));jdbc=new JdbcTemplate(data);manager=new DataSourceTransactionManager(data);
         new ResourceDatabasePopulator(new ClassPathResource("db/migration/V30__model_credentials.sql"),new ClassPathResource("db/migration/V31__model_worker_proofs.sql"),
-                new ClassPathResource("db/migration/V32__local_model_vault.sql")).execute(data);
+                new ClassPathResource("db/migration/V32__local_model_vault.sql"),new ClassPathResource("db/migration/V50__model_credential_file_references.sql")).execute(data);
         jdbc.execute("CREATE TABLE authority_audit(id TEXT,target_key TEXT,grant_id TEXT,request_id TEXT,actor TEXT,event TEXT,detail TEXT,created_ms BIGINT)");
         repo=new AuthorityRepository(jdbc);boundary=mock(AuthorityBoundary.class);when(boundary.human()).thenReturn(actor);keys=temp.resolve("protected-keys");
         vault=freshVault();connections=new ModelConnections(repo,boundary,mock(AuthorityGrantService.class),vault,mock(OpenAiOAuth.class),mock(ExecutionGuard.class),manager);
@@ -45,7 +45,7 @@ class LocalModelVaultTest {
     CredentialVault freshVault() {return new CredentialVault("",repo,manager,new LocalModelKeyStore(keys,protector));}
     String revision() {return vault.status().revision();}
     Path keyFile(String id) {return keys.resolve(id+".dpapi");}
-    Issued issued(String token) {return new Issued(new TokenSet("access-"+token,"refresh-"+token,"id-"+token,"scope"),"client","subject",null,null,System.currentTimeMillis()+3600000,0,true);}
+    Issued issued(String token) {return new Issued(java.util.UUID.nameUUIDFromBytes(token.getBytes(java.nio.charset.StandardCharsets.UTF_8))+".json",AuthorityRepository.hash("refresh-"+token),Kind.CHATGPT_RESPONSES,"client","subject",null,null,System.currentTimeMillis()+3600000,0,true);}
     Connection create(String owner,String token) {return connections.save(owner,Kind.CHATGPT_RESPONSES,"Account",issued(token),null);}
 
     @Test void firstInstallationGeneratesProtectedKeyAndRestartReusesIt() throws Exception {
@@ -58,13 +58,13 @@ class LocalModelVaultTest {
         create(actor,"original");String id=revision();Files.delete(keyFile(id));
         assertThat(vault.status().state()).isEqualTo("MODEL_LOCAL_KEY_MISSING");assertThat(vault.ready()).isFalse();
         assertThat(keyFile(id)).doesNotExist();assertThat(revision()).isEqualTo(id);
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM model_connection WHERE secret_cipher IS NOT NULL",Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM model_connection WHERE credential_file IS NOT NULL",Integer.class)).isEqualTo(1);
     }
-    @Test void legacyCiphertextWithoutManagedKeyRequiresExplicitRecovery() {
+    @Test void tokenFileReferencesDoNotDependOnTheWorkerProofEncryptionKey() {
         var legacy=new CredentialVault(Base64.getEncoder().encodeToString(new byte[32]));
         var service=new ModelConnections(repo,boundary,mock(AuthorityGrantService.class),legacy,mock(OpenAiOAuth.class),mock(ExecutionGuard.class),manager);
         service.save(actor,Kind.CHATGPT_RESPONSES,"Account",issued("legacy"),null);
-        assertThat(vault.status().state()).isEqualTo("MODEL_LOCAL_KEY_MISSING");assertThat(keyFile(revision())).doesNotExist();
+        assertThat(vault.ready()).isTrue();assertThat(keyFile(revision())).exists();
     }
     @Test void damagedProtectedFileFailsClosedInsteadOfGeneratingAnotherKey() throws Exception {
         vault.ready();String id=revision();Files.write(keyFile(id),new byte[]{1,2,3});
@@ -115,16 +115,6 @@ class LocalModelVaultTest {
         vault.ready();var different=new CredentialVault(Base64.getEncoder().encodeToString(new byte[32]),repo,manager,new LocalModelKeyStore(keys,protector));
         assertThat(different.status().state()).isEqualTo("MODEL_LOCAL_KEY_CHANGED");assertThat(different.ready()).isFalse();
         assertThat(vault.ready()).isTrue();
-    }
-    @Test void wrongExplicitKeyCannotPoisonLegacyDatabaseFingerprint() {
-        byte[] original=new byte[32];Arrays.fill(original,(byte)7);
-        var legacy=new CredentialVault(Base64.getEncoder().encodeToString(original));
-        new ModelConnections(repo,boundary,mock(AuthorityGrantService.class),legacy,mock(OpenAiOAuth.class),mock(ExecutionGuard.class),manager)
-                .save(actor,Kind.CHATGPT_RESPONSES,"Legacy account",issued("legacy"),null);
-        var wrong=new CredentialVault(Base64.getEncoder().encodeToString(new byte[32]),repo,manager,new LocalModelKeyStore(keys,protector));
-        assertThat(wrong.status().ready()).isFalse();assertThat(jdbc.queryForMap("SELECT * FROM model_vault_local").get("key_digest")).isNull();
-        var correct=new CredentialVault(Base64.getEncoder().encodeToString(original),repo,manager,new LocalModelKeyStore(keys,protector));
-        assertThat(correct.ready()).isTrue();assertThat(keys).doesNotExist();
     }
     private Process helper(InputStream output,OutputStream input,boolean aliveInitially) throws Exception {
         var process=mock(Process.class);var alive=new AtomicBoolean(aliveInitially);

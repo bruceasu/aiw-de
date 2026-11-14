@@ -19,10 +19,7 @@ public final class ModelAuthContract {
         @Override public String toString() {return "Import[redacted]";}
     }
     public record Access(Lease lease,String connectionId,long connectionVersion,String model,Long rejectedGeneration) {}
-    public record TokenSet(String accessToken,String refreshToken,String idToken,String scope) {
-        @Override public String toString() {return "TokenSet[redacted]";}
-    }
-    public record Issued(TokenSet tokens,String clientId,String subject,String accountId,String planType,
+    public record Issued(String credentialFile,String refreshDigest,Kind kind,String clientId,String subject,String accountId,String planType,
                          long expiresAt,long earliestRefreshAt,boolean inferenceAllowed) {
         @Override public String toString() {return "Issued[redacted]";}
     }

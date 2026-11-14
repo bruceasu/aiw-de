@@ -13,7 +13,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import static me.asu.aidev.modelauth.ModelAuthContract.*;
 
-/** Plane owns renewable credentials; Workers receive only an exact-task short-lived access token. */
+/** Plane coordinates file references; Python owns tokens. Workers receive exact-task short-lived access only. */
 @Service
 public class ModelConnections {
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.workflow.application.WorkflowAiPreferences workflowPreferences;
@@ -34,7 +34,7 @@ public class ModelConnections {
         String actor=actor();var values=repo.jdbc().queryForList("SELECT * FROM model_connection WHERE owner_actor=? ORDER BY updated_ms DESC",actor);
         var storage=vault.status();
         boolean resetAllowed="WINDOWS_DPAPI".equals(storage.mode())&&!storage.ready()&&!storage.revision().isBlank()
-                &&repo.jdbc().queryForObject("SELECT COUNT(*) FROM model_connection WHERE owner_actor<>? AND secret_cipher IS NOT NULL",Long.class,actor)==0;
+                &&repo.jdbc().queryForObject("SELECT COUNT(*) FROM model_connection WHERE owner_actor<>? AND credential_file IS NOT NULL",Long.class,actor)==0;
         return Map.of("vaultConfigured",storage.ready(),"vaultMode",storage.mode(),"vaultState",storage.state(),"vaultRevision",storage.revision(),
                 "canResetVault",resetAllowed,"connections",values.stream().map(this::projection).toList());
     }
@@ -42,16 +42,19 @@ public class ModelConnections {
     public Map<String,Object> resetLocalStorage(ResetLocalStorage input) {
         String actor=actor();
         if(!input.confirmClear())throw new IllegalArgumentException("MODEL_LOCAL_KEY_CLEAR_CONFIRMATION_REQUIRED");
-        transaction.executeWithoutResult(status->{
+        var files=transaction.execute(status->{
             vault.rotateLocal(input.expectedRevision());
-            if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM model_connection WHERE owner_actor<>? AND secret_cipher IS NOT NULL",Long.class,actor)>0)
+            if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM model_connection WHERE owner_actor<>? AND credential_file IS NOT NULL",Long.class,actor)>0)
                 throw new IllegalStateException("MODEL_LOCAL_KEY_OTHER_OWNERS");
+            var removedFiles=repo.jdbc().queryForList("SELECT credential_file FROM model_connection WHERE owner_actor=? AND credential_file IS NOT NULL",String.class,actor);
             repo.jdbc().update("UPDATE model_auth_worker SET proof_digest=NULL,proof_cipher=NULL WHERE connection_id IN (SELECT id FROM model_connection WHERE owner_actor=?)",actor);
             // The original schema deliberately uses immutable references without FK cascades.
             repo.jdbc().update("DELETE FROM model_connection WHERE owner_actor=?",actor);
             repo.audit("MODEL_VAULT",null,null,actor,"MODEL_LOCAL_CREDENTIALS_RESET","Local model credentials cleared; prior task/plan references retained; remote revocation not confirmed");
+            return removedFiles;
         });
         boolean removed=vault.removeLocal(input.expectedRevision());
+        for(String file:files)oauth.discard(file);
         return Map.of("oldKeyRemoved",removed,"remoteRevocationConfirmed",false,"state",state());
     }
     private Connection projection(Map<String,Object> row) {
@@ -115,41 +118,54 @@ public class ModelConnections {
         String actor=actor();var storage=vault.status();if(!storage.ready())throw new IllegalStateException("MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED");
         if(input.content()==null||input.content().length()>98304)throw new IllegalArgumentException("MODEL_IMPORT_LIMIT");
         var source=repo.decode(input.content(),com.fasterxml.jackson.databind.JsonNode.class);
-        Kind kind=source.has("tokens")?Kind.CODEX_APP_SERVER:Kind.CHATGPT_RESPONSES;
-        var issued=oauth.importTokens(source);
         var prior=input.connectionId()==null?null:owned(input.connectionId(),Objects.requireNonNull(input.expectedVersion()),actor);
+        var issued=oauth.importTokens(source);
+        Kind kind=issued.kind();
         return save(actor,kind,input.label(),issued,prior,storage.revision());
     }
     Connection save(String actor,Kind kind,String label,Issued issued,Map<String,Object> prior) {
         return save(actor,kind,label,issued,prior,null);
     }
     Connection save(String actor,Kind kind,String label,Issued issued,Map<String,Object> prior,String expectedVaultRevision) {
+        Connection saved;
+        try {
+        if(kind!=issued.kind()||issued.credentialFile()==null||!issued.credentialFile().matches("[0-9a-f-]{36}\\.json"))throw new IllegalArgumentException("MODEL_CREDENTIAL_REFERENCE_INVALID");
         if(label==null||label.isBlank()||label.length()>160)throw new IllegalArgumentException("MODEL_CONNECTION_LABEL_REQUIRED");
-        return transaction.execute(status->{
+        saved=transaction.execute(status->{
             if(expectedVaultRevision!=null)vault.requireRevision(expectedVaultRevision);
             String id=prior==null?"MC-"+UUID.randomUUID():(String)prior.get("id");
             long version=prior==null?1:number(prior,"version"),generation=prior==null?1:number(prior,"generation")+1;
             if(prior!=null&&(!actor.equals(prior.get("owner_actor"))||!kind.name().equals(prior.get("kind"))
                     ||!issued.clientId().equals(prior.get("client_id"))||!issued.subject().equals(prior.get("subject_id"))
                     ||!Objects.equals(issued.accountId(),prior.get("account_id"))))throw new SecurityException("MODEL_ACCOUNT_OR_CLIENT_CHANGED");
-            rememberToken(id,issued.tokens().refreshToken());
+            rememberToken(id,issued.refreshDigest());
             String state=issued.inferenceAllowed()?"READY":"IDENTITY_ONLY";
-            String cipher=vault.seal(aad(id,actor,issued.clientId(),generation),repo.encode(issued.tokens()));
+            String cipher=issued.credentialFile();
             if(prior==null) repo.jdbc().update("INSERT INTO model_connection VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",id,actor,kind.name(),label,issued.clientId(),issued.subject(),issued.accountId(),issued.planType(),state,version,generation,issued.expiresAt(),issued.earliestRefreshAt(),cipher,null,System.currentTimeMillis());
-            else if(repo.jdbc().update("UPDATE model_connection SET label=?,state=?,generation=?,expires_ms=?,earliest_refresh_ms=?,secret_cipher=?,refresh_started_ms=NULL,updated_ms=? WHERE id=? AND owner_actor=? AND version=? AND generation=? AND (state<>'REFRESHING' OR COALESCE(refresh_started_ms,0)<=?)",
+            else if(repo.jdbc().update("UPDATE model_connection SET label=?,state=?,generation=?,expires_ms=?,earliest_refresh_ms=?,credential_file=?,refresh_started_ms=NULL,updated_ms=? WHERE id=? AND owner_actor=? AND version=? AND generation=? AND (state<>'REFRESHING' OR COALESCE(refresh_started_ms,0)<=?)",
                     label,state,generation,issued.expiresAt(),issued.earliestRefreshAt(),cipher,System.currentTimeMillis(),id,actor,version,generation-1,System.currentTimeMillis()-30000)!=1)throw new IllegalStateException("MODEL_CONNECTION_CHANGED");
             repo.audit("MODEL_CONNECTION:"+id,null,null,actor,"MODEL_CREDENTIAL_SAVED","Validated token set; generation "+generation);
             return projection(row(id));
         });
+        }catch(RuntimeException failure){
+            try{discardUnreferenced(issued.credentialFile());}
+            catch(RuntimeException cleanup){throw new IllegalStateException("MODEL_CREDENTIAL_SAVE_AND_CLEANUP_FAILED");}
+            throw failure;
+        }
+        if(prior!=null)try{discardUnreferenced((String)prior.get("credential_file"));}
+        catch(RuntimeException cleanup){throw new IllegalStateException("MODEL_CONNECTION_SAVED_OLD_FILE_CLEANUP_FAILED");}
+        return saved;
     }
-    private void rememberToken(String id,String refresh) {
-        String digest=AuthorityRepository.hash(refresh);
+    void discardUnreferenced(String file){
+        if(file!=null&&repo.jdbc().queryForObject("SELECT COUNT(*) FROM model_connection WHERE credential_file=?",Long.class,file)==0)oauth.discard(file);
+    }
+    private void rememberToken(String id,String digest) {
+        if(digest==null||!digest.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("MODEL_TOKEN_DIGEST_INVALID");
         var previous=repo.jdbc().queryForList("SELECT connection_id FROM model_token_seen WHERE token_digest=?",String.class,digest);
         if(!previous.isEmpty())throw new IllegalStateException("MODEL_TOKEN_ALREADY_IMPORTED_OR_USED");
         repo.jdbc().update("INSERT INTO model_token_seen VALUES(?,?)",digest,id);
     }
-    private static String aad(String id,String actor,String client,long generation) {return String.join("\n","aiw.model-auth.v1",id,actor,client,Long.toString(generation));}
-    private TokenSet secrets(Map<String,Object> row) {return repo.decode(vault.open(aad((String)row.get("id"),(String)row.get("owner_actor"),(String)row.get("client_id"),number(row,"generation")),(String)row.get("secret_cipher")),TokenSet.class);}
+    private String file(Map<String,Object> row) {return Objects.requireNonNull((String)row.get("credential_file"),"MODEL_CREDENTIAL_FILE_REQUIRED");}
     public Connection refresh(Selection selected) {
         var row=owned(selected.id(),selected.version(),actor());
         refresh(row,true,null);return projection(row(selected.id()));
@@ -160,7 +176,7 @@ public class ModelConnections {
         var current=refresh(owned(selected.id(),selected.version(),actor),false,null);
         var latest=owned(selected.id(),selected.version(),actor);
         if(!"READY".equals(latest.get("state"))||number(latest,"generation")!=number(current,"generation"))throw new IllegalStateException("MODEL_CONNECTION_CHANGED");
-        return new AccessToken(secrets(current).accessToken(),number(current,"expires_ms"),number(current,"generation"),Kind.valueOf((String)current.get("kind")),(String)current.get("account_id"),(String)current.get("plan_type"));
+        return new AccessToken(oauth.access(file(current)),number(current,"expires_ms"),number(current,"generation"),Kind.valueOf((String)current.get("kind")),(String)current.get("account_id"),(String)current.get("plan_type"));
     }
     private Map<String,Object> refresh(Map<String,Object> initial,boolean force,Long rejectedGeneration) {
         String id=(String)initial.get("id");
@@ -177,7 +193,7 @@ public class ModelConnections {
             if(!force&&number(row,"expires_ms")>System.currentTimeMillis()+180000)return row;
             if(number(row,"earliest_refresh_ms")>System.currentTimeMillis())throw new IllegalStateException("MODEL_REFRESH_TOO_EARLY");
             // Decode before consuming the durable intent; a missing/wrong master key sends nothing.
-            secrets(row);
+            file(row);
             if(repo.jdbc().update("UPDATE model_connection SET state='REFRESHING',refresh_started_ms=?,updated_ms=? WHERE id=? AND version=? AND generation=? AND state IN ('READY','IDENTITY_ONLY')",
                     System.currentTimeMillis(),System.currentTimeMillis(),id,number(row,"version"),number(row,"generation"))!=1) {
                 var waiting=new LinkedHashMap<>(row);waiting.put("wait",true);return waiting;
@@ -201,13 +217,13 @@ public class ModelConnections {
         if(!Boolean.TRUE.equals(locked.get("send")))return locked;
         try {
             var kind=Kind.valueOf((String)locked.get("kind"));
-            var issued=oauth.refresh(kind,(String)locked.get("client_id"),(String)locked.get("subject_id"),secrets(locked));
+            var issued=oauth.refresh(kind,(String)locked.get("client_id"),(String)locked.get("subject_id"),file(locked));
             if(!Objects.equals(issued.accountId(),locked.get("account_id")))throw new SecurityException("MODEL_ACCOUNT_CHANGED");
             transaction.executeWithoutResult(status->{
                 long generation=number(locked,"generation")+1;
-                rememberToken(id,issued.tokens().refreshToken());
-                String cipher=vault.seal(aad(id,(String)locked.get("owner_actor"),issued.clientId(),generation),repo.encode(issued.tokens()));
-                if(repo.jdbc().update("UPDATE model_connection SET state=?,generation=?,expires_ms=?,earliest_refresh_ms=?,secret_cipher=?,refresh_started_ms=NULL,updated_ms=? WHERE id=? AND version=? AND generation=? AND state='REFRESHING'",
+                rememberToken(id,issued.refreshDigest());
+                String cipher=issued.credentialFile();
+                if(repo.jdbc().update("UPDATE model_connection SET state=?,generation=?,expires_ms=?,earliest_refresh_ms=?,credential_file=?,refresh_started_ms=NULL,updated_ms=? WHERE id=? AND version=? AND generation=? AND state='REFRESHING'",
                         issued.inferenceAllowed()?"READY":"IDENTITY_ONLY",generation,issued.expiresAt(),issued.earliestRefreshAt(),cipher,System.currentTimeMillis(),id,number(locked,"version"),generation-1)!=1)throw new IllegalStateException("MODEL_CONNECTION_CHANGED");
                 repo.audit("MODEL_CONNECTION:"+id,null,null,"plane","MODEL_CREDENTIAL_REFRESHED","Token generation "+generation);
             });
@@ -220,16 +236,16 @@ public class ModelConnections {
     }
     /** Commit local denial first; remote failure cannot resurrect locally cleared credentials. */
     public Disconnection disconnect(Selection input) {
-        String actor=actor();TokenSet[] retained={null};String[] client={null};boolean[] known={false};
+        String actor=actor();String[] retained={null};boolean[] known={false};
         var connection=transaction.execute(status->{
-            var old=owned(input.id(),input.version(),actor);client[0]=(String)old.get("client_id");known[0]=READY.contains(old.get("state"));
-            try {if(old.get("secret_cipher")!=null)retained[0]=secrets(old);}catch(IllegalStateException ignored) { /* Local clearing remains possible after key loss. */ }
-            if(repo.jdbc().update("UPDATE model_connection SET state='DISCONNECTED',version=version+1,secret_cipher=NULL,updated_ms=? WHERE id=? AND owner_actor=? AND version=? AND generation=? AND state=?",
+            var old=owned(input.id(),input.version(),actor);known[0]=READY.contains(old.get("state"));
+            retained[0]=(String)old.get("credential_file");
+            if(repo.jdbc().update("UPDATE model_connection SET state='DISCONNECTED',version=version+1,credential_file=NULL,updated_ms=? WHERE id=? AND owner_actor=? AND version=? AND generation=? AND state=?",
                     System.currentTimeMillis(),input.id(),actor,input.version(),number(old,"generation"),old.get("state"))!=1)throw new IllegalStateException("MODEL_CONNECTION_CHANGED");
             repo.audit("MODEL_CONNECTION:"+input.id(),null,null,actor,"MODEL_CONNECTION_DISCONNECTED","Local credentials cleared; remote revocation not confirmed");
             return projection(row(input.id()));
         });
-        boolean confirmed=retained[0]!=null&&oauth.revoke(client[0],retained[0])&&known[0];retained[0]=null;
+        boolean confirmed=retained[0]!=null&&oauth.revoke(retained[0])&&known[0];retained[0]=null;
         return new Disconnection(connection,confirmed);
     }
     String host() {
@@ -307,7 +323,7 @@ public class ModelConnections {
         guard.verifyLease(task,input.lease(),true,true); // Refresh must not outlive cancellation or revocation.
         var current=owned(input.connectionId(),input.connectionVersion(),(String)binding.get("owner_actor"));
         if(!"READY".equals(current.get("state"))||number(current,"generation")!=number(row,"generation"))throw new IllegalStateException("MODEL_CONNECTION_CHANGED");
-        return new AccessToken(secrets(row).accessToken(),number(row,"expires_ms"),number(row,"generation"),Kind.valueOf((String)row.get("kind")),(String)row.get("account_id"),(String)row.get("plan_type"));
+        return new AccessToken(oauth.access(file(row)),number(row,"expires_ms"),number(row,"generation"),Kind.valueOf((String)row.get("kind")),(String)row.get("account_id"),(String)row.get("plan_type"));
     }
     static long number(Map<String,Object> row,String key) {return row.get(key)==null?0:((Number)row.get(key)).longValue();}
 }

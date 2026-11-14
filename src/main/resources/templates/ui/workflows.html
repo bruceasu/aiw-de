@@ -26,7 +26,10 @@
           <label class="field"><span data-wf-label="Team member">Team member</span><select name="memberId" data-wf-member data-i18n-skip><option value="AUTO">Automatically choose member</option><option value="GENERAL">General execution (no team member)</option></select></label>
           <label class="field"><span data-wf-label="Required Skills (optional, up to 8)">Required Skills (optional, up to 8)</span><select multiple size="4" data-wf-skills data-i18n-skip></select></label>
           <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input name="location" maxlength="4096"></label>
+          <label class="field"><span><input type="checkbox" name="workspaceTools"><span data-wf-label="Work on files in this location">Work on files in this location</span></span></label>
+          <p class="help" data-wf-label="Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.">Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.</p>
           <div data-wf-task-sources></div>
+          <details><summary data-wf-label="Configured commands (advanced)">Configured commands (advanced)</summary><p class="help" data-wf-label="Optional JSON command profiles. Requires workspace tools and a connected Linux/WSL command Worker; no Windows command permissions are granted.">Optional JSON command profiles. Requires workspace tools and a connected Linux/WSL command Worker; no Windows command permissions are granted.</p><textarea name="commands" rows="3" maxlength="16000" spellcheck="false" aria-label="Command profiles JSON">[]</textarea></details>
           <button class="btn primary" data-wf-label="Run task">Run task</button></form>
       </section>
       <section class="card" data-wf-editor hidden><h2 data-wf-label="Workflow definition">Workflow definition</h2>
@@ -35,6 +38,7 @@
         <div data-wf-definition-sources></div>
         <div data-wf-definition-graph class="wf-graph"></div>
         <details><summary data-wf-label="Edit steps">Edit steps</summary><div data-wf-nodes></div><button class="btn ghost" data-wf-add-node>Add step</button></details>
+        <details><summary data-wf-label="Configured commands (advanced)">Configured commands (advanced)</summary><p class="help" data-wf-label="Optional JSON command profiles. Requires workspace tools and a connected Linux/WSL command Worker; no Windows command permissions are granted.">Optional JSON command profiles. Requires workspace tools and a connected Linux/WSL command Worker; no Windows command permissions are granted.</p><textarea data-wf-commands rows="3" maxlength="16000" spellcheck="false" aria-label="Command profiles JSON">[]</textarea></details>
         <div class="wf-actions"><button class="btn primary" data-wf-save>Save workflow</button></div>
         <hr><label class="field"><span data-wf-label="Input and reference material">Input and reference material</span><textarea data-wf-input maxlength="32000" rows="6"></textarea></label>
         <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input data-wf-location maxlength="4096"></label>
@@ -57,7 +61,8 @@
           <p class="help" data-wf-label="Recorded calls include retries and summaries. Calls are not rounds. Cached input is part of input. Costs are estimates, not invoices.">Recorded calls include retries and summaries. Calls are not rounds. Cached input is part of input. Costs are estimates, not invoices.</p>
           <div data-wf-usage></div><a data-wf-usage-link data-wf-label="View recorded calls">View recorded calls</a>
         </section>
-        <div class="wf-actions"><button class="btn ghost" data-wf-control="pause">Pause following steps</button><button class="btn primary" data-wf-control="resume">Resume workflow</button><button class="btn ghost" data-wf-control="retry">Retry this step</button><button class="btn ghost" data-wf-control="stop">Stop execution</button></div>
+        <div class="wf-actions"><button class="btn ghost" data-wf-control="pause">Pause following steps</button><button class="btn primary" data-wf-control="resume">Resume workflow</button><button class="btn ghost" data-wf-control="retry">Retry this step</button><button class="btn primary" data-wf-control="accept-result" data-wf-label="Use recorded result" hidden>Use recorded result</button><button class="btn ghost" data-wf-control="stop">Stop execution</button><a class="btn ghost" data-wf-inspect data-wf-label="Inspect existing execution" hidden>Inspect existing execution</a></div>
+        <p class="help" data-wf-interrupted data-wf-label="A lost connection does not mean the Worker stopped. Check the existing execution before retrying." hidden>A lost connection does not mean the Worker stopped. Check the existing execution before retrying.</p>
         <p class="help" data-wf-label="Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.">Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.</p>
         <section data-wf-amendment>
           <h3 data-wf-label="Adjust a future step">Adjust a future step</h3>

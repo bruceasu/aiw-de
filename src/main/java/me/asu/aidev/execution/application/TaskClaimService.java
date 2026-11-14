@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TaskClaimService {
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.authority.AuthorityBoundary workerBoundary;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.modelauth.ModelConnections modelConnections;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> unifiedWorkflows;
     private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
     @Autowired public void setExecutionConfigurations(me.asu.aidev.execution.config.ExecutionConfigurations configurations) { this.configurations=configurations; }
     private me.asu.aidev.execution.guard.ExecutionGuard guard;
@@ -127,6 +128,8 @@ public class TaskClaimService {
                 });
         for (var schedulingCandidate : rankedCandidates) {
             var candidate = schedulingCandidate.task();
+            var workflow=unifiedWorkflows==null?null:unifiedWorkflows.getIfAvailable();
+            if(workflow!=null&&!workflow.canClaim(candidate))continue;
             boolean configured = configurations != null && configurations.managed(candidate.id().value());
             // Factory tasks carry immutable reviewed model guidance in their binding.
             // Keep ordinary external tasks on the existing global catalog policy.

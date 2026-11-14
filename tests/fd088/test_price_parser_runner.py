@@ -25,6 +25,18 @@ class PriceParserRunnerCases(unittest.TestCase):
         self.assertFalse(result["accountingReady"])
         source = MODULE.parent / "deepseek.py"
         self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(), result["collectorSha256"])
+        self.assertTrue(result["priceRules"])
+        self.assertTrue(all("input" in rule and "days" in rule for rule in result["priceRules"]))
+
+    def test_openai_prices_are_normalized_by_the_python_provider(self):
+        from test_openai_price_collector import PAGE as openai_page
+        result = runner.execute({"protocol": "aiw.price-parser-request.v1", "provider": "openai", "observedMs": 123456,
+                                 "contentBase64": base64.b64encode(openai_page).decode("ascii")})
+        self.assertEqual(1, len(result["priceRules"]))
+        rate = result["priceRules"][0]
+        self.assertEqual("sample-model", rate["model"])
+        self.assertEqual((2_000_000, 200_000, 10_000_000), (rate["input"], rate["cached"], rate["output"]))
+        self.assertEqual(123456, rate["fromMs"])
 
     def test_invalid_request_never_selects_arbitrary_file(self):
         request = self.request()
@@ -47,8 +59,8 @@ class PriceParserRunnerCases(unittest.TestCase):
     def test_collect_uses_installed_module_for_fetch_and_parse(self):
         module = SimpleNamespace(SourceFetchError=RuntimeError, _aiw_collector_sha256="a" * 64,
                                  fetch=lambda: (PAGE, 123456, "https://api-docs.deepseek.com/new-pricing"),
-                                 parse=lambda content, timestamp, source: {"source": source, "observed": timestamp})
-        with mock.patch.object(runner, "_load", return_value=module):
+                                 parse=lambda content, timestamp, source: {"source": source, "observed": timestamp}, prices=lambda observation: [])
+        with mock.patch.object(runner, "_load", return_value=(module, "a" * 64)):
             result, encoded = runner.collect({"protocol": "aiw.price-collector-request.v1", "provider": "deepseek"})
         self.assertEqual("https://api-docs.deepseek.com/new-pricing", result["source"])
         self.assertEqual(PAGE, base64.b64decode(encoded))
@@ -57,7 +69,7 @@ class PriceParserRunnerCases(unittest.TestCase):
         def fail():
             raise RuntimeError("source unavailable")
         module = SimpleNamespace(SourceFetchError=RuntimeError, fetch=fail)
-        with mock.patch.object(runner, "_load", return_value=module):
+        with mock.patch.object(runner, "_load", return_value=(module, "a" * 64)):
             with self.assertRaises(runner.FetchFailed):
                 runner.collect({"protocol": "aiw.price-collector-request.v1", "provider": "deepseek"})
 
@@ -68,7 +80,7 @@ class PriceParserRunnerCases(unittest.TestCase):
             raise Changed("PRICE_ROWS_CHANGED")
         module = SimpleNamespace(SourceFetchError=RuntimeError, PriceStructureError=Changed, VERSION="v1", _aiw_collector_sha256="a" * 64,
                                  fetch=lambda: (PAGE, 123456, "https://api-docs.deepseek.com/pricing"), parse=fail)
-        with mock.patch.object(runner, "_load", return_value=module):
+        with mock.patch.object(runner, "_load", return_value=(module, "a" * 64)):
             with self.assertRaises(runner.StructureChanged) as caught:
                 runner.collect({"protocol": "aiw.price-collector-request.v1", "provider": "deepseek"})
         self.assertEqual(PAGE, caught.exception.content)
