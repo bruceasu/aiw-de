@@ -77,3 +77,8 @@ V19 仅追加工作台/批次/收据/探索表，不回填旧尝试，不改原�
 算法复用本仓库 [FD-005 context.mjs](../extern-workers/process-typescript/runtime-core/context.mjs) 的安全切点与可见来源思路，原 [Pi 来源记录](../extern-workers/process-typescript/runtime-core/SOURCE-PROVENANCE.md) 及 [Python 参考许可](../workers/process-python/THIRD-PARTY-NOTICES.md) 保留，没有嵌入 Pi SDK。
 
 SDK 概念核对使用 [OpenAI 官方结果与状态](https://developers.openai.com/api/docs/guides/agents/results)、[运行与流式结束](https://developers.openai.com/api/docs/guides/agents/running-agents)：本地续行用 `to_input_list()`，流结束后处理报告。当前环境缺对应 Python SDK 源码，具体 provider/ModelSettings 兼容仍需运行证据，官方文档不等于本系统运行通过。
+## 中断后核对
+
+统一任务／工作流的 Worker 租约过期后，流程显示需要处理，记录“执行中断，结果待核对”，不会自动重新派发。连接中断不代表进程已经结束，原租约和容量保留；先在原执行工作台核对已执行操作、结果与停止回执。
+
+如果后来收到正式成功结果，可选择“使用已记录的结果”继续后续步骤；这不会再次执行原任务。选择“重试本步骤”则明确重新执行，必须先确认原执行结束；旧结果保留。没有自动启动审查 Worker，评审仍由明确配置的步骤决定。

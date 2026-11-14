@@ -9,6 +9,15 @@
     'Work on files in this location':['在此工作目录处理文件','この作業場所でファイルを扱う'],
     'Workspace task':['工作区任务','作業場所のタスク'],
     'Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.':['不勾选时仅返回文本。不会因此授权其他主机路径；命令需要单独权限。','未選択の場合はテキストのみ返します。他のホストパスは許可されず、コマンドには別の権限が必要です。'],
+    'INTERRUPTED':['执行中断，结果待核对','実行が中断されました。結果の確認が必要です'],
+    'The Worker lease expired. Its process and external effects are not confirmed. Inspect the existing execution and request stop or reconcile it before choosing a retry.':['Worker 租约已过期，进程和外部操作的结果尚未确认。请先查看原执行并请求停止或核对结果，再决定是否重试。','Worker のリースが期限切れです。プロセスと外部操作の結果は未確認です。元の実行を確認し、停止または結果確認後に再試行を判断してください。'],
+    'An administrator revoked the original lease. Check existing results before explicitly choosing a retry; no work was automatically dispatched.':['管理员已撤销原租约。请核对已有结果后明确选择是否重试；没有自动重新派发。','管理者が元のリースを取り消しました。既存の結果を確認して再試行を選んでください。自動再割り当ては行われていません。'],
+    'RESULT_ACCEPTED':['已确认使用原结果','記録済みの結果を使用'],
+    'Use recorded result':['使用已记录的结果','記録済みの結果を使用'],
+    'Inspect existing execution':['查看原执行，核对结果与停止状态','元の実行・結果・停止状態を確認'],
+    'A lost connection does not mean the Worker stopped. Check the existing execution before retrying.':['连接中断不代表 Worker 已停止。重试前，请核对原执行和已有结果。','接続切断は Worker の停止を意味しません。再試行前に元の実行と結果を確認してください。'],
+    'Retry this step? Existing results will be retained; this starts another execution.':['重做本步骤？已有结果会保留，此操作会再次执行。','このステップを再試行しますか？既存の結果は保持され、再び実行されます。'],
+    'Use the recorded successful result and continue the workflow?':['使用已记录的成功结果，并继续工作流？','記録済みの成功結果を使用してワークフローを続けますか？'],
     'If suggestion generation is still running, wait for its stop acknowledgement before resuming.':['建议仍在生成时，先等待其停止确认，再继续流程。','提案作成中の場合は、その停止確認後にフローを再開してください。'],
     'Adjust a future step':['调整后续步骤','後続ステップを調整'],
     'Pause following steps first. A read-only Worker suggests a change to one undispatched node. Review it before applying. Resuming or stopping discards the suggestion.':['先暂停后续步骤，再让只读 Worker 为一个尚未派发节点生成建议，审阅确认后才应用。继续或停止流程会放弃建议。','先に後続ステップを一時停止してください。未割り当てノード1件の変更案を読み取り専用 Worker が作成します。確認後に適用してください。再開・停止すると提案を破棄します。'],
@@ -134,7 +143,7 @@
     if(busy)return;busy=true;status('');
     const buttons=$$('button');buttons.forEach(b=>b.disabled=true);
     try {await work();} catch(error) {status(error instanceof TypeError?t('Request outcome is unknown. Check execution history before submitting again.'):t(error.message));}
-    finally {busy=false;buttons.forEach(b=>{if(b.isConnected)b.disabled=false;});if(currentView)controlButtons(currentView.run);}
+    finally {busy=false;buttons.forEach(b=>{if(b.isConnected)b.disabled=false;});if(currentView)controlButtons(currentView.run,currentView.task);}
   }
   function element(tag,text,className) {const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;}
   function button(label,callback) {const b=element('button',t(label),'btn ghost');b.type='button';b.onclick=callback;return b;}
@@ -272,8 +281,9 @@
   function assignment(value){return {assignment:['AUTO','GENERAL'].includes(value)?value:'MEMBER',memberId:['AUTO','GENERAL'].includes(value)?null:value};}
   function skillOptions(select,values){select.replaceChildren();for(const skill of new Set([...teamSkills,...values]))select.add(new Option(skill,skill,false,values.includes(skill)));}
   async function openRun(id) {if(id!==route.get('execution'))preparingGoal=null;selectedRun=id;signature='';panel('run');await refreshRun();}
-  function controlButtons(run) {
-    const allowed={pause:['RUNNING','WAITING_MEMBER'].includes(run.state),resume:run.state==='PAUSED',retry:run.state==='FAILED',stop:!['COMPLETED','STOPPED','STOPPING'].includes(run.state)};
+  function controlButtons(run,task) {
+    const allowed={pause:['RUNNING','WAITING_MEMBER'].includes(run.state),resume:run.state==='PAUSED',retry:run.state==='FAILED',
+      'accept-result':run.state==='FAILED'&&task?.state==='COMPLETED',stop:!['COMPLETED','STOPPED','STOPPING'].includes(run.state)};
     $$('[data-wf-control]').forEach(b=>{b.hidden=!allowed[b.dataset.wfControl];b.disabled=busy;});
   }
   function renderActivity(data) {
@@ -356,7 +366,10 @@
     $('[data-wf-run-state]').textContent=t(run.state);
     const node=run.spec.nodes.find(n=>n.key===run.current),task=data.task;
     $('[data-wf-run-current]').textContent=(node?.title||'')+(task?' · '+t(task.state):'');
-    graph($('[data-wf-run-graph]'),run.spec,run);controlButtons(run);
+    graph($('[data-wf-run-graph]'),run.spec,run);controlButtons(run,task);
+    $('[data-wf-interrupted]').hidden=run.state!=='FAILED'||!run.events.some(e=>e.type==='INTERRUPTED');
+    const inspect=$('[data-wf-inspect]');inspect.hidden=!task||!data.activity?.attemptId;
+    if(!inspect.hidden)inspect.href='/ui/configurations?'+new URLSearchParams({view:'workbench',source:task.requiredCapabilities.includes('execution-guard-v1')?'guarded':'native',plan:run.id,task:task.id.value||task.id,attempt:data.activity.attemptId})+'#worker-run';
     $('[data-wf-supplement]').hidden=!['RUNNING','PAUSED','WAITING_USER','WAITING_MEMBER'].includes(run.state);
     const inputReceipts=$('[data-wf-input-receipts]');inputReceipts.replaceChildren();
     for(const input of run.inputs||[]) {
@@ -373,8 +386,8 @@
     detail.hidden=!activityTask;detail.href=activityTask?'/ui/plans/'+encodeURIComponent(run.id)+'/tasks/'+encodeURIComponent(activityTask):'#';
     const timeline=$('[data-wf-timeline]');timeline.replaceChildren();
     for(const event of run.events) {
-      const section=element('details',undefined,'wf-event');section.open=['RESULT','FAILED','QUESTION'].includes(event.type);
-      section.append(element('summary',new Date(event.time).toLocaleTimeString()+' · '+(run.spec.nodes.find(n=>n.key===event.node)?.title||'')+' · '+t(event.type)),element('pre',event.content));timeline.append(section);
+      const section=element('details',undefined,'wf-event');section.open=['RESULT','FAILED','QUESTION','INTERRUPTED'].includes(event.type);
+      section.append(element('summary',new Date(event.time).toLocaleTimeString()+' · '+(run.spec.nodes.find(n=>n.key===event.node)?.title||'')+' · '+t(event.type)),element('pre',event.type==='INTERRUPTED'?t(event.content):event.content));timeline.append(section);
     }
     if(data.report&&!run.events.some(e=>e.type==='RESULT'&&e.content===data.report)){const section=element('details',undefined,'wf-event');section.append(element('summary',t('RESULT')),element('pre',data.report));timeline.append(section);}
     if(run.state==='COMPLETED'&&preparingGoal&&!importAttempted) {
@@ -390,6 +403,8 @@
   }
   async function control(action,answer) {
     if(action==='stop'&&!window.confirm(t('Stop this execution? Existing results will be retained.')))return;
+    if(action==='retry'&&!window.confirm(t('Retry this step? Existing results will be retained; this starts another execution.')))return;
+    if(action==='accept-result'&&!window.confirm(t('Use the recorded successful result and continue the workflow?')))return;
     await api('/executions/'+encodeURIComponent(selectedRun)+'/control',{version:currentView.run.version,action,answer});signature='';await refreshRun();await library();
   }
   function example() {
