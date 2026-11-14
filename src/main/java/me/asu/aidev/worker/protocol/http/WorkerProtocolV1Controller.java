@@ -168,7 +168,7 @@ public class WorkerProtocolV1Controller {
                 request.gitResult().publicationRef());
         CompletionReport report = request.report() == null ? null : new CompletionReport(
                 CompletionVerdict.valueOf(required(request.report().verdict(), "report.verdict")),
-                required(request.report().summary(), "report.summary"), request.report().experience());
+                required(request.report().summary(), "report.summary"), request.report().experience(),request.report().skillUpdate());
         if(request.report()==null) throw new IllegalArgumentException("Completion report required");
         if(executions.replayedGuardedCompletion(new TaskId(taskId),new WorkerId(required(request.workerId(),"workerId")),new LeaseToken(required(request.leaseToken(),"leaseToken")),workspaceResult,report))
         { handoffs.verifyReplay(request.leaseToken(),request.handoff()); return new CompletionResponse(taskId,List.of(),List.of()); }
@@ -254,8 +254,9 @@ public class WorkerProtocolV1Controller {
     public record CompleteTaskRequest(String workerId,String leaseToken,String externalSessionId,
             GitResultRequest gitResult,CompletionReportRequest report,
             me.asu.aidev.execution.application.TaskHandoffs.Reference handoff) {}
-    public record CompletionReportRequest(String verdict,String summary,String experience) {
-        public CompletionReportRequest(String verdict,String summary) { this(verdict,summary,null); }
+    public record CompletionReportRequest(String verdict,String summary,String experience,CompletionReport.SkillUpdate skillUpdate) {
+        public CompletionReportRequest(String verdict,String summary) { this(verdict,summary,null,null); }
+        public CompletionReportRequest(String verdict,String summary,String experience) { this(verdict,summary,experience,null); }
     }
     public record GitResultRequest(String resultRevision,List<String> changedFiles,String publicationRef) {}
     public record TaskInputResponse(String taskId,String taskType,String completionVerdict,String completionSummary,

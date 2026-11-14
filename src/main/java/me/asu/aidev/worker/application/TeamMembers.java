@@ -1,9 +1,12 @@
 package me.asu.aidev.worker.application;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import me.asu.aidev.authority.AuthorityBoundary;
 import me.asu.aidev.authority.AuthorityRepository;
+import me.asu.aidev.execution.domain.CompletionReport;
 import me.asu.aidev.execution.port.TaskClaimPolicy;
+import me.asu.aidev.execution.skills.SkillFileContract;
 import me.asu.aidev.execution.skills.SkillFiles;
 import me.asu.aidev.work.domain.WorkTask;
 import me.asu.aidev.work.domain.TaskType;
@@ -44,6 +47,9 @@ public class TeamMembers implements TaskClaimPolicy {
     public record Save(String id,long revision,String name,String purpose,List<String> skills,String notes,Settings settings) {
         public Save {if(settings==null)settings=new Settings(null,null,null,null,null);}
     }
+    public record SkillVersion(int version,String digest,String reason,String sourceTaskId,String sourceRunId,long createdMs) {}
+    public record SkillHistory(String ref,int currentVersion,List<SkillVersion> versions) {}
+    public record SkillContent(int version,String content,String digest,String reason) {}
     private static String text(String value,int limit,boolean optional) {
         if(value==null)value="";value=value.strip();
         if((!optional&&value.isEmpty())||value.length()>limit||value.indexOf(0)>=0)throw new IllegalArgumentException("Member text is empty or too long");
@@ -69,6 +75,100 @@ public class TeamMembers implements TaskClaimPolicy {
         for(var row:rows){var run=db.decode((String)row.remove("run_json"),Map.class);if(run.get("spec") instanceof Map<?,?> spec)row.put("title",spec.get("title"));}
         return rows;
     }
+    @Transactional public SkillHistory skillHistory(String actor,String member,String ref) {
+        var profile=get(actor,member);requireSelectedSkill(profile,ref);ensureSkillBaselines(actor,member,List.of(ref));
+        var versions=new ArrayList<SkillVersion>();
+        var rows=db.jdbc().queryForList("SELECT version,content,content_hash,reason,source_task_id,source_run_id,created_ms FROM worker_team_skill_revision WHERE member_id=? AND skill_ref=? ORDER BY version",member,ref);
+        for(var row:rows) {
+            String content=(String)row.get("content"),digest=(String)row.get("content_hash");
+            if(!skillHash(content).equals(digest))throw new IllegalStateException("Stored member Skill revision is corrupted");
+            versions.add(new SkillVersion(((Number)row.get("version")).intValue(),digest,(String)row.get("reason"),
+                    (String)row.get("source_task_id"),(String)row.get("source_run_id"),((Number)row.get("created_ms")).longValue()));
+        }
+        return new SkillHistory(ref,versions.getLast().version(),List.copyOf(versions));
+    }
+    @Transactional public SkillContent skillVersion(String actor,String member,String ref,int version) {
+        requireSelectedSkill(get(actor,member),ref);ensureSkillBaselines(actor,member,List.of(ref));
+        if(version<0)throw new IllegalArgumentException("Invalid Skill version");
+        var row=db.jdbc().queryForList("SELECT content,content_hash,reason FROM worker_team_skill_revision WHERE member_id=? AND skill_ref=? AND version=?",member,ref,version)
+                .stream().findFirst().orElseThrow(()->new IllegalArgumentException("Skill version not found"));
+        String content=(String)row.get("content"),digest=(String)row.get("content_hash");
+        if(!skillHash(content).equals(digest))throw new IllegalStateException("Stored member Skill revision is corrupted");
+        return new SkillContent(version,content,digest,(String)row.get("reason"));
+    }
+    @Transactional public SkillHistory restoreSkill(String actor,String member,String ref,int expectedVersion,int targetVersion) {
+        boundary.lock();var profile=get(actor,member);requireSelectedSkill(profile,ref);
+        if(profile.state().equals("ARCHIVED"))throw new IllegalStateException("Archived members are read-only");
+        db.jdbc().update("UPDATE worker_team_member SET updated_ms=updated_ms WHERE id=? AND actor=?",member,actor);
+        var history=skillHistory(actor,member,ref);
+        if(history.currentVersion()!=expectedVersion)throw new IllegalStateException("Skill changed; refresh before restoring");
+        var target=skillVersion(actor,member,ref,targetVersion);
+        appendSkillRevision(member,ref,target.content(),"Restored version "+targetVersion,null,null,System.currentTimeMillis());
+        return skillHistory(actor,member,ref);
+    }
+    private void requireSelectedSkill(Profile profile,String ref) {
+        if(ref==null||!ref.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,95}")||!skills.available().contains(ref)||profile.skills()==null||!profile.skills().contains(ref))
+            throw new IllegalArgumentException("Skill is not configured for this member");
+    }
+    private void ensureSkillBaselines(String actor,String member,List<String> selected) {
+        var missing=new ArrayList<String>();
+        for(String ref:selected)if(db.jdbc().queryForObject("SELECT COUNT(*) FROM worker_team_skill_revision WHERE member_id=? AND skill_ref=? AND version=0",Long.class,member,ref)==0)missing.add(ref);
+        if(missing.isEmpty())return;
+        if(db.jdbc().update("UPDATE worker_team_member SET updated_ms=updated_ms WHERE id=? AND actor=?",member,actor)!=1)
+            throw new IllegalArgumentException("Member not found");
+        for(String ref:missing) {
+            if(db.jdbc().queryForObject("SELECT COUNT(*) FROM worker_team_skill_revision WHERE member_id=? AND skill_ref=? AND version=0",Long.class,member,ref)>0)continue;
+            String content=skills.defaultText(ref);
+            db.jdbc().update("INSERT INTO worker_team_skill_revision(member_id,skill_ref,version,content,content_hash,reason,source_task_id,source_run_id,created_ms) VALUES(?,?,0,?,?,?,NULL,NULL,?)",
+                    member,ref,content,skillHash(content),"Built-in baseline",System.currentTimeMillis());
+        }
+    }
+    /** Optional model metadata is ignored when malformed; a valid revision is appended with the task completion. */
+    public void recordSkillUpdate(me.asu.aidev.work.domain.WorkTask task,CompletionReport.SkillUpdate update,long createdMs) {
+        if(update==null||update.ref()==null||update.content()==null||update.reason()==null)return;
+        String ref=update.ref(),content=update.content().strip(),reason=update.reason().strip();
+        if(!ref.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,95}")||content.isBlank()||content.indexOf(0)>=0||content.getBytes(StandardCharsets.UTF_8).length>16_384
+                ||content.split("\\R",-1).length>200||reason.isBlank()||reason.length()>1000||reason.indexOf(0)>=0)return;
+        if(!skills.available().contains(ref))return;
+        String member,actor,sourceRun;
+        Profile frozen;
+        var assignments=db.jdbc().queryForList("""
+            SELECT t.run_id,a.member_id,a.profile_json,m.actor
+              FROM worker_team_task t JOIN worker_team_assignment a ON a.run_id=t.run_id AND a.node_key=t.node_key
+              JOIN worker_team_member m ON m.id=a.member_id
+              JOIN workflow_execution r ON r.id=t.run_id AND r.actor=m.actor
+             WHERE t.task_id=?
+            """,task.id().value());
+        if(!assignments.isEmpty()) {
+            var assignment=assignments.getFirst();member=(String)assignment.get("member_id");actor=(String)assignment.get("actor");sourceRun=(String)assignment.get("run_id");
+            frozen=db.decode((String)assignment.get("profile_json"),Profile.class);
+        } else if("goal-discussion".equals(task.subjectType())) {
+            frozen=forTask(task.id().value());
+            var owners=db.jdbc().queryForList("SELECT actor FROM goal_request WHERE id=?",String.class,task.id().value());
+            if(frozen==null||owners.isEmpty())return;
+            member=frozen.id();actor=owners.getFirst();sourceRun=null;
+            if(db.jdbc().queryForObject("SELECT COUNT(*) FROM worker_team_member WHERE id=? AND actor=?",Long.class,member,actor)!=1)return;
+        } else return;
+        if(frozen.skills()==null||!frozen.skills().contains(ref)
+                ||db.jdbc().queryForObject("SELECT COUNT(*) FROM worker_team_skill_revision WHERE source_task_id=? AND skill_ref=?",Long.class,task.id().value(),ref)>0)return;
+        // Serialize this member's revision number so concurrent task completions do not choose the same version.
+        ensureSkillBaselines(actor,member,frozen.skills());
+        db.jdbc().update("UPDATE worker_team_member SET updated_ms=updated_ms WHERE id=? AND actor=?",member,actor);
+        String previous=skills.defaultText(ref);var rows=db.jdbc().queryForList("SELECT content,content_hash FROM worker_team_skill_revision WHERE member_id=? AND skill_ref=? ORDER BY version DESC LIMIT 1",member,ref);
+        if(!rows.isEmpty()) {
+            var row=rows.getFirst();previous=(String)row.get("content");
+            if(!skillHash(previous).equals(row.get("content_hash")))throw new IllegalStateException("Stored member Skill revision is corrupted");
+        }
+        if(previous.equals(content))return;
+        appendSkillRevision(member,ref,content,reason,task.id().value(),sourceRun,createdMs);
+    }
+    private void appendSkillRevision(String member,String ref,String content,String reason,String task,String run,long createdMs) {
+        String digest=skillHash(content);
+        int next=db.jdbc().queryForObject("SELECT COALESCE(MAX(version),0)+1 FROM worker_team_skill_revision WHERE member_id=? AND skill_ref=?",Integer.class,member,ref);
+        db.jdbc().update("INSERT INTO worker_team_skill_revision(member_id,skill_ref,version,content,content_hash,reason,source_task_id,source_run_id,created_ms) VALUES(?,?,?,?,?,?,?,?,?)",
+                member,ref,next,content,digest,reason,task,run,createdMs);
+    }
+    private static String skillHash(String content) {return SkillFileContract.hash(content.getBytes(StandardCharsets.UTF_8));}
     public Object list(String actor,boolean archived) {
         var members=db.jdbc().queryForList("SELECT * FROM worker_team_member WHERE actor=? AND state"+(archived?"='ARCHIVED'":"<>'ARCHIVED'")+" ORDER BY updated_ms DESC,id LIMIT 100",actor)
                 .stream().map(this::profile).map(p->Map.of("id",p.id(),"revision",p.revision(),"name",p.name(),"purpose",p.purpose(),"skills",p.skills(),"state",p.state(),"model",Objects.toString(p.settings().model(),""),"effort",Objects.toString(p.settings().effort(),""))).toList();
@@ -109,13 +209,14 @@ public class TeamMembers implements TaskClaimPolicy {
             var previous=db.jdbc().queryForList("SELECT * FROM worker_team_member WHERE id=?",input.id());
             if(!previous.isEmpty()) {
                 var original=get(actor,input.id());
-                if(original.revision()==1&&original.name().equals(name)&&original.purpose().equals(purpose)&&original.skills().equals(selected)&&original.notes().equals(notes)&&original.settings().equals(input.settings()))return original;
+                if(original.revision()==1&&original.name().equals(name)&&original.purpose().equals(purpose)&&original.skills().equals(selected)&&original.notes().equals(notes)&&original.settings().equals(input.settings())){ensureSkillBaselines(actor,input.id(),selected);return original;}
                 throw new IllegalStateException("Member already exists; refresh before changing it");
             }
             if(db.jdbc().queryForObject("SELECT COUNT(*) FROM worker_team_member WHERE actor=? AND state<>'ARCHIVED'",Long.class,actor)>=100)throw new IllegalStateException("At most 100 current members per account");
             db.jdbc().update("INSERT INTO worker_team_member(id,actor,name,purpose,skills_json,notes,revision,state,created_ms,updated_ms,settings_json) VALUES(?,?,?,?,?,?,1,'ACTIVE',?,?,?)",input.id(),actor,name,purpose,encoded,notes,now,now,db.encode(input.settings()));
         } else if(db.jdbc().update("UPDATE worker_team_member SET name=?,purpose=?,skills_json=?,notes=?,settings_json=?,revision=revision+1,updated_ms=? WHERE id=? AND actor=? AND revision=? AND state<>'ARCHIVED'",name,purpose,encoded,notes,db.encode(input.settings()),now,input.id(),actor,input.revision())!=1)
             throw new IllegalStateException("Member changed or is archived; refresh before saving");
+        ensureSkillBaselines(actor,input.id(),selected);
         return get(actor,input.id());
     }
     @Transactional public Profile state(String actor,String member,long revision,String action) {
@@ -198,7 +299,16 @@ public class TeamMembers implements TaskClaimPolicy {
         }
         return result;
     }
-    public void attachSkills(String task,List<String> required) {if(!required.isEmpty())skills.member(task,required);}
+    public void attachSkills(String task,List<String> required) {
+        if(required.isEmpty())return;
+        var member=forTask(task);
+        if(member==null){skills.member(task,required);return;}
+        String actor=db.jdbc().queryForObject("SELECT actor FROM goal_request WHERE id=?",String.class,task);
+        if(db.jdbc().queryForObject("SELECT COUNT(*) FROM worker_team_member WHERE id=? AND actor=?",Long.class,member.id(),actor)!=1)
+            throw new SecurityException("Discussion member is outside the request owner");
+        ensureSkillBaselines(actor,member.id(),member.skills());
+        skills.member(task,required,actor,member.id(),latestSkillRevisions(member.id()));
+    }
     public void freeze(String run,String node,Profile member) {
         db.jdbc().update("INSERT INTO worker_team_assignment VALUES(?,?,?,?)",run,node,member.id(),db.encode(member));
     }
@@ -277,7 +387,24 @@ public class TeamMembers implements TaskClaimPolicy {
         return Map.of("sourceRun",runId,"state",run.state,"node",latest.node(),"type",latest.type(),"content",content.substring(0,Math.min(2000,content.length())),"truncated",content.length()>2000);
     }
     public void bind(String run,String node,String task,Profile member) {
-        db.jdbc().update("INSERT INTO worker_team_task VALUES(?,?,?)",task,run,node);skills.member(task,member.skills());
+        db.jdbc().update("INSERT INTO worker_team_task VALUES(?,?,?)",task,run,node);
+        String actor=db.jdbc().queryForObject("SELECT actor FROM worker_team_member WHERE id=?",String.class,member.id());
+        ensureSkillBaselines(actor,member.id(),member.skills());
+        skills.member(task,member.skills(),actor,member.id(),latestSkillRevisions(member.id()));
+    }
+    private Map<String,SkillFiles.MemberRevision> latestSkillRevisions(String member) {
+        var revisions=new HashMap<String,SkillFiles.MemberRevision>();
+        var rows=db.jdbc().queryForList("""
+            SELECT r.skill_ref,r.version,r.content,r.content_hash FROM worker_team_skill_revision r
+             WHERE r.member_id=? AND r.version=(SELECT MAX(latest.version) FROM worker_team_skill_revision latest
+               WHERE latest.member_id=r.member_id AND latest.skill_ref=r.skill_ref)
+            """,member);
+        for(var row:rows) {
+            String content=(String)row.get("content");
+            if(!skillHash(content).equals(row.get("content_hash")))throw new IllegalStateException("Stored member Skill revision is corrupted");
+            revisions.put((String)row.get("skill_ref"),new SkillFiles.MemberRevision(((Number)row.get("version")).intValue(),content));
+        }
+        return Map.copyOf(revisions);
     }
     public void inherit(String source,String successor) {
         var rows=db.jdbc().queryForList("SELECT run_id,node_key FROM worker_team_task WHERE task_id=?",source);

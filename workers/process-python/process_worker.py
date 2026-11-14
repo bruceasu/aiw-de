@@ -233,9 +233,9 @@ class ControlPlaneClient:
         })
 
     def complete(self, task: dict[str, Any], worker_id: str, session_id: str | None,
-                 workspace_result: dict[str, Any] | None, report: dict[str, str] | None) -> dict[str, Any]:
+                 workspace_result: dict[str, Any] | None, report: dict[str, Any] | None) -> dict[str, Any]:
         completion = None if report is None else {
-            key: report[key] for key in ("verdict", "summary", "experience") if key in report
+            key: report[key] for key in ("verdict", "summary", "experience", "skillUpdate") if key in report
         }
         return self._post(f"/tasks/{_quote(task['taskId'])}/complete", {
             "workerId": worker_id,
@@ -381,21 +381,36 @@ def _git(cwd: str, *args: str) -> str:
     return runtime_git(cwd, *args)
 
 
-def _completion_report(result_kind: str, final_response: str) -> dict[str, str]:
+def _completion_report(result_kind: str, final_response: str) -> dict[str, Any]:
     summary = final_response.strip()
     experience = None
+    skill_update = None
     match = re.search(r"\n<AIW_WORKER_EXPERIENCE>\r?\n(.*?)\r?\n</AIW_WORKER_EXPERIENCE>\s*$",
                       summary, re.DOTALL | re.IGNORECASE)
     if match:
         candidate = match.group(1).strip()
         summary = summary[:match.start()].rstrip()
-        if candidate and candidate.upper() != "NONE" and len(candidate) <= 2000 and "\0" not in candidate:
-            experience = candidate
+        if candidate and len(candidate) <= 50000:
+            try: metadata = json.loads(candidate)
+            except json.JSONDecodeError: metadata = None
+            if isinstance(metadata, dict):
+                lesson = metadata.get("experience")
+                if isinstance(lesson, str) and lesson.strip().upper() != "NONE" and len(lesson.strip()) <= 2000 and "\0" not in lesson:
+                    experience = lesson.strip()
+                update = metadata.get("skill_update")
+                if isinstance(update, dict):
+                    ref, content, reason = update.get("ref"), update.get("content"), update.get("reason")
+                    if (isinstance(ref, str) and isinstance(content, str) and isinstance(reason, str)
+                            and len(ref.strip()) <= 96 and len(content) <= 16384 and len(reason.strip()) <= 1000
+                            and "\0" not in content and "\0" not in reason):
+                        skill_update = {"ref": ref.strip(), "content": content, "reason": reason.strip()}
 
-    def report(verdict: str) -> dict[str, str]:
+    def report(verdict: str) -> dict[str, Any]:
         value = {"verdict": verdict, "summary": summary}
         if experience is not None:
             value["experience"] = experience
+        if skill_update is not None:
+            value["skillUpdate"] = skill_update
         return value
 
     if not summary:
@@ -596,11 +611,13 @@ class ProcessSlot:
                 instruction += (
                     "\n\nEnd your final response with a separate metadata block exactly in this form:\n"
                     "<AIW_WORKER_EXPERIENCE>\n"
-                    "Up to three brief, reusable lessons from the completed work. Include only general methods or verified system facts. "
-                    "Do not include credentials, personal or private facts, raw user content, local paths, or copied file contents. "
-                    "Write NONE if there is no reusable lesson.\n"
+                    '{"experience":"NONE",'
+                    '"skill_update":null}\n'
                     "</AIW_WORKER_EXPERIENCE>\n"
-                    "This block is internal learning metadata and will be removed from the task result.\n"
+                    "Replace experience with up to three actual reusable lessons containing only general methods or verified system facts, or leave it exactly NONE. Replace skill_update with {\"ref\":\"exact configured Skill ref\",\"content\":\"complete revised SKILL.md text\",\"reason\":\"verified improvement\"} only when this completed work proves a reusable improvement to one of this member's configured Skills. "
+                    "Do not copy the placeholder words into experience. Do not invent Skill refs or include credentials, private facts, raw user content, local paths, or copied task files. "
+                    "A Skill revision may improve methods only; it cannot grant tools, file access, permissions, or workflow changes. "
+                    "Use valid JSON and no code fence. This block is internal learning metadata and will be removed from the task result.\n"
                 )
                 instruction += "\nShared Plan location: " + str(workspace.root) + "\nActual working directory: " + workspace.cwd
                 instruction += "\nVerified handoff manifests:\n" + json.dumps(task.get("handoffInputs", []), ensure_ascii=False)

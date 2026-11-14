@@ -63,8 +63,12 @@ def load(task, profile, prepared=None):
             if ref["ownerId"] != "" or ref["repositoryRef"] != "": _fail()
         elif ref["source"] == "platform-asset":
             if prepared is None or ref["ownerId"] != prepared.candidate["ownerId"] or ref["repositoryRef"] != prepared.candidate["repositoryRef"]: _fail()
+        elif ref["source"] == "member-revision":
+            if (not isinstance(ref["ownerId"], str) or not ref["ownerId"] or not isinstance(ref["repositoryRef"], str)
+                    or not re.fullmatch(r"member-[a-f0-9-]{36}", ref["repositoryRef"])): _fail()
+            if not isinstance(ref["assetVersion"], str) or not re.fullmatch(r"(?:0|[1-9][0-9]{0,9})", ref["assetVersion"]): _fail()
         else: _fail()
-        if prepared:
+        if prepared and ref["source"] != "member-revision":
             original = next((r for r in prepared.reference["skills"] if r["ref"] == ref["ref"]), None)
             if original is None or (original["version"], original["digest"]) != (ref["assetVersion"], ref["assetDigest"]): _fail()
         files = package["files"]

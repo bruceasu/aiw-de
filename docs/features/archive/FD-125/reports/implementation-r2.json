@@ -1,0 +1,30 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-125",
+  "source_event": "FD-125-000009-changes-requested",
+  "human_report": "implementation-r2.md",
+  "data": {
+    "session": "fd125-worker-session-20261115",
+    "summary": "Repair the three independent review findings: persist the version-0 Skill baseline, apply and record member revisions for owner-verified Wish Pool discussions, and replace the experience placeholder example with NONE.",
+    "changed_paths": [
+      "src/main/java/me/asu/aidev/execution/skills/SkillFileContract.java",
+      "src/main/java/me/asu/aidev/worker/application/TeamMembers.java",
+      "src/main/resources/db/migration/V53__member_skill_revisions.sql",
+      "workers/process-python/process_worker.py",
+      "workers/process-python/skill_files.py",
+      "docs/features/FD-125/FD-125_WORKER_SKILLS.md"
+    ],
+    "commands": [
+      {"command": "git diff --check", "exit_code": 0},
+      {"command": "& 'C:\\green\\bin\\setup-jdk25.ps1'; & 'C:\\green\\apache-maven-3.9.4\\bin\\mvn.cmd' -o -s 'D:\\03_projects\\AI-tools\\aiw-de\\.ai\\fd\\FD-081\\offline-maven-settings.xml' '-Dmaven.repo.local=D:\\.m2\\repository' -DskipTests compile", "exit_code": 0, "sources": 367},
+      {"command": "python -m py_compile workers/process-python/process_worker.py workers/process-python/skill_files.py", "exit_code": 0}
+    ],
+    "results": [
+      "Baseline version 0 is stored once and restored from immutable member history.",
+      "Plan tasks and Wish Pool discussions freeze the member's latest configured Skills; completion validates the frozen member and discussion Owner before recording an update.",
+      "The model sees experience=NONE as the only example placeholder and is told not to copy placeholders."
+    ],
+    "residual_risk": "Tests, migration execution, application startup, Worker execution, browser interaction and real model calls were not run."
+  }
+}

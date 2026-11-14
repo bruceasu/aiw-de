@@ -3,9 +3,12 @@
   const host=document.querySelector('[data-team-members]');if(!host)return;
   const $=s=>host.querySelector(s),form=$('[data-team-form]'),factory=host.dataset.teamMode==='factory';
   const root='/api/r1/team-members',csrf=document.querySelector('meta[name="csrf-token"]').content;
+  const skillHistories=new Map();
+  const openSkillPanels=new Set();
   const words={
     'Team members':['团队成员','チームメンバー'],'Create in Agent factory':['到 Agent 工厂创建','Agent ファクトリーで作成'],'Create member':['创建成员','メンバーを作成'],'Refresh members':['刷新成员','メンバーを更新'],
     'Open team':['查看团队','チームを表示'],
+    'Skill versions':['Skill 版本','Skill バージョン'],'View versions':['查看版本','バージョンを見る'],'Version':['版本','バージョン'],'Reason':['修改理由','変更理由'],'Source task':['来源任务','元のタスク'],'Source Plan':['来源 Plan','元の Plan'],'Current version':['当前版本','現在のバージョン'],'Restore this version':['恢复此版本','このバージョンに戻す'],'Skill restored as a new version':['已恢复为新的 Skill 版本','新しい Skill バージョンとして復元しました'],'Built-in baseline':['内置初始版本','組み込み初期版'],'Select a Skill version':['选择 Skill 版本','Skill バージョンを選択'],'No Skills configured':['没有配置 Skill','Skill が設定されていません'],
     'Member identities survive process restarts. Processes are shared; member settings do not grant tools or permissions.':['成员身份在进程重启后仍保留。执行进程可共享；成员设定不增加工具或权限。','メンバーの識別情報はプロセス再起動後も保持されます。プロセスは共有でき、設定によって権限は増えません。'],
     'Member work currently uses the read-only text runtime. Skills do not enable file edits.':['当前成员工作仅支持只读文本执行；选择 Skills 不会启用文件修改。','現在は読み取り専用のテキスト実行です。Skills を選んでもファイル編集は有効になりません。'],
     'Member list':['成员列表','メンバー一覧'],'Current members':['当前成员','現在のメンバー'],'Dissolved members (read-only)':['已解散成员（只读）','解散済みメンバー（読み取り専用）'],
@@ -26,6 +29,7 @@
     'Discard unsaved edits?':['放弃未保存的修改？','未保存の変更を破棄しますか？'],'Select up to eight registered platform Skills':['请选择最多 8 项已注册的平台 Skills','登録済み Skills を最大8件選択してください'],
     'Member changed; refresh before applying this action':['成员已变化，请刷新后操作','メンバーが変更されています。更新してください'],
     'Member changed or is archived; refresh before saving':['成员已变化或已解散，请刷新后保存','メンバーが変更または解散されています。更新してください'],
+    'Skill is not configured for this member':['此 Skill 未配置给该成员','この Skill はこのメンバーに設定されていません'],'Skill changed; refresh before restoring':['Skill 已变化，请刷新后再恢复','Skill が変更されています。更新してから復元してください'],'Skill version not found':['找不到此 Skill 版本','Skill バージョンが見つかりません'],'Skill restore request required':['缺少 Skill 恢复参数','Skill の復元情報がありません'],
     'Finish or stop assigned workflows before dissolving this member':['请先完成或停止该成员关联的流程，再解散','解散する前に関連ワークフローを完了または停止してください'],
     'Archived members are read-only':['已解散成员只能查看或导出','解散済みメンバーは読み取り専用です'],
     'Member already exists; refresh before changing it':['成员已存在，请刷新核对后再修改','メンバーは既に存在します。更新して確認してください'],
@@ -82,12 +86,18 @@
   async function act(work){if(busy||loading)return;busy=true;controls();try{await work();}catch(error){status(error.message);}finally{busy=false;controls();}}
   function button(label,callback){const b=node('button',t(label),'btn ghost');b.type='button';b.onclick=()=>act(callback);return b;}
   function render(){
-    if(!data)return;const list=$('[data-team-list]');list.replaceChildren();if(factory)return;
+    if(!data)return;const list=$('[data-team-list]');list.replaceChildren();
     for(const member of data.members){
       const card=node('article',null,'team-card'),heading=node('div',null,'workers-heading');
       let mark=0;for(const char of member.id)mark=(mark*31+char.charCodeAt(0))>>>0;
       const avatar=raw('span',[...member.name].slice(0,2).join(''),'team-avatar');avatar.dataset.shape=String(mark%4);heading.append(avatar,raw('h3',member.name),node('span',t(member.state),'pill neutral'));card.append(heading,raw('p',member.purpose.length>300?member.purpose.slice(0,300)+'…':member.purpose),raw('p',member.skills.join(' · '),'help'));
       card.append(raw('p',member.model?[member.model,member.effort].filter(Boolean).join(' · '):t('Inherit task or Worker default'),'help'));
+      const skillPanel=node('details',null,'team-skill-panel');skillPanel.append(node('summary',t('Skill versions')));
+      if(!member.skills.length)skillPanel.append(node('p',t('No Skills configured'),'help'));
+      for(const skill of member.skills){const row=node('div',null,'record-actions');row.append(raw('span',skill),button('View versions',()=>openSkillHistory(member.id,skill)));skillPanel.append(row);}
+      const selectedHistory=skillHistories.get(member.id);if(selectedHistory&&member.skills.includes(selectedHistory.ref))renderSkillHistory(skillPanel,member,selectedHistory);else if(selectedHistory)skillHistories.delete(member.id);
+      skillPanel.open=openSkillPanels.has(member.id);skillPanel.ontoggle=()=>{if(skillPanel.open)openSkillPanels.add(member.id);else openSkillPanels.delete(member.id);};
+      card.append(skillPanel);
       const work=data.work.filter(w=>w.member_id===member.id),runs=data.runs.filter(r=>r.member_id===member.id),seen=new Set();
       if(!work.length&&!runs.length)card.append(node('p',t('No assigned work in this snapshot'),'help'));
       for(const item of work.slice(0,3)){
@@ -106,6 +116,41 @@
       if(histories.has(member.id)){const history=histories.get(member.id),details=node('details');details.open=history.open;details.ontoggle=()=>history.open=details.open;details.append(node('summary',t('Execution history (latest 100)')));for(const run of history.rows){const link=raw('a',t(run.state)+' · '+(run.title||run.id));link.href='/ui/workflows?execution='+encodeURIComponent(run.id);details.append(link,node('br'));}if(!history.rows.length)details.append(node('p',t('No execution history'),'help'));card.append(details);}list.append(card);
     }
     if(!data.members.length)list.append(node('p',t('No members in this list'),'empty'));controls();
+  }
+  async function openSkillHistory(member,ref,version){
+    const base='/'+encodeURIComponent(member)+'/skills/'+encodeURIComponent(ref)+'/versions',history=await request(base),selected=version??history.currentVersion;
+    const content=await request(base+'/'+selected),previous=selected>0?await request(base+'/'+(selected-1)):null;
+    skillHistories.set(member,{ref,history,selected,content,previous});openSkillPanels.add(member);render();
+  }
+  function skillDiff(before,after){
+    const oldLines=before?before.split(/\r?\n/):[],newLines=after.split(/\r?\n/);
+    if(oldLines.length>250||newLines.length>250)return '+ '+newLines.join('\n+ ');
+    const rows=oldLines.length+1,cols=newLines.length+1,table=Array.from({length:rows},()=>new Uint16Array(cols));
+    for(let i=oldLines.length-1;i>=0;i--)for(let j=newLines.length-1;j>=0;j--)table[i][j]=oldLines[i]===newLines[j]?table[i+1][j+1]+1:Math.max(table[i+1][j],table[i][j+1]);
+    const result=[];let i=0,j=0;
+    while(i<oldLines.length||j<newLines.length){
+      if(i<oldLines.length&&j<newLines.length&&oldLines[i]===newLines[j]){result.push('  '+oldLines[i]);i++;j++;}
+      else if(i<oldLines.length&&(j===newLines.length||table[i+1][j]>=table[i][j+1])){result.push('- '+oldLines[i]);i++;}
+      else {result.push('+ '+newLines[j]);j++;}
+    }
+    return result.join('\n');
+  }
+  function renderSkillHistory(target,member,state){
+    const details=node('details',null,'team-skill-history');details.open=true;details.append(node('summary',state.ref));
+    const selector=raw('select');selector.setAttribute('aria-label',t('Select a Skill version'));
+    for(const item of state.history.versions){const label='v'+item.version+(item.version===state.history.currentVersion?' · '+t('Current version'):'');selector.add(new Option(label,String(item.version)));}
+    selector.value=String(state.selected);selector.onchange=()=>act(()=>openSkillHistory(member.id,state.ref,Number(selector.value)));
+    const selected=state.history.versions.find(item=>item.version===state.selected);
+    const reason=state.selected===0?t('Built-in baseline'):(selected?.reason||state.content.reason);
+    details.append(selector,node('p',t('Version')+' '+state.selected+' · '+t('Reason')+': '+reason,'help'));
+    if(selected?.sourceTaskId)details.append(node('p',t('Source task')+': '+selected.sourceTaskId,'help'));
+    if(selected?.sourceRunId){const link=raw('a',t('Source Plan')+': '+selected.sourceRunId);link.href='/ui/workflows?execution='+encodeURIComponent(selected.sourceRunId);link.target='_blank';link.rel='noopener';details.append(link);}
+    details.append(raw('pre',skillDiff(state.previous?.content||null,state.content.content),'team-skill-diff'));
+    if(member.state!=='ARCHIVED'&&state.selected!==state.history.currentVersion)details.append(button('Restore this version',async()=>{
+      await request('/'+encodeURIComponent(member.id)+'/skills/'+encodeURIComponent(state.ref)+'/restore',{expectedVersion:state.history.currentVersion,targetVersion:state.selected});
+      status('Skill restored as a new version');await openSkillHistory(member.id,state.ref);
+    }));
+    target.append(details);
   }
   async function load(){
     if(loading)return;loading=true;controls();

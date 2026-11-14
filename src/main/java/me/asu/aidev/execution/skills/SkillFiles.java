@@ -13,6 +13,7 @@ import static me.asu.aidev.execution.skills.SkillFileContract.*;
 public class SkillFiles {
     public record Index(Map<String,List<String>> files,Map<String,List<String>> profiles) {}
     public record Frozen(List<Bundle> packages) { public Frozen { packages=List.copyOf(packages); } }
+    public record MemberRevision(int version,String content) {}
     private final AuthorityRepository repo;
     private final Map<String,Bundle> builtin=new HashMap<>();
     private final Index index;
@@ -75,10 +76,29 @@ public class SkillFiles {
     }
     public boolean managed(String task) { return repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_task_skills WHERE task_id=?",Long.class,task)>0; }
     public List<String> available() { return builtin.keySet().stream().sorted().toList(); }
+    public String defaultText(String ref) {
+        var value=builtin.get(ref);if(value==null)throw new IllegalArgumentException("Unknown platform Skill");
+        return new String(Base64.getDecoder().decode(value.files().stream().filter(f->f.path().equals("SKILL.md")).findFirst().orElseThrow().base64()),StandardCharsets.UTF_8);
+    }
     public void member(String task,List<String> selected) {
         var original=payload(task,null);var packages=new LinkedHashMap<String,Bundle>();
         if(original!=null)original.packages().forEach(b->packages.put(b.ref(),b));
         for(String name:selected){var value=builtin.get(name);if(value==null)throw new IllegalArgumentException("Unknown platform Skill");packages.put(name,value);}
+        store(task,new Frozen(List.copyOf(packages.values())),true);
+    }
+    public void member(String task,List<String> selected,String actor,String memberId,Map<String,MemberRevision> revisions) {
+        var original=payload(task,null);var packages=new LinkedHashMap<String,Bundle>();
+        if(original!=null)original.packages().forEach(b->packages.put(b.ref(),b));
+        if(selected.isEmpty()&&packages.isEmpty())return;
+        for(String name:selected) {
+            var value=builtin.get(name);if(value==null)throw new IllegalArgumentException("Unknown platform Skill");
+            var revision=revisions.get(name);
+            if(revision==null) {packages.put(name,value);continue;}
+            var files=new ArrayList<>(value.files().stream().filter(f->!f.path().equals("SKILL.md")).toList());
+            files.add(file("SKILL.md",revision.content().getBytes(StandardCharsets.UTF_8)));files.sort(Comparator.comparing(File::path));
+            String digest=hash(revision.content().getBytes(StandardCharsets.UTF_8));
+            packages.put(name,bundle(name,"member-revision",actor,memberId,Integer.toString(revision.version()),digest,files));
+        }
         store(task,new Frozen(List.copyOf(packages.values())),true);
     }
     public Payload payload(String task,String attempt) {

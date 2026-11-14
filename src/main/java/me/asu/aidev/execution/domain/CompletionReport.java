@@ -3,9 +3,15 @@ package me.asu.aidev.execution.domain;
 import java.util.Objects;
 
 /** Structured semantic outcome reported by a successfully executed task. */
-public record CompletionReport(CompletionVerdict verdict, String summary, String experience) {
+public record CompletionReport(CompletionVerdict verdict, String summary, String experience, SkillUpdate skillUpdate) {
+    public record SkillUpdate(String ref,String content,String reason) {}
+
     public CompletionReport(CompletionVerdict verdict, String summary) {
-        this(verdict, summary, null);
+        this(verdict, summary, null, null);
+    }
+
+    public CompletionReport(CompletionVerdict verdict,String summary,String experience) {
+        this(verdict,summary,experience,null);
     }
 
     public CompletionReport {

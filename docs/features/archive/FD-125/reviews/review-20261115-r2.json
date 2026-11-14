@@ -1,0 +1,79 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-125",
+  "source_event": "FD-125-000012-implementation-ready",
+  "human_report": "review-20261115-r2.md",
+  "data": {
+    "reviewer_session": "fd125-review-session-20261114",
+    "comparison_base": "6458518f03132825196c580d881e0861ce20893c",
+    "implementation_commit": null,
+    "reviewed_fd_revision": 12,
+    "reviewed_fd_sha256": "75035e14f5b4336289498e3873320ce40530d5bc846f545f7421d6c620813307",
+    "recommendation": "verification-passed",
+    "review_type": "focused independent static re-review of R1-R3",
+    "findings": [],
+    "resolved_prior_findings": [
+      {
+        "id": "FD125-R1",
+        "result": "resolved",
+        "evidence": "Member save and use paths persist version 0; history and restore read immutable persisted content and validate its hash."
+      },
+      {
+        "id": "FD125-R2",
+        "result": "resolved",
+        "evidence": "Goal discussion binds the frozen member's latest Skill revisions, checks Owner membership, and records a completion update only for a Skill in that frozen member profile."
+      },
+      {
+        "id": "FD125-R3",
+        "result": "resolved",
+        "evidence": "The metadata example uses experience=NONE and directs the model to provide only actual reusable lessons or retain NONE; the old instructional placeholder is gone."
+      }
+    ],
+    "acceptance": [
+      {
+        "criteria": ["Immutable history and restoration of prior Skill content"],
+        "result": "supported statically",
+        "evidence": ["Version zero is persisted per member and Skill; restore reads the selected stored version and appends a new revision."]
+      },
+      {
+        "criteria": ["Member revisions apply to Plan and Wish Pool work and valid updates are retained for that member"],
+        "result": "supported statically",
+        "evidence": ["Plan binding and Goal discussion attachment use latestSkillRevisions; discussion completion validates its frozen member and Owner before recording."]
+      },
+      {
+        "criteria": ["Completion metadata example does not persist prompt scaffolding as experience"],
+        "result": "supported statically",
+        "evidence": ["The example value is NONE and the prompt requires actual lessons or NONE, explicitly forbidding copying placeholder text."]
+      }
+    ],
+    "worker_evidence_not_rerun": {
+      "reported_passes": [
+        "git diff --check",
+        "offline JDK 25 Maven -DskipTests compile of 367 Java source files",
+        "Python py_compile for process_worker.py and skill_files.py"
+      ],
+      "reviewer_reran": false
+    },
+    "skipped": [
+      "tests",
+      "database migration execution",
+      "application startup",
+      "Worker runtime",
+      "browser interaction",
+      "real model calls",
+      "network"
+    ],
+    "residual_risks": [
+      "Migration, transaction behavior and end-to-end UI behavior remain unverified at runtime."
+    ],
+    "actual_commands": [
+      "aiw fd claim FD-125 FD-125-000012-implementation-ready --session fd125-review-session-20261114",
+      "aiw fd show FD-125",
+      "aiw fd show-review FD-125",
+      "git status --short --branch",
+      "git rev-parse HEAD",
+      "Targeted static reads and rg inspections of TeamMembers.java, GoalDiscussionService.java, SkillFiles.java, V53 migration, process_worker.py, implementation-r2.md/.json, and FD-125 Verification"
+    ]
+  }
+}

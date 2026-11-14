@@ -7,6 +7,7 @@ import me.asu.aidev.knowledge.domain.KnowledgeDocument;
 import me.asu.aidev.work.domain.TaskType;
 import me.asu.aidev.work.domain.WorkTask;
 import me.asu.aidev.work.port.WorkTaskRepository;
+import me.asu.aidev.worker.application.TeamMembers;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -22,10 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class KnowledgeService {
     private final JdbcTemplate jdbc;
     private final WorkTaskRepository tasks;
+    private final TeamMembers members;
 
-    public KnowledgeService(JdbcTemplate jdbc, WorkTaskRepository tasks) {
+    public KnowledgeService(JdbcTemplate jdbc, WorkTaskRepository tasks,TeamMembers members) {
         this.jdbc = jdbc;
         this.tasks = tasks;
+        this.members = members;
     }
 
     /** Called inside the authoritative task-completion transaction. */
@@ -41,6 +44,8 @@ public class KnowledgeService {
                      WHERE t.task_id=?
                     """, report.experience(), completedAt.toEpochMilli(), task.id().value());
         }
+        if(report!=null&&report.verdict()==CompletionVerdict.PASS&&report.skillUpdate()!=null)
+            members.recordSkillUpdate(task,report.skillUpdate(),completedAt.toEpochMilli());
         if (!isDocumentType(task.type())) return;
         if (report == null) throw new IllegalStateException("knowledge document requires a completion report");
         jdbc.update("""
