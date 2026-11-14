@@ -21,7 +21,7 @@ import static org.mockito.Mockito.*;
 class NativePlanOwnersTest {
     @TempDir Path temp;
     JdbcTemplate jdbc;AuthorityBoundary boundary;NativePlanOwners owners;WorkTaskRepository tasks;
-    WorkflowPlanRepository plans;WorkflowPlan plan;
+    WorkflowPlanRepository plans;WorkflowPlan plan;AuthorityGrantService grants;
     NativePlanOwners.Bind input=new NativePlanOwners.Bind("bind-request","plan",3);
 
     @BeforeEach void setup() {
@@ -37,7 +37,12 @@ class NativePlanOwnersTest {
         var spec=new WorkflowPlanSpec("Original goal",WorkflowPlanSpec.Source.MANAGER,List.of(new WorkflowPlanSpec.Step("work",Set.of("coding"),Set.of(),"coding-work-package-executor","Implement it",null,null,Set.of())));
         plan=new WorkflowPlan("plan",WorkflowPlan.State.CONFIRMED,3,spec,"human","human","confirmed",Instant.now(),Instant.now());
         when(plans.find("plan")).thenReturn(Optional.of(plan));when(tasks.findBySubject("flexible-plan","plan")).thenReturn(List.of());
-        owners=new NativePlanOwners(repo,boundary,mock(AuthorityGrantService.class),plans,tasks,mock(ExecutionGuard.class));
+        grants=mock(AuthorityGrantService.class);owners=new NativePlanOwners(repo,boundary,grants,plans,tasks,mock(ExecutionGuard.class));
+    }
+    @Test void authenticatedHumanGetsAnOwnerWithoutASeparateSetupStep(){
+        jdbc.update("DELETE FROM authority_owner");when(grants.bind("human")).thenReturn("new-owner");
+        assertThat(owners.currentOwner()).isEqualTo("new-owner");verify(grants).bind("human");
+        boundary.human(null);assertThatThrownBy(owners::currentOwner).isInstanceOf(SecurityException.class);
     }
     WorkTask task(TaskState state,String id) {
         return new WorkTask(new TaskId(id),TaskType.IMPLEMENTATION,state,"flexible-plan","plan",Set.of(),null,"Original instruction",1,null,null,TaskPriority.NORMAL,0,Instant.now(),Instant.now());

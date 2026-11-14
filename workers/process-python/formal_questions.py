@@ -1,9 +1,7 @@
 """Trusted yield handshake. Questions contain no credential, grant or executable source reference."""
 import hashlib
 import json
-import os
 from pathlib import Path
-import socket
 import uuid
 
 
@@ -11,9 +9,10 @@ class YieldRequested(RuntimeError):
     pass
 
 
-def storage_capability(repository):
-    root = os.path.normcase(str(Path(repository).resolve(strict=True)))
-    return "checkpoint-store:" + hashlib.sha256((socket.gethostname().lower() + "\n" + root).encode()).hexdigest()
+def storage_capability():
+    from native_run import storage_capability as shared_store
+    # The exact location is verified by the frozen handoff. Enrollment names the shared filesystem.
+    return "checkpoint-store:" + hashlib.sha256(shared_store().encode()).hexdigest()
 
 
 def ask(broker, args):
@@ -25,9 +24,21 @@ def ask(broker, args):
         raise RuntimeError("QUESTION_CHECKPOINT_ADAPTER_REQUIRED")
     broker.accepting_tools = False
     result = broker.checkpoint()
-    checkpoint = {"repositoryRef": broker.repository, "baseRevision": broker.context["snapshot"]["task"].get("baseRevision"),
-                  "resultRevision": result["resultRevision"], "changedFiles": result["changedFiles"],
-                  "configurationDigest": broker.context["configurationDigest"], "storageCapability": storage_capability(broker.source_root)}
+    if result is None:
+        from worker_runtime import snapshot
+        from native_run import storage_capability as handoff_storage
+        handoff = broker.workspace.handoff(broker.task,
+            {"verdict": "REPAIR_REQUIRED", "summary": "Waiting for essential input: " + args["question"]},
+            None, snapshot(broker.workspace.cwd, broker.attempt))
+        broker.client._post(broker.base + "/handoff", {"workerId": broker.lease["workerId"],
+            "leaseToken": broker.lease["leaseToken"], "handoff": handoff})
+        checkpoint = {"protocol": "aiw.questions.v2", "location": broker.task["location"], "handoff": handoff,
+                      "changedFiles": sorted(broker.file_changes), "configurationDigest": broker.context["configurationDigest"],
+                      "storageCapability": handoff_storage()}
+    else:
+        checkpoint = {"repositoryRef": broker.repository, "baseRevision": broker.context["snapshot"]["task"].get("baseRevision"),
+                      "resultRevision": result["resultRevision"], "changedFiles": result["changedFiles"],
+                      "configurationDigest": broker.context["configurationDigest"], "storageCapability": storage_capability()}
     source = broker.client._post(broker.base + "/questions/source", broker.lease)
     payload = {"protocol": "aiw.questions.v1", "sourceQuestionKey": str(uuid.uuid4()), "source": source, "lease": broker.lease,
                "question": args["question"], "context": args["context"], "options": args["options"],
@@ -58,15 +69,29 @@ def verify_checkpoints(broker):
     expected = [ref for ref in broker.context["snapshot"]["references"] if ref["kind"] == "checkpoint"]
     if len(records) != len(expected):
         raise RuntimeError("CHECKPOINT_REFERENCE_MISSING")
+    latest_location = None
     for record in records:
         ref, checkpoint = record["reference"], record["checkpoint"]
-        if ref not in expected or checkpoint["storageCapability"] != storage_capability(broker.source_root):
+        location_based = checkpoint.get("protocol") == "aiw.questions.v2"
+        from native_run import storage_capability as handoff_storage
+        if ref not in expected or checkpoint["storageCapability"] != (handoff_storage() if location_based else storage_capability()):
             raise RuntimeError("CHECKPOINT_STORAGE_NOT_AVAILABLE")
         raw = record["checkpointJson"]
-        if json.loads(raw) != checkpoint or ref["sha256"] != hashlib.sha256(raw.encode()).hexdigest() or ref["revision"] != checkpoint["resultRevision"]:
+        revision = checkpoint["handoff"]["sha256"] if location_based else checkpoint["resultRevision"]
+        if json.loads(raw) != checkpoint or ref["sha256"] != hashlib.sha256(raw.encode()).hexdigest() or ref["revision"] != revision:
             raise RuntimeError("CHECKPOINT_CONTENT_CHANGED")
+        if location_based:
+            source = {"taskId": ref["id"], "attemptId": record["attemptId"],
+                      "handoff": {"location": checkpoint["location"], **checkpoint["handoff"]}}
+            latest_location = source
+            continue  # PlanWorkspace verifies the retained manifest and tree while holding the directory lock.
         # Only the configured local object store is consulted. There is no fetch/download fallback.
         from execution_guard import ControlledGit
         git = ControlledGit(broker.source_root, broker.attempt)
         if git._run("rev-parse", "--verify", checkpoint["resultRevision"] + "^{commit}").strip().lower() != checkpoint["resultRevision"].lower():
             raise RuntimeError("CHECKPOINT_COMMIT_NOT_AVAILABLE")
+        latest_location = None
+    if latest_location is not None:
+        if broker.task.get("checkpointInputs"):
+            raise RuntimeError("CHECKPOINT_INPUT_COLLISION")
+        broker.task["checkpointInputs"] = [latest_location]

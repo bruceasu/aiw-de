@@ -2,6 +2,13 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'Configured commands (advanced)':['受控命令（高级）','制御対象コマンド（詳細）'],
+    'Optional JSON command profiles. Requires workspace tools and a connected Linux/WSL command Worker; no Windows command permissions are granted.':['可选的 JSON 命令配置。需要工作区工具及已接入的 Linux／WSL 命令 Worker；不会授予 Windows 命令权限。','任意の JSON コマンド設定です。作業場所ツールと接続済みの Linux／WSL コマンド Worker が必要です。Windows のコマンド権限は付与しません。'],
+    'Commands must be a JSON array.':['命令配置必须是 JSON 数组。','コマンド設定は JSON 配列で入力してください。'],
+    'This task requires a connected Linux/WSL Worker with the configured command adapter; the local factory does not enable commands automatically.':['此任务需要已接入的 Linux／WSL 受控命令 Worker；工厂不会自动开启本机命令能力。','このタスクには接続済みの Linux／WSL 制御コマンド Worker が必要です。ファクトリーはローカルのコマンド権限を自動で有効にしません。'],
+    'Work on files in this location':['在此工作目录处理文件','この作業場所でファイルを扱う'],
+    'Workspace task':['工作区任务','作業場所のタスク'],
+    'Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.':['不勾选时仅返回文本。不会因此授权其他主机路径；命令需要单独权限。','未選択の場合はテキストのみ返します。他のホストパスは許可されず、コマンドには別の権限が必要です。'],
     'If suggestion generation is still running, wait for its stop acknowledgement before resuming.':['建议仍在生成时，先等待其停止确认，再继续流程。','提案作成中の場合は、その停止確認後にフローを再開してください。'],
     'Adjust a future step':['调整后续步骤','後続ステップを調整'],
     'Pause following steps first. A read-only Worker suggests a change to one undispatched node. Review it before applying. Resuming or stopping discards the suggestion.':['先暂停后续步骤，再让只读 Worker 为一个尚未派发节点生成建议，审阅确认后才应用。继续或停止流程会放弃建议。','先に後続ステップを一時停止してください。未割り当てノード1件の変更案を読み取り専用 Worker が作成します。確認後に適用してください。再開・停止すると提案を破棄します。'],
@@ -119,6 +126,10 @@
     if(!response.ok) {const detail=await response.json().catch(()=>({}));throw new Error(detail.error || `${response.status} ${response.statusText}`);}
     return response.json();
   }
+  function commands(control){
+    try{const result=JSON.parse(control.value.trim()||'[]');if(!Array.isArray(result))throw Error();return result;}
+    catch(_){throw Error(t('Commands must be a JSON array.'));}
+  }
   async function act(work) {
     if(busy)return;busy=true;status('');
     const buttons=$$('button');buttons.forEach(b=>b.disabled=true);
@@ -141,6 +152,7 @@
   function showEditor(definition) {
     selectedRun=null;editing=structuredClone(definition || {id:null,version:0,spec:singleSpec()});
     editing.spec.sources ||= [];
+    $('[data-wf-commands]').value=JSON.stringify(editing.spec.commands||[],null,2);
     renderSources($('[data-wf-definition-sources]'),editing.spec.sources,values=>editing.spec.sources=values);
     for(const n of editing.spec.nodes)if(['TASK','DECISION'].includes(n.kind))n.assignment ||= n.memberId?'MEMBER':definition?.id?'GENERAL':'AUTO';
     $('[data-wf-title]').value=editing.spec.title;$('[data-wf-goal]').value=editing.spec.goal;
@@ -180,11 +192,12 @@
       const section=element('section',undefined,'wf-node-editor');section.id='wf-node-'+node.key;
       const row=element('div',undefined,'wf-node-fields'),kind=element('select');
       for(const [value,label] of [['TASK','Task'],['DECISION','LLM decision'],['ASK','Ask user'],['END','Done']])kind.append(new Option(t(label),value));
-      kind.value=node.kind;kind.onchange=()=>{node.kind=kind.value;if(!['TASK','DECISION'].includes(node.kind)){node.memberId=null;node.assignment=null;node.requiredSkills=[];}else node.assignment ||= 'AUTO';node.branches={};node.next=node.kind==='END'||node.kind==='DECISION'?null:'end';if(node.kind==='DECISION')node.branches={'yes':'end','no':'end'};renderNodes();redraw();};
+      kind.value=node.kind;kind.onchange=()=>{node.kind=kind.value;if(node.kind!=='TASK')node.workspaceTools=false;if(!['TASK','DECISION'].includes(node.kind)){node.memberId=null;node.assignment=null;node.requiredSkills=[];}else node.assignment ||= 'AUTO';node.branches={};node.next=node.kind==='END'||node.kind==='DECISION'?null:'end';if(node.kind==='DECISION')node.branches={'yes':'end','no':'end'};renderNodes();redraw();};
       row.append(field('Title',input(node.title,v=>{node.title=v;redraw();},160)),field('Type',kind));section.append(row);
       if(node.kind!=='END') {
         const instruction=element('textarea');instruction.value=node.instruction;instruction.rows=3;instruction.maxLength=8000;instruction.oninput=()=>node.instruction=instruction.value;
         section.append(field('Instruction',instruction));
+        if(node.kind==='TASK'){const files=element('input');files.type='checkbox';files.checked=!!node.workspaceTools;files.onchange=()=>node.workspaceTools=files.checked;section.append(field('Work on files in this location',files));}
         if(['TASK','DECISION'].includes(node.kind)){const select=element('select');select.dataset.i18nSkip='';memberOptions(select,node.memberId||node.assignment||'GENERAL');select.onchange=()=>Object.assign(node,assignment(select.value));section.append(field('Team member',select));const required=element('select');required.multiple=true;required.size=4;required.dataset.i18nSkip='';skillOptions(required,node.requiredSkills||[]);required.onchange=()=>node.requiredSkills=[...required.selectedOptions].map(o=>o.value);section.append(field('Required Skills (optional, up to 8)',required));}
         if(node.kind==='DECISION'||node.kind==='ASK') {
           for(const [choice,next] of Object.entries(node.branches)) {
@@ -221,7 +234,7 @@
     for(const n of nodes) {
       const p=positions.get(n.key),group=make('g',{class:run?.current===n.key?'wf-current':visited.has(n.key)?'wf-visited':''});
       group.append(make('rect',{x:p.x,y:p.y,width:220,height:60,rx:n.kind==='DECISION'?22:8}));
-      const kind=make('text',{x:p.x+12,y:p.y+21});kind.textContent=t({TASK:'Task',DECISION:'LLM decision',ASK:'Ask user',END:'Done'}[n.kind]);
+      const kind=make('text',{x:p.x+12,y:p.y+21});kind.textContent=t(n.workspaceTools?'Workspace task':{TASK:'Task',DECISION:'LLM decision',ASK:'Ask user',END:'Done'}[n.kind]);
       const title=make('text',{x:p.x+12,y:p.y+44});title.textContent=n.title.length>22?n.title.slice(0,21)+'…':n.title;
       const tooltip=make('title',{});tooltip.textContent=n.title+'\n'+n.instruction;group.append(kind,title,tooltip);
       if(!run){group.setAttribute('tabindex','0');group.style.cursor='pointer';const open=()=>{$('[data-wf-editor] details').open=true;document.getElementById('wf-node-'+n.key)?.scrollIntoView({block:'center',behavior:'smooth'});};group.onclick=open;group.onkeydown=e=>{if(e.key==='Enter')open();};}
@@ -391,14 +404,14 @@
     ]}});
     savedSpec='';$('[data-wf-input]').value='模拟售后规则 v1：签收后30天内产品故障可建议换货，超期转人工决定；需购买记录、签收日期、故障说明；实物损坏需照片。疑似运输损伤须核实包装和签收情况。本流程不实际退款、换货或发送消息。\n\n处理日期：2026-11-12。\n购买记录：已提供，订单 DEMO-001。\n签收日期：2026-11-09。\n客户说明：通电后无法启动，希望换货。\n\n以上全部是模拟资料。';
   }
-  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,...assignment($('[data-wf-member]').value),requiredSkills:[...$('[data-wf-skills]').selectedOptions].map(o=>o.value),sources:taskSources});taskRequest=newRequest();await library();await openRun(run.id);});};
+  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,workspaceTools:form.has('workspaceTools'),commands:commands(e.target.elements.commands),...assignment($('[data-wf-member]').value),requiredSkills:[...$('[data-wf-skills]').selectedOptions].map(o=>o.value),sources:taskSources});taskRequest=newRequest();await library();await openRun(run.id);});};
   $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
   $('[data-wf-add-node]').onclick=()=>{const key='step'+newRequest().replaceAll('-','').slice(0,8);editing.spec.nodes.splice(-1,0,{key,title:t('Task'),kind:'TASK',instruction:'',next:'end',branches:{},assignment:'AUTO',requiredSkills:[]});renderNodes();redraw();};
-  $('[data-wf-save]').onclick=()=>act(async()=>{editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing=await api('/definitions',editing);savedSpec=JSON.stringify(editing.spec);startRequest=newRequest();await library();status(t('Workflow saved'));});
+  $('[data-wf-save]').onclick=()=>act(async()=>{editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));editing=await api('/definitions',editing);savedSpec=JSON.stringify(editing.spec);startRequest=newRequest();await library();status(t('Workflow saved'));});
   $('[data-wf-start]').onclick=()=>act(async()=>{
-    editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;
+    editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));
     if(!editing.id||savedSpec!==JSON.stringify(editing.spec))throw new Error(t('Save changes before starting'));
     const run=await api('/start',{requestId:startRequest,definitionId:editing.id,version:editing.version,input:$('[data-wf-input]').value,location:$('[data-wf-location]').value||null});
     startRequest=newRequest();await library();await openRun(run.id);

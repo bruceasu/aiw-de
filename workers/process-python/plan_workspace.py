@@ -117,6 +117,10 @@ class PlanWorkspace:
         root = root.resolve(strict=True)
         gate = DirectoryLock(root, attempt)
         try:
+            if broker:
+                broker.source_root = root
+                from formal_questions import verify_checkpoints
+                verify_checkpoints(broker)
             manifests = input_manifests(task)
             task["handoffInputs"] = manifests
             source = root
@@ -191,12 +195,21 @@ class PlanWorkspace:
 
     def handoff(self, task, report, result, checkpoint_tree_digest=None, tool_approval=None):
         target = directory(self.root, ".ai", "handoffs", key(task["taskId"]), key(task["attemptId"]))
+        # Carry prior outputs across nodes and approval/question continuations. Bodies stay on disk.
+        outputs = {}
+        for source in task.get("handoffInputs", []):
+            for item in source.get("deliverables", []):
+                if isinstance(item, dict) and isinstance(item.get("path"), str):
+                    outputs[item["path"]] = item
+        broker = getattr(self.attempt, "guard_broker", None)
+        for item in report.get("outputFiles", list(broker.file_changes.values()) if broker else []):
+            outputs[item["path"]] = item
         with (target / "report.md").open("xb") as file:
             file.write(report["summary"].encode("utf-8"))
         manifest = {"protocol": "aiw.handoff.v1", "taskId": task["taskId"], "attemptId": task["attemptId"],
                     "planId": task["planId"], "workingDirectory": self.cwd, "completedAt": time.time_ns() // 1000000,
                     "report": "report.md", "reportSha256": key(report["summary"]), "verdict": report["verdict"], "gitResult": result,
-                    "deliverables": report.get("outputFiles", [])}
+                    "deliverables": list(outputs.values())}
         if checkpoint_tree_digest is not None:
             manifest["checkpointTreeSha256"] = checkpoint_tree_digest
         if tool_approval is not None:

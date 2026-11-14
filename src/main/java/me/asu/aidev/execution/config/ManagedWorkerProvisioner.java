@@ -47,10 +47,10 @@ public class ManagedWorkerProvisioner {
     public synchronized Result requestAnalysis(String runtime) {
         return request(null,runtime,false,"planner");
     }
-    public synchronized Result requestNative(String repository,String runtime,String role) {
-        if(!Set.of("general","requirements","architect","planner","coder","stage-reviewer").contains(role))
+    public synchronized Result requestWorkflow(String repository,String runtime,String role,boolean guarded) {
+        if(!Set.of("general","workspace","requirements","architect","planner","coder","stage-reviewer").contains(role))
             throw new IllegalArgumentException("Unsupported workflow role");
-        return request(repository,runtime,false,role,false);
+        return request(repository,runtime,false,role,guarded);
     }
     private Result request(String repository,String runtime,boolean commandRequired,String role) {
         return request(repository,runtime,commandRequired,role,"coder".equals(role));
@@ -63,7 +63,7 @@ public class ManagedWorkerProvisioner {
         if(commandRequired)return new Result(false,"此方法要求命令执行适配器，请接入声明该能力的 Worker；自动 Worker 不隐式授予任意命令权限。");
         Path root=Path.of(workerRoot).toAbsolutePath().normalize();
         if(!Files.isRegularFile(root.resolve("managed_worker.py")))return new Result(false,"未找到随平台安装的 Worker 程序，请检查平台安装目录。");
-        String key=compatibilityKey("coder".equals(role) && !guarded?"coder:native":role,repository,config);
+        String key=compatibilityKey(role+(guarded?":guarded":":native"),repository,config);
         var existing=slots.get(key);
         if(existing!=null) {
             readStatus(existing);
@@ -111,6 +111,7 @@ public class ManagedWorkerProvisioner {
                 case "architect" -> "solution-architect";
                 case "planner" -> "implementation-planner";
                 case "general" -> "general-work";
+                case "workspace" -> "workspace-work";
                 case "stage-reviewer" -> "workflow-stage-reviewer";
                 case "coder" -> "coding-work-package-executor";
                 default -> null;
@@ -169,7 +170,8 @@ public class ManagedWorkerProvisioner {
             Files.deleteIfExists(slot.status);
             env.put("AIW_FACTORY_STATUS_FILE",slot.status.toString());env.put("AIW_WORKER_ID",slot.worker);env.put("AIW_PROCESS_ROLE",role);env.put("AIW_WORKER_MAX_CONCURRENCY","1");
             env.remove("AIW_WORKER_CAPABILITIES");
-            env.put("AIW_DYNAMIC_CONFIG",Boolean.toString(guarded));env.put("AIW_EXECUTION_GUARD",Boolean.toString(guarded));env.put("AIW_GUARD_COMMAND_ENABLED","false");
+            env.put("AIW_DYNAMIC_CONFIG",Boolean.toString(guarded&&!Set.of("general","workspace").contains(role)));
+            env.put("AIW_EXECUTION_GUARD",Boolean.toString(guarded));env.put("AIW_WORKER_LOOP_CONTROL",Boolean.toString(guarded));env.put("AIW_GUARD_COMMAND_ENABLED","false");
             if(!guarded){env.put("AIW_CODEX_SANDBOX","coder".equals(role)?"workspace-write":"read-only");env.put("AIW_AGENT_ALLOW_SHELL","false");}
             if(!config.executable().isEmpty())env.put("AIW_CODEX_PATH",config.executable());
             if(!config.guardHome().isEmpty())env.put("AIW_CODEX_GUARD_HOME",config.guardHome());

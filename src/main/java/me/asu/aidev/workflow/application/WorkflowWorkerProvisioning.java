@@ -63,6 +63,7 @@ public class WorkflowWorkerProvisioning {
                     case "solution-architect" -> "architect";
                     case "implementation-planner" -> "planner";
                     case "general-work" -> "general";
+                    case "workspace-work" -> "workspace";
                     case "coding-work-package-executor" -> "coder";
                     case "workflow-stage-reviewer" -> "stage-reviewer";
                     default -> null;
@@ -77,12 +78,15 @@ public class WorkflowWorkerProvisioning {
                                 && (stageReviewPolicy==null || stageReviewPolicy.canClaim(currentTask,w))
                                 && (nativeRuns==null || nativeRuns.canClaim(currentTask,w)));
                 if(!online) {
+                    if(required.contains("guarded-command-linux-v1")){
+                        pending.put(id,new Preparation(id,task.subjectId(),"BLOCKED","This task requires a connected Linux/WSL Worker with the configured command adapter; the local factory does not enable commands automatically."));continue;
+                    }
                     boolean frozen=required.stream().anyMatch(c->c.startsWith("native-config:"));
                     boolean incompatible=workers.online(Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW)).stream().anyMatch(w->w.runtimeType().startsWith(config.runtime()+":")&&w.capabilities().contains(roleCapability(role)));
                     if(frozen&&incompatible) {
                         pending.put(id,new Preparation(id,task.subjectId(),"BLOCKED","此后继任务固定到原生 Worker 配置和交接存储；当前在线配置不匹配。恢复相同 Worker 配置，或明确创建新计划；不会自动切换模型。"));continue;
                     }
-                    var result=provisioner.requestNative(task.repositoryRef(),config.runtime(),role);
+                    var result=provisioner.requestWorkflow(task.repositoryRef(),config.runtime(),role,task.requiredCapabilities().contains(me.asu.aidev.execution.guard.GuardContract.CAPABILITY));
                     pending.put(id,new Preparation(id,task.subjectId(),result.starting()?"STARTING":"BLOCKED",result.message()));
                 } else pending.remove(id);
             } catch(RuntimeException error) {
@@ -92,6 +96,6 @@ public class WorkflowWorkerProvisioning {
         }
     }
     private String roleCapability(String role) {
-        return switch(role) {case "general"->"general-work";case "requirements"->"requirement-analysis";case "architect"->"solution-architecture";case "planner"->"implementation-planning";case "coder"->"coding";default->"workflow-review";};
+        return switch(role) {case "general"->"general-work";case "workspace"->"workspace-work";case "requirements"->"requirement-analysis";case "architect"->"solution-architecture";case "planner"->"implementation-planning";case "coder"->"coding";default->"workflow-review";};
     }
 }

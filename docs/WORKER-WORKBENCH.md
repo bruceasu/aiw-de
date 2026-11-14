@@ -1,5 +1,11 @@
 # Worker 工作台与上下文能力
 
+普通任务和工作流 TASK 节点可明确勾选“在此工作目录处理文件”；未勾选仍只读。文件任务复用同一执行循环、过程记录、问答和停止协议。它不要求 Git，也不自动授权其他主机路径；实际命令能力仍取决于已有适配器和明确授权。
+
+“受控命令（高级）”填写已有 GuardContract.Command 格式的 JSON 数组；默认 `[]`。例如 `[{"id":"status","argv":["git","status"],"cwd":".","permissionProfile":"workspace","timeoutMs":10000,"outputBytes":65536,"memoryBytes":268435456,"processLimit":16}]`。这会要求已接入的 Linux／WSL 命令适配器，危险命令继续走原确认流程；不会开启 Windows 或本机工厂的命令能力。配置在保存、启动和节点调整时保持冻结，Worker 只能使用这些明确的命令 ID。
+
+Worker 的 `.ai/handoffs/.../manifest.json` 汇报实际 workingDirectory、报告摘要和 deliverables 元数据，不上传修改后的正文。连续节点通过真实上游任务引用读取这些交接；工作区任务的报告也显示实际工作目录。单文件删除保存在共享 Plan 目录的 `.ai/trash/<trashId>`，可用 restore 工具恢复到原相对路径，恢复不能覆盖现有文件。失败保留现场，临时目录沿用原明确清理流程。
+
 FD-044 沿现有 Worker、固定技能、角色编译和受控工具补充 Pi 调研中的九项机制。没有安装 Pi 或增加 Worker 类型，没有新增费用或执行预算门禁。
 
 ## 入口与执行阶段
