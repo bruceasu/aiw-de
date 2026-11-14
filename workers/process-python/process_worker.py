@@ -104,7 +104,7 @@ class WorkerConfig:
             raise ValueError("WORKSPACE_ROLE_REQUIRES_GUARDED_ADAPTER")
         capabilities = {part.strip() for part in os.getenv("AIW_WORKER_CAPABILITIES", "").split(",") if part.strip()}
         role_capabilities = {"general-work", "workspace-work", "goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
-        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "model-images-v1", "worker-loop-turn-v1", "questions-v2", "price-repair-v1", "workspace-files-v1"} or part.startswith(("repo:", "native-config:", "handoff-store:")) or part in role_capabilities for part in capabilities):
+        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "model-images-v1", "worker-loop-turn-v1", "questions-v2", "price-repair-v1", "workspace-files-v1"} or part.startswith(("repo:", "native-config:", "handoff-store:", "fixed-worker-profile:")) or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
         if process_role == "coder":

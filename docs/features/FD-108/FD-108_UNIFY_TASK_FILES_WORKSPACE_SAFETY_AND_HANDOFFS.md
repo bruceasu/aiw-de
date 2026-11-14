@@ -1,7 +1,7 @@
 # FD-108: Unify task files workspace safety and handoffs
 
 **Status:** In Progress
-**Revision:** 3
+**Revision:** 5
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -60,6 +60,10 @@ Dependencies: FD-107、FD-112（均已交付）。
 简单任务可交付实际文件；越界未授权被阻止；同一授权不重复询问；删除可恢复且留记录；临时目录保留至执行结束，失败保留现场。
 
 ## Verification
+
+- 第二轮聚焦修复：实际 Profile 文件使用既有 PROFILES／ROLE_FILES 的已加载对象定位，不根据业务 name 猜文件名；固定方法证明能力禁止通过普通 capability 环境配置伪造。handoff-store 在所有实际支持 Broker 位置型问答的 runtime 登记，资料能力仍仅 SDK 登记。第二次 Changes requested 历史保留，待最后一次聚焦复核；仍未编译或运行测试。
+
+- 独立聚焦复核 `4a4db9d`（来源 `FD-108-000004-implementation-ready`）：Changes requested，2 项 P1——新增 Profile 摘要按 name 猜文件路径导致既有 guarded 角色启动失败；guarded Codex 未登记位置型问答所需 handoff-store 能力。SDK 资料能力及位置检查点主链修复已静态核对，首轮历史保留；详见 [复核报告](reviews/review-recheck-20261114.md)。未运行测试、编译或脚本；最终编译仍待补齐，不能据此归档。
 
 - 第一轮审查三项修复：业务摘要继续冻结在 configurationDigest；新增 worker-profile 引用冻结实际 TOML 内容摘要（统一换行），领取核对 Worker 真实加载的方法文件与原 Skill 摘要。旧配置路径保留原 fixed-profile 校验。
 - guarded openai-agents 登记实际支持的 task-materials-v1 和共享 handoff-store；备用 runtime 不冒充资料能力。
