@@ -37,8 +37,8 @@
     </form>
     <p class="help" th:unless="${taskDetail.retry.allowed}" th:text="${taskDetail.retry.blockedReason}"></p>
     <p data-retry-status role="status"></p><p data-retry-error role="alert"></p>
-    <p class="help">To change the goal or selected steps, copy the plan into a new draft.</p>
-    <div class="form-actions"><a class="btn ghost" th:if="${canOperate}" th:href="@{/ui/plans/new(copy=${planId})}">Copy to change the plan</a><a class="btn ghost" href="/ui/workers">View Workers →</a></div>
+    <p class="help">Use the workflow editor for new work. Existing execution records stay here.</p>
+    <div class="form-actions"><a class="btn ghost" th:if="${canOperate}" href="/ui/workflows">Open workflows</a><a class="btn ghost" href="/ui/workers">View Workers →</a></div>
   </section>
   <section class="card section"><h2>Execution history</h2><p class="empty" th:if="${#lists.isEmpty(taskDetail.attempts)}">No Worker has claimed this task yet. Check Fleet matching and task prerequisites.</p>
     <article class="task-attempt" th:each="attempt : ${taskDetail.attempts}" data-attempt-duration

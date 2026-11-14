@@ -1366,6 +1366,15 @@ function invalidatePreview(route) {
   byId(question ? "question-projection" : "goal-projection").textContent = "内容已变化，请重新生成本地预览。";
 }
 function applyResult(route, result, version) {
+  if (route === "goal-submit" || route === "goal-receipt") {
+    const target = byId("goal-wish-link"); target.replaceChildren();
+    if (result.receipt?.goalId && snapshot.platformOrigin) {
+      const link = node("a", "text-button", "打开许愿池中的需求");
+      link.href = new URL("/ui/goals?goal=" + encodeURIComponent(result.receipt.goalId), snapshot.platformOrigin).href;
+      link.target = "_blank"; link.rel = "noopener noreferrer";
+      target.append(link);
+    }
+  }
   if (route === "questions") byId("questions").textContent = JSON.stringify(result, null, 2);
   if (route === "question-preview" || route === "goal-preview") {
     if (version !== previewVersions[route]) return false;
@@ -1686,7 +1695,7 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
     if (route === "work") message = "工作已保存，并已选入安排列表。";
     if (route === "settings") message = "设置已保存，可以直接聊天或安排工作。";
     if (route === "question-preview" || route === "goal-preview") message = current ? "本地预览已生成，请核对精确内容后确认提交。" : "内容已变化，请重新生成本地预览。";
-    if (route === "goal-submit" || route === "goal-receipt") message = "目标提案：" + (stateLabels[result.state]?.[0] || result.state || "待核对") + "。" + (result.note || "平台采纳前不会创建任务。");
+    if (route === "goal-submit" || route === "goal-receipt") message = "目标提案：" + (stateLabels[result.state]?.[0] || result.state || "待核对") + "。" + (result.note || "保存到许愿池，不会启动任务。");
     if (!refreshed) message += " 服务已返回结果，但状态读取失败。请先刷新状态、核对原回执，避免重复提交。";
     feedback(message, !refreshed || !current || route === "schedule" && result.state !== "SCHEDULED" ? "warn" : "ok", byId("personal-app").hidden);
   } catch (error) {

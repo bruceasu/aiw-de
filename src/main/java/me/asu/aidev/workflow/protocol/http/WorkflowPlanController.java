@@ -46,18 +46,6 @@ public class WorkflowPlanController {
     @GetMapping("/{id}")
     public Detail get(@PathVariable String id) { return new Detail(plans.get(id), plans.steps(id), plans.controlHistory(id)); }
 
-    @PostMapping
-    public WorkflowPlan draft(@RequestBody WorkflowPlanSpec spec, HttpSession session) {
-        security.requireOperator(session);
-        return plans.draft(spec, security.actor(session));
-    }
-
-    @PostMapping("/{id}/copy")
-    public WorkflowPlan copy(@PathVariable String id, HttpSession session) {
-        security.requireOperator(session);
-        return plans.copy(id, security.actor(session));
-    }
-
     @PostMapping("/{id}/confirm")
     public WorkflowPlan confirm(@PathVariable String id, @RequestBody Version request, HttpSession session) {
         security.requireOperator(session);

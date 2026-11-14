@@ -3141,6 +3141,18 @@
     '这条回复的处理过程': ['Processing details for this reply', 'この返信の処理過程'],
     '查看最近的全部运行': ['View all recent runs', '最近のすべての実行を見る']
   });
+  Object.assign(workspaceCatalog, {
+    '打开许愿池中的需求': ['Open the requirement in the wish pool', '願いの泉で要件を開く'],
+    '确认提交后保存到许愿池，不会启动工作。': ['Confirmed submissions are saved in the wish pool and do not start work.', '確認後は願いの泉に保存し、作業を開始しません。']
+  });
+  Object.assign(translations, {
+    'Send requirements to the wish pool': '将需求送入许愿池',
+    'Only your confirmed selection is sent. It becomes a wish draft; no plan starts.': '仅发送你确认选择的内容，保存为许愿草稿，不会启动计划。'
+  });
+  Object.assign(japaneseTranslations, {
+    'Send requirements to the wish pool': '要件を願いの泉に送る',
+    'Only your confirmed selection is sent. It becomes a wish draft; no plan starts.': '確認した選択内容のみを送信します。願いの下書きとなり、計画は開始しません。'
+  });
   const translateText = value => {
     if (consoleLookup.has(value)) return consoleLookup.get(value)[locale];
     if (value.endsWith(' · AIW:DE')) return translateText(value.slice(0, -9)) + ' · AIW:DE';

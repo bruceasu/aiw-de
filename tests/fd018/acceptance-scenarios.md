@@ -1,5 +1,7 @@
 # FD-018 独立验收场景（先于实现访问固定）
 
+FD-105 退役说明：推荐服务及其创建／应用入口已删除，对应 RecommendationAcceptanceTest 不再作为当前可运行夹具保留。下列场景和原日志仅为历史验收证据；保留的 RecommendationPolicyTest 用于历史任务的冻结模型策略。这里不表示已重新执行任何测试。
+
 会话 `/root/fd018_acceptance`，基线 `435bcbaeb2b67d1ccf66653d6708fd9c60aa75bb`，FD revision 3。此时只读取 FD/Issue、规则与目录状态，未读取生产实现或已有测试。预期从 FD Acceptance 和 Solution D1–D4 推导；不采用实现输出作为 oracle。
 
 | ID | 规则/边界 | 输入和前提 | 预期、关键断言与错误实现反例 |

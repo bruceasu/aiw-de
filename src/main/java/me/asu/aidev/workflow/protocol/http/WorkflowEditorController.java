@@ -10,7 +10,6 @@ import me.asu.aidev.workflow.application.WorkflowEditorService;
 import me.asu.aidev.workflow.application.WorkflowPlanService;
 import me.asu.aidev.workflow.application.WorkflowCancellationService;
 import me.asu.aidev.workflow.application.WorkflowPlanArchiveService;
-import me.asu.aidev.workflow.application.WorkflowRecommendationService;
 import me.asu.aidev.workflow.domain.WorkflowPlan;
 import me.asu.aidev.workflow.domain.WorkflowPlanSpec;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,7 +37,6 @@ public class WorkflowEditorController {
     private final WorkflowPlanService plans;
     private final WorkflowCancellationService cancellation;
     private final WorkflowPlanArchiveService archives;
-    private final WorkflowRecommendationService recommendations;
     private final FleetDashboardService fleet;
     private final WebConsoleSecurityService security;
     private final ManagedWorkspaceService workspaces;
@@ -55,14 +53,13 @@ public class WorkflowEditorController {
     public WorkflowEditorController(WorkflowEditorService editor, WorkflowPlanService plans,
                                     WorkflowCancellationService cancellation,
                                     WorkflowPlanArchiveService archives,
-                                    WorkflowRecommendationService recommendations, FleetDashboardService fleet,
+                                    FleetDashboardService fleet,
                                     WebConsoleSecurityService security, ManagedWorkspaceService workspaces,
                                     me.asu.aidev.workflow.application.WorkflowRepairAuthorizationService repairs) {
         this.editor = editor;
         this.plans = plans;
         this.cancellation = cancellation;
         this.archives = archives;
-        this.recommendations = recommendations;
         this.fleet = fleet;
         this.security = security;
         this.workspaces = workspaces;
@@ -101,9 +98,7 @@ public class WorkflowEditorController {
     @GetMapping("/ui/plans/new")
     public String newPage(HttpSession session, Model model) {
         security.requireOperator(session);
-        model.addAttribute("page", "plans");
-        model.addAttribute("workspaceTargets", java.util.List.of());
-        return "ui/plan-editor";
+        return "redirect:/ui/workflows";
     }
 
     @GetMapping("/ui/plans/{id}")
@@ -172,9 +167,7 @@ public class WorkflowEditorController {
     @ResponseBody
     public Catalog catalog() {
         requireEnabled();
-        var availability = recommendations.availability();
-        return new Catalog(editor.roles(), editor.templates(), availability.available(),
-                fleet.dashboard(100).workers().workers(), availability);
+        return new Catalog(editor.roles(), editor.templates(), fleet.dashboard(100).workers().workers());
     }
 
     @GetMapping("/api/r1/plan-editor/plans/{id}")
@@ -233,13 +226,6 @@ public class WorkflowEditorController {
         requireWrite(session);
         return plans.retryFailedTask(id, taskId, request.planVersion(), request.taskVersion(),
                 security.actor(session), request.reason(), request.warningConfirmed());
-    }
-
-    @PostMapping("/api/r1/plan-editor/drafts")
-    @ResponseBody
-    public WorkflowPlan draft(@RequestBody WorkflowPlanSpec spec, HttpSession session) {
-        requireWrite(session);
-        return editor.draft(spec, security.actor(session));
     }
 
     @PostMapping("/api/r1/plan-editor/plans/{id}/confirm")
@@ -323,64 +309,6 @@ public class WorkflowEditorController {
         return plans.clearStaleControl(id, request.version(), security.actor(session));
     }
 
-    @PostMapping("/api/r1/plan-editor/recommendations")
-    @ResponseBody
-    public WorkflowRecommendationService.Result recommend(@RequestBody WorkflowRecommendationService.Request request,
-                                                          HttpSession session) {
-        requireWrite(session);
-        return recommendations.request(request, security.actor(session));
-    }
-
-    @GetMapping("/api/r1/plan-editor/recommendation-contexts")
-    @ResponseBody
-    public List<me.asu.aidev.workflow.jdbc.JdbcRecommendationRepository.Context> recommendationContexts(HttpSession session) {
-        requireWrite(session);
-        return recommendations.contexts(security.actor(session));
-    }
-    @GetMapping("/api/r1/plan-editor/plans/{id}/recommendation-context")
-    @ResponseBody
-    public java.util.Map<String, String> recommendationContextForPlan(@PathVariable String id, HttpSession session) {
-        requireWrite(session);
-        String contextId = recommendations.contextForPlan(id, security.actor(session));
-        return contextId == null ? java.util.Map.of() : java.util.Map.of("id", contextId);
-    }
-
-    @PostMapping("/api/r1/plan-editor/recommendation-contexts")
-    @ResponseBody
-    public me.asu.aidev.workflow.jdbc.JdbcRecommendationRepository.Context newRecommendationContext(HttpSession session) {
-        requireWrite(session);
-        return recommendations.createContext(security.actor(session));
-    }
-
-    @GetMapping("/api/r1/plan-editor/recommendation-contexts/{id}")
-    @ResponseBody
-    public WorkflowRecommendationService.Recovery recoverRecommendation(@PathVariable String id, HttpSession session) {
-        requireWrite(session);
-        return recommendations.recover(id, security.actor(session));
-    }
-
-    public record ContextDraft(long revision, WorkflowPlanSpec plan) {}
-    @PostMapping("/api/r1/plan-editor/recommendation-contexts/{id}/draft")
-    @ResponseBody
-    public WorkflowPlan saveContextDraft(@PathVariable String id, @RequestBody ContextDraft request, HttpSession session) {
-        requireWrite(session);
-        return recommendations.saveDraft(id, request.revision(), request.plan(), security.actor(session));
-    }
-
-    @GetMapping("/api/r1/plan-editor/recommendations/{id}")
-    @ResponseBody
-    public WorkflowRecommendationService.Result recommendation(@PathVariable String id, HttpSession session) {
-        requireWrite(session);
-        return recommendations.get(id, security.actor(session));
-    }
-
-    @PostMapping("/api/r1/plan-editor/recommendations/{id}/withdraw")
-    @ResponseBody
-    public WorkflowRecommendationService.Result withdrawRecommendation(@PathVariable String id, HttpSession session) {
-        requireWrite(session);
-        return recommendations.cancelQueued(id, security.actor(session));
-    }
-
     private void requireEnabled() {
         // Plans are the only supported execution flow.
     }
@@ -415,6 +343,5 @@ public class WorkflowEditorController {
     }
 
     public record Catalog(List<WorkflowEditorService.Role> roles, List<WorkflowEditorService.Template> templates,
-                          boolean recommendationAvailable, List<me.asu.aidev.fleet.domain.FleetDashboard.WorkerSummary> workers,
-                          WorkflowRecommendationService.Availability recommendationStatus) {}
+                          List<me.asu.aidev.fleet.domain.FleetDashboard.WorkerSummary> workers) {}
 }

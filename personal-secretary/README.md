@@ -363,6 +363,12 @@ Qt 托盘的“退出秘书并停止本地服务”在监听端口关闭后退�
 
 ## Formal work questions (FD-028)
 
+### Send selected requirements to the wish pool (FD-105)
+
+After the local preview and explicit confirmation, the existing goal-proposals endpoint saves the selected requirement as an ordinary wish draft for the authenticated Owner's console account. It does not create or run a software plan. The receipt includes the wish ID and a link to the wish pool. Repeated submission returns the original receipt; older receipts without a wish ID stay unchanged. A receipt lookup never recreates or resubmits work. Continue clarification and workflow preparation from the wish pool.
+
+The duplicate recommendation service and software-plan adoption endpoints have been removed. Historical task reports and the read-only software delivery report remain available; their records are not deleted.
+
 ### Conversation shortcuts and history (FD-119)
 
 The conversation log searches local conversation titles and saved summaries. Earlier messages remain available through the existing paged history. Switching conversations keeps unsent text in this page; a page reload does not preserve these drafts. Shortcuts only fill the composer and never submit a request automatically.
