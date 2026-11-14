@@ -5,7 +5,8 @@ import tempfile
 import threading
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+import json
 
 from execution_guard import GuardBroker
 
@@ -22,6 +23,35 @@ class WorkspaceFilesTest(unittest.TestCase):
         self.broker.attempt=SimpleNamespace(resource_uncertain=False,evidence=Mock())
         self.broker.begin=Mock(return_value="operation");self.broker.finish=Mock()
         self.broker._request_approval=Mock(return_value={"waiting":True})
+
+    def test_plain_directory_question_retains_tree_and_rejects_changed_resume(self):
+        from formal_questions import ask, verify_checkpoints
+        from plan_workspace import PlanWorkspace, input_manifests
+        broker=self.broker
+        broker.task={"taskId":"task-1","attemptId":"attempt-1","planId":"plan-1","location":str(self.root)}
+        broker.lease={"workerId":"worker-1","attemptId":"attempt-1","leaseToken":"token"}
+        broker.base="/tasks/task-1";broker.pending_question=None;broker.repository="workspace"
+        broker.context={"configurationDigest":"a"*64,"snapshot":{"task":{"baseRevision":None}}}
+        broker.attempt.check=Mock()
+        broker.workspace=PlanWorkspace(self.root,self.root,broker.attempt,Mock(),Mock())
+        broker.checkpoint=lambda: broker.workspace.finalize(broker.task)
+        receipt={"question":{"questionId":"Q-1"},"yield":{}}
+        broker.client=Mock();broker.client._post.side_effect=[{}, {"kind":"LEGACY_PLAN_TASK"}, receipt]
+        (self.root/"report.txt").write_text("Existing result",encoding="utf-8")
+        ask(broker,{"question":"Which format?","context":"","options":[],"answerRequirements":""})
+        payload=broker.client._post.call_args_list[-1].args[1]
+        checkpoint=payload["checkpoint"]
+        self.assertNotIn("resultRevision",checkpoint)
+        raw=json.dumps(checkpoint,separators=(",",":"))
+        ref={"kind":"checkpoint","id":"task-1","revision":checkpoint["handoff"]["sha256"],"sha256":hashlib.sha256(raw.encode()).hexdigest()}
+        resumed=SimpleNamespace(task={},context={"snapshot":{"references":[ref]}},lease={},base="/tasks/next",client=Mock())
+        resumed.client._post.return_value=[{"reference":ref,"checkpoint":checkpoint,"checkpointJson":raw,"attemptId":"attempt-1"}]
+        verify_checkpoints(resumed)
+        with patch("worker_runtime.current_attempt",return_value=broker.attempt):
+            self.assertEqual(str(self.root),input_manifests(resumed.task)[0]["workingDirectory"])
+            (self.root/"report.txt").write_text("Changed",encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError,"HANDOFF_CHECKPOINT_TREE_CHANGED"):
+                input_manifests(resumed.task)
 
     def test_plain_directory_can_write_delete_and_restore_without_git(self):
         self.broker._invoke("write",{"path":"report.txt","content":"Report","expectedDigest":"ABSENT"})

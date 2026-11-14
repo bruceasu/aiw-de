@@ -21,7 +21,7 @@ public class GuardClaimPolicy implements WorkerTaskClaimPolicy {
         if(guard.required(task))
             return task.type()==me.asu.aidev.work.domain.TaskType.EXTERNAL_WORK && guard.managed(task.id().value()) && worker.capabilities().contains(GuardContract.CAPABILITY)
                     && (worker.runtimeType().startsWith("openai-agents:") || worker.runtimeType().startsWith("codex-app-server:"))
-                    && worker.capabilities().contains("fixed-profile:"+guard.context(task.id().value()).configurationDigest())
+                    && matchesProfile(task,worker)
                     && (guard.context(task.id().value()).originalPolicy().rules().stream().noneMatch(rule->rule.tool()==GuardContract.Tool.QUESTION)
                         || worker.capabilities().contains(me.asu.aidev.questions.QuestionContract.CAPABILITY))
                     && guard.context(task.id().value()).snapshot().references().stream().filter(ref->ref.kind().equals("skill")).allMatch(ref->
@@ -30,5 +30,13 @@ public class GuardClaimPolicy implements WorkerTaskClaimPolicy {
                     && (guard.context(task.id().value()).originalPolicy().commands().isEmpty() || worker.capabilities().contains("guarded-command-linux-v1"))
                     && guard.canClaim(task.id().value());
         return true;
+    }
+    private boolean matchesProfile(WorkTask task,Worker worker) {
+        var context=guard.context(task.id().value());
+        var profiles=context.snapshot().references().stream().filter(ref->ref.kind().equals("worker-profile")).toList();
+        if(profiles.isEmpty())return worker.capabilities().contains("fixed-profile:"+context.configurationDigest());
+        if(profiles.size()!=1)return false;
+        var profile=profiles.getFirst();
+        return profile.id().equals(task.skillRef())&&worker.capabilities().contains("fixed-worker-profile:"+profile.id()+":"+profile.sha256());
     }
 }

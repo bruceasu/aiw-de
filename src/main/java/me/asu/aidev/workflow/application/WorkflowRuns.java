@@ -122,6 +122,7 @@ public class WorkflowRuns {
     @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<ExecutionRuns> executionRuns;
     @org.springframework.beans.factory.annotation.Autowired private ExecutionGuard guard;
     @org.springframework.beans.factory.annotation.Autowired private SkillFiles skillFiles;
+    @org.springframework.beans.factory.annotation.Value("${aidev.agent-factory.worker-root:workers/process-python}") private String workerRoot="workers/process-python";
     private final AuthorityRepository db;
     private final AuthorityBoundary boundary;
     private final WorkflowPlanRepository planStore;
@@ -419,6 +420,11 @@ public class WorkflowRuns {
             var packages=skillFiles.payload(taskId.value(),"pre-dispatch");
             var frozen=new ArrayList<>(packages.packages().stream().map(p->new GuardContract.FrozenRef("skill",p.ref(),p.version(),p.assetDigest())).toList());
             for(int source=0;source<references.size();source++){var ref=references.get(source);frozen.add(new GuardContract.FrozenRef(ref.kind(),"task-source-"+source,"1",ref.digest()));}
+            String profile=node.workspaceTools()?"workspace-work":"general-work";
+            try {
+                String content=java.nio.file.Files.readString(java.nio.file.Path.of(workerRoot,"profiles",profile+".toml"));
+                frozen.add(new GuardContract.FrozenRef("worker-profile",profile,"1",AuthorityRepository.hash(content.replace("\r\n","\n"))));
+            } catch(java.io.IOException error){throw new IllegalStateException("Cannot read the selected Worker profile",error);}
             var policy=guard.policyRow(run.id);
             guard.bindPrepared(taskId.value(),new GuardContract.Bind(run.id,((Number)policy.get("revision")).longValue(),"WORKFLOW-"+taskId.value(),AuthorityRepository.hash(db.encode(Arrays.asList(run.spec,node.key(),round,member,references))),frozen),String.valueOf(policy.get("owner_id")));
         }

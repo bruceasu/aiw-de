@@ -81,12 +81,18 @@ def capabilities(runtime, profile, skills_root):
     from execution_guard import digest
     from worker_runtime import skill_package
     result.add("fixed-profile:" + digest(asdict(profile)))
+    from process_profiles import PROFILE_DIR
+    source = (PROFILE_DIR / (profile.name + ".toml")).read_text(encoding="utf-8")
+    result.add("fixed-worker-profile:" + profile.name + ":" + hashlib.sha256(source.encode("utf-8")).hexdigest())
     if os.environ.get("AIW_DYNAMIC_CONFIG", "").lower() != "true":
         for name in set((*profile.protocol_skills, profile.primary_skill)):
             result.add("fixed-skill:" + name + ":" + hashlib.sha256(skill_package(skills_root, name).encode()).hexdigest())
     if runtime == "openai-agents":
         from agents import FunctionTool, Runner
         if not callable(getattr(Runner, "run_streamed", None)) or not callable(FunctionTool): raise RuntimeError("OPENAI_AGENTS_REQUIRED_APIS_UNAVAILABLE")
+        result.add("task-materials-v1")
+        from native_run import storage_capability
+        result.add(storage_capability())
     else:
         from app_server_runtime import StdioSession, preflight
         from guarded_app_server import verify_config

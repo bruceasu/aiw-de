@@ -21,6 +21,8 @@ public class FormalQuestions {
     @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<NativeQuestions> nativeQuestions;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.run.NativePlanOwners nativeOwners;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.port.WorkerRepository workers;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.application.TaskHandoffs handoffs;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.workflow.application.PlanLocations locations;
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final ExecutionGuard guard;
     private final ExecutionYieldService yields;private final ExecutionLedger ledger;private final WorkTaskRepository tasks;
     private final WorkflowPlanService plans;private final WebConsoleSecurityService security;
@@ -107,18 +109,26 @@ public class FormalQuestions {
         return insert(new Question(QuestionContract.PROTOCOL,"Q-"+UUID.randomUUID(),expectedOwner,source,null,sourceKey,Kind.PROFESSIONAL,question,context,options,requirements,1,State.OPEN,0,null,null,null,null,null),sourceDigest,digest);
     }
     @Transactional public Object open(String taskId,Open input) {
-        if(QuestionContract.LOCATION_PROTOCOL.equals(input.protocol()))return nativeQuestions.getObject().open(taskId,input);
+        if(input.source().kind()==SourceKind.NATIVE_PLAN_TASK)return nativeQuestions.getObject().open(taskId,input);
         boundary.lock();if(!taskId.equals(input.source().taskId())) throw new IllegalArgumentException("Exact task source required");
         guard.verifyLease(taskId,input.lease(),true,true);var c=guard.context(taskId);String digest=AuthorityRepository.hash(repo.encode(input));
         var previous=repo.jdbc().queryForList("SELECT id,request_digest FROM formal_question WHERE owner_id=? AND plan_id=? AND source_key=?",c.ownerId(),c.planId(),input.sourceQuestionKey());
         if(!previous.isEmpty()) {if(!digest.equals(previous.getFirst().get("request_digest"))) throw new IllegalStateException("QUESTION_SOURCE_CONFLICT");return opened(get(String.valueOf(previous.getFirst().get("id"))),input.lease());}
         String sourceDigest=validate(input.source(),c.ownerId(),true);
         var checkpoint=input.checkpoint();var original=tasks.find(new TaskId(taskId)).orElseThrow();
-        if(checkpoint==null||!Objects.equals(checkpoint.repositoryRef(),original.repositoryRef())||!Objects.equals(checkpoint.baseRevision(),original.baseRevision())||!checkpoint.configurationDigest().equals(c.configurationDigest()))
+        if(checkpoint==null||!checkpoint.configurationDigest().equals(c.configurationDigest()))
             throw new IllegalArgumentException("Fixed task checkpoint required");
+        if(checkpoint.locationBased()) {
+            var retained=handoffs.input(input.lease().attemptId());
+            if(original.baseRevision()!=null||checkpoint.repositoryRef()!=null||checkpoint.baseRevision()!=null||checkpoint.resultRevision()!=null
+                    ||!locations.forTask(original).equals(checkpoint.location())||retained==null
+                    ||!retained.location().equals(checkpoint.location())||!retained.manifest().equals(checkpoint.handoff().manifest())||!retained.sha256().equals(checkpoint.handoff().sha256()))
+                throw new IllegalArgumentException("Exact retained location checkpoint required");
+        } else if(!Objects.equals(checkpoint.repositoryRef(),original.repositoryRef())||!Objects.equals(checkpoint.baseRevision(),original.baseRevision()))
+            throw new IllegalArgumentException("Fixed Git checkpoint required");
         if(!workers.find(new me.asu.aidev.worker.domain.WorkerId(input.lease().workerId())).orElseThrow().capabilities().contains(checkpoint.storageCapability())) throw new SecurityException("Checkpoint store is not registered by this Worker");
         String operation="Q-"+AuthorityRepository.hash(taskId+":"+input.sourceQuestionKey());
-        var permit=guard.begin(taskId,new Begin(GuardContract.PROTOCOL,c.instanceId(),input.lease(),operation,Tool.QUESTION,checkpoint.repositoryRef(),".",digest,c.grantRevision()));
+        var permit=guard.begin(taskId,new Begin(GuardContract.PROTOCOL,c.instanceId(),input.lease(),operation,Tool.QUESTION,original.repositoryRef(),".",digest,c.grantRevision()));
         if(!permit.execute()) throw new SecurityException("Question permission required");
         String id="Q-"+UUID.randomUUID();
         var q=new Question(QuestionContract.PROTOCOL,id,c.ownerId(),input.source(),input.lease().attemptId(),input.sourceQuestionKey(),Kind.PROFESSIONAL,input.question(),input.context(),input.options(),input.answerRequirements(),1,State.OPEN,0,null,checkpoint,null,null,null);
@@ -128,7 +138,7 @@ public class FormalQuestions {
         var inputYield=yieldInput(q,input.lease());yields.prepare(taskId,inputYield);return opened(q,input.lease());
     }
     private GuardContract.Yield yieldInput(Question q,Lease lease) { return new GuardContract.Yield(lease,q.questionId(),checkpointRef(q)); }
-    private FrozenRef checkpointRef(Question q) { return new FrozenRef("checkpoint",q.source().taskId(),q.checkpoint().resultRevision(),AuthorityRepository.hash(repo.encode(q.checkpoint()))); }
+    private FrozenRef checkpointRef(Question q) { return new FrozenRef("checkpoint",q.source().taskId(),q.checkpoint().revision(),AuthorityRepository.hash(repo.encode(q.checkpoint()))); }
     private Object opened(Question q,Lease lease) { return Map.of("question",q,"yield",yieldInput(q,lease),"releaseResources",false); }
     @Transactional public Object receipt(String task,QuestionReceipt input) {
         boundary.lock();var lease=input.lease();
@@ -227,10 +237,10 @@ public class FormalQuestions {
         if(!guard.managed(task))return nativeQuestions.getObject().checkpoints(task,lease);
         boundary.lock();guard.verifyLease(task,lease,false,true);var refs=guard.context(task).snapshot().references();var result=new ArrayList<Map<String,Object>>();
         for(var ref:refs) if(ref.kind().equals("checkpoint")) {
-            var row=repo.jdbc().queryForMap("SELECT s.checkpoint_json,y.state FROM formal_question_slot s JOIN execution_yield y ON y.task_id=s.source_task_id WHERE s.source_task_id=?",ref.id());
+            var row=repo.jdbc().queryForMap("SELECT s.checkpoint_json,s.question_id,y.state FROM formal_question_slot s JOIN execution_yield y ON y.task_id=s.source_task_id WHERE s.source_task_id=?",ref.id());
             var checkpoint=repo.decode(String.valueOf(row.get("checkpoint_json")),Checkpoint.class);
-            if(!"ACKNOWLEDGED".equals(row.get("state"))||!ref.sha256().equals(AuthorityRepository.hash(repo.encode(checkpoint)))||!ref.revision().equals(checkpoint.resultRevision())) throw new IllegalStateException("Registered checkpoint changed");
-            result.add(Map.of("reference",ref,"checkpoint",checkpoint,"checkpointJson",String.valueOf(row.get("checkpoint_json"))));
+            if(!"ACKNOWLEDGED".equals(row.get("state"))||!ref.sha256().equals(AuthorityRepository.hash(repo.encode(checkpoint)))||!ref.revision().equals(checkpoint.revision())) throw new IllegalStateException("Registered checkpoint changed");
+            result.add(Map.of("reference",ref,"checkpoint",checkpoint,"checkpointJson",String.valueOf(row.get("checkpoint_json")),"attemptId",get(String.valueOf(row.get("question_id"))).sourceAttemptId()));
         }return List.copyOf(result);
     }
     @Transactional public Object control(String plan,long revision,String action) {

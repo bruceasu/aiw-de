@@ -117,6 +117,10 @@ class PlanWorkspace:
         root = root.resolve(strict=True)
         gate = DirectoryLock(root, attempt)
         try:
+            if broker:
+                broker.source_root = root
+                from formal_questions import verify_checkpoints
+                verify_checkpoints(broker)
             manifests = input_manifests(task)
             task["handoffInputs"] = manifests
             source = root

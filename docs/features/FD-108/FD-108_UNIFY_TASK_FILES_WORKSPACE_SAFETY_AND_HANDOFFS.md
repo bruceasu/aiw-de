@@ -1,7 +1,7 @@
 # FD-108: Unify task files workspace safety and handoffs
 
 **Status:** In Progress
-**Revision:** 1
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -60,6 +60,13 @@ Dependencies: FD-107、FD-112（均已交付）。
 简单任务可交付实际文件；越界未授权被阻止；同一授权不重复询问；删除可恢复且留记录；临时目录保留至执行结束，失败保留现场。
 
 ## Verification
+
+- 第一轮审查三项修复：业务摘要继续冻结在 configurationDigest；新增 worker-profile 引用冻结实际 TOML 内容摘要（统一换行），领取核对 Worker 真实加载的方法文件与原 Skill 摘要。旧配置路径保留原 fixed-profile 校验。
+- guarded openai-agents 登记实际支持的 task-materials-v1 和共享 handoff-store；备用 runtime 不冒充资料能力。
+- 正式问题的无 Git 检查点复用位置／不可变 handoff／树摘要。服务端核对当前 Attempt 已登记的 handoff，续接保留原授权；Worker 在目录锁内验证 manifest 和最新检查点树。旧 Git 检查点仍验证原提交。新增普通目录问答及现场被修改的回归用例源码，未执行。
+- 用户延期编译仍有效。本次只做源码修正和静态检查，未运行编译、测试、模型、网络或服务。
+
+- 独立静态审查（`48e16be → 01ca86c`，来源 `FD-108-000002-review-requested`）：Changes requested，3 项 P1——固定 profile 与业务摘要不匹配阻止领取、guarded SDK 未登记资料能力、无 Git 正式提问/续接仍依赖提交检查点。详见 [审查报告](reviews/review-20261114.md)。未运行测试、编译或运行时验证；最终编译仍待补齐，不能据此归档。
 
 文件部分已修改，未编译、未运行。新增离线文件工具测试源码，覆盖无 Git 写入／回收／恢复、真实 SDK 参数结构触发大范围覆盖确认、精确旧摘要；新增管理员自动绑定用例源码，调整工厂调度夹具。尚未执行。
 

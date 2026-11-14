@@ -45,7 +45,7 @@ public final class QuestionContract {
     public record Open(String protocol,String sourceQuestionKey,Source source,Lease lease,String question,String context,
                        List<String> options,String answerRequirements,Checkpoint checkpoint) {
         public Open { QuestionContract.protocol(protocol);text(sourceQuestionKey,128);Objects.requireNonNull(source);Objects.requireNonNull(lease);
-            if(LOCATION_PROTOCOL.equals(protocol)!=(source.kind()==SourceKind.NATIVE_PLAN_TASK)||checkpoint!=null&&LOCATION_PROTOCOL.equals(protocol)!=checkpoint.locationBased())throw new IllegalArgumentException("Question/checkpoint protocol mismatch");
+            if(LOCATION_PROTOCOL.equals(protocol)!=(source.kind()==SourceKind.NATIVE_PLAN_TASK)||LOCATION_PROTOCOL.equals(protocol)&&checkpoint!=null&&!checkpoint.locationBased())throw new IllegalArgumentException("Question/checkpoint protocol mismatch");
             text(question,8000);context=context==null?"":context;answerRequirements=answerRequirements==null?"":answerRequirements;
             if(context.length()>8000||answerRequirements.length()>2000) throw new IllegalArgumentException("Question projection limit");
             options=options==null?List.of():List.copyOf(options);if(options.size()>12) throw new IllegalArgumentException("Option limit");options.forEach(s->text(s,1000)); }
