@@ -27,6 +27,8 @@ class Store(Protocol):
     def list(self, kind: str) -> list: ...
     def put(self, kind: str, identity: str, value: dict, revision: int | None = None): ...
     def delete_draft(self, identity: str, revision: int): ...
+    def deleted_drafts(self) -> list: ...
+    def change_deleted_draft(self, identity, revision, action, confirmed=False): ...
     def queue(self, request: str, path: str, body: dict, decision: dict | None = None): ...
     def bind_platform(self, instance: str): ...
     def pending(self) -> list: ...
@@ -36,6 +38,7 @@ class Store(Protocol):
     def sending(self, request: str): ...
     def pause_request(self, request: str): ...
     def backup(self) -> dict: ...
+    def restore_backup(self, package: dict) -> dict: ...
     def close(self): ...
     def history(self, kind: str, identity: str) -> list: ...
     def chat_messages(self, work_id=None, limit=20, before=None) -> list: ...
@@ -173,9 +176,9 @@ class SQLiteStore:
             current = 0 if old is None else old[0]
             if revision is not None and revision != current:
                 raise ValueError("Private record changed; reload before saving")
-            # Reusing a deleted draft ID must not reuse an earlier revision.
+            # Reusing an erased ID must not let a stale window edit the new record.
             next_revision = current + 1
-            if old is None and kind == "draft":
+            if old is None and kind in {"draft", "memory"}:
                 next_revision = db.execute("SELECT COALESCE(MAX(revision),0)+1 FROM personal_history WHERE kind=? AND id=?", (kind, identity)).fetchone()[0]
             db.execute("INSERT INTO personal_record VALUES(?,?,?,?) ON CONFLICT(kind,id) DO UPDATE SET revision=excluded.revision,data=excluded.data", (kind, identity, next_revision, encode(value)))
             # Run checkpoints have their own immutable events, sources and tool
@@ -283,6 +286,7 @@ class SQLiteStore:
             if db.execute("DELETE FROM personal_record WHERE kind='memory' AND id=? AND revision=?", (identity, revision)).rowcount != 1:
                 raise ValueError("记忆已变化，请刷新后再删除。")
             db.execute("DELETE FROM personal_history WHERE kind='memory' AND id=?", (identity,))
+            db.execute("INSERT INTO personal_history VALUES('memory',?,?,?,?)", (identity, revision + 1, encode({"purged": True}), int(time.time() * 1000)))
         return {"deleted": True}
 
     def delete_draft(self, identity, revision):
@@ -293,6 +297,31 @@ class SQLiteStore:
                 raise ValueError("Draft changed or was deleted; reload before deleting")
             db.execute("INSERT INTO personal_history VALUES('draft',?,?,?,?)", (identity, revision + 1, encode({"deleted": True}), int(time.time() * 1000)))
         return {"id": identity, "deleted": True}
+
+    def deleted_drafts(self):
+        with self.lock:
+            return [{"id": row[0], "revision": row[1], "title": row[2] or row[0]} for row in self.db.execute("""
+                SELECT h.id,h.revision,(SELECT json_extract(p.data,'$.title') FROM personal_history p
+                    WHERE p.kind='draft' AND p.id=h.id AND p.revision<h.revision ORDER BY p.revision DESC LIMIT 1)
+                FROM personal_history h WHERE h.kind='draft'
+                AND h.data=? AND NOT EXISTS(SELECT 1 FROM personal_record r WHERE r.kind='draft' AND r.id=h.id)
+                AND h.revision=(SELECT MAX(x.revision) FROM personal_history x WHERE x.kind='draft' AND x.id=h.id)
+                ORDER BY h.id""", (encode({"deleted": True}),))]
+
+    def change_deleted_draft(self, identity, revision, action, confirmed=False):
+        with self.transaction() as db:
+            if type(revision) is not int or not any(row["id"] == identity and row["revision"] == revision for row in self.deleted_drafts()):
+                raise ValueError("草稿已恢复或发生变化，请刷新后再操作。")
+            if action == "purge" and confirmed is True:
+                db.execute("DELETE FROM personal_history WHERE kind='draft' AND id=? AND revision<>?", (identity, revision))
+                db.execute("UPDATE personal_history SET data=? WHERE kind='draft' AND id=? AND revision=?", (encode({"purged": True}), identity, revision))
+                return {"deleted": True}
+            prior = db.execute("SELECT data FROM personal_history WHERE kind='draft' AND id=? AND revision<? ORDER BY revision DESC LIMIT 1", (identity, revision)).fetchone()
+            if action != "restore" or not prior:
+                raise ValueError("请选择恢复草稿，或明确确认永久删除其历史。")
+            db.execute("INSERT INTO personal_record VALUES('draft',?,?,?)", (identity, revision + 1, prior[0]))
+            db.execute("INSERT INTO personal_history VALUES('draft',?,?,?,?)", (identity, revision + 1, prior[0], int(time.time() * 1000)))
+        return self.get("draft", identity)
 
     def queue(self, request, path, body, decision=None):
         if path not in {"/actions", "/coordination", "/question-replies"} or (body.get("envelope", {}) if path == "/question-replies" else body).get("requestId") != request:
@@ -376,7 +405,83 @@ class SQLiteStore:
                     "records": {kind: self.list(kind) for kind in sorted(self.KINDS)},
                     "outbox": [dict(row) for row in self.db.execute("SELECT * FROM personal_outbox ORDER BY request_id")],
                     "history": [dict(row) for row in self.db.execute("SELECT * FROM personal_history ORDER BY kind,id,revision")],
-                    "receiptHistory": [dict(row) for row in self.db.execute("SELECT * FROM personal_receipt_history ORDER BY request_id,sequence")]}
+                    "receiptHistory": [dict(row) for row in self.db.execute("SELECT * FROM personal_receipt_history ORDER BY request_id,sequence")],
+                    "archivedBackups": [json.loads(row[0]) for row in self.db.execute("SELECT data FROM personal_legacy_record WHERE source_key='backup' ORDER BY batch_id")]}
+
+    def restore_backup(self, package):
+        """Copy private text into new IDs; never activate imported actions or credentials."""
+        if not isinstance(package, dict) or package.get("schema") != "aiw.personal.backup.v1":
+            raise ValueError("请选择秘书导出的私人备份 JSON 文件。")
+        records = package.get("records")
+        if not isinstance(records, dict) or any(kind not in self.KINDS or not isinstance(rows, list) for kind, rows in records.items()):
+            raise ValueError("备份的私人记录格式无效。")
+        indexed = {}
+        for kind, rows in records.items():
+            indexed[kind] = {}
+            for row in rows:
+                if (not isinstance(row, dict) or not isinstance(row.get("id"), str) or not row["id"]
+                        or len(row["id"]) > 512 or row["id"] in indexed[kind]):
+                    raise ValueError("备份包含无效或重复的记录标识。")
+                indexed[kind][row["id"]] = row
+        # Archived packages stay flat and inert, including old outbox and run receipts.
+        archives = package.get("archivedBackups", [])
+        if not isinstance(archives, list) or any(not isinstance(item, dict)
+                or item.get("schema") != "aiw.personal.backup.v1" or "archivedBackups" in item for item in archives):
+            raise ValueError("备份的历史副本格式无效。")
+        original = {key: item for key, item in package.items() if key != "archivedBackups"}
+        payload = encode(original)
+        digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        def identity(kind, old):
+            return hashlib.sha256((digest + "\n" + kind + "\n" + old).encode("utf-8")).hexdigest()
+        restored, now = [], int(time.time() * 1000)
+        for old, row in indexed.get("work", {}).items():
+            if not isinstance(row.get("title"), str) or not isinstance(row.get("body", ""), str):
+                raise ValueError("备份中的工作标题或说明无效。")
+            restored.append(("work", identity("work", old), {
+                "title": row["title"], "body": row.get("body", ""), "state": "TRASHED",
+                "conversationOnly": bool(row.get("conversationOnly")), "backupSource": digest,
+                "originalId": old, "createdAt": now}))
+        for old, row in indexed.get("message", {}).items():
+            if not all(isinstance(row.get(key, ""), str) for key in ("text", "reply")):
+                raise ValueError("备份中的对话文本无效。")
+            if not isinstance(row.get("workId"), str) or row["workId"] not in indexed.get("work", {}):
+                continue  # Orphaned records remain available in the archived original.
+            restored.append(("message", identity("message", old), {
+                "workId": identity("work", row["workId"]), "text": row.get("text", ""),
+                "reply": row.get("reply", ""), "state": "RESTORED",
+                "createdAt": row.get("createdAt") if type(row.get("createdAt")) is int else now}))
+        for old, row in indexed.get("memory", {}).items():
+            if not isinstance(row.get("text"), str) or not 0 < len(row["text"].strip()) <= 2000:
+                raise ValueError("备份中的记忆文本无效或超过 2000 字。")
+            memory = {"text": row["text"], "trashed": bool(row.get("trashed")), "backupSource": digest, "originalId": old}
+            if isinstance(row.get("sourceTitle"), str):
+                memory["sourceTitle"] = row["sourceTitle"]
+            if isinstance(row.get("sourceWorkId"), str) and row["sourceWorkId"] in indexed.get("work", {}):
+                memory["sourceWorkId"] = identity("work", row["sourceWorkId"])
+            if isinstance(row.get("sourceMessageIds"), list):
+                memory["sourceMessageIds"] = [identity("message", key) for key in row["sourceMessageIds"]
+                    if isinstance(key, str) and key in indexed.get("message", {})]
+            restored.append(("memory", identity("memory", old), memory))
+        # Drafts and templates are passive private documents, not queued actions.
+        for kind in ("draft", "template"):
+            for old, row in indexed.get(kind, {}).items():
+                restored.append((kind, identity(kind, old), {**{key: item for key, item in row.items()
+                    if key not in {"id", "revision"}}, "backupSource": digest, "originalId": old}))
+        with self.transaction() as db:
+            duplicate = db.execute("SELECT 1 FROM personal_import_batch WHERE batch_id=?", (digest,)).fetchone() is not None
+            for archived in [original, *archives]:
+                raw = encode(archived)
+                batch = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+                db.execute("INSERT OR IGNORE INTO personal_legacy_record VALUES(?, 'backup', ?, 'ARCHIVE_ONLY')", (batch, raw))
+            if not duplicate:
+                for kind, key, value in restored:
+                    # Separate IDs and one transaction preserve current data, even on failure.
+                    raw = encode(value)
+                    db.execute("INSERT INTO personal_record VALUES(?,?,1,?)", (kind, key, raw))
+                    db.execute("INSERT INTO personal_history VALUES(?,?,1,?,?)", (kind, key, raw, now))
+                # Only an actual restore owns a dedup marker. An archive is not a restore.
+                db.execute("INSERT INTO personal_import_batch VALUES(?,?,?,?)", (digest, digest, str(original.get("ownerId", "")), str(original.get("workerId", ""))))
+        return {"duplicate": duplicate, "restored": 0 if duplicate else len(restored), "backupSource": digest}
 
     def close(self):
         with self.lock:

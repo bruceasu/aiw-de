@@ -2979,6 +2979,39 @@
     '保存默认模型和本机 Worker 自动启动设置？': ['Save the default model and automatic local worker settings?', '既定モデルとローカルWorkerの自動起動設定を保存しますか？'],
     '工厂设置已保存，等待授权的任务会自动重新检查。': ['Factory settings saved. Tasks waiting for authorization will check again automatically.', 'Factory設定を保存しました。権限待ちのタスクは自動で再確認します。']
   });
+  Object.assign(workspaceCatalog, {
+    '移除对话': ['Remove conversation', '会話を取り除く'],
+    '草稿已移除，可在资料列表中恢复。': ['Draft removed. Restore it from the records list.', '下書きを取り除きました。資料一覧から復元できます。'],
+    '草稿已更新。': ['Draft updated.', '下書きを更新しました。'],
+    '已移除的草稿': ['Removed draft', '取り除いた下書き'],
+    '恢复草稿': ['Restore draft', '下書きを復元'],
+    '永久删除草稿': ['Permanently delete draft', '下書きを完全に削除'],
+    '永久删除草稿内容和历史？已有备份会保留。': ['Permanently delete this draft and its content history? Existing backups remain.', '下書きの内容と変更履歴を完全に削除しますか？既存のバックアップは残ります。'],
+    '对话已移除，可在设置中的已删除工作恢复。': ['Conversation removed. Restore it from deleted work in Settings.', '会話を取り除きました。設定の削除済み作業から復元できます。'],
+    '纠正记忆': ['Correct memory', '記憶を修正'],
+    '保存纠正': ['Save correction', '修正を保存'],
+    '取消编辑': ['Cancel edit', '編集をキャンセル'],
+    '移除记忆': ['Remove memory', '記憶を取り除く'],
+    '恢复记忆': ['Restore memory', '記憶を復元'],
+    '永久删除记忆': ['Permanently delete memory', '記憶を完全に削除'],
+    '记忆已移除，可以恢复。': ['Memory removed. It can be restored.', '記憶を取り除きました。復元できます。'],
+    '记忆已更新。': ['Memory updated.', '記憶を更新しました。'],
+    '已移除，不参与后续对话': ['Removed; excluded from future conversations', '取り除き済み。今後の会話には使用しません'],
+    '永久删除这条记忆及其历史？已有备份和来源对话会保留。': ['Permanently delete this memory and its revisions? Backups, including imported copies, and source conversations remain.', 'この記憶と変更履歴を完全に削除しますか？インポート済みの控えを含むバックアップと元の会話は残ります。'],
+    '查看记忆来源': ['View memory source', '記憶の出典を表示'],
+    '来源原文未记录或已删除。': ['Source text was not recorded or has been deleted.', '出典の原文は記録されていないか、削除済みです。'],
+    '来自私人备份；原始副本包含在下载的备份中。': ['Imported from a private backup. The original copy is included in downloaded backups.', '個人バックアップから復元した資料です。ダウンロードするバックアップにも元の控えが含まれます。'],
+    '恢复会新增对话和记忆，不覆盖当前资料。工作先放入已删除列表；旧安排、授权和待发送请求只保留历史副本，不会启用。': ['Restore adds conversations and memories without overwriting current data. Work starts in the deleted list. Old schedules, permissions and outgoing requests remain historical copies only.', '現在の資料を上書きせず、会話と記憶を追加します。作業は削除済み一覧に入ります。以前の予定、権限、送信待ちリクエストは履歴の控えとしてのみ保存され、実行されません。'],
+    '选择私人备份': ['Select private backup', '個人バックアップを選択'],
+    '恢复私人备份': ['Restore private backup', '個人バックアップを復元'],
+    '备份含私人原文，请自行妥善保管。恢复和永久删除都不会修改你已下载的备份。': ['Backups contain private text. Keep them safe. Restore and permanent deletion do not modify files you have already downloaded.', 'バックアップには個人の原文が含まれます。安全に保管してください。復元や完全削除によってダウンロード済みのファイルは変更されません。'],
+    '请选择不超过 15 MiB 的私人备份 JSON 文件。': ['Select a private backup JSON file up to 15 MiB.', '15 MiB以下の個人バックアップJSONファイルを選択してください。'],
+    '请选择秘书导出的私人备份 JSON 文件。': ['Select a private backup JSON file exported by the secretary.', '秘書から出力した個人バックアップJSONファイルを選択してください。'],
+    '恢复此私人备份？将新增对话和记忆，不覆盖当前资料；工作先移入已删除列表，旧安排、授权和请求不会启用。': ['Restore this private backup? Conversations and memories will be added without overwriting current data. Work starts in the deleted list; old schedules, permissions and requests will not be activated.', 'この個人バックアップを復元しますか？現在の資料を上書きせず会話と記憶を追加します。作業は削除済み一覧に入り、以前の予定、権限、リクエストは実行されません。'],
+    '这份备份已经恢复过，不会重复导入。': ['This backup was already restored. No duplicate was imported.', 'このバックアップは復元済みです。重複して追加しません。'],
+    '私人备份已恢复。可在设置中恢复工作，在对话中查看长期记忆。': ['Backup restored. Restore work in Settings and view long-term memories in Chat.', 'バックアップを復元しました。設定で作業を復元し、会話で長期記憶を確認できます。'],
+    '备份不是有效的 JSON 文件。': ['The backup is not valid JSON.', 'バックアップは有効なJSONファイルではありません。']
+  });
   const attrNames = ['placeholder', 'aria-label', 'title', 'alt', 'data-confirm'];
   const originals = new WeakMap();
   const rendered = new WeakMap();

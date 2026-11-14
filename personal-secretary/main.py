@@ -197,7 +197,7 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                         "messageCount": sum(runtime.store.chat_counts().values()), "conversations": runtime.conversations.list(), "memories": runtime.store.list("memory"),
                         "platformConnection": runtime.platform_setup.public(),
                         "backgroundError": runtime.background_error,
-                        "policies": runtime.store.list("policy"), "drafts": runtime.store.list("draft"), "templates": runtime.store.list("template"),
+                        "policies": runtime.store.list("policy"), "drafts": runtime.store.list("draft"), "deletedDrafts": runtime.store.deleted_drafts(), "templates": runtime.store.list("template"),
                         "todos": runtime.store.list("todo"), "decisions": runtime.store.list("decision"),
                         "runs": runtime.runs.public(), "localOAuth": self.local_request() and os.name == "nt",
                         "receipts": [{key: row[key] for key in ("request_id", "state", "receipt")} for row in runtime.store.pending()]})
@@ -224,7 +224,8 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                 return
             try:
                 length = int(self.headers.get("Content-Length", "-1"))
-                if length < 0 or length > 32768 or self.headers.get("Transfer-Encoding"):
+                limit = 16 * 1024 * 1024 if self.path == "/api/backup/restore" else 32768
+                if length < 0 or length > limit or self.headers.get("Transfer-Encoding"):
                     self.respond(413, {"error": "Bounded JSON body required"})
                     return
                 data = json.loads(self.rfile.read(length))
@@ -361,7 +362,19 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                         if not data.get("requestId"):
                             raise PersonalChatError("CHAT_INVALID_INPUT", "消息缺少提交标识，请刷新页面使用新版客户端。")
                         result = runtime.chat(data.get("workId"), data.get("text"), data["requestId"])
-                    elif self.path in {"/api/conversation/page", "/api/conversation/summary", "/api/conversation/delete", "/api/memory/delete"}:
+                    elif self.path == "/api/backup/restore":
+                        try:
+                            if data.get("confirmed") is not True:
+                                raise ValueError("请先确认恢复范围；当前资料不会被覆盖，旧安排和授权不会启用。")
+                            result = runtime.store.restore_backup(data.get("backup"))
+                        except ValueError as error:
+                            raise PersonalChatError("BACKUP_RESTORE_INVALID", str(error)) from None
+                    elif self.path == "/api/draft/change":
+                        try:
+                            result = runtime.store.change_deleted_draft(data.get("id"), data.get("revision"), data.get("action"), data.get("confirmed"))
+                        except ValueError as error:
+                            raise PersonalChatError("DRAFT_CHANGED", str(error)) from None
+                    elif self.path in {"/api/conversation/page", "/api/conversation/summary", "/api/conversation/delete", "/api/memory/delete", "/api/memory/change", "/api/memory/source"}:
                         try:
                             if self.path.endswith("/page"):
                                 result = runtime.conversations.page(data.get("id"), data.get("before"))
@@ -369,6 +382,10 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                                 result = runtime.conversations.request_summary(data["id"], data["revision"])
                             elif self.path == "/api/memory/delete":
                                 result = runtime.conversations.delete_memory(data["id"], data["revision"])
+                            elif self.path == "/api/memory/change":
+                                result = runtime.conversations.change_memory(data.get("id"), data.get("revision"), data.get("action"), data.get("text"), data.get("confirmed"))
+                            elif self.path == "/api/memory/source":
+                                result = runtime.conversations.memory_source(data["id"])
                             else:
                                 result = runtime.conversations.delete(data["id"], data["revision"], data.get("deleteMemories"))
                         except ValueError as error:

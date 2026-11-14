@@ -68,12 +68,18 @@ class Conversations:
     def delete(self, identity, revision, delete_memories):
         if type(delete_memories) is not bool or type(revision) is not int:
             raise ValueError("请明确选择是否同时删除派生记忆。")
+        if delete_memories:
+            raise ValueError("普通移除会保留记忆；如需永久删除，请在已删除工作中明确选择删除范围。")
         with self.runtime.daily.lock:
             if identity in self.runtime.daily.busy:
                 raise ValueError("正在处理这段对话，请等回复后再删除。")
             work = self.store.get("work", identity)
             self._idle(work)
-            return self.store.delete_conversation(identity, revision, delete_memories)
+            if not work or work["revision"] != revision:
+                raise ValueError("对话已变化，请刷新后再移除。")
+            # Normal removal preserves the transcript and all derived memories.
+            # Permanent deletion remains in the existing trashed-work flow.
+            return self.store.put("work", identity, {**value(work), "state": "TRASHED"}, revision)
 
     def delete_memory(self, identity, revision):
         with self.runtime.daily.lock:
@@ -82,7 +88,36 @@ class Conversations:
                 raise ValueError("找不到这条记忆，请刷新列表。")
             if memory.get("sourceWorkId") in self.runtime.daily.busy:
                 raise ValueError("来源对话正在处理，请等完成后再删除记忆。")
-            return self.store.delete_memory(identity, revision)
+            return self.store.put("memory", identity, {**value(memory), "trashed": True}, revision)
+
+    def change_memory(self, identity, revision, action, text=None, confirmed=False):
+        with self.runtime.daily.lock:
+            memory = self.store.get("memory", identity)
+            if not memory or type(revision) is not int or memory["revision"] != revision:
+                raise ValueError("记忆已变化，请刷新后再操作。")
+            if memory.get("sourceWorkId") in self.runtime.daily.busy:
+                raise ValueError("来源对话正在处理，请等完成后再修改记忆。")
+            if action == "purge":
+                if not memory.get("trashed") or confirmed is not True:
+                    raise ValueError("请先移除记忆，再明确确认永久删除；已有备份不会改变。")
+                return self.store.delete_memory(identity, revision)
+            if action == "restore" and memory.get("trashed"):
+                return self.store.put("memory", identity, {**value(memory), "trashed": False}, revision)
+            if action == "edit" and not memory.get("trashed") and isinstance(text, str) and 0 < len(text.strip()) <= 2000:
+                return self.store.put("memory", identity, {**value(memory), "text": text.strip(), "correctedAt": int(time.time() * 1000)}, revision)
+            raise ValueError("请选择恢复记忆，或输入不超过 2000 字的记忆内容。")
+
+    def memory_source(self, identity):
+        memory = self.store.get("memory", identity)
+        if not memory:
+            raise ValueError("找不到这条记忆，请刷新列表。")
+        source = self.store.get("work", memory.get("sourceWorkId", ""))
+        ids = memory.get("sourceMessageIds", [])
+        messages = [self.store.get("message", key) for key in ids[:20]]
+        return {"title": memory.get("sourceTitle", source.get("title", "") if source else ""),
+                "backupSource": memory.get("backupSource"),
+                "messages": [{key: row.get(key, "") for key in ("text", "reply")} for row in messages
+                             if row and row.get("workId") == memory.get("sourceWorkId")]}
 
     def delete_work(self, identity, revision, delete_memories):
         if not isinstance(identity, str) or type(revision) is not int or type(delete_memories) is not bool:
@@ -119,7 +154,7 @@ class Conversations:
                 words.update(part[index:index + 2] for index in range(max(1, len(part) - 1)))
             return words
         query = tokens(request + " " + work.get("title", ""))
-        ranked = [(len(query & tokens(row.get("text", ""))), row) for row in self.store.list("memory")]
+        ranked = [(len(query & tokens(row.get("text", ""))), row) for row in self.store.list("memory") if not row.get("trashed")]
         ranked.sort(key=lambda pair: (-pair[0], pair[1]["id"]))
         memories = [{"id": row["id"], "text": row["text"]} for score, row in ranked if score > 0][:4]
         return {"summary": work.get("chatSummary", ""), "relevantMemories": memories}

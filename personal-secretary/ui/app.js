@@ -537,10 +537,37 @@ function renderMemories() {
   for (const memory of memories) {
     const item = node("article", "record-item");
     const text = node("p", "", memory.text); text.dataset.i18nSkip = "";
-    item.append(text, button("删除记忆", async () => {
-      if (!await window.aiwConfirm("删除这条长期记忆？", { danger: true, target: memory.text })) return;
-      await assistantOperation("memory/delete", { id: memory.id, revision: memory.revision }, "记忆已删除。");
-    }));
+    const actions = node("div", "record-actions");
+    const change = (action, extra = {}) => assistantOperation("memory/change", { id: memory.id, revision: memory.revision, action, ...extra }, "记忆已更新。");
+    if (memory.trashed) {
+      item.append(node("small", "", "已移除，不参与后续对话"));
+      actions.append(button("恢复记忆", () => change("restore")), button("永久删除记忆", async () => {
+        if (await window.aiwConfirm("永久删除这条记忆及其历史？已有备份和来源对话会保留。", { danger: true, target: memory.text })) await change("purge", { confirmed: true });
+      }));
+    } else {
+      const editor = node("div", "field"); editor.hidden = true;
+      const input = node("textarea"); input.value = memory.text; input.maxLength = 2000; input.dataset.i18nSkip = ""; input.setAttribute("aria-label", "纠正记忆");
+      editor.append(input, button("保存纠正", () => change("edit", { text: input.value })), button("取消编辑", () => { editor.hidden = true; }));
+      actions.append(button("纠正记忆", () => { editor.hidden = false; input.focus(); }), button("移除记忆", () => assistantOperation("memory/delete", { id: memory.id, revision: memory.revision }, "记忆已移除，可以恢复。")));
+      item.append(editor);
+    }
+    const source = node("details"), content = node("div");
+    source.append(node("summary", "", "查看记忆来源"), content);
+    source.addEventListener("toggle", async () => {
+      if (!source.open || content.dataset.loaded) return;
+      content.dataset.loaded = "true";
+      content.replaceChildren();
+      try {
+        const { result } = await post("memory/source", { id: memory.id }, false);
+        content.append(rawNode("p", "help", result.title || ""));
+        if (result.backupSource) content.append(node("p", "help", "来自私人备份；原始副本包含在下载的备份中。"));
+        if (!result.messages.length) content.append(node("p", "help", "来源原文未记录或已删除。"));
+        for (const message of result.messages) {
+          content.append(rawNode("p", "", message.text), rawNode("p", "", message.reply));
+        }
+      } catch (error) { delete content.dataset.loaded; content.textContent = errorMessage(error); }
+    });
+    item.prepend(text); item.append(actions, source);
     target.append(item);
   }
 }
@@ -664,7 +691,7 @@ function renderRecords() {
             form.elements.kind.value = "draft";
             form.elements.id.readOnly = false;
           }
-          feedback(refreshed ? "草稿已删除，历史版本仍保留在私人备份中。" : "删除已返回成功，但状态读取失败，请刷新核对。", refreshed ? "ok" : "warn");
+          feedback(refreshed ? "草稿已移除，可在资料列表中恢复。" : "删除已返回成功，但状态读取失败，请刷新核对。", refreshed ? "ok" : "warn");
         } catch (error) { feedback(errorMessage(error), "error"); }
         finally { remove.disabled = false; }
       });
@@ -673,6 +700,15 @@ function renderRecords() {
     }
     item.append(actions, detail(record));
     target.append(item);
+  }
+  if (kind === "draft") for (const record of rows("deletedDrafts")) {
+    const item = node("article", "record-item"), actions = node("div", "record-actions");
+    const change = action => assistantOperation("draft/change", { id: record.id, revision: record.revision, action, confirmed: action === "purge" }, "草稿已更新。");
+    item.append(rawNode("h3", "", record.title), node("small", "", "已移除的草稿"));
+    actions.append(button("恢复草稿", () => change("restore")), button("永久删除草稿", async () => {
+      if (await window.aiwConfirm("永久删除草稿内容和历史？已有备份会保留。", { danger: true, target: record.title })) await change("purge");
+    }));
+    item.append(actions); target.append(item);
   }
 }
 function renderReceipts() {
@@ -1413,18 +1449,29 @@ byId("chat-delete").addEventListener("click", async event => {
   const id = formFor("chat").elements.workId.value;
   const session = (snapshot.conversations || []).find(item => item.id === id);
   if (!session) return;
-  const deleteMemories = byId("chat-delete-mode").value === "all";
-  const question = deleteMemories ? "永久删除这段对话及其派生记忆？关联工作和已有备份会保留。" : "永久删除这段对话，但保留长期记忆？关联工作和已有备份会保留。";
-  if (!await window.aiwConfirm(question, { danger: true, target: session.title || "" })) return;
   control.disabled = true;
   try {
-    await post("conversation/delete", { id, revision: session.revision, deleteMemories });
+    await post("conversation/delete", { id, revision: session.revision, deleteMemories: false });
     chatPages.delete(id); chatVisible.delete(id);
     formFor("chat").elements.workId.value = "";
     renderedChatWork = null; renderChat();
-    feedback("对话已删除。", "ok");
+    feedback("对话已移除，可在设置中的已删除工作恢复。", "ok");
   } catch (error) { feedback(errorMessage(error), "error"); }
   finally { renderChatContext(formFor("chat").elements.workId.value); }
+});
+byId("private-backup-restore").addEventListener("click", async event => {
+  const control = event.currentTarget, file = byId("private-backup-file").files[0];
+  if (!file || file.size > 15 * 1024 * 1024) { feedback("请选择不超过 15 MiB 的私人备份 JSON 文件。", "error"); return; }
+  control.disabled = true;
+  try {
+    const backup = JSON.parse(await file.text());
+    if (backup?.schema !== "aiw.personal.backup.v1") throw new Error("请选择秘书导出的私人备份 JSON 文件。");
+    if (!await window.aiwConfirm("恢复此私人备份？将新增对话和记忆，不覆盖当前资料；工作先移入已删除列表，旧安排、授权和请求不会启用。", { target: file.name })) return;
+    const { result, refreshed } = await post("backup/restore", { backup, confirmed: true });
+    feedback(refreshed ? result.duplicate ? "这份备份已经恢复过，不会重复导入。" : "私人备份已恢复。可在设置中恢复工作，在对话中查看长期记忆。" : "操作已返回结果，请刷新列表查看最新状态。", refreshed ? "ok" : "warn");
+    byId("private-backup-file").value = "";
+  } catch (error) { feedback(error instanceof SyntaxError ? "备份不是有效的 JSON 文件。" : errorMessage(error), "error"); }
+  finally { control.disabled = false; }
 });
 formFor("cancel").elements.kind.addEventListener("change", updateCancelRecords);
 formFor("cancel").elements.id.addEventListener("change", updateCancelRevision);
