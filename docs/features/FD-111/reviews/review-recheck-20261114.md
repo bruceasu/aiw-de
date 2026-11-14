@@ -18,3 +18,10 @@ OpenAiLogin.callback 在 exchange 返回后保留 issued；回调取消、会话
 实际执行 aiw fd show/claim、定向 git diff/stat 和 Get-Content，随后写报告、更新 Verification 并发送 Reviewer 静态结论。未运行测试、编译、脚本、迁移、服务、网络、真实 API/模型或安装，未派子 Agent。
 
 Worker 在本次实质修复后用低内存 192 MiB/SerialGC 尝试编译，仍因 JVM Native malloc 失败中止，无最终源码编译成功证据。用户已选择先继续静态整理、稍后编译；因此本次只确认代码 finding 关闭，**不能将最终 HEAD 记为已编译通过，也不能据此直接归档交付**。最终编译需后续补齐，原真实 OAuth/文件保护/锁的运行证据限制保持。
+
+## bootstrap 收拢补充复核：静态 Pass
+
+- 来源 `FD-111-000007-review-requested` 已由同一 Reviewer 精确认领；限定差异 `63a1126 → d365481`，不重审已关闭的文件清理 P1。
+- Java 新连接以空 client 交给 Python authorize，由 Python 选择 bootstrap；旧连接继续核对回调 client 与既有签发 ID 相等。新连接缺少 client 或仍返回 bootstrap 时，Python exchange 在 token HTTP 前拒绝；真实签发 client 仍进入原 nonce/client/subject/JWT 校验，未增加绕过条件。
+- 新增源码用例检查 Python authorize 选择 bootstrap，以及 bootstrap exchange 不调用 request_json；未执行。限定静态复核未发现阻塞。
+- 实际只执行 aiw fd show/claim、定向 git diff/stat 和 Get-Content，再追加结论、更新 Verification、发送事件；未运行测试、编译、脚本、服务、网络、安装或子 Agent。**最终 Java/Python 编译证据仍待补齐，静态 Pass 不解除归档前门槛；不记作编译/运行通过。**
