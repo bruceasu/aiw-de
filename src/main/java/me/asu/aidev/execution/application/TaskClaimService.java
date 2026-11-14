@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskClaimService {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.authority.AuthorityBoundary workerBoundary;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.modelauth.ModelConnections modelConnections;
     private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
     @Autowired public void setExecutionConfigurations(me.asu.aidev.execution.config.ExecutionConfigurations configurations) { this.configurations=configurations; }
@@ -107,6 +108,7 @@ public class TaskClaimService {
 
     @Transactional
     public Optional<ClaimedTask> claimNext(WorkerId workerId) {
+        if(workerBoundary!=null)workerBoundary.requireWorker(workerId.value(),false);
         var now = clock.instant();
         var worker = workers.find(workerId)
                 .orElseThrow(() -> new IllegalStateException("worker not found: " + workerId.value()));

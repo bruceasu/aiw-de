@@ -23,6 +23,7 @@ spring:
     locations: classpath:db/migration
 
 aidev:
+  remote-access: ${AIW_REMOTE_ACCESS:false}
   model-auth:
     # Optional deployment override. Windows otherwise protects a per-installation key with CurrentUser DPAPI.
     key: ${AIW_MODEL_CREDENTIAL_KEY:}
@@ -33,8 +34,6 @@ aidev:
     local:
       repositories: {}
       # Add repository mappings here, for example: core: D:/projects/core
-  worker-protocol:
-    token: ${AIW_WORKER_TOKEN:}
   execution:
     accounting-mode: ${AIW_EXECUTION_ACCOUNTING_MODE:record-only}
   lease-recovery:
@@ -51,10 +50,9 @@ aidev:
 
   web-console:
     auth:
-      # All console pages require login; /ui/login remains publicly available.
+      # Loopback-only deployments trust local access. Remote mode always requires login.
       username: ${AIW_WEB_CONSOLE_USERNAME:admin}
       password: ${AIW_WEB_CONSOLE_PASSWORD:}
-      role: ${AIW_WEB_CONSOLE_ROLE:ADMIN}
 
   approval:
     policy:

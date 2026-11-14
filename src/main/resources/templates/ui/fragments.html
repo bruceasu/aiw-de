@@ -37,7 +37,8 @@
   <div class="topbar-actions">
     <span class="pill neutral" th:text="${consoleAuthEnabled ? consoleRole : '未登录'}">未登录</span>
     <a th:unless="${consoleAuthEnabled}" class="btn primary small-btn" href="/ui/login">Sign in</a>
-    <form th:if="${consoleAuthEnabled}" action="/ui/logout" method="post" class="inline-form">
+    <span th:if="${consoleLocalMode}" class="pill neutral">Local administrator</span>
+    <form th:if="${consoleAuthEnabled and !consoleLocalMode}" action="/ui/logout" method="post" class="inline-form">
       <input type="hidden" name="_csrf" th:value="${csrfToken}"/>
       <button class="btn ghost small-btn" type="submit">Sign out</button>
     </form>

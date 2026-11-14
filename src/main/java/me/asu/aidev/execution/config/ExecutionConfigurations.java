@@ -178,6 +178,7 @@ public class ExecutionConfigurations {
         if(managed(source)) repo.jdbc().update("INSERT INTO execution_task_configuration VALUES(?,?)",successor,repo.encode(binding(source)));
     }
     @Transactional public void registerWorker(WorkerRegistration input) {
+        boundary.requireWorker(input.workerId(),false);
         boundary.lock();var worker=workers.find(new WorkerId(input.workerId())).orElseThrow();var capabilities=input.capabilities();
         if(!worker.capabilities().containsAll(Set.of(CAPABILITY,GuardContract.CAPABILITY)) || !worker.runtimeType().startsWith(capabilities.runtime()+":")) throw new SecurityException("Verified configuration adapter capability required");
         String json=repo.encode(capabilities);

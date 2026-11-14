@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskExecutionService {
+    @Autowired private me.asu.aidev.authority.AuthorityBoundary workerBoundary;
     @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> unifiedWorkflows;
     private me.asu.aidev.execution.run.NativeRunLifecycle nativeRuns;
     @Autowired public void setNativeRuns(me.asu.aidev.execution.run.NativeRunLifecycle runs) { this.nativeRuns=runs; }
@@ -46,6 +47,7 @@ public class TaskExecutionService {
     @org.springframework.beans.factory.annotation.Autowired
     public void setExecutionGuard(me.asu.aidev.execution.guard.ExecutionGuard guard,me.asu.aidev.execution.guard.ExecutionYieldService yields) { this.guard=guard;this.guardedYield=yields; }
     private me.asu.aidev.execution.guard.GuardContract.Lease guardLease(WorkerId worker,LeaseToken token) {
+        if(workerBoundary!=null)workerBoundary.requireWorker(worker.value(),false);
         return new me.asu.aidev.execution.guard.GuardContract.Lease(worker.value(),attempts.findAttemptId(token).orElseThrow().value(),token.value());
     }
     private me.asu.aidev.authority.AuthorityTaskPolicy authorityPolicy;
@@ -140,6 +142,7 @@ public class TaskExecutionService {
     @Transactional
     public void start(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                       String profileId, String profileVersion, String selectionReason) {
+        if(workerBoundary!=null)workerBoundary.requireWorker(workerId.value(),false);
         if(nativeRuns!=null)nativeRuns.serialize(taskId.value());
         var task = tasks.find(taskId).orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
         if(authorityPolicy!=null) authorityPolicy.beforeStart(task);
@@ -216,6 +219,7 @@ public class TaskExecutionService {
 
     @Transactional
     public boolean heartbeat(TaskId taskId, WorkerId workerId, LeaseToken leaseToken, String externalSessionId) {
+        if(workerBoundary!=null)workerBoundary.requireWorker(workerId.value(),false);
         var task = tasks.find(taskId).orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
         assertExecutionAllowed(task);
         var now = clock.instant();
@@ -396,6 +400,7 @@ public class TaskExecutionService {
     public TaskCompletionResult complete(TaskId taskId, WorkerId workerId, LeaseToken leaseToken,
                                          String externalSessionId, WorkspaceResult workspaceResult,
                                          CompletionReport completionReport) {
+        if(workerBoundary!=null)workerBoundary.requireWorker(workerId.value(),false);
         if(nativeRuns!=null) {nativeRuns.serialize(taskId.value());nativeRuns.requireQuiescent(taskId.value(),guardLease(workerId,leaseToken));}
         if(replayedGuardedCompletion(taskId,workerId,leaseToken,workspaceResult,completionReport)) return new TaskCompletionResult(taskId,List.of(),List.of());
         if(guard!=null) { guard.serialize(taskId.value());guard.finishing(taskId.value(),guardLease(workerId,leaseToken),true); }

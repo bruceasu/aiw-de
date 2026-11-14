@@ -21,7 +21,6 @@ public class ModelConnections {
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final AuthorityGrantService grants;
     private final CredentialVault vault;private final OpenAiOAuth oauth;private final ExecutionGuard guard;
     private final TransactionTemplate transaction;
-    @Value("${aidev.worker-protocol.token:}") private String workerToken;
     public ModelConnections(AuthorityRepository repo,AuthorityBoundary boundary,AuthorityGrantService grants,CredentialVault vault,
             OpenAiOAuth oauth,ExecutionGuard guard,PlatformTransactionManager manager) {
         this.repo=repo;this.boundary=boundary;this.grants=grants;this.vault=vault;this.oauth=oauth;this.guard=guard;
@@ -291,7 +290,7 @@ public class ModelConnections {
         }
     }
     public AccessToken access(String task,Access input,Worker worker) {
-        if(workerToken==null||workerToken.isBlank())throw new SecurityException("MODEL_AUTH_WORKER_AUTHENTICATION_REQUIRED");
+        boundary.requireWorker(worker.id().value(),true);
         var registered=workerMapping(worker.id().value(),worker.runtimeType(),worker.capabilities());requireWorkerProof(registered);
         guard.verifyLease(task,input.lease(),true,true);
         var binding=repo.jdbc().queryForMap("SELECT * FROM model_auth_task WHERE task_id=?",task);

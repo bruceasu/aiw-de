@@ -34,6 +34,7 @@ public class WorkerService {
 
     @Transactional
     public Worker register(RegisterWorkerCommand command) {
+        if(delegation!=null)delegation.requireWorker(command.workerId().value(),false);
         if(modelConnections!=null)modelConnections.getObject().validateRegistration(command);
         if (delegation != null) {
             delegation.registered(command.workerId().value());
@@ -50,6 +51,7 @@ public class WorkerService {
 
     @Transactional
     public void heartbeat(WorkerId workerId) {
+        if(delegation!=null)delegation.requireWorker(workerId.value(),false);
         if (!workers.heartbeat(workerId, clock.instant())) {
             throw new IllegalStateException("worker not found: " + workerId.value());
         }
@@ -58,6 +60,7 @@ public class WorkerService {
 
     @Transactional
     public void drain(WorkerId workerId) {
+        if(delegation!=null)delegation.requireWorker(workerId.value(),false);
         if (delegation != null) delegation.changing("WORKER:" + workerId.value());
         if (!workers.changeStatus(workerId, WorkerStatus.DRAINING, clock.instant())) {
             throw new IllegalStateException("worker not found: " + workerId.value());
@@ -66,6 +69,7 @@ public class WorkerService {
 
     @Transactional
     public void offline(WorkerId workerId) {
+        if(delegation!=null)delegation.requireWorker(workerId.value(),false);
         if (delegation != null) delegation.changing("WORKER:" + workerId.value());
         if (!workers.changeStatus(workerId, WorkerStatus.OFFLINE, clock.instant())) {
             throw new IllegalStateException("worker not found: " + workerId.value());

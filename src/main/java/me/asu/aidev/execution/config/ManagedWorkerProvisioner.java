@@ -17,8 +17,10 @@ public class ManagedWorkerProvisioner {
     private boolean closed;
     private final Map<String,Slot> slots=new HashMap<>();
     private final AgentFactorySettings settings;private final WorkspaceRegistry workspaces;
-    @org.springframework.beans.factory.annotation.Value("${aidev.worker-protocol.token:}") private String token;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.authority.WorkerAccess access;
     @org.springframework.beans.factory.annotation.Value("${server.port:8080}") private int port;
+    @org.springframework.beans.factory.annotation.Value("${server.ssl.enabled:false}") private boolean tls;
+    @org.springframework.beans.factory.annotation.Value("${aidev.agent-factory.control-plane-url:}") private String controlPlaneUrl;
     @org.springframework.beans.factory.annotation.Value("${server.servlet.context-path:}") private String contextPath;
     @org.springframework.beans.factory.annotation.Value("${aidev.agent-factory.worker-root:workers/process-python}") private String workerRoot;
     @org.springframework.beans.factory.annotation.Value("${aidev.agent-factory.max-workers:4}") private int maximum;
@@ -38,7 +40,7 @@ public class ManagedWorkerProvisioner {
         var config=settings.current();
         if(closed || config==null || !config.automaticWorkers() || !config.runtime().equals(runtime))
             return new Result(false,"No matching automatic analysis Worker is configured in Agent factory.");
-        if(token==null || token.isBlank() || !Files.isRegularFile(Path.of(workerRoot).toAbsolutePath().resolve("managed_worker.py")))
+        if(!Files.isRegularFile(Path.of(workerRoot).toAbsolutePath().resolve("managed_worker.py")))
             return new Result(false,"The local analysis Worker installation or connection credentials are unavailable.");
         return new Result(true,"An analysis Worker will start automatically when requested.");
     }
@@ -58,7 +60,6 @@ public class ManagedWorkerProvisioner {
         var config=settings.current();
         if(config==null||!config.automaticWorkers())return new Result(false,"本机 Worker 自动启动尚未启用。请在 Agent 工厂设置中启用；外部 Worker 可继续自行接入。");
         if(!config.runtime().equals(runtime))return new Result(false,"当前工厂默认运行时已变化，请重新选择模型后准备任务。");
-        if(token==null||token.isBlank())return new Result(false,"平台缺少本机 Worker 连接凭证，请检查平台启动配置。");
         if(commandRequired)return new Result(false,"此方法要求命令执行适配器，请接入声明该能力的 Worker；自动 Worker 不隐式授予任意命令权限。");
         Path root=Path.of(workerRoot).toAbsolutePath().normalize();
         if(!Files.isRegularFile(root.resolve("managed_worker.py")))return new Result(false,"未找到随平台安装的 Worker 程序，请检查平台安装目录。");
@@ -151,7 +152,6 @@ public class ManagedWorkerProvisioner {
                     env.put("AIW_CODEX_HOST_SESSION_REUSE","true");
                 }
             }
-            env.put("AIW_WORKER_TOKEN",token);env.put("AIW_CONTROL_PLANE_URL","http://127.0.0.1:"+port+contextPath);
             env.put("AIW_AGENT_RUNTIME",config.runtime());
             env.put("AIW_API_PROVIDER",config.apiProvider());env.put("AIW_API_PROTOCOL",config.apiProtocol());
             if(config.apiProvider().equals("deepseek")) {env.remove("OPENAI_API_KEY");env.remove("OPENAI_BASE_URL");}
@@ -159,6 +159,10 @@ public class ManagedWorkerProvisioner {
             env.remove("AIW_REPOSITORY_REF");env.remove("AIW_REPOSITORY_ROOT");
 
             slot.worker="factory-"+key.substring(0,24);
+            String endpoint=controlPlaneUrl==null||controlPlaneUrl.isBlank()?(tls?"https":"http")+"://127.0.0.1:"+port+contextPath:controlPlaneUrl;
+            var uri=java.net.URI.create(endpoint);
+            if(uri.getHost()==null||uri.getUserInfo()!=null||uri.getQuery()!=null||uri.getFragment()!=null||!("https".equals(uri.getScheme())||"http".equals(uri.getScheme())&&me.asu.aidev.webconsole.security.WebConsoleSecurityService.loopback(uri.getHost())))throw new java.io.IOException("Factory connection requires HTTPS or literal loopback HTTP");
+            env.put("AIW_WORKER_TOKEN",access.localToken(slot.worker));env.put("AIW_CONTROL_PLANE_URL",endpoint);
             Path statuses=Path.of(System.getProperty("user.home"),".aiw","agent-factory","status");Files.createDirectories(statuses);
             slot.status=statuses.resolve(slot.worker+".json");
             if(Files.isSymbolicLink(slot.status))throw new java.io.IOException("Unsafe status path");

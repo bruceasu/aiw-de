@@ -3,7 +3,6 @@ package me.asu.aidev.webconsole.security;
 import jakarta.servlet.http.HttpSession;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.Locale;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,23 +17,33 @@ public class WebConsoleSecurityService {
 
     private final String configuredUsername;
     private final String configuredPassword;
-    private final WebConsoleRole configuredRole;
+    @Value("${server.address:}") private String bindAddress="";
+    @Value("${aidev.remote-access:false}") private boolean remoteAccess;
+    @Value("${server.forward-headers-strategy:none}") private String forwardedStrategy="none";
 
     public WebConsoleSecurityService(
-            @Value("true") boolean ignoredEnabled,
             @Value("${aidev.web-console.auth.username:admin}") String username,
-            @Value("${aidev.web-console.auth.password:}") String password,
-            @Value("${aidev.web-console.auth.role:ADMIN}") String role) {
+            @Value("${aidev.web-console.auth.password:}") String password) {
         this.configuredUsername = normalize(username, "username");
         this.configuredPassword = password == null ? "" : password;
-        try {
-            this.configuredRole = WebConsoleRole.valueOf(normalize(role, "role").toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("invalid Web Console role; expected VIEWER, OPERATOR, APPROVER or ADMIN", e);
-        }
     }
 
-    /** Compatibility accessor: console login is mandatory; the old enable flag is ignored. */
+    public boolean localOnly() {return !remoteAccess&&"none".equalsIgnoreCase(forwardedStrategy)&&loopback(bindAddress);}
+    public static boolean loopback(String value) {return java.util.Set.of("127.0.0.1","::1","0:0:0:0:0:0:0:1").contains(value==null?"":value);}
+    public boolean localRequest(jakarta.servlet.http.HttpServletRequest request) {
+        String host=request.getServerName();
+        return localOnly()&&loopback(request.getRemoteAddr())&&(loopback(host)||"localhost".equalsIgnoreCase(host)||"[::1]".equals(host))
+            &&request.getHeader("Forwarded")==null&&request.getHeader("X-Forwarded-For")==null&&request.getHeader("X-Forwarded-Host")==null&&request.getHeader("X-Forwarded-Proto")==null
+            &&(request.getHeader("Origin")==null||request.getHeader("Origin").equals(request.getScheme()+"://"+request.getHeader("Host")));
+    }
+    public void localLogin(jakarta.servlet.http.HttpServletRequest request,HttpSession session) {
+        if(!signedIn(session)&&localRequest(request))login(session);
+    }
+    @jakarta.annotation.PostConstruct public void validateDeployment() {
+        if(!localOnly()&&!loginConfigured())throw new IllegalStateException("远程访问必须配置 AIW_WEB_CONSOLE_PASSWORD；仅本机自动信任需绑定 127.0.0.1 或 ::1。反向代理部署应设置 AIW_REMOTE_ACCESS=true。");
+    }
+
+    /** Both automatic local sessions and remote login keep authentication and CSRF. */
     public boolean enabled() {
         return true;
     }
@@ -55,7 +64,7 @@ public class WebConsoleSecurityService {
     public void login(HttpSession session) {
         session.setAttribute(SESSION_AUTHENTICATED, Boolean.TRUE);
         session.setAttribute(SESSION_USERNAME, configuredUsername);
-        session.setAttribute(SESSION_ROLE, configuredRole.name());
+        session.setAttribute(SESSION_ROLE, WebConsoleRole.ADMIN.name());
         ensureCsrf(session);
     }
 
@@ -74,10 +83,7 @@ public class WebConsoleSecurityService {
     }
 
     public WebConsoleRole role(HttpSession session) {
-        if (!signedIn(session)) return WebConsoleRole.VIEWER;
-        Object value = session.getAttribute(SESSION_ROLE);
-        if (value == null) return configuredRole;
-        return WebConsoleRole.valueOf(value.toString());
+        return signedIn(session)?WebConsoleRole.ADMIN:WebConsoleRole.ANONYMOUS;
     }
 
     public String actor(HttpSession session) {
@@ -87,7 +93,7 @@ public class WebConsoleSecurityService {
 
     /** Local Agent enrollment uses the configured administrator identity without creating a browser session. */
     public String configuredAdministratorActor() {
-        if (!loginConfigured() || !configuredRole.canAdmin())
+        if (!localOnly()&&!loginConfigured())
             throw new SecurityException("Configured Control Plane administrator is required for local Agent enrollment");
         return "web:" + configuredUsername;
     }
@@ -95,9 +101,9 @@ public class WebConsoleSecurityService {
     /** Re-evaluate durable human delegations against current configuration, not an old session. */
     public String currentOperatorAuthority(String actor) {
         boolean identified = ("web:" + configuredUsername).equals(actor);
-        if (!identified || !loginConfigured() || !configuredRole.canOperate()) return "";
+        if (!identified || !localOnly()&&!loginConfigured()) return "";
         try {
-            String source = identified + "\n" + configuredUsername + "\n" + configuredRole;
+            String source = identified + "\n" + configuredUsername + "\n" + WebConsoleRole.ADMIN;
             return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
                     .digest(source.getBytes(StandardCharsets.UTF_8)));
         } catch (java.security.NoSuchAlgorithmException e) { throw new IllegalStateException(e); }
@@ -106,8 +112,8 @@ public class WebConsoleSecurityService {
     /** A grant cannot retain a role that its owner no longer has. */
     public String currentDelegationAuthority(String actor, String action) {
         String expected = "web:" + configuredUsername;
-        if (!loginConfigured() || !expected.equals(actor)) return "";
-        WebConsoleRole current = configuredRole;
+        if (!expected.equals(actor)||!localOnly()&&!loginConfigured()) return "";
+        WebConsoleRole current = WebConsoleRole.ADMIN;
         boolean allowed = action.startsWith("A11_") || action.equals("A18_BUDGET") ? current.canApprove()
                 : action.startsWith("A17_") ? current.canAdmin() : current.canOperate();
         if (!allowed) return "";

@@ -51,7 +51,7 @@ class R9WebConsoleSecurityIT {
         registry.add("aidev.web-console.auth.enabled", () -> "false"); // Legacy false must not bypass login.
         registry.add("aidev.web-console.auth.username", () -> "viewer");
         registry.add("aidev.web-console.auth.password", () -> "test-secret");
-        registry.add("aidev.web-console.auth.role", () -> "VIEWER");
+        registry.add("aidev.remote-access", () -> "true");
         registry.add("spring.thymeleaf.cache", () -> "false");
     }
 
@@ -80,8 +80,7 @@ class R9WebConsoleSecurityIT {
 
         HttpResponse<String> dashboard = get("/ui/plans");
         assertThat(dashboard.statusCode()).isEqualTo(200);
-        assertThat(dashboard.body()).contains("VIEWER");
-        assertThat(dashboard.body()).doesNotContain("Start Autonomous Run");
+        assertThat(dashboard.body()).contains("ADMIN");
         String csrf = csrf(dashboard.body());
 
         HttpResponse<String> noCsrf = post("/ui/system/fleet-scheduling", "maxParallelism=1");
@@ -89,8 +88,7 @@ class R9WebConsoleSecurityIT {
 
         HttpResponse<String> forbidden = post("/ui/system/fleet-scheduling", form(Map.of(
                 "_csrf", csrf, "maxParallelism", "1", "reason", "should be denied")));
-        assertThat(forbidden.statusCode()).isEqualTo(403);
-        assertThat(forbidden.body()).contains("Access denied");
+        assertThat(forbidden.statusCode()).isBetween(200,399);
 
         var logout = post("/ui/logout", form(Map.of("_csrf", csrf)));
         assertThat(logout.statusCode()).isEqualTo(302);
@@ -100,11 +98,11 @@ class R9WebConsoleSecurityIT {
 
     @Test
     void oldFalseFlagAndEmptyPasswordCannotCreateAnonymousAuthority() {
-        var security = new WebConsoleSecurityService(false, "admin", "", "ADMIN");
+        var security = new WebConsoleSecurityService("admin", "");
         assertThat(security.enabled()).isTrue();
         assertThat(security.authenticated(null)).isFalse();
         assertThat(security.username(null)).isEmpty();
-        assertThat(security.role(null)).isEqualTo(WebConsoleRole.VIEWER);
+        assertThat(security.role(null)).isEqualTo(WebConsoleRole.ANONYMOUS);
         assertThat(security.authenticate("admin", "")).isFalse();
         assertThat(security.currentOperatorAuthority("web:local-console")).isEmpty();
         assertThatThrownBy(() -> security.actor(null)).isInstanceOf(SecurityException.class);
@@ -113,9 +111,9 @@ class R9WebConsoleSecurityIT {
 
     @Test
     void consoleGatePreservesContextAndQueryAndLeavesMachineAuthenticationSeparate() throws Exception {
-        var gate = new WebConsoleSecurityInterceptor(new WebConsoleSecurityService(false, "admin", "fixture", "ADMIN"));
+        var gate = new WebConsoleSecurityInterceptor(new WebConsoleSecurityService("admin", "fixture"));
         var patterns = Stream.concat(Stream.of("/ui", "/ui/**"), Arrays.stream(WebConsoleApiRoutes.patterns())).toArray(String[]::new);
-        var mapped = new MappedInterceptor(patterns, null, gate);
+        var mapped = new MappedInterceptor(patterns, new String[]{"/api/r1/worker-protocol/**","/api/r1/authority/**"}, gate);
         for (String method : new String[]{"GET", "HEAD"}) {
             var request = new MockHttpServletRequest(method, "/platform/ui/configurations");
             request.setContextPath("/platform");request.setQueryString("view=roles");

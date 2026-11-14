@@ -171,8 +171,20 @@ class WorkerConfig:
         return result
 
 
+class _NoControlPlaneRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None  # Never forward a Worker credential to another endpoint.
+
+
 class ControlPlaneClient:
     def __init__(self, config: WorkerConfig):
+        from urllib.parse import urlsplit
+        endpoint = urlsplit(config.control_plane_url)
+        if (not endpoint.hostname or endpoint.username is not None or endpoint.password is not None
+                or endpoint.query or endpoint.fragment or not (endpoint.scheme == "https" or
+                endpoint.scheme == "http" and endpoint.hostname in {"127.0.0.1", "::1", "localhost"})):
+            raise ValueError("Remote Control Plane requires HTTPS; URL must not contain credentials, query or fragment")
+        self.http = urllib.request.build_opener(_NoControlPlaneRedirect())
         self.base = config.control_plane_url + "/api/r1/worker-protocol/v1"
         self.token = config.worker_token
         self.model_proof = os.getenv("AIW_MODEL_WORKER_PROOF", "") if os.getenv("AIW_MODEL_CREDENTIAL_REF") else ""
@@ -245,7 +257,7 @@ class ControlPlaneClient:
         try:
             active = current_attempt()
             timeout = min(self.timeout, active.remaining()) if active else self.timeout
-            with urllib.request.urlopen(req, timeout=timeout) as response:
+            with self.http.open(req, timeout=timeout) as response:
                 if response.status == 204: return None if allow_no_content else {}
                 body = response.read(max_response_bytes + 1) if max_response_bytes is not None else response.read()
                 if max_response_bytes is not None and len(body) > max_response_bytes:

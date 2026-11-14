@@ -1,5 +1,6 @@
 (() => {
   const translations = {
+    'Local administrator': '本机管理员',
     'Review risk': '评审风险',
     'Acceptance method': '验收方式',
     'Self-check': '自检',
@@ -283,6 +284,7 @@
     'Runtime unavailable': '运行环境不可用', 'Draining · no new claims; active leases continue': '正在停止接收新任务；现有租约继续执行', 'Executing': '执行中', 'Idle': '空闲', 'Unknown': '未知'
   };
   const japaneseTranslations = {
+    'Local administrator': 'ローカル管理者',
     "Personalization": "個人設定",
     "Your console, your way": "自分に合ったコンソールに",
     "Changes apply immediately and are saved in this browser.": "変更はすぐに反映され、このブラウザーに保存されます。",

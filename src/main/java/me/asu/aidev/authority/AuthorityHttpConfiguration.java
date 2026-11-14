@@ -16,15 +16,8 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
     private final AuthorityBoundary boundary;private final WebConsoleSecurityService security;private final AgentTransportSecurity agentTransport;
     public AuthorityHttpConfiguration(AuthorityBoundary boundary,WebConsoleSecurityService security,AgentTransportSecurity agentTransport) { this.boundary=boundary;this.security=security;this.agentTransport=agentTransport; }
     private boolean leaseMachine(String path) {
-        return path.equals("/api/r1/worker-protocol/v1/workers/register") || path.equals("/api/r1/worker-protocol/v1/tasks/claim")
-                || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/heartbeat")
-                || path.matches("/api/r1/worker-protocol/v1/workers/[^/]+/configuration")
-                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/questions/(source|open|ack|checkpoints|receipt)")
-                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/execution-run/(availability|open|events|control|seal|inputs)")
-                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/model-usage/(start|finish)")
-                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/price-repair/(materials|result)")
-                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(execution-context/read|operations/(begin|finish|approval|approved|approved-begin|approved-discard)|operations/[^/]+/receipt|yield/(prepare|ack)|delivery)")
-                || path.matches("/api/r1/worker-protocol/v1/tasks/[^/]+/(start|workspace-baseline|heartbeat|complete|fail|stop-acknowledgement|handoff|outputs|outputs/read)");
+        // The earlier Worker interceptor owns this dedicated protocol, including self drain/offline.
+        return path.startsWith("/api/r1/worker-protocol/");
     }
     private boolean agentMachine(String method,String path) {
         return method.equals("GET") && (Set.of("/professional-tasks/options","/professional-tasks/diagnostics","/connection-state","/identity","/state","/target-state","/grants","/management-state","/questions","/permission-questions","/action-permissions","/plan-overview","/messages").contains(path) || path.matches("/professional-tasks/[0-9a-f-]{36}") || path.matches("/permission-actions/[0-9a-f-]{36}") || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))
@@ -51,7 +44,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
     @Override public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new HandlerInterceptor() {
             @Override public boolean preHandle(HttpServletRequest request,HttpServletResponse response,Object handler) throws Exception {
-                String path=request.getRequestURI().substring(request.getContextPath().length());String method=request.getMethod();
+                String path=me.asu.aidev.webconsole.security.WebConsoleApiRoutes.path(request);String method=request.getMethod();
                 if(path.startsWith("/api/r1/authority/")) {
                     String operation=path.substring("/api/r1/authority".length());
                     if(method.equals("POST") && operation.equals("/agents/pair")) return true;
@@ -79,9 +72,9 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 } else {
                     if(leaseMachine(path)) return true;
                     if(!Set.of("/ui/authority","/ui/agents","/ui/delegation","/ui/agent-factory","/ui/configurations","/ui/questions").contains(path) && Set.of("GET","HEAD","OPTIONS").contains(method)) return true;
-                    // The earlier console interceptor already checks local-session CSRF and the persistent auth requirement.
-                    if(WebConsoleApiRoutes.matches(path) && !security.enabled() && !security.signedIn(request.getSession(false)) && !boundary.humanAuthRequired()) return true;
                 }
+                if(!security.localOnly()&&!request.isSecure()&&!me.asu.aidev.webconsole.security.WebConsoleSecurityService.loopback(request.getRemoteAddr())){response.sendError(403,"Remote console access requires HTTPS");return false;}
+                security.localLogin(request,request.getSession(true));
                 var session=request.getSession(false);
                 if(!security.signedIn(session)) {
                     if(path.startsWith("/ui/") && method.equals("GET")) {

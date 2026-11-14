@@ -14,8 +14,6 @@ import static me.asu.aidev.execution.guard.ExecutionLedger.number;
 /** The platform linearization point. No external operation runs inside these database transactions. */
 @Service
 public class ExecutionGuard {
-    @org.springframework.beans.factory.annotation.Value("${aidev.worker-protocol.token:}")
-    private String machineToken;
     @org.springframework.beans.factory.annotation.Autowired
     private me.asu.aidev.webconsole.security.WebConsoleSecurityService humanSecurity;
     private final AuthorityRepository repo; private final AuthorityBoundary boundary;
@@ -76,10 +74,8 @@ public class ExecutionGuard {
             if(!owner.equals(boundary.principal().owner())) throw new SecurityException("Policy belongs to another owner");
         } else owner(owner);
     }
-    public boolean machineConnectionConfigured() { return machineToken!=null&&!machineToken.isBlank(); }
     @Transactional public Context confirm(Policy input) {
         boundary.lock();owner(input.ownerId());
-        if(!machineConnectionConfigured()) throw new IllegalStateException("平台尚未配置专业 Worker 连接令牌。请先配置 AIW_WORKER_TOKEN 并重启平台；重复点击计划授权不能补齐此项。");
         var owners=repo.jdbc().queryForList("SELECT owner_id FROM authority_target WHERE target_key=?",String.class,"PLAN:"+input.planId());
         if(!owners.isEmpty() && !owners.getFirst().equals(input.ownerId())) throw new SecurityException("Existing target belongs to another owner");
         var graphOwners=repo.jdbc().queryForList("SELECT owner_id FROM workflow_graph WHERE id=?",String.class,input.planId());
@@ -233,6 +229,7 @@ public class ExecutionGuard {
     private boolean active(Map<String,Object> row) { return !AuthorityRepository.flag(row.get("revoked")) && number(row,"expires_ms")>System.currentTimeMillis()
             && !humanSecurity.currentDelegationAuthority(repo.actor(String.valueOf(row.get("owner_id"))),"A05").isBlank(); }
     public void verifyLease(String task,Lease lease,boolean running,boolean live) {
+        boundary.requireWorker(lease.workerId(),false);
         var rows=repo.jdbc().queryForList("""
                 SELECT t.state,t.current_worker_id,t.lease_token,t.lease_expires_at_epoch_ms,a.id,a.state AS attempt_state,
                 a.stop_requested_at_epoch_ms FROM work_task t JOIN execution_attempt a ON a.task_id=t.id

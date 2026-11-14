@@ -43,7 +43,6 @@ class AiProfileProtocolIT {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + DB.toAbsolutePath());
-        registry.add("aidev.worker-protocol.token", () -> "test-worker-token");
         registry.add("aidev.ai.version", () -> "reviewed-v1");
         registry.add("aidev.ai.profiles.fast.provider", () -> "openai");
         registry.add("aidev.ai.profiles.fast.runtime", () -> "codex-sdk");
@@ -115,7 +114,6 @@ class AiProfileProtocolIT {
 
     private HttpResponse<String> post(String endpoint, String body) throws Exception {
         return http.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/r1/worker-protocol/v1" + endpoint))
-                .header("Authorization", "Bearer test-worker-token")
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
     }

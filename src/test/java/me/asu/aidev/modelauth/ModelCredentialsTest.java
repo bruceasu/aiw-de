@@ -34,7 +34,6 @@ class ModelCredentialsTest {
         oauth=mock(OpenAiOAuth.class);guard=mock(ExecutionGuard.class);
         var vault=new CredentialVault(Base64.getEncoder().encodeToString(new byte[32]));
         service=spy(new ModelConnections(repo,boundary,mock(AuthorityGrantService.class),vault,oauth,guard,new DataSourceTransactionManager(data)));
-        ReflectionTestUtils.setField(service,"workerToken","test-machine-credential");
     }
     Issued issued(String token,long expiry) {
         return new Issued(new TokenSet("access-"+token,"refresh-"+token,"identity-"+token,"openid resource.invoke chatgpt.tokens.use.direct"),"oaiapp_test","subject",null,null,expiry,0,true);

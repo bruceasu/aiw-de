@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("sqlite")
 class R4WorkerProtocolIT {
-    private static final String TOKEN = "r4-test-token";
+    private final java.util.Map<String,String> tokens = new java.util.HashMap<>();
     private static final Path DB;
     static {
         try {
@@ -44,12 +44,14 @@ class R4WorkerProtocolIT {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> "jdbc:sqlite:" + DB.toAbsolutePath());
-        registry.add("aidev.worker-protocol.token", () -> TOKEN);
+        registry.add("aidev.remote-access", () -> "true");
+        registry.add("aidev.web-console.auth.password", () -> "test-console-password");
     }
 
     @LocalServerPort int port;
     @Autowired WorkTaskService taskService;
     @Autowired JdbcTemplate jdbc;
+    @Autowired me.asu.aidev.authority.WorkerAccess access;
     private final ObjectMapper json = new ObjectMapper();
 
     private final HttpClient http = HttpClient.newHttpClient();
@@ -57,6 +59,8 @@ class R4WorkerProtocolIT {
     @BeforeEach
     void clearDatabase() {
         DatabaseTestCleaner.clear(jdbc);
+        tokens.clear();
+        for(String worker:java.util.List.of("r4-codex-1","r4-python-only"))tokens.put(worker,access.create("web:admin",new me.asu.aidev.authority.WorkerAccess.Create(java.util.UUID.randomUUID().toString(),worker,"test")).token());
     }
 
     @Test
@@ -129,7 +133,7 @@ class R4WorkerProtocolIT {
                 .uri(URI.create("http://127.0.0.1:" + port + "/api/r1/worker-protocol/v1" + path))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body == null ? "" : body));
-        if (authenticated) builder.header("Authorization", "Bearer " + TOKEN);
+        if (authenticated) builder.header("Authorization", "Bearer " + tokens.get(json.readTree(body).path("workerId").asText()));
         return http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
     }
 }

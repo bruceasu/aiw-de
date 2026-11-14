@@ -1,15 +1,16 @@
 package me.asu.aidev.webconsole.security;
 
-import java.util.List;
-
 /** Console JSON/file APIs keep their session boundary after moving out of /ui. */
 public final class WebConsoleApiRoutes {
-    private static final List<String> ROOTS = List.of("/api/r1/team-members", "/api/r1/fleet/workers", "/api/r1/workflows", "/api/r1/goals", "/api/r1/task-outputs", "/api/r1/workflow-plans", "/api/r1/plan-editor", "/api/r1/worker-registrations", "/api/r1/model-connections");
     private WebConsoleApiRoutes() {}
     public static boolean matches(String path) {
-        return ROOTS.stream().anyMatch(root -> path.equals(root) || path.startsWith(root + "/"));
+        return path.startsWith("/api/r1/")&&!path.startsWith("/api/r1/worker-protocol/")&&!path.startsWith("/api/r1/authority/");
     }
     public static String[] patterns() {
-        return ROOTS.stream().flatMap(root -> java.util.stream.Stream.of(root, root + "/**")).toArray(String[]::new);
+        return new String[]{"/api/r1/**"};
+    }
+    public static String path(jakarta.servlet.http.HttpServletRequest request) {
+        var parsed=org.springframework.web.util.ServletRequestPathUtils.hasParsedRequestPath(request)?org.springframework.web.util.ServletRequestPathUtils.getParsedRequestPath(request):org.springframework.http.server.RequestPath.parse(request.getRequestURI(),request.getContextPath());
+        var path=new StringBuilder();for(var element:parsed.pathWithinApplication().elements())path.append(element instanceof org.springframework.http.server.PathContainer.PathSegment segment?segment.valueToMatch():element.value());return path.toString();
     }
 }

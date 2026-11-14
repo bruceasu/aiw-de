@@ -13,6 +13,7 @@ public class AuthorityBoundary {
     private final String boot=UUID.randomUUID().toString();
     private final ThreadLocal<Principal> current=new ThreadLocal<>();
     private final ThreadLocal<String> human=new ThreadLocal<>();
+    private final ThreadLocal<String> worker=new ThreadLocal<>();
     private final ThreadLocal<Boolean> completion=new ThreadLocal<>();
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<ManagedPlanAdmission> manager;
@@ -24,6 +25,10 @@ public class AuthorityBoundary {
     public Principal principal() { return Objects.requireNonNull(current.get(),"Authenticated platform action context required"); }
     public Principal optionalPrincipal() { return current.get(); }
     public void human(String actor) { if(actor==null) human.remove();else human.set(actor); }
+    public void workerIdentity(String id) {if(id==null)worker.remove();else worker.set(id);}
+    public void requireWorker(String id,boolean required) {
+        String current=worker.get();if(required&&current==null||current!=null&&!current.equals("*")&&!current.equals(id))throw new SecurityException("Worker credential does not match this Worker identity");
+    }
     public String human() { return human.get(); }
     public <T> T as(Principal principal,Supplier<T> action) {
         var previous=current.get();current.set(principal);

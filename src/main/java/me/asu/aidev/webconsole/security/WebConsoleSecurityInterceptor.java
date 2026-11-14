@@ -44,10 +44,14 @@ public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         ConsolePath route = consolePath(request);
         String path = route.match();
+        if(!security.localOnly()&&!request.isSecure()&&!WebConsoleSecurityService.loopback(request.getRemoteAddr())){
+            response.sendError(403,"Remote console access requires HTTPS");return false;
+        }
         if (path.equals("/ui/login") || path.equals("/ui/console.css") || path.equals("/ui/console.js")) return true;
         boolean page = path.equals("/ui") || path.startsWith("/ui/");
         // MVC registration owns scope; raw URI aliases must never open an early pass.
         HttpSession session = request.getSession(true);
+        security.localLogin(request,session);
         if (!security.authenticated(session)) {
             if (page && (HttpMethod.GET.matches(request.getMethod()) || HttpMethod.HEAD.matches(request.getMethod()))) {
                 String target = route.target() + (request.getQueryString() == null ? "" : "?" + request.getQueryString());
@@ -60,7 +64,8 @@ public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
         }
 
         if (!HttpMethod.GET.matches(request.getMethod()) && !HttpMethod.HEAD.matches(request.getMethod())) {
-            if (!security.validCsrf(session, request.getParameter("_csrf"))) {
+            String csrf=request.getHeader("X-CSRF-Token");if(csrf==null)csrf=request.getParameter("_csrf");
+            if (!security.validCsrf(session, csrf)) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "invalid Web Console CSRF token");
                 return false;
             }
@@ -69,6 +74,7 @@ public class WebConsoleSecurityInterceptor implements HandlerInterceptor {
         WebConsoleRole role = security.role(session);
         if(delegation!=null && security.signedIn(session)) delegation.human(security.actor(session));
         request.setAttribute("consoleAuthEnabled", security.signedIn(session));
+        request.setAttribute("consoleLocalMode",security.localOnly());
         request.setAttribute("consolePrincipal", security.username(session));
         request.setAttribute("consoleRole", role.name());
         request.setAttribute("canOperate", role.canOperate());

@@ -88,7 +88,6 @@ public class PersonalTaskPreparations {
         if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM flexible_workflow_plan WHERE id=? AND created_by=?",Long.class,planId,repo.actor(principal.owner()))!=1)
             throw new SecurityException("Owned personal Plan required");
         var missing=new ArrayList<Map<String,String>>();long now=System.currentTimeMillis();
-        if(!guard.machineConnectionConfigured())missing.add(Map.of("code","WORKER_TOKEN_REQUIRED","message","平台尚未配置专业 Worker 连接令牌，这是平台运行配置缺项，需要配置后重启平台；重复计划授权不会解决。"));
         if(!principal.enabled())missing.add(Map.of("code","PROCESS_ENABLE_REQUIRED","message","平台已连接，但当前秘书进程尚未启用。请确认当前秘书进程，保留原授权。"));
         var managed=repo.jdbc().queryForList("SELECT owner_id,worker_id,paused,expires_ms FROM authority_managed_plan WHERE plan_id=?",planId);
         if(managed.isEmpty())missing.add(Map.of("code","PLAN_MANAGEMENT_REQUIRED","message","此计划尚未交给秘书管理，请在计划与文件范围页面选择原计划并保存。"));
