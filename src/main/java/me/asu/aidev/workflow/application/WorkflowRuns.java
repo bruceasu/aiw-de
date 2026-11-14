@@ -96,7 +96,14 @@ public class WorkflowRuns {
     }
     public record Event(long time,String node,String type,String content) {}
     public record Proposal(String id,String node,String helperRun,String requestDigest,long baseVersion) {}
-    public record ProposalView(String id,String status,String helperRun,Node before,Node candidate,String error) {}
+    public record NodeChange(Node before,Node candidate) {}
+    public record ProposalView(String id,String status,String helperRun,Node before,Node candidate,String error,List<NodeChange> changes) {
+        public ProposalView(String id,String status,String helperRun,Node before,Node candidate,String error) {
+            this(id,status,helperRun,before,candidate,error,
+                    before==null||candidate==null?List.of():List.of(new NodeChange(before,candidate)));
+        }
+        public ProposalView { changes=changes==null?List.of():List.copyOf(changes); }
+    }
     public static class Supplement {
         public String id,text,mode,state,taskId,attemptId,batchId;
         public long receivedAt,appliedAt;
@@ -381,59 +388,138 @@ public class WorkflowRuns {
         if(run.context.length()+content.length()+2>64000) throw new IllegalStateException("Workflow context is full; preserve results and start a new execution");
         run.context+="\n\n"+content;
     }
+    private boolean startedNode(Run run,String key) {
+        return run.visits.getOrDefault(key,0)>0||run.events.stream().anyMatch(e->e.node().equals(key)&&Set.of("DISPATCHED","QUESTION").contains(e.type()));
+    }
     private Node pendingNode(Run run,String key) {
         if(!run.state.equals("PAUSED"))throw new IllegalStateException("Pause following steps before requesting a change");
         var node=run.spec.nodes().stream().filter(n->n.key().equals(key)).findFirst().orElseThrow();
-        if(node.kind()==Kind.END||run.visits.getOrDefault(key,0)>0||run.events.stream().anyMatch(e->e.node().equals(key)&&Set.of("DISPATCHED","QUESTION").contains(e.type())))
+        if(node.kind()==Kind.END||startedNode(run,key))
             throw new IllegalStateException("Only an undispatched node can change");
         return node;
     }
+    private List<Node> pendingNodes(Run run,List<String> keys) {
+        if(keys==null||keys.isEmpty()||keys.size()>8||new HashSet<>(keys).size()!=keys.size())
+            throw new IllegalArgumentException("Select one to eight distinct pending nodes");
+        return keys.stream().map(key->pendingNode(run,key)).toList();
+    }
+    private List<String> proposalNodes(Proposal proposal,Run helper) {
+        var source=helper.spec.sources().stream().filter(material->material.title().equals("Workflow change basis")).findFirst().orElse(null);
+        if(source==null)return List.of(proposal.node());
+        var basis=db.decode(source.content(),Map.class);
+        if(!basis.containsKey("selectedNodes"))return List.of(proposal.node());
+        if(!(basis.get("selectedNodes") instanceof List<?> selected)||selected.isEmpty()||selected.size()>8)
+            throw new IllegalArgumentException("Invalid selected nodes in suggestion basis");
+        var keys=new ArrayList<String>();
+        for(var value:selected) {
+            if(!(value instanceof Map<?,?> node)||!(node.get("key") instanceof String key))throw new IllegalArgumentException("Invalid selected node in suggestion basis");
+            keys.add(key);
+        }
+        if(new HashSet<>(keys).size()!=keys.size()||!Objects.equals(keys.getFirst(),proposal.node()))
+            throw new IllegalArgumentException("Suggestion basis does not match its proposal");
+        if(keys.size()<2)throw new IllegalArgumentException("A coordinated suggestion needs multiple nodes");
+        return List.copyOf(keys);
+    }
     @Transactional public Run propose(String id,long version,String request,String key,String change) {
-        var run=load(id,true);request=text(request,64);key=text(key,32);change=text(change,2000);
-        String digest=AuthorityRepository.hash(db.encode(List.of(key,change)));
+        return proposeNodes(id,version,request,List.of(key),change,false);
+    }
+    @Transactional public Run propose(String id,long version,String request,List<String> keys,String change) {
+        if(keys!=null&&keys.size()==1)return propose(id,version,request,keys.getFirst(),change);
+        return proposeNodes(id,version,request,keys,change,true);
+    }
+    private Run proposeNodes(String id,long version,String request,List<String> keys,String change,boolean batch) {
+        var run=load(id,true);request=text(request,64);change=text(change,2000);
+        keys=keys==null?List.of():List.copyOf(keys);
+        if(keys.size()==1)keys=List.of(text(keys.getFirst(),32));
+        else keys=keys.stream().map(key->text(key,32)).toList();
+        String digest=AuthorityRepository.hash(db.encode(List.of(!batch&&keys.size()==1?keys.getFirst():keys,change)));
         if(run.proposal!=null&&run.proposal.id().equals(request)) {
             if(!run.proposal.requestDigest().equals(digest))throw new IllegalStateException("Request identifier has different content");
             return run;
         }
         if(run.version!=version)throw new IllegalStateException("Execution changed; reload");
         if(run.proposal!=null)throw new IllegalStateException("Discard the current suggestion before requesting another");
-        var node=pendingNode(run,key);
-        String basis=db.encode(Map.of("goal",run.spec.goal(),"node",node,"destinations",run.spec.nodes().stream().map(n->Map.of("key",n.key(),"title",n.title())).toList()));
-        String instruction="Suggest a change to ONE existing workflow node using the supplied basis. Do not execute the proposed work. "
-                +"Read the basis, keep the original goal and node key, and use only its existing destination keys. Return one JSON object with exactly "
-                +"key, title, instruction, next, branches. Preserve the existing node kind: TASK uses next and empty branches; DECISION uses next=null and at least two branches; "
-                +"ASK uses either next and empty branches or next=null and options. Do not add nodes, tools, members, Skills, permissions or sources. "
-                +"Match the original node language. Do not claim the suggestion is approved. Requested change:\n"+change;
+        var selected=pendingNodes(run,keys);
+        String basis;
+        if(batch) {
+            var destinations=run.spec.nodes().stream().map(n->Map.of("key",n.key(),"title",n.title(),"kind",n.kind(),"next",n.next()==null?"":n.next(),"branches",n.branches())).toList();
+            basis=db.encode(Map.of("goal",run.spec.goal(),"current",run.current,"context",run.context,"selectedNodes",selected,"destinations",destinations));
+        } else {
+            var node=selected.getFirst();var destinations=run.spec.nodes().stream().map(n->Map.of("key",n.key(),"title",n.title())).toList();
+            basis=db.encode(Map.of("goal",run.spec.goal(),"node",node,"destinations",destinations));
+        }
+        if(batch&&basis.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>131072)
+            throw new IllegalArgumentException("Workflow context is too large for a coordinated suggestion; select fewer nodes or request one change at a time");
+        String instruction=batch
+                ?"Suggest coordinated updates to ALL selected existing workflow nodes using the supplied basis. Do not execute proposed work or claim the suggestion is approved. "
+                    +"Return exactly one JSON object with one changes array. Each array item must contain exactly key, title, instruction, next, branches; return each selected key once and no other key. "
+                    +"Keep every key and kind. Keep existing branch choice labels and use only existing destination keys. TASK uses next and empty branches; DECISION uses next=null and its original branch labels; "
+                    +"ASK keeps its original answer options or next path. Do not add a new route to a visited node. Do not add, delete or reorder nodes, tools, members, Skills, permissions or sources. "
+                    +"Match each node's language. Requested change:\n"+change
+                :"Suggest a change to ONE existing workflow node using the supplied basis. Do not execute the proposed work. "
+                    +"Read the basis, keep the original goal and node key, and use only its existing destination keys. Return one JSON object with exactly "
+                    +"key, title, instruction, next, branches. Preserve the existing node kind: TASK uses next and empty branches; DECISION uses next=null and at least two branches; "
+                    +"ASK uses either next and empty branches or next=null and options. Do not add nodes, tools, members, Skills, permissions or sources. "
+                    +"Match the original node language. Do not claim the suggestion is approved. Requested change:\n"+change;
         var helper=simple("amend-"+UUID.randomUUID(),instruction,null,null,Assignment.GENERAL,List.of(),List.of(new Material("knowledge","Workflow change basis",basis,null)));
-        run.proposal=new Proposal(request,key,helper.id,digest,run.version+1);
+        run.proposal=new Proposal(request,keys.getFirst(),helper.id,digest,run.version+1);
         event(run,"AMENDMENT_REQUESTED",helper.id);persist(run);return run;
     }
-    private Spec amended(Run run,Node node) {
-        return new Spec(run.spec.title(),run.spec.goal(),run.spec.entry(),run.spec.nodes().stream().map(n->n.key().equals(node.key())?node:n).toList(),run.spec.sources(),run.spec.commands());
+    private Spec amended(Run run,List<Node> candidates) {
+        var byKey=new HashMap<String,Node>();candidates.forEach(node->byKey.put(node.key(),node));
+        return new Spec(run.spec.title(),run.spec.goal(),run.spec.entry(),run.spec.nodes().stream().map(n->byKey.getOrDefault(n.key(),n)).toList(),run.spec.sources(),run.spec.commands());
     }
     private ProposalView proposalView(Run run) {
         var p=run.proposal;if(p==null)return null;
-        var before=run.spec.nodes().stream().filter(n->n.key().equals(p.node())).findFirst().orElseThrow();
         var helper=db.jdbc().query("SELECT run_json FROM workflow_execution WHERE id=? AND actor=?",(rs,i)->db.decode(rs.getString(1),Run.class),p.helperRun(),run.actor).stream().findFirst().orElseThrow();
-        if(run.state.equals("STOPPING")||Set.of("STOPPING","STOPPED").contains(helper.state))return new ProposalView(p.id(),helper.state.equals("STOPPED")?"STOPPED":"STOPPING",p.helperRun(),before,null,null);
+        List<String> keys;
+        try {keys=proposalNodes(p,helper);} catch(IllegalArgumentException invalid) {
+            return new ProposalView(p.id(),"INVALID",p.helperRun(),null,null,"The suggestion basis is invalid; nothing was changed",List.of());
+        }
+        boolean batch=keys.size()>1;
+        var beforeNodes=run.spec.nodes().stream().filter(n->keys.contains(n.key())).toList();
+        if(beforeNodes.size()!=keys.size())return new ProposalView(p.id(),"STALE",p.helperRun(),null,null,"Execution changed; request a new suggestion",List.of());
+        var before=beforeNodes.getFirst();
+        if(run.state.equals("STOPPING")||Set.of("STOPPING","STOPPED").contains(helper.state))return new ProposalView(p.id(),helper.state.equals("STOPPED")?"STOPPED":"STOPPING",p.helperRun(),before,null,null,List.of());
         if(p.baseVersion()!=run.version)return new ProposalView(p.id(),"STALE",p.helperRun(),before,null,"Execution changed; request a new suggestion");
-        if(!helper.state.equals("COMPLETED"))return new ProposalView(p.id(),helper.state,p.helperRun(),before,null,null);
+        if(!helper.state.equals("COMPLETED"))return new ProposalView(p.id(),helper.state,p.helperRun(),before,null,null,List.of());
         try {
             var task=plans.getObject().effectiveSteps(helper.id).stream().max(Comparator.comparing(WorkTask::createdAt).thenComparing(t->t.id().value())).orElseThrow();
             String summary=attempts.findCompletionReport(task.id()).orElseThrow().summary().strip();
             if(summary.startsWith("```json\n")&&summary.endsWith("```"))summary=summary.substring(8,summary.length()-3).strip();
-            var raw=db.decode(summary,Map.class);
-            if(raw==null||!raw.keySet().equals(Set.of("key","title","instruction","next","branches"))||!Objects.equals(raw.get("key"),before.key())
-                    ||!(raw.get("title") instanceof String)||!(raw.get("instruction") instanceof String)
-                    ||raw.get("next")!=null&&!(raw.get("next") instanceof String)||!(raw.get("branches") instanceof Map<?,?> branches))throw new IllegalArgumentException();
-            var exits=new LinkedHashMap<String,String>();
-            for(var branch:branches.entrySet()){if(!(branch.getKey() instanceof String choice)||!(branch.getValue() instanceof String next))throw new IllegalArgumentException();exits.put(choice,next);}
-            var candidate=new Node(before.key(),(String)raw.get("title"),before.kind(),(String)raw.get("instruction"),(String)raw.get("next"),exits,before.memberId(),before.assignment(),before.requiredSkills(),before.workspaceTools());
-            amended(run,candidate);
-            return new ProposalView(p.id(),"READY",p.helperRun(),before,candidate,null);
+            var raw=db.decode(summary,Map.class);var changes=new ArrayList<NodeChange>();
+            if(!batch)changes.add(new NodeChange(before,candidate(run,before,raw,false)));
+            else {
+                if(raw==null||!raw.keySet().equals(Set.of("changes"))||!(raw.get("changes") instanceof List<?> rows)||rows.size()!=keys.size())throw new IllegalArgumentException();
+                var candidates=new LinkedHashMap<String,Node>();
+                for(var row:rows) {
+                    if(!(row instanceof Map<?,?> values)||!(values.get("key") instanceof String key)||!keys.contains(key)||candidates.containsKey(key))throw new IllegalArgumentException();
+                    var original=beforeNodes.stream().filter(n->n.key().equals(key)).findFirst().orElseThrow();candidates.put(key,candidate(run,original,values,true));
+                }
+                if(!candidates.keySet().equals(new LinkedHashSet<>(keys)))throw new IllegalArgumentException();
+                for(var original:beforeNodes)changes.add(new NodeChange(original,candidates.get(original.key())));
+            }
+            amended(run,changes.stream().map(NodeChange::candidate).toList());
+            var first=changes.getFirst();
+            return new ProposalView(p.id(),"READY",p.helperRun(),first.before(),first.candidate(),null,changes);
         } catch(IllegalArgumentException invalid) {
             return new ProposalView(p.id(),"INVALID",p.helperRun(),before,null,"The suggestion is invalid; nothing was changed");
         }
+    }
+    private Node candidate(Run run,Node before,Map<?,?> raw,boolean coordinated) {
+        if(raw==null||!raw.keySet().equals(Set.of("key","title","instruction","next","branches"))||!Objects.equals(raw.get("key"),before.key())
+                ||!(raw.get("title") instanceof String title)||!(raw.get("instruction") instanceof String instruction)
+                ||raw.get("next")!=null&&!(raw.get("next") instanceof String)||!(raw.get("branches") instanceof Map<?,?> inputBranches))throw new IllegalArgumentException();
+        var exits=new LinkedHashMap<String,String>();
+        for(var branch:inputBranches.entrySet()){if(!(branch.getKey() instanceof String choice)||!(branch.getValue() instanceof String next))throw new IllegalArgumentException();exits.put(choice,next);}
+        if(coordinated&&!exits.keySet().equals(before.branches().keySet()))throw new IllegalArgumentException();
+        String next=(String)raw.get("next");
+        if(coordinated&&visitedRoute(run,before.next(),next))throw new IllegalArgumentException();
+        for(var branch:exits.entrySet())if(coordinated&&visitedRoute(run,before.branches().get(branch.getKey()),branch.getValue()))throw new IllegalArgumentException();
+        return new Node(before.key(),title,before.kind(),instruction,next,exits,before.memberId(),before.assignment(),before.requiredSkills(),before.workspaceTools());
+    }
+    private boolean visitedRoute(Run run,String original,String candidate) {
+        return candidate!=null&&startedNode(run,candidate)&&!Objects.equals(original,candidate);
     }
     private boolean discardProposal(Run run) {
         if(run.proposal==null)return true;
@@ -448,9 +534,10 @@ public class WorkflowRuns {
         var run=load(id,true);
         if(run.version!=version||run.proposal==null||!run.proposal.id().equals(proposal))throw new IllegalStateException("Execution changed; reload");
         if(!apply){discardProposal(run);persist(run);return run;}
-        var view=proposalView(run);pendingNode(run,run.proposal.node());
+        var view=proposalView(run);
         if(!view.status().equals("READY"))throw new IllegalStateException("A current valid suggestion is required");
-        run.spec=amended(run,view.candidate());event(run,"AMENDMENT_APPLIED",db.encode(List.of(view.before(),view.candidate())));
+        pendingNodes(run,view.changes().stream().map(change->change.before().key()).toList());
+        run.spec=amended(run,view.changes().stream().map(NodeChange::candidate).toList());event(run,"AMENDMENT_APPLIED",db.encode(view.changes()));
         run.proposal=null;persist(run);return run;
     }
     private void advance(Run run) {

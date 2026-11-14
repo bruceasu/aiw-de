@@ -48,16 +48,18 @@
     'Retry this step? Existing results will be retained; this starts another execution.':['重做本步骤？已有结果会保留，此操作会再次执行。','このステップを再試行しますか？既存の結果は保持され、再び実行されます。'],
     'Use the recorded successful result and continue the workflow?':['使用已记录的成功结果，并继续工作流？','記録済みの成功結果を使用してワークフローを続けますか？'],
     'If suggestion generation is still running, wait for its stop acknowledgement before resuming.':['建议仍在生成时，先等待其停止确认，再继续流程。','提案作成中の場合は、その停止確認後にフローを再開してください。'],
-    'Adjust a future step':['调整后续步骤','後続ステップを調整'],
-    'Pause following steps first. A read-only Worker suggests a change to one undispatched node. Review it before applying. Resuming or stopping discards the suggestion.':['先暂停后续步骤，再让只读 Worker 为一个尚未派发节点生成建议，审阅确认后才应用。继续或停止流程会放弃建议。','先に後続ステップを一時停止してください。未割り当てノード1件の変更案を読み取り専用 Worker が作成します。確認後に適用してください。再開・停止すると提案を破棄します。'],
-    'Future step':['尚未派发的步骤','未割り当てのステップ'],'Requested change':['希望如何调整','変更したい内容'],'Generate suggestion':['生成调整建议','変更案を作成'],
+    'Adjust future steps':['调整后续步骤','後続ステップを調整'],
+    'Pause following steps first. A read-only Worker can coordinate changes to up to eight undispatched nodes. Review every change before applying. Resuming or stopping discards the suggestion.':['先暂停后续步骤，再让只读 Worker 协调调整最多八个尚未派发的节点。请逐项审阅后再应用。继续或停止流程会放弃建议。','先に後続ステップを一時停止してください。読み取り専用 Worker が未割り当てノード最大8件の変更をまとめて提案します。すべて確認してから適用してください。再開・停止すると提案を破棄します。'],
+    'Future steps':['尚未派发的步骤（可多选）','未割り当てのステップ（複数選択可）'],'Requested change':['希望如何调整','変更したい内容'],'Generate suggestion':['生成调整建议','変更案を作成'],
     'Suggestion generation task (usage is recorded separately)':['查看建议生成任务（用量单独记录）','提案作成タスクを表示（使用量は別に記録）'],
-    'Current instruction':['原说明','現在の指示'],'Suggested instruction':['建议说明','変更案の指示'],
+    'Current step':['原步骤','現在のステップ'],'Suggested step':['建议步骤','変更案のステップ'],
     'Preview the changed workflow':['预览调整后的流程','変更後のフローをプレビュー'],'Confirm and apply':['确认应用','確認して適用'],'Discard suggestion':['放弃建议','提案を破棄'],
     'Pause following steps before requesting a change':['请先暂停后续步骤，再请求调整。','変更依頼の前に後続ステップを一時停止してください。'],
     'Only an undispatched node can change':['只能调整尚未派发或提问的节点。','未割り当て・未質問のノードのみ変更できます。'],
     'Discard the current suggestion before requesting another':['请先放弃当前建议，再生成新建议。','新しい提案の前に現在の提案を破棄してください。'],
     'Execution changed; request a new suggestion':['执行状态已变化，请放弃旧建议后重新生成。','実行が変わりました。提案を破棄して再作成してください。'],
+    'Select one to eight distinct pending nodes':['请选择 1 到 8 个不同的尚未派发节点。','未割り当ての異なるノードを1～8件選択してください。'],
+    'Workflow context is too large for a coordinated suggestion; select fewer nodes or request one change at a time':['当前工作流上下文过长，无法生成协调建议；请减少所选节点，或逐项请求调整。','ワークフローの文脈が長すぎて一括提案できません。選択ノードを減らすか、一件ずつ依頼してください。'],
     'The suggestion is invalid; nothing was changed':['建议格式或分支无效，未修改流程。请查看生成任务的结果。','提案の形式または分岐が無効です。フローは変更されていません。作成タスクの結果を確認してください。'],
     'A current valid suggestion is required':['需要当前版本的有效建议。','現在のバージョンに対応する有効な提案が必要です。'],
     'STALE':['建议已过期','期限切れの提案'],'INVALID':['建议无效','無効な提案'],
@@ -396,19 +398,25 @@
     const stamp=JSON.stringify([run.id,run.version,proposal]);if(host.dataset.stamp===stamp)return;
     const changedRun=host.dataset.run!==run.id;host.dataset.run=run.id;host.dataset.stamp=stamp;
     if(changedRun){form.reset();amendmentRequest=newRequest();}
-    const previous=select.value;select.replaceChildren();
+    const previous=[...select.selectedOptions].map(option=>option.value);select.replaceChildren();
     run.spec.nodes.filter(n=>n.kind!=='END'&&!(run.visits?.[n.key])&&!run.events.some(e=>e.node===n.key&&['DISPATCHED','QUESTION'].includes(e.type))).forEach(n=>select.add(new Option(n.title,n.key)));
-    if([...select.options].some(o=>o.value===previous))select.value=previous;
+    for(const option of select.options)option.selected=previous.includes(option.value);
     form.hidden=run.state!=='PAUSED'||!!proposal||!select.options.length;result.replaceChildren();
     if(!proposal)return;
     result.append(element('p',t(proposal.status),'help'));
     if(proposal.status==='STOPPING')result.append(element('p',t('If suggestion generation is still running, wait for its stop acknowledgement before resuming.'),'help'));
     const link=element('a',t('Suggestion generation task (usage is recorded separately)'));link.href='/ui/tasks?execution='+encodeURIComponent(proposal.helperRun);result.append(link);
     if(proposal.error)result.append(element('p',t(proposal.error),'help'));
-    if(proposal.candidate){
-      result.append(element('h4',t('Current instruction')),element('pre',proposal.before.instruction),element('h4',t('Suggested instruction')),element('pre',proposal.candidate.instruction));
+    const changes=proposal.changes?.length?proposal.changes:proposal.candidate?[{before:proposal.before,candidate:proposal.candidate}]:[];
+    if(changes.length){
+      const replacements=new Map();
+      for(const change of changes){
+        const before=change.before,candidate=change.candidate;replacements.set(candidate.key,candidate);
+        result.append(element('h4',t('Current step')+': '+before.title),element('pre',JSON.stringify({title:before.title,instruction:before.instruction,next:before.next,branches:before.branches},null,2)),
+          element('h4',t('Suggested step')+': '+candidate.title),element('pre',JSON.stringify({title:candidate.title,instruction:candidate.instruction,next:candidate.next,branches:candidate.branches},null,2)));
+      }
       const preview=element('details'),canvas=element('div',undefined,'wf-graph');preview.append(element('summary',t('Preview the changed workflow')),canvas);result.append(preview);
-      graph(canvas,{...run.spec,nodes:run.spec.nodes.map(n=>n.key===proposal.candidate.key?proposal.candidate:n)});
+      graph(canvas,{...run.spec,nodes:run.spec.nodes.map(n=>replacements.get(n.key)||n)});
       if(run.state==='PAUSED'&&proposal.status==='READY')result.append(button('Confirm and apply',()=>act(()=>decideAmendment(true))));
     }
     result.append(button('Discard suggestion',()=>act(()=>decideAmendment(false))));
@@ -501,7 +509,8 @@
   });};
   $('[data-wf-amendment-form]').onsubmit=e=>{e.preventDefault();act(async()=>{
     const form=new FormData(e.target);
-    await api('/executions/'+encodeURIComponent(selectedRun)+'/amendments',{version:currentView.run.version,requestId:amendmentRequest,node:form.get('node'),change:form.get('change')});
+    const nodes=form.getAll('nodes');
+    await api('/executions/'+encodeURIComponent(selectedRun)+'/amendments',{version:currentView.run.version,requestId:amendmentRequest,node:nodes[0],nodes,change:form.get('change')});
     signature='';await refreshRun();await library();
   });};
   $('[data-wf-schedule-task]').onclick=()=>act(()=>{
