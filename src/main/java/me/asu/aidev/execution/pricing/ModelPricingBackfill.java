@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 /** Bounded background passes do not alter already recorded estimates. */
 @Component
 public class ModelPricingBackfill {
+    @org.springframework.beans.factory.annotation.Value("${aidev.model-pricing.enabled:true}") private boolean enabled=true;
     private static final Logger LOG = LoggerFactory.getLogger(ModelPricingBackfill.class);
     private record Position(String snapshot, ModelPriceCatalog.Cursor cursor) {}
     private final AuthorityRepository repo;
@@ -35,7 +36,7 @@ public class ModelPricingBackfill {
 
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
-        if (started.compareAndSet(false, true)) executor.scheduleWithFixedDelay(this::run, 5, 30, TimeUnit.SECONDS);
+        if (enabled && started.compareAndSet(false, true)) executor.scheduleWithFixedDelay(this::run, 5, 30, TimeUnit.SECONDS);
     }
 
     private void run() {

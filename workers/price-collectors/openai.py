@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 SOURCE = "https://developers.openai.com/api/docs/pricing.md"
-VERSION = "openai-markdown-1"
+VERSION = "openai-markdown-2"
 MAX_BYTES = 2_000_000
 _MONEY = re.compile(r"^\$(?:0|[1-9]\d*)(?:\.\d{1,6})?$")
 _SEPARATOR = re.compile(r"^:?-{3,}:?$")
@@ -142,3 +142,21 @@ def parse(content: bytes, observed_ms: int, source_url: str = SOURCE):
         "missing": ["TRUSTED_EFFECTIVE_INTERVAL", "SERVICE_TIER_AND_PRICING_CONDITIONS"],
         "conditions": {"pricingTables": "source-order; tier and context thresholds not inferred"}, "models": tables,
     }
+
+
+def prices(observation):
+    """Normalize explicitly identified standard prices; leave other tiers unpriced."""
+    result = []
+    for table in observation["models"]:
+        title = " ".join(table.get("sectionHeadings", [])).lower()
+        if (table.get("columns") != ["Model", "Input", "Output", "Cached input"] or "standard" not in title
+                or any(word in title for word in ("batch", "flex", "priority", "realtime", "fine-tun"))):
+            continue
+        for row in table.get("rows", []):
+            model, values = row.get("modelLabel"), row.get("rates")
+            if not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,199}", model):
+                continue
+            if not isinstance(values, list) or len(values) != 3 or any(type(n) is not int or n < 0 for n in values):
+                continue
+            result.append({"model": model, "input": values[0], "output": values[1], "cached": values[2]})
+    return result

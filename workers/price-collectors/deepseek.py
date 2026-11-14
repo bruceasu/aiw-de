@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 SOURCE = "https://api-docs.deepseek.com/quick_start/pricing/"
-VERSION = "deepseek-html-1"
+VERSION = "deepseek-html-2"
 MAX_BYTES = 2_000_000
 _MODEL = re.compile(r"^(deepseek-[a-z0-9][a-z0-9.-]*)(?:\s*\(\d+\))?$", re.I)
 _MONEY = re.compile(r"^\$(?:0|[1-9]\d*)(?:\.\d{1,6})?$")
@@ -232,3 +232,42 @@ def parse(content: bytes, observed_ms: int, source_url: str = SOURCE):
                        "excluded": "CHINESE_PUBLIC_HOLIDAYS"},
         "models": [{"model": model, **prices[model]} for model in models],
     }
+
+
+def prices(observation):
+    """Normalize confirmed off-peak windows; unknown peak/holiday prices remain unpriced."""
+    conditions = observation["conditions"]
+    week = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]
+    days, windows = conditions.get("peakDays"), conditions.get("peakWindows")
+    if (conditions.get("zone") != "UTC" or conditions.get("excluded") != "CHINESE_PUBLIC_HOLIDAYS"
+            or not isinstance(days, list) or not days or not set(days).issubset(week)
+            or not isinstance(windows, list) or not windows):
+        return []
+    result = []
+    for item in observation["models"]:
+        model, rate = item.get("model"), item.get("off_peak", {})
+        if not isinstance(model, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,199}", model):
+            return []
+        if any(type(rate.get(key)) is not int or rate[key] < 0 for key in ("input", "cached", "output")):
+            continue
+        for day in week:
+            bounds = []
+            if day not in days:
+                bounds.append((None, None))
+            else:
+                start = "00:00"
+                for window in sorted(windows):
+                    if (not isinstance(window, list) or len(window) != 2
+                            or any(not isinstance(t, str) or not re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?", t) for t in window)
+                            or window[0] < start or window[0] >= window[1]):
+                        return []
+                    if window[0] > start:
+                        bounds.append((start, window[0]))
+                    start = window[1]
+                if start >= "23:59":
+                    return []
+                bounds.append((start, "23:59:59.999999999"))
+            for start, end in bounds:
+                result.append({"model": model, "days": [day], "start": start, "end": end,
+                               "input": rate["input"], "cached": rate["cached"], "output": rate["output"]})
+    return result
