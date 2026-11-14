@@ -1,7 +1,7 @@
 # FD-114: Reconcile interrupted work and make completion checks explicit
 
 **Status:** In Progress
-**Revision:** 1
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -39,6 +39,10 @@ Dependencies: FD-108, FD-109. 中断核对与完成检查先在统一执行路�
 未知副作用不会直接重放；结果与模型声称完成分开；失败说明已完成内容和阻碍；重做由用户决定；普通结束不隐式启动评审。
 
 ## Verification
+
+第一轮独立静态审查提出 1 项 P2：act.finally 更新按钮状态时漏传当前 task，隐藏“使用已记录的结果”。已将该调用与 refreshRun 一样传入 currentView.task，等待聚焦复核。首轮报告保留；没有执行浏览器／测试或编译。
+
+- 独立静态审查（`48e16be → b7ab56a`，来源 `FD-114-000002-review-requested`）：Changes requested，1 项 P2——act.finally 刷新控制按钮漏传 task，使“使用已记录结果”在加载收尾被隐藏。详见 [审查报告](reviews/review-20261114.md)。限定范围未发现其他阻塞；未运行测试、编译或运行时验证。最终编译仍待补齐，不据此归档；后续合并 FD-108 必须保留其工作区提示和 commands 冻结。
 
 源码已实施，未通过运行验收。统一执行在租约过期时使用现有 FAILED／INTERRUPTED，保留真实进程资源；原 Guard 继续登记 UNKNOWN 副作用。领取核对当前执行及任务；管理员撤销租约仍须手动重试，重做时取消旧未领取任务。晚到的正式 PASS 报告可由用户明确使用，继续前仍核对无活动租约和原版本／Owner。页面新增原执行工作台入口、使用结果／重做确认及连接不等于停止的说明。
 
