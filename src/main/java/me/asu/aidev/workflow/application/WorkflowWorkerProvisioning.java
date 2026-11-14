@@ -78,6 +78,9 @@ public class WorkflowWorkerProvisioning {
                                 && (stageReviewPolicy==null || stageReviewPolicy.canClaim(currentTask,w))
                                 && (nativeRuns==null || nativeRuns.canClaim(currentTask,w)));
                 if(!online) {
+                    if(required.contains("guarded-command-linux-v1")){
+                        pending.put(id,new Preparation(id,task.subjectId(),"BLOCKED","This task requires a connected Linux/WSL Worker with the configured command adapter; the local factory does not enable commands automatically."));continue;
+                    }
                     boolean frozen=required.stream().anyMatch(c->c.startsWith("native-config:"));
                     boolean incompatible=workers.online(Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW)).stream().anyMatch(w->w.runtimeType().startsWith(config.runtime()+":")&&w.capabilities().contains(roleCapability(role)));
                     if(frozen&&incompatible) {
@@ -93,6 +96,6 @@ public class WorkflowWorkerProvisioning {
         }
     }
     private String roleCapability(String role) {
-        return switch(role) {case "general"->"general-work";case "requirements"->"requirement-analysis";case "architect"->"solution-architecture";case "planner"->"implementation-planning";case "coder"->"coding";default->"workflow-review";};
+        return switch(role) {case "general"->"general-work";case "workspace"->"workspace-work";case "requirements"->"requirement-analysis";case "architect"->"solution-architecture";case "planner"->"implementation-planning";case "coder"->"coding";default->"workflow-review";};
     }
 }
