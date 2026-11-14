@@ -1,7 +1,7 @@
 # FD-111: Move same-device ChatGPT credential protocols into Python
 
-**Status:** In Progress
-**Revision:** 1
+**Status:** Pending Verification
+**Revision:** 2
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -47,6 +47,8 @@ V50 将旧密文列改为凭据文件引用并使旧连接失效，历史执行�
 独立审查：认证协议、文件持久化与跨模块变更。
 
 Java 与测试源通过 JDK25 离线 test-compile；首次修复删除旧密文兼容测试时误移除的测试 helper 后重编译通过。Python 新协议与离线用例通过 py_compile；git diff --check 通过。新增文件引用、轮换后旧引用失效、刷新不确定不重发、路径拒绝及撤销本地清除的测试源码，未运行。
+
+最终状态限制：上述 Java 通过后，又删除了不再适用的“存在 Token 文件则拒绝初始化 Worker proof 密钥”旧判断，并改写对应测试。对此最终差异的编译因 JVM 原生内存分配失败中止（`Native memory allocation failed`），未获得最终源码编译通过证据；未自动重跑，等待后续有授权且内存恢复的编译。故前述通过只适用于这两处最后修改之前，不能称整个最终 HEAD 已编译通过。
 
 令牌文件采用新旧分开的引用，避免旧数据库 generation 读到新一代 Token。Plane 已有刷新 CAS、账号归属和精确租约仍保留；旧模型密文验钥兼容逻辑删除，Worker proof 密钥逻辑保留。复用的秘书 Python 文件需随同机安装保留。
 
