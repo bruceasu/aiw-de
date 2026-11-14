@@ -173,19 +173,25 @@ async def _complete_openai(settings, request):
 
     request.attempt.add_cancel_callback(cancel_run)
     try:
-        result = await asyncio.wait_for(client.responses.create(**parameters), timeout=request.attempt.remaining())
+        chat = settings.get("apiProtocol", "responses") == "chat-completions"
+        if chat:
+            from secretary_sdk import chat_completion
+            result, known = await asyncio.wait_for(chat_completion(client, settings, parameters["instructions"], parameters["input"], {}), timeout=request.attempt.remaining())
+        else:
+            result = await asyncio.wait_for(client.responses.create(**parameters), timeout=request.attempt.remaining())
         request.attempt.check()
         from secretary_sdk import normalized
         items = normalized(result.output)
-        if result.status != "completed" or any(item.get("type") not in {"message", "reasoning"} or item.get("status") not in {None, "completed"} for item in items):
+        if (not chat and result.status != "completed") or any(item.get("type") not in {"message", "reasoning"} or item.get("status") not in {None, "completed"} for item in items):
             raise RuntimeError("RESPONSES_TERMINAL_NOT_COMPLETED")
         output = "".join(part.get("text", "") for item in items if item.get("type") == "message" for part in item.get("content", []) if part.get("type") == "output_text")
         if not isinstance(output, str) or not output.strip() or len(output.encode("utf-8")) > MAX_OUTPUT_BYTES:
             raise RuntimeError("AGENT_OUTPUT_INVALID")
         usage = getattr(result, "usage", None)
         incoming, outgoing = getattr(usage, "input_tokens", None), getattr(usage, "output_tokens", None)
-        known = type(incoming) is int and incoming >= 0 and type(outgoing) is int and outgoing >= 0
-        request.attempt.evidence.record("model-terminal", status="completed", runtime="openai-responses",
+        if not chat:
+            known = type(incoming) is int and incoming >= 0 and type(outgoing) is int and outgoing >= 0
+        request.attempt.evidence.record("model-terminal", status="completed", runtime="openai-chat-completions" if chat else "openai-responses",
             usageKnown=known, usageSource="provider-response" if known else "unknown",
             **({"inputTokens": incoming, "outputTokens": outgoing} if known else {}))
         return output.strip()

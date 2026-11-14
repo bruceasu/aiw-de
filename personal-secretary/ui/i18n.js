@@ -3012,6 +3012,15 @@
     '私人备份已恢复。可在设置中恢复工作，在对话中查看长期记忆。': ['Backup restored. Restore work in Settings and view long-term memories in Chat.', 'バックアップを復元しました。設定で作業を復元し、会話で長期記憶を確認できます。'],
     '备份不是有效的 JSON 文件。': ['The backup is not valid JSON.', 'バックアップは有効なJSONファイルではありません。']
   });
+  Object.assign(workspaceCatalog, {
+    'API 协议': ['API protocol', 'APIプロトコル'],
+    '其他 OpenAI 兼容服务': ['Other OpenAI-compatible service', 'その他のOpenAI互換サービス'],
+    '强度来自所选模型的目录；none 表示关闭思考，默认值不发送强度参数。': ['Effort levels come from this model’s catalog. none disables thinking; the default omits the effort parameter.', '強度はこのモデルの一覧情報に基づきます。noneは思考を無効にし、既定値では強度を送信しません。'],
+    '当前强度未被目录确认，请选择默认值或目录支持的强度。': ['The catalog does not confirm the current effort. Select the default or a listed effort.', '現在の強度は一覧情報で確認できません。既定値か対応する強度を選択してください。'],
+    '目录未提供此模型的强度能力。默认值不发送参数；其他选项是手动覆盖，不保证所选模型支持。': ['No effort capabilities were returned for this model. The default omits the parameter; other values are manual overrides and may not be supported.', 'このモデルの強度情報は返されていません。既定値では強度を送信せず、他の値は手動指定として扱います。対応は保証されません。'],
+    '请选择 Responses 或 Chat Completions 协议。': ['Select the Responses or Chat Completions protocol.', 'ResponsesまたはChat Completionsを選択してください。'],
+    'ChatGPT 登录连接使用 Responses 协议，请勿用于 Chat Completions。': ['ChatGPT login connections use Responses and cannot use Chat Completions.', 'ChatGPTログイン接続はResponsesを使用し、Chat Completionsでは利用できません。']
+  });
   const attrNames = ['placeholder', 'aria-label', 'title', 'alt', 'data-confirm'];
   const originals = new WeakMap();
   const rendered = new WeakMap();

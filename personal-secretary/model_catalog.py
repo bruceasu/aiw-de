@@ -19,7 +19,7 @@ _probes = threading.BoundedSemaphore(2)
 
 def list_models(settings, data):
     service = data.get("service")
-    if service not in {"chatgpt", "openai", "deepseek", "responses", "chat"}:
+    if service not in {"chatgpt", "openai", "deepseek", "responses"}:
         raise ValueError("当前方式没有可用的模型目录，请手动填写模型。")
     identity = data.get("connectionId") or ""
     key = data.get("key") or ""
@@ -38,7 +38,7 @@ def list_models(settings, data):
     else:
         if service == "chatgpt":
             raise ValueError("请先登录并选择 ChatGPT 连接。")
-        if service in {"responses", "chat"} and not data.get("endpoint"):
+        if service == "responses" and not data.get("endpoint"):
             raise ValueError("请先填写模型服务地址。")
         base = endpoint(data.get("endpoint"))
         saved = settings.value
@@ -88,7 +88,7 @@ def list_models(settings, data):
             rows = body.get("models")
         if not isinstance(rows, list):
             raise ValueError("模型目录格式不受支持，请手动填写模型。")
-        models, seen = [], set()
+        models, seen, reasoning = [], set(), {}
         for row in rows:
             if not isinstance(row, dict) or row.get("visibility", "list") != "list":
                 continue
@@ -97,9 +97,18 @@ def list_models(settings, data):
                 continue
             seen.add(name)
             models.append(name)
+            # OpenAI's standard /models response has no effort capability fields.
+            # DeepSeek documents this optional metadata; do not infer it from IDs.
+            metadata = row.get("effort")
+            if base in {"https://api.deepseek.com", "https://api.deepseek.com/v1"} and isinstance(metadata, dict):
+                levels = metadata.get("supported_levels")
+                if isinstance(levels, list):
+                    allowed = list(dict.fromkeys(level for level in levels if isinstance(level, str) and level in {"low", "high", "max"}))
+                    if allowed:
+                        reasoning[name] = allowed
             if len(models) == 500:
                 break
-        return {"models": models, "truncated": len(rows) > 500,
+        return {"models": models, "efforts": reasoning, "truncated": len(rows) > 500,
                 "note": "目录由服务商返回，模型是否支持当前工具和接口仍需确认。"}
     finally:
         _probes.release()

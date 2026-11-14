@@ -25,6 +25,15 @@ class Response:
 
 
 class ModelCatalogTest(unittest.TestCase):
+    def test_deepseek_efforts_are_metadata_not_guessed_from_model_names(self):
+        rows = {"data": [{"id": "future-model", "effort": {"supported_levels": ["low", "max", "unknown", "low"]}}, {"id": "other-model"}]}
+        opener = SimpleNamespace(open=lambda *_args, **_kwargs: Response())
+        with patch.dict("os.environ", {"DEEPSEEK_API_KEY": "offline-key"}):
+            with patch("model_catalog.urllib.request.build_opener", return_value=opener), patch.object(Response, "read", return_value=json.dumps(rows).encode()):
+                result = list_models(SimpleNamespace(value={}, connections=None), {"service": "deepseek", "endpoint": "https://api.deepseek.com", "credentialSource": "environment"})
+        self.assertEqual(["future-model", "other-model"], result["models"])
+        self.assertEqual({"future-model": ["low", "max"]}, result["efforts"])
+
     def test_deepseek_environment_is_used_without_exposing_key(self):
         settings = SimpleNamespace(value={}, connections=None)
         requests = []

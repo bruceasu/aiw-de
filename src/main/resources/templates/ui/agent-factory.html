@@ -40,7 +40,7 @@ $env:AIW_MODEL_CREDENTIAL_KEY = [Convert]::ToBase64String($modelCredentialBytes)
 <p id="factory-api-settings" class="callout" role="status" hidden></p><p id="factory-api-protocol-help" class="help" hidden>DeepSeek 使用 https://api.deepseek.com，密钥来自执行设备的 DEEPSEEK_API_KEY。修改环境后需重启 Plane 或对应外部 Worker。两种协议均有思考模式适配；Chat Completions 在完整回合结束后提交 SDK，保留原始推理与工具消息。标准端点不启用 Beta strict，本机始终校验工具参数。不会自动切换协议或借用 OpenAI 凭据。</p><p id="factory-capabilities" class="help" role="status" hidden></p>
 <h3>2. 模型与推理</h3><div class="form-grid">
 <label class="field">默认模型<select id="factory-model-choice" required><option value="">请先完成执行与登录设置</option></select></label>
-<label class="field" id="factory-manual-model" hidden>手动模型名称<input name="model" maxlength="120" autocomplete="off" pattern="[A-Za-z0-9._-]{1,120}" placeholder="输入该账户实际可用的模型 ID"></label>
+<label class="field" id="factory-manual-model" hidden>手动模型名称<input name="model" maxlength="160" autocomplete="off" placeholder="输入该账户实际可用的模型 ID"></label>
 <label class="field">推理强度<select name="effort" required><option value="none">none</option><option value="minimal">minimal</option><option value="low">low</option><option value="medium" selected>medium</option><option value="high">high</option></select></label>
 </div><div class="actions"><button class="btn ghost" id="factory-model-refresh" type="button" disabled>重新读取模型目录</button><button class="btn ghost" id="factory-model-manual" type="button">手动填写模型</button></div>
 <p id="factory-model-status" class="help" role="status" aria-live="polite">完成登录设置后自动读取目录。也可以手动填写模型。</p><p id="factory-effort-help" class="help"></p>

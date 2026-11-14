@@ -826,9 +826,12 @@ const secretaryRunDrafts = new Map();
 const secretaryRunDetails = new Map();
 const secretaryControlRequests = new Map();
 let modelCatalogGeneration = 0;
+let secretaryModelEfforts = {};
 let modelCatalogTimer = null;
 
 function scheduleModelCatalog() {
+  secretaryModelEfforts = {};
+  renderSecretaryEfforts();
   const generation = ++modelCatalogGeneration;
   clearTimeout(modelCatalogTimer);
   byId("available-models").replaceChildren();
@@ -836,7 +839,7 @@ function scheduleModelCatalog() {
   choice.replaceChildren(new Option("获取列表后选择，也可直接输入", ""));
   choice.disabled = true;
   const service = byId("model-service").value;
-  if (!["openai", "deepseek", "responses", "chat", "chatgpt"].includes(service)) {
+  if (!["openai", "deepseek", "responses", "chatgpt"].includes(service)) {
     byId("model-catalog-status").textContent = "当前方式请手动填写模型。";
     return;
   }
@@ -847,7 +850,7 @@ function scheduleModelCatalog() {
   const base = form.elements.endpoint.value.trim();
   const savedKeyMatches = snapshot?.assistant?.hasKey && snapshot.assistant.credentialSource !== "environment"
     && (snapshot.assistant.endpoint || "").replace(/\/$/, "") === base.replace(/\/$/, "");
-  if (service === "chatgpt" && !connectionId || ["responses", "chat"].includes(service) && !base
+  if (service === "chatgpt" && !connectionId || service === "responses" && !base
       || ["openai", "deepseek"].includes(service) && source !== "environment" && !key && !connectionId && !savedKeyMatches) {
     byId("model-catalog-status").textContent = "选择连接或填写所需信息后自动获取；也可手动填写。";
     return;
@@ -857,6 +860,8 @@ function scheduleModelCatalog() {
     try {
       const { result } = await post("model/catalog", { service, endpoint: base, connectionId, key, credentialSource: source }, false);
       if (generation !== modelCatalogGeneration) return;
+      secretaryModelEfforts = result.efforts || {};
+      renderSecretaryEfforts();
       const list = byId("available-models");
       list.replaceChildren(...result.models.map(value => new Option(value, value)));
       choice.replaceChildren(new Option("请选择模型，或直接输入模型名称", ""), ...result.models.map(value => new Option(value, value)));
@@ -872,6 +877,19 @@ function scheduleModelCatalog() {
   }, 250);
 }
 
+function renderSecretaryEfforts() {
+  const form = formFor("settings"), service = byId("model-service").value;
+  const levels = secretaryModelEfforts[form.elements.model.value];
+  const supported = service === "deepseek" || levels ? ["", "none", ...(levels || ["low", "high", "max"])]
+    : ["", "none", "minimal", "low", "medium", "high", "xhigh", "max"];
+  for (const option of form.elements.effort.options) {
+    option.hidden = !supported.includes(option.value) && option.value !== form.elements.effort.value;
+    option.disabled = !supported.includes(option.value) && option.value !== form.elements.effort.value;
+  }
+  byId("model-effort-help").textContent = levels
+    ? supported.includes(form.elements.effort.value) ? "强度来自所选模型的目录；none 表示关闭思考，默认值不发送强度参数。" : "当前强度未被目录确认，请选择默认值或目录支持的强度。"
+    : "目录未提供此模型的强度能力。默认值不发送参数；其他选项是手动覆盖，不保证所选模型支持。";
+}
 function renderSecretaryModels() {
   const form = formFor("settings");
   if (!form || !snapshot?.assistant) return;
@@ -902,15 +920,14 @@ function renderSecretaryModels() {
   form.elements.credentialSource.disabled = !sdk || mode !== "api-key";
   document.querySelector("[data-connection-field]").hidden = !sdk || environmentKey;
   select.disabled = !sdk || environmentKey;
-  const showKey = service === "openai" || service === "responses" || service === "deepseek" || service === "chat";
+  const showKey = service === "openai" || service === "responses" || service === "deepseek";
   const showEndpoint = showKey;
   const showModel = !!service && service !== "command";
   const showEffort = sdk || service === "codex";
-  for (const option of form.elements.effort.options) {
-    const supported = service !== "deepseek" || ["", "none", "low", "high", "max"].includes(option.value);
-    option.hidden = !supported && option.value !== form.elements.effort.value;
-    option.disabled = !supported && option.value !== form.elements.effort.value;
-  }
+  renderSecretaryEfforts();
+  document.querySelector("[data-api-protocol]").hidden = !sdk || mode !== "api-key";
+  form.elements.apiProtocol.disabled = !sdk || mode !== "api-key";
+  if (mode === "chatgpt") form.elements.apiProtocol.value = "responses";
   for (const element of document.querySelectorAll("[data-chatgpt-only]")) element.hidden = service !== "chatgpt";
   for (const element of document.querySelectorAll("[data-codex-only]")) element.hidden = service !== "codex";
   for (const element of document.querySelectorAll("[data-command-only]")) element.hidden = service !== "command";
@@ -1093,12 +1110,12 @@ function renderAssistant() {
     const endpoint = (settings.endpoint || "").replace(/\/$/, "");
     byId("model-service").value = settings.provider === "codex-app-server" ? "codex"
       : settings.provider === "command" ? "command"
-      : settings.provider === "chat" ? "chat"
       : settings.authMode === "chatgpt" ? "chatgpt"
       : settings.authMode === "api-key" ? (!endpoint || endpoint === "https://api.openai.com/v1" ? "openai"
         : endpoint === "https://api.deepseek.com" || endpoint === "https://api.deepseek.com/v1" ? "deepseek" : "responses") : "";
     form.elements.connectionId.dataset.savedId = settings.connectionId || "";
     form.elements.endpoint.value = settings.endpoint;
+    form.elements.apiProtocol.value = settings.apiProtocol || "responses";
     form.elements.model.value = settings.model;
     form.elements.executable.value = settings.executable || "";
     form.elements.effort.value = settings.effort || "";
@@ -1538,6 +1555,9 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
     if (route === "policy") { data.confirmed = data.confirmed === "on"; if (data.deny.trim()) data.deny = parseInput(data.deny, "禁止范围"); else delete data.deny; }
     if (route === "record") data.data = parseInput(data.data, "私人内容");
     if (route === "settings") {
+      const levels = secretaryModelEfforts[data.model];
+      if (levels && data.effort && !["none", ...levels].includes(data.effort)) throw new Error("当前强度未被目录确认，请选择默认值或目录支持的强度。");
+      if (data.authMode === "chatgpt") data.apiProtocol = "responses";
       data.roots = data.roots.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
       if (knowledgeSettingsDirty) data.knowledgeEnabled = !!form.elements.knowledgeEnabled?.checked;
       else { delete data.knowledgeEnabled; delete data.knowledgeBaseUrl; delete data.knowledgeToken; }
@@ -1609,8 +1629,9 @@ byId("model-service").addEventListener("change", event => {
   const form = formFor("settings");
   const service = event.target.value;
   form.elements.provider.value = service === "codex" ? "codex-app-server" : service === "command" ? "command"
-    : service === "chat" ? "chat" : "openai-agents";
+    : "openai-agents";
   form.elements.authMode.value = service === "chatgpt" ? "chatgpt" : ["openai", "deepseek", "responses"].includes(service) ? "api-key" : "";
+  form.elements.apiProtocol.value = "responses";
   form.elements.credentialSource.value = "";
   form.elements.endpoint.value = service === "deepseek" ? "https://api.deepseek.com" : service === "openai" ? "https://api.openai.com/v1" : "";
   form.elements.model.value = "";
@@ -1635,6 +1656,8 @@ for (const name of ["endpoint", "key"]) {
     byId("available-models").replaceChildren();
     byId("model-catalog-choice").replaceChildren(new Option("获取列表后选择，也可直接输入", ""));
     byId("model-catalog-choice").disabled = true;
+    secretaryModelEfforts = {};
+    renderSecretaryEfforts();
     if (name === "endpoint") renderSecretaryModels();
   });
   formFor("settings").elements[name].addEventListener("change", scheduleModelCatalog);
@@ -1642,7 +1665,10 @@ for (const name of ["endpoint", "key"]) {
 byId("model-catalog-refresh").addEventListener("click", scheduleModelCatalog);
 byId("model-catalog-choice").addEventListener("change", event => {
   if (event.target.value) formFor("settings").elements.model.value = event.target.value;
+  renderSecretaryEfforts();
 });
+formFor("settings").elements.model.addEventListener("input", renderSecretaryEfforts);
+formFor("settings").elements.effort.addEventListener("change", renderSecretaryEfforts);
 formFor("settings").elements.credentialSource.addEventListener("change", () => {
   const form = formFor("settings");
   form.elements.connectionId.value = "";

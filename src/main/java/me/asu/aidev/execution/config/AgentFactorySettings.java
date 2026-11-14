@@ -28,7 +28,7 @@ public class AgentFactorySettings {
             if(credentialRef==null)credentialVersion=null;
             else if(!credentialRef.matches("MC-[0-9a-f-]{36}")||credentialVersion==null||credentialVersion<1)throw new IllegalArgumentException("MODEL_CONNECTION_REQUIRED");
             if(runtime==null||!Set.of("codex-app-server","openai-agents").contains(runtime))throw new IllegalArgumentException("请选择支持的模型运行时。");
-            if(model==null||!model.matches("[A-Za-z0-9._-]{1,120}"))throw new IllegalArgumentException("请填写模型名称。");
+            if(!me.asu.aidev.modelauth.ModelAuthContract.modelName(model))throw new IllegalArgumentException("请填写模型名称。");
             var efforts=runtime.equals("codex-app-server")?Set.of("none","minimal","low","medium","high","xhigh")
                 :apiProvider.equals("deepseek")?Set.of("default","none","low","high","max"):Set.of("default","none","minimal","low","medium","high","xhigh","max");
             if(effort==null||!efforts.contains(effort))throw new IllegalArgumentException("此服务商与协议不支持所选推理强度。");

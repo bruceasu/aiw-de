@@ -297,7 +297,7 @@ public class ModelConnections {
                 ||!input.connectionId().equals(registered.get("connection_id"))||input.connectionVersion()!=number(registered,"connection_version")
                 ||!worker.capabilities().contains(capability(input.connectionId(),input.connectionVersion()))
                 ||!worker.id().value().equals(input.lease().workerId())||!worker.runtimeType().startsWith(runtime(row)+":"))throw new SecurityException("MODEL_CREDENTIAL_SCOPE_DENIED");
-        if(input.model()==null||!input.model().matches("[A-Za-z0-9._-]{1,120}"))throw new IllegalArgumentException("MODEL_REQUIRED");
+        if(!ModelAuthContract.modelName(input.model()))throw new IllegalArgumentException("MODEL_REQUIRED");
         String selected=repo.jdbc().queryForObject("SELECT ai_model FROM execution_attempt WHERE id=?",String.class,input.lease().attemptId());
         if(selected==null||selected.isBlank())selected=(String)binding.get("model");
         if(!input.model().equals(selected))throw new SecurityException("MODEL_CONFIGURATION_CHANGED");

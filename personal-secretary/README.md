@@ -96,13 +96,15 @@ Codex 是明确选择的备用通道，由秘书执行宿主搜索与文件工�
 
 新安装在“设置”中优先显示 Agents SDK，认证来源和模型必须明确选择后才能运行。已有配置保留 provider，不自动换账户。切换后端或覆盖模型时，打开“设置模型”（Web 中为“设置”）：
 
-Web 设置先选择 ChatGPT、OpenAI API Key、DeepSeek、其他兼容服务或 Codex，再填写对应的信息。OpenAI、DeepSeek 和 Responses 兼容服务使用同一 Agents SDK 工具循环；旧 Chat Completions 兼容服务仍使用原有文本处理路径。已有旧服务配置不会自动切换，选择 DeepSeek 并保存后才改用 SDK 路径。服务地址、凭据和模型应与所选服务匹配。DeepSeek 提供默认、`none`、`low`、`high` 和 `max` 推理强度；Responses 路径选择 `none` 时会显式传入该值，模型是否支持由服务商和模型决定；留空才使用服务端默认值。
+Web 设置先选择 ChatGPT、OpenAI API Key、DeepSeek、其他 OpenAI 兼容服务或备用 Codex，再填写对应信息。API Key 服务可独立选择 Responses／Chat Completions 协议，都使用同一个 Agents SDK 工具循环；ChatGPT 登录使用 Responses。检查已保存配置、摘要等文本调用也沿用所选协议。旧 Chat 配置保留地址和已有凭据，统一改走 SDK；原来没有凭据的配置需要明确选择来源，不会擅自发送环境变量中的密钥。服务地址填 API 根地址，不包含 `/responses` 或 `/chat/completions`。
+
+模型目录成功后可选择，也可直接输入未来新模型；目录失败仍可手填。DeepSeek 提供模型级强度信息时，按返回值显示，另提供 `none` 关闭思考；留空不发送强度参数。没有强度元数据时，其他值标为手动覆盖，不能当作模型已支持的能力。协议、模型和强度保留在本次运行绑定中；不会因失败自动换模型、改账户或重试。Codex 与自定义程序仍须显式选择。
 
 选择 API Key 认证后，可明确选择秘书进程的环境变量作为密钥来源：OpenAI 使用 `OPENAI_API_KEY`，DeepSeek 使用 `DEEPSEEK_API_KEY`。变量需在启动秘书的环境中设置；页面不会读取或回显变量内容，运行和模型目录查询均在秘书主机使用该变量。环境变量不会自动选中。设置页在选择连接或填写所需信息后查询对应服务的模型目录，成功后可从列表选择，也可手动刷新或直接输入任意模型名称；新模型不需要代码中预设。目录结果不保证模型支持工具调用。ChatGPT 连接的目录可用性取决于账户权限；Codex 和自定义程序目前需要手动填写模型。
 
 - `codex-app-server`：使用秘书目录内的 Codex App Server 适配器。通过 PATH（或已有的 `AIW_CODEX_PATH`）找到已安装的 Codex，沿用本机 `CODEX_HOME`、配置和登录，无需专用目录或重复登录。模型、服务地址和密钥可以留空；程序路径仅为高级可选覆盖项。Windows npm 的 `codex.cmd` / `codex.ps1` 会解析到已安装的原生程序，不通过 cmd/PowerShell 执行 shim。
 - `openai-agents`：先在运行个人服务的 Python 环境中安装本目录 `requirements.txt`，选择 ChatGPT 登录或 API Key、连接和模型。API Key 地址留空使用 `https://api.openai.com/v1`；ChatGPT 固定使用公开 Responses API。秘书管理自己的连接，不要求 Plane 在线。此前已保存的 SDK 环境密钥来源保持有效；新配置不因存在 `OPENAI_API_KEY` 就自动选择它。不会自动安装依赖。
-- 原有 Chat Completions 和自定义 argv 程序仍可显式选择，旧设置不会自动切换后端。Chat 服务地址仍会追加 `/chat/completions`。
+- Chat Completions 在同一 API Key 设置中选择协议；自定义 argv 程序仍可显式选择。两者不会在失败时互相回退。
 
 秘书维护自己的 Runtime、RPC、期限和取消实现，不依赖 `workers/process-python`。SDK 在同一运行中复用 API 客户端；规范历史、工具调用/结果和来源保存在私库，工具结果按需投影，原文不因裁剪删除。SDK 调用秘书提供的受控 Python 工具。Codex 备用沿用本机配置，保持只读沙箱、不接受审批，并关闭原生 shell、网页搜索及多 Agent；其单次模型调用仍使用临时目录。旧 `codexHome` 不参与调用，也不会自动删除旧目录。此前若设置临时 `CODEX_HOME`，请从正常已登录 Codex 的终端重启秘书。
 

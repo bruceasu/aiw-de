@@ -188,6 +188,8 @@ class RunJournal:
     def binding(settings):
         result = {key: settings.get(key, "") for key in ("provider", "authMode", "connectionId", "connectionVersion", "endpoint", "model", "effort",
             "knowledgeEnabled", "knowledgeServiceId", "knowledgeCredentialRef", "knowledgeBaseUrl", "knowledgePublicBaseUrl")}
+        if settings.get("provider") == "openai-agents":
+            result["apiProtocol"] = settings.get("apiProtocol", "responses")
         from secretary_credentials import api_key_environment
         key = settings.get("key") or (os.environ.get(api_key_environment(settings.get("endpoint")), "").strip() if settings.get("credentialSource") == "environment" else None)
         if key:

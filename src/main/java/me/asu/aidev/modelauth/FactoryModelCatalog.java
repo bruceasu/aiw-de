@@ -87,7 +87,7 @@ public class FactoryModelCatalog {
         for(var row:rows) {
             if(chatgpt&&!row.path("visibility").asText().equals("list")||codex&&row.path("hidden").asBoolean(false))continue;
             String id=row.path(chatgpt?"slug":codex?"model":"id").asText();
-            if(!id.matches("[A-Za-z0-9._-]{1,120}"))continue; // Match the existing Worker/Settings model contract.
+            if(!modelName(id))continue;
             String name=row.path(chatgpt?"display_name":"displayName").asText(id);if(name.isBlank())name=id;if(name.length()>256)name=name.substring(0,256);
             var efforts=new ArrayList<String>();
             if(codex&&row.path("supportedReasoningEfforts").isArray())for(var item:row.path("supportedReasoningEfforts")) {

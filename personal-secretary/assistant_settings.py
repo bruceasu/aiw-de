@@ -16,6 +16,9 @@ class AssistantSettings:
         self.value = read_private(self.path, {})
         self.legacy_command = legacy_command
         self.value.setdefault("provider", "command" if legacy_command else "openai-agents")
+        if self.value.get("provider") == "chat":
+            # Existing Chat Completions settings now use the same SDK tool loop.
+            self.value.update(provider="openai-agents", apiProtocol="chat-completions", authMode="api-key")
         self.connections = ModelConnections(self.directory)
         if "authMode" not in self.value:
             legacy_sdk = self.path.exists() and self.value.get("provider") == "openai-agents" and self.value.get("model")
@@ -27,6 +30,7 @@ class AssistantSettings:
     def public(self):
         return {"configured": self.configured(), "paused": self.value.get("paused", False),
                 "provider": self.value.get("provider", "codex-app-server"), "endpoint": self.value.get("endpoint", ""),
+                "apiProtocol": self.value.get("apiProtocol", "responses"),
                 "model": self.value.get("model", ""), "hasKey": bool(self.value.get("key")),
                 "executable": self.value.get("executable", ""), "effort": self.value.get("effort", ""),
                 "roots": self.value.get("roots", []), "scope": "daily-assistant-v1",
@@ -81,9 +85,13 @@ class AssistantSettings:
         provider = data.get("provider", self.value.get("provider", "openai-agents"))
         value = {"provider": provider, "paused": self.value.get("paused", False), **{
             key: self.value[key] for key in ("knowledgeEnabled", "knowledgeBaseUrl", "knowledgeCredentialRef", "knowledgeServiceId", "knowledgePublicBaseUrl", "knowledgeCapabilities") if key in self.value}}
-        if provider in {"chat", "openai-agents"}:
+        if provider == "openai-agents":
+            protocol = data.get("apiProtocol", self.value.get("apiProtocol", "responses"))
+            if protocol not in {"responses", "chat-completions"}:
+                raise ValueError("请选择 Responses 或 Chat Completions 协议。")
+            value["apiProtocol"] = protocol
             endpoint = str(data.get("endpoint", "")).strip().rstrip("/")
-            if provider == "openai-agents" and not endpoint:
+            if not endpoint:
                 endpoint = "https://api.openai.com/v1"
             parsed = urllib.parse.urlsplit(endpoint)
             if parsed.username or parsed.password or parsed.query or parsed.fragment or not parsed.hostname or (
@@ -96,33 +104,34 @@ class AssistantSettings:
             if not isinstance(key, str) or len(key) > 4096 or "\n" in key or "\r" in key:
                 raise ValueError("模型密钥格式不正确。")
             value.update(endpoint=endpoint, model=model, key=key)
-            if provider == "openai-agents":
-                mode = data.get("authMode", self.value.get("authMode", ""))
-                if mode not in {"api-key", "chatgpt"}:
-                    raise ValueError("请明确选择使用 ChatGPT 套餐登录或 API Key。")
-                source = data.get("credentialSource", self.value.get("credentialSource", ""))
-                if source not in {"", "environment"}:
-                    raise ValueError("请选择有效的 API Key 来源。")
-                identity = data.get("connectionId") if "connectionId" in data else self.value.get("connectionId")
-                if mode == "api-key" and source == "environment":
-                    if not os.environ.get(api_key_environment(endpoint), "").strip():
-                        raise ValueError(missing_api_key_environment(endpoint))
-                    identity = None
-                    key = ""
-                    value.pop("key", None)
-                    value["credentialSource"] = "environment"
-                if mode == "api-key" and data.get("key"):
-                    if source == "environment":
-                        raise ValueError("请选择环境变量或填写 API Key，不要同时使用。")
-                    identity = self.connections.create_api_key(data["key"], endpoint)["id"]
-                if identity:
-                    value.update(self.connections.binding(identity, mode))
-                    value.pop("key", None)
-                elif mode == "api-key" and value.get("credentialSource") == "environment":
-                    value["credentialSource"] = "environment"
-                elif mode == "chatgpt" or not key:
-                    raise ValueError("请先登录并选择本机连接，或填写 API Key。")
-                value["authMode"] = mode
+            mode = data.get("authMode", self.value.get("authMode", ""))
+            if mode not in {"api-key", "chatgpt"}:
+                raise ValueError("请明确选择使用 ChatGPT 套餐登录或 API Key。")
+            if mode == "chatgpt" and protocol != "responses":
+                raise ValueError("ChatGPT 登录连接使用 Responses 协议，请勿用于 Chat Completions。")
+            source = data.get("credentialSource", self.value.get("credentialSource", ""))
+            if source not in {"", "environment"}:
+                raise ValueError("请选择有效的 API Key 来源。")
+            identity = data.get("connectionId") if "connectionId" in data else self.value.get("connectionId")
+            if mode == "api-key" and source == "environment":
+                if not os.environ.get(api_key_environment(endpoint), "").strip():
+                    raise ValueError(missing_api_key_environment(endpoint))
+                identity = None
+                key = ""
+                value.pop("key", None)
+                value["credentialSource"] = "environment"
+            if mode == "api-key" and data.get("key"):
+                if source == "environment":
+                    raise ValueError("请选择环境变量或填写 API Key，不要同时使用。")
+                identity = self.connections.create_api_key(data["key"], endpoint)["id"]
+            if identity:
+                value.update(self.connections.binding(identity, mode))
+                value.pop("key", None)
+            elif mode == "api-key" and value.get("credentialSource") == "environment":
+                value["credentialSource"] = "environment"
+            elif mode == "chatgpt" or not key:
+                raise ValueError("请先登录并选择本机连接，或填写 API Key。")
+            value["authMode"] = mode
         elif provider == "codex-app-server":
             executable = data.get("executable", "")
             if not isinstance(executable, str) or len(executable) > 4096 or any(c in executable for c in "\x00\n\r"):

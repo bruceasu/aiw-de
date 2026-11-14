@@ -6,6 +6,9 @@ import me.asu.aidev.execution.guard.GuardContract.Lease;
 /** No secret-bearing value is an ordinary connection projection. */
 public final class ModelAuthContract {
     private ModelAuthContract() {}
+    public static boolean modelName(String value) {
+        return value != null && value.matches("[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}");
+    }
     public enum Kind { CHATGPT_RESPONSES, CODEX_APP_SERVER }
     public record Connection(String id,Kind kind,String label,String state,long version,long generation,long expiresAt) {}
     public record Selection(String id,long version) {}

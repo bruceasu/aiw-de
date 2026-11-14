@@ -23,6 +23,42 @@ MAX_INPUT = 240_000
 MAX_OUTPUT = 32_000
 
 
+async def chat_completion(client, config, instruction, history, schemas):
+    """Use SDK message conversion; reject incomplete batches before exposing any tool."""
+    from agents.models.chatcmpl_converter import Converter
+    from agents.items import ModelResponse
+    from agents.usage import Usage
+    if not {"model", "base_url", "should_replay_reasoning_content"}.issubset(inspect.signature(Converter.items_to_messages).parameters):
+        raise ValueError("当前 Agents SDK 缺少 Chat Completions 上下文转换能力，请更新运行环境后再使用。")
+    from urllib.parse import urlsplit
+    deepseek = urlsplit(str(client.base_url)).hostname == "api.deepseek.com"
+    # Reasoning replay follows the explicit endpoint, never a guessed model name.
+    replay = (lambda _context: True) if deepseek else None
+    messages = Converter.items_to_messages(history, model=config["model"], base_url=str(client.base_url), should_replay_reasoning_content=replay)
+    if instruction:
+        messages.insert(0, {"role": "system", "content": instruction})
+    parameters = {"model": config["model"], "messages": messages, "stream": False}
+    if schemas:
+        parameters["tools"] = [{"type": "function", "function": {"name": name,
+            "description": "Use the declared secretary tool within the current request.", "parameters": schema, "strict": False}}
+            for name, schema in schemas.items()]
+    effort = config.get("effort")
+    if effort:
+        parameters["reasoning_effort"] = effort
+        if deepseek:
+            parameters["extra_body"] = {"thinking": {"type": "disabled" if effort == "none" else "enabled"}}
+    actual = await client.chat.completions.create(**parameters)
+    if len(actual.choices) != 1 or actual.choices[0].finish_reason not in {"stop", "tool_calls"}:
+        raise ValueError("模型响应整体未完成，没有执行其中的工具请求。")
+    usage = actual.usage
+    incoming, outgoing = getattr(usage, "prompt_tokens", None), getattr(usage, "completion_tokens", None)
+    known = type(incoming) is int and incoming >= 0 and type(outgoing) is int and outgoing >= 0
+    response = ModelResponse(output=Converter.message_to_output_items(actual.choices[0].message, provider_data={"model": config["model"]}),
+        response_id=None, usage=Usage(requests=1, input_tokens=incoming if known else 0, output_tokens=outgoing if known else 0,
+        total_tokens=incoming + outgoing if known else 0))
+    return response, known
+
+
 def normalized(value):
     if hasattr(value, "model_dump"):
         return value.model_dump(exclude_none=True)
@@ -303,13 +339,24 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
                 elif binding != client_binding:
                     raise ModelAuthRequired("运行中的连接凭据发生变化，未自动替换；请重新安排。")
                 try:
-                    parameters = {"model": config["model"], "instructions": system_instructions, "input": history,
-                        "tools": [{"type": "function", "name": name, "description": "Use the declared secretary tool within the current request.",
-                                   "parameters": schema, "strict": False} for name, schema in schemas.items()],
-                        "store": False, "stream": False}
-                    if config.get("effort"):
-                        parameters["reasoning"] = {"effort": config["effort"]}
-                    actual = await asyncio.wait_for(client.responses.create(**parameters), timeout=120)
+                    if config.get("apiProtocol", "responses") == "chat-completions":
+                        response, known = await asyncio.wait_for(chat_completion(client, config, system_instructions, history, schemas), timeout=120)
+                    else:
+                        parameters = {"model": config["model"], "instructions": system_instructions, "input": history,
+                            "tools": [{"type": "function", "name": name, "description": "Use the declared secretary tool within the current request.",
+                                       "parameters": schema, "strict": False} for name, schema in schemas.items()],
+                            "store": False, "stream": False}
+                        if config.get("effort"):
+                            parameters["reasoning"] = {"effort": config["effort"]}
+                        actual = await asyncio.wait_for(client.responses.create(**parameters), timeout=120)
+                        if getattr(actual, "status", None) != "completed":
+                            raise ValueError("模型响应整体未完成，没有执行其中的工具请求。")
+                        usage = getattr(actual, "usage", None)
+                        incoming, outgoing = getattr(usage, "input_tokens", None), getattr(usage, "output_tokens", None)
+                        known = type(incoming) is int and incoming >= 0 and type(outgoing) is int and outgoing >= 0
+                        response = ModelResponse(output=actual.output, response_id=actual.id, usage=Usage(requests=1,
+                            input_tokens=incoming if known else 0, output_tokens=outgoing if known else 0,
+                            total_tokens=incoming + outgoing if known else 0))
                 except Exception as error:
                     status = getattr(error, "status_code", None)
                     if status in {401, 403}:
@@ -317,14 +364,7 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
                     if status == 429:
                         raise ValueError("模型额度或限流阻止了请求，请检查账户用量；未自动重试或更换付费来源。") from None
                     raise ValueError("模型请求未完成，请检查所选模型、服务和 SDK 配置；没有执行未完成响应中的工具。") from None
-                if getattr(actual, "status", None) != "completed":
-                    raise ValueError("模型响应整体未完成，没有执行其中的工具请求。")
-                usage = getattr(actual, "usage", None)
-                incoming, outgoing = getattr(usage, "input_tokens", None), getattr(usage, "output_tokens", None)
-                known = type(incoming) is int and incoming >= 0 and type(outgoing) is int and outgoing >= 0
-                response = ModelResponse(output=actual.output, response_id=actual.id, usage=Usage(requests=1,
-                    input_tokens=incoming if known else 0, output_tokens=outgoing if known else 0,
-                    total_tokens=incoming + outgoing if known else 0))
+                incoming, outgoing = response.usage.input_tokens, response.usage.output_tokens
                 journal.event(identity, "model-end", status="completed", usageKnown=known,
                     **({"inputTokens": incoming, "outputTokens": outgoing} if known else {}))
             # SDK receives actionable output only after a complete model result.

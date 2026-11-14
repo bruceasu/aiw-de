@@ -45,7 +45,7 @@ class FactoryModelCatalogTest {
         var rows=json.readTree("""
                 {"data":[{"model":"model-a","displayName":"Coding","defaultReasoningEffort":"high",
                   "supportedReasoningEfforts":[{"reasoningEffort":"low"},{"reasoningEffort":"high"},{"reasoningEffort":"invented"}]},
-                  {"model":"hidden","hidden":true},{"model":"unsupported:model"}]}
+                  {"model":"hidden","hidden":true},{"model":"unsupported model"}]}
                 """);
         var models=FactoryModelCatalog.parse(rows,"CODEX_RPC");
         assertThat(models).hasSize(1);assertThat(models.getFirst().efforts()).containsExactly("low","high");assertThat(models.getFirst().defaultEffort()).isEqualTo("high");
@@ -54,6 +54,12 @@ class FactoryModelCatalogTest {
         var models=FactoryModelCatalog.parse(json.readTree("{\"data\":[{\"id\":\"model-a\"},{\"id\":\"embedding-model\"}]}"),"OPENAI_API_ACCOUNT");
         assertThat(models).extracting(FactoryModelCatalog.Model::id).containsExactly("model-a","embedding-model");
         assertThat(models).allMatch(model->model.efforts().isEmpty()&&model.defaultEffort()==null);
+    }
+    @Test void compatibleModelNamesCanContainProviderPathsAndVersions() throws Exception {
+        var models=FactoryModelCatalog.parse(json.readTree("{\"data\":[{\"id\":\"vendor/model:release\"}]}"),"OPENAI_API_ACCOUNT");
+        assertThat(models).extracting(FactoryModelCatalog.Model::id).containsExactly("vendor/model:release");
+        assertThat(ModelAuthContract.modelName("vendor/model:release")).isTrue();
+        assertThat(ModelAuthContract.modelName("model\nother")).isFalse();
     }
     @Test void mismatchedOrMissingCredentialModesCannotFallBackToAnotherAccount() {
         for(var query:List.of(new FactoryModelCatalog.Query("codex-app-server","chatgpt","MC-test",1L,false),
