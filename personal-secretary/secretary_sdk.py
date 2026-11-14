@@ -129,8 +129,8 @@ def definitions(knowledge=False):
         "platform_answer": ({"permissionId": short, "targetId": short, "questionId": short, "requestVersion": number, "answer": text},
             ["permissionId", "targetId", "questionId", "requestVersion", "answer"]),
         "create_work": ({"title": short, "description": text}, ["title", "description"]),
-        "delegate_task": ({key: short if key != "instruction" else text for key in ("planId", "repositoryRef", "baseRevision", "role", "aiProfileId", "instruction")},
-            ["planId", "repositoryRef", "baseRevision", "role", "aiProfileId", "instruction"]),
+        "delegate_task": ({"instruction": text, "memberId": short,
+                           "requiredSkills": {"type": "array", "items": short, "maxItems": 8}}, ["instruction"]),
         "read_run_source": ({"sourceId": short, "offset": number}, ["sourceId"]),
     }
     if knowledge:

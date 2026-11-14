@@ -84,26 +84,11 @@ class AuthorizationRequests:
                 runtime.platform.session_started = True
             identity = runtime.platform_actions._read(lambda: runtime.platform.request("/connection-state"))
             runtime.platform_observed = {"enabled": identity.get("enabled") is True, "agentBoot": runtime.platform.boot, "generation": identity.get("generation")}
-            if row.get("planId") and row["action"].get("action") in {"professional_options", "delegate_task"}:
-                details = runtime.platform_setup.diagnostics(row["planId"])
-                if details.get("missing"):
-                    missing = details["missing"]
-                    raise AuthorizationRequired("\n".join(item["message"] for item in missing), missing[0]["code"])
             if identity.get("enabled") is not True:
                 runtime.enabled = False
                 raise AuthorizationRequired("平台已连接，但当前秘书进程尚未启用。请在平台确认当前秘书进程，保留原授权。", "PROCESS_ENABLE_REQUIRED")
             if row["action"].get("action") in {"professional_options", "delegate_task"}:
-                options = runtime.professional.options()
-                if row.get("planId"):
-                    plan = next((plan for plan in options.get("plans", []) if plan["id"] == row["planId"]), None)
-                    if not plan:
-                        raise AuthorizationRequired("平台连接已确认，但此计划尚无可用的托管和文件执行范围。请打开“配置计划与文件范围”，核对仓库、文件和 Git 基线后保存。", "PLAN_SCOPE_REQUIRED")
-                    if plan.get("paused") or plan.get("revoked") or plan.get("expiresAt", 0) <= int(time.time() * 1000):
-                        raise AuthorizationRequired("此计划的文件执行范围已暂停、撤销或到期，请在平台执行控制中核对。", "EXECUTION_SCOPE_INACTIVE")
-                    if not any(repository.get("baselines") for repository in plan.get("repositories", [])):
-                        raise AuthorizationRequired("此计划缺少固定 Git 基线。请在文件执行范围中选择仓库，准备基线并确认保存。", "BASELINE_REQUIRED")
-                if not options.get("models"):
-                    raise AuthorizationRequired("Agent 工厂尚未选择默认模型。请打开“Agent 工厂设置”保存一次模型与自动 Worker 设置，之后由工厂自动准备。", "PROFESSIONAL_MODEL_REQUIRED")
+                runtime.professional.options()
             elif row["action"].get("action") not in {"platform_permissions", "platform_plan_overview"}:
                 permissions = runtime.platform.request("/action-permissions")
                 if not any(item.get("effectiveState") == "ENABLED" and item.get("remaining", 0) > 0

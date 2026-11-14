@@ -355,8 +355,8 @@ function workCard(work, compact = false) {
   actions.append(button("移除工作", () => assistantOperation("work-trash", { id: work.id, revision: work.revision }, "已移到设置中的“已删除工作”，可以恢复。")));
   const planId = work.professionalPlanId || work.professionalDraftPlanId || work.planId;
   if (planId && snapshot.platformOrigin) {
-    const link = node("a", "text-button", "查看平台 Plan");
-    link.href = new URL("/ui/plans/" + encodeURIComponent(planId), snapshot.platformOrigin).href;
+    const link = node("a", "text-button", work.professionalExecutionId ? "查看平台执行" : "查看平台 Plan");
+    link.href = new URL(work.professionalExecutionId ? "/ui/tasks?execution=" + encodeURIComponent(work.professionalExecutionId) : "/ui/plans/" + encodeURIComponent(planId), snapshot.platformOrigin).href;
     link.target = "_blank"; link.rel = "noopener noreferrer";
     actions.append(link);
   }

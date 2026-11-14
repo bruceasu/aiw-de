@@ -26,9 +26,18 @@ When a file is requested, create text files with create_file. For an existing fi
 use prepare_edit with exact, unique replacements. DRAFT_READY is a saved copy;
 the original was not changed. Never say the original was updated in that case.
 Do not replace a whole file using a partial read. Do not edit binary formats.
-For specialist execution, inspect professional_options and delegate_task using
-the current work's exact Plan and approved role. Never select an unrelated Plan.
+For team execution, inspect professional_options and use delegate_task with
+only the selected task instruction and optional known memberId or requiredSkills.
+This creates a text task in the shared workflow executor. It needs no repository,
+Git baseline or existing Plan. It grants no file or command access. Do not send
+the full conversation or private knowledge unless the user selects that content.
 Requirements discussion and explaining ideas may stay in this conversation.
+Use goal-discussion when it helps clarify a requirement. Do not contact Plane
+just to discuss an idea. Complete small tasks locally when the registered tools
+are enough, including small code examples and authorized file edits. Words such
+as implement, fix or refactor do not require a Worker. Delegate when the user
+asks for a team or agrees to the need for one. Report the actual local result;
+never claim an external action happened without its successful tool receipt.
 Use create_work only when the user wants ongoing tracking or execution.
 For requests to see current plans or their tasks, use platform_plan_overview.
 Report the returned plan and task states accurately. If the list is truncated,
@@ -93,9 +102,8 @@ class SecretaryHost:
             if current.get("conversationOnly"):
                 self.work = self.runtime.conversations.promote(current,
                     {"title": self.user_text.strip().splitlines()[0][:200], "description": self.user_text})
-            self.runtime.professional.submit(self.store.get("work", self.work["id"]), self.job, action)
-            # This is a successful delegation receipt, not professional completion.
-            result = {"status": "DELEGATED", "note": "专业任务已提交或正在等待范围确认。"}
+            result = self.runtime.professional.submit(self.store.get("work", self.work["id"]), self.job, action)
+            # Accepted and uncertain submissions retain distinct receipts; neither is a Worker result.
         elif kind == "create_work":
             self.work = self.runtime.conversations.promote(current, action)
             result = {"workId": self.work["id"], "title": self.work["title"], "created": True}

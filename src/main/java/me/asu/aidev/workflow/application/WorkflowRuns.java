@@ -122,6 +122,7 @@ public class WorkflowRuns {
     @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<ExecutionRuns> executionRuns;
     @org.springframework.beans.factory.annotation.Autowired private ExecutionGuard guard;
     @org.springframework.beans.factory.annotation.Autowired private SkillFiles skillFiles;
+    @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<me.asu.aidev.authority.BusinessActionPermissions> actionPermissions;
     @org.springframework.beans.factory.annotation.Value("${aidev.agent-factory.worker-root:workers/process-python}") private String workerRoot="workers/process-python";
     private final AuthorityRepository db;
     private final AuthorityBoundary boundary;
@@ -190,8 +191,11 @@ public class WorkflowRuns {
         return rows;
     }
     private Run replay(String request,String digest) {
+        return replay(actor(),request,digest);
+    }
+    private Run replay(String actor,String request,String digest) {
         text(request,80);boundary.lock();
-        var rows=db.jdbc().queryForList("SELECT request_digest,run_json FROM workflow_execution WHERE actor=? AND request_id=?",actor(),request);
+        var rows=db.jdbc().queryForList("SELECT request_digest,run_json FROM workflow_execution WHERE actor=? AND request_id=?",actor,request);
         if(rows.isEmpty())return null;
         if(!rows.getFirst().get("request_digest").equals(digest)) throw new IllegalStateException("Request identifier has different content; inspect the original execution");
         return db.decode((String)rows.getFirst().get("run_json"),Run.class);
@@ -221,8 +225,46 @@ public class WorkflowRuns {
                 new Node("task","Task",Kind.TASK,instruction,"end",Map.of(),memberId,assignment,requiredSkills,workspaceTools),new Node("end","Done",Kind.END,"",null,Map.of(),null,null,List.of())),sources,commands);
         return start(request,digest,null,0,spec,"",location);
     }
+    private String delegationKey(AuthorityBoundary.Principal agent,String request) {
+        if(!agent.equals(boundary.optionalPrincipal()))throw new SecurityException("Current authenticated Agent required");
+        me.asu.aidev.authority.ActionPermissionContract.uuid(request);
+        return UUID.nameUUIDFromBytes(("secretary:"+agent.worker()+":"+request).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+    }
+    /** Authenticated machine port. A text task cannot expand workspace or command permissions. */
+    @Transactional public Run delegate(AuthorityBoundary.Principal agent,String request,String instruction,String member,List<String> skills) {
+        String key=delegationKey(agent,request),actor=db.actor(agent.owner());
+        instruction=text(instruction,8000);skills=team.requirements(skills);
+        String digest=AuthorityRepository.hash(db.encode(Arrays.asList("delegated-task",instruction,member,skills)));
+        var previous=replay(actor,key,digest);if(previous!=null)return previous;
+        var spec=new Spec(instruction.substring(0,Math.min(80,instruction.length())),instruction,"task",List.of(
+            new Node("task","Task",Kind.TASK,instruction,"end",Map.of(),member,member==null?Assignment.AUTO:Assignment.MEMBER,skills,false),
+            new Node("end","Done",Kind.END,"",null,Map.of(),null,null,List.of())),List.of());
+        return start(key,digest,null,0,spec,"",null,agent);
+    }
+    @Transactional public Map<String,Object> delegation(AuthorityBoundary.Principal agent,String request) {
+        String key=delegationKey(agent,request);boundary.lock();
+        var run=db.jdbc().query("SELECT run_json FROM workflow_execution WHERE actor=? AND request_id=?",
+            (rs,i)->db.decode(rs.getString(1),Run.class),db.actor(agent.owner()),key).stream().findFirst().orElseThrow();
+        var task=currentTask(run);
+        if(run.state.equals("RUNNING")&&task!=null&&Set.of(TaskState.FAILED,TaskState.CANCELLED).contains(task.state())) {
+            run.state="FAILED";event(run,"FAILED","Worker task "+task.state()+"; inspect the existing execution before retrying");persist(run);
+        }
+        String result=run.events.reversed().stream().filter(e->e.type().equals("RESULT")).map(Event::content).findFirst().orElse("");
+        if(task!=null)result=attempts.findCompletionReport(task.id()).map(CompletionReport::summary).orElse(result);
+        var status=new LinkedHashMap<String,Object>();
+        status.put("requestId",request);status.put("ownerId",agent.owner());status.put("agentId",agent.worker());status.put("platformInstanceId",boundary.instance());
+        status.put("planId",run.id);status.put("executionId",run.id);status.put("state",run.state);status.put("version",run.version);
+        status.put("taskId",task==null?null:task.id().value());status.put("taskState",task==null?null:task.state().name());
+        status.put("activeLease",task!=null&&tasks.findLease(task.id()).isPresent());
+        status.put("report",result);status.put("message",run.events.isEmpty()?"":run.events.getLast().content());
+        status.put("executionPath","/ui/tasks?execution="+run.id);
+        return status;
+    }
     private Run start(String request,String digest,String definition,long definitionVersion,Spec spec,String input,String declaredLocation) {
-        String actor=actor();input=input==null?"":input;
+        return start(request,digest,definition,definitionVersion,spec,input,declaredLocation,null);
+    }
+    private Run start(String request,String digest,String definition,long definitionVersion,Spec spec,String input,String declaredLocation,AuthorityBoundary.Principal agent) {
+        String actor=agent==null?actor():db.actor(agent.owner());input=input==null?"":input;
         var assigned=new LinkedHashMap<String,me.asu.aidev.worker.application.TeamMembers.Profile>();
         for(var node:spec.nodes()){
             team.requirements(node.requiredSkills());
@@ -236,7 +278,13 @@ public class WorkflowRuns {
                         WorkflowPlanSpec.ReviewMode.SELF,WorkflowPlanSpec.ReviewRisk.LOW)).toList();
         if(steps.isEmpty()) throw new IllegalArgumentException("A working node is required");
         var plan=plans.getObject().draft(new WorkflowPlanSpec(spec.goal(),WorkflowPlanSpec.Source.MANAGER,steps,declaredLocation),actor);
-        owners.bind(new NativePlanOwners.Bind(UUID.randomUUID().toString(),plan.id(),plan.version()));
+        var binding=new NativePlanOwners.Bind(UUID.randomUUID().toString(),plan.id(),plan.version());
+        if(agent==null)owners.bind(binding);
+        else {
+            if(workspaceTools)throw new SecurityException("Delegation does not grant file or command authority");
+            actionPermissions.getObject().confirmFactoryPlan(agent,plan.id(),request);
+            owners.bindConfirmedAgent(binding,agent,request);
+        }
         if(!planStore.transition(plan.id(),plan.version(),WorkflowPlan.State.DRAFT,WorkflowPlan.State.CONFIRMED,actor,"Start workflow execution",Instant.now()))
             throw new IllegalStateException("Execution changed while starting");
         var run=new Run();run.id=plan.id();run.actor=actor;run.definitionId=definition;run.definitionVersion=definitionVersion;

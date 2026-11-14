@@ -1327,6 +1327,7 @@
     "View platform Plan",
     "プラットフォームの Plan を表示"
   ],
+  "查看平台执行": ["View Plane execution", "Plane の実行を表示"],
   "查看工作详情": [
     "View task details",
     "作業の詳細を表示"

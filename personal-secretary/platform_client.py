@@ -141,6 +141,9 @@ class PlatformClient:
 
     def request(self, path, body=None):
         operation = path.split("?", 1)[0]
+        delegation = operation in {"/task-delegations", "/task-delegations/options"}
+        if operation.startswith("/task-delegations/") and operation != "/task-delegations/options":
+            delegation = operation == "/task-delegations/" + str(uuid.UUID(operation.removeprefix("/task-delegations/")))
         goal_receipt = operation.startswith("/goal-proposals/") and operation == "/goal-proposals/" + str(uuid.UUID(operation.removeprefix("/goal-proposals/")))
         plan_receipt = operation.startswith("/personal-plans/") and operation == "/personal-plans/" + str(uuid.UUID(operation.removeprefix("/personal-plans/")))
         permission_receipt = operation.startswith("/permission-actions/") and operation != "/permission-actions/prepare" and operation == "/permission-actions/" + str(uuid.UUID(operation.removeprefix("/permission-actions/")))
@@ -155,7 +158,8 @@ class PlatformClient:
             identity = operation.removeprefix("/professional-tasks/").removesuffix("/continue")
             professional_continue = identity == str(uuid.UUID(identity)) and body == {}
         if operation not in {"/professional-tasks", "/professional-tasks/options", "/professional-tasks/diagnostics", "/sessions", "/connection-state", "/identity", "/grants", "/action-permissions", "/plan-overview", "/permission-questions", "/permission-actions/prepare", "/state", "/management-state", "/actions", "/coordination", "/restrictions", "/questions", "/question-replies", "/goal-proposals", "/personal-plans", "/messages"} and not operation.startswith("/receipts/") and not permission_receipt and not goal_receipt and not plan_receipt and not professional_receipt and not professional_continue and not message_ack and not certificate_rotation:
-            raise ValueError("Unknown platform operation")
+            if not delegation:
+                raise ValueError("Unknown platform operation")
         payload = None if body is None else encode(body).encode()
         if payload is not None and len(payload) > 32768:
             raise ValueError("Platform action exceeds the fixed envelope limit")

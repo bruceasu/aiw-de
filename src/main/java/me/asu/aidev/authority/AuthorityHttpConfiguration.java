@@ -20,6 +20,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
         return path.startsWith("/api/r1/worker-protocol/");
     }
     private boolean agentMachine(String method,String path) {
+        if(method.equals("POST")&&path.equals("/task-delegations")||method.equals("GET")&&(path.equals("/task-delegations/options")||path.matches("/task-delegations/[0-9a-f-]{36}")))return true;
         return method.equals("GET") && (Set.of("/professional-tasks/options","/professional-tasks/diagnostics","/connection-state","/identity","/state","/target-state","/grants","/management-state","/questions","/permission-questions","/action-permissions","/plan-overview","/messages").contains(path) || path.matches("/professional-tasks/[0-9a-f-]{36}") || path.matches("/permission-actions/[0-9a-f-]{36}") || path.matches("/receipts/[^/]+")||path.matches("/goal-proposals/[0-9a-f-]{36}")||path.matches("/personal-plans/[0-9a-f-]{36}"))
                 || method.equals("POST") && (Set.of("/professional-tasks","/sessions","/actions","/restrictions","/coordination","/question-replies","/goal-proposals","/personal-plans","/permission-actions/prepare","/agents/certificate-rotation/request").contains(path) || path.matches("/messages/[0-9a-f-]{36}/ack") || path.matches("/professional-tasks/[0-9a-f-]{36}/continue"));
     }

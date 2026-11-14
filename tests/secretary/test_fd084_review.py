@@ -65,6 +65,27 @@ class ReviewCase(unittest.TestCase):
         self.assertEqual(self.journal.records("SECRETARY_TOOL"), [])
         self.assertFalse(any(row.get("kind") == "DAILY_CONFIRMATION" for row in self.store.list("decision")))
 
+    def test_local_code_example_does_not_require_plane_or_a_worker(self):
+        daily = self.daily()
+        request = "Implement a Python function that adds two numbers. Show the code here."
+        message = self.store.put("message", "local-code", {"workId": "work", "text": request, "state": "PENDING"}, 0)
+        answer = "def add(a, b):\n    return a + b\n\nThis is a code example; no file was changed."
+        with patch.object(SecretaryHost, "sdk", return_value=json.dumps({"action": "finish", "completed": True, "text": answer})):
+            daily.run(self.store.get("work", "work"), request, message["id"])
+        self.assertEqual(self.store.get("message", message["id"])["state"], "DONE")
+        self.assertIn("def add", self.store.get("message", message["id"])["reply"])
+        self.assertEqual(self.journal.records("SECRETARY_TOOL"), [])
+        self.assertFalse(any(row.get("kind") in {"PERSONAL_PLAN", "PROFESSIONAL_TASK"} for row in self.store.list("decision")))
+
+    def test_local_permission_still_needs_a_file_receipt(self):
+        daily = self.daily()
+        request = "Implement a function and save it to " + str(self.work / "missing.py")
+        message = self.store.put("message", "missing-code-file", {"workId": "work", "text": request, "state": "PENDING"}, 0)
+        with patch.object(SecretaryHost, "sdk", return_value=json.dumps({"action": "finish", "completed": True, "text": "The file is saved."})):
+            daily.run(self.store.get("work", "work"), request, message["id"])
+        self.assertEqual(self.store.get("message", message["id"])["state"], "FAILED")
+        self.assertFalse((self.work / "missing.py").exists())
+
     def test_file_permission_request_is_visible_and_approval_keeps_original_action(self):
         daily = self.daily()
         message = self.store.put("message", "msg-confirm", {"workId": "work", "text": "创建文件", "state": "PENDING"}, 0)
@@ -152,10 +173,9 @@ class ReviewCase(unittest.TestCase):
         self.journal.finish(identity, "CANCELLED")
         professional = ProfessionalTasks.__new__(ProfessionalTasks)
         professional.runtime, professional.store = self.runtime, self.store
-        row = {"jobId": "job", "platformInstanceId": "platform", "requestId": "request", "state": "ACTIVE"}
-        result = {"platformInstanceId": "platform", "requestId": "request", "planId": "plan",
-                  "preparation": {"state": "READY", "taskId": "task"}, "taskState": "COMPLETED",
-                  "report": {"verdict": "PASS", "summary": "done"}}
+        row = self.store.put("decision", "delegated", {"jobId": "job", "platformInstanceId": "platform", "requestId": "request", "state": "ACTIVE"}, 0)
+        result = {"platformInstanceId": "platform", "requestId": "request", "planId": "plan", "executionId": "plan",
+                  "taskId": "task", "state": "COMPLETED", "taskState": "COMPLETED", "report": "done"}
         with patch.object(professional, "_identity"), patch.object(professional, "_save"), patch.object(professional, "_publish"):
             professional._receive(row, result)
         self.assertEqual(self.journal.get(identity)["state"], "CANCELLED")

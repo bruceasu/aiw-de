@@ -36,6 +36,22 @@ public class NativePlanOwners {
     public boolean bound(String plan) { return !repo.jdbc().queryForList("SELECT plan_id FROM plan_run_owner WHERE plan_id=?",String.class,plan).isEmpty(); }
     @Transactional public Object bind(Bind input) {
         boundary.lock();String owner=currentOwner();text(input.requestId(),80);text(input.planId(),128);grants.human(boundary.human(),"A05");
+        return bind(input,owner,boundary.human());
+    }
+    /** Internal port: the exact plan-confirmation permission was consumed in the same transaction. */
+    @Transactional public Object bindConfirmedAgent(Bind input,AuthorityBoundary.Principal principal,String confirmationRequest) {
+        boundary.lock();
+        if(!principal.equals(boundary.optionalPrincipal())||repo.jdbc().queryForObject("""
+                SELECT COUNT(*) FROM authority_permission_child c
+                JOIN authority_action_permission p ON p.id=c.permission_id
+                JOIN authority_permission_use u ON u.permission_id=p.id AND u.request_id=c.request_id AND u.grant_id=c.grant_id
+                WHERE c.source_plan=? AND c.request_id=? AND p.owner_id=? AND p.worker_id=? AND p.action='A05'
+                """,Long.class,input.planId(),confirmationRequest,principal.owner(),principal.worker())!=1)
+            throw new SecurityException("Exact consumed Agent plan confirmation required");
+        text(input.requestId(),80);text(input.planId(),128);
+        return bind(input,principal.owner(),repo.actor(principal.owner()));
+    }
+    private Object bind(Bind input,String owner,String actor) {
         String digest=AuthorityRepository.hash(repo.encode(input));
         var old=repo.jdbc().queryForList("SELECT * FROM plan_run_owner WHERE owner_id=? AND request_id=?",owner,input.requestId());
         if(!old.isEmpty()) {
@@ -43,13 +59,13 @@ public class NativePlanOwners {
             return Map.of("planId",input.planId(),"ownerId",owner,"bound",true);
         }
         var plan=plans.find(input.planId()).orElseThrow();
-        if(!boundary.human().equals(plan.createdBy()))throw new SecurityException("Only the actual Plan creator can bind its run Owner");
+        if(!actor.equals(plan.createdBy()))throw new SecurityException("Only the actual Plan creator can bind its run Owner");
         if(bound(plan.id()))throw new IllegalStateException("Plan already has a fixed run Owner; do not rebind historical work");
         if(plan.version()!=input.expectedPlanVersion()||!Set.of(WorkflowPlan.State.DRAFT,WorkflowPlan.State.CONFIRMED).contains(plan.state()))throw new IllegalStateException("Plan changed or ended");
         if(tasks.findBySubject("flexible-plan",plan.id()).stream().anyMatch(t->Set.of(TaskState.CLAIMED,TaskState.RUNNING,TaskState.YIELDING).contains(t.state())))
             throw new IllegalStateException("Bind before active execution; never change an in-flight Attempt");
-        repo.jdbc().update("INSERT INTO plan_run_owner VALUES(?,?,?,?,?,?,?,?)",plan.id(),owner,input.requestId(),digest,sourceDigest(plan.id()),Math.addExact(plan.version(),1),boundary.human(),System.currentTimeMillis());
-        repo.audit("PLAN:"+plan.id(),null,input.requestId(),boundary.human(),"PLAN_RUN_OWNER_BOUND","Owner for native observations, control and professional questions only");
+        repo.jdbc().update("INSERT INTO plan_run_owner VALUES(?,?,?,?,?,?,?,?)",plan.id(),owner,input.requestId(),digest,sourceDigest(plan.id()),Math.addExact(plan.version(),1),actor,System.currentTimeMillis());
+        repo.audit("PLAN:"+plan.id(),null,input.requestId(),actor,"PLAN_RUN_OWNER_BOUND","Owner for native observations, control and professional questions only");
         return Map.of("planId",plan.id(),"ownerId",owner,"bound",true);
     }
     public Basis task(String taskId,boolean active) {
