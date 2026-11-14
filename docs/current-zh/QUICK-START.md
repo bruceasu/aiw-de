@@ -1,236 +1,65 @@
-# Quick Start — Web Console + SQLite + Java Codex Worker
+# 快速开始：本机 Plane、Worker 与私人秘书
 
-现在最快的体验路径改为 **浏览器优先**：启动 Control Plane 和一个 Worker 后，直接通过 Web Console 创建 Requirement、观察执行并处理审批。REST API 主要保留给自动化和故障排查。
+需要 JDK 25、Maven 3.9+、Python 3.11+。所选 Python 环境须装好 [Worker 依赖](../../workers/process-python/requirements.txt)；使用私人秘书时还需 [秘书依赖](../../personal-secretary/requirements.txt)。先用文字任务体验即可，无须 Git 仓库、工作区或 Codex CLI。
 
+## 1. 启动本机 Plane
 
-这是最快体验当前系统的一条路径，建议使用一个可丢弃/测试用的本地 Git Repository。
+在项目根目录创建 `data` 目录，并编辑根目录 `.env`：
 
-## 1. 准备
+```dotenv
+AIW_DB_URL=jdbc:sqlite:./data/aiw.db
+AIW_BIND_ADDRESS=127.0.0.1
+AIW_WEB_CONSOLE_USERNAME=admin
+AIW_WEB_CONSOLE_PASSWORD=替换为你自己的管理员密码
+```
 
-需要：
+数据库目录须先存在。默认启用 `sqlite` profile，其内置 URL 是 `jdbc:sqlite:d:/temp/data/aiwde.db`；请像上例一样显式设置 `AIW_DB_URL`，避免 Windows 默认路径不适用于当前设备。切换 PostgreSQL 还需同时调整 profile、驱动和数据库模式，不能只改 URL。管理员密码用于 Plane 登录和本机秘书关联的管理员 Owner，秘书不会再次要求输入该密码。
 
-- JDK 21
-- Maven 3.9+
-- Git
-- 已安装并认证的 Codex CLI
-- 一个已经 commit 的本地 Git Repo
-
-## 2. 启动 Control Plane
-
-PowerShell：
+Windows PowerShell（项目根目录）：
 
 ```powershell
 New-Item -ItemType Directory -Force data | Out-Null
-$env:AIW_DB_URL = "jdbc:sqlite:./data/aidev-r3.db"
-mvn clean verify
-mvn spring-boot:run
+.\scripts\startup.bat
 ```
 
-以上命令显式使用项目目录下的 SQLite 数据库：
+Linux / macOS Bash（项目根目录）：
 
-```text
-127.0.0.1:8080
-./data/aidev-r3.db
+```bash
+mkdir -p data
+bash scripts/startup.sh
 ```
 
-通过 `scripts/startup.bat` 或 `scripts/startup.sh` 启动时，脚本会加载根目录的 `.env`；其中的 `AIW_DB_URL` 会覆盖 YAML 中的默认地址，也会替换当前终端的同名变量。Windows 可使用 `jdbc:sqlite:d:/temp/data/aidev-r3.db`，Linux 可使用 `jdbc:sqlite:/mnt/temp/data/aidev-r3.db`。请使用当前系统的实际路径，并先创建数据库的父目录；SQLite 不会自动创建父目录，否则启动时可能报 `SQLITE_CANTOPEN`。
+两种启动脚本都读取项目根目录 `.env`。若直接用 `mvn spring-boot:run`，须自行在该进程环境中设置同样的变量；Maven 不负责读取此文件。启动后打开 `http://127.0.0.1:8080/ui`。首次启动会执行数据库迁移；升级现有数据库前先保留备份。
 
-新终端检查：
+## 2. 配置模型并开始工作
 
-```powershell
-curl.exe http://127.0.0.1:8080/api/r1/fleet/dashboard
+打开“Agent 工厂”，选择模型连接、实际模型和执行方式。API Key 可从对应 Python 进程的 `OPENAI_API_KEY` 或 `DEEPSEEK_API_KEY` 环境变量读取，无须填到网页；兼容服务按设置页选择变量名。模型可从目录选择，也可手动输入。ChatGPT 连接使用现有登录入口；Codex app-server 是备选 Runtime。
+
+工厂按任务需要启动本机 Worker。任务失败时先查看原因和已有结果，再决定重做或修复。远程 Worker 自行管理其设备上的模型连接，不能假定能读取 Plane 本机的凭据文件。
+
+- 简单请求：进入“简单任务”，填写目标并明确开始。
+- 模糊需求：进入“许愿池”，用文字或可选附件与专业成员澄清，再保存需求快照、生成工作流草稿。
+- 多步骤工作：进入“工作流”，核对任务、LLM 判断和人工问题节点后再开始。保存草稿不会开始业务工作。
+- “Workers”查看实际任务与过程；“待处理”处理正式问题和授权。停止领取新任务会保留当前执行，标记离线不等于结束远程进程。
+
+## 3. 私人秘书可以独立运行
+
+在另一个终端使用已准备好秘书依赖的 Python：
+
+```sh
+python personal-secretary/main.py
 ```
 
-## 3. 取得 Repository Base Revision
+默认打开 `http://127.0.0.1:8766`，私库位于用户目录 `.aiw-personal`。在设置中选择模型后即可独立对话，不需要先连接 Plane。秘书读取的是 `personal-secretary/.env`，不是 Plane 根目录 `.env`；直接运行和现有 `start.ps1` / `start.sh` 都遵循这一点。
 
-```powershell
-git -C C:\work\demo-repo status
-git -C C:\work\demo-repo rev-parse HEAD
-```
+选择连接本地 Plane 时，使用其 loopback 地址，秘书自动登记到本机配置的管理员 Owner，不做单独 Owner 登录。只发送明确选择并确认的需求或任务，不会上传整段私人历史。
 
-保存完整 SHA。
+暂停自动处理仍可对话和查看原任务状态；暂停本次执行、取消后续操作是另一组控制。快捷操作只填输入框，由你决定发送。会话日志支持标题／摘要筛选，回复旁可以查看真实运行；切换会话保留输入，刷新网页不会保留未发送草稿。
 
-## 4. 编译并启动 Java Worker
+## 4. 不同设备与远程访问
 
-进入：
+本机模式保持绑定 `127.0.0.1`。需要远程访问时，先按 [远程 Agent mTLS 部署指南](../features/archive/FD-072/AGENT_MTLS_DEPLOYMENT.md) 配置 HTTPS、服务端信任和客户端证书；其中有 Windows PowerShell、Linux / macOS 的 CA、签发、文件权限和启动指引。
 
-```text
-workers/codex-java
-```
+远程秘书在 Plane 的“Agent 管理”中取得专属配对邀请，由管理员确认身份并启用新进程；选择 REMOTE，不把远程地址当成本机自动信任连接。远程普通 Worker 使用管理员创建的专属 Worker 凭据，配置见 [Python Worker](../../workers/process-python/README.md)。每台设备自行配置模型，凭据路径不是跨设备共享凭据。
 
-PowerShell：
-
-```powershell
-Remove-Item -Recurse -Force out -ErrorAction SilentlyContinue
-javac --release 21 -d out src/main/java/me/asu/aidev/worker/example/CodexJavaWorker.java
-
-$env:AIW_CONTROL_PLANE_URL="http://127.0.0.1:8080"
-$env:AIW_WORKER_ID="local-java-1"
-$env:AIW_WORKER_MAX_CONCURRENCY="2"
-$env:AIW_WORKER_CAPABILITIES="requirement-analysis,solution-architecture,implementation-planning,coding,integration,code-review,verification,integration-verification,repair,java,maven"
-$env:AIW_REPOSITORY_REF="core"
-$env:AIW_REPOSITORY_ROOT="C:\work\demo-repo"
-$env:AIW_WORKTREE_ROOT="C:\work\.aidev-worktrees"
-$env:AIW_CODEX_PATH="codex"
-
-java -cp out me.asu.aidev.worker.example.CodexJavaWorker
-```
-
-Worker 禁止 `git push`，不要设置 `AIW_GIT_PUBLISH_REMOTE`。代码任务的后续 Worker 应能访问同一本地 Git 仓库；跨机器交接需由独立受控发布服务处理。
-
-### 可选：使用 R10 流程专职 Worker
-
-上面的 Java Worker 适合单进程演示。若要让 R2 角色说明在 R9 Pull/Lease 协议下运行，可改用 [TypeScript 流程 Worker](../../extern-workers/process-typescript/README.md)（Node.js 22+）、[Go 流程 Worker](../../workers/process-go/README.md)（Go 1.23+）或 [Python 流程 Worker](../../workers/process-python/README.md)（Python 3.11+）。每个角色使用独立进程，所有进程配置同一个 Control Plane 地址、Repository Ref、Repository Root 和所需技术能力。
-
-Go 版本在 `workers/process-go` 下运行 `go test ./...`、`go build -o process-worker .`，然后为每个角色分别设置 `AIW_PROCESS_PROFILE` 并启动。完整流程至少需要需求分析、架构、规划、编码、代码审查、验证和修复角色；可能产生集成任务时还需集成执行和集成验证角色。Python 版本使用 `scripts/run-role.ps1` 或 `scripts/run-role.sh`，分别启动 `requirements`、`architect`、`planner`、`coder`、`reviewer`、`verifier`、`repairer`，按需增加 `integrator`。具体命令见对应 Worker README。
-
-角色能力和 `repo:<AIW_REPOSITORY_REF>` 会自动注册；`AIW_WORKER_CAPABILITIES` 只填写附加技术能力（例如 `java,maven`）。并行或复制部署时给每个进程不同的 `AIW_WORKER_ID`。不要启动尚无 R9 TaskType 对应的 release-readiness 或 orchestrator 配置。
-
-TypeScript 版本在 `extern-workers/process-typescript` 下运行 `npm ci --omit=optional` 和 `npm run build`，然后为每个角色显式选择后端，例如 `./scripts/run-role.ps1 coder codex-sdk` 或 `sh scripts/run-role.sh reviewer openai-agents`。Codex 后端需要已认证 CLI（从 `PATH` 或 `AIW_CODEX_PATH` 查找）；Agents 后端需要 `OPENAI_API_KEY`。旧 API 包及启动路径已删除。完整配置见 [TypeScript 指南](../../extern-workers/process-typescript/README.md)。
-
-## 5. 提交 Requirement
-
-PowerShell 建议先建立 JSON：
-
-```powershell
-$body = @{
-  requestId = "quickstart-001"
-  requirement = "Add a simple health endpoint and focused tests. Keep the change minimal and do not break existing behavior."
-  repositoryRef = "core"
-  baseRevision = "<BASE_SHA>"
-  technicalCapabilities = @("java", "maven")
-  priority = "NORMAL"
-  maxParallelism = 2
-} | ConvertTo-Json
-
-Invoke-RestMethod `
-  -Method Post `
-  -Uri http://127.0.0.1:8080/api/r1/requirements `
-  -ContentType "application/json" `
-  -Body $body
-```
-
-返回：
-
-```json
-{
-  "runId":"AR-quickstart-001",
-  "requirementTaskId":"AR-quickstart-001~requirement"
-}
-```
-
-## 6. 看进度
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8080/api/r1/runs/AR-quickstart-001/dashboard
-Invoke-RestMethod http://127.0.0.1:8080/api/r1/runs/AR-quickstart-001/timeline
-Invoke-RestMethod http://127.0.0.1:8080/api/r1/fleet/dashboard
-```
-
-预期流程：
-
-```text
-Requirement -> Architecture -> Planning
--> Implementation(s) -> optional Integration
--> Review + Verification -> optional Repair
--> Engineering Gate -> Approval
-```
-
-## 7. 默认 Manual Approval
-
-默认：
-
-```text
-AIW_APPROVAL_POLICY=MANUAL
-```
-
-所以工程通过后 Run 会停在 `ENGINEERING_PASSED`。
-
-先查询 Run，取 `terminalSourceTaskId`：
-
-```powershell
-$run = Invoke-RestMethod http://127.0.0.1:8080/api/r1/runs/AR-quickstart-001
-$run.terminalSourceTaskId
-```
-
-创建 Approval：
-
-```powershell
-$approval = Invoke-RestMethod `
-  -Method Post `
-  -Uri http://127.0.0.1:8080/api/r1/approvals `
-  -ContentType "application/json" `
-  -Body (@{
-    sourceTaskId = $run.terminalSourceTaskId
-    requestedBy = "human:quickstart"
-    channel = "API"
-  } | ConvertTo-Json)
-```
-
-批准：
-
-```powershell
-Invoke-RestMethod `
-  -Method Post `
-  -Uri "http://127.0.0.1:8080/api/r1/approvals/$($approval.approvalRequestId)/decision" `
-  -ContentType "application/json" `
-  -Body (@{
-    decision = "APPROVE"
-    decidedBy = "human:quickstart"
-    note = "Quick Start approval"
-  } | ConvertTo-Json)
-```
-
-Run 最终应进入 `SUCCEEDED`。
-
-如果希望自动产生 ApprovalRequest，需要在 Run 开始前设置：
-
-```text
-AIW_APPROVAL_POLICY=REQUIRED
-```
-
-## 8. 如果不执行
-
-看 Fleet Dashboard 中的：
-
-```text
-unmatchedReady
-capacityBlockedReady
-admissionBlockedReady
-fleetAdmissionBlockedReady
-policyBlockedReady
-```
-
-详见 [故障排查与恢复](11-TROUBLESHOOTING-AND-RECOVERY.md)。
-
-
-## 使用 Web Console
-
-打开：
-
-```text
-http://127.0.0.1:8080/ui
-```
-
-现在可以直接在浏览器中：
-
-1. 选择 **New Run**，填写 Requirement、Repository Ref、不可变 Base SHA、Capabilities、Priority、Run 并发上限；
-2. 观察 Requirement → Architecture → Planning → Implementation/Integration → Review/Verification → Gate；
-3. Pause / Resume / Recover / Cancel；
-4. 修改 Run/Fleet `maxParallelism`；
-5. Drain / Offline Worker；
-6. 创建并处理 Approval。
-
-默认 `AIW_APPROVAL_POLICY=MANUAL` 时，Engineering Gate PASSED 后可以直接在 Run Detail 中点击 **Request Approval**。
-
-Web Console 登录页 `/ui/login` 始终可用。配置登录凭据：
-
-```text
-AIW_WEB_CONSOLE_USERNAME=admin
-AIW_WEB_CONSOLE_PASSWORD=<strong secret>
-AIW_WEB_CONSOLE_ROLE=ADMIN
-```
-
-所有平台业务页面都要求登录；未登录进入登录页，成功后返回原页面及查询参数。无需启用开关，旧false值也不能绕过认证。未配置非空密码时按登录页提示设置；退出或会话失效后重新登录。
-
-注意：该登录保护 `/ui`、`/ui/**` 及现有 `/api/r1/` 控制台数据根：goals、task-outputs、workflow-plans、plan-editor；个人授权等人工接口继续单独检查真实身份，保留 session、CSRF、角色及所有者校验。其他旧管理写入在首次代理启用前保持原本地策略，首次启用后持久要求人工 session、CSRF 和动作角色；Worker 租约协议继续使用机器认证。Control Plane 仍应绑定 localhost 或置于合适的内网/边缘访问保护后。
+这些命令是操作说明；本轮仅完成编译与静态审查，没有启动服务、登录模型、联网调用或执行部署验收。

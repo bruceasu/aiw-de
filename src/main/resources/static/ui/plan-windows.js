@@ -7,6 +7,17 @@
     maximized: false, positioned: false, opener: null, drag: null,
   }));
   const order = [...windows];
+  const labels = state => {
+    const t = value => window.aiwI18n?.t(value) || value;
+    const maximize = state.panel.querySelector('[data-plan-window-maximize]');
+    const caption = t(state.maximized ? 'Restore window' : 'Maximize window');
+    maximize.title = caption; maximize.setAttribute('aria-label', caption);
+    maximize.setAttribute('aria-pressed', String(state.maximized));
+    const close = state.panel.querySelector('[data-plan-window-hide]');
+    close.title = t('Close window'); close.setAttribute('aria-label', t('Close window'));
+  };
+  window.addEventListener('aiw:locale-changed', () => windows.forEach(labels));
+  window.addEventListener('aiw:i18n-ready', () => windows.forEach(labels));
   const raise = state => {
     order.splice(order.indexOf(state), 1); order.push(state);
     order.forEach((item, index) => { item.panel.style.zIndex = String(40 + index); item.panel.dataset.active = String(item === state); });
@@ -40,6 +51,7 @@
     raise(state); state.panel.focus({ preventScroll: true });
   };
   for (const state of windows) {
+    labels(state);
     state.openers.forEach(button => button.addEventListener('click', () => {
       if (state.panel.hidden) show(state, button); else hide(state);
     }));
@@ -49,6 +61,7 @@
       state.panel.dataset.maximized = String(state.maximized);
       event.currentTarget.setAttribute('aria-pressed', String(state.maximized));
       event.currentTarget.textContent = state.maximized ? '❐' : '□';
+      labels(state);
       if (!state.maximized) {
         const rect = state.panel.getBoundingClientRect(); place(state, rect.left, rect.top);
       }

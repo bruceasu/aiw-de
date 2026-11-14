@@ -175,7 +175,7 @@ Agent 配对通过秘书设置中的 **Control Plane Agent 连接** 与 Control 
 
 升级需同时重启平台和秘书；Web 刷新，GUI 退出后重开。新增委派记录使用现有私库 decision/work/message 记录，不修改数据库表结构。回退前先核对并停止或等待已提交的平台任务，保留原请求记录；回退代码不会撤销已创建的专业任务。
 
-需要 Python 3.11+，默认 Codex 后端无第三方 Python 依赖；openai-agents 后端按需安装本目录 requirements.txt。新 Agent 在 Control Plane 的 `/ui/agents` 创建一次性配对邀请，再从秘书设置连接；首次确认绑定 Agent 身份并启用当前进程，不要求预先填写动作编号或目标 ID，也不自动授予动作 Grant。现有个人身份、凭证和 Grant 不会自动迁移，需重新配对；后续动作按明确任务和目标授权。普通 Worker 注册、共享 bearer 或 capability 不代表 Agent 身份。
+需要 Python 3.11+，主要使用 Agents SDK 与已有 `requirements.txt` 依赖，Codex 是备用 Runtime。本机 Plane 的 loopback 连接自动登记到配置的管理员 Owner，不做单独 Owner 登录；远程连接在 `/ui/agents` 创建专属配对邀请，核对身份后启用当前进程。普通 Worker 注册或 capability 不代表秘书的 Agent 身份。不同设备各自管理模型连接，不假定能够读取对方的凭据文件。分系统启动与连接步骤见 [快速开始](../docs/current-zh/QUICK-START.md)。
 
 `AIW_PERSONAL_CREDENTIAL` 已退役；启动脚本会从秘书进程环境中移除它。正常配对凭据保存在本机专属设置中；高级预配置 Agent 可使用 `AIW_AGENT_CREDENTIAL`，REMOTE 证书使用 `AIW_AGENT_CLIENT_CERT`、`AIW_AGENT_CLIENT_KEY` 及可选的 `AIW_AGENT_SERVER_CA`。可选 `AIW_PERSONAL_MODEL_COMMAND` 是用户选择的模型程序 argv JSON 数组；程序从 stdin 读取私人上下文，将最多 16000 字符的答复写到 stdout。不会启用 shell，模型子进程不继承 Agent 凭据。未配置模型时仍能维护私人记录和提交已有固定能力，但不会伪称已调用模型。
 
@@ -239,7 +239,7 @@ LOCAL Control Plane 连接会从本机 loopback 自动登记到配置的管理�
    ```
 
 3. 在桌面连接窗口填写与服务启动终端一致的地址（默认 `http://127.0.0.1:8766`），粘贴新配对码。桌面端不填写平台凭证、Owner ID 或 Worker ID。
-4. 点击人物打开聊天，选择工作或点击“日常对话”。复杂内容通过“工作台”弹窗填写。聊天需要个人服务已配置 `AIW_PERSONAL_MODEL_COMMAND`；未配置模型时，仍可保存工作和维护表单。
+4. 点击人物打开聊天，选择工作或点击“日常对话”。复杂内容通过“工作台”弹窗填写。聊天使用秘书设置中保存的模型连接；`AIW_PERSONAL_MODEL_COMMAND` 只用于选定的自定义程序方式。未配置模型时，仍可保存工作和维护表单。
 
 使用不同端口或解释器时：
 

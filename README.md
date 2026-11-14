@@ -1,19 +1,17 @@
 # AI Worker: Digital Employee
 
-让 AI 以数字员工的方式协作，把需求推进为可审查、可验证、可追溯的工程结果。
+让 AI 团队把想法变成明确需求，再通过可观察、可控制的工作流完成工作。
 
-**AI Worker** 是一个面向数字员工协作的平台。你提出需求，由不同角色的 Worker 承担需求分析、架构设计、实施规划、编码、集成、审查、验证和修复。平台负责组织任务、跟踪执行、管理审批，并保留结果与决策依据。
+**AI Worker** 由 Control Plane、Worker 和可独立使用的私人秘书组成。许愿池帮助澄清需求；工作流组织任务、LLM 判断和人工问题；简单任务使用同一执行机制。平台保留真实过程、结果、资源记录与人工决定。
 
-当前落地场景是**软件工程**。数字员工通过外部 Worker 进程执行任务，Java 控制平面统一管理任务状态、依赖、调度、租约和工程门禁，人通过 Web Console 观察进度、干预执行并作出批准决定。
+软件开发是应用场景之一，也可以处理文字分析和业务流程。Worker 的名称、职责、工作方法、Skills 和参考资料可不同，执行进程按需启动或复用。人通过 Web Console 观察和干预执行；秘书在自己的设备上管理私人对话与资料，按需连接 Plane。
 
 ## 数字员工如何协作
 
 ```text
-提出需求
-  → 需求分析 → 架构设计 → 实施规划
-  → 一个或多个实现任务 → 按需集成
-  → 代码审查 + 验证 → 按需修复
-  → 工程门禁 → 按策略进行人类审批
+模糊想法／原始需求 → 许愿池澄清 → 确认需求
+  → 工作流草稿 → 核对并启动 → 任务／LLM 判断／人工问题 → 结果
+简单请求 → 简单任务 → 结果
 ```
 
 每个 Worker 声明自己的能力并主动领取已就绪的任务。任务之间通过依赖关系衔接；控制平面维护状态和执行权，Worker 在租约约束下完成具体工作。审查、验证和审批关联到明确的代码结果，便于追踪做了什么、验证了什么、批准了哪个版本。
@@ -25,43 +23,45 @@
 | Web Console | 创建需求、查看任务和时间线、管理 Worker 与并发、处理审批 |
 | 人类负责人 | 确认需求与执行方案，在需要时干预或审批 |
 
-项目全称为 **AI Worker: Digital Employee**，正文简称 **AI Worker**。“数字员工”描述协作主题，`Worker` 指具体执行进程；控制平面和 Web Console 是平台组件。
+项目全称为 **AI Worker: Digital Employee**，正文简称 **AI Worker**。团队成员身份长期保留，运行进程可以重启或复用；进程停止不等于成员资料被删除。
 
 ## 当前能力
 
-- **工程流程协作**：从自然语言需求到实现、集成、审查、验证和修复，支持角色分工与任务依赖。
+- **需求与流程**：专业成员结合 Skills 与系统资料澄清愿望，生成待确认的统一工作流；附件可作为原始需求。
 - **执行管理**：能力匹配、Worker Pull、租约与心跳、过期租约恢复、执行尝试历史，以及运行暂停、恢复和取消。
 - **并发与隔离**：运行级和 Worker 集群级并发预算，Git Worktree 工作区隔离。
 - **人工监督**：工程门禁、人类审批、控制台操作、时间线与审计记录。
 - **可替换执行端**：提供 Python、TypeScript、JavaScript、Go、Java Worker 示例，以及 Go、Python、TypeScript 流程 Worker。
-- **可选工作流方案**：启用 Flexible Workflow 后，可以起草、导入和确认委派方案；草案确认后才创建可执行工作。
+- **私人秘书**：独立对话、本地小工作、会话日志与真实执行过程查看；确认选定内容后可送入许愿池或委派任务。
+- **安排与费用记录**：单次／每日／每周安排，错过时间等待决定；记录已获知的 Token 与价格，缺少信息时显示未记录。
 
-不同 Worker 的角色覆盖、运行时支持和准入条件以各自指南为准。产品主题面向数字员工协作，当前能力范围仍以软件工程任务为主。
+不同 Runtime 的工具能力以当前配置和各自指南为准。保存需求或工作流草稿不会自动开始业务执行；失败时保留原因与结果，重做或修复由用户决定。
 
 ## 开始使用
 
-建议先在可丢弃的本地 Git 仓库中体验。完整步骤见 [Quick Start](docs/current-zh/QUICK-START.md)，包括仓库基线、Worker 配置、任务创建和审批。
+从本机文字任务开始即可，不要求 Git、工作区或 Codex CLI。Windows、Linux／macOS 及远程连接的步骤见 [快速开始](docs/current-zh/QUICK-START.md) / [Quick Start](docs/current/QUICK-START.md)。
 
 ### 1. 启动控制平面
 
-准备 JDK 21 和 Maven。在仓库根目录执行：
+准备 JDK 25、Maven 3.9+ 和 Python 3.11+。按快速开始配置项目根目录 `.env` 中的数据库，然后运行现有启动脚本：
 
 ```sh
-mvn spring-boot:run
+# Windows: .\scripts\startup.bat
+bash scripts/startup.sh
 ```
 
-默认使用本地 SQLite。启动后打开 `http://127.0.0.1:8080/ui`。
+启动后打开 `http://127.0.0.1:8080/ui`。默认启用 `sqlite` profile，其内置地址为 `jdbc:sqlite:d:/temp/data/aiwde.db`；请按 Quick Start 用 `AIW_DB_URL` 显式指定当前系统的路径。切换 PostgreSQL 时须同时调整 profile 和连接配置，不能只替换 SQLite profile 下的 URL。
 
 ### 2. 启动数字员工
 
-按指南配置并启动 Worker，提供控制平面地址、仓库路径、角色、技术能力，以及所选 AI Runtime 的认证信息：
+在 Agent 工厂中配置模型连接和执行方式。工厂按任务需要启动本机 Worker；外部 Worker 在自身设备上管理模型连接，使用专属 Worker 凭据接入：
 
 - [TypeScript 流程 Worker](extern-workers/process-typescript/README.md)：角色、Runtime、单进程与多角色启动说明。
 - [Python 流程 Worker](workers/process-python/README.md)。
 - [Go 流程 Worker](workers/process-go/README.md)。
 - [Worker 总览](workers/README.md)：其他语言示例与协议入口。
 
-完整工程流程需要相应角色就绪；具体角色与能力配置见 Worker 指南。Worker 需要额外准备其运行环境、依赖和 AI Runtime。
+Python 依赖与 Runtime 须事先准备好。私人秘书可通过 `personal-secretary/scripts/start.ps1` 或 `start.sh` 独立启动；连接本机 Plane 自动登记，远程连接须配对与确认。
 
 ### 3. 提出需求并监督执行
 
@@ -73,7 +73,7 @@ mvn spring-boot:run
 
 | 项目 | 当前基础 |
 | --- | --- |
-| 控制平面 | Java 21、Spring Boot 4.0.8 |
+| 控制平面 | Java 25、Spring Boot 4.0.8 |
 | 持久化 | JDBC + Flyway；本地 SQLite / 共享 PostgreSQL |
 | Worker 协议 | 外部进程、主动领取任务、Worker Protocol v1 |
 | 配置 | 环境变量使用 `AIW_` 前缀；具体配置键见配置参考 |

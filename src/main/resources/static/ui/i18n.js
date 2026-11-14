@@ -3124,6 +3124,22 @@
     'Member model settings do not match the selected discussion backend. Choose another member or update the settings.': 'メンバーのモデル設定が議論用の接続先と一致しません。別のメンバーを選ぶか設定を変更してください。',
     'Finish or stop this member\'s wish discussions before dissolving it': 'このメンバーの要件整理を完了または停止してから解散してください'
   });
+  Object.assign(translations, {
+    'Maximize window': '最大化窗口', 'Restore window': '还原窗口', 'Close window': '关闭窗口',
+    'Local access': '本机访问',
+    'Open workflows': '打开工作流',
+    'Use the workflow editor for new work.': '新工作请使用统一工作流编辑器。',
+    'Use the workflow editor for new work. Existing execution records stay here.': '新工作请使用统一工作流编辑器，已有执行记录保留在这里。',
+    'Confirm scope and acceptance before generating a workflow': '生成工作流前，请确认需求范围和验收条件'
+  });
+  Object.assign(japaneseTranslations, {
+    'Maximize window': 'ウィンドウを最大化', 'Restore window': 'ウィンドウを元に戻す', 'Close window': 'ウィンドウを閉じる',
+    'Local access': 'ローカルアクセス',
+    'Open workflows': 'ワークフローを開く',
+    'Use the workflow editor for new work.': '新しい作業は共通のワークフローエディターを使ってください。',
+    'Use the workflow editor for new work. Existing execution records stay here.': '新しい作業は共通のワークフローエディターを使います。既存の実行記録はここに残ります。',
+    'Confirm scope and acceptance before generating a workflow': 'ワークフローを生成する前に、要件の範囲と受入条件を確認してください'
+  });
   const translateText = value => {
     if (consoleLookup.has(value)) return consoleLookup.get(value)[locale];
     const filterPrefix = 'A changed file uses a Git filter and requires a manual merge:';
