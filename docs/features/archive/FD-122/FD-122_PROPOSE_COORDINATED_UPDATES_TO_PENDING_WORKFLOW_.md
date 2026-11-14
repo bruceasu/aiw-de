@@ -80,7 +80,7 @@ dependency.
 
 - Offline Java compile after the review correction passed: `mvn -q -o -s D:/03_projects/AI-tools/aiw-de/.ai/fd/FD-081/offline-maven-settings.xml -Dmaven.repo.local=D:/.m2/repository -DskipTests compile` (JDK 25). `git diff --check` passed. `node --check src/main/resources/static/ui/workflows.js` passed before the Java-only correction.
 - No tests, models, services, migrations, or browser were run.
-- First independent review found the ASK-node routing P2 in [its report](reviews/review-fd122-20261114.md); `Changes requested` history is retained. The correction is recorded in [the Worker report](reports/worker-fix-20261114.md); focused independent recheck is pending.
+- First independent review found the ASK-node routing P2 in [its report](reviews/review-fd122-20261114.md); `Changes requested` history is retained. The correction is recorded in [the Worker report](reports/worker-fix-20261114.md); focused independent recheck passed, as recorded below.
 - The amendment API adds a batch request and response shape, so independent review is required. No database or saved main-execution format change is required. An older runtime can read a pending proposal but treats the batch response as invalid; it can be discarded, and no node is partially applied.
 
 - 独立聚焦复核（`b4aa3d7d..f106769e`，来源 `FD-122-000005-implementation-ready`，会话 `fd122-review-recheck-20261114`）：Verification passed。`startedNode` 将既有 `QUESTION` 事件视为已启动，并同时用于待选校验和新路线校验；确认时在锁内复核 `view.changes` 中全部节点后才原子写回。实现差异仅涉及该缺陷修复，没有无关实现漂移。详情见 [聚焦复核报告](reviews/review-recheck-fd122-20261114.md)。本轮未运行测试、编译、服务、模型或浏览器。
