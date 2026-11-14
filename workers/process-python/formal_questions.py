@@ -1,9 +1,7 @@
 """Trusted yield handshake. Questions contain no credential, grant or executable source reference."""
 import hashlib
 import json
-import os
 from pathlib import Path
-import socket
 import uuid
 
 
@@ -11,9 +9,10 @@ class YieldRequested(RuntimeError):
     pass
 
 
-def storage_capability(repository):
-    root = os.path.normcase(str(Path(repository).resolve(strict=True)))
-    return "checkpoint-store:" + hashlib.sha256((socket.gethostname().lower() + "\n" + root).encode()).hexdigest()
+def storage_capability():
+    from native_run import storage_capability as shared_store
+    # The exact location is verified by the frozen handoff. Enrollment names the shared filesystem.
+    return "checkpoint-store:" + hashlib.sha256(shared_store().encode()).hexdigest()
 
 
 def ask(broker, args):
@@ -27,7 +26,7 @@ def ask(broker, args):
     result = broker.checkpoint()
     checkpoint = {"repositoryRef": broker.repository, "baseRevision": broker.context["snapshot"]["task"].get("baseRevision"),
                   "resultRevision": result["resultRevision"], "changedFiles": result["changedFiles"],
-                  "configurationDigest": broker.context["configurationDigest"], "storageCapability": storage_capability(broker.source_root)}
+                  "configurationDigest": broker.context["configurationDigest"], "storageCapability": storage_capability()}
     source = broker.client._post(broker.base + "/questions/source", broker.lease)
     payload = {"protocol": "aiw.questions.v1", "sourceQuestionKey": str(uuid.uuid4()), "source": source, "lease": broker.lease,
                "question": args["question"], "context": args["context"], "options": args["options"],
@@ -60,7 +59,7 @@ def verify_checkpoints(broker):
         raise RuntimeError("CHECKPOINT_REFERENCE_MISSING")
     for record in records:
         ref, checkpoint = record["reference"], record["checkpoint"]
-        if ref not in expected or checkpoint["storageCapability"] != storage_capability(broker.source_root):
+        if ref not in expected or checkpoint["storageCapability"] != storage_capability():
             raise RuntimeError("CHECKPOINT_STORAGE_NOT_AVAILABLE")
         raw = record["checkpointJson"]
         if json.loads(raw) != checkpoint or ref["sha256"] != hashlib.sha256(raw.encode()).hexdigest() or ref["revision"] != checkpoint["resultRevision"]:

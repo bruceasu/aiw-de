@@ -26,6 +26,8 @@
           <label class="field"><span data-wf-label="Team member">Team member</span><select name="memberId" data-wf-member data-i18n-skip><option value="AUTO">Automatically choose member</option><option value="GENERAL">General execution (no team member)</option></select></label>
           <label class="field"><span data-wf-label="Required Skills (optional, up to 8)">Required Skills (optional, up to 8)</span><select multiple size="4" data-wf-skills data-i18n-skip></select></label>
           <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input name="location" maxlength="4096"></label>
+          <label class="field"><span><input type="checkbox" name="workspaceTools"><span data-wf-label="Work on files in this location">Work on files in this location</span></span></label>
+          <p class="help" data-wf-label="Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.">Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.</p>
           <div data-wf-task-sources></div>
           <button class="btn primary" data-wf-label="Run task">Run task</button></form>
       </section>

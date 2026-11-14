@@ -100,9 +100,11 @@ class WorkerConfig:
         if process_role in {"release-readiness", "orchestrator"}:
             raise ValueError("ROLE_NONEXECUTABLE")
         profile = get_profile(process_role)
+        if process_role == "workspace" and not _bool_env("AIW_EXECUTION_GUARD", False):
+            raise ValueError("WORKSPACE_ROLE_REQUIRES_GUARDED_ADAPTER")
         capabilities = {part.strip() for part in os.getenv("AIW_WORKER_CAPABILITIES", "").split(",") if part.strip()}
-        role_capabilities = {"goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
-        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "model-images-v1", "worker-loop-turn-v1", "questions-v2", "price-repair-v1"} or part.startswith(("repo:", "native-config:", "handoff-store:")) or part in role_capabilities for part in capabilities):
+        role_capabilities = {"general-work", "workspace-work", "goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
+        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "model-images-v1", "worker-loop-turn-v1", "questions-v2", "price-repair-v1", "workspace-files-v1"} or part.startswith(("repo:", "native-config:", "handoff-store:")) or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
         if process_role == "coder":
@@ -118,8 +120,7 @@ class WorkerConfig:
             from guarded_preflight import capabilities as guarded_capabilities
             capabilities.update(guarded_capabilities(runtime, profile, str(Path(os.getenv("AIW_PROCESS_SKILLS_ROOT", Path(__file__).with_name("skills"))).resolve())))
             from formal_questions import storage_capability
-            if not repository_root: raise ValueError("QUESTION_PERSISTENT_REPOSITORY_REQUIRED")
-            capabilities.update({"questions-v1", storage_capability(repository_root)})
+            capabilities.update({"questions-v1", "workspace-files-v1", storage_capability()})
         elif "execution-guard-v1" in capabilities or "guarded-command-linux-v1" in capabilities or "questions-v1" in capabilities or any(c.startswith("checkpoint-store:") for c in capabilities):
             raise ValueError("GUARDED_CAPABILITIES_REQUIRE_VERIFIED_ADAPTER")
         if _bool_env("AIW_DYNAMIC_CONFIG", False):
@@ -239,7 +240,7 @@ class ControlPlaneClient:
             "externalSessionId": session_id,
             "gitResult": workspace_result,
             "handoff": task["_handoff"],
-            "report": report,
+            "report": None if report is None else {key: report[key] for key in ("verdict", "summary")},
         }) or {}
 
     def _task_action(self, task: dict[str, Any], worker_id: str, action: str, session_id: str | None):
@@ -526,7 +527,7 @@ class ProcessSlot:
                     attempt.guard_broker = broker
                 if task.get("taskType") not in profile.task_types:
                     raise RuntimeError("ROLE_TASK_TYPE_DENIED")
-                if task.get("taskType") != "EXTERNAL_WORK" or task.get("skillRef") != profile.primary_skill:
+                if task.get("taskType") != "EXTERNAL_WORK" or task.get("skillRef") not in {profile.primary_skill,profile.name}:
                     raise RuntimeError("ROLE_SKILL_DENIED")
                 if broker:
                     broker.prepare_approved_inputs(task)
@@ -664,6 +665,8 @@ class ProcessSlot:
                     proposal = submission(workspace.cwd, task, self.config.worker_id, repair_id, report["summary"])
                     self.client.submit_price_repair(task, proposal)
                 workspace_result = workspace.finalize(task, read_only=not profile.writable)
+                if profile.writable:
+                    report["summary"] += "\n\nWorking directory: " + workspace.cwd
                 if broker: broker.record_delivery(workspace_result, report)
                 task["_handoff"] = workspace.handoff(task, report, workspace_result)
                 if native:
@@ -819,7 +822,7 @@ def _prompt(task: dict[str, Any], config: WorkerConfig, skill_reader=None) -> st
     instruction = (task.get("instruction") or "").strip() or f"Execute AI Dev Manager task {task['taskId']} for {task.get('subjectType')} {task.get('subjectId')}."
     if task.get("inputs"):
         instruction += "\n\nUpstream task inputs (authoritative):\n" + json.dumps(task["inputs"], indent=2)
-    if task_type != "EXTERNAL_WORK" or task.get("skillRef") != profile.primary_skill:
+    if task_type != "EXTERNAL_WORK" or task.get("skillRef") not in {profile.primary_skill,profile.name}:
         raise RuntimeError("ROLE_SKILL_DENIED")
     skill_ref = (task.get("skillRef") or "").strip()
     skill_line = f"\nControl Plane skill reference: {skill_ref}" if skill_ref else ""

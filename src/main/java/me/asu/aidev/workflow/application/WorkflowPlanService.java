@@ -674,12 +674,12 @@ public class WorkflowPlanService {
     }
 
     /** The unified workflow router supplies the frozen business input for this existing task slot. */
-    void createWorkflowExecution(WorkflowPlan plan,int stepIndex,int round,String instruction,Set<String> additionalCapabilities) {
+    void createWorkflowExecution(WorkflowPlan plan,int stepIndex,int round,String instruction,Set<String> additionalCapabilities,Set<TaskId> dependencies) {
         var step=plan.spec().steps().get(stepIndex);
         var capabilities=new java.util.HashSet<>(step.requiredSkills());capabilities.addAll(additionalCapabilities);
         TaskId id=executionId(plan,stepIndex,round);
         taskService.createIfAbsent(new CreateWorkTaskCommand(id,TaskType.EXTERNAL_WORK,SUBJECT,plan.id(),
-                capabilities,step.skillRef(),instruction,step.repositoryRef(),step.baseRevision(),TaskPriority.NORMAL,Set.of()));
+                capabilities,step.skillRef(),instruction,step.repositoryRef(),step.baseRevision(),TaskPriority.NORMAL,dependencies));
         if(delegation!=null)delegation.allowHumanTask(id.value());
     }
 

@@ -63,6 +63,7 @@ public class WorkflowWorkerProvisioning {
                     case "solution-architect" -> "architect";
                     case "implementation-planner" -> "planner";
                     case "general-work" -> "general";
+                    case "workspace-work" -> "workspace";
                     case "coding-work-package-executor" -> "coder";
                     case "workflow-stage-reviewer" -> "stage-reviewer";
                     default -> null;
@@ -82,7 +83,7 @@ public class WorkflowWorkerProvisioning {
                     if(frozen&&incompatible) {
                         pending.put(id,new Preparation(id,task.subjectId(),"BLOCKED","此后继任务固定到原生 Worker 配置和交接存储；当前在线配置不匹配。恢复相同 Worker 配置，或明确创建新计划；不会自动切换模型。"));continue;
                     }
-                    var result=provisioner.requestNative(task.repositoryRef(),config.runtime(),role);
+                    var result=provisioner.requestWorkflow(task.repositoryRef(),config.runtime(),role,task.requiredCapabilities().contains(me.asu.aidev.execution.guard.GuardContract.CAPABILITY));
                     pending.put(id,new Preparation(id,task.subjectId(),result.starting()?"STARTING":"BLOCKED",result.message()));
                 } else pending.remove(id);
             } catch(RuntimeException error) {
