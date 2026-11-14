@@ -167,10 +167,11 @@ class Credentials:
 def run(input):
     operation = input["operation"]
     if operation == "authorize":
-        params = {"client_id": input["client"], "ext_agent_host_id": input["host"], "response_type": "code",
+        client = input["client"] or "dynamic_agent_client"
+        params = {"client_id": client, "ext_agent_host_id": input["host"], "response_type": "code",
                   "redirect_uri": input["redirect"], "scope": SCOPES, "resource": RESOURCE, "state": input["state"],
                   "nonce": input["nonce"], "code_challenge_method": "S256", "code_challenge": input["challenge"]}
-        if input["client"] == "dynamic_agent_client":
+        if client == "dynamic_agent_client":
             params["agent_name_hint"] = "AIW DE"
         return {"url": ISSUER + "/api/accounts/authorize?" + urllib.parse.urlencode(params)}
     if operation == "models":
@@ -187,6 +188,8 @@ def run(input):
             return json.loads(raw)
     store = Credentials(input["directory"])
     if operation == "exchange":
+        if not input.get("client") or input["client"] == "dynamic_agent_client":
+            raise ValueError("ISSUED_CLIENT_REQUIRED")
         tokens = request_json(ISSUER + "/api/accounts/oauth/token", {"grant_type": "authorization_code", "client_id": input["client"],
             "redirect_uri": input["redirect"], "code": input["code"], "code_verifier": input["verifier"], "resource": RESOURCE})
         return store.save(validate(tokens, "CHATGPT_RESPONSES", input["client"], nonce=input["nonce"]))

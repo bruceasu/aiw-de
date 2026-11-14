@@ -38,7 +38,7 @@ public class OpenAiLogin {
             p.prior=connections.owned(input.connectionId(),Objects.requireNonNull(input.expectedVersion()),actor);
             if(!Kind.CHATGPT_RESPONSES.name().equals(p.prior.get("kind")))throw new IllegalArgumentException("CODEX_IMPORT_REQUIRES_ITS_ORIGINAL_REGISTRATION");
         }
-        p.client=p.prior==null?"dynamic_agent_client":(String)p.prior.get("client_id");
+        p.client=p.prior==null?"":(String)p.prior.get("client_id");
         p.state=random();p.nonce=random();p.verifier=random();p.expires=System.currentTimeMillis()+180000;
         try {
             p.server=HttpServer.create(new InetSocketAddress(InetAddress.getByName("127.0.0.1"),0),0);
@@ -69,7 +69,7 @@ public class OpenAiLogin {
             }
             if(query.containsKey("error"))throw new IllegalArgumentException();
             String client=query.getOrDefault("client_id",p.client);
-            if(p.client.equals("dynamic_agent_client")?client.equals("dynamic_agent_client")||client.isBlank():!p.client.equals(client))throw new SecurityException();
+            if(p.prior!=null&&!p.client.equals(client))throw new SecurityException();
             String code=query.get("code");if(code==null||code.isBlank())throw new IllegalArgumentException();
             issued=oauth.exchange(client,p.redirect,code,p.verifier,p.nonce);
             synchronized(p) {

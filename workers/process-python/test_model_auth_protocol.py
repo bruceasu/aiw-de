@@ -34,6 +34,16 @@ class CredentialFilesTest(unittest.TestCase):
         self.assertEqual(saved["refreshDigest"], hashlib.sha256(b"refresh-original").hexdigest())
         self.assertEqual(self.store.access(saved["credentialFile"]), {"accessToken": "access-original"})
 
+    def test_bootstrap_client_is_selected_in_python_and_never_used_for_code_exchange(self):
+        from urllib.parse import urlsplit, parse_qs
+        result=auth.run({"operation":"authorize","client":"","host":"host","redirect":"http://127.0.0.1:1455/auth/callback",
+                         "state":"state","nonce":"nonce","challenge":"challenge"})
+        self.assertEqual(["dynamic_agent_client"],parse_qs(urlsplit(result["url"]).query)["client_id"])
+        request=self.start_patch("request_json")
+        with self.assertRaisesRegex(ValueError,"ISSUED_CLIENT_REQUIRED"):
+            auth.run({"operation":"exchange","directory":self.temporary.name,"client":"dynamic_agent_client"})
+        request.assert_not_called()
+
     def test_uncertain_refresh_is_not_retried(self):
         saved = self.store.save(self.record())
         request = self.start_patch("request_json", side_effect=OSError("lost reply"))
