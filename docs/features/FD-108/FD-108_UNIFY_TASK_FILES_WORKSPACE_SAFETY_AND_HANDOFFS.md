@@ -1,7 +1,7 @@
 # FD-108: Unify task files workspace safety and handoffs
 
-**Status:** In Progress
-**Revision:** 5
+**Status:** Complete
+**Revision:** 7
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -60,6 +60,8 @@ Dependencies: FD-107、FD-112（均已交付）。
 简单任务可交付实际文件；越界未授权被阻止；同一授权不重复询问；删除可恢复且留记录；临时目录保留至执行结束，失败保留现场。
 
 ## Verification
+
+- 最终独立聚焦复核 `71102c1`（来源 `FD-108-000006-implementation-ready`）：静态代码 Pass，第二轮两项 P1 均关闭，累计两轮失败历史保留。实际 Profile 文件按已加载对象/映射定位；共享 handoff 能力覆盖两种 Broker runtime，资料能力仅 SDK 保留。详见 [最终复核报告](reviews/review-recheck2-20261114.md)。未运行测试、编译或脚本；**最终编译仍未补齐，不据此归档交付。**
 
 - 第二轮聚焦修复：实际 Profile 文件使用既有 PROFILES／ROLE_FILES 的已加载对象定位，不根据业务 name 猜文件名；固定方法证明能力禁止通过普通 capability 环境配置伪造。handoff-store 在所有实际支持 Broker 位置型问答的 runtime 登记，资料能力仍仅 SDK 登记。第二次 Changes requested 历史保留，待最后一次聚焦复核；仍未编译或运行测试。
 
