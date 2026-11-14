@@ -25,6 +25,7 @@ spring:
 aidev:
   remote-access: ${AIW_REMOTE_ACCESS:false}
   model-auth:
+    directory: ${AIW_MODEL_CREDENTIAL_DIR:${user.home}/.aiw/model-credentials}
     # Optional deployment override. Windows otherwise protects a per-installation key with CurrentUser DPAPI.
     key: ${AIW_MODEL_CREDENTIAL_KEY:}
   database:

@@ -25,7 +25,7 @@ class ModelCredentialsTest {
     final String actor="web:admin";
     @BeforeEach void setup() {
         var data=new DriverManagerDataSource("jdbc:sqlite:"+temp.resolve("credentials.db"));jdbc=new JdbcTemplate(data);
-        new ResourceDatabasePopulator(new ClassPathResource("db/migration/V30__model_credentials.sql"),new ClassPathResource("db/migration/V31__model_worker_proofs.sql")).execute(data);
+        new ResourceDatabasePopulator(new ClassPathResource("db/migration/V30__model_credentials.sql"),new ClassPathResource("db/migration/V31__model_worker_proofs.sql"),new ClassPathResource("db/migration/V50__model_credential_file_references.sql")).execute(data);
         jdbc.execute("CREATE TABLE authority_audit(id TEXT,target_key TEXT,grant_id TEXT,request_id TEXT,actor TEXT,event TEXT,detail TEXT,created_ms BIGINT)");
         jdbc.execute("CREATE TABLE execution_context(task_id TEXT,owner_id TEXT)");jdbc.execute("CREATE TABLE authority_owner(id TEXT,actor TEXT)");
         jdbc.execute("CREATE TABLE flexible_workflow_plan(id TEXT,created_by TEXT)");jdbc.update("INSERT INTO flexible_workflow_plan VALUES('plan',?)",actor);
@@ -36,7 +36,9 @@ class ModelCredentialsTest {
         service=spy(new ModelConnections(repo,boundary,mock(AuthorityGrantService.class),vault,oauth,guard,new DataSourceTransactionManager(data)));
     }
     Issued issued(String token,long expiry) {
-        return new Issued(new TokenSet("access-"+token,"refresh-"+token,"identity-"+token,"openid resource.invoke chatgpt.tokens.use.direct"),"oaiapp_test","subject",null,null,expiry,0,true);
+        String file=UUID.nameUUIDFromBytes(token.getBytes(java.nio.charset.StandardCharsets.UTF_8))+".json";
+        lenient().when(oauth.access(file)).thenReturn("access-"+token);
+        return new Issued(file,AuthorityRepository.hash("refresh-"+token),Kind.CHATGPT_RESPONSES,"oaiapp_test","subject",null,null,expiry,0,true);
     }
     Connection create(long expiry) {return service.save(actor,Kind.CHATGPT_RESPONSES,"My connection",issued("original",expiry),null);}
     Worker worker(Connection c) {
@@ -55,8 +57,8 @@ class ModelCredentialsTest {
     }
     @Test void projectionDatabaseAndAuditDoNotExposeTokens() {
         var c=create(System.currentTimeMillis()+3600000);
-        assertThat(repo.encode(service.state())).doesNotContain("access-original","refresh-original","identity-original","secret_cipher");
-        assertThat(jdbc.queryForObject("SELECT secret_cipher FROM model_connection",String.class)).doesNotContain("access-original","refresh-original");
+        assertThat(repo.encode(service.state())).doesNotContain("access-original","refresh-original","identity-original","credential_file");
+        assertThat(jdbc.queryForObject("SELECT credential_file FROM model_connection",String.class)).doesNotContain("access-original","refresh-original");
         assertThat(jdbc.queryForList("SELECT detail FROM authority_audit").toString()).doesNotContain("refresh-original");
         assertThat(c.state()).isEqualTo("READY");
     }
@@ -107,7 +109,7 @@ class ModelCredentialsTest {
         var c=create(System.currentTimeMillis()+1000);bind(c);
         when(oauth.refresh(any(),anyString(),anyString(),any())).thenAnswer(call->{service.disconnect(new Selection(c.id(),c.version()));return issued("late",System.currentTimeMillis()+3600000);});
         assertThatThrownBy(()->service.access("task",input(c),worker(c))).isInstanceOf(IllegalStateException.class);
-        var row=service.row(c.id());assertThat(row.get("state")).isEqualTo("DISCONNECTED");assertThat(row.get("secret_cipher")).isNull();
+        var row=service.row(c.id());assertThat(row.get("state")).isEqualTo("DISCONNECTED");assertThat(row.get("credential_file")).isNull();
     }
     @Test void importingTheSameRotatingTokenSetTwiceIsRejected() {
         create(System.currentTimeMillis()+3600000);
@@ -122,7 +124,7 @@ class ModelCredentialsTest {
         assertThat(jdbc.queryForObject("SELECT connection_id FROM model_auth_task WHERE task_id='successor'",String.class)).isEqualTo(c.id());
         var local=mock(Worker.class);when(local.capabilities()).thenReturn(Set.of());
         assertThat(service.canClaim(task,local)).isFalse();
-        var changed=service.save(actor,Kind.CHATGPT_RESPONSES,"Another",new Issued(issued("other",System.currentTimeMillis()+3600000).tokens(),"oaiapp_other","other-subject",null,null,System.currentTimeMillis()+3600000,0,true),null);
+        var changed=service.save(actor,Kind.CHATGPT_RESPONSES,"Another",new Issued(issued("other",System.currentTimeMillis()+3600000).credentialFile(),AuthorityRepository.hash("other-refresh"),Kind.CHATGPT_RESPONSES,"oaiapp_other","other-subject",null,null,System.currentTimeMillis()+3600000,0,true),null);
         assertThat(service.canClaim(task,worker(changed))).isFalse();
     }
     @Test void callbackRejectsDuplicateParametersAndConsoleRoutesRemainProtected() {
