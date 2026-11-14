@@ -160,8 +160,6 @@ class RunJournal:
             work = self.store.get("work", row["workId"])
             if self.runtime.cancelled.is_set() or not work or work.get("state") in {"CANCELLED", "TRASHED"}:
                 raise RunYield("cancel")
-            if self.runtime.settings.value.get("paused", False):
-                raise RunYield("pause")
             queued = [r for r in self.records("SECRETARY_CONTROL", identity) if r.get("kind") == "SECRETARY_CONTROL"
                       and r.get("runId") == identity and r.get("state") == "QUEUED"]
             queued.sort(key=lambda r: (r["createdAt"], r["id"]))

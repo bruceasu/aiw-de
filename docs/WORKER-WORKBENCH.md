@@ -77,6 +77,12 @@ V19 仅追加工作台/批次/收据/探索表，不回填旧尝试，不改原�
 算法复用本仓库 [FD-005 context.mjs](../extern-workers/process-typescript/runtime-core/context.mjs) 的安全切点与可见来源思路，原 [Pi 来源记录](../extern-workers/process-typescript/runtime-core/SOURCE-PROVENANCE.md) 及 [Python 参考许可](../workers/process-python/THIRD-PARTY-NOTICES.md) 保留，没有嵌入 Pi SDK。
 
 SDK 概念核对使用 [OpenAI 官方结果与状态](https://developers.openai.com/api/docs/guides/agents/results)、[运行与流式结束](https://developers.openai.com/api/docs/guides/agents/running-agents)：本地续行用 `to_input_list()`，流结束后处理报告。当前环境缺对应 Python SDK 源码，具体 provider/ModelSettings 兼容仍需运行证据，官方文档不等于本系统运行通过。
+## 定时安排
+
+任务页面可直接“安排文字工作”，已保存工作流旁可选择“定时安排”。Plane 保存当前内容快照、浏览器时区和首次时间，支持指定时间、每天、每周；后续编辑原工作流不会改写安排。首期只运行文字工作流，不增加文件或命令权限。秘书仍保留独立的本地单次安排，不要求连接 Plane；“暂停自动处理”只暂停后续自动启动，当前工作、聊天和既有委派的状态查询继续，单次执行仍由自己的暂停／取消按钮控制。
+
+安排由 Spring 扫描、数据库事务和原触发时间去重，操作系统只负责启动和守护 Plane。错过执行分钟、上次未结束或失败未核对时，安排等待决定，不自动补跑。暂停／停用安排不停止当前执行；“执行一次”“跳过”“改期”和“已核对，恢复安排”作用于安排本身，当前工作的停止在原执行页面处理。
+
 ## 中断后核对
 
 统一任务／工作流的 Worker 租约过期后，流程显示需要处理，记录“执行中断，结果待核对”，不会自动重新派发。连接中断不代表进程已经结束，原租约和容量保留；先在原执行工作台核对已执行操作、结果与停止回执。

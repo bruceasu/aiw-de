@@ -765,14 +765,14 @@ function render() {
   byId("worker-label").textContent = snapshot.workerId || "个人秘书";
   byId("worker-label").title = snapshot.workerId || "";
   const enabled = snapshot.enabled === true;
-  byId("runtime-state").textContent = snapshot.modelConfigured === false ? "先连接模型" : enabled ? "秘书可用" : "秘书已暂停";
+  byId("runtime-state").textContent = snapshot.modelConfigured === false ? "先连接模型" : enabled ? "秘书可用" : "自动处理已暂停，仍可对话";
   byId("runtime-state").className = "pill " + (enabled ? "ok" : "neutral");
   byId("enable").hidden = enabled;
   byId("pause").hidden = !enabled;
   byId("state").textContent = JSON.stringify(snapshot, null, 2);
   byId("last-updated").textContent = "状态读取于 " + new Date().toLocaleTimeString(window.aiwI18n?.locale || "en", { hour12: false });
   window.AiwAppearance?.setSummary({
-    status: snapshot.modelConfigured === false ? "先连接模型" : enabled ? "秘书可用" : "秘书已暂停",
+    status: snapshot.modelConfigured === false ? "先连接模型" : enabled ? "秘书可用" : "自动处理已暂停，仍可对话",
     state: snapshot.modelConfigured === false ? "unknown" : enabled ? "ready" : "paused",
     running: rows("work").filter(work => ["DAILY_RUNNING", "ACTIVE", "START_PENDING"].includes(work.state)).length,
     waiting: rows("decisions").filter(item => ["DAILY_CONFIRMATION", "PLATFORM_AUTHORIZATION", "PLATFORM_QUESTION"].includes(item.kind) && ["WAITING", "INTERRUPTED"].includes(item.state)).length
@@ -1579,7 +1579,7 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
     if (route === "chat" && result.state !== "UNKNOWN" && result.workId) { form.elements.workId.value = result.workId; renderChat(); }
     let message = route === "login" ? "个人服务已接受配对。" : (refreshed ? "操作已记录，状态已更新。" : "操作已返回结果。");
     if (route === "schedule" && result.report) message = result.report.message;
-    if (immediate && result.state === "SCHEDULED") message = "已提交马上执行，进度和结果会自动更新；秘书暂停时需先点击“继续工作”。";
+    if (immediate && result.state === "SCHEDULED") message = "已提交马上执行；自动处理暂停时，请先恢复自动处理。当前对话仍可使用。";
     if (route === "chat") message = result.state === "UNKNOWN" ? result.reply : "请求已记录，回复会自动显示；重发的原请求未重复排队。";
     if (route === "work") message = "工作已保存，并已选入安排列表。";
     if (route === "settings") message = "设置已保存，可以直接聊天或安排工作。";
@@ -1604,7 +1604,7 @@ for (const [id, enabled] of [["enable", true], ["pause", false]]) byId(id).addEv
   byId("enable").disabled = true; byId("pause").disabled = true;
   try {
     const { refreshed } = await post("assistant/control", { paused: !enabled });
-    feedback(refreshed ? (enabled ? "秘书已继续工作，安排会自动处理。" : "秘书已暂停，后续工具操作会停止；已完成操作保留。") : "状态读取失败，请刷新查看秘书状态。", refreshed ? "ok" : "warn", byId("personal-app").hidden);
+    feedback(refreshed ? (enabled ? "已恢复自动处理，安排会按原规则处理。" : "已暂停后续自动启动；当前处理、对话和已委派任务的状态查看继续。") : "状态读取失败，请刷新查看秘书状态。", refreshed ? "ok" : "warn", byId("personal-app").hidden);
   } catch (error) { feedback(errorMessage(error), "error"); }
   finally { byId("enable").disabled = false; byId("pause").disabled = false; }
 });

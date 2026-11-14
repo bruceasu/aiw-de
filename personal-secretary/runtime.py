@@ -163,8 +163,8 @@ class Runtime:
                 message = self.store.get("message", prior["messageId"])
                 return message or {"workId": prior["workId"], "state": "UNKNOWN", "requestId": request_id,
                     "reply": "原请求已记录，但开始处理的结果尚未确认；未重复排队。请核对原对话或运行记录。"}
-            if not self.settings.configured() or self.settings.value.get("paused", False):
-                raise PersonalChatError("CHAT_NOT_READY", "请先连接模型并继续工作，再开始对话。")
+            if not self.settings.configured():
+                raise PersonalChatError("CHAT_NOT_READY", "请先连接模型，再开始对话。")
             if work_id and not self.store.get("work", work_id):
                 raise PersonalChatError("CHAT_INVALID_INPUT", "原工作不存在，请重新选择。")
             target = work_id or "conversation:" + key.split(":", 1)[1]

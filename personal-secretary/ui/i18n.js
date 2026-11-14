@@ -1328,6 +1328,13 @@
     "プラットフォームの Plan を表示"
   ],
   "查看平台执行": ["View Plane execution", "Plane の実行を表示"],
+  "暂停自动处理": ["Pause automatic work", "自動処理を一時停止"],
+  "恢复自动处理": ["Resume automatic work", "自動処理を再開"],
+  "自动处理已暂停，仍可对话": ["Automatic work paused; chat is available", "自動処理は一時停止中です。会話は使えます"],
+  "已恢复自动处理，安排会按原规则处理。": ["Automatic work resumed; arrangements follow their existing rules.", "自動処理を再開しました。予定は元のルールで処理します。"],
+  "已暂停后续自动启动；当前处理、对话和已委派任务的状态查看继续。": ["Automatic starts are paused. Current work, chat and delegated-task status tracking continue.", "自動開始を一時停止しました。現在の処理・会話・委任済みタスクの状態確認は継続します。"],
+  "已提交马上执行；自动处理暂停时，请先恢复自动处理。当前对话仍可使用。": ["Immediate work accepted. Resume automatic work to start it; chat remains available.", "即時実行を受け付けました。開始するには自動処理を再開してください。会話は使えます。"],
+  "请先连接模型，再开始对话。": ["Connect a model before starting a conversation.", "会話を始める前にモデルを接続してください。"],
   "查看工作详情": [
     "View task details",
     "作業の詳細を表示"

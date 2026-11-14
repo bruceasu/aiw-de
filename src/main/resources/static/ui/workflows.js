@@ -2,6 +2,35 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'Plane schedules':['Plane 定时安排','Plane の実行予定'], 'Arrange text work':['安排文字工作','テキスト作業を予定'],
+    'Schedule':['定时安排','実行を予定'], 'Save arrangement':['保存安排','予定を保存'], 'No arrangements yet':['尚无定时安排','予定はありません'],
+    'First time (browser time zone)':['首次时间（浏览器时区）','初回日時（ブラウザーのタイムゾーン）'], 'Repeat':['重复方式','繰り返し'],
+    'Once':['仅一次','1回のみ'], 'Every day':['每天','毎日'], 'Every week':['每周','毎週'], 'Time zone':['时区','タイムゾーン'],
+    'Pause arrangement':['暂停自动启动','自動開始を一時停止'], 'Checked; resume arrangement':['已核对，恢复安排','確認して予定を再開'],
+    'Run once now':['现在执行一次','今すぐ1回実行'], 'Skip occurrence':['跳过本次','今回をスキップ'], 'Reschedule':['改期','日時を変更'], 'Disable arrangement':['停用安排','予定を無効化'],
+    'View execution':['查看本次执行','実行を表示'], 'ACTIVE':['自动安排中','自動実行予定'], 'NEEDS_CONFIRMATION':['等待你决定','判断待ち'], 'TRIGGERED':['本次已启动','実行を開始済み'],
+    'Captured work':['已保存的工作内容','保存した作業内容'], 'New arrangement with captured work':['使用原内容新建安排','保存した内容で予定を新規作成'],
+    'Pausing an arrangement leaves its current execution running. Use the execution page to stop that work.':['暂停或停用安排不会停止当前执行；请在执行页面停止该项工作。','予定の一時停止・無効化では実行中の作業は停止しません。実行ページで停止してください。'],
+    'The selected content is frozen. Later edits do not change this arrangement. Missed or overlapping work waits for your decision.':['安排保存当前内容快照，后续编辑不会自动替换。错过时间或上次尚未结束时，等待你决定。','現在の内容を保存します。後の編集は反映されません。予定時刻を逃した場合や前回が未完了の場合は判断を待ちます。'],
+    'Schedules currently support text workflows only':['当前定时安排只支持文字工作流，不授予文件或命令权限。','現在の予定はテキスト作業のみです。ファイル・コマンド権限は付与しません。'],
+    'Schedule work must have an instruction':['请先填写工作内容和完成条件。','作業内容と完了条件を入力してください。'],
+    'Run this occurrence now? Check the prior result first.':['现在执行一次？请先核对原结果及停止状态。','今すぐ1回実行しますか？元の結果と停止状態を確認してください。'],
+    'Check the original execution and its stop acknowledgement first':['原执行尚未确认结束，请先核对结果和停止回执。','元の実行の結果と停止確認を先に確認してください。'],
+    'Choose a future first time':['请选择将来的执行时间。','将来の実行日時を選択してください。'],
+    'Schedules use temporary locations; attach selected text sources':['定时文字任务使用临时目录，请把所需资料明确加入任务资料。','予定のテキスト作業は一時フォルダーを使います。必要な資料を明示的に追加してください。'],
+    'Arrangement saved; the current content is frozen':['安排已保存，使用当前内容快照。','予定を保存しました。現在の内容を使用します。'],
+    'Schedule changed; reload':['安排已变化，请刷新后再操作。','予定が変更されました。再読み込みしてください。'],
+    'Schedule request changed; inspect the original arrangement':['请求内容已变化，请先查看原安排。','依頼内容が変わりました。元の予定を確認してください。'],
+    'Current schedule Owner required':['需要当前安排所属账号的操作权限。','予定を所有するアカウントの権限が必要です。'],
+    'User checked the prior result and resumed automatic starts':['你已核对原结果并恢复自动安排。','元の結果を確認し、自動開始を再開しました。'],
+    'Choose run once, skip or reschedule; missed work was not started':['错过的工作尚未启动；请选择执行一次、跳过或改期。','時刻を過ぎた作業は開始していません。1回実行・スキップ・日時変更を選んでください。'],
+    'User rescheduled after checking the prior result':['你已核对原结果并修改时间。','元の結果を確認し、日時を変更しました。'],
+    'Missed time; choose run once, skip or reschedule':['已错过时间；请选择执行一次、跳过或改期。','予定時刻を逃しました。1回実行・スキップ・日時変更を選んでください。'],
+    'Check the prior execution before starting another occurrence':['请先核对上次执行，再决定是否启动下一次。','次の実行を始める前に前回の結果を確認してください。'],
+    'Execution started; inspect its actual result':['本次执行已启动，请查看实际结果。','実行を開始しました。実際の結果を確認してください。'],
+    'Automatic starts paused; current execution continues':['已暂停后续自动启动，当前执行继续。','自動開始を一時停止しました。現在の実行は継続します。'],
+    'Arrangement disabled; current execution is unchanged':['安排已停用，当前执行不受影响。','予定を無効にしました。現在の実行は変わりません。'],
+    'User skipped the missed occurrence':['你已跳过本次安排。','今回の予定をスキップしました。'],
     'Configured commands (advanced)':['受控命令（高级）','制御対象コマンド（詳細）'],
     'Optional JSON command profiles. Requires workspace tools and a connected Linux/WSL command Worker; no Windows command permissions are granted.':['可选的 JSON 命令配置。需要工作区工具及已接入的 Linux／WSL 命令 Worker；不会授予 Windows 命令权限。','任意の JSON コマンド設定です。作業場所ツールと接続済みの Linux／WSL コマンド Worker が必要です。Windows のコマンド権限は付与しません。'],
     'Commands must be a JSON array.':['命令配置必须是 JSON 数组。','コマンド設定は JSON 配列で入力してください。'],
@@ -124,6 +153,7 @@
   };
   const status = message => { $('[data-wf-status]').textContent = message; };
   let definitions=[], teamSkills=[], teamMembers=[], taskSources=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='';
+  let scheduleSpec=null,scheduleRequest=crypto.randomUUID();
   const newRequest = () => crypto.randomUUID();
   let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest(), amendmentRequest=newRequest();
   const route=new URLSearchParams(location.search);
@@ -252,14 +282,45 @@
     container.append(svg);
   }
   async function library() {
-    const data=await api('?kind='+pageMode);definitions=data.definitions;
+    const [data,schedules]=await Promise.all([api('?kind='+pageMode),api('/schedules')]);definitions=data.definitions;
     const list=$('[data-wf-definitions]');list.replaceChildren();
     if(!definitions.length)list.append(element('p',t('No saved workflows'),'help'));
-    definitions.forEach(d=>{const b=button('',()=>showEditor(d));b.textContent=d.spec.title;b.dataset.i18nSkip='';b.classList.add('wf-item');list.append(b);});
+    definitions.forEach(d=>{const b=button('',()=>showEditor(d));b.textContent=d.spec.title;b.dataset.i18nSkip='';b.classList.add('wf-item');list.append(b,button('Schedule',()=>act(()=>arrange(d.spec))));});
     const runs=$('[data-wf-executions]');runs.replaceChildren();
     if(!data.executions.length)runs.append(element('p',t('No executions yet'),'help'));
     data.executions.forEach(r=>{const b=button('',()=>act(()=>openRun(r.id)));b.textContent=r.title||r.id;b.dataset.i18nSkip='';b.classList.add('wf-item');b.append(element('small',t(r.state)+' · '+new Date(r.updated_ms).toLocaleString()));runs.append(b);});
     loadMembers();
+    renderSchedules(schedules);
+  }
+  function localDateInput(value){const d=new Date(value);return new Date(value-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
+  function arrange(spec){
+    if(spec.nodes.some(n=>n.workspaceTools)||(spec.commands||[]).length)throw new Error('Schedules currently support text workflows only');
+    scheduleSpec=structuredClone(spec);scheduleRequest=crypto.randomUUID();
+    const details=$('[data-wf-schedule-editor]');details.hidden=false;details.open=true;
+    $('[data-wf-schedule-title]').textContent=spec.title;
+    $('[data-wf-schedule-content]').textContent=JSON.stringify(spec,null,2);
+    $('[data-wf-schedule-zone]').textContent=t('Time zone')+': '+Intl.DateTimeFormat().resolvedOptions().timeZone;
+    $('[data-wf-schedule-form]').elements.firstAt.value=localDateInput(Date.now()+3600000);
+  }
+  function renderSchedules(rows){
+    const host=$('[data-wf-schedules]');host.replaceChildren();
+    if(!rows.length)host.append(element('p',t('No arrangements yet'),'help'));
+    for(const row of rows){
+      const entry=element('details',undefined,'wf-event');entry.append(element('summary',row.title+' · '+t(row.state)));
+      entry.append(element('p',new Date(row.next_ms).toLocaleString(window.aiwI18n?.locale||undefined,{timeZone:row.zone_id})+' · '+row.zone_id),element('p',t(row.message),'help'));
+      if(row.last_execution){const link=element('a',t('View execution')+' · '+t(row.last_state));link.href='/ui/tasks?execution='+encodeURIComponent(row.last_execution);entry.append(link);}
+      const controls=element('div',undefined,'wf-actions');
+      controls.append(button('New arrangement with captured work',()=>act(async()=>arrange((await api('/schedules/'+encodeURIComponent(row.id))).spec))));
+      const send=(action,extra={})=>act(async()=>{if(action==='run-now'&&!window.confirm(t('Run this occurrence now? Check the prior result first.')))return;await api('/schedules/'+encodeURIComponent(row.id)+'/control',{version:row.version,action,...extra});await library();});
+      if(row.state==='ACTIVE')controls.append(button('Pause arrangement',()=>send('pause')));
+      if(['PAUSED','NEEDS_CONFIRMATION'].includes(row.state))controls.append(button('Checked; resume arrangement',()=>send('resume')));
+      if(!['STOPPED','TRIGGERED'].includes(row.state)){
+        controls.append(button('Run once now',()=>send('run-now')),button('Skip occurrence',()=>send('skip')),button('Disable arrangement',()=>send('stop')));
+        const date=element('input');date.type='datetime-local';date.value=localDateInput(Math.max(Date.now()+3600000,row.next_ms));date.ariaLabel=t('First time (browser time zone)');
+        controls.append(date,button('Reschedule',()=>send('reschedule',{firstAt:new Date(date.value).getTime()})));
+      }
+      entry.append(controls);host.append(entry);
+    }
   }
   let teamLoading=false;
   async function loadMembers(){
@@ -442,6 +503,20 @@
     const form=new FormData(e.target);
     await api('/executions/'+encodeURIComponent(selectedRun)+'/amendments',{version:currentView.run.version,requestId:amendmentRequest,node:form.get('node'),change:form.get('change')});
     signature='';await refreshRun();await library();
+  });};
+  $('[data-wf-schedule-task]').onclick=()=>act(()=>{
+    const form=new FormData($('[data-wf-task-form]')),instruction=String(form.get('instruction')||'').trim();
+    if(!instruction)throw new Error('Schedule work must have an instruction');
+    if(form.has('workspaceTools')||commands($('[data-wf-task-form]').elements.commands).length)throw new Error('Schedules currently support text workflows only');
+    if(String(form.get('location')||'').trim())throw new Error('Schedules use temporary locations; attach selected text sources');
+    arrange({title:instruction.slice(0,80),goal:instruction,entry:'task',nodes:[
+      {key:'task',title:'Task',kind:'TASK',instruction,next:'end',branches:{},...assignment($('[data-wf-member]').value),requiredSkills:[...$('[data-wf-skills]').selectedOptions].map(o=>o.value)},
+      {key:'end',title:'Done',kind:'END',instruction:'',next:null,branches:{}}],sources:taskSources,commands:[]});
+  });
+  $('[data-wf-schedule-form]').onsubmit=e=>{e.preventDefault();act(async()=>{
+    const form=new FormData(e.target);
+    await api('/schedules',{requestId:scheduleRequest,spec:scheduleSpec,repeat:form.get('repeat'),zone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',firstAt:new Date(form.get('firstAt')).getTime()});
+    $('[data-wf-schedule-editor]').hidden=true;scheduleSpec=null;await library();
   });};
   window.addEventListener('aiw:locale-changed',()=>{translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(editing)renderSources($('[data-wf-definition-sources]'),editing.spec.sources||[],values=>editing.spec.sources=values);signature='';$('[data-wf-usage]').dataset.stamp='';$('[data-wf-amendment]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
   translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(pageMode==='tasks')panel('task');else showEditor();act(async()=>{

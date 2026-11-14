@@ -69,8 +69,8 @@ class AuthorizationRequests:
                 self._save(current, reason=reason, message=message)
             if strict: raise ValueError(message)
             return False
-        if runtime.cancelled.is_set() or runtime.settings.value.get("paused", False):
-            return blocked("SECRETARY_PAUSED", "秘书已暂停，请先恢复秘书；原任务仍在等待。")
+        if runtime.cancelled.is_set():
+            return blocked("SECRETARY_STOPPING", "服务正在停止，原请求仍然保留；尚未恢复执行。")
         work = self.store.get("work", row["workId"])
         if not work or work.get("state") in {"CANCELLED", "TRASHED"}:
             return blocked("WORK_STOPPED", "这项工作已取消或移除，不能继续执行。")
@@ -131,9 +131,9 @@ class AuthorizationRequests:
         return True
 
     def tick(self):
-        if self.runtime.cancelled.is_set() or self.runtime.settings.value.get("paused", False): return
+        if self.runtime.cancelled.is_set(): return
         decisions = self.store.list("decision")
-        waiting = [row for row in decisions if row.get("kind") == "PLATFORM_AUTHORIZATION" and row.get("state") == "WAITING"]
+        waiting = [] if self.runtime.settings.value.get("paused", False) else [row for row in decisions if row.get("kind") == "PLATFORM_AUTHORIZATION" and row.get("state") == "WAITING"]
         followup = any(
             row.get("kind") == "DAILY_PLAN" and row.get("state") == "WAITING_PLATFORM" and row.get("businessRequestId")
             or row.get("kind") == "PROFESSIONAL_TASK" and row.get("state") == "ACTIVE" and row.get("receipt", {}).get("taskState") == "WAITING_INPUT"
@@ -145,18 +145,23 @@ class AuthorizationRequests:
         if time.monotonic() - self.last_poll < 5: return
         self.last_poll = time.monotonic()
         backend = self.runtime.platform.backend
-        if (not self.runtime.platform_setup.public()["connected"] and getattr(backend, "profile", None) != "LOCAL") or not self.checking.acquire(blocking=False): return
+        if not self.checking.acquire(blocking=False): return
         def check():
             try:
+                if followup: self.runtime.platform_actions.poll()
+                if self.runtime.cancelled.is_set() or self.runtime.settings.value.get("paused", False): return
+                if not self.runtime.platform_setup.public()["connected"] and getattr(backend, "profile", None) != "LOCAL": return
                 # Only pending authorization requests fetch connection/approval state.
                 if waiting:
                     try:
                         self.runtime.platform_setup.check()
                     except (PlatformError, ValueError):
                         return
-                    for row in waiting: self.resume(row)
+                    for row in waiting:
+                        if self.runtime.cancelled.is_set() or self.runtime.settings.value.get("paused", False): return
+                        self.resume(row)
                 if not followup or not self.runtime.enabled: return
-                self.runtime.platform_actions.poll()
+                if self.runtime.settings.value.get("paused", False): return
                 self.runtime.platform_actions.follow_questions()
             finally:
                 self.checking.release()

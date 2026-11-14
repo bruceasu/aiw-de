@@ -114,6 +114,7 @@ class PlatformAgentActions:
         """At most one model decision per question version, and only under A19."""
         from store import encode
         for source in self.store.list("decision"):
+            if self.runtime.settings.value.get("paused", False) or self.runtime.cancelled.is_set(): return
             if source.get("kind") != "PROFESSIONAL_TASK": continue
             identity = "platform-question:" + source["requestId"]
             card = self.store.get("decision", identity)
@@ -122,8 +123,8 @@ class PlatformAgentActions:
                 continue
             work = self.store.get("work", source["workId"])
             if not work or work.get("state") in {"CANCELLED", "TRASHED"}: continue
-            plan_id = source.get("body", {}).get("planId")
-            task_id = source.get("receipt", {}).get("preparation", {}).get("taskId")
+            plan_id = source.get("receipt", {}).get("planId")
+            task_id = source.get("receipt", {}).get("taskId")
             if not card:
                 card = self.store.put("decision", identity, {"kind": "PLATFORM_QUESTION", "state": "WAITING", "workId": work["id"],
                     "planId": plan_id, "taskId": task_id, "message": "专业任务需要补充信息。秘书会在已授权范围内处理；需要你判断的问题请在平台确认。", "attempted": []}, 0)

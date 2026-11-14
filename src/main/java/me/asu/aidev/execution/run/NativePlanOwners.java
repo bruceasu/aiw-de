@@ -68,6 +68,16 @@ public class NativePlanOwners {
         repo.audit("PLAN:"+plan.id(),null,input.requestId(),actor,"PLAN_RUN_OWNER_BOUND","Owner for native observations, control and professional questions only");
         return Map.of("planId",plan.id(),"ownerId",owner,"bound",true);
     }
+    /** Internal scheduler port; a persisted active arrangement is the authority source. */
+    @Transactional public Object bindScheduled(Bind input,String schedule,long due) {
+        boundary.lock();
+        if(due>System.currentTimeMillis())throw new IllegalStateException("Schedule is not due");
+        var row=repo.jdbc().queryForMap("SELECT actor,owner_id FROM workflow_schedule WHERE id=? AND state='ACTIVE' AND next_ms=?",schedule,due);
+        String actor=(String)row.get("actor"),owner=(String)row.get("owner_id");
+        if(!actor.equals(repo.actor(owner)))throw new SecurityException("Schedule Owner changed");
+        grants.human(actor,"A05");
+        return bind(input,owner,actor);
+    }
     public Basis task(String taskId,boolean active) {
         var task=tasks.find(new TaskId(taskId)).orElseThrow();
         if(!task.subjectType().equals("flexible-plan")||guard.managed(taskId))throw new SecurityException("Exact native Plan task required");

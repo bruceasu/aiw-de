@@ -264,7 +264,22 @@ public class WorkflowRuns {
         return start(request,digest,definition,definitionVersion,spec,input,declaredLocation,null);
     }
     private Run start(String request,String digest,String definition,long definitionVersion,Spec spec,String input,String declaredLocation,AuthorityBoundary.Principal agent) {
-        String actor=agent==null?actor():db.actor(agent.owner());input=input==null?"":input;
+        return start(request,digest,definition,definitionVersion,spec,input,declaredLocation,agent,null,0);
+    }
+    /** Background startup reads the original arrangement, never an invented human session. */
+    @Transactional public Run startScheduled(String schedule,long due) {
+        if(due>System.currentTimeMillis())throw new IllegalStateException("Schedule is not due");
+        boundary.lock();var row=db.jdbc().queryForMap("SELECT * FROM workflow_schedule WHERE id=? AND state='ACTIVE' AND next_ms=?",schedule,due);
+        var spec=db.decode((String)row.get("spec_json"),Spec.class);
+        if(spec.nodes().stream().anyMatch(Node::workspaceTools)||!spec.commands().isEmpty())throw new SecurityException("Schedules do not grant file or command authority");
+        String request=UUID.nameUUIDFromBytes(("schedule:"+schedule+":"+due).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+        String digest=AuthorityRepository.hash(db.encode(Arrays.asList(schedule,due,spec)));
+        var previous=replay((String)row.get("actor"),request,digest);if(previous!=null)return previous;
+        return start(request,digest,null,0,spec,"Scheduled arrangement: "+schedule+"\nOriginal time: "+java.time.Instant.ofEpochMilli(due),null,null,schedule,due);
+    }
+    private Run start(String request,String digest,String definition,long definitionVersion,Spec spec,String input,String declaredLocation,AuthorityBoundary.Principal agent,String schedule,long due) {
+        String actor=schedule!=null?db.jdbc().queryForObject("SELECT actor FROM workflow_schedule WHERE id=? AND state='ACTIVE' AND next_ms=?",String.class,schedule,due):agent==null?actor():db.actor(agent.owner());
+        input=input==null?"":input;
         var assigned=new LinkedHashMap<String,me.asu.aidev.worker.application.TeamMembers.Profile>();
         for(var node:spec.nodes()){
             team.requirements(node.requiredSkills());
@@ -279,7 +294,8 @@ public class WorkflowRuns {
         if(steps.isEmpty()) throw new IllegalArgumentException("A working node is required");
         var plan=plans.getObject().draft(new WorkflowPlanSpec(spec.goal(),WorkflowPlanSpec.Source.MANAGER,steps,declaredLocation),actor);
         var binding=new NativePlanOwners.Bind(UUID.randomUUID().toString(),plan.id(),plan.version());
-        if(agent==null)owners.bind(binding);
+        if(schedule!=null)owners.bindScheduled(binding,schedule,due);
+        else if(agent==null)owners.bind(binding);
         else {
             if(workspaceTools)throw new SecurityException("Delegation does not grant file or command authority");
             actionPermissions.getObject().confirmFactoryPlan(agent,plan.id(),request);

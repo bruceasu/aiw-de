@@ -170,8 +170,6 @@ class DailyAssistant:
             raise ValueError("这项工作已有专业任务正在处理或核对，进度和结果会自动更新。请先查看工作报告，避免重复安排。")
         if not self.settings.configured():
             raise ValueError("还没有连接模型。请打开“设置”完成首次连接，保存后即可直接聊天。")
-        if self.settings.value.get("paused", False):
-            raise ValueError("秘书已暂停，请点击“继续工作”后发送消息。")
         with self.lock:
             if work["id"] in self.busy:
                 raise ValueError("正在处理这项工作的上一条请求，请等回复后再发送。")
@@ -200,7 +198,7 @@ class DailyAssistant:
         elif mode == "IMMEDIATE" and recovering:
             self._report(work["id"], "NEEDS_CONFIRMATION", "RECOVERY_CONFIRMATION",
                          "上次的马上执行任务在停机前尚未开始。现在还需要执行吗？请选择现在执行、重新定时或取消。")
-        elif mode == "TIMED" and now_ms() >= work["dueMs"] + 60_000:
+        elif mode == "TIMED" and now_ms() // 60_000 > work["dueMs"] // 60_000:
             self._report(work["id"], "NEEDS_CONFIRMATION", "MISSED_TIME",
                          "已错过定时任务的执行分钟，未自动补跑。请选择现在执行、重新定时或取消。")
         else:
@@ -269,7 +267,7 @@ class DailyAssistant:
             resumed = job.get("resumePlatformAction")
             if resumed:
                 current = self.store.get("work", work["id"])
-                if self.runtime.cancelled.is_set() or self.settings.value.get("paused", False) or not current or current.get("state") in {"CANCELLED", "TRASHED"}:
+                if self.runtime.cancelled.is_set() or not current or current.get("state") in {"CANCELLED", "TRASHED"}:
                     raise ValueError("工作已停止，未继续执行授权后的操作。")
                 action = resumed
                 job = self._decision(job, resumePlatformAction=None)
@@ -288,7 +286,7 @@ class DailyAssistant:
             approved = job.get("approvedAction")
             if approved:
                 current = self.store.get("work", work["id"])
-                if self.runtime.cancelled.is_set() or self.settings.value.get("paused", False) or not current or current.get("state") in {"CANCELLED", "TRASHED"}:
+                if self.runtime.cancelled.is_set() or not current or current.get("state") in {"CANCELLED", "TRASHED"}:
                     raise ValueError("工作已暂停、取消或移除，批准的操作尚未执行。")
                 self.runtime.runs.check(host.identity)
                 tools.tool_receipt = job.get("approvedReceipt")
@@ -298,7 +296,7 @@ class DailyAssistant:
             host.job = job
             for _ in range(max(0, 12 - len(job["steps"]))):
                 current = self.store.get("work", work["id"])
-                if self.runtime.cancelled.is_set() or not current or current.get("state") in {"CANCELLED", "TRASHED"} or self.settings.value.get("paused", False):
+                if self.runtime.cancelled.is_set() or not current or current.get("state") in {"CANCELLED", "TRASHED"}:
                     raise ValueError("处理已停止，已完成的文件操作不会回滚。请核对结果后再继续。")
                 context = {"currentDate": time.strftime("%Y-%m-%d %H:%M:%S %z"), "title": work["title"], "description": work.get("body", ""),
                     "planId": current.get("planId") or current.get("professionalDraftPlanId") or current.get("professionalPlanId"),
@@ -378,7 +376,7 @@ class DailyAssistant:
                     return
                 try:
                     current = self.store.get("work", work["id"])
-                    if self.runtime.cancelled.is_set() or self.settings.value.get("paused", False) or not current or current.get("state") in {"CANCELLED", "TRASHED"}:
+                    if self.runtime.cancelled.is_set() or not current or current.get("state") in {"CANCELLED", "TRASHED"}:
                         raise ValueError("工作已暂停、取消或移除，后续操作已停止。")
                     result = host.perform(action)
                     work, job = host.work, host.job
@@ -453,8 +451,8 @@ class DailyAssistant:
         run = self.runtime.runs.get(identity)
         if run["binding"] != self.runtime.runs.binding(self.settings.value):
             raise ValueError("模型或知识库设置已经变化，不能替原运行更换连接。请恢复原设置，或取消后重新安排。")
-        if run["state"] != "PAUSED" or self.settings.value.get("paused", False):
-            raise ValueError("请先继续秘书工作，再继续已暂停的运行。")
+        if run["state"] != "PAUSED":
+            raise ValueError("这次运行没有暂停，请刷新查看当前状态。")
         job = self.store.get("decision", run["jobId"])
         work = self.store.get("work", run["workId"])
         if not job or not work or work.get("state") in {"CANCELLED", "TRASHED"}:
@@ -463,7 +461,7 @@ class DailyAssistant:
             raise ValueError("这项工作仍在结束上一回合，或秘书正在处理其他工作，请稍后继续。")
 
     def followups(self):
-        if self.settings.value.get("paused", False) or self.runtime.cancelled.is_set():
+        if self.runtime.cancelled.is_set():
             return
         commands = [row for row in self.runtime.runs.records("SECRETARY_CONTROL") if row.get("kind") == "SECRETARY_CONTROL"
                     and row.get("state") == "QUEUED" and row.get("payload", {}).get("control") == "follow-up"]
@@ -512,8 +510,6 @@ class DailyAssistant:
             if row.get("messageId"): self._message(row["messageId"], "已按你的选择停止这次操作。", "CANCELLED")
             else: self._report(work["id"], "CANCELLED", "DECLINED", "你已拒绝这次操作，工作已停止。")
             return {"state": "REJECTED", "note": "已拒绝，这项操作不会执行。"}
-        if self.settings.value.get("paused", False):
-            raise ValueError("秘书已暂停，请先点击“继续工作”。")
         with self.lock:
             if work["id"] in self.busy:
                 raise ValueError("这项工作仍在处理，请稍后再确认。")

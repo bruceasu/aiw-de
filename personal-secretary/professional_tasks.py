@@ -144,7 +144,7 @@ class ProfessionalTasks:
         return {"requestId": row["requestId"], "state": self.store.get("decision", identity)["state"], "note": "已查询原委派，没有重复提交。"}
 
     def tick(self):
-        if time.monotonic() - self.last_poll < 15 or self.runtime.settings.value.get("paused", False):
+        if time.monotonic() - self.last_poll < 15:
             return
         self.last_poll = time.monotonic()
         for row in self.store.list("decision"):

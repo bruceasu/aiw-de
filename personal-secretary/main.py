@@ -335,6 +335,10 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                     elif self.path == "/api/assistant/control":
                         try:
                             result = runtime.settings.pause(data.get("paused"))
+                            for identity in list(runtime.runs.active.values()):
+                                run = runtime.runs.get(identity)
+                                if run.get("state") not in {"SUCCEEDED", "FAILED", "CANCELLED"}:
+                                    runtime.runs.event(identity, "automatic-starts-changed", control="pause-automatic" if data["paused"] else "resume-automatic")
                         except ValueError as error:
                             raise PersonalChatError("SETTINGS_INVALID", str(error)) from None
                     elif self.path == "/api/assistant/confirm":

@@ -18,6 +18,21 @@
       </div>
       <h3 data-wf-label="Executions">Executions</h3><div data-wf-executions></div>
       <button class="btn ghost" data-wf-refresh>Refresh</button>
+      <h3 data-wf-label="Plane schedules">Plane schedules</h3>
+      <p class="help" data-wf-label="Pausing an arrangement leaves its current execution running. Use the execution page to stop that work.">Pausing an arrangement leaves its current execution running. Use the execution page to stop that work.</p>
+      <details data-wf-schedule-editor hidden class="wf-event">
+        <summary data-wf-label="Arrange text work">Arrange text work</summary>
+        <p data-wf-schedule-title data-i18n-skip></p>
+        <details><summary data-wf-label="Captured work">Captured work</summary><pre data-wf-schedule-content data-i18n-skip></pre></details>
+        <p class="help" data-wf-label="The selected content is frozen. Later edits do not change this arrangement. Missed or overlapping work waits for your decision.">The selected content is frozen. Later edits do not change this arrangement. Missed or overlapping work waits for your decision.</p>
+        <form data-wf-schedule-form>
+          <label class="field"><span data-wf-label="First time (browser time zone)">First time (browser time zone)</span><input type="datetime-local" name="firstAt" required></label>
+          <label class="field"><span data-wf-label="Repeat">Repeat</span><select name="repeat"><option value="ONCE" data-wf-label="Once">Once</option><option value="DAILY" data-wf-label="Every day">Every day</option><option value="WEEKLY" data-wf-label="Every week">Every week</option></select></label>
+          <p data-wf-schedule-zone data-i18n-skip></p>
+          <button class="btn primary" data-wf-label="Save arrangement">Save arrangement</button>
+        </form>
+      </details>
+      <div data-wf-schedules></div>
     </section>
     <section class="wf-content">
       <section class="card" data-wf-task hidden><h2 data-wf-label="Simple task">Simple task</h2>
@@ -30,7 +45,7 @@
           <p class="help" data-wf-label="Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.">Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.</p>
           <div data-wf-task-sources></div>
           <details><summary data-wf-label="Configured commands (advanced)">Configured commands (advanced)</summary><p class="help" data-wf-label="Optional JSON command profiles. Requires workspace tools and a connected Linux/WSL command Worker; no Windows command permissions are granted.">Optional JSON command profiles. Requires workspace tools and a connected Linux/WSL command Worker; no Windows command permissions are granted.</p><textarea name="commands" rows="3" maxlength="16000" spellcheck="false" aria-label="Command profiles JSON">[]</textarea></details>
-          <button class="btn primary" data-wf-label="Run task">Run task</button></form>
+          <button class="btn primary" data-wf-label="Run task">Run task</button><button type="button" class="btn ghost" data-wf-schedule-task data-wf-label="Arrange text work">Arrange text work</button></form>
       </section>
       <section class="card" data-wf-editor hidden><h2 data-wf-label="Workflow definition">Workflow definition</h2>
         <label class="field"><span data-wf-label="Name">Name</span><input data-wf-title maxlength="160"></label>
