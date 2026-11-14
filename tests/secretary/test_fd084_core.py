@@ -27,6 +27,23 @@ from secretary_host import SecretaryHost
 
 
 class LocalCase(unittest.TestCase):
+    def test_message_process_lookup_is_exact_and_not_limited_to_recent_runs(self):
+        self.store.put("message", "older-message", {"workId": "work", "reply": "saved reply"}, 0)
+        for index in range(35):
+            self.store.put("runtime", "run:" + str(index), {
+                "kind": "SECRETARY_RUN", "workId": "work", "messageId": "older-message" if index == 0 else "other",
+                "state": "SUCCEEDED", "createdAt": index, "binding": {"secret": "private-binding"}}, 0)
+        self.store.put("decision", "delegated", {"kind": "PROFESSIONAL_TASK", "messageId": "older-message",
+                       "receipt": {"executionId": "exact-execution"}, "body": {"instruction": "private"}}, 0)
+        self.assertNotIn("run:0", {run["id"] for run in self.journal.public()})
+        result = self.journal.for_message("older-message")
+        self.assertEqual([run["id"] for run in result["runs"]], ["run:0"])
+        self.assertEqual(result["delegations"][0]["executionId"], "exact-execution")
+        self.assertNotIn("private-binding", json.dumps(result))
+        self.assertNotIn("instruction", json.dumps(result))
+        with self.assertRaises(ValueError):
+            self.journal.for_message("missing-message")
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)

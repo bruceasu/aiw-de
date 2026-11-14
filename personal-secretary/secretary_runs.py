@@ -371,8 +371,17 @@ class RunJournal:
                 state = "RECONCILING"
             self.finish(identity, state, job.get("result") or job.get("message") or "")
 
-    def public(self):
-        rows = self.records("SECRETARY_RUN", view=True)
+    def for_message(self, message_id):
+        if not isinstance(message_id, str) or not self.store.get("message", message_id):
+            raise ValueError("找不到这条会话消息。")
+        runs = [run for identity in self.store.message_run_ids(message_id) for run in self.public(identity)]
+        delegations = [{"executionId": row["receipt"]["executionId"], "state": row.get("state")}
+                       for row in self.store.list("decision") if row.get("kind") == "PROFESSIONAL_TASK"
+                       and row.get("messageId") == message_id and row.get("receipt", {}).get("executionId")]
+        return {"runs": runs, "delegations": delegations}
+
+    def public(self, identity=None):
+        rows = self.records("SECRETARY_RUN", identity, view=True)
         rows.sort(key=lambda r: r.get("createdAt", 0), reverse=True)
         controls = self.records("SECRETARY_CONTROL")
         usage = {}

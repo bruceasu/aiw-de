@@ -3123,6 +3123,24 @@
     '月光下安静相伴，陪你整理思绪。': ['A quiet companion under moonlight as you gather your thoughts.', '月明かりの下で静かに寄り添い、思いを整理します。'],
     '双击人物头像切换侧栏': ['Double-click the secretary avatar to toggle the sidebar', '秘書アバターをダブルクリックしてサイドバーを切り替え'],
   });
+  Object.assign(workspaceCatalog, {
+    '会话日志': ['Conversation log', '会話ログ'],
+    '这条回复没有保存的运行记录；未推测处理过程。': ['No saved run record is available for this reply; no process is inferred.', 'この返信の実行記録は保存されていません。処理過程は推測しません。'],
+    '历史会话': ['Conversation history', '会話履歴'],
+    '搜索标题或摘要': ['Search titles or summaries', 'タイトルや要約を検索'],
+    '没有匹配的会话': ['No matching conversations', '一致する会話がありません'],
+    '可以换个关键词，或开始新对话。': ['Try another keyword or start a new conversation.', '別のキーワードを試すか、新しい会話を始めてください。'],
+    '对话快捷操作': ['Conversation shortcuts', '会話のショートカット'],
+    '一起理清想法': ['Clarify an idea', 'アイデアを整理'],
+    '看看当前工作': ['Check current work', '現在の作業を確認'],
+    '整理这段对话': ['Summarize this conversation', 'この会話を要約'],
+    '请和我一起理清这个想法：': ['Help me clarify this idea:', 'このアイデアの整理を手伝ってください：'],
+    '请查看当前正在执行和等待处理的工作。': ['Show the work currently running or waiting for attention.', '実行中や対応待ちの作業を確認してください。'],
+    '请总结本段对话的已确认决定和待解决问题。': ['Summarize the confirmed decisions and open questions in this conversation.', 'この会話で確定した決定と未解決の質問を要約してください。'],
+    '查看这条回复的过程': ['View how this reply was handled', 'この返信の処理過程を見る'],
+    '这条回复的处理过程': ['Processing details for this reply', 'この返信の処理過程'],
+    '查看最近的全部运行': ['View all recent runs', '最近のすべての実行を見る']
+  });
   const translateText = value => {
     if (consoleLookup.has(value)) return consoleLookup.get(value)[locale];
     if (value.endsWith(' · AIW:DE')) return translateText(value.slice(0, -9)) + ' · AIW:DE';

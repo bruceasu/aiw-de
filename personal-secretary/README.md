@@ -363,6 +363,12 @@ Qt 托盘的“退出秘书并停止本地服务”在监听端口关闭后退�
 
 ## Formal work questions (FD-028)
 
+### Conversation shortcuts and history (FD-119)
+
+The conversation log searches local conversation titles and saved summaries. Earlier messages remain available through the existing paged history. Switching conversations keeps unsent text in this page; a page reload does not preserve these drafts. Shortcuts only fill the composer and never submit a request automatically.
+
+Each reply has a processing-details button. It looks up the saved run and delegation receipts by that exact message, including runs outside the recent-run list. Events, model interactions, file requests and controls reuse the existing viewer. A platform execution link comes from the saved delegation receipt, not from a guessed current task. Viewing details does not call a model or restart work.
+
 The private UI can read platform questions within the exact PLAN read scope. Select the goal, necessary context and original answer, preview the projection locally, then explicitly queue it with a current A19_ANSWER or A18_BUDGET grant. The platform verifies the original projection digest and exact envelope; private chats, policies, templates and credentials stay local. The private outbox retains the original wrapper and request ID for receipt reconciliation. See [the formal question contract](../../docs/FORMAL-QUESTIONS.md). Ordinary answers do not grant execution or extra budget.
 
 ## Agent mTLS deployment reference

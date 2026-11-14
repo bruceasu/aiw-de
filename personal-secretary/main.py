@@ -287,7 +287,7 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                         pairing_expiry = time.monotonic() + 300
                         attempts = 0
                         result = {"code": pairing, "expiresIn": 300}
-                    elif self.path in {"/api/model/login", "/api/model/cancel", "/api/model/disconnect", "/api/model/import", "/api/run/control", "/api/run/events", "/api/run/interactions", "/api/run/file-intents", "/api/run/reconcile", "/api/file/diff"}:
+                    elif self.path in {"/api/model/login", "/api/model/cancel", "/api/model/disconnect", "/api/model/import", "/api/run/control", "/api/run/events", "/api/run/interactions", "/api/run/file-intents", "/api/run/reconcile", "/api/run/message", "/api/file/diff"}:
                         try:
                             if self.path == "/api/model/login":
                                 if not self.local_request():
@@ -299,6 +299,8 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                                 result = runtime.settings.connections.disconnect(data.get("id"), data.get("version"))
                             elif self.path == "/api/model/import":
                                 result = runtime.settings.connections.import_metadata(data)
+                            elif self.path == "/api/run/message":
+                                result = runtime.runs.for_message(data.get("messageId"))
                             elif self.path == "/api/run/control":
                                 result = runtime.runs.control(data)
                             elif self.path == "/api/run/reconcile":

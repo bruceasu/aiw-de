@@ -479,6 +479,58 @@ let trashRenderKey = "";
 let renderedChatWork = null;
 const chatPages = new Map();
 const chatVisible = new Map();
+const chatDrafts = new Map();
+let chatDraftWork = "";
+let focusedMessageRuns = null;
+let focusedMessageId = null;
+const messageRuns = new Map();
+let messageDelegations = [];
+let messageRunRequest = 0;
+
+function renderConversationHistory() {
+  const target = byId("chat-history-list");
+  const query = byId("chat-history-search").value.trim().toLocaleLowerCase();
+  target.replaceChildren();
+  const conversations = (snapshot.conversations || []).filter(item =>
+    !query || [item.title, item.summary].some(value => (value || "").toLocaleLowerCase().includes(query)));
+  if (!conversations.length) empty(target, "没有匹配的会话", "可以换个关键词，或开始新对话。");
+  for (const conversation of conversations) {
+    const entry = button(conversation.title || "私人会话", () => {
+      selectWork(conversation.id, "chat");
+      byId("chat-history-panel").open = false;
+      formFor("chat").elements.text.focus();
+    });
+    entry.dataset.i18nSkip = "";
+    entry.setAttribute("aria-current", String(conversation.id === formFor("chat").elements.workId.value));
+    target.append(entry);
+  }
+}
+
+async function showMessageRuns(messageId, focus = true) {
+  if (focus) focusedMessageId = messageId;
+  const request = ++messageRunRequest;
+  try {
+    const { result } = await post("run/message", { messageId }, false);
+    if (request !== messageRunRequest || focusedMessageId !== messageId) return;
+    focusedMessageRuns = new Set(result.runs.map(run => run.id));
+    messageRuns.clear();
+    for (const run of result.runs) messageRuns.set(run.id, run);
+    messageDelegations = result.delegations;
+    renderSecretaryRuns();
+    const panel = byId("secretary-runs");
+    if (focus) {
+      panel.open = true;
+      panel.scrollIntoView({ block: "start", behavior: "smooth" });
+      panel.querySelector("summary").focus();
+    }
+  } catch (error) { feedback(errorMessage(error), "error"); }
+}
+
+function visibleSecretaryRuns() {
+  const runs = new Map(messageRuns);
+  for (const run of snapshot?.runs || []) runs.set(run.id, run);
+  return [...runs.values()];
+}
 const compareMessages = (a, b) => (a.createdAt || 0) - (b.createdAt || 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 function mergeMessages(previous, incoming) {
   const items = new Map(previous.map(item => [item.id, item]));
@@ -574,6 +626,13 @@ function renderMemories() {
 function renderChat() {
   const target = byId("chat-messages");
   const workId = formFor("chat").elements.workId.value;
+  if (chatDraftWork !== workId) {
+    const composer = formFor("chat").elements.text;
+    chatDrafts.set(chatDraftWork, composer.value);
+    composer.value = chatDrafts.get(workId) || "";
+    chatDraftWork = workId;
+  }
+  renderConversationHistory();
   renderChatContext(workId);
   if (workId && !chatPages.has(workId)) chatPages.set(workId, { messages: [], hasMore: false, loaded: false, loading: false, error: false, before: null });
   const page = chatPages.get(workId);
@@ -623,6 +682,7 @@ function renderChat() {
       bubble.dataset.i18nSkip = "";
       if (kind === "assistant") bubble.append(markdownContent(text)); else bubble.textContent = text;
       item.append(node("small", "", label + (message.createdAt ? " · " + dateLabel(message.createdAt) : "")), bubble);
+      if (kind === "assistant") item.append(button("查看这条回复的过程", () => showMessageRuns(message.id)));
       if (kind === "assistant" && waitingConfirmations.some(decision => decision.messageId === message.id)) {
         item.append(button("查看待确认的文件操作", () => switchView("confirmations", true)));
       }
@@ -795,6 +855,8 @@ async function refresh() {
   csrf = state.csrf;
   delete state.csrf;
   snapshot = state;
+  if (focusedMessageId && byId("secretary-runs")?.open) await showMessageRuns(focusedMessageId, false);
+  if (version !== stateRequestVersion) return false;
   if (byId("work-detail").open) updateWorkDetailNotice(); else render();
   showSession(true);
   byId("pairing-status").hidden = true;
@@ -988,10 +1050,23 @@ function renderSecretaryRuns() {
   }
   if (document.activeElement?.tagName === "TEXTAREA" && panel.contains(document.activeElement)) return;
   while (panel.childNodes.length > 1) panel.lastChild.remove();
-  const runs = snapshot?.runs || [];
-  if (!runs.length) { panel.append(node("p", "help", "开始处理请求后，这里显示真实运行与工具记录。")); return; }
+  panel.querySelector("summary").textContent = focusedMessageRuns ? "这条回复的处理过程" : "运行过程与控制";
+  const runs = focusedMessageRuns ? visibleSecretaryRuns().filter(run => focusedMessageRuns.has(run.id)) : snapshot?.runs || [];
+  if (focusedMessageRuns) {
+    panel.append(button("查看最近的全部运行", () => {
+      messageRunRequest += 1; focusedMessageRuns = null; focusedMessageId = null; messageRuns.clear(); messageDelegations = [];
+      renderSecretaryRuns();
+    }));
+    if (snapshot.platformOrigin) for (const delegation of messageDelegations) {
+      const link = node("a", "text-button", "查看平台执行");
+      link.href = new URL("/ui/tasks?execution=" + encodeURIComponent(delegation.executionId), snapshot.platformOrigin).href;
+      link.target = "_blank"; link.rel = "noopener noreferrer";
+      panel.append(link);
+    }
+  }
+  if (!runs.length) { panel.append(node("p", "help", focusedMessageRuns ? "这条回复没有保存的运行记录；未推测处理过程。" : "开始处理请求后，这里显示真实运行与工具记录。")); return; }
   const labels = { QUEUED: "等待处理", RUNNING: "正在处理", PAUSE_REQUESTED: "暂停待生效", PAUSED: "已暂停", WAITING_USER: "等待确认或专业任务结果", WAITING_AUTH: "等待登录", RECONCILING: "结果待核对", SUCCEEDED: "已完成", FAILED: "未完成", CANCELLED: "已取消" };
-  for (const run of runs.slice(0, 12)) {
+  for (const run of runs.slice(0, focusedMessageRuns ? 30 : 12)) {
     const section = node("section", "record-card");
     const work = (snapshot.work || []).find(row => row.id === run.workId);
     section.append(node("h3", "", work?.title || "私人会话"), node("p", "help", `${labels[run.state] || run.state} · 模型 ${run.modelCalls || 0} 次 · 工具 ${run.toolCalls || 0} 次`));
@@ -1011,7 +1086,7 @@ function renderSecretaryRuns() {
     }
     const actions = node("div", "record-actions");
     const send = async (control, text = "") => {
-      const current = (snapshot.runs || []).find(item => item.id === run.id);
+      const current = visibleSecretaryRuns().find(item => item.id === run.id);
       if (!current) return;
       const key = JSON.stringify([run.id, control, text]);
       let requestId = secretaryControlRequests.get(key);
@@ -1030,7 +1105,7 @@ function renderSecretaryRuns() {
     if (run.state === "PAUSED") actions.append(button("继续原运行", () => send("resume")));
     if (["RUNNING", "PAUSED", "PAUSE_REQUESTED", "WAITING_USER", "WAITING_AUTH", "RECONCILING"].includes(run.state)) actions.append(button("取消后续操作", () => send("cancel")));
     if (run.state === "RECONCILING" || run.state === "CANCELLED" && run.hasUnknownEffect) actions.append(button("核对原操作结果", async () => {
-      const current = (snapshot.runs || []).find(item => item.id === run.id);
+      const current = visibleSecretaryRuns().find(item => item.id === run.id);
       try { const { result } = await post("run/reconcile", { runId: run.id, revision: current.revision }); feedback(result.note); }
       catch (error) { feedback(errorMessage(error), "error"); }
     }));
@@ -1368,6 +1443,23 @@ formFor("schedule").elements.workId.addEventListener("change", updateSchedule);
 formFor("schedule").elements.executionMode.addEventListener("change", updateExecutionMode);
 updateExecutionMode();
 formFor("chat").elements.workId.addEventListener("change", renderChat);
+formFor("chat").elements.text.addEventListener("input", () => chatDrafts.set(chatDraftWork, formFor("chat").elements.text.value));
+byId("chat-history-search").addEventListener("input", renderConversationHistory);
+byId("chat-history-open").addEventListener("click", () => {
+  byId("chat-history-panel").open = !byId("chat-history-panel").open;
+  if (byId("chat-history-panel").open) byId("chat-history-search").focus();
+});
+for (const [label, prompt] of [
+  ["一起理清想法", "请和我一起理清这个想法："],
+  ["看看当前工作", "请查看当前正在执行和等待处理的工作。"],
+  ["整理这段对话", "请总结本段对话的已确认决定和待解决问题。"]
+]) byId("chat-quick-actions").append(button(label, () => {
+  const composer = formFor("chat").elements.text;
+  const value = window.aiwI18n?.t?.(prompt) || prompt;
+  composer.value = composer.value ? composer.value + "\n" + value : value;
+  chatDrafts.set(chatDraftWork, composer.value);
+  composer.focus();
+}));
 byId("chat-new").addEventListener("click", () => {
   formFor("chat").elements.workId.value = "";
   renderedChatWork = null; renderChat(); formFor("chat").elements.text.focus();
@@ -1575,8 +1667,18 @@ document.querySelectorAll("form[data-route]").forEach(form => form.addEventListe
     const current = applyResult(route, result, version);
     updateSavedEditor(route, data, refreshed);
     if (route === "login") form.reset();
-    if (route === "chat" && result.state !== "UNKNOWN" && form.elements.text.value === data.text) form.elements.text.value = "";
-    if (route === "chat" && result.state !== "UNKNOWN" && result.workId) { form.elements.workId.value = result.workId; renderChat(); }
+    if (route === "chat" && result.state !== "UNKNOWN") {
+      if (chatDrafts.get(data.workId || "") === data.text) chatDrafts.delete(data.workId || "");
+      if (form.elements.workId.value === (data.workId || "")) {
+        if (form.elements.text.value === data.text) form.elements.text.value = "";
+        if (result.workId) {
+          chatDrafts.set(result.workId, form.elements.text.value);
+          chatDraftWork = result.workId;
+          form.elements.workId.value = result.workId;
+        }
+        renderChat();
+      }
+    }
     let message = route === "login" ? "个人服务已接受配对。" : (refreshed ? "操作已记录，状态已更新。" : "操作已返回结果。");
     if (route === "schedule" && result.report) message = result.report.message;
     if (immediate && result.state === "SCHEDULED") message = "已提交马上执行；自动处理暂停时，请先恢复自动处理。当前对话仍可使用。";
