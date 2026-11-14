@@ -197,7 +197,8 @@ public class ExecutionConfigurations {
         if(rows.size()!=1) return false;var row=rows.getFirst();String json=String.valueOf(row.get("capabilities_json"));
         if(!AuthorityRepository.hash(json).equals(row.get("capabilities_digest"))) return false;
         var metadata=repo.decode(json,WorkerCapabilities.class);
-        return metadata.runtime().equals(binding.runtime()) && (!binding.ref().toolRequirements().contains(GuardContract.Tool.COMMAND) || worker.capabilities().contains("guarded-command-linux-v1"))
+        return metadata.runtime().equals(binding.runtime()) && (!binding.ref().toolRequirements().contains(GuardContract.Tool.COMMAND)
+                || worker.capabilities().contains("guarded-command-v1") || worker.capabilities().contains("guarded-command-linux-v1"))
                 && (!binding.ref().toolRequirements().contains(GuardContract.Tool.QUESTION) || worker.capabilities().contains(me.asu.aidev.questions.QuestionContract.CAPABILITY)
                     && metadata.protocolVersions().contains(me.asu.aidev.questions.QuestionContract.PROTOCOL));
     }

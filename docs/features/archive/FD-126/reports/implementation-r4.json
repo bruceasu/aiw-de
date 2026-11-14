@@ -1,0 +1,26 @@
+{
+  "fd_id": "FD-126",
+  "revision": 11,
+  "stage": "implementation",
+  "implementation_commits": [
+    "44baffa5"
+  ],
+  "recommendation": "review-requested",
+  "changes": [
+    "Require explicit AIW approval for every Windows command because process/spawn runs without filesystem or network sandboxing, including riskStrategyVersion 0.",
+    "Probe the installed App Server schema for ProcessSpawnParams fields before advertising Windows command capability.",
+    "Keep the existing CommandExecParams probe for Linux/WSL.",
+    "Update the missing-Codex diagnostic to say command execution requires App Server, not isolation."
+  ],
+  "verification": {
+    "python_compile": "passed: app_server_runtime.py, execution_guard.py, guarded_command.py, guarded_preflight.py",
+    "diff_check": "passed",
+    "java_compile": "not run: mvn unavailable on PATH; no Maven wrapper in checkout",
+    "tests": "not run per instruction",
+    "windows_runtime": "not run per instruction"
+  },
+  "residual_risks": [
+    "Windows process/spawn was checked against the official App Server schema contract but not run locally.",
+    "The Java diagnostic string edit remains uncompiled because Maven is unavailable."
+  ]
+}

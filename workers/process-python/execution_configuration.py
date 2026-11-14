@@ -156,7 +156,8 @@ def load(config, task):
     tools = set(ref["toolRequirements"])
     if tools - {"READ", "SEARCH", "WRITE", "GIT", "COMMAND", "MODEL", "QUESTION"} or "MODEL" not in tools or ("WRITE" in tools) == method["readOnly"]:
         raise RuntimeError("CONFIGURATION_TOOL_REQUIREMENT_INVALID")
-    if "COMMAND" in tools and "guarded-command-linux-v1" not in config.capabilities: raise RuntimeError("CONFIGURATION_COMMAND_ADAPTER_REQUIRED")
+    if "COMMAND" in tools and not ({"guarded-command-v1", "guarded-command-linux-v1"} & set(config.capabilities)):
+        raise RuntimeError("CONFIGURATION_COMMAND_ADAPTER_REQUIRED")
     if task.get("aiPreferences"): raise RuntimeError("PREPARED_AI_PROFILE_CANNOT_BE_OVERRIDDEN")
     profile = ProcessProfile(method["name"], method["workerIdPrefix"], (method["roleCapability"],), tuple(method["allowedTaskTypes"]), tuple(method["protocolSkills"]), method["primarySkill"], method["instruction"], not method["readOnly"], method["resultKind"])
     return Prepared(ref, candidate, tuple(assets), profile)

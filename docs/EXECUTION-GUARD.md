@@ -62,13 +62,13 @@ Git 使用最小环境，禁用 hooks、fsmonitor、签名、pager、自动维�
 
 ## 验证命令与进程收尾
 
-Windows 的 OpenAI 模型/文件路径可用；验证命令能力只声明于兼容的 Linux/WSL Worker。需显式设置 `AIW_GUARD_COMMAND_ENABLED=true`、宿主已委托的 `AIW_COMMAND_CGROUP_ROOT`，以及 JSON 数组 `AIW_COMMAND_TOOLCHAIN_ROOTS`。宿主须事先启用 cgroup v2 cpu、memory、pids 控制器。本流程不安装 CLI、配置系统或提权。
+Windows 命令适配器只为本机 Worker 上明确声明 COMMAND 的任务启用。每次命令使用一次性 `CODEX_HOME`，并显式启用 Codex 的 `[windows] sandbox = "unelevated"`；命名权限配置只允许工作区写入及必要工具链读取，关闭网络并拒绝读取受保护目录。Codex App Server 使用 Windows Restricted Token 执行命令。权限配置或沙箱无法确认时，命令失败关闭，不回退到无沙箱执行。Windows Job Object 负责超时或取消时终止整个进程树，并执行配置的内存和进程数上限。PowerShell 固定为系统 Windows PowerShell，不加载 Profile、不接受交互；每个 PowerShell 命令都经过人工审批。Python 命令固定使用当前 Worker 解释器。Codex App Server 是隔离执行器，不是模型 Runtime；平台不会安装它，未安装时请连接已配置的外部 Worker。Windows 命令输出有 App Server 固定 1 MiB 上限，Worker 另检查任务配置的上限。Linux/WSL 仍需显式设置 `AIW_GUARD_COMMAND_ENABLED=true`、宿主已委托的 `AIW_COMMAND_CGROUP_ROOT` 和 JSON 数组 `AIW_COMMAND_TOOLCHAIN_ROOTS`；宿主还须事先启用 cgroup v2 cpu、memory、pids 控制器。整个流程不提权。
 
 每个命令配置明确 id、argv 数组、仓库相对 cwd、permissionProfile、timeoutMs、outputBytes、memoryBytes、processLimit。平台不接受模型提供的任意命令字符串。工具链只读根来自部署配置，不能是宿主根、用户目录或宽泛私库。
 
-命令使用独立的无凭证 App Server `command/exec`，不调用模型或查询账户。可信 launcher 先进入操作专属 cgroup，再 exec App Server；后代继承该组。生成的命名 Profile 仅允许精确工作区和必要工具链，禁止网络、受保护元数据、命令 home 及宿主 socket/cgroup 入口。命令环境不继承模型或平台凭证。
+Linux/WSL 命令使用独立的无凭证 App Server `command/exec`，不调用模型或查询账户。可信 launcher 先进入操作专属 cgroup，再 exec App Server；后代继承该组。生成的命名 Profile 仅允许精确工作区和必要工具链，禁止网络、受保护元数据、命令 home 及宿主 socket/cgroup 入口。命令环境不继承模型或平台凭证。
 
-正常返回、取消和失败均执行 cgroup.kill，并确认 cgroup.events 的 populated=0，才认定全部进程结束。失败或不确定时保留 UNKNOWN、工作区和槽，不伪报停止。系统权限、Profile 或进程约束不能确认时不声明命令能力。
+Linux/WSL 命令正常返回、取消和失败后均执行 `cgroup.kill`，并确认 `cgroup.events` 的 `populated=0`。Windows 由 Job Object 终止命令进程树并确认活动进程数为零。清理失败或结果不确定时保留 UNKNOWN、工作区和槽，不伪报停止。系统权限、Profile 或进程约束不能确认时不声明命令能力。
 
 ## 阈值、暂停、追加与 UNKNOWN
 

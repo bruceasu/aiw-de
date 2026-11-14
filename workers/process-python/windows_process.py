@@ -69,7 +69,7 @@ class _Accounting(ctypes.Structure):
 
 
 class WindowsJob:
-    def __init__(self):
+    def __init__(self, memory_bytes=None, process_limit=None):
         self.api = ctypes.WinDLL("kernel32", use_last_error=True)
         signatures = {
             "CreateJobObjectW": ([ctypes.c_void_p, wintypes.LPCWSTR], wintypes.HANDLE),
@@ -86,7 +86,20 @@ class WindowsJob:
         if not self.handle:
             raise RuntimeError("WINDOWS_JOB_CREATE_FAILED")
         limits = _ExtendedLimit()
-        limits.BasicLimitInformation.LimitFlags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE; no breakaway
+        flags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE; no breakaway
+        if memory_bytes is not None:
+            if type(memory_bytes) is not int or memory_bytes < 1:
+                self.close()
+                raise RuntimeError("WINDOWS_JOB_MEMORY_LIMIT_INVALID")
+            flags |= 0x200  # JOB_OBJECT_LIMIT_JOB_MEMORY
+            limits.JobMemoryLimit = memory_bytes
+        if process_limit is not None:
+            if type(process_limit) is not int or process_limit < 1:
+                self.close()
+                raise RuntimeError("WINDOWS_JOB_PROCESS_LIMIT_INVALID")
+            flags |= 0x8  # JOB_OBJECT_LIMIT_ACTIVE_PROCESS
+            limits.BasicLimitInformation.ActiveProcessLimit = process_limit
+        limits.BasicLimitInformation.LimitFlags = flags
         if not self.api.SetInformationJobObject(self.handle, 9, ctypes.byref(limits), ctypes.sizeof(limits)):
             self.close()
             raise RuntimeError("WINDOWS_JOB_LIMIT_FAILED")

@@ -1,0 +1,114 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-126",
+  "source_event": "FD-126-000010-review-requested",
+  "human_report": "review-20261115-r3.md",
+  "data": {
+    "reviewer_session": "reviewer-fd126-20261115-r3",
+    "comparison_base": "cb11d6d1",
+    "implementation_commits": ["a259d630", "cf9e5617"],
+    "reviewed_fd_revision": 10,
+    "reviewed_fd_sha256": "f872522feb3d2cd5e1e0551a02a0d3cd24e2a03a0f62f65e90a879df8f52edff",
+    "recommendation": "changes-requested",
+    "review_type": "independent static implementation review",
+    "findings": [
+      {
+        "id": "R1",
+        "severity": "blocking",
+        "title": "Unsandboxed Windows commands can access outside-workspace resources without user approval",
+        "locations": [
+          "workers/process-python/guarded_command.py:115-118",
+          "workers/process-python/execution_guard.py:42-85",
+          "workers/process-python/execution_guard.py:241-245"
+        ],
+        "evidence": "Windows invokes host process/spawn without a Codex filesystem/network sandbox. Risk strategy version 0 skips approval for every COMMAND. Version 1 auto-approves commands such as mvn test and python -m unittest, which execute workspace-controlled build/test code.",
+        "impact": "A command can read or modify files outside the workspace or access the network without explicit user authorization, contrary to the confirmed boundary.",
+        "requested_change": "Require explicit approval for unsandboxed Windows command execution, or restrict auto-approved commands to a set that cannot execute workspace-controlled code or access outside resources; ensure risk strategy version 0 cannot bypass this boundary."
+      },
+      {
+        "id": "R2",
+        "severity": "major",
+        "title": "Capability preflight validates command/exec but not process/spawn",
+        "locations": [
+          "workers/process-python/guarded_preflight.py:65",
+          "workers/process-python/guarded_command.py:115"
+        ],
+        "evidence": "The Windows adapter calls process/spawn, while the generated-schema preflight requires only CommandExecParams fields. A server without process/spawn can still advertise guarded-command-v1 and only fail when a command is invoked.",
+        "impact": "Worker readiness can report a Windows command capability that the installed App Server cannot execute.",
+        "requested_change": "Probe the process/spawn method and the request fields used by Windows before advertising guarded-command-v1."
+      },
+      {
+        "id": "R3",
+        "severity": "minor",
+        "title": "Missing App Server diagnostic still describes sandbox isolation as the dependency",
+        "locations": ["src/main/java/me/asu/aidev/execution/config/ManagedWorkerProvisioner.java:201"],
+        "evidence": "CODEX_EXECUTABLE_UNAVAILABLE maps to wording that says Windows command isolation requires Codex App Server, although the new path uses it only to execute commands without a Codex sandbox.",
+        "impact": "The diagnostic suggests an obsolete isolation requirement and can send users to the wrong setup path.",
+        "requested_change": "Change the message to state that Windows command execution requires an installed Codex App Server."
+      }
+    ],
+    "acceptance": [
+      {
+        "criteria": "Windows command uses the configured executable, workspace cwd, and bounded environment payload.",
+        "result": "supported statically, with an authorization finding",
+        "evidence": "argv is taken from the fixed command policy with Python/PowerShell executable normalization; cwd uses safe_path; process/spawn receives the configured command, resolved cwd, and explicit environment map. The API child environment remains unsandboxed."
+      },
+      {
+        "criteria": "Commands that may access outside the workspace require explicit authorization.",
+        "result": "not supported; blocking R1",
+        "evidence": "Windows process/spawn is unsandboxed; version 0 auto-allows all commands and version 1 auto-allows build/test commands that execute workspace-controlled code."
+      },
+      {
+        "criteria": "Timeout, output limit, cancellation, and Job Object cleanup are retained.",
+        "result": "supported statically; runtime unverified",
+        "evidence": "Request includes timeoutMs/outputBytesCap, output events are accumulated and checked against the configured cap, cancellation interrupts event receive, and finally closes the Job after TerminateJobObject/ActiveProcesses confirmation. Actual App Server behavior was not run."
+      },
+      {
+        "criteria": "Installed App Server support is diagnosed before Windows command capability is advertised.",
+        "result": "not supported; R2",
+        "evidence": "Preflight only requires CommandExecParams, not process/spawn."
+      },
+      {
+        "criteria": "Missing App Server has an actionable message that matches its role.",
+        "result": "partially supported; R3",
+        "evidence": "AIW_CODEX_PATH and external Worker are named, but the message still calls this a command-isolation dependency."
+      },
+      {
+        "criteria": "Linux/WSL retains cgroup-limited sandboxed command/exec behavior.",
+        "result": "supported statically",
+        "evidence": "The Linux branch retains generated sandbox config, command/exec, cgroup resource limits, kill and populated=0 confirmation; the changed Windows path is selected when no Linux cgroup group exists."
+      }
+    ],
+    "reviewer_checks": {
+      "git_diff_check": "passed",
+      "tests": "not run per instruction",
+      "compile": "not run per instruction",
+      "live_app_server": "not run per instruction",
+      "windows_runtime": "not run per instruction"
+    },
+    "actual_commands": [
+      "aiw fd claim FD-126 FD-126-000010-review-requested --session reviewer-fd126-20261115-r3",
+      "aiw fd show FD-126",
+      "git status --short --branch",
+      "git log -6 --oneline --decorate",
+      "git show --stat --oneline a259d630",
+      "git show --stat --oneline cf9e5617",
+      "git show --format=fuller --no-ext-diff --unified=8 a259d630 -- targeted implementation files",
+      "git diff --check cb11d6d1..HEAD",
+      "git diff -- docs/features/FD-126/FD-126_WORKER_PYTHON_POWERSHELL.md",
+      "Targeted Get-Content and Select-String reads for the FD, implementation report, guarded command path, approval classifier, App Server session, Windows Job Object, capability preflight, Java diagnostic, and prior review evidence",
+      "Targeted rg reads for process/spawn, command approval, riskStrategyVersion, Linux cgroup paths, and diagnostic mapping"
+    ],
+    "skipped": [
+      "tests and builds, per explicit instruction",
+      "live App Server, process/spawn protocol calls, and real commands",
+      "network and external APIs",
+      "runtime cancellation, output-limit, timeout, and filesystem-boundary probes"
+    ],
+    "residual_risks": [
+      "The installed Windows App Server's process/spawn parameter and notification behavior was not executed or independently checked against a live schema.",
+      "Windows timeout, output truncation, cancellation, and Job Object process-tree cleanup remain runtime-unverified."
+    ]
+  }
+}

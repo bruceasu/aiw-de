@@ -47,10 +47,10 @@ public class ManagedWorkerProvisioner {
     public synchronized Result requestAnalysis(String runtime) {
         return request(null,runtime,false,"planner");
     }
-    public synchronized Result requestWorkflow(String repository,String runtime,String role,boolean guarded) {
+    public synchronized Result requestWorkflow(String repository,String runtime,String role,boolean guarded,boolean commandRequired) {
         if(!Set.of("general","workspace","requirements","architect","planner","coder","stage-reviewer").contains(role))
             throw new IllegalArgumentException("Unsupported workflow role");
-        return request(repository,runtime,false,role,guarded);
+        return request(repository,runtime,commandRequired,role,guarded);
     }
     private Result request(String repository,String runtime,boolean commandRequired,String role) {
         return request(repository,runtime,commandRequired,role,"coder".equals(role));
@@ -60,10 +60,10 @@ public class ManagedWorkerProvisioner {
         var config=settings.current();
         if(config==null||!config.automaticWorkers())return new Result(false,"本机 Worker 自动启动尚未启用。请在 Agent 工厂设置中启用；外部 Worker 可继续自行接入。");
         if(!config.runtime().equals(runtime))return new Result(false,"当前工厂默认运行时已变化，请重新选择模型后准备任务。");
-        if(commandRequired)return new Result(false,"此方法要求命令执行适配器，请接入声明该能力的 Worker；自动 Worker 不隐式授予任意命令权限。");
+        if(commandRequired&&!windowsHost())return new Result(false,"Local command adapter is not available on this platform; connect a compatible Linux/WSL or Windows Worker.");
         Path root=Path.of(workerRoot).toAbsolutePath().normalize();
         if(!Files.isRegularFile(root.resolve("managed_worker.py")))return new Result(false,"未找到随平台安装的 Worker 程序，请检查平台安装目录。");
-        String key=compatibilityKey(role+(guarded?":guarded":":native"),repository,config);
+        String key=compatibilityKey(role+(guarded?":guarded":":native")+(commandRequired?":commands":""),repository,config);
         var existing=slots.get(key);
         if(existing!=null) {
             readStatus(existing);
@@ -89,7 +89,7 @@ public class ManagedWorkerProvisioner {
         var slot=new Slot();slot.worker="factory-"+key.substring(0,24);slot.settingsVersion=settings.version();slot.role=role;slot.repository=repository;
         if(registrations.busy(slot.worker)) return new Result(false,"The previous Worker still has an active lease; wait for recovery before restarting it.");
         registrations.remember(slot.worker,key);slots.put(key,slot);
-        Runnable start=()->start(slot,config,key,repository,directory,root,role,guarded);
+        Runnable start=()->start(slot,config,key,repository,directory,root,role,guarded,commandRequired);
         if(TransactionSynchronizationManager.isSynchronizationActive())TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() {Thread.ofVirtual().name("factory-worker-start").start(start);}
             @Override public void afterCompletion(int status) {if(status!=STATUS_COMMITTED)synchronized(ManagedWorkerProvisioner.this){slots.remove(key,slot);}}
@@ -101,6 +101,7 @@ public class ManagedWorkerProvisioner {
         return AuthorityRepository.hash(String.join("\n",role,Objects.toString(repository,""),config.runtime(),config.model(),
                 config.effort(),config.python(),config.executable(),config.guardHome(),Objects.toString(config.credentialRef(),""),Objects.toString(config.credentialVersion(),""),config.apiProvider(),config.apiProtocol()));
     }
+    private static boolean windowsHost() {return System.getProperty("os.name","").toLowerCase(Locale.ROOT).contains("windows");}
     private boolean releaseIdle() {
         for(var entry:new ArrayList<>(slots.entrySet())) {
             var slot=entry.getValue();
@@ -137,7 +138,7 @@ public class ManagedWorkerProvisioner {
             registrations.stopped(slot.worker);slots.remove(key,slot);
         } catch(InterruptedException error) {Thread.currentThread().interrupt();slot.stopping=false;}
     }
-    private synchronized void start(Slot slot,AgentFactorySettings.Settings config,String key,String repository,String directory,Path root,String role,boolean guarded) {
+    private synchronized void start(Slot slot,AgentFactorySettings.Settings config,String key,String repository,String directory,Path root,String role,boolean guarded,boolean commandRequired) {
         if(closed){slot.failure="平台正在停止。";return;}
         try {
             var builder=new ProcessBuilder(config.python(),root.resolve("managed_worker.py").toString()).directory(root.toFile());
@@ -171,7 +172,8 @@ public class ManagedWorkerProvisioner {
             env.put("AIW_FACTORY_STATUS_FILE",slot.status.toString());env.put("AIW_WORKER_ID",slot.worker);env.put("AIW_PROCESS_ROLE",role);env.put("AIW_WORKER_MAX_CONCURRENCY","1");
             env.remove("AIW_WORKER_CAPABILITIES");
             env.put("AIW_DYNAMIC_CONFIG",Boolean.toString(guarded&&!Set.of("general","workspace").contains(role)));
-            env.put("AIW_EXECUTION_GUARD",Boolean.toString(guarded));env.put("AIW_WORKER_LOOP_CONTROL",Boolean.toString(guarded));env.put("AIW_GUARD_COMMAND_ENABLED","false");
+            env.put("AIW_EXECUTION_GUARD",Boolean.toString(guarded));env.put("AIW_WORKER_LOOP_CONTROL",Boolean.toString(guarded));
+            env.put("AIW_GUARD_COMMAND_ENABLED",Boolean.toString(commandRequired&&windowsHost()));
             if(!guarded){env.put("AIW_CODEX_SANDBOX","coder".equals(role)?"workspace-write":"read-only");env.put("AIW_AGENT_ALLOW_SHELL","false");}
             if(!config.executable().isEmpty())env.put("AIW_CODEX_PATH",config.executable());
             if(!config.guardHome().isEmpty())env.put("AIW_CODEX_GUARD_HOME",config.guardHome());
@@ -180,8 +182,8 @@ public class ManagedWorkerProvisioner {
             // Never expose subprocess output or inherited credentials in console responses.
             builder.redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD);
             slot.process=builder.start();
-        } catch(java.io.IOException failure) {slot.failure="无法启动 Python Worker，请检查 Agent 工厂设置中的 Python 路径及本机安装。";}
-        catch(RuntimeException failure) {slot.failure="模型连接或 Worker 固定配置尚未就绪，请核对连接状态并重新保存工厂设置。";}
+        } catch(java.io.IOException failure) {slot.failure=commandRequired?"无法启动 Windows 命令 Worker；请检查 Python 配置和 Codex App Server 是否可用。":"无法启动 Python Worker，请检查 Agent 工厂设置中的 Python 路径及本机安装。";}
+        catch(RuntimeException failure) {slot.failure=commandRequired?"Codex App Server 不可用；Windows 命令无法执行。":"模型连接或 Worker 固定配置尚未就绪，请核对连接状态并重新保存工厂设置。";}
     }
     private void readStatus(Slot slot) {
         if(slot.failure!=null||slot.status==null)return;
@@ -196,6 +198,7 @@ public class ManagedWorkerProvisioner {
                 case "PYTHON_VERSION_UNSUPPORTED" -> "Worker 要求 Python 3.11 或更高版本，请调整 Agent 工厂中的 Python 路径。";
                 case "OPENAI_AGENTS_SDK_MISSING" -> "当前 Python 环境缺少 OpenAI Agents SDK，请在该环境中安装 Worker 的 requirements.txt。";
                 case "OPENAI_SDK_MISSING" -> "当前 Python 环境缺少 OpenAI SDK，请在该环境中安装 Worker 的 requirements.txt。";
+                case "CODEX_EXECUTABLE_UNAVAILABLE" -> "Windows 命令执行需要 Codex App Server。请安装兼容版本，或通过 AIW_CODEX_PATH 指定可执行文件；也可连接已配置的外部 Worker。平台不会自动安装。";
                 case "EXECUTABLE_NOT_FOUND" -> "运行环境找不到必要程序，请核对 Python、Git 和 Codex 的安装路径。";
                 case "DEDICATED_GUARDED_CODEX_HOME_REQUIRED","GUARDED_HOME_MUST_BE_DEDICATED" -> "Codex 专业 Worker 的受控登录目录尚未就绪，请在工厂高级设置中选择已有的受控执行环境。";
                 default -> "Worker 初始化检查未通过，请核对工厂运行环境。";

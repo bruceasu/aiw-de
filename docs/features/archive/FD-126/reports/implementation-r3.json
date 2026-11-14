@@ -1,0 +1,27 @@
+{
+  "fd_id": "FD-126",
+  "revision": 9,
+  "stage": "implementation",
+  "implementation_commits": [
+    "a259d630"
+  ],
+  "recommendation": "review-requested",
+  "changes": [
+    "Windows command execution now uses Codex App Server process/spawn, which does not require Codex sandbox setup.",
+    "Existing AIW command-risk approval remains in place; PowerShell remains approval-gated.",
+    "Windows Job Object cleanup, resource bounds, command timeout and output cap remain enforced.",
+    "Linux/WSL cgroup and sandboxed command/exec path is unchanged.",
+    "Startup diagnostics no longer describe the Windows sandbox as mandatory."
+  ],
+  "verification": {
+    "python_compile": "passed: app_server_runtime.py, execution_guard.py, guarded_command.py",
+    "diff_check": "passed",
+    "java_compile": "not run: mvn is unavailable on PATH and the repository has no Maven wrapper",
+    "tests": "not run per instruction",
+    "windows_runtime": "not run per instruction"
+  },
+  "residual_risks": [
+    "Windows process/spawn behavior was verified against the official protocol statically but not run against an installed App Server.",
+    "Windows command execution has no Codex filesystem/network sandbox; access is governed by the fixed task command policy and existing AIW risk approvals."
+  ]
+}

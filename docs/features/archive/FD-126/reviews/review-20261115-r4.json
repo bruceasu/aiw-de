@@ -1,0 +1,66 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-126",
+  "source_event": "FD-126-000012-review-requested",
+  "human_report": "review-20261115-r4.md",
+  "data": {
+    "reviewer_session": "reviewer-fd126-20261115-r4",
+    "comparison_base": "cf9e5617",
+    "implementation_commits": ["44baffa5", "14169c05"],
+    "reviewed_fd_revision": 12,
+    "reviewed_fd_sha256": "720833202c79ae285a4f6e4e9cc02470091eb3a51ac274a7ae9199cb2bbc247b",
+    "recommendation": "verification-passed",
+    "review_type": "independent static implementation review",
+    "findings": [],
+    "acceptance": [
+      {
+        "criteria": "Every unsandboxed Windows command requires AIW approval, including risk strategy version 0.",
+        "result": "supported statically",
+        "evidence": "COMMAND calls flow through GuardBroker.operate and _requires_approval. On win32, needs_approval is unconditionally true after policy validation; the non-Windows version-0 bypass is explicitly excluded. Approved replay validates the frozen command and APPROVED state."
+      },
+      {
+        "criteria": "Windows startup checks ProcessSpawnParams before advertising guarded-command-v1.",
+        "result": "supported statically",
+        "evidence": "Windows calls protocol_capability(process_spawn=True), which requires ProcessSpawnParams and all fields used by process/spawn. The capability is added only after that check succeeds. Linux/WSL still requires CommandExecParams."
+      },
+      {
+        "criteria": "Missing Codex App Server is reported as an execution dependency, not a sandbox dependency.",
+        "result": "supported statically",
+        "evidence": "ManagedWorkerProvisioner maps CODEX_EXECUTABLE_UNAVAILABLE to wording that Windows command execution needs Codex App Server and retains executable-path and external Worker guidance."
+      },
+      {
+        "criteria": "Timeout, output cap, cancellation, Job Object cleanup, and Linux/WSL behavior remain intact.",
+        "result": "supported statically; runtime unverified",
+        "evidence": "Windows request carries timeoutMs/outputBytesCap; Worker enforces a local deadline and cumulative output cap, and checks outputDrainTimedOut. Cancellation interrupts session receive; finally closes a kill-on-close Job Object and waits for zero active processes. Linux/WSL remains on sandboxed command/exec with cgroup limits and populated=0 cleanup."
+      }
+    ],
+    "reviewer_checks": {
+      "tests": "not run per instruction",
+      "compile": "not run per instruction",
+      "live_app_server": "not run per instruction",
+      "worker_commands": "not run per instruction",
+      "windows_runtime": "not run per instruction"
+    },
+    "actual_commands": [
+      "aiw fd claim FD-126 FD-126-000012-review-requested --session reviewer-fd126-20261115-r4",
+      "git status --short --branch",
+      "git log -7 --oneline --decorate",
+      "git show --stat --oneline 44baffa5",
+      "git show --stat --oneline 14169c05",
+      "git show --format=fuller --no-ext-diff --unified=10 44baffa5 -- targeted implementation files",
+      "git diff --unified=4 cf9e5617..44baffa5 -- workers/process-python/guarded_command.py workers/process-python/guarded_preflight.py",
+      "aiw fd show FD-126",
+      "Targeted Get-Content and Select-String reads for FD, implementation report, risk approval and approved-operation replay, protocol probe, process adapter, App Server session, Job Object cleanup, Java diagnostic, and Linux/WSL branch"
+    ],
+    "skipped": [
+      "tests and builds",
+      "live Codex App Server, Worker commands, and external APIs",
+      "network access and Windows runtime probes"
+    ],
+    "residual_risks": [
+      "Windows process/spawn timeout, output, cancellation, and Job Object behavior were not exercised against the installed App Server and Windows runtime.",
+      "Python compile and Maven availability are recorded by the implementation report and were not independently rerun."
+    ]
+  }
+}

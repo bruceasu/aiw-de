@@ -121,7 +121,7 @@ class WorkerConfig:
             capabilities.update(guarded_capabilities(runtime, profile, str(Path(os.getenv("AIW_PROCESS_SKILLS_ROOT", Path(__file__).with_name("skills"))).resolve())))
             from formal_questions import storage_capability
             capabilities.update({"questions-v1", "workspace-files-v1", storage_capability()})
-        elif "execution-guard-v1" in capabilities or "guarded-command-linux-v1" in capabilities or "questions-v1" in capabilities or any(c.startswith("checkpoint-store:") for c in capabilities):
+        elif "execution-guard-v1" in capabilities or "guarded-command-v1" in capabilities or "guarded-command-linux-v1" in capabilities or "questions-v1" in capabilities or any(c.startswith("checkpoint-store:") for c in capabilities):
             raise ValueError("GUARDED_CAPABILITIES_REQUIRE_VERIFIED_ADAPTER")
         if _bool_env("AIW_DYNAMIC_CONFIG", False):
             if not _bool_env("AIW_EXECUTION_GUARD", False): raise ValueError("DYNAMIC_CONFIGURATION_REQUIRES_GUARDED_ADAPTER")

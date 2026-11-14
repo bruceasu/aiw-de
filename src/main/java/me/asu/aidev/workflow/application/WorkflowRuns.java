@@ -336,7 +336,7 @@ public class WorkflowRuns {
     private static Set<String> capabilities(Node node,boolean guarded,boolean sources,boolean commands){
         var result=new HashSet<String>();result.add(node.workspaceTools()?"workspace-work":"general-work");
         if(guarded){result.add(GuardContract.CAPABILITY);result.add("workspace-files-v1");result.add("worker-loop-v1");}
-        if(commands&&node.workspaceTools())result.add("guarded-command-linux-v1");
+        if(commands&&node.workspaceTools())result.add("guarded-command-v1");
         if(sources)result.add("task-materials-v1");return Set.copyOf(result);
     }
     private WorkflowPlanSpec.Step workflowTaskSlot(Spec spec,Node node) {

@@ -238,9 +238,11 @@ class GuardBroker:
             command = next((item for item in original if item.get("id") == resource), None)
             if not isinstance(command, dict) or command not in current:
                 raise RuntimeError("GUARD_COMMAND_DENIED")
-            if self.context.get("originalPolicy", {}).get("riskStrategyVersion", 0) == 0:
+            if sys.platform != "win32" and self.context.get("originalPolicy", {}).get("riskStrategyVersion", 0) == 0:
                 return False
-            needs_approval = not _low_risk_command(command)
+            # Windows process/spawn runs without a filesystem/network sandbox.
+            # Require explicit approval before any host command can run.
+            needs_approval = sys.platform == "win32" or not _low_risk_command(command)
             self.attempt.evidence.record("guard-command-risk", commandId=resource,
                 classification="LOW_RISK_CONFIGURED_COMMAND" if not needs_approval else "OWNER_APPROVAL_REQUIRED")
             return needs_approval

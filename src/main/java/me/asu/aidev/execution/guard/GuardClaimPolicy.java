@@ -27,7 +27,8 @@ public class GuardClaimPolicy implements WorkerTaskClaimPolicy {
                     && guard.context(task.id().value()).snapshot().references().stream().filter(ref->ref.kind().equals("skill")).allMatch(ref->
                         worker.capabilities().contains("fixed-skill:"+ref.id()+":"+ref.sha256()))
                     && worker.capabilities().stream().filter(cap->cap.startsWith("fixed-skill:")).allMatch(cap->guard.context(task.id().value()).snapshot().references().stream().anyMatch(ref->cap.equals("fixed-skill:"+ref.id()+":"+ref.sha256())))
-                    && (guard.context(task.id().value()).originalPolicy().commands().isEmpty() || worker.capabilities().contains("guarded-command-linux-v1"))
+                    && (guard.context(task.id().value()).originalPolicy().commands().isEmpty()
+                        || worker.capabilities().contains("guarded-command-v1") || worker.capabilities().contains("guarded-command-linux-v1"))
                     && guard.canClaim(task.id().value());
         return true;
     }

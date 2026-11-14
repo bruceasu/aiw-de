@@ -1,0 +1,65 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-126",
+  "source_event": "FD-126-000008-implementation-ready",
+  "human_report": "review-20261115-r2.md",
+  "data": {
+    "reviewer_session": "reviewer-fd126-20261115-r2",
+    "comparison_base": "1e213feb",
+    "implementation_commits": ["64f8414b", "3ebc4608", "743d1e28", "cb11d6d1"],
+    "reviewed_fd_revision": 8,
+    "reviewed_fd_sha256": "795ac944372bfd6f35b5156beb2fb081ec8c488c748afaa2e837efa5b3be848c",
+    "recommendation": "verification-passed",
+    "review_type": "independent static implementation review",
+    "findings": [],
+    "acceptance": [
+      {
+        "criteria": "A missing local Windows Codex App Server is reported with an actionable configuration path.",
+        "result": "supported statically",
+        "evidence": "ManagedWorkerProvisioner maps CODEX_EXECUTABLE_UNAVAILABLE to a message naming AIW_CODEX_PATH and the external Worker option."
+      },
+      {
+        "criteria": "Windows commands use explicit Restricted Token sandboxing and fail closed when the configured policy is absent.",
+        "result": "supported statically; runtime unverified",
+        "evidence": "guarded_command writes windows.sandbox=unelevated after the permission tables. guarded_app_server rejects a missing or different Windows policy before command/exec. The command request selects the named permission profile, and the session is closed through the kill-on-close Job Object."
+      },
+      {
+        "criteria": "Operational documentation distinguishes Linux/WSL cgroup behavior from Windows Job Object cleanup.",
+        "result": "supported statically",
+        "evidence": "EXECUTION-GUARD.md scopes cgroup creation and cgroup.kill/populated checks to Linux/WSL and documents Windows Job Object termination and active-process confirmation."
+      },
+      {
+        "criteria": "Linux/WSL command isolation remains intact.",
+        "result": "supported statically",
+        "evidence": "The Linux branch still applies cgroup memory, swap, pids and CPU limits, kills the cgroup, waits for populated=0 and removes the group only after confirmation."
+      }
+    ],
+    "reviewer_checks": {
+      "git_diff_check": "passed",
+      "tests": "not run",
+      "compile": "not rerun; implementation report records Python py_compile and offline Maven compile-only as passed",
+      "windows_runtime": "not run"
+    },
+    "actual_commands": [
+      "aiw fd claim FD-126 FD-126-000008-implementation-ready --session reviewer-fd126-20261115-r2",
+      "aiw fd show FD-126",
+      "git status --short --branch",
+      "git log --oneline --decorate -5",
+      "git diff --stat 1e213feb..HEAD",
+      "git diff --check 1e213feb..HEAD",
+      "git diff --unified=3 1e213feb..HEAD -- targeted FD-126 implementation paths",
+      "Targeted rg and Get-Content reads for the FD, implementation report, prior review, capability preflight, command adapter, App Server verification, Job Object cleanup and Java failure mapping"
+    ],
+    "skipped": [
+      "tests, per explicit instruction",
+      "compile reruns, per explicit instruction",
+      "Windows Codex App Server startup and command execution",
+      "real command execution, cancellation, and filesystem boundary probes",
+      "network and external API calls"
+    ],
+    "residual_risks": [
+      "Windows Restricted Token filesystem enforcement and Job Object command cancellation were not runtime-tested."
+    ]
+  }
+}

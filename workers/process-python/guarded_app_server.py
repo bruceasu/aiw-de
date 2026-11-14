@@ -56,12 +56,19 @@ def verify_config(session, home, profile, *, command=False):
         if source.get("type") == "user" and path.resolve() != (home / "config.toml").resolve(): raise RuntimeError("CODEX_UNEXPECTED_USER_CONFIG")
         config = tomllib.loads(path.read_text(encoding="utf-8"))
         if FORBIDDEN.intersection(config): raise RuntimeError("CODEX_LEGACY_OR_EXTERNAL_CAPABILITY_CONFIG_DENIED")
-        if set(config) - {"default_permissions", "approval_policy", "web_search", "features", "permissions", "model", "model_provider", "model_providers", "model_reasoning_effort"}:
+        allowed = {"default_permissions", "approval_policy", "web_search", "features", "permissions", "model", "model_provider", "model_providers", "model_reasoning_effort"}
+        if command:
+            allowed.add("windows")
+        if set(config) - allowed:
             raise RuntimeError("CODEX_CONFIG_KEY_REQUIRES_ADAPTER_SUPPORT")
         if source.get("type") != "user" and config:
             # Unknown externally imposed defaults cannot override the operator's closed policy unnoticed.
             raise RuntimeError("CODEX_EXTERNAL_CONFIG_REQUIRES_ADAPTER_SUPPORT")
         merged.update(config)
+    if command:
+        expected_windows = {"sandbox": "unelevated"} if os.name == "nt" else {}
+        if merged.get("windows", {}) != expected_windows:
+            raise RuntimeError("WINDOWS_SANDBOX_POLICY_NOT_EXPLICIT")
     profiles = merged.get("permissions", {})
     selected = profiles.get(profile)
     if not isinstance(selected, dict) or selected.get("extends") is not None or selected.get("workspace_roots"):
@@ -110,7 +117,7 @@ def definitions():
         tool("git_status", "Show local Git status.", {}),tool("git_diff", "Show local Git changes.", {}),
         tool("git_commit", "Commit exact local files. No push.", {"message": string, "paths": {"type": "array", "items": string}}),
         tool("git_integrate", "Merge one fixed upstream task result locally. Resolve reported conflicts before committing.", {"sourceTaskId": string}),
-        tool("run_command", "Run one explicitly authorized command profile.", {"commandId": string}),
+        tool("run_command", "Run one explicitly authorized command profile. Prefer Python for cross-platform work; use PowerShell only for Windows-specific tasks. PowerShell commands require approval.", {"commandId": string}),
         tool("ask_question", "Save one question and yield this task. Stop after the receipt. The answer will arrive in a new task.", {"question": string, "context": string, "options": {"type": "array", "items": string}, "answerRequirements": string}),
     ]
     from skill_files import text_enabled

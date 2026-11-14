@@ -106,7 +106,8 @@ def preflight(path=None):
 class StdioSession:
     """One bounded RPC channel for one attempt; reader never logs wire bodies."""
 
-    def __init__(self, attempt, cwd, *, argv=None, environment=None, request_handler=None, credential_provider=None):
+    def __init__(self, attempt, cwd, *, argv=None, environment=None, request_handler=None, credential_provider=None,
+                 windows_job_memory_bytes=None, windows_job_process_limit=None):
         self.credential_provider = credential_provider
         self.auth_home = None
         if credential_provider is not None:
@@ -131,7 +132,7 @@ class StdioSession:
         self.job = None
         if sys.platform == "win32":
             from windows_process import WindowsJob
-            self.job = WindowsJob()
+            self.job = WindowsJob(windows_job_memory_bytes, windows_job_process_limit)
             try:
                 self.process = self.job.start(command, cwd, environment)
             except BaseException:
@@ -264,11 +265,14 @@ class StdioSession:
                 raise RuntimeError("CODEX_RPC_RESPONSE_INVALID")
             return result
 
-    def next_event(self):
+    def next_event(self, timeout=None):
         if self.events:
             self.attempt.check()
             return self.events.popleft()
-        message = self.receive(time.monotonic() + self.attempt.remaining())
+        deadline = time.monotonic() + self.attempt.remaining()
+        if timeout is not None:
+            deadline = min(deadline, time.monotonic() + timeout)
+        message = self.receive(deadline)
         if not isinstance(message.get("method"), str) or "id" in message:
             raise RuntimeError("CODEX_EVENT_INVALID")
         return message

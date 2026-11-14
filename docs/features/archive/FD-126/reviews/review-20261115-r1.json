@@ -1,0 +1,81 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-126",
+  "source_event": "FD-126-000005-review-requested",
+  "human_report": "review-20261115-r1.md",
+  "data": {
+    "reviewer_session": "reviewer-fd126-20261115",
+    "comparison_base": "1e213feb4e78c3cae5abcc41e00c3b6eb7809e54",
+    "implementation_commits": ["64f8414b", "3ebc4608"],
+    "reviewed_fd_revision": 5,
+    "reviewed_fd_sha256": "90039dc6a0e4eadbccce2d1107fe5a3cde0d486b77f4c3da62610cd24d0171f0",
+    "recommendation": "changes-requested",
+    "review_type": "independent static implementation review",
+    "findings": [
+      {
+        "id": "FD126-R1",
+        "severity": "acceptance",
+        "file": "src/main/java/me/asu/aidev/execution/config/ManagedWorkerProvisioner.java",
+        "related_files": [
+          "workers/process-python/windows_process.py",
+          "workers/process-python/managed_worker.py"
+        ],
+        "requirement": "When Codex App Server is unavailable, the local Windows command adapter must be reported clearly as unavailable.",
+        "observed": "CODEX_EXECUTABLE_UNAVAILABLE is recorded by the Python worker, but Java does not map that code and displays the generic initialization failure message.",
+        "consequence": "The user cannot tell that the Windows command adapter needs Codex App Server or how to configure it.",
+        "minimal_correction": "Map CODEX_EXECUTABLE_UNAVAILABLE to an actionable message naming AIW_CODEX_PATH and the external Worker option."
+      },
+      {
+        "id": "FD126-R2",
+        "severity": "documentation-contract",
+        "file": "docs/EXECUTION-GUARD.md",
+        "related_lines": [69, 71],
+        "requirement": "Operational documentation must describe the platform-specific isolation and process cleanup accurately.",
+        "observed": "The generic command section states all commands use a cgroup and cgroup.kill, while the new Windows implementation uses a Job Object.",
+        "consequence": "Windows operators receive inaccurate instructions about isolation and termination behavior.",
+        "minimal_correction": "Scope cgroup statements to Linux/WSL and point Windows readers to the Job Object behavior."
+      }
+    ],
+    "acceptance": [
+      {
+        "criteria": "Windows commands remain restricted to the configured workspace, with PowerShell approval and Job Object cleanup/resource limits.",
+        "result": "supported statically, runtime unverified",
+        "evidence": "The command path normalizes powershell aliases to the System32 executable, unknown PowerShell profiles do not qualify as low risk and therefore use the existing approval path, App Server config verification requires a closed named permission profile, and StdioSession closes the Job Object process tree."
+      },
+      {
+        "criteria": "Linux/WSL retains the configured cgroup command adapter.",
+        "result": "supported statically",
+        "evidence": "The Linux branch still configures memory, swap, pids, and cpu cgroup controls, kills the cgroup, and waits for populated=0 before release."
+      },
+      {
+        "criteria": "A missing Windows Codex App Server is reported clearly and operator documentation distinguishes platform cleanup.",
+        "result": "not supported",
+        "evidence": "The failure code falls through to Java's generic message, and EXECUTION-GUARD.md describes cgroup cleanup without restricting it to Linux/WSL."
+      }
+    ],
+    "reviewer_checks": {
+      "git_diff_check": "passed",
+      "tests": "not-run",
+      "compile": "not-rerun; handoff reports Python py_compile and offline Maven compile-only passed",
+      "windows_runtime": "not-run"
+    },
+    "actual_commands": [
+      "aiw fd claim FD-126 FD-126-000005-review-requested --session reviewer-fd126-20261115",
+      "aiw fd show FD-126",
+      "git status --short --branch",
+      "git log -2 --oneline",
+      "git diff --check 64f8414b^ 64f8414b",
+      "Targeted git diff, rg, and source/document reads for the reviewed Python, Java, and documentation paths"
+    ],
+    "skipped": [
+      "all tests, per explicit instruction",
+      "Python and Maven compile reruns",
+      "Windows App Server / restricted-token runtime execution",
+      "real command execution and cancellation"
+    ],
+    "residual_risks": [
+      "Windows Restricted Token behavior, Job Object resource limits, and process-tree cancellation remain unverified at runtime."
+    ]
+  }
+}

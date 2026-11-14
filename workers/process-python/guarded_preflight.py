@@ -3,6 +3,7 @@ import os
 import hashlib
 import json
 import subprocess
+import sys
 from dataclasses import asdict
 from pathlib import Path
 import tempfile
@@ -52,16 +53,20 @@ def _protocol_properties(schema, name):
     return properties(candidates[0])
 
 
-def protocol_capability(model=False):
+def protocol_capability(model=False, process_spawn=False):
     from app_server_runtime import preflight
     with tempfile.TemporaryDirectory(prefix="aiw-guard-schema-") as directory:
-        environment = {"PATH": os.environ.get("PATH", ""), "HOME": directory, "CODEX_HOME": directory}
+        environment = {key: os.environ[key] for key in ("PATH", "PATHEXT", "SystemRoot", "WINDIR", "ComSpec") if key in os.environ}
+        environment.update({"HOME": directory, "CODEX_HOME": directory})
         result = subprocess.run([preflight(), "app-server", "generate-json-schema", "--experimental", "--out", directory],
                                 env=environment, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
         file = Path(directory) / "codex_app_server_protocol.schemas.json"
         if result.returncode or not file.is_file() or file.stat().st_size > 32 * 1024 * 1024: raise RuntimeError("CODEX_PROTOCOL_METADATA_UNAVAILABLE")
         raw = file.read_bytes();schema = json.loads(raw)
-        required = {"CommandExecParams": {"command", "permissionProfile", "timeoutMs", "outputBytesCap", "processId"}}
+        if process_spawn:
+            required = {"ProcessSpawnParams": {"command", "processHandle", "cwd", "streamStdoutStderr", "outputBytesCap", "timeoutMs", "env"}}
+        else:
+            required = {"CommandExecParams": {"command", "permissionProfile", "timeoutMs", "outputBytesCap", "processId"}}
         if model:
             required.update({"ThreadStartParams": {"dynamicTools", "permissions", "runtimeWorkspaceRoots", "ephemeral"},
                              "TurnInterruptParams": {"threadId", "turnId"},
@@ -122,6 +127,7 @@ def capabilities(runtime, profile, skills_root):
         from guarded_command import configuration
         from app_server_runtime import preflight
         configuration();preflight()
-        result.add(protocol_capability())
-        result.add("guarded-command-linux-v1")
+        result.add(protocol_capability(process_spawn=sys.platform == "win32"))
+        result.add("guarded-command-v1")
+        if sys.platform == "linux": result.add("guarded-command-linux-v1")
     return result

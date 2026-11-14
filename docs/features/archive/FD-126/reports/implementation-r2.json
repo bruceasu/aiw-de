@@ -1,0 +1,26 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-126",
+  "source_event": "FD-126-000007-changes-requested",
+  "human_report": "implementation-r2.md",
+  "data": {
+    "worker_session": "worker-fd126-fix-20261115",
+    "implementation_commits": ["743d1e28"],
+    "recommendation": "implementation-ready",
+    "changes": [
+      "CODEX_EXECUTABLE_UNAVAILABLE now has an actionable Windows message.",
+      "Windows command App Server configuration explicitly enables the unelevated Restricted Token sandbox and rejects a missing policy.",
+      "Execution guard documentation scopes cgroup setup and cleanup to Linux/WSL and describes Windows Job Object cleanup."
+    ],
+    "verification": {
+      "python_compile": "passed",
+      "maven_compile": "passed; 367 Java source files",
+      "tests": "not run",
+      "windows_runtime": "not run"
+    },
+    "residual_risks": [
+      "Windows App Server sandbox enforcement and command cancellation were not runtime-tested."
+    ]
+  }
+}
