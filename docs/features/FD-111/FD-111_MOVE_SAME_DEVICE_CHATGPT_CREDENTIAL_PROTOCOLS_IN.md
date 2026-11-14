@@ -1,7 +1,7 @@
 # FD-111: Move same-device ChatGPT credential protocols into Python
 
-**Status:** In Progress
-**Revision:** 4
+**Status:** Complete
+**Revision:** 6
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -43,6 +43,8 @@ V50 将旧密文列改为凭据文件引用并使旧连接失效，历史执行�
 同机登录、导入、刷新和失效可观察；同一旋转令牌的刷新串行；日志不回显 Token；异机不会误用 Plane 本地路径。
 
 ## Verification
+
+- 独立聚焦复核 `816b190`（来源 `FD-111-000005-implementation-ready`）：静态代码 Pass，首轮唯一 P1 已关闭。成功替换退役旧引用，失败/取消清理未采用文件，当前数据库引用保护有效；详见 [复核报告](reviews/review-recheck-20261114.md)。**最终 Java 编译仍因原生内存不足未完成，不记为通过；用户选择稍后补编译，归档交付前仍须补齐最终编译证据。** Reviewer 未运行测试、编译或运行时验证。
 
 - 独立静态审查（`48e16be → 8435e4b`，替代来源 `FD-111-000003-review-requested`）：Changes requested，1 项 P1——普通重登录/导入替换未退役旧凭据文件，保存/取消失败也会遗留未采用的新文件。详见 [审查报告](reviews/review-20261114.md)。最终 HEAD 的 Java 编译因 JVM 原生内存失败未完成，明确不记为通过；Reviewer 未运行测试、编译、脚本或运行时验证。
 
