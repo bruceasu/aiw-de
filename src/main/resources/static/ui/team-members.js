@@ -92,7 +92,7 @@
       if(!work.length&&!runs.length)card.append(node('p',t('No assigned work in this snapshot'),'help'));
       for(const item of work.slice(0,3)){
         const state=['CLAIMED','RUNNING','YIELDING'].includes(item.state)?'Running':item.state==='WAITING_INPUT'?'Waiting':'Ready';
-        const link=node('a',t(state)+' · '+item.title);link.href='/ui/workflows?execution='+encodeURIComponent(item.run_id);link.dataset.i18nSkip='';card.append(link);seen.add(item.run_id);
+        const link=node('a',t(state)+' · '+item.title);link.href=item.goal_id?'/ui/goals?goal='+encodeURIComponent(item.goal_id):'/ui/workflows?execution='+encodeURIComponent(item.run_id);link.dataset.i18nSkip='';card.append(link);if(item.run_id)seen.add(item.run_id);
         if(item.last_heartbeat_at_epoch_ms&&data.observedAt-item.last_heartbeat_at_epoch_ms>90000)card.append(node('p',t('Connection issue; process state is unconfirmed'),'help'));
       }
       for(const run of runs.filter(r=>!seen.has(r.run_id)).slice(0,3)){const link=node('a',t('Linked workflow')+' · '+run.run_id);link.href='/ui/workflows?execution='+encodeURIComponent(run.run_id);card.append(link);}

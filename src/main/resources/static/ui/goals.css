@@ -35,3 +35,11 @@
 .goal-discussion-materials .field{display:grid;gap:8px;margin:16px 0 8px}.goal-discussion-materials input[type=file]{width:100%}
 @media(max-width:760px){.goal-discussion-bar{padding:12px}.goal-discussion-body{grid-template-columns:1fr;overflow:auto}.goal-discussion-chat{min-height:55dvh;padding:12px}.goal-discussion-materials{max-height:38dvh;padding:12px;border-top:1px solid var(--line);border-left:0}}
 @media(max-width:900px){.goal-layout{grid-template-columns:1fr}}
+.wish-guide { display:flex; align-items:center; gap:16px; margin-bottom:16px; }
+.wish-guide svg { width:80px; height:64px; flex-shrink:0; color:var(--accent); }
+.wish-guide [hidden] { display:none; }
+.wish-guide h2 { margin:0 0 6px; }
+.wish-guide p { margin:0; }
+.goal-discussion-participant { grid-column:1/-1; padding:12px 18px; border-bottom:1px solid var(--line); }
+.goal-discussion-participant .field { display:grid; gap:6px; max-width:620px; }
+.goal-discussion-body { grid-template-rows:auto minmax(0,1fr); }

@@ -6,6 +6,21 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
 class DeepSeekDiscussionTest {
+    @Test void discussionFreezesTheMemberAndRejectsUnmatchedModelSettings() {
+        var policy=new GoalTaskPolicy(null,null);
+        var profile=new AiProfileCatalog.NamedProfile("factory-default",new AiProfileCatalog.Profile("deepseek","openai-agents","model-a","high",false,1));
+        var frozen=new GoalTaskPolicy.Frozen("deepseek","factory-one",List.of(profile),"chat-completions");
+        var settings=new me.asu.aidev.worker.application.TeamMembers.Settings("model-a","high",List.of(),List.of(),List.of());
+        var member=new me.asu.aidev.worker.application.TeamMembers.Profile("member",3,"Analyst","Clarify requirements",List.of("goal-discussion"),"","ACTIVE",settings);
+        var selected=policy.member(frozen,member);
+        assertThat(selected.member()).isSameAs(member);
+        assertThat(selected.profiles()).containsExactly(profile);
+        assertThat(selected.apiProtocol()).isEqualTo("chat-completions");
+        var wrong=new me.asu.aidev.worker.application.TeamMembers.Profile("other",1,"Other","Clarify",List.of(),"","ACTIVE",
+            new me.asu.aidev.worker.application.TeamMembers.Settings("different-model",null,List.of(),List.of(),List.of()));
+        assertThatThrownBy(()->policy.member(frozen,wrong)).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("do not match");
+        assertThat(frozen.member()).isNull();
+    }
     @Test void openAiProtocolSelectionAlsoRejectsADifferentProtocolWorker() {
         var policy=new GoalTaskPolicy(null,null);
         var profile=new AiProfileCatalog.NamedProfile("openai",new AiProfileCatalog.Profile("openai","openai-agents","account-model","none",false,1));

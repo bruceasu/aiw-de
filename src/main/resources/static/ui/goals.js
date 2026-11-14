@@ -12,6 +12,25 @@
     if (activeStatus) $(activeStatus).textContent = text(message);
   };
   const node = (tag, text, className) => { const n = document.createElement(tag); if (text != null) n.textContent = text; if (className) n.className = className; return n; };
+  function wishGuide() {
+    const chinese = window.aiwI18n?.locale === 'zh';
+    $('wish-guide-softshell').hidden = !chinese;
+    $('wish-guide-spirit').hidden = chinese;
+  }
+  window.addEventListener('aiw:locale-changed', wishGuide);
+  window.addEventListener('aiw:i18n-ready', wishGuide);
+  wishGuide();
+  async function participants() {
+    const selected = $('goal-member').value;
+    const available = await api('/participants');
+    $('goal-member').replaceChildren(new Option(text('Default requirements guide'), ''));
+    for (const member of available.members.filter(m => m.state === 'ACTIVE')) {
+      const option = new Option(member.name + (member.skills.length ? ' · ' + member.skills.join(', ') : ''), member.id);
+      option.dataset.i18nSkip = '';
+      $('goal-member').append(option);
+    }
+    if ([...$('goal-member').options].some(option => option.value === selected)) $('goal-member').value = selected;
+  }
   async function api(path, value, options = {}) {
     const post = value !== undefined;
     const response = await fetch(`/api/r1/goals${path}${post ? (path.includes('?') ? '&' : '?') + '_csrf=' + encodeURIComponent(csrf) : ''}`, {
@@ -247,7 +266,7 @@
   $('goal-send').onclick = () => run(async () => {
     clean(); const text = $('goal-message').value;
     const attachments = [...document.querySelectorAll('[data-share-file]:checked')].map(n => n.value);
-    const reply = await api(`/${current.id}/messages`, {key:crypto.randomUUID(),revision:current.revision,text,attachments});
+    const reply = await api(`/${current.id}/messages`, {key:crypto.randomUUID(),revision:current.revision,text,attachments,memberId:$('goal-member').value || null});
     $('goal-message').value = ''; replyPolls = 0; await load(current.id); status(reply.detail);
   }, 'goal-discussion-status');
   $('goal-replies').onclick = () => run(async () => {
@@ -319,5 +338,10 @@
       $('goal-versions').append(box);
     });
   }
-  run(list);
+  run(async () => {
+    await list();
+    await participants();
+    const goal = new URLSearchParams(location.search).get('goal');
+    if (goal) await load(goal);
+  });
 })();

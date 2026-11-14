@@ -14,6 +14,26 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TeamMemberSettingsTest {
+    @Test void wishTaskUsesItsFrozenMemberAndShowsCurrentMemberState() {
+        var connection=new org.springframework.jdbc.datasource.SingleConnectionDataSource("jdbc:sqlite::memory:",true);
+        try {
+            var jdbc=new org.springframework.jdbc.core.JdbcTemplate(connection);
+            jdbc.execute("CREATE TABLE worker_team_assignment(run_id TEXT,node_key TEXT,member_id TEXT,profile_json TEXT)");
+            jdbc.execute("CREATE TABLE worker_team_task(task_id TEXT,run_id TEXT,node_key TEXT)");
+            jdbc.execute("CREATE TABLE worker_team_member(id TEXT,state TEXT)");
+            jdbc.execute("CREATE TABLE work_task(id TEXT,subject_type TEXT)");
+            jdbc.execute("CREATE TABLE goal_request(id TEXT,frozen_json TEXT)");
+            var db=new AuthorityRepository(jdbc);
+            var frozen=new TeamMembers.Profile("member",2,"Original analyst","Clarify",List.of("goal-discussion"),"","ACTIVE",null);
+            jdbc.update("INSERT INTO work_task VALUES('task','goal-discussion'),('ordinary','workflow')");
+            jdbc.update("INSERT INTO worker_team_member VALUES('member','DRAINING')");
+            jdbc.update("INSERT INTO goal_request VALUES('task',?)",db.encode(Map.of("member",frozen)));
+            var members=new TeamMembers(db,null,null);
+            assertThat(members.forTask("task").revision()).isEqualTo(2);
+            assertThat(members.identity("task")).containsEntry("name","Original analyst").containsEntry("state","DRAINING");
+            assertThat(members.forTask("ordinary")).isNull();
+        } finally {connection.destroy();}
+    }
     private AiProfileCatalog.NamedProfile model(String id,String name) {
         return new AiProfileCatalog.NamedProfile(id,new AiProfileCatalog.Profile("openai","openai-agents",name,"low",false,1));
     }

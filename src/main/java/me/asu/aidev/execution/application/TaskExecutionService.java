@@ -151,8 +151,9 @@ public class TaskExecutionService {
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         task = tasks.find(taskId).orElseThrow();
         if(authorityPolicy!=null) authorityPolicy.starting(task,workerId.value());
-        if(authorityPolicy!=null) authorityPolicy.selection(task,profileId,profileVersion);
-        if(nativeQuestions!=null) {
+        // Discussion selection is checked below against its frozen backend and member range.
+        if(authorityPolicy!=null && !(goalPolicy!=null&&goalPolicy.managed(task))) authorityPolicy.selection(task,profileId,profileVersion);
+        if(nativeQuestions!=null && "flexible-plan".equals(task.subjectType())) {
             var runtime=workers.find(workerId).orElseThrow().runtimeType();
             var approved=aiProfiles.guidance(task.type(),runtime,null);
             if(authorityPolicy!=null)approved=authorityPolicy.guidance(task,runtime,approved);

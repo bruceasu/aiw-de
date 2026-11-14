@@ -44,6 +44,9 @@ public class GoalController {
     @GetMapping("/api/r1/goals/sources") @ResponseBody public Object sources(@RequestParam(defaultValue="") String query, HttpSession session) {
         actor(session); return discussion.sources(query.isBlank() ? null : GoalDiscussionService.bounded(query, "Query", 160, true));
     }
+    @GetMapping("/api/r1/goals/participants") @ResponseBody public Object participants(HttpSession session) {
+        return discussion.participants(actor(session));
+    }
     @GetMapping("/api/r1/goals/{id}") @ResponseBody public Object detail(@PathVariable String id, HttpSession session) {
         String a = actor(session); Draft draft = repo.get(id, a);
         return Map.of("draft", draft, "attachments", draft.deleted() ? List.of() : repo.attachments(id,a),

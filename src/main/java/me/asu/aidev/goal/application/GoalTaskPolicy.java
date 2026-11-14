@@ -8,10 +8,12 @@ import me.asu.aidev.goal.jdbc.GoalRepository;
 import me.asu.aidev.work.domain.*;
 import me.asu.aidev.worker.domain.Worker;
 import org.springframework.stereotype.Component;
+import me.asu.aidev.worker.application.TeamMembers;
 
 @Component
 public class GoalTaskPolicy implements WorkerTaskClaimPolicy {
-    public record Frozen(String backend, String version, List<AiProfileCatalog.NamedProfile> profiles,String apiProtocol,List<GoalImages.Image> images,boolean oauth) {
+    public record Frozen(String backend, String version, List<AiProfileCatalog.NamedProfile> profiles,String apiProtocol,List<GoalImages.Image> images,boolean oauth,TeamMembers.Profile member) {
+        public Frozen(String backend,String version,List<AiProfileCatalog.NamedProfile> profiles,String apiProtocol,List<GoalImages.Image> images,boolean oauth) {this(backend,version,profiles,apiProtocol,images,oauth,null);}
         public Frozen(String backend,String version,List<AiProfileCatalog.NamedProfile> profiles) {this(backend,version,profiles,null,List.of(),false);}
         public Frozen(String backend,String version,List<AiProfileCatalog.NamedProfile> profiles,String apiProtocol) {this(backend,version,profiles,apiProtocol,List.of(),false);}
         public Frozen {
@@ -49,6 +51,17 @@ public class GoalTaskPolicy implements WorkerTaskClaimPolicy {
         return repo.jdbc().query("SELECT frozen_json FROM goal_request WHERE id=?", (rs,n) -> repo.decode(rs.getString(1), Frozen.class),
             task.id().value()).stream().findFirst().orElseThrow(() -> new IllegalStateException("Frozen goal request missing"));
     }
+    public Frozen member(Frozen frozen,TeamMembers.Profile member) {
+        if(member==null)return frozen;
+        var settings=member.settings();
+        boolean restricted=settings.model()!=null||settings.effort()!=null||!settings.allowedProfiles().isEmpty();
+        var selected=frozen.profiles().stream().filter(p ->
+            (settings.allowedProfiles().isEmpty()||settings.allowedProfiles().stream().anyMatch(a->a.profile().equals(p.profile())))
+            &&(settings.model()==null||settings.model().equals(p.profile().model()))
+            &&(settings.effort()==null||settings.effort().equals(p.profile().effort()))).toList();
+        if(restricted&&selected.isEmpty())throw new IllegalArgumentException("Member model settings do not match the selected discussion backend. Choose another member or update the settings.");
+        return new Frozen(frozen.backend(),frozen.version(),selected,frozen.apiProtocol(),frozen.images(),frozen.oauth(),member);
+    }
     public Frozen images(Frozen frozen,List<GoalImages.Image> images) {
         if(images.isEmpty())return frozen;
         if(!Set.of("openai","deepseek").contains(frozen.backend()))throw new IllegalArgumentException("图片讨论需要 API Key SDK Worker；当前 Codex 通道未接入图片。");
@@ -57,7 +70,7 @@ public class GoalTaskPolicy implements WorkerTaskClaimPolicy {
         var selected=frozen.profiles().stream().filter(p->p.profile().runtime().equals("openai-agents")
             && !(p.profile().provider().equals("deepseek")&&p.profile().model().equals("deepseek-v4-pro"))).toList();
         if(selected.isEmpty())throw new IllegalArgumentException("请先明确配置可接收图片的 SDK 模型；DeepSeek V4 Pro 文档未声明图片处理能力。");
-        return new Frozen(frozen.backend(),frozen.version(),selected,frozen.apiProtocol(),images,false);
+        return new Frozen(frozen.backend(),frozen.version(),selected,frozen.apiProtocol(),images,false,frozen.member());
     }
     public boolean matches(Frozen f, String runtime) {
         return runtime(f.backend(), runtime)

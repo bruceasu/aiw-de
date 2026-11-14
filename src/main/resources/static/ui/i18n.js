@@ -3102,6 +3102,28 @@
     const entry = { en, zh, ja };
     for (const source of [en, zh, ja]) consoleLookup.set(source, entry);
   }
+  Object.assign(translations, {
+    'Meet your wish guide': '向小王八许个愿',
+    'Bring an idea, a question, or an original requirement. We will shape it together.': '带上想法、问题或原始需求，和小鳖一起把愿望捋清楚。',
+    'Discussion specialist': '参与澄清的专业成员',
+    'Default requirements guide': '默认需求向导',
+    'The selected member brings frozen Skills and system references. Discussion stays read-only; no tools or file permissions are added.': '所选成员携带本次冻结的 Skills 与系统参考资料参与澄清；讨论保持只读，不增加工具或文件权限。',
+    'Only the knowledge and attachments you check, plus the selected member\'s saved references, are sent. You can select an attachment and leave the note empty to use it as the original requirement.': '仅发送勾选的知识和附件，以及所选成员保存的参考资料。可以只勾选附件、留空消息，直接把附件作为原始需求。',
+    'Write a note or select an attachment as the original requirement.': '请写一条消息，或勾选附件作为原始需求。',
+    'Member model settings do not match the selected discussion backend. Choose another member or update the settings.': '成员的模型设定与当前讨论后端不匹配，请选择其它成员或调整设置。',
+    'Finish or stop this member\'s wish discussions before dissolving it': '请先完成或停止该成员参与的许愿讨论，再解散成员'
+  });
+  Object.assign(japaneseTranslations, {
+    'Meet your wish guide': '願いの案内役へようこそ',
+    'Bring an idea, a question, or an original requirement. We will shape it together.': 'アイデア、質問、元の要件を持ち寄り、一緒に具体化しましょう。',
+    'Discussion specialist': '要件整理に参加する専門メンバー',
+    'Default requirements guide': '標準の要件ガイド',
+    'The selected member brings frozen Skills and system references. Discussion stays read-only; no tools or file permissions are added.': '選択したメンバーのスキルとシステム資料を固定して使用します。議論は読み取り専用で、ツールやファイルの権限は増えません。',
+    'Only the knowledge and attachments you check, plus the selected member\'s saved references, are sent. You can select an attachment and leave the note empty to use it as the original requirement.': '選択した知識、添付資料、メンバーの保存済み参考資料のみを送信します。メモを空欄にして、添付資料を元の要件として使うこともできます。',
+    'Write a note or select an attachment as the original requirement.': 'メモを記入するか、元の要件として添付資料を選択してください。',
+    'Member model settings do not match the selected discussion backend. Choose another member or update the settings.': 'メンバーのモデル設定が議論用の接続先と一致しません。別のメンバーを選ぶか設定を変更してください。',
+    'Finish or stop this member\'s wish discussions before dissolving it': 'このメンバーの要件整理を完了または停止してから解散してください'
+  });
   const translateText = value => {
     if (consoleLookup.has(value)) return consoleLookup.get(value)[locale];
     const filterPrefix = 'A changed file uses a Git filter and requires a manual merge:';
