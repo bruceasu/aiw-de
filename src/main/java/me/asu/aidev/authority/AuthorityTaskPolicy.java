@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 /** All permission checks are platform-owned, including the actual fixed attempt start. */
 @Component
 public class AuthorityTaskPolicy implements WorkerTaskClaimPolicy,TaskExecutionPolicy {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.application.TeamMembers members;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.workflow.application.WorkflowAiPreferences preferences;
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<BusinessActionPermissions> businessPermissions;
     private final AuthorityRepository repo;
@@ -127,6 +129,11 @@ public class AuthorityTaskPolicy implements WorkerTaskClaimPolicy,TaskExecutionP
         if(retired(task) || !live(task,true) || !independent(task,worker)) throw new IllegalStateException("Admission changed or Worker history is not independent");
     }
     public void selection(WorkTask task,String profile,String version) {
+        if(members!=null&&members.forTask(task.id().value())!=null&&profiles.hasPolicy(task.type())) {
+            var allowed=members.guidance(task,new AiProfileCatalog.Guidance(profiles.version(),profiles.approved(task.type()),null,""),preferences!=null&&preferences.explicitForTask(task)!=null);
+            if(!allowed.version().equals(version)||allowed.allowedProfiles().stream().noneMatch(p->p.id().equals(profile)))
+                throw new IllegalStateException("Actual model selection violates the frozen member settings");
+        }
         if(!managed(task)) return;
         var plan=plans.getObject().get(task.subjectId());var at=WorkflowTaskPosition.parse(plan,task.id()).orElseThrow();
         String key="PLAN:"+plan.id()+":STEP:"+at.step();String role=at.review()?"REVIEW":"EXECUTION";
@@ -142,13 +149,17 @@ public class AuthorityTaskPolicy implements WorkerTaskClaimPolicy,TaskExecutionP
     }
     public void started(WorkTask task) { repo.jdbc().update("UPDATE authority_task SET started=TRUE,state='IN_PROGRESS' WHERE task_id=?",task.id().value()); }
     public AiProfileCatalog.Guidance guidance(WorkTask task,String runtime,AiProfileCatalog.Guidance fallback) {
-        if(!managed(task) || fallback==null) return fallback;
-        var plan=plans.getObject().get(task.subjectId());var at=WorkflowTaskPosition.parse(plan,task.id()).orElseThrow();
-        var constraints=repo.jdbc().queryForList("SELECT catalog_version,profiles_json FROM authority_model_scope WHERE target_key=? AND role=?",
-                "PLAN:"+plan.id()+":STEP:"+at.step(),at.review()?"REVIEW":"EXECUTION");
-        if(constraints.isEmpty()) return fallback;var row=constraints.getFirst();
-        var allowed=Arrays.asList(repo.decode(String.valueOf(row.get("profiles_json")),String[].class));
-        var selected=fallback.allowedProfiles().stream().filter(p->allowed.contains(p.id()) && fallback.version().equals(row.get("catalog_version"))).toList();
-        return new AiProfileCatalog.Guidance(fallback.version(),selected,fallback.previous(),selected.stream().map(AiProfileCatalog.NamedProfile::id).findFirst().orElse(""));
+        var result=fallback;
+        if(fallback!=null&&managed(task)) {
+            var plan=plans.getObject().get(task.subjectId());var at=WorkflowTaskPosition.parse(plan,task.id()).orElseThrow();
+            var constraints=repo.jdbc().queryForList("SELECT catalog_version,profiles_json FROM authority_model_scope WHERE target_key=? AND role=?",
+                    "PLAN:"+plan.id()+":STEP:"+at.step(),at.review()?"REVIEW":"EXECUTION");
+            if(!constraints.isEmpty()) {
+                var row=constraints.getFirst();var allowed=Arrays.asList(repo.decode(String.valueOf(row.get("profiles_json")),String[].class));
+                var selected=fallback.allowedProfiles().stream().filter(p->allowed.contains(p.id())&&fallback.version().equals(row.get("catalog_version"))).toList();
+                result=new AiProfileCatalog.Guidance(fallback.version(),selected,fallback.previous(),selected.stream().map(AiProfileCatalog.NamedProfile::id).findFirst().orElse(""));
+            }
+        }
+        return members==null?result:members.guidance(task,result,preferences!=null&&preferences.explicitForTask(task)!=null);
     }
 }

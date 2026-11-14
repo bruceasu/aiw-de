@@ -16,6 +16,7 @@ import static me.asu.aidev.modelauth.ModelAuthContract.*;
 /** Plane owns renewable credentials; Workers receive only an exact-task short-lived access token. */
 @Service
 public class ModelConnections {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.workflow.application.WorkflowAiPreferences workflowPreferences;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.guard.ExecutionAccounting accounting;
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final AuthorityGrantService grants;
     private final CredentialVault vault;private final OpenAiOAuth oauth;private final ExecutionGuard guard;
@@ -277,7 +278,9 @@ public class ModelConnections {
         }
         var fixed=repo.jdbc().queryForList("SELECT model FROM model_auth_worker WHERE worker_id=? AND connection_id=? AND connection_version=?",String.class,worker.id().value(),row.get("id"),number(row,"version"));
         if(fixed.size()!=1)throw new SecurityException("MODEL_WORKER_BINDING_REQUIRED");
-        repo.jdbc().update("INSERT INTO model_auth_task VALUES(?,?,?,?,?,?) ON CONFLICT(task_id) DO NOTHING",task.id().value(),row.get("id"),number(row,"version"),row.get("owner_actor"),runtime(row),fixed.getFirst());
+        var preferred=workflowPreferences==null?null:workflowPreferences.forTask(task);
+        String model=preferred!=null&&preferred.model()!=null?preferred.model():fixed.getFirst();
+        repo.jdbc().update("INSERT INTO model_auth_task VALUES(?,?,?,?,?,?) ON CONFLICT(task_id) DO NOTHING",task.id().value(),row.get("id"),number(row,"version"),row.get("owner_actor"),runtime(row),model);
     }
     public void replaced(me.asu.aidev.work.domain.TaskId source,me.asu.aidev.work.domain.TaskId successor) {
         repo.jdbc().update("INSERT INTO model_auth_task SELECT ?,connection_id,connection_version,owner_actor,runtime,model FROM model_auth_task WHERE task_id=? ON CONFLICT(task_id) DO NOTHING",successor.value(),source.value());

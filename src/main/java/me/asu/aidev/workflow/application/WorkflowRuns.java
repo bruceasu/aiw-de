@@ -62,9 +62,7 @@ public class WorkflowRuns {
     public record Spec(String title,String goal,String entry,List<Node> nodes,List<Material> sources) {
         public Spec {
             title=text(title,160);goal=text(goal,8000);
-            sources=sources==null?List.of():List.copyOf(sources);
-            if(sources.size()>8||sources.stream().mapToInt(s->s.content().getBytes(java.nio.charset.StandardCharsets.UTF_8).length).sum()>524288)
-                throw new IllegalArgumentException("Select up to eight text sources totaling 512 KiB");
+            sources=checkedSources(sources);
             if(nodes==null || nodes.isEmpty() || nodes.size()>32) throw new IllegalArgumentException("A workflow needs 1 to 32 nodes");
             nodes=List.copyOf(nodes);var keys=new HashSet<String>();
             for(var node:nodes) if(!keys.add(node.key())) throw new IllegalArgumentException("Duplicate node key");
@@ -79,6 +77,12 @@ public class WorkflowRuns {
         }
     }
     public record Definition(String id,long version,Spec spec) {}
+    public static List<Material> checkedSources(List<Material> sources) {
+        sources=sources==null?List.of():List.copyOf(sources);
+        if(sources.size()>8||sources.stream().mapToInt(s->s.content().getBytes(java.nio.charset.StandardCharsets.UTF_8).length).sum()>524288)
+            throw new IllegalArgumentException("Select up to eight text sources totaling 512 KiB");
+        return sources;
+    }
     public record Event(long time,String node,String type,String content) {}
     public record Proposal(String id,String node,String helperRun,String requestDigest,long baseVersion) {}
     public record ProposalView(String id,String status,String helperRun,Node before,Node candidate,String error) {}
@@ -202,6 +206,7 @@ public class WorkflowRuns {
             team.requirements(node.requiredSkills());
             if(node.memberId()!=null)assigned.put(node.key(),team.forRun(actor,node.memberId(),node.requiredSkills()));
         }
+        for(var member:assigned.values())sources(spec,member);
         if(input.length()>32000) throw new IllegalArgumentException("Input exceeds 32000 characters");
         var steps=spec.nodes().stream().filter(n->n.kind()==Kind.TASK || n.kind()==Kind.DECISION).map(n->
                 new WorkflowPlanSpec.Step(n.key(),spec.sources().isEmpty()?Set.of("general-work"):Set.of("general-work","task-materials-v1"),Set.of(),"general-work",instruction(spec,n),null,null,Set.of(),null,null,
@@ -232,7 +237,10 @@ public class WorkflowRuns {
     public List<Material> sources(WorkTask task) {
         if(!task.subjectType().equals("flexible-plan"))return List.of();
         return db.jdbc().queryForList("SELECT run_json FROM workflow_execution WHERE id=?",String.class,task.subjectId())
-                .stream().findFirst().map(json->db.decode(json,Run.class).spec.sources()).orElse(List.of());
+                .stream().findFirst().map(json->sources(db.decode(json,Run.class).spec,team.forTask(task.id().value()))).orElse(List.of());
+    }
+    private List<Material> sources(Spec spec,me.asu.aidev.worker.application.TeamMembers.Profile member) {
+        var result=new ArrayList<>(spec.sources());result.addAll(team.materials(member));return checkedSources(result);
     }
     private Run load(String id,boolean human) {
         // Member edits and task claims already use this lock. Keep a single lock order.
@@ -364,9 +372,11 @@ public class WorkflowRuns {
         var taskId=new TaskId(plan.id()+"~"+node.key()+"~work-"+round);
         var instruction=instruction(run.spec,node)+"\nExecution input and prior results:\n"+context;
         if(member!=null)instruction=team.context(member)+instruction;
+        List<Material> references;
+        try {references=sources(run.spec,member);}catch(IllegalArgumentException error) {run.state="FAILED";event(run,"LIMIT",error.getMessage());return;}
         if(instruction.length()>16384) {run.state="FAILED";event(run,"LIMIT","Node input exceeds the current Worker instruction limit; no work was dispatched");return;}
         // createExecution uses the original slot; append the execution input through the same task creation path.
-        plans.getObject().createWorkflowExecution(plan,index,round,instruction);
+        plans.getObject().createWorkflowExecution(plan,index,round,instruction,references.isEmpty()?Set.of():Set.of("task-materials-v1"));
         if(member!=null)team.bind(run.id,node.key(),taskId.value(),member);
         else team.attachSkills(taskId.value(),node.requiredSkills());
         run.taskId=taskId.value();event(run,"DISPATCHED",node.title());

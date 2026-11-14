@@ -151,7 +151,9 @@ public class TaskExecutionService {
         if(authorityPolicy!=null) authorityPolicy.selection(task,profileId,profileVersion);
         if(nativeQuestions!=null) {
             var runtime=workers.find(workerId).orElseThrow().runtimeType();
-            nativeQuestions.getObject().validateSelection(task,runtime,profileId,profileVersion,aiProfiles.guidance(task.type(),runtime,null));
+            var approved=aiProfiles.guidance(task.type(),runtime,null);
+            if(authorityPolicy!=null)approved=authorityPolicy.guidance(task,runtime,approved);
+            nativeQuestions.getObject().validateSelection(task,runtime,profileId,profileVersion,approved);
         }
         if (task.state() == TaskState.CLAIMED && attempts.stopRequested(leaseToken, workerId)) {
             throw new IllegalStateException("Worker stop requested before task start; acknowledge stop instead");

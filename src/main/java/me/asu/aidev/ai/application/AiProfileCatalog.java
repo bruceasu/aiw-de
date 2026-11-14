@@ -31,7 +31,7 @@ public class AiProfileCatalog {
         for (var entry : profiles.entrySet()) {
             if (!entry.getKey().matches("[a-z][a-z0-9._-]{0,63}")) throw new IllegalArgumentException("invalid AI profile id: " + entry.getKey());
             Profile p = Objects.requireNonNull(entry.getValue(), "AI profile");
-            if (!valid(p.provider()) || !valid(p.runtime()) || !valid(p.model()) || !valid(p.effort()) || p.level() < 1) {
+            if (!valid(p.provider()) || !valid(p.runtime()) || !me.asu.aidev.modelauth.ModelAuthContract.modelName(p.model()) || !valid(p.effort()) || p.level() < 1) {
                 throw new IllegalArgumentException("invalid AI profile: " + entry.getKey());
             }
         }

@@ -9,10 +9,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class WorkflowAiPreferences {
     private final WorkflowPlanRepository plans;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.application.TeamMembers members;
 
     public WorkflowAiPreferences(WorkflowPlanRepository plans) { this.plans = plans; }
 
     public Preferences forTask(WorkTask task) {
+        var explicit=explicitForTask(task);
+        var member=members==null?null:members.forTask(task.id().value());
+        if(member==null)return explicit;var settings=member.settings();
+        String model=explicit!=null&&explicit.model()!=null?explicit.model():settings.model();
+        String effort=explicit!=null&&explicit.effort()!=null?explicit.effort():settings.effort();
+        return model==null&&effort==null?null:new Preferences(model,effort);
+    }
+    public Preferences explicitForTask(WorkTask task) {
         if (!"flexible-plan".equals(task.subjectType())) return null;
         return plans.find(task.subjectId()).flatMap(plan -> WorkflowTaskPosition.parse(plan, task.id())
                 .map(position -> plan.spec().steps().get(position.step())))
