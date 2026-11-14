@@ -1,7 +1,7 @@
 # FD-114: Reconcile interrupted work and make completion checks explicit
 
-**Status:** In Progress
-**Revision:** 3
+**Status:** Complete
+**Revision:** 5
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -39,6 +39,8 @@ Dependencies: FD-108, FD-109. 中断核对与完成检查先在统一执行路�
 未知副作用不会直接重放；结果与模型声称完成分开；失败说明已完成内容和阻碍；重做由用户决定；普通结束不隐式启动评审。
 
 ## Verification
+
+- 独立聚焦复核 `e9f7b6f`（来源 `FD-114-000004-implementation-ready`）：静态代码 Pass，首轮唯一 P2 已关闭；act.finally 与 refreshRun 均向 controlButtons 传一致的 run/task，失败历史保留。详见 [复核报告](reviews/review-recheck-20261114.md)。未运行测试、编译或脚本；**最终编译仍未补齐，不据此归档。**
 
 第一轮独立静态审查提出 1 项 P2：act.finally 更新按钮状态时漏传当前 task，隐藏“使用已记录的结果”。已将该调用与 refreshRun 一样传入 currentView.task，等待聚焦复核。首轮报告保留；没有执行浏览器／测试或编译。
 
