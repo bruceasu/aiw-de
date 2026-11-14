@@ -1,0 +1,32 @@
+id = "ISSUE-00015"
+title = "秘书完整交互日志导出"
+parent_id = ""
+status = "DECIDED"
+created = "2026-11-14"
+updated = "2026-11-14"
+revision = 2
+
+[approval]
+status = "PENDING"
+by = ""
+at = ""
+reason = ""
+source_digest = ""
+
+[promotion]
+status = "NOT_STARTED"
+task_id = ""
+
+[conversation]
+session_id = ""
+
+[terminal]
+by = ""
+at = ""
+reason = ""
+
+[artifact]
+requirement-plan = "docs/issues/ISSUE-00015/issue-plan.md"
+
+[digest]
+requirement-plan = "fcfebbababbcf1edbd509278732ed5a9a9164cd35b3aa39734181837b52e1ab9"
