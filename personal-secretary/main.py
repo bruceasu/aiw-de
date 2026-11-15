@@ -380,9 +380,13 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                             result = runtime.store.change_deleted_draft(data.get("id"), data.get("revision"), data.get("action"), data.get("confirmed"))
                         except ValueError as error:
                             raise PersonalChatError("DRAFT_CHANGED", str(error)) from None
-                    elif self.path in {"/api/conversation/page", "/api/conversation/summary", "/api/conversation/delete", "/api/memory/delete", "/api/memory/change", "/api/memory/source"}:
+                    elif self.path in {"/api/conversation/page", "/api/conversation/export", "/api/conversation/summary", "/api/conversation/delete", "/api/memory/delete", "/api/memory/change", "/api/memory/source"}:
                         try:
-                            if self.path.endswith("/page"):
+                            if self.path == "/api/conversation/export":
+                                if not self.local_request():
+                                    raise ValueError("交互记录只允许在秘书主机的本机浏览器导出。")
+                                result = runtime.conversations.export(data.get("id"))
+                            elif self.path.endswith("/page"):
                                 result = runtime.conversations.page(data.get("id"), data.get("before"))
                             elif self.path.endswith("/summary"):
                                 result = runtime.conversations.request_summary(data["id"], data["revision"])

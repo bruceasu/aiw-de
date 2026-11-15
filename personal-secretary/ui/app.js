@@ -626,6 +626,8 @@ function renderMemories() {
 function renderChat() {
   const target = byId("chat-messages");
   const workId = formFor("chat").elements.workId.value;
+  const exportButton = byId("chat-export");
+  exportButton.disabled = !workId || exportButton.dataset.busy === "true";
   if (chatDraftWork !== workId) {
     const composer = formFor("chat").elements.text;
     chatDrafts.set(chatDraftWork, composer.value);
@@ -1457,6 +1459,29 @@ byId("chat-history-search").addEventListener("input", renderConversationHistory)
 byId("chat-history-open").addEventListener("click", () => {
   byId("chat-history-panel").open = !byId("chat-history-panel").open;
   if (byId("chat-history-panel").open) byId("chat-history-search").focus();
+});
+byId("chat-export").addEventListener("click", async () => {
+  const button = byId("chat-export");
+  const workId = formFor("chat").elements.workId.value;
+  if (!workId || button.dataset.busy === "true") return;
+  button.dataset.busy = "true";
+  button.disabled = true;
+  try {
+    const { result } = await post("conversation/export", { id: workId }, false);
+    const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "secretary-conversation-" + workId.replace(/[^a-zA-Z0-9_-]/g, "_") + ".json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    feedback("会话交互记录已下载。");
+  } catch (error) {
+    feedback(errorMessage(error), "error");
+  } finally {
+    button.dataset.busy = "false";
+    button.disabled = !formFor("chat").elements.workId.value;
+  }
 });
 for (const [label, prompt] of [
   ["一起理清想法", "请和我一起理清这个想法："],

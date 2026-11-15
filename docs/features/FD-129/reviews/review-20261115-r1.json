@@ -1,0 +1,77 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-129",
+  "source_event": "FD-129-000002-review-requested",
+  "human_report": "review-20261115-r1.md",
+  "data": {
+    "reviewer_session": "fd129-reviewer-20261115",
+    "comparison_base": "432c6fc0ecf10d174cd615e65c499ba71cfb2320",
+    "reviewed_fd_revision": 2,
+    "reviewed_fd_sha256": "7e9fd5785c63e6344a6eacd79689f6efb59c695cec6455f391645f95cba32280",
+    "recommendation": "verification-passed",
+    "review_type": "independent static implementation review",
+    "findings": [],
+    "acceptance": [
+      {
+        "criteria": "导出指定会话及其关联本地运行，覆盖全部已保存消息页面并保留会话/运行/message 关联。",
+        "result": "supported statically",
+        "evidence": "Conversations.export 使用 100 条稳定游标分页读取完整消息集，按时间升序恢复页面；运行按 workId 和本会话 message ID 过滤，并按 createdAt 排序。运行内历史、事件、工具、控制和已保存 OAuth 响应保留自己的 sequence/ordinal 顺序。"
+      },
+      {
+        "criteria": "只导出当前保存的模型历史和 OAuth 响应，不声称完整 API Key HTTP 原文；如实保留截断、缺失和占位信息。",
+        "result": "supported statically",
+        "evidence": "导出使用运行记录中的 history 与 SECRETARY_WIRE response，不重建请求；scope 明确说明仅为已保存 SDK 历史且不含完整 Provider HTTP transcript。消息截断字段、模型历史状态和工具回执结果进入投影。"
+      },
+      {
+        "criteria": "排除模型连接凭据、令牌、认证头、凭据绑定和模型推理，保留会话正文原文。",
+        "result": "supported statically",
+        "evidence": "export_value 递归处理 dict/list，移除已列出的 credential/secret/binding/reasoning 字段，并丢弃 type=reasoning 项；运行输出不序列化 binding/config。消息正文仍作为文本导出。"
+      },
+      {
+        "criteria": "导出仅供秘书主机本机浏览器下载，受 session/CSRF 和本机请求限制，且不触发模型或远程副作用。",
+        "result": "supported statically",
+        "evidence": "do_POST 先校验 Host、Origin、有效 session 与 X-CSRF-Token；导出路由额外调用 local_request，要求 local_attach、loopback 客户端且无 Forwarded/X-Forwarded 头。路由只读取本地存储并返回 JSON。"
+      },
+      {
+        "criteria": "界面提示隐私和会话正文保留，支持本地 JSON 下载及中/英/日文案。",
+        "result": "supported statically",
+        "evidence": "有会话时启用按钮，POST 后生成 JSON Blob 下载并对 workId 文件名做字符清理；提示、按钮、成功和拒绝文案有中文、英文及日文映射。"
+      }
+    ],
+    "implementation_reported_checks": {
+      "compile": "scripts/compile-secretary-runtime.ps1: passed per FD Verification; reviewer did not rerun",
+      "static": [
+        "git diff --check: passed per FD Verification; reviewer did not rerun",
+        "node --check personal-secretary/ui/i18n.js: passed per FD Verification; reviewer did not rerun"
+      ],
+      "tests": "not run per instruction and recorded as not run in FD Verification"
+    },
+    "reviewer_checks": {
+      "tests": "not run per instruction",
+      "compile": "not rerun; implementation-reported pass recorded above",
+      "services": "not run per instruction",
+      "models": "not run per instruction",
+      "network": "not accessed per instruction"
+    },
+    "actual_commands": [
+      "aiw fd show FD-129",
+      "aiw fd show-review FD-129",
+      "aiw fd claim FD-129 FD-129-000002-review-requested --session fd129-reviewer-20261115",
+      "git status --short --branch",
+      "git rev-parse HEAD",
+      "git diff --stat 432c6fc0",
+      "git diff --no-ext-diff --unified=12 432c6fc0 -- personal-secretary/conversations.py personal-secretary/main.py personal-secretary/secretary_runs.py personal-secretary/secretary_sdk.py",
+      "git diff --no-ext-diff --unified=8 432c6fc0 -- personal-secretary/ui/app.js personal-secretary/ui/i18n.js personal-secretary/ui/index.html",
+      "aiw fd show-report FD-129"
+    ],
+    "skipped": [
+      "测试、构建、服务、模型和网络请求（按指令）",
+      "Reviewer 未重新运行实现记录的编译及静态检查命令"
+    ],
+    "residual_risks": [
+      "分页边界、Provider 保存响应变体及浏览器 Blob 下载未做运行时验证。",
+      "导出完整历史会在服务端和浏览器中整体组装；极大历史记录下的内存和下载体验未验证。"
+    ]
+  }
+}

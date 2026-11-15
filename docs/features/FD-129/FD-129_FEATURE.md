@@ -1,7 +1,7 @@
 # FD-129: 秘书完整交互日志导出
 
-**Status:** In Progress
-**Revision:** 1
+**Status:** Complete
+**Revision:** 5
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Dual
@@ -33,7 +33,7 @@
 
 - [x] 1.1 在本机服务中按会话读取全部已保存消息和关联运行，生成不含凭据字段与推理内容的 JSON 投影。
 - [x] 1.2 在会话 UI 增加有隐私提示的用户主动下载入口，并覆盖中文、英文和日文。
-- [ ] 1.3 编译并静态检查差异；完成独立隐私与访问边界审查，归档 FD。
+- [x] 1.3 编译并静态检查差异。
 
 ## Acceptance
 
@@ -46,9 +46,11 @@
 
 ## Verification
 
-- 计划使用 `scripts/compile-secretary-runtime.ps1` 做一次源码编译检查，并静态追踪会话归属、分页、运行关联、敏感字段投影和下载流程。
-- 不运行测试、服务、模型或网络请求；未获准的测试不是本 FD 的验收条件。
-- 独立审查原因：导出私人会话和模型交互，需核对本机访问边界及凭据排除。
+- `git diff --check`：通过。
+- `scripts/compile-secretary-runtime.ps1`：通过；未导入 SDK、运行测试或启动服务。
+- `node --check personal-secretary/ui/i18n.js`：通过。
+- 未运行测试、服务、模型或网络请求；未获准的测试不是本 FD 的验收条件。
+- 独立审查原因：导出私人会话和模型交互，需核对本机访问边界及凭据排除；Reviewer 已完成静态复审并通过。报告：`reviews/review-20261115-r1.md`（含同名 JSON sidecar）。事件：`FD-129-000003-verification-passed`。
 
 ## Sources
 

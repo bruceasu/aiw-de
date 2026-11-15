@@ -300,7 +300,9 @@ async def _run(settings, instructions, context, execute, journal, identity, afte
                 header += "Tool schemas: " + json.dumps(schemas, ensure_ascii=False)
                 def completed(actual):
                     journal.store.put("runtime", identity + ":wire:" + uuid.uuid4().hex,
-                        {"kind": "SECRETARY_WIRE", "runId": identity, "response": actual}, 0)
+                        {"kind": "SECRETARY_WIRE", "runId": identity,
+                         "sequence": journal.get(identity).get("modelCalls"),
+                         "createdAt": int(time.time() * 1000), "response": actual}, 0)
                 text, usage, response_id = await asyncio.to_thread(oauth_text, access["token"], config["model"], header, history,
                     lambda: journal.check(identity), completed, config.get("effort", ""))
                 action = object_json(text)

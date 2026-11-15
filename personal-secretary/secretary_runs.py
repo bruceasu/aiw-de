@@ -10,6 +10,33 @@ import os
 
 
 TERMINAL = {"SUCCEEDED", "FAILED", "CANCELLED"}
+_EXPORT_SECRET_KEYS = {
+    "authorization", "api_key", "apikey", "accesstoken", "access_token",
+    "refreshtoken", "refresh_token", "idtoken", "id_token", "clientsecret",
+    "client_secret", "openai_api_key", "deepseek_api_key", "auth_token",
+    "bearer_token", "session_token", "cookie", "set_cookie", "password",
+    "secret", "secrets", "token", "credential", "credentials", "binding",
+    "reasoning", "reasoning_content", "reasoning_summary", "analysis", "thinking", "encrypted_content",
+}
+_EXPORT_OMIT = object()
+
+
+def export_value(value):
+    if isinstance(value, dict):
+        if value.get("type") == "reasoning":
+            return _EXPORT_OMIT
+        result = {}
+        for key, item in value.items():
+            normalized_key = str(key).replace("-", "_").replace(" ", "_").casefold()
+            if normalized_key in _EXPORT_SECRET_KEYS:
+                continue
+            exported = export_value(item)
+            if exported is not _EXPORT_OMIT:
+                result[key] = exported
+        return result
+    if isinstance(value, list):
+        return [exported for item in value if (exported := export_value(item)) is not _EXPORT_OMIT]
+    return value
 
 
 class RunYield(Exception):
@@ -502,6 +529,69 @@ class RunJournal:
             remaining -= min(len(payload), limit)
             truncated = truncated or shortened
         return {"items": items, "truncated": truncated}
+
+    def export_record(self, identity):
+        row = self.get(identity)
+        history = row.get("history")
+        exported_history = None
+        history_status = "UNAVAILABLE"
+        if isinstance(history, list):
+            history_status = "RECORDED" if history else "EMPTY"
+            exported_history = []
+            for sequence, item in enumerate(history, 1):
+                exported = export_value(item)
+                if exported is not _EXPORT_OMIT:
+                    exported_history.append({"sequence": sequence, "item": exported})
+
+        events = []
+        for event in self.records("SECRETARY_EVENT", identity):
+            events.append({key: event[key] for key in (
+                "sequence", "createdAt", "type", "state", "tool", "status", "inputTokens",
+                "outputTokens", "cachedTokens", "usageKnown", "control", "sourceId",
+            ) if key in event})
+        events.sort(key=lambda event: (event.get("sequence", 0), event.get("createdAt", 0)))
+
+        tools = []
+        for receipt in self.records("SECRETARY_TOOL", identity):
+            tools.append(export_value({key: receipt[key] for key in (
+                "id", "createdAt", "ordinal", "callId", "action", "state", "result", "note",
+            ) if key in receipt}))
+        tools.sort(key=lambda receipt: (receipt.get("ordinal", 0), receipt.get("createdAt", 0)))
+
+        controls = []
+        for command in self.records("SECRETARY_CONTROL", identity):
+            payload = command.get("payload")
+            if not isinstance(payload, dict):
+                continue
+            controls.append(export_value({
+                "id": command.get("id"), "createdAt": command.get("createdAt"),
+                "control": payload.get("control"), "text": payload.get("text"),
+                "state": command.get("state"), "note": command.get("note", ""),
+            }))
+        controls.sort(key=lambda command: (command.get("createdAt", 0), command.get("id", "")))
+
+        provider_responses = []
+        for wire in self.records("SECRETARY_WIRE", identity):
+            raw_response = wire.get("response")
+            response = export_value(raw_response)
+            if response is not _EXPORT_OMIT:
+                provider_responses.append({
+                    "id": wire.get("id"), "sequence": wire.get("sequence"),
+                    "orderKnown": type(wire.get("sequence")) is int,
+                    "createdAt": wire.get("createdAt"), "response": response,
+                })
+        provider_responses.sort(key=lambda response: (
+            response.get("sequence") is None, response.get("sequence") or 0,
+            response.get("createdAt", 0) or 0, response.get("id", "")))
+
+        return {
+            "id": row["id"], "messageId": row.get("messageId"), "createdAt": row.get("createdAt"),
+            "state": row.get("state"), "note": export_value(row.get("note", "")),
+            "modelCalls": row.get("modelCalls", 0), "toolCalls": row.get("toolCalls", 0),
+            "modelHistoryStatus": history_status, "modelHistory": exported_history,
+            "providerResponses": provider_responses,
+            "events": events, "tools": tools, "controls": controls,
+        }
 
     def file_intents(self, identity):
         """Project the original local create requests without accessing the filesystem."""
