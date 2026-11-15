@@ -1,7 +1,7 @@
 # FD-089: Agent permission page redesign and multi-select action grants
 
-**Status:** In Progress
-**Revision:** 1
+**Status:** Complete
+**Revision:** 4
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -48,8 +48,11 @@ Redesign this page and the permission picker/confirmation; add the human-authori
 - Static review: inspected the permission contract, service transaction path, Agent message writes, human-route allowlist, UI request/recovery flow, and changed page structure. The batch reuses the single-action validator and audit path inside one transaction.
 - Compile-only: passed with JDK 25 using `. 'C:\green\bin\setup-jdk25.ps1'; & "$env:MAVEN_HOME\bin\mvn.cmd" --offline "-Dmaven.repo.local=D:/.m2/repository" "-DskipTests" compile` (344 production sources). Earlier attempts stopped on command lookup, `JAVA_HOME`, and PowerShell argument parsing; the corrected command completed successfully.
 - Tests were not added or run.
-- Independent implementation review remains required because this adds a permission-writing batch endpoint.
+- Independent review requested changes. Report: `reviews/review-20261115-direction.md`. The review found the permission subject is still presented and validated as an Agent despite the confirmed Worker identity model, and the implementation commit includes runtime changes outside this FD's scope. Batch authorization, transaction, per-action idempotency, and UI recovery were statically reviewed; no runtime checks were run.
 
 ## Sources
 
 - Issue: none
+
+**Completed:** 2026-11-15
+**Disposition reason:** 按用户明确指示直接归档。实现提交已进入 develop/main；不再继续实现或复审。保留 changes-requested 审查记录，未解决的术语对齐与提交范围归属不视为已通过；测试和编译未由本次归档执行。
