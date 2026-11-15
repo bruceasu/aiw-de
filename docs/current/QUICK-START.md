@@ -29,7 +29,7 @@ mkdir -p data
 bash scripts/startup.sh
 ```
 
-Both startup scripts load the root `.env`. If you use `mvn spring-boot:run` directly, set the same variables in that process environment; Maven does not load this file. Open `http://127.0.0.1:8080/ui`. Startup applies database migrations; preserve a backup before upgrading an existing database.
+Both startup scripts load the root `.env`. If you use `mvn spring-boot:run` directly, set the same variables in that process environment; Maven does not load this file. Open `http://127.0.0.1:8080/ui`. The current Flyway baseline requires a new, empty database file or instance. It does not upgrade or reset an existing database; if the configured file already has data, point `AIW_DB_URL` to a different new file.
 
 ## Connect a model and start work
 

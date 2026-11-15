@@ -47,19 +47,9 @@ java -jar target/ai-dev-manager-r9-9.0.0-SNAPSHOT.jar
 
 基础 application.yaml 已是 PostgreSQL 配置；激活非 sqlite profile 后不会加载默认 sqlite profile。
 
-## 5. Flyway
+## 5. 初始化数据库
 
-启动自动运行 Migration，当前最新 V14。
-
-升级建议：
-
-1. 备份 DB；
-2. 维护窗口中部署新版本；
-3. 启动并让 Flyway 迁移；
-4. 检查 Fleet Dashboard；
-5. 再恢复/启动 Worker。
-
-不要修改已经执行过的 Migration。
+启动时 Flyway 执行单个 `V1__initial_schema.sql` 基线。它只用于全新空数据库，不支持升级旧库。请将应用指向新数据库文件或实例；已有数据库保持原样。不要手动修改 Flyway 历史记录。
 
 ## 6. 备份
 

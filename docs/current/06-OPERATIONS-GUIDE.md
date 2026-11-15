@@ -71,26 +71,12 @@ java -jar target/ai-dev-manager-r9-9.0.0-SNAPSHOT.jar
 
 There is no `application-postgresql.yaml`; activating a non-SQLite profile prevents the default `sqlite` profile from loading, leaving the base PostgreSQL datasource/dialect configuration active.
 
-## 5. Database migrations
+## 5. Database initialization
 
-Flyway runs automatically at startup from:
-
-```text
-classpath:db/migration
-```
-
-Current latest migration: **V14**.
-
-Operational upgrade sequence:
-
-1. stop or drain application instances as required by your maintenance policy;
-2. back up the database;
-3. deploy the new application;
-4. allow Flyway to migrate;
-5. verify startup and dashboards;
-6. start/resume workers.
-
-Do not manually edit Flyway history or change an already-applied migration file.
+Flyway runs the single `V1__initial_schema.sql` baseline at startup. It is for a
+new, empty database and is not an upgrade path. Point the application to a new
+database file or instance; the existing database is left untouched. Do not
+manually edit Flyway history.
 
 ## 6. Backup and restore
 

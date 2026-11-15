@@ -69,7 +69,7 @@ This page is a concise inventory for deciding whether additional infrastructure 
 - Small JDBC-only schema.
 - SQLite local mode.
 - PostgreSQL shared/server mode.
-- Flyway V1–V14.
+- One Flyway V1 baseline for a new, empty database; existing databases are not migrated or reset.
 - nine tables.
 - Java 21 modular monolith.
 

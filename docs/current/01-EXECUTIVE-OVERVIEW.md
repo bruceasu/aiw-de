@@ -70,7 +70,7 @@ If review or verification reports `REPAIR_REQUIRED`, the Control Plane creates a
 5. **Git revisions identify code results.** `baseRevision`, `resultRevision`, `publicationRef` and `changedFiles` carry code handoff.
 6. **Human approval is independent.** A successful AI process is not equivalent to a human authorization.
 7. **Local-first operation.** SQLite is the default local profile; PostgreSQL is the shared/server mode.
-8. **Small persistence model.** The current system uses nine justified business/authority/audit tables rather than a large framework schema.
+8. **Focused persistence schema.** A single Flyway baseline creates the tables used by the current runtime; it does not retain unused historical migration tables.
 
 ## 5. Current maturity
 

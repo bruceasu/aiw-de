@@ -66,7 +66,7 @@
 - JDBC only；
 - SQLite local；
 - PostgreSQL shared；
-- Flyway V1-V14；
+- 单个 Flyway V1 空库基线；不迁移或重置已有数据库；
 - 9 tables。
 
 ## 当前明确未做

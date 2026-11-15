@@ -7,7 +7,7 @@ R8-S13 Fix2
 package: me.asu.aidev
 Java 21
 Spring Boot 4.0.8
-Flyway V1-V14
+Flyway V1（全新空数据库基线；未运行数据库迁移验证）
 9 tables
 29 Failsafe IT methods
 ```

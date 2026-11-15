@@ -57,7 +57,7 @@ Reviewer/Verifier 发现问题时不会直接改代码，而是产生 `REPAIR_RE
 5. **Git revision 是代码结果身份。**
 6. **Human Approval 独立于 AI 执行结果。**
 7. **Local-first。** 默认 SQLite，本地就能运行；共享模式使用 PostgreSQL。
-8. **小型数据库。** 当前仅 9 张有明确生命周期/并发/审计理由的表。
+8. **精简持久化 Schema。** 单一 Flyway 基线只创建当前运行代码使用的表，不保留未使用的历史迁移表。
 
 ## 5. 当前成熟度
 

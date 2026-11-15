@@ -53,7 +53,7 @@ Control Plane 不会在一个 Handler 里“调用下一个 Agent”。上游完
 
 管理 Flexible Workflow Plan 的 draft/version/confirmation、有序步骤及任务/依赖生成、jump/stop 与人工 complete/cancel 控制、任务执行和替换协调。
 
-当前 Schema 不再持久化单独的固定 `autonomous_run` aggregate。V1 中历史 `autonomous_run` DDL 会在基线结束前删除。
+当前运行代码仍使用 `autonomous_run`、`autonomous_run_event` 和 `web_console_run_archive`，因此新基线会保留这些表。
 
 ### `development`
 
@@ -115,9 +115,9 @@ Run 使用持久化 `active_slots` 作为 semaphore；Fleet 不保存第二套 a
 
 ## 6. 数据库
 
-当前为 28 张应用表，Flyway V1～V5。V1 是全新数据库基线，文件中包含历史 DDL，并在完成前删除退役的固定 Run 表。V4 新增清理后保留的单轮修复授权；V5 新增追加保存、随计划删除的已确认问题答复。字段、约束和数据流见[数据库字典](08-DATA-MODEL-AND-MIGRATIONS.md)。
+当前 Schema 使用一个 Flyway V1 基线初始化全新空数据库，只包含当前 Java 运行代码引用的表及必要的约束、索引和初始记录。已有数据库不会被迁移或重置；请为该基线使用新数据库。详见[数据模型与初始 Schema](08-DATA-MODEL-AND-MIGRATIONS.md)。
 
-完整表/字段字典、表关系、迁移基线和数据流转见[数据模型与迁移](08-DATA-MODEL-AND-MIGRATIONS.md)。
+初始 Schema 和数据持久化边界见[数据模型与初始 Schema](08-DATA-MODEL-AND-MIGRATIONS.md)。
 
 ## 7. Local 与 Shared 模式
 

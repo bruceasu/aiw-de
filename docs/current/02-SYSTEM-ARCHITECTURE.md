@@ -85,7 +85,7 @@ Owns flexible workflow plan execution:
 - jump/stop and human complete/cancel controls;
 - task-level execution and replacement coordination.
 
-The current schema does not persist a separate fixed `autonomous_run` aggregate. Historical `autonomous_run` DDL in V1 is dropped before the baseline completes.
+The current schema retains `autonomous_run`, `autonomous_run_event`, and `web_console_run_archive` because current runtime code still uses them.
 
 ### `development`
 
@@ -173,9 +173,9 @@ The per-run budget is an atomic slot ledger. The fleet-wide budget does not main
 
 ## 6. Persistence
 
-Current schema: 28 application tables, Flyway V1–V5. V1 is a clean-slate baseline that contains historical DDL internally; it drops the retired fixed-Run tables before completion. V4 adds retained one-round repair grants; V5 adds append-only confirmed question answers that are deleted with their plan. See [the database dictionary](08-DATA-MODEL-AND-MIGRATIONS.md) for fields, constraints, and data flows.
+The current schema starts from one Flyway V1 baseline for a new, empty database. It contains the tables referenced by current Java runtime code and their required constraints, indexes, and initial records. Existing databases are not migrated or reset; use a new database for this baseline. See [Data Model and Initial Schema](08-DATA-MODEL-AND-MIGRATIONS.md).
 
-The complete table/field dictionary, relationships, migration baseline, and persisted data flow are in [Data Model and Migrations](08-DATA-MODEL-AND-MIGRATIONS.md).
+The initial schema and persistence boundaries are described in [Data Model and Initial Schema](08-DATA-MODEL-AND-MIGRATIONS.md).
 
 ## 7. Local vs shared mode
 
