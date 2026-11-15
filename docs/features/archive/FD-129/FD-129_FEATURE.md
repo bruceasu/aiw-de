@@ -50,7 +50,7 @@
 - `scripts/compile-secretary-runtime.ps1`：通过；未导入 SDK、运行测试或启动服务。
 - `node --check personal-secretary/ui/i18n.js`：通过。
 - 未运行测试、服务、模型或网络请求；未获准的测试不是本 FD 的验收条件。
-- 独立审查原因：导出私人会话和模型交互，需核对本机访问边界及凭据排除；Reviewer 已完成静态复审并通过。报告：`reviews/review-20261115-r1.md`（含同名 JSON sidecar）。事件：`FD-129-000003-verification-passed`。
+- 独立审查原因：导出私人会话和模型交互，需核对本机访问边界及凭据排除；Reviewer 已完成静态复审并通过。最终报告：`reviews/FD-129-review-20261115-r2.md`（含同名 JSON sidecar）。事件：`FD-129-000005-verification-passed`；该事件已由本地 PM 在归档时确认。
 
 ## Sources
 
@@ -58,3 +58,5 @@
 - `docs/FUNCTION-INVENTORY.md` 第 27、37 项。
 - `docs/features/archive/FD-119/FD-119_MAKE_SECRETARY_CONVERSATIONS_HISTORY_AND_EXECUTI.md`。
 - 现有实现：`personal-secretary/store.py`、`personal-secretary/secretary_runs.py`、`personal-secretary/main.py`、`personal-secretary/ui/app.js`。
+
+**Completed:** 2026-11-15
