@@ -10,7 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Operator-owned factory defaults. No model credentials or task authority are stored here. */
 @Service
 public class AgentFactorySettings {
-    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.modelauth.ModelConnections modelConnections;
+    // Resolve connection validation only when saving; OAuth reads these settings during operation.
+    @org.springframework.beans.factory.annotation.Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.modelauth.ModelConnections> modelConnections;
     public record Settings(String runtime,String model,String effort,boolean automaticWorkers,String python,String executable,String guardHome,String credentialRef,Long credentialVersion,String apiProvider,String apiProtocol) {
         public Settings(String runtime,String model,String effort,boolean automaticWorkers,String python,String executable,String guardHome,String credentialRef,Long credentialVersion) {
             this(runtime,model,effort,automaticWorkers,python,executable,guardHome,credentialRef,credentialVersion,"openai","responses");
@@ -63,7 +64,7 @@ public class AgentFactorySettings {
     @Transactional public Map<String,Object> save(Settings input) {
         grants.human(boundary.human(),"A17_CONFIGURATION");boundary.lock();
         if(input==null)throw new IllegalArgumentException("请核对工厂设置。");
-        if(input.credentialRef()!=null)modelConnections.selection(new me.asu.aidev.modelauth.ModelAuthContract.Selection(input.credentialRef(),input.credentialVersion()),input.runtime());
+        if(input.credentialRef()!=null)modelConnections.getObject().selection(new me.asu.aidev.modelauth.ModelAuthContract.Selection(input.credentialRef(),input.credentialVersion()),input.runtime());
         repo.audit("AGENT_FACTORY",null,null,boundary.human(),"AGENT_FACTORY_SETTINGS",repo.encode(input));
         return state();
     }

@@ -33,6 +33,10 @@ CREATE TABLE work_task (
     lease_heartbeat_at_epoch_ms BIGINT,
     created_at_epoch_ms BIGINT NOT NULL,
     updated_at_epoch_ms BIGINT NOT NULL,
+    instruction TEXT NOT NULL DEFAULT '',
+    repository_ref VARCHAR(256),
+    base_revision VARCHAR(128),
+    instruction_revision INTEGER NOT NULL DEFAULT 1,
     FOREIGN KEY (current_worker_id) REFERENCES worker(id),
     CHECK (attempt_no >= 0),
     CHECK (state IN ('BLOCKED','READY','CLAIMED','RUNNING','YIELDING','WAITING_INPUT','CONTINUED','COMPLETED','FAILED','CANCELLED')),
@@ -44,11 +48,8 @@ CREATE TABLE work_task (
         (lease_token IS NOT NULL AND current_worker_id IS NOT NULL
             AND lease_acquired_at_epoch_ms IS NOT NULL AND lease_expires_at_epoch_ms IS NOT NULL
             AND lease_heartbeat_at_epoch_ms IS NOT NULL)
-    ),
-    instruction TEXT NOT NULL DEFAULT '',
-    repository_ref VARCHAR(256),
-    base_revision VARCHAR(128),
-    instruction_revision INTEGER NOT NULL DEFAULT 1);
+    )
+);
 
 CREATE TABLE work_task_dependency (
     task_id VARCHAR(128) NOT NULL,
@@ -70,11 +71,6 @@ CREATE TABLE execution_attempt (
     created_at_epoch_ms BIGINT NOT NULL,
     started_at_epoch_ms BIGINT,
     finished_at_epoch_ms BIGINT,
-    FOREIGN KEY (task_id) REFERENCES work_task(id),
-    FOREIGN KEY (worker_id) REFERENCES worker(id),
-    UNIQUE (task_id, attempt_no),
-    CHECK (attempt_no >= 1),
-    CHECK (state IN ('CLAIMED','RUNNING','YIELDED','COMPLETED','FAILED','EXPIRED')),
     workspace_key VARCHAR(256),
     branch_name VARCHAR(512),
     base_revision VARCHAR(128),
@@ -99,7 +95,13 @@ CREATE TABLE execution_attempt (
     failure_category VARCHAR(32),
     instruction_revision INTEGER NOT NULL DEFAULT 1,
     stop_requested_at_epoch_ms BIGINT,
-    stop_acknowledged_at_epoch_ms BIGINT);
+    stop_acknowledged_at_epoch_ms BIGINT,
+    FOREIGN KEY (task_id) REFERENCES work_task(id),
+    FOREIGN KEY (worker_id) REFERENCES worker(id),
+    UNIQUE (task_id, attempt_no),
+    CHECK (attempt_no >= 1),
+    CHECK (state IN ('CLAIMED','RUNNING','YIELDED','COMPLETED','FAILED','EXPIRED'))
+);
 
 CREATE INDEX idx_work_task_ready_order
     ON work_task(state, priority DESC, created_at_epoch_ms, id);
@@ -169,6 +171,17 @@ CREATE TABLE autonomous_run (
     started_at_epoch_ms BIGINT NOT NULL,
     status_updated_at_epoch_ms BIGINT NOT NULL,
     completed_at_epoch_ms BIGINT,
+    control_state VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+    pause_count INTEGER NOT NULL DEFAULT 0,
+    resume_count INTEGER NOT NULL DEFAULT 0,
+    last_control_action VARCHAR(32),
+    last_controlled_by VARCHAR(256),
+    last_control_reason VARCHAR(4096),
+    last_controlled_at_epoch_ms BIGINT,
+    cancelled_at_epoch_ms BIGINT,
+    event_sequence BIGINT NOT NULL DEFAULT 0,
+    max_parallelism INTEGER NOT NULL DEFAULT 0 CHECK (max_parallelism >= 0),
+    active_slots INTEGER NOT NULL DEFAULT 0 CHECK (active_slots >= 0),
     FOREIGN KEY (requirement_task_id) REFERENCES work_task(id),
     FOREIGN KEY (terminal_source_task_id) REFERENCES work_task(id),
     FOREIGN KEY (approval_request_id) REFERENCES approval_request(id),
@@ -180,18 +193,8 @@ CREATE TABLE autonomous_run (
         (status IN ('SUCCEEDED','REJECTED') AND completed_at_epoch_ms IS NOT NULL)
         OR
         (status NOT IN ('SUCCEEDED','REJECTED') AND completed_at_epoch_ms IS NULL)
-    ),
-    control_state VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
-    pause_count INTEGER NOT NULL DEFAULT 0,
-    resume_count INTEGER NOT NULL DEFAULT 0,
-    last_control_action VARCHAR(32),
-    last_controlled_by VARCHAR(256),
-    last_control_reason VARCHAR(4096),
-    last_controlled_at_epoch_ms BIGINT,
-    cancelled_at_epoch_ms BIGINT,
-    event_sequence BIGINT NOT NULL DEFAULT 0,
-    max_parallelism INTEGER NOT NULL DEFAULT 0 CHECK (max_parallelism >= 0),
-    active_slots INTEGER NOT NULL DEFAULT 0 CHECK (active_slots >= 0));
+    )
+);
 
 CREATE INDEX idx_autonomous_run_status
     ON autonomous_run(status, status_updated_at_epoch_ms);
@@ -1006,13 +1009,23 @@ CREATE TABLE execution_task_skills (
 );
 
 CREATE TABLE authority_action_permission (
- id VARCHAR(128) PRIMARY KEY, owner_id VARCHAR(64) NOT NULL, worker_id VARCHAR(128) NOT NULL,
- action VARCHAR(32) NOT NULL, scope_kind VARCHAR(16) NOT NULL, scope_id VARCHAR(128),
- maximum_uses BIGINT NOT NULL CHECK(maximum_uses>0), used_uses BIGINT NOT NULL DEFAULT 0 CHECK(used_uses>=0),
- state VARCHAR(16) NOT NULL, authority VARCHAR(64) NOT NULL, effective_ms BIGINT NOT NULL, expires_ms BIGINT NOT NULL,
- creation_request VARCHAR(36) NOT NULL, creation_digest VARCHAR(64) NOT NULL,
- UNIQUE(owner_id,creation_request),
-    revision BIGINT NOT NULL DEFAULT 1);
+    id VARCHAR(128) PRIMARY KEY,
+    owner_id VARCHAR(64) NOT NULL,
+    worker_id VARCHAR(128) NOT NULL,
+    action VARCHAR(32) NOT NULL,
+    scope_kind VARCHAR(16) NOT NULL,
+    scope_id VARCHAR(128),
+    maximum_uses BIGINT NOT NULL CHECK(maximum_uses>0),
+    used_uses BIGINT NOT NULL DEFAULT 0 CHECK(used_uses>=0),
+    state VARCHAR(16) NOT NULL,
+    authority VARCHAR(64) NOT NULL,
+    effective_ms BIGINT NOT NULL,
+    expires_ms BIGINT NOT NULL,
+    creation_request VARCHAR(36) NOT NULL,
+    creation_digest VARCHAR(64) NOT NULL,
+    revision BIGINT NOT NULL DEFAULT 1,
+    UNIQUE(owner_id,creation_request)
+);
 
 CREATE UNIQUE INDEX authority_permission_current ON authority_action_permission(owner_id,worker_id,action) WHERE state='ENABLED';
 
@@ -1253,19 +1266,31 @@ CREATE TABLE model_vault_local (
 );
 
 CREATE TABLE execution_tool_approval (
- id VARCHAR(128) PRIMARY KEY, task_id VARCHAR(128) NOT NULL REFERENCES execution_context(task_id),
- plan_id VARCHAR(128) NOT NULL REFERENCES execution_policy(plan_id), owner_id VARCHAR(128) NOT NULL,
- attempt_id VARCHAR(128) NOT NULL REFERENCES execution_attempt(id), operation_id VARCHAR(128) NOT NULL UNIQUE,
- binding_json TEXT NOT NULL, binding_digest VARCHAR(64) NOT NULL, request_digest VARCHAR(64) NOT NULL,
- policy_digest VARCHAR(64) NOT NULL, generation BIGINT NOT NULL,
- state VARCHAR(24) NOT NULL, revision BIGINT NOT NULL DEFAULT 1, expires_ms BIGINT NOT NULL,
- decision_json TEXT, decided_by VARCHAR(256), created_ms BIGINT NOT NULL, decided_ms BIGINT,
- CHECK(state IN ('PENDING','APPROVED','REJECTED','EXPIRED','INVALIDATED','CONSUMED')),
+    id VARCHAR(128) PRIMARY KEY,
+    task_id VARCHAR(128) NOT NULL REFERENCES execution_context(task_id),
+    plan_id VARCHAR(128) NOT NULL REFERENCES execution_policy(plan_id),
+    owner_id VARCHAR(128) NOT NULL,
+    attempt_id VARCHAR(128) NOT NULL REFERENCES execution_attempt(id),
+    operation_id VARCHAR(128) NOT NULL UNIQUE,
+    binding_json TEXT NOT NULL,
+    binding_digest VARCHAR(64) NOT NULL,
+    request_digest VARCHAR(64) NOT NULL,
+    policy_digest VARCHAR(64) NOT NULL,
+    generation BIGINT NOT NULL,
+    state VARCHAR(24) NOT NULL,
+    revision BIGINT NOT NULL DEFAULT 1,
+    expires_ms BIGINT NOT NULL,
+    decision_json TEXT,
+    decided_by VARCHAR(256),
+    created_ms BIGINT NOT NULL,
+    decided_ms BIGINT,
     consumption_json TEXT,
     start_digest VARCHAR(64),
     consumed_task_id VARCHAR(128) REFERENCES execution_context(task_id),
     consumed_ms BIGINT,
-    successor_task_id VARCHAR(128) REFERENCES work_task(id));
+    successor_task_id VARCHAR(128) REFERENCES work_task(id),
+    CHECK(state IN ('PENDING','APPROVED','REJECTED','EXPIRED','INVALIDATED','CONSUMED'))
+);
 
 CREATE INDEX idx_tool_approval_plan ON execution_tool_approval(plan_id,created_ms);
 
@@ -1379,9 +1404,10 @@ CREATE TABLE model_price_collection_state (
     content_sha256 VARCHAR(64),
     collector_version VARCHAR(128),
     observation_json TEXT,
-    CHECK (status IN ('PENDING','RUNNING','OBSERVED_INCOMPLETE','FAILED')),
     collector_sha256 VARCHAR(64),
-    last_success_sample_base64 TEXT);
+    last_success_sample_base64 TEXT,
+    CHECK (status IN ('PENDING','RUNNING','OBSERVED_INCOMPLETE','FAILED'))
+);
 
 CREATE TABLE model_price_collection_failure (
     provider VARCHAR(64) PRIMARY KEY REFERENCES model_price_collection_state(provider),
@@ -1394,8 +1420,9 @@ CREATE TABLE model_price_collection_failure (
     last_seen_ms BIGINT NOT NULL,
     failure_count INTEGER NOT NULL,
     active BOOLEAN NOT NULL,
-    CHECK (failure_count >= 0),
-    collector_sha256 VARCHAR(64));
+    collector_sha256 VARCHAR(64),
+    CHECK (failure_count >= 0)
+);
 
 CREATE TABLE model_price_repair_material (
     id VARCHAR(128) PRIMARY KEY,
@@ -1439,7 +1466,6 @@ CREATE TABLE model_price_repair_activation (
     verified_page_sha256 VARCHAR(64),
     failure_code VARCHAR(80),
     updated_ms BIGINT NOT NULL,
-    CHECK (state IN ('VERIFYING','INSTALLING','INSTALLED','FAILED')),
     decision_by VARCHAR(64),
     decision_ms BIGINT,
     reviewed_candidate_sha256 VARCHAR(64),
@@ -1452,7 +1478,9 @@ CREATE TABLE model_price_repair_activation (
     approved_source_url VARCHAR(2048),
     approved_page_observed_ms BIGINT,
     execution_started_ms BIGINT,
-    collection_lease_token VARCHAR(128));
+    collection_lease_token VARCHAR(128),
+    CHECK (state IN ('VERIFYING','INSTALLING','INSTALLED','FAILED'))
+);
 
 CREATE TABLE workflow_definition (
     id VARCHAR(80) PRIMARY KEY,
@@ -1480,12 +1508,19 @@ CREATE INDEX workflow_definition_actor ON workflow_definition(actor, updated_ms)
 CREATE INDEX workflow_execution_actor ON workflow_execution(actor, updated_ms);
 
 CREATE TABLE worker_team_member (
- id VARCHAR(80) PRIMARY KEY, actor VARCHAR(128) NOT NULL,
- name VARCHAR(80) NOT NULL, purpose TEXT NOT NULL, skills_json TEXT NOT NULL, notes TEXT NOT NULL,
- revision BIGINT NOT NULL, state VARCHAR(24) NOT NULL,
- created_ms BIGINT NOT NULL, updated_ms BIGINT NOT NULL,
- CHECK(state IN ('ACTIVE','DRAINING','ARCHIVED')),
-    settings_json TEXT NOT NULL DEFAULT '{}');
+    id VARCHAR(80) PRIMARY KEY,
+    actor VARCHAR(128) NOT NULL,
+    name VARCHAR(80) NOT NULL,
+    purpose TEXT NOT NULL,
+    skills_json TEXT NOT NULL,
+    notes TEXT NOT NULL,
+    revision BIGINT NOT NULL,
+    state VARCHAR(24) NOT NULL,
+    created_ms BIGINT NOT NULL,
+    updated_ms BIGINT NOT NULL,
+    settings_json TEXT NOT NULL DEFAULT '{}',
+    CHECK(state IN ('ACTIVE','DRAINING','ARCHIVED'))
+);
 
 CREATE INDEX worker_team_actor ON worker_team_member(actor,state,updated_ms);
 
