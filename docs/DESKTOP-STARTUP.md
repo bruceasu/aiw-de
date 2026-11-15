@@ -1,5 +1,15 @@
 # 秘书桌面与托盘启动
 
+## Windows 桌面 Pet 快捷方式
+
+从仓库根目录运行以下命令，创建或更新当前用户桌面上的 `AIW Secretary` 快捷方式：
+
+```powershell
+powershell -NoProfile -File .\personal-secretary\scripts\create-desktop-shortcut.ps1
+```
+
+双击快捷方式会调用现有桌面启动脚本并显示 Pet。点击 Pet 打开秘书对话，右键菜单打开工作台。快捷方式不安装服务或设置系统登录自启动；个人服务连接沿用 Pet 的现有逻辑。Pet 已运行时不会创建第二个实例，可从已有托盘入口继续操作。
+
 在有图形桌面的本机环境启动个人秘书服务时，同时请求启动 desktop pet，默认隐藏在系统托盘。原浏览器自动打开行为保留。SSH、无显示会话、Windows 非交互 window station、非本机服务 origin 不自动启动人物。
 
 自动选择已安装的 PySide6 Qt GUI；Windows 未安装 Qt 时使用原 Tk 人物。Linux 没有 Qt 时保留浏览器/服务入口，不安装或下载依赖。Qt 手工安装依赖见 `personal-secretary/pet/requirements-desktop.txt`，此文件只供用户自行安装。桌面实现和素材位于 `personal-secretary/pet/`；根目录保留原启动入口以兼容现有命令。
