@@ -1,17 +1,17 @@
 id = "ISSUE-00015"
 title = "秘书完整交互日志导出"
 parent_id = ""
-status = "DECIDED"
+status = "APPROVED"
 created = "2026-11-14"
-updated = "2026-11-14"
-revision = 2
+updated = "2026-11-15"
+revision = 4
 
 [approval]
-status = "PENDING"
-by = ""
-at = ""
-reason = ""
-source_digest = ""
+status = "APPROVED"
+by = "suk"
+at = "2026-11-15T22:00:31+09:00"
+reason = "用户已确认所选会话及关联执行、本地 JSON、仅导出已保存数据、隐藏凭据和内部推理、不新增采集或远程传输，并要求继续创建 FD、实现和审查。"
+source_digest = "2d9c222dadf28b3b7a8ca58c0115d9c549fa206cb74001e392f183a118fc2f35"
 
 [promotion]
 status = "NOT_STARTED"
@@ -29,4 +29,4 @@ reason = ""
 requirement-plan = "docs/issues/ISSUE-00015/issue-plan.md"
 
 [digest]
-requirement-plan = "fcfebbababbcf1edbd509278732ed5a9a9164cd35b3aa39734181837b52e1ab9"
+requirement-plan = "b98943c53e2cb03c7a190c5cd016d9457ca017ca6f57a5d2876df6f78293a19c"
