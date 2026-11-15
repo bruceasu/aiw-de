@@ -1,7 +1,7 @@
 # FD-080: Risk based milestone review policy
 
-**Status:** Pending Verification
-**Revision:** 2
+**Status:** Complete
+**Revision:** 6
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -51,7 +51,7 @@
 - [x] 2.1 实现自检推进、里程碑材料范围和固定独立评审；统一接纳输入/Plan 完成门禁。
 - [x] 2.2 自检未通过保留阻塞，支持精确版本的人工评审恢复，不自动放大重试。
 - [x] 3.1 编辑器、模板、确认预览与详情显示固定策略和真实验收来源。
-- [x] 4.1 补充关键回归用例、相邻文档与稳定规范，执行适用编译；记录实际验证与跳过项。
+- [x] 4.1 更新相邻文档与稳定规范；用户决定不保留本 FD 新增的专属回归测试，测试执行不作为交付项。
 - [x] 4.2 汇总独立审查输入和升级/回滚核对；整项 Reviewer 结果由 Review policy 单独把关。
 
 ## Acceptance
@@ -84,9 +84,20 @@
 - 最新 `f0fcde4` 已收窄 SELF 例外并增加 guarded-v1 兼容用例；当前 55 项 runtime 尚未获额外运行授权，未运行。最终离线 test-compile 成功（330 生产源、62 测试源，10.628 秒），不能将编译或 53/54 记为全通过，也不复用 FD-079 的结果证明新行为。
 - 按当前父流程要求保留 Pending Verification 和已领取的审查事件，不发未经完成的正式 PASS 或 Complete。额外同范围测试授权问题仍待回复，授权后以真实结果续接；未增加未经用户授权的真实服务、模型、浏览器、网络、部署或回滚检查。FD-081 仅为独立本机认证设计，不在本 FD 范围。
 
+### 用户决定：无测试审查（2026-11-15）
+
+- 用户要求停止测试，删除 FD-080 新增的 `WorkflowReviewPolicyTest` 与 `WorkflowReviewPolicyFlowTest`，并删除 `WorkflowWorkerProvisioningTest`。后者与 FD-080 无关，但用户明确要求删除。
+- 删除前最后一次 Maven 命令中，365 个生产源编译成功；测试编译在 `WorkflowWorkerProvisioningTest` 的四处旧 `requestWorkflow` 调用处失败。该文件现已按用户要求删除；未重跑编译或测试。
+- 本轮不提供自动化测试通过证据。新 Reviewer 仅做静态审查，需明确报告未运行测试及其风险。旧审查事件已取消回执，但 AIW 未停止旧 Agent；后续仅接纳新事件的结果。
+- Reviewer `fd080-reviewer-no-test-20261115` 对事件 `FD-080-000004-review-requested` 作出静态审查通过，记录见 [review-20261115-no-test.md](reviews/review-20261115-no-test.md)，结果事件为 `FD-080-000005-verification-passed`。未运行测试、构建或编译；该结论不是测试通过。
+- 这是对 Work Item 4.1 的明确范围调整：移除自动化回归测试交付要求，保留此前已完成的相邻文档、稳定规范和生产代码编译记录。
+
 ## Sources
 
 - 用户确认“小任务自检、阶段集中评审、高风险独立评审，并在确认 Plan 时固定”的建议。
 - `WorkflowStepCompletedHandler` 现有逐步评审路径；`WorkflowPlanService` 既有修正授权、输入接纳和完成门禁。
 - 已归档 FD-079 的原生 Owner/问答恢复与未知资源边界。
 - [Plan 评审策略说明](../../WORKFLOW-REVIEW-POLICY.md)
+
+**Completed:** 2026-11-15
+**Disposition reason:** User authorized force archive after no-test static review passed; the Agent cannot claim the human PM receipt, and tests were waived and not run.

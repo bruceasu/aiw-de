@@ -1,7 +1,7 @@
 # FD-078: Respect blocked report verdicts and repair clarification recovery
 
-**Status:** In Progress
-**Revision:** 2
+**Status:** Closed
+**Revision:** 3
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -76,3 +76,6 @@ REPORT 的完整 JSON 对象（可带完整 Markdown JSON 围栏）如包含顶�
 
 - 用户侧对话报告计划执行受阻，并明确要求修正发现的问题。
 - 只读分析 D:/temp/data/aidev-r3.db 中该 Plan 的任务、报告、授权和问题记录。
+
+**Closed:** 2026-11-15
+**Disposition reason:** 用户决定取消，不再继续正式问答恢复逻辑的实现与审查。保留已停止计划及历史材料，不回滚任何代码。

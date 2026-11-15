@@ -1,0 +1,60 @@
+{
+  "fd_id": "FD-080",
+  "fd_revision": 2,
+  "date": "2026-11-15",
+  "status": "BLOCKED",
+  "observation": "test-compile-failed; selected tests not-run",
+  "cause": "test-source-signature-mismatch",
+  "implementation_and_test_baseline": "5293cae0d30a0f47874fb229e4b0d5dcf0d84803",
+  "authorization": "User requested to continue FD-080 testing.",
+  "scope": {
+    "test_classes": [
+      "WorkflowReviewPolicyTest",
+      "WorkflowReviewPolicyFlowTest",
+      "WorkflowReviewedCompletionTest",
+      "WorkflowReviewRecoveryTest",
+      "WorkflowCompletionRoutingTest",
+      "FactoryPlanReviewTest",
+      "NativePlanOwnersTest",
+      "NativeQuestionsTest"
+    ],
+    "planned_test_count_from_prior_record": 55,
+    "current_count_verified": false,
+    "scenarios": [
+      {"id": "FD080-SELF", "source": "Acceptance 1, 3", "status": "not-run"},
+      {"id": "FD080-MILESTONE", "source": "Acceptance 1, 4", "status": "not-run"},
+      {"id": "FD080-RISK-LOCK", "source": "Acceptance 2", "status": "not-run"},
+      {"id": "FD080-REVIEW-GATE", "source": "Acceptance 4, 5", "status": "not-run"},
+      {"id": "FD080-PLAN-COMPLETION", "source": "Acceptance 5", "status": "not-run"}
+    ]
+  },
+  "execution": {
+    "working_directory": "D:\\03_projects\\AI-tools\\aiw-de",
+    "command": "mvn -o \"-Dmaven.repo.local=D:\\\\.m2\\\\repository\" \"-Dtest=WorkflowReviewPolicyTest,WorkflowReviewPolicyFlowTest,WorkflowReviewedCompletionTest,WorkflowReviewRecoveryTest,WorkflowCompletionRoutingTest,FactoryPlanReviewTest,NativePlanOwnersTest,NativeQuestionsTest\" test",
+    "attempts": [
+      {"result": "shell-parse-error", "maven_started": false},
+      {"result": "mvn-not-found-before-environment-setup", "maven_started": false, "exit_code": 1},
+      {"result": "maven-plugin-prefix-parse-error-from-unquoted-repository-path", "maven_started": true, "tests_started": false, "exit_code": 1},
+      {"result": "test-compile-failed", "maven_started": true, "production_sources_compiled": 365, "test_sources_attempted": 85, "tests_started": false, "exit_code": 1,
+       "error": "WorkflowWorkerProvisioningTest.java lines 30, 39, 47, 55 call requestWorkflow with 4 arguments; method requires 5."}
+    ],
+    "environment_script": "C:\\green\\bin\\setup-jdk25.ps1; JDK 25.0.1 and Maven 3.9.4",
+    "network": "none; offline mode specified and Maven did not start",
+    "services_or_models": "not started",
+    "independent_tester_session": false,
+    "side_effects": "target/classes and target/test-classes updated; no tests or temporary SQLite databases executed; the user later requested deletion of the reported test source"
+  },
+  "direction_check": {
+    "result": "no-material-conflict-found",
+    "basis": "FD-080 reduces per-step reviews and matches the confirmed policy of self-checks for small work, milestone reviews, and independent review for high risk. It does not add automatic model or reasoning-strength changes."
+  },
+  "fd_status_changed": false,
+  "post_run_decision": "User waived further tests and requested deletion of WorkflowWorkerProvisioningTest plus the two FD-080-specific test classes. No rerun was performed.",
+  "removed_test_files": [
+    "src/test/java/me/asu/aidev/workflow/application/WorkflowWorkerProvisioningTest.java",
+    "src/test/java/me/asu/aidev/workflow/application/WorkflowReviewPolicyTest.java",
+    "src/test/java/me/asu/aidev/workflow/application/WorkflowReviewPolicyFlowTest.java"
+  ],
+  "old_review_event": "FD-080-000002-review-requested cancelled; cancel-event did not stop its Agent.",
+  "next_action": "Await the fresh no-test independent review result."
+}
