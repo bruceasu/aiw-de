@@ -31,8 +31,11 @@
     'Automatic starts paused; current execution continues':['已暂停后续自动启动，当前执行继续。','自動開始を一時停止しました。現在の実行は継続します。'],
     'Arrangement disabled; current execution is unchanged':['安排已停用，当前执行不受影响。','予定を無効にしました。現在の実行は変わりません。'],
     'User skipped the missed occurrence':['你已跳过本次安排。','今回の予定をスキップしました。'],
-    'Configured commands (advanced)':['受控命令（高级）','制御対象コマンド（詳細）'],
-    'Optional JSON command profiles. Requires workspace tools and a connected Linux/WSL command Worker; no Windows command permissions are granted.':['可选的 JSON 命令配置。需要工作区工具及已接入的 Linux／WSL 命令 Worker；不会授予 Windows 命令权限。','任意の JSON コマンド設定です。作業場所ツールと接続済みの Linux／WSL コマンド Worker が必要です。Windows のコマンド権限は付与しません。'],
+    'Extra command profiles (optional, advanced)':['额外命令配置（可选，高级）','追加コマンド設定（任意・詳細）'],
+    'Most tasks should leave this empty. It describes fixed command profiles for a connected Linux or WSL Worker; it does not grant command permission. Each command still needs separate authorization.':['大多数任务留空即可。这里只描述连接的 Linux／WSL Worker 可用的固定命令，不会授予命令权限；每次执行仍须单独获准。','ほとんどのタスクでは空欄のままにします。接続された Linux／WSL Worker 用の固定コマンドを記述しますが、コマンド権限は付与しません。実行には別途許可が必要です。'],
+    'Most workflows should leave this empty. It describes fixed command profiles for a connected Linux or WSL Worker; it does not grant command permission. Each command still needs separate authorization.':['大多数工作流留空即可。这里只描述连接的 Linux／WSL Worker 可用的固定命令，不会授予命令权限；每次执行仍须单独获准。','ほとんどのワークフローでは空欄のままにします。接続された Linux／WSL Worker 用の固定コマンドを記述しますが、コマンド権限は付与しません。実行には別途許可が必要です。'],
+    'Use the task instructions above for natural-language requests. This box only lists fixed command IDs and arguments; unlisted commands cannot be selected by the Worker.':['自然语言请求请写在上方任务说明中。此处仅列出固定命令 ID 和参数，Worker 不能选择列表外的命令。','自然言語の依頼は上の指示欄に記入してください。ここには固定コマンドの ID と引数のみを記述し、一覧にないコマンドは Worker が選択できません。'],
+    'Command profiles (JSON)':['命令配置（JSON）','コマンド設定（JSON）'],
     'Commands must be a JSON array.':['命令配置必须是 JSON 数组。','コマンド設定は JSON 配列で入力してください。'],
     'This task requires a connected Linux/WSL Worker with the configured command adapter; the local factory does not enable commands automatically.':['此任务需要已接入的 Linux／WSL 受控命令 Worker；工厂不会自动开启本机命令能力。','このタスクには接続済みの Linux／WSL 制御コマンド Worker が必要です。ファクトリーはローカルのコマンド権限を自動で有効にしません。'],
     'Work on files in this location':['在此工作目录处理文件','この作業場所でファイルを扱う'],
@@ -155,13 +158,40 @@
     'DISPATCHED':['已派发','割り当て済み'], 'QUESTION':['需要补充','質問'], 'ANSWER':['用户回答','ユーザーの回答'],
     'BRANCH':['分支判断','分岐判断'], 'RESULT':['步骤结果','ステップ結果'], 'STOP_REQUESTED':['已请求停止','停止要求済み'], 'RESUMED':['已继续','再開済み'],
     'LIMIT':['达到执行限制','実行上限に到達'], 'RETRY':['用户请求重试','ユーザーによる再試行'],
+    'Required Skills':['必需 Skills','必須 Skills'],
+    'Task method':['本次任务方法','今回の作業方法'],
+    'Choose any number of installed Skills this task must use. Leave empty for automatic selection.':['可多选本任务必须使用的已安装 Skill；留空表示由 Worker 自行选择。','このタスクで必須のインストール済み Skill を複数選べます。空欄なら Worker が選びます。'],
+    'Only catalogued Skills appear here. Write one-task instructions under Task sources; external downloads are not enabled.':['这里只显示平台目录中的 Skill。单次任务说明可直接写在“任务资料”中；目前没有开放外部下载。','ここにはプラットフォームのカタログにある Skill のみ表示されます。今回だけの指示は「作業資料」に記述できます。外部ダウンロードは現在無効です。'],
+    'Choose any number of installed Skills this step must use. Leave empty for automatic selection.':['可多选本步骤必须使用的已安装 Skill；留空表示由 Worker 自行选择。','このステップで必須のインストール済み Skill を複数選べます。空欄なら Worker が選びます。'],
+    'Write a task-specific method or reference':['直接写入本次工作的方法或资料','今回の作業方法・資料を直接入力'],
+    'Add written source':['添加文字资料','テキスト資料を追加'],
+    'Written method':['手写方法','記述した方法'], 'Written reference':['手写参考资料','記述した参考資料'],
+    'This text is attached to this task or saved workflow. It is not installed as a shared Skill.':['这段文字只附加到本任务或已保存的工作流中，不会安装成共享 Skill。','この内容はタスクまたは保存済みワークフローに添付されます。共有 Skill としては登録されません。'],
+    'Choose a step to delete. The final Done step cannot be removed.':['请选择要删除的步骤。最后的“完成”步骤不能删除。','削除するステップを選んでください。最後の「完了」ステップは削除できません。'],
+    'Drag a step onto the diagram to add it. Drag an output dot to another step to connect them. Double-click a step to edit it, or select it and use Edit selected step.':['将步骤拖到图中可添加；拖动右侧圆点到另一节点可连线；双击节点编辑，也可选中节点后点“编辑所选步骤”。','ステップを図にドラッグして追加します。右側の丸を別のステップへドラッグして接続し、ダブルクリックで編集できます。選択して「選択したステップを編集」も使えます。'],
+    'Delete selected step':['删除所选步骤','選択したステップを削除'], 'Edit selected step':['编辑所选步骤','選択したステップを編集'], 'Edit step':['编辑步骤','ステップを編集'],
+    'Step settings':['步骤设置','ステップ設定'], 'Done':['完成','完了'],
+    'The selected step cannot be deleted.':['所选步骤不能删除。','選択したステップは削除できません。'],
+    'Deleting this decision sends incoming routes to Done. Continue?':['删除此判断步骤后，指向它的连线会改为指向“完成”。是否继续？','この判断ステップを削除すると、ここへ向かう経路は「完了」に進みます。続行しますか？'],
+    'Connect a step to itself is not allowed.':['不能将步骤连接到自身。','ステップを自分自身に接続できません。'],
+    'Connected steps. Save the workflow to keep this change.':['已连接步骤。保存工作流后保留此修改。','ステップを接続しました。ワークフローを保存してください。'],
+    'Step added. Save the workflow to keep this change.':['已添加步骤。保存工作流后保留此修改。','ステップを添加しました。ワークフローを保存してください。'],
+    'Saved workflows are reusable. Every start creates a separate run from a frozen copy; later edits do not change existing runs.':['已保存的工作流可重复使用。每次启动都会基于固定副本创建独立执行，后续编辑不会改变已启动的执行。','保存済みワークフローは再利用できます。開始ごとに固定コピーから別の実行を作り、後の編集は既存の実行に影響しません。'],
+    'Open a saved workflow to edit it, make a separate copy, or schedule it. Starting it creates its own execution.':['打开已保存的工作流，可以编辑、复制为新工作流或设置定时安排。每次启动都会创建独立执行。','保存済みワークフローを開いて編集・複製・予定できます。開始ごとに独立した実行が作成されます。'],
+    'Information for this run':['本次执行的补充信息','今回の実行情報'],
+    'Enter facts or case details that change each time you run this workflow. Shared documents and methods belong under Task sources above.':['填写每次运行会变化的事实或个案信息。所有执行共用的文档和方法请放在上方“任务资料”中。','実行ごとに変わる事実や案件情報を入力します。共通の文書や方法は上の「作業資料」に追加してください。'],
+    'Attach notes or methods to this task or saved workflow. They are sent with each run. A written method here is not installed as a shared Skill. Up to 8 sources, 128 KiB each, 512 KiB total.':['把说明或方法附加到本任务或已保存的工作流，每次执行都会发送。这里写的方法不会安装成共享 Skill。最多 8 项，每项 128 KiB，总计 512 KiB。','メモや方法をタスクまたは保存済みワークフローに添付し、各実行で送信します。ここに書いた方法は共有 Skill として登録されません。最大8件、各128 KiB、合計512 KiBです。'],
+    'Write some text first.':['请先写入内容。','先に内容を入力してください。'],
+    'No installed Skills are available. You can write a task-specific method in Task sources.':['当前没有已安装 Skill。可以在“任务资料”中直接写入本次方法。','インストール済み Skill がありません。「作業資料」に今回の方法を直接記述できます。'],
+    'Delete step':['删除步骤','ステップを削除'],
+    'Make a copy':['复制为新工作流','新しいワークフローとして複製'],
   };
   const t = value => {
     const locale = window.aiwI18n?.locale || document.documentElement.lang;
     return words[value]?.[locale?.startsWith('zh') ? 0 : locale?.startsWith('ja') ? 1 : 2] || value;
   };
   const status = message => { $('[data-wf-status]').textContent = message; };
-  let definitions=[], teamSkills=[], teamMembers=[], taskSources=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='';
+  let definitions=[], teamSkills=[], teamMembers=[], taskSources=[], taskSkills=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='', selectedNodeKey=null;
   let scheduleSpec=null,scheduleRequest=crypto.randomUUID();
   const newRequest = () => crypto.randomUUID();
   let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest(), amendmentRequest=newRequest();
@@ -189,7 +219,7 @@
   function translate() {
     document.title=t(pageMode==='tasks'?'Simple task':'Workflows');
     $$('[data-wf-label]').forEach(e=>e.textContent=t(e.dataset.wfLabel));
-    $$('[data-wf-new], [data-wf-sample], [data-wf-refresh], [data-wf-add-node], [data-wf-save], [data-wf-start], [data-wf-control]').forEach(e=>{
+    $$('[data-wf-new], [data-wf-sample], [data-wf-refresh], [data-wf-save], [data-wf-start], [data-wf-control]').forEach(e=>{
       e.dataset.wfOriginal ||= e.textContent;e.textContent=t(e.dataset.wfOriginal);
     });
   }
@@ -199,6 +229,7 @@
     {key:'end',title:t('Done'),kind:'END',instruction:'',next:null,branches:{}}]};}
   function showEditor(definition) {
     selectedRun=null;editing=structuredClone(definition || {id:null,version:0,spec:singleSpec()});
+    selectedNodeKey=editing.spec.nodes[0]?.key||null;
     editing.spec.sources ||= [];
     $('[data-wf-commands]').value=JSON.stringify(editing.spec.commands||[],null,2);
     renderSources($('[data-wf-definition-sources]'),editing.spec.sources,values=>editing.spec.sources=values);
@@ -209,9 +240,17 @@
   }
   function field(label,input) {const wrapper=element('label',undefined,'field');wrapper.append(element('span',t(label)),input);return wrapper;}
   function renderSources(host,values,change){
-    host.replaceChildren(element('h3',t('Task sources')),element('p',t('Selected text is saved with this definition and sent to the assigned Worker. The model reads relevant pages on demand. Up to 8 files, 128 KiB each, 512 KiB total.'),'help'));
-    const kind=element('select');kind.append(new Option(t('Reference knowledge'),'knowledge'),new Option(t('Method / custom Skill'),'skill'));
+    host.replaceChildren(element('h3',t('Task sources')),element('p',t('Attach notes or methods to this task or saved workflow. They are sent with each run. A written method here is not installed as a shared Skill. Up to 8 sources, 128 KiB each, 512 KiB total.'),'help'));
+    const kind=element('select');kind.append(new Option(t('Reference knowledge'),'knowledge'),new Option(t('Task method'),'skill'));
+    const written=element('textarea');written.rows=4;written.maxLength=131072;written.placeholder=t('Write a task-specific method or reference');
     const file=element('input');file.type='file';file.multiple=true;file.accept='.txt,.md,.markdown,.json,.csv';
+    const addWritten=button('Add written source',()=>{
+      const content=written.value.trim(),bytes=new TextEncoder().encode(content).length;if(!content){status(t('Write some text first.'));return;}if(content.includes('\0')||bytes>131072){status(t('A text source must contain 1 to 128 KiB'));return;}
+      const sourceKind=kind.value,title=sourceKind==='skill'?'Written method':'Written reference';
+      const next=[...values,{kind:sourceKind,title,content}],size=next.reduce((total,item)=>total+new TextEncoder().encode(item.content).length,0);
+      if(next.length>8||size>524288){status(t('Select up to eight text sources totaling 512 KiB'));return;}
+      change(next);renderSources(host,next,change);status('');
+    });
     file.onchange=()=>act(async()=>{
       const additions=[],sourceKind=kind.value,selectedFiles=[...file.files];
       for(const source of selectedFiles){
@@ -224,8 +263,8 @@
       if(next.length>8||next.reduce((size,item)=>size+new TextEncoder().encode(item.content).length,0)>524288)throw new Error('Select up to eight text sources totaling 512 KiB');
       change(next);renderSources(host,next,change);
     });
-    host.append(field('Source type',kind),field('Add text files',file));
-    values.forEach((source,index)=>{const row=element('div',undefined,'wf-actions');row.append(element('span',source.title+' · '+t(source.kind==='skill'?'Method / custom Skill':'Reference knowledge')),button('Remove',()=>{const next=values.filter((_,i)=>i!==index);change(next);renderSources(host,next,change);}));host.append(row);});
+    host.append(field('Source type',kind),field('Write a task-specific method or reference',written),addWritten,field('Add text files',file),element('p',t('This text is attached to this task or saved workflow. It is not installed as a shared Skill.'),'help'));
+      values.forEach((source,index)=>{const row=element('div',undefined,'wf-actions');row.append(element('span',t(source.title)+' · '+t(source.kind==='skill'?'Task method':'Reference knowledge')),button('Remove',()=>{const next=values.filter((_,i)=>i!==index);change(next);renderSources(host,next,change);}));host.append(row);});
   }
   function input(value,change,max=8000) {const e=element('input');e.value=value||'';e.maxLength=max;e.oninput=()=>change(e.value);return e;}
   function target(value,change) {
@@ -234,9 +273,50 @@
     select.onchange=()=>{change(select.value||null);redraw();};return select;
   }
   const redraw=()=>graph($('[data-wf-definition-graph]'),editing.spec);
+  function renderSkillPicker(host,values,change){
+    host.replaceChildren();
+    for(const skill of new Set([...teamSkills,...values])){
+      const label=element('label',undefined,'wf-skill-option'),checkbox=element('input');
+      checkbox.type='checkbox';checkbox.checked=values.includes(skill);checkbox.disabled=!checkbox.checked&&values.length>=8;
+      checkbox.onchange=()=>{const next=checkbox.checked?[...values,skill]:values.filter(value=>value!==skill);change(next);renderSkillPicker(host,next,change);};
+      label.append(checkbox,element('span',skill));host.append(label);
+    }
+    if(!host.children.length)host.append(element('p',t('No installed Skills are available. You can write a task-specific method in Task sources.'),'help'));
+  }
+  function removeNode(key){
+    const node=editing.spec.nodes.find(item=>item.key===key);if(!node||node.kind==='END'){status(t('The selected step cannot be deleted.'));return;}
+    const branching=Object.keys(node.branches||{}).length>0,hasIncoming=editing.spec.nodes.some(item=>item.next===key||Object.values(item.branches||{}).includes(key));
+    if(branching&&hasIncoming&&!window.confirm(t('Deleting this decision sends incoming routes to Done. Continue?')))return;
+    const bypass=!branching?node.next||'end':'end';
+    editing.spec.nodes=editing.spec.nodes.filter(item=>item.key!==key);
+    for(const item of editing.spec.nodes){if(item.next===key)item.next=bypass;for(const choice of Object.keys(item.branches||{}))if(item.branches[choice]===key)item.branches[choice]=bypass;}
+    if(editing.spec.entry===key)editing.spec.entry=editing.spec.nodes[0]?.key||'end';
+    if($('[data-wf-node-dialog]').open)$('[data-wf-node-dialog]').close();
+    selectedNodeKey=editing.spec.nodes.find(item=>item.kind!=='END')?.key||'end';renderNodes();redraw();
+  }
+  function addNode(kind='TASK'){
+    const source=editing.spec.nodes.find(item=>item.key===selectedNodeKey&&item.kind!=='END')||[...editing.spec.nodes].reverse().find(item=>item.kind!=='END');
+    const endIndex=editing.spec.nodes.findIndex(item=>item.kind==='END'),key='step'+newRequest().replaceAll('-','').slice(0,8);
+    const branch=kind==='DECISION'||kind==='ASK',node={key,title:t(({TASK:'Task',DECISION:'LLM decision',ASK:'Ask user'})[kind]||'Task'),kind,instruction:'',next:branch?null:'end',branches:branch?{'Option 1':'end'}:{},assignment:'AUTO',requiredSkills:[]};
+    editing.spec.nodes.splice(endIndex<0?editing.spec.nodes.length:endIndex,0,node);
+    if(source){
+      if(source.kind==='TASK'){node.next=source.next||'end';source.next=key;}
+      else {source.branches||={};if(!Object.keys(source.branches).length&&source.next)source.branches.Continue=source.next;let choice='Option '+(Object.keys(source.branches).length+1);while(choice in source.branches)choice+=' ';source.branches[choice]=key;source.next=null;}
+    }
+    selectedNodeKey=key;renderNodes();redraw();status(t('Step added. Save the workflow to keep this change.'));
+  }
+  function connectNodes(sourceKey,targetKey){
+    if(sourceKey===targetKey){status(t('Connect a step to itself is not allowed.'));return;}
+    const source=editing.spec.nodes.find(item=>item.key===sourceKey),target=editing.spec.nodes.find(item=>item.key===targetKey);
+    if(!source||!target||source.kind==='END')return;
+    if(source.kind==='TASK'){source.next=targetKey;source.branches={};}
+    else {source.branches||={};if(!Object.keys(source.branches).length&&source.next)source.branches.Continue=source.next;let choice='Option '+(Object.keys(source.branches).length+1);while(choice in source.branches)choice+=' ';source.branches[choice]=targetKey;source.next=null;}
+    selectedNodeKey=sourceKey;renderNodes();redraw();status(t('Connected steps. Save the workflow to keep this change.'));
+  }
   function renderNodes() {
     const list=$('[data-wf-nodes]');list.replaceChildren();
     for(const node of editing.spec.nodes) {
+      if(node.key!==selectedNodeKey)continue;
       const section=element('section',undefined,'wf-node-editor');section.id='wf-node-'+node.key;
       const row=element('div',undefined,'wf-node-fields'),kind=element('select');
       for(const [value,label] of [['TASK','Task'],['DECISION','LLM decision'],['ASK','Ask user'],['END','Done']])kind.append(new Option(t(label),value));
@@ -246,7 +326,7 @@
         const instruction=element('textarea');instruction.value=node.instruction;instruction.rows=3;instruction.maxLength=8000;instruction.oninput=()=>node.instruction=instruction.value;
         section.append(field('Instruction',instruction));
         if(node.kind==='TASK'){const files=element('input');files.type='checkbox';files.checked=!!node.workspaceTools;files.onchange=()=>node.workspaceTools=files.checked;section.append(field('Work on files in this location',files));}
-        if(['TASK','DECISION'].includes(node.kind)){const select=element('select');select.dataset.i18nSkip='';memberOptions(select,node.memberId||node.assignment||'GENERAL');select.onchange=()=>Object.assign(node,assignment(select.value));section.append(field('Team member',select));const required=element('select');required.multiple=true;required.size=4;required.dataset.i18nSkip='';skillOptions(required,node.requiredSkills||[]);required.onchange=()=>node.requiredSkills=[...required.selectedOptions].map(o=>o.value);section.append(field('Required Skills (optional, up to 8)',required));}
+        if(['TASK','DECISION'].includes(node.kind)){const select=element('select');select.dataset.i18nSkip='';memberOptions(select,node.memberId||node.assignment||'GENERAL');select.onchange=()=>Object.assign(node,assignment(select.value));section.append(field('Team member',select));const skillField=element('div',undefined,'field');skillField.append(element('span',t('Required Skills')),element('p',t('Choose any number of installed Skills this step must use. Leave empty for automatic selection.'),'help'));const picker=element('div',undefined,'wf-skill-picker');renderSkillPicker(picker,node.requiredSkills||[],values=>node.requiredSkills=values);skillField.append(picker);section.append(skillField);}
         if(node.kind==='DECISION'||node.kind==='ASK') {
           for(const [choice,next] of Object.entries(node.branches)) {
             const branch=element('div',undefined,'wf-node-fields');let currentChoice=choice;
@@ -257,8 +337,10 @@
         }
         if(node.kind==='TASK'||node.kind==='ASK'&&!Object.keys(node.branches).length)section.append(field('Next step',target(node.next,v=>node.next=v)));
       }
-      section.append(button('Remove',()=>{editing.spec.nodes=editing.spec.nodes.filter(n=>n!==node);if(editing.spec.entry===node.key)editing.spec.entry=editing.spec.nodes[0]?.key;renderNodes();redraw();}));list.append(section);
+      section.append(button('Delete step',()=>removeNode(node.key)));list.append(section);
     }
+    const dialog=$('[data-wf-node-dialog]');if(dialog.open)dialog.querySelector('[data-wf-label="Edit step"]').textContent=t('Edit step');
+    const selected=editing.spec.nodes.find(item=>item.key===selectedNodeKey),deleteButton=$('[data-wf-delete-node]');deleteButton.disabled=!selected||selected.kind==='END';$('[data-wf-open-node]').disabled=!selected;
   }
   function graph(container,spec,run) {
     container.replaceChildren();if(!spec?.nodes.length)return;
@@ -274,27 +356,47 @@
     for(const n of nodes) {
       const from=positions.get(n.key),edges=n.next?[[t('Next step'),n.next]]:Object.entries(n.branches);
       edges.forEach(([choice,key],i)=>{const to=positions.get(key);if(!to)return;
-        const path=make('path',{d:`M ${from.x+110} ${from.y+60} C ${from.x+110+35*i} ${from.y+105}, ${to.x+110-35*i} ${to.y-45}, ${to.x+110} ${to.y}`,'marker-end':`url(#${marker.id})`,class:taken.has(n.key+'\n'+key)?'wf-taken':''});svg.append(path);
+        const path=make('path',{d:`M ${from.x+220} ${from.y+30} C ${from.x+270+30*i} ${from.y+30}, ${to.x-50-30*i} ${to.y+30}, ${to.x} ${to.y+30}`,'marker-end':`url(#${marker.id})`,class:taken.has(n.key+'\n'+key)?'wf-taken':''});svg.append(path);
         if(n.branches&&Object.keys(n.branches).length){const label=make('text',{x:(from.x+to.x)/2+120,y:(from.y+to.y)/2+82+i*15});label.textContent=choice;svg.append(label);}
       });
     }
     const visited=new Set(run?.events.filter(e=>['RESULT','ANSWER','COMPLETED'].includes(e.type)).map(e=>e.node)||[]);
     for(const n of nodes) {
-      const p=positions.get(n.key),group=make('g',{class:run?.current===n.key?'wf-current':visited.has(n.key)?'wf-visited':''});
+      const p=positions.get(n.key),group=make('g',{class:run?.current===n.key?'wf-current':visited.has(n.key)?'wf-visited':!run&&selectedNodeKey===n.key?'wf-selected':''});
+      if(!run)group.dataset.nodeKey=n.key;
       group.append(make('rect',{x:p.x,y:p.y,width:220,height:60,rx:n.kind==='DECISION'?22:8}));
       const kind=make('text',{x:p.x+12,y:p.y+21});kind.textContent=t(n.workspaceTools?'Workspace task':{TASK:'Task',DECISION:'LLM decision',ASK:'Ask user',END:'Done'}[n.kind]);
       const title=make('text',{x:p.x+12,y:p.y+44});title.textContent=n.title.length>22?n.title.slice(0,21)+'…':n.title;
       const tooltip=make('title',{});tooltip.textContent=n.title+'\n'+n.instruction;group.append(kind,title,tooltip);
-      if(!run){group.setAttribute('tabindex','0');group.style.cursor='pointer';const open=()=>{$('[data-wf-editor] details').open=true;document.getElementById('wf-node-'+n.key)?.scrollIntoView({block:'center',behavior:'smooth'});};group.onclick=open;group.onkeydown=e=>{if(e.key==='Enter')open();};}
+      if(!run){
+        group.setAttribute('tabindex','0');group.style.cursor='pointer';
+        const inputPort=make('circle',{cx:p.x,cy:p.y+30,r:6,class:'wf-port wf-input-port'}),outputPort=make('circle',{cx:p.x+220,cy:p.y+30,r:7,class:'wf-port wf-output-port'});
+        group.append(inputPort,outputPort);
+        group.onclick=()=>{selectedNodeKey=n.key;renderNodes();redraw();};
+        group.ondblclick=()=>openNodeEditor(n.key);
+        group.onkeydown=e=>{if(e.key==='Enter')openNodeEditor(n.key);};
+        outputPort.onpointerdown=e=>{e.preventDefault();e.stopPropagation();svg.dataset.connectSource=n.key;svg.dataset.connectX=String(e.clientX);svg.dataset.connectY=String(e.clientY);};
+      }
       svg.append(group);
+    }
+    if(!run){
+      svg.onpointerup=e=>{
+        const source=svg.dataset.connectSource;if(!source)return;delete svg.dataset.connectSource;
+        if(Math.hypot(e.clientX-Number(svg.dataset.connectX),e.clientY-Number(svg.dataset.connectY))<8)return;
+        const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-node-key]')?.dataset.nodeKey;
+        if(target)connectNodes(source,target);
+      };
+      container.ondragover=e=>{if(Array.from(e.dataTransfer.types).includes('text/plain'))e.preventDefault();};
+      container.ondrop=e=>{e.preventDefault();const kind=e.dataTransfer.getData('text/plain');if(['TASK','DECISION','ASK'].includes(kind))addNode(kind);};
     }
     container.append(svg);
   }
+  function openNodeEditor(key){selectedNodeKey=key;renderNodes();$('[data-wf-node-dialog]').showModal();redraw();}
   async function library() {
     const [data,schedules]=await Promise.all([api('?kind='+pageMode),api('/schedules')]);definitions=data.definitions;
     const list=$('[data-wf-definitions]');list.replaceChildren();
     if(!definitions.length)list.append(element('p',t('No saved workflows'),'help'));
-    definitions.forEach(d=>{const b=button('',()=>showEditor(d));b.textContent=d.spec.title;b.dataset.i18nSkip='';b.classList.add('wf-item');list.append(b,button('Schedule',()=>act(()=>arrange(d.spec))));});
+    definitions.forEach(d=>{const b=button('',()=>showEditor(d));b.textContent=d.spec.title;b.dataset.i18nSkip='';b.classList.add('wf-item');const copy=button('Make a copy',()=>showEditor({id:null,version:0,spec:structuredClone(d.spec)}));list.append(b,copy,button('Schedule',()=>act(()=>arrange(d.spec))));});
     const runs=$('[data-wf-executions]');runs.replaceChildren();
     if(!data.executions.length)runs.append(element('p',t('No executions yet'),'help'));
     data.executions.forEach(r=>{const b=button('',()=>act(()=>openRun(r.id)));b.textContent=r.title||r.id;b.dataset.i18nSkip='';b.classList.add('wf-item');b.append(element('small',t(r.state)+' · '+new Date(r.updated_ms).toLocaleString()));runs.append(b);});
@@ -337,7 +439,7 @@
     try{
       const response=await fetch('/api/r1/team-members',{credentials:'same-origin'});if(!response.ok||response.redirected)throw new Error();
       const team=await response.json();if(!Array.isArray(team.members))throw new Error();teamMembers=team.members;teamSkills=team.skills||[];
-      memberOptions($('[data-wf-member]'),$('[data-wf-member]').value);skillOptions($('[data-wf-skills]'),[...$('[data-wf-skills]').selectedOptions].map(o=>o.value));if(editing&&!$('[data-wf-editor]').hidden)renderNodes();
+      memberOptions($('[data-wf-member]'),$('[data-wf-member]').value);renderSkillPicker($('[data-wf-skills]'),taskSkills,values=>taskSkills=values);if(editing&&!$('[data-wf-editor]').hidden)renderNodes();
       $('[data-wf-member-status]').textContent='';
     }catch(_){$('[data-wf-member-status]').textContent=t('Member catalog unavailable; existing assignments are preserved.');}
     finally{teamLoading=false;}
@@ -349,7 +451,6 @@
     select.value=value||'AUTO';
   }
   function assignment(value){return {assignment:['AUTO','GENERAL'].includes(value)?value:'MEMBER',memberId:['AUTO','GENERAL'].includes(value)?null:value};}
-  function skillOptions(select,values){select.replaceChildren();for(const skill of new Set([...teamSkills,...values]))select.add(new Option(skill,skill,false,values.includes(skill)));}
   async function openRun(id) {if(id!==route.get('execution'))preparingGoal=null;selectedRun=id;signature='';panel('run');await refreshRun();}
   function controlButtons(run,task) {
     const allowed={pause:['RUNNING','WAITING_MEMBER'].includes(run.state),resume:run.state==='PAUSED',retry:run.state==='FAILED',
@@ -513,11 +614,19 @@
     ]}});
     savedSpec='';$('[data-wf-input]').value='模拟售后规则 v1：签收后30天内产品故障可建议换货，超期转人工决定；需购买记录、签收日期、故障说明；实物损坏需照片。疑似运输损伤须核实包装和签收情况。本流程不实际退款、换货或发送消息。\n\n处理日期：2026-11-12。\n购买记录：已提供，订单 DEMO-001。\n签收日期：2026-11-09。\n客户说明：通电后无法启动，希望换货。\n\n以上全部是模拟资料。';
   }
-  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,workspaceTools:form.has('workspaceTools'),commands:commands(e.target.elements.commands),...assignment($('[data-wf-member]').value),requiredSkills:[...$('[data-wf-skills]').selectedOptions].map(o=>o.value),sources:taskSources});taskRequest=newRequest();await library();await openRun(run.id);});};
+  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,workspaceTools:form.has('workspaceTools'),commands:commands(e.target.elements.commands),...assignment($('[data-wf-member]').value),requiredSkills:taskSkills,sources:taskSources});taskRequest=newRequest();await library();await openRun(run.id);});};
   $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
-  $('[data-wf-add-node]').onclick=()=>{const key='step'+newRequest().replaceAll('-','').slice(0,8);editing.spec.nodes.splice(-1,0,{key,title:t('Task'),kind:'TASK',instruction:'',next:'end',branches:{},assignment:'AUTO',requiredSkills:[]});renderNodes();redraw();};
+  $$('[data-wf-drag-kind]').forEach(control=>{
+    let dragEndedAt=0;control.onclick=()=>{if(Date.now()-dragEndedAt>400)addNode(control.dataset.wfDragKind);};
+    control.ondragstart=event=>event.dataTransfer.setData('text/plain',control.dataset.wfDragKind);
+    control.ondragend=()=>dragEndedAt=Date.now();
+  });
+  $('[data-wf-open-node]').onclick=()=>selectedNodeKey&&openNodeEditor(selectedNodeKey);
+  $('[data-wf-delete-node]').onclick=()=>removeNode(selectedNodeKey);
+  $('[data-wf-node-close]').onclick=()=> $('[data-wf-node-dialog]').close();
+  $('[data-wf-node-dialog]').addEventListener('click',event=>{if(event.target===$('[data-wf-node-dialog]'))event.target.close();});
   $('[data-wf-save]').onclick=()=>act(async()=>{editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));editing=await api('/definitions',editing);savedSpec=JSON.stringify(editing.spec);startRequest=newRequest();await library();status(t('Workflow saved'));});
   $('[data-wf-start]').onclick=()=>act(async()=>{
     editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));
@@ -546,7 +655,7 @@
     if(form.has('workspaceTools')||commands($('[data-wf-task-form]').elements.commands).length)throw new Error('Schedules currently support text workflows only');
     if(String(form.get('location')||'').trim())throw new Error('Schedules use temporary locations; attach selected text sources');
     arrange({title:instruction.slice(0,80),goal:instruction,entry:'task',nodes:[
-      {key:'task',title:'Task',kind:'TASK',instruction,next:'end',branches:{},...assignment($('[data-wf-member]').value),requiredSkills:[...$('[data-wf-skills]').selectedOptions].map(o=>o.value)},
+      {key:'task',title:'Task',kind:'TASK',instruction,next:'end',branches:{},...assignment($('[data-wf-member]').value),requiredSkills:taskSkills},
       {key:'end',title:'Done',kind:'END',instruction:'',next:null,branches:{}}],sources:taskSources,commands:[]});
   });
   $('[data-wf-schedule-form]').onsubmit=e=>{e.preventDefault();act(async()=>{

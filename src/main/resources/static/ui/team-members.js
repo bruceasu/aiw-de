@@ -6,7 +6,11 @@
   const skillHistories=new Map();
   const openSkillPanels=new Set();
   const words={
-    'Team members':['团队成员','チームメンバー'],'Create in Agent factory':['到 Agent 工厂创建','Agent ファクトリーで作成'],'Create member':['创建成员','メンバーを作成'],'Refresh members':['刷新成员','メンバーを更新'],
+    'Team members':['团队成员','チームメンバー'],'Create in Agent factory':['到 Agent 工厂创建','Agent ファクトリーで作成'],'Create member':['创建成员','メンバーを作成'],'Create team member':['创建团队成员','チームメンバーを作成'],'Refresh members':['刷新成员','メンバーを更新'],
+    'A team member is a stable specialist identity with responsibilities and Skills. A Worker is the running process that performs a task; creating a member does not start a process or grant tools.':['团队成员是长期保留的专业角色身份，包含职责和 Skills。Worker 是实际执行任务的运行进程；创建成员不会启动进程，也不会授予工具权限。','チームメンバーは役割と Skills を持つ恒久的な専門家 ID です。Worker はタスクを実行するプロセスです。メンバーを作成してもプロセス起動やツール権限付与は行いません。'],
+    'Optional model preferences':['可选的模型偏好','任意のモデル設定'],
+    'Leave defaults blank to inherit the task or Worker settings. Defaults guide model choice; they are not a cost limit.':['默认值留空时继承任务或 Worker 的设置。默认值用于选择模型，并不是费用上限。','既定値を空欄にするとタスクまたは Worker の設定を引き継ぎます。既定値はモデル選択の目安であり、費用上限ではありません。'],
+    'Allowed profiles limit which registered models this member can use when switching. They are not a token or spending budget.':['允许的模型方案限制成员切换时可用的已登记模型；它不是 Token 或费用预算。','許可プロファイルは切り替え可能な登録済みモデルを制限します。トークン数や支出の予算ではありません。'],
     'Open team':['查看团队','チームを表示'],
     'Skill versions':['Skill 版本','Skill バージョン'],'View versions':['查看版本','バージョンを見る'],'Version':['版本','バージョン'],'Reason':['修改理由','変更理由'],'Source task':['来源任务','元のタスク'],'Source Plan':['来源 Plan','元の Plan'],'Current version':['当前版本','現在のバージョン'],'Restore this version':['恢复此版本','このバージョンに戻す'],'Skill restored as a new version':['已恢复为新的 Skill 版本','新しい Skill バージョンとして復元しました'],'Built-in baseline':['内置初始版本','組み込み初期版'],'Select a Skill version':['选择 Skill 版本','Skill バージョンを選択'],'No Skills configured':['没有配置 Skill','Skill が設定されていません'],
     'Member identities survive process restarts. Processes are shared; member settings do not grant tools or permissions.':['成员身份在进程重启后仍保留。执行进程可共享；成员设定不增加工具或权限。','メンバーの識別情報はプロセス再起動後も保持されます。プロセスは共有でき、設定によって権限は増えません。'],

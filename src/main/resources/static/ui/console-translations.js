@@ -1522,6 +1522,16 @@ window.aiwConsoleCatalog = [
   ["Registration input or request format is invalid (422). The Worker ID, credential or read scope did not pass validation. If using a generated credential with an empty read scope, confirm that the server has loaded the latest version.", "登记输入或请求格式不符合要求（422）。Worker ID、凭证或读取范围未通过校验；若使用生成的凭证且读取范围留空，请确认服务端已加载最新版本。", "登録入力またはリクエスト形式が無効です（422）。Worker ID、認証情報、読み取り範囲のいずれかが検証に失敗しました。生成した認証情報を使い、読み取り範囲が空の場合は、サーバーが最新バージョンを読み込んでいることを確認してください。"],
   ["The current sign-in identity, owner or operation permission does not match (403). Verify the identity binding.", "当前登录身份、所有者或操作权限不匹配（403）。请核对身份绑定。", "現在のログイン ID、所有者、または操作権限が一致しません（403）。ID の紐付けを確認してください。"],
   ["The state or version changed (409). Refresh the status or check the original request receipt.", "状态或版本已变化（409）。请刷新状态或查看原请求回执。", "状態またはバージョンが変更されました（409）。状態を更新するか、元のリクエストの受付記録を確認してください。"],
+  ["Professional task preparation", "专业任务准备", "専門タスクの準備"],
+  ["Manually prepare a specialist software task or diagnose why preparation is blocked.", "手动准备专业软件任务，或排查任务准备受阻的原因。", "専門的なソフトウェア作業を手動で準備するか、準備が止まった理由を調べます。"],
+  ["专业软件工作 · 可选入口", "Software work · optional entry", "専門ソフトウェア作業 · 任意の入口"],
+  ["手动准备软件任务", "Prepare a software task manually", "ソフトウェア作業を手動で準備"],
+  ["仅在你要自己指定已确认的 Plan、仓库、工作方法和模型，或排查准备失败时使用。平时直接告诉秘书即可；简单文字任务不需要打开此页。", "Use this page only when you want to choose a confirmed Plan, repository, method, and model yourself, or diagnose a preparation failure. Usually, just tell the Secretary; simple text tasks do not need this page.", "確認済みの Plan、リポジトリ、作業方法、モデルを自分で選ぶ場合、または準備失敗を調べる場合に使います。通常は秘書に依頼してください。簡単なテキスト作業ではこのページは不要です。"],
+  ["配置 Worker 的执行方式", "Configure Worker execution", "Worker の実行方法を設定"],
+  ["Create the team and configure shared execution settings.", "创建团队成员并配置共用的执行设置。", "チームを作成し、共通の実行設定を行います。"],
+  ["Two parts of the team", "团队中的两种角色", "チームを構成する二つの要素"],
+  ["Team members are persistent specialist identities. Workers are the running processes assigned to perform their work. Creating a member saves its role and Skills; it does not start a Worker.", "团队成员是长期保留的专业角色身份；Worker 是接手工作的运行进程。创建成员会保存其职责和 Skills，但不会启动 Worker。", "チームメンバーは継続して使う専門家 ID です。Worker は作業を担当する実行プロセスです。メンバーを作成すると役割と Skills が保存されますが、Worker は起動しません。"],
+  ["Choose how new Workers run and which saved model connection they use. These settings affect new work only; existing tasks keep their original connection.", "选择新 Worker 的运行方式和使用的已保存模型连接。设置只影响新工作；现有任务继续使用原连接。", "新しい Worker の実行方式と保存済みモデル接続を選びます。この設定は新しい作業にのみ適用され、既存タスクは元の接続を維持します。"],
 ];
 window.aiwConsolePatterns = [
   [/^读取时间：(.+) · (\d+) 条（最多 (\d+) 条）$/, 'Read at: $1 · $2 records (up to $3)', '取得日時：$1 · $2 件（最大 $3 件）'],

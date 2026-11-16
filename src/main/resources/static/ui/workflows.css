@@ -9,3 +9,18 @@
 .wf-instructions{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;font:inherit}
 .wf-node-editor{padding:16px 0;border-bottom:1px solid var(--border,rgba(127,127,127,.2))}.wf-node-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wf-event{border-left:2px solid var(--border,#c4c9d3);padding:0 0 16px 14px;margin-left:6px}.wf-event pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;margin:8px 0;max-height:320px;overflow:auto}.wf-event summary{cursor:pointer}.wf-content [hidden]{display:none!important}
 @media(max-width:900px){.wf-layout{grid-template-columns:1fr}.wf-library{position:static}.wf-node-fields{grid-template-columns:1fr}}
+.wf-content .wf-editor-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:18px 0 10px;padding:14px 16px;border:1px solid var(--line);border-radius:6px;background:color-mix(in srgb,var(--panel) 78%,var(--nav))}
+.wf-editor-toolbar .help{margin:0;max-width:76ch}
+.wf-node-palette{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.wf-node-palette button{cursor:grab}
+.wf-skill-picker{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.wf-skill-option{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:5px;background:var(--panel);cursor:pointer}
+.wf-skill-option:has(input:checked){border-color:var(--accent);color:var(--accent)}
+.wf-graph svg{touch-action:none}
+.wf-graph .wf-selected rect{stroke:var(--accent);stroke-width:3}
+.wf-graph .wf-port{fill:var(--panel);stroke:var(--accent);stroke-width:2;cursor:crosshair}
+.wf-graph .wf-port:hover{fill:var(--accent)}
+.wf-node-dialog{width:min(760px,calc(100vw - 28px));max-height:min(86vh,900px);overflow:auto}
+.wf-node-dialog .workspace-confirm__body{max-height:calc(86vh - 140px);overflow:auto}
+.wf-content .command-json{min-height:120px;font:12px/1.55 var(--font-mono,Consolas,monospace)}
+@media(max-width:700px){.wf-content .wf-editor-toolbar{align-items:flex-start;flex-direction:column}.wf-node-dialog .workspace-confirm__body{max-height:calc(82vh - 140px)}}

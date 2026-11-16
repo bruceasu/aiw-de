@@ -2,12 +2,12 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" th:content="${csrfToken}"><meta name="configuration-owner" th:content="${ownerId}">
-<title>专业 Worker 任务配置（高级） · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/configurations.css?v=clear-settings-2">
+<title>Professional task preparation · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/configurations.css?v=clear-settings-2">
 <script src="/ui/configurations.js?v=clear-settings-2" defer></script><script src="/ui/configuration-methods.js?v=human-forms-1" defer></script></head>
 <body><div class="app configuration-page"><nav th:replace="~{ui/fragments :: nav('configurations')}"></nav><main class="main">
-<header th:replace="~{ui/fragments :: topbar('专业 Worker 任务配置（高级）','手动配置专业软件任务，选择工作方法与模型，检查 Worker 执行条件。')}"></header>
+<header th:replace="~{ui/fragments :: topbar('Professional task preparation','Manually prepare a specialist software task or diagnose why preparation is blocked.')}"></header>
 <div class="content configuration-content">
-<section class="configuration-intro"><div><span class="configuration-eyebrow">软件工作 · 准备与配置</span><h2>手动准备任务或排查准备失败</h2><p>此页用于手动选择计划、仓库、工作方法和执行模型，检查条件并创建一项专业任务；也可查看之前的准备记录。日常交给Agent的工作由Agent自动准备，无需在这里重复提交。</p></div><a class="btn ghost" href="/ui/agent-factory">设置执行模型与自动 Worker</a></section>
+<section class="configuration-intro"><div><span class="configuration-eyebrow">专业软件工作 · 可选入口</span><h2>手动准备软件任务</h2><p>仅在你要自己指定已确认的 Plan、仓库、工作方法和模型，或排查准备失败时使用。平时直接告诉秘书即可；简单文字任务不需要打开此页。</p></div><a class="btn ghost" href="/ui/agent-factory">配置 Worker 的执行方式</a></section>
 <ol class="configuration-steps"><li><span>1</span><div><strong>选计划</strong><small>使用已确认的执行范围</small></div></li><li><span>2</span><div><strong>描述任务</strong><small>选择方法和已批准模型</small></div></li><li><span>3</span><div><strong>检查准备结果</strong><small>创建任务或查看需要补齐的条件</small></div></li></ol>
 <p th:if="${ownerId.isEmpty()}" class="callout warn-callout">当前账号尚无任务执行身份。请先在<a href="/ui/agents">Agent 管理</a>完成配对后返回这里。</p>
 <p id="configuration-result" class="configuration-feedback" role="status" aria-live="polite" hidden></p>

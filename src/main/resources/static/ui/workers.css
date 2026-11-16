@@ -7,6 +7,14 @@
 .workers-person{display:flex;align-items:center;gap:10px}.workers-mark{display:grid;place-items:center;min-width:42px;height:42px;border:1px solid var(--line);border-radius:50%;color:var(--accent);font-size:12px}
 .team-card{padding:16px 0;border-bottom:1px solid var(--line)}.team-card>p{white-space:pre-wrap;overflow-wrap:anywhere}.team-card>a{display:block;margin:7px 0}.team-card h3{flex:1;margin:0}.team-avatar{display:grid;place-items:center;min-width:44px;height:44px;border:1px solid var(--accent);color:var(--accent)}.team-avatar[data-shape="0"]{border-radius:50%}.team-avatar[data-shape="1"]{border-radius:10px}.team-avatar[data-shape="2"]{border-radius:50% 10px}.team-avatar[data-shape="3"]{border-radius:10px 50%}
 .team-members [hidden]{display:none!important}.team-members form{margin:20px 0}.team-members select[multiple]{min-height:140px}
+.factory-page .content{display:grid;gap:24px;padding-top:30px;padding-bottom:60px}
+.factory-page .content>.card,.factory-page .content>.team-members{margin:0;padding:26px 28px}
+.factory-page .factory-intro{border-left:3px solid var(--accent);background:linear-gradient(110deg,color-mix(in srgb,var(--accent) 8%,var(--panel)),var(--panel) 72%)}
+.factory-page .factory-intro h2{margin:0 0 8px}.factory-page .factory-intro p{max-width:90ch;margin:0;color:var(--muted);line-height:1.75}
+.team-model-options{margin:14px 0;padding:14px 16px;border:1px solid var(--line);border-radius:5px;background:color-mix(in srgb,var(--panel) 84%,var(--nav))}
+.team-model-options>summary{cursor:pointer;font-weight:650}.team-model-options>.help{max-width:78ch;line-height:1.7}
+.team-model-options .field{margin:14px 0}
+@media(max-width:720px){.factory-page .content>.card,.factory-page .content>.team-members{padding:20px 18px}}
 .team-skill-panel{margin:12px 0}.team-skill-panel>summary,.team-skill-history>summary{cursor:pointer;font-weight:600}.team-skill-history{margin:10px 0;padding:10px}.team-skill-diff{max-height:32rem;overflow:auto;white-space:pre-wrap;font-family:var(--font-mono,monospace);font-size:.85rem}
 [data-workers-list] small{display:block;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}[data-workers-list] td{vertical-align:top}
 [data-workers-list] .pill{display:inline-block;margin:3px}.workers-detail .workers-links{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
