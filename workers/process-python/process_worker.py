@@ -121,7 +121,7 @@ class WorkerConfig:
             capabilities.update(guarded_capabilities(runtime, profile, str(Path(os.getenv("AIW_PROCESS_SKILLS_ROOT", Path(__file__).with_name("skills"))).resolve())))
             from formal_questions import storage_capability
             capabilities.update({"questions-v1", "workspace-files-v1", storage_capability()})
-        elif "execution-guard-v1" in capabilities or "guarded-command-v1" in capabilities or "guarded-command-linux-v1" in capabilities or "questions-v1" in capabilities or any(c.startswith("checkpoint-store:") for c in capabilities):
+        elif "execution-guard-v1" in capabilities or "workflow-skill-bundles-v1" in capabilities or "task-shell-v1" in capabilities or "guarded-command-v1" in capabilities or "guarded-command-linux-v1" in capabilities or "questions-v1" in capabilities or any(c.startswith("checkpoint-store:") for c in capabilities):
             raise ValueError("GUARDED_CAPABILITIES_REQUIRE_VERIFIED_ADAPTER")
         if _bool_env("AIW_DYNAMIC_CONFIG", False):
             if not _bool_env("AIW_EXECUTION_GUARD", False): raise ValueError("DYNAMIC_CONFIGURATION_REQUIRES_GUARDED_ADAPTER")
@@ -553,7 +553,8 @@ class ProcessSlot:
                     from execution_guard import GuardBroker
                     broker = GuardBroker(self.client, task, self.config.worker_id, attempt)
                     broker.writable = profile.writable
-                    if skill_reader: skill_reader.verify_guard(broker.context)
+                    if skill_reader:
+                        skill_reader.verify_guard(broker.context, exact="workflow-skill-bundles-v1" in attempt.required_capabilities)
                     if prepared:
                         prepared.verify_context(broker.context)
                         broker.allowed_tools = set(prepared.reference["toolRequirements"])
@@ -757,6 +758,8 @@ class ProcessSlot:
             status = "lease-lost" if lost else "report-unknown" if reporting else "failed"
             if attempt:
                 attempt.cancel("lease-lost" if lost else attempt.reason or "execution-failed")
+                if broker and not broker.shell_idle.wait(7):
+                    attempt.resource_uncertain = True
                 if str(error) == "NATIVE_ADAPTER_CHANGED_DRAIN_REQUIRED":
                     self.stop_event.set()
                 if native:

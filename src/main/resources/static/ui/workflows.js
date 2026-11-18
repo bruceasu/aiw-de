@@ -31,6 +31,8 @@
     'Automatic starts paused; current execution continues':['已暂停后续自动启动，当前执行继续。','自動開始を一時停止しました。現在の実行は継続します。'],
     'Arrangement disabled; current execution is unchanged':['安排已停用，当前执行不受影响。','予定を無効にしました。現在の実行は変わりません。'],
     'User skipped the missed occurrence':['你已跳过本次安排。','今回の予定をスキップしました。'],
+    'Allow autonomous project commands':['??????????','????????????????'],
+    'Use only with a trusted Worker account. Commands run with that account?s file and network access.':['???????? Worker ?????????????????????','????? Worker ???????????????????????????????????????????????????????'],
     'Extra command profiles (optional, advanced)':['额外命令配置（可选，高级）','追加コマンド設定（任意・詳細）'],
     'Most tasks should leave this empty. It describes fixed command profiles for a connected Linux or WSL Worker; it does not grant command permission. Each command still needs separate authorization.':['大多数任务留空即可。这里只描述连接的 Linux／WSL Worker 可用的固定命令，不会授予命令权限；每次执行仍须单独获准。','ほとんどのタスクでは空欄のままにします。接続された Linux／WSL Worker 用の固定コマンドを記述しますが、コマンド権限は付与しません。実行には別途許可が必要です。'],
     'Most workflows should leave this empty. It describes fixed command profiles for a connected Linux or WSL Worker; it does not grant command permission. Each command still needs separate authorization.':['大多数工作流留空即可。这里只描述连接的 Linux／WSL Worker 可用的固定命令，不会授予命令权限；每次执行仍须单独获准。','ほとんどのワークフローでは空欄のままにします。接続された Linux／WSL Worker 用の固定コマンドを記述しますが、コマンド権限は付与しません。実行には別途許可が必要です。'],
@@ -232,6 +234,7 @@
     selectedNodeKey=editing.spec.nodes[0]?.key||null;
     editing.spec.sources ||= [];
     $('[data-wf-commands]').value=JSON.stringify(editing.spec.commands||[],null,2);
+    $('[data-wf-shell]').checked=Boolean(editing.spec.autonomousShell);
     renderSources($('[data-wf-definition-sources]'),editing.spec.sources,values=>editing.spec.sources=values);
     for(const n of editing.spec.nodes)if(['TASK','DECISION'].includes(n.kind))n.assignment ||= n.memberId?'MEMBER':definition?.id?'GENERAL':'AUTO';
     $('[data-wf-title]').value=editing.spec.title;$('[data-wf-goal]').value=editing.spec.goal;
@@ -614,7 +617,7 @@
     ]}});
     savedSpec='';$('[data-wf-input]').value='模拟售后规则 v1：签收后30天内产品故障可建议换货，超期转人工决定；需购买记录、签收日期、故障说明；实物损坏需照片。疑似运输损伤须核实包装和签收情况。本流程不实际退款、换货或发送消息。\n\n处理日期：2026-11-12。\n购买记录：已提供，订单 DEMO-001。\n签收日期：2026-11-09。\n客户说明：通电后无法启动，希望换货。\n\n以上全部是模拟资料。';
   }
-  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,workspaceTools:form.has('workspaceTools'),commands:commands(e.target.elements.commands),...assignment($('[data-wf-member]').value),requiredSkills:taskSkills,sources:taskSources});taskRequest=newRequest();await library();await openRun(run.id);});};
+  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,workspaceTools:form.has('workspaceTools'),autonomousShell:form.has('autonomousShell'),commands:commands(e.target.elements.commands),...assignment($('[data-wf-member]').value),requiredSkills:taskSkills,sources:taskSources});taskRequest=newRequest();await library();await openRun(run.id);});};
   $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
@@ -627,9 +630,9 @@
   $('[data-wf-delete-node]').onclick=()=>removeNode(selectedNodeKey);
   $('[data-wf-node-close]').onclick=()=> $('[data-wf-node-dialog]').close();
   $('[data-wf-node-dialog]').addEventListener('click',event=>{if(event.target===$('[data-wf-node-dialog]'))event.target.close();});
-  $('[data-wf-save]').onclick=()=>act(async()=>{editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));editing=await api('/definitions',editing);savedSpec=JSON.stringify(editing.spec);startRequest=newRequest();await library();status(t('Workflow saved'));});
+  $('[data-wf-save]').onclick=()=>act(async()=>{editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));editing.spec.autonomousShell=$('[data-wf-shell]').checked;editing=await api('/definitions',editing);savedSpec=JSON.stringify(editing.spec);startRequest=newRequest();await library();status(t('Workflow saved'));});
   $('[data-wf-start]').onclick=()=>act(async()=>{
-    editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));
+    editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));editing.spec.autonomousShell=$('[data-wf-shell]').checked;
     if(!editing.id||savedSpec!==JSON.stringify(editing.spec))throw new Error(t('Save changes before starting'));
     const run=await api('/start',{requestId:startRequest,definitionId:editing.id,version:editing.version,input:$('[data-wf-input]').value,location:$('[data-wf-location]').value||null});
     startRequest=newRequest();await library();await openRun(run.id);
@@ -652,7 +655,7 @@
   $('[data-wf-schedule-task]').onclick=()=>act(()=>{
     const form=new FormData($('[data-wf-task-form]')),instruction=String(form.get('instruction')||'').trim();
     if(!instruction)throw new Error('Schedule work must have an instruction');
-    if(form.has('workspaceTools')||commands($('[data-wf-task-form]').elements.commands).length)throw new Error('Schedules currently support text workflows only');
+    if(form.has('workspaceTools')||form.has('autonomousShell')||commands($('[data-wf-task-form]').elements.commands).length)throw new Error('Schedules currently support text workflows only');
     if(String(form.get('location')||'').trim())throw new Error('Schedules use temporary locations; attach selected text sources');
     arrange({title:instruction.slice(0,80),goal:instruction,entry:'task',nodes:[
       {key:'task',title:'Task',kind:'TASK',instruction,next:'end',branches:{},...assignment($('[data-wf-member]').value),requiredSkills:taskSkills},

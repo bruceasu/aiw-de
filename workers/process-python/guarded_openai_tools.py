@@ -12,7 +12,7 @@ def tools(broker):
         unavailable.update({"write","mkdir","delete","restore","git_commit","git_integrate","run_command"})
     if not broker.context.get("originalPolicy", {}).get("commands"):
         unavailable.add("run_command")
-    for definition in definitions():
+    for definition in definitions(broker):
         if definition["name"] in unavailable: continue
         async def invoke(context, arguments, name=definition["name"]):
             if not isinstance(arguments, str): raise RuntimeError("SDK_TOOL_ARGUMENTS_UNSUPPORTED")

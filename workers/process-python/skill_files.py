@@ -45,14 +45,16 @@ def _path(path):
 def load(task, profile, prepared=None):
     payload = task.get("skillFiles")
     if payload is None:
-        if CAPABILITY in task.get("requiredCapabilities", []): _fail()
+        if {CAPABILITY, "workflow-skill-bundles-v1"} & set(task.get("requiredCapabilities", [])): _fail()
         return None  # Existing standalone/local-Profile contract only.
     if not isinstance(payload, dict) or set(payload) != {"protocol", "taskId", "attemptId", "references", "packages"}: _fail()
     if payload["protocol"] != PROTOCOL or payload["taskId"] != task["taskId"] or payload["attemptId"] != task["attemptId"]: _fail()
     refs, packages = payload["references"], payload["packages"]
     if not isinstance(refs, list) or not isinstance(packages, list) or not 1 <= len(packages) <= 16 or len(refs) != len(packages): _fail()
     expected = set((*profile.protocol_skills, profile.primary_skill))
-    if len({r.get("ref") for r in refs}) != len(refs) or {r.get("ref") for r in refs} != expected: _fail()
+    actual = {r.get("ref") for r in refs}
+    extra_allowed = "workflow-skill-bundles-v1" in task.get("requiredCapabilities", [])
+    if len(actual) != len(refs) or not expected.issubset(actual) or (not extra_allowed and actual != expected): _fail()
     frozen, entries, evidence = {}, {}, []
     total = 0
     for ref, package in zip(refs, packages):
@@ -104,14 +106,15 @@ def load(task, profile, prepared=None):
                      "The description is not its full input/output contract. Do not substitute another version.")
         entries[ref["ref"]] = f"=== Skill {ref['ref']} @ {ref['version']} ===\n{entry}\nDeclared files:\n" + "\n".join(f["path"] for f in files)
         evidence.append((ref["ref"], ref["manifestDigest"], size, ref["assetDigest"]))
-    return Reader(frozen, entries, evidence)
+    return Reader(frozen, entries, evidence, {r["ref"]: (r["version"], r["assetDigest"]) for r in refs})
 
 
 class Reader:
-    def __init__(self, files, entries, evidence):
+    def __init__(self, files, entries, evidence, assets=None):
         self._files = MappingProxyType(files)
         self._entries = MappingProxyType(entries)
         self.evidence = tuple(evidence)
+        self._assets = assets
 
     def prompt(self):
         from run_contract import register_material
@@ -127,8 +130,9 @@ class Reader:
         start = min(offset, len(raw)); end = min(start + limit, len(raw))
         return {"encoding": "base64", "base64": base64.b64encode(raw[start:end]).decode(), "sha256": hashlib.sha256(raw).hexdigest(), "size": len(raw), "offset": start, "nextOffset": end, "complete": end == len(raw)}
 
-    def verify_guard(self, context):
+    def verify_guard(self, context, *, exact=False):
         refs = {r["id"]: (r["revision"], r["sha256"]) for r in context["snapshot"]["references"] if r["kind"] == "skill"}
+        if exact and self._assets != refs: _fail()
         for name, _digest, _size, asset_digest in self.evidence:
             if name in refs and refs[name][1] != asset_digest: _fail()
 

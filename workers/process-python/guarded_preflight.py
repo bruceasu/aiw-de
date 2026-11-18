@@ -82,7 +82,7 @@ def protocol_capability(model=False, process_spawn=False):
 
 def capabilities(runtime, profile, skills_root):
     if not os.environ.get("AIW_WORKER_TOKEN", "").strip(): raise RuntimeError("GUARDED_MACHINE_TOKEN_REQUIRED")
-    result = {"execution-guard-v1"}
+    result = {"execution-guard-v1", "workflow-skill-bundles-v1"}
     from execution_guard import digest
     from worker_runtime import skill_package
     result.add("fixed-profile:" + digest(asdict(profile)))
@@ -97,6 +97,9 @@ def capabilities(runtime, profile, skills_root):
     if os.environ.get("AIW_DYNAMIC_CONFIG", "").lower() != "true":
         for name in set((*profile.protocol_skills, profile.primary_skill)):
             result.add("fixed-skill:" + name + ":" + hashlib.sha256(skill_package(skills_root, name).encode()).hexdigest())
+    from task_shell import shell_executable
+    if shell_executable() is not None:
+        result.add("task-shell-v1")
     if runtime == "openai-agents":
         from agents import FunctionTool, Runner
         if not callable(getattr(Runner, "run_streamed", None)) or not callable(FunctionTool): raise RuntimeError("OPENAI_AGENTS_REQUIRED_APIS_UNAVAILABLE")

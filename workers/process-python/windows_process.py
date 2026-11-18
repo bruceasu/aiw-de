@@ -104,7 +104,7 @@ class WindowsJob:
             self.close()
             raise RuntimeError("WINDOWS_JOB_LIMIT_FAILED")
 
-    def start(self, argv, cwd, environment):
+    def start(self, argv, cwd, environment, *, merge_stderr=False):
         from worker_runtime import child_environment
         environment = child_environment(environment)
         # The desktop/service may run under pythonw.exe. Use the matching
@@ -120,7 +120,7 @@ class WindowsJob:
         bootstrap = "import os,sys; gate=os.read(0,1); sys.exit(1) if gate!=b'G' else os.execv(sys.argv[1],sys.argv[1:])"
         child = subprocess.Popen([str(interpreter), "-I", "-c", bootstrap, *argv], cwd=cwd,
             env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
+            stderr=subprocess.STDOUT if merge_stderr else subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
         try:
             if not self.api.AssignProcessToJobObject(self.handle, wintypes.HANDLE(int(child._handle))):
                 raise RuntimeError("WINDOWS_JOB_ASSIGN_FAILED")

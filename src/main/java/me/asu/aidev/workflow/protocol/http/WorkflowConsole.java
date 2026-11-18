@@ -16,7 +16,7 @@ public class WorkflowConsole {
     public WorkflowConsole(WorkflowRuns workflows,WebConsoleSecurityService security) {this.workflows=workflows;this.security=security;}
     public record Save(String id,long version,WorkflowRuns.Spec spec) {}
     public record Start(String requestId,String definitionId,long version,String input,String location) {}
-    public record Simple(String requestId,String instruction,String location,String memberId,WorkflowRuns.Assignment assignment,java.util.List<String> requiredSkills,java.util.List<WorkflowRuns.Material> sources,boolean workspaceTools,java.util.List<me.asu.aidev.execution.guard.GuardContract.Command> commands) {}
+    public record Simple(String requestId,String instruction,String location,String memberId,WorkflowRuns.Assignment assignment,java.util.List<String> requiredSkills,java.util.List<WorkflowRuns.Material> sources,boolean workspaceTools,java.util.List<me.asu.aidev.execution.guard.GuardContract.Command> commands,boolean autonomousShell) {}
     public record Control(long version,String action,String answer) {}
     public record Supplement(String requestId,String text,String mode) {}
     public record Amendment(long version,String requestId,String node,List<String> nodes,String change,String mode) {
@@ -57,7 +57,7 @@ public class WorkflowConsole {
         security.requireOperator(session);return workflows.start(input.requestId(),input.definitionId(),input.version(),input.input(),input.location());
     }
     @PostMapping("/api/r1/workflows/tasks") @ResponseBody public Object simple(@RequestBody Simple input,HttpSession session) {
-        security.requireOperator(session);return workflows.simple(input.requestId(),input.instruction(),input.location(),input.memberId(),input.assignment(),input.requiredSkills(),input.sources(),input.workspaceTools(),input.commands());
+        security.requireOperator(session);return workflows.simple(input.requestId(),input.instruction(),input.location(),input.memberId(),input.assignment(),input.requiredSkills(),input.sources(),input.workspaceTools(),input.commands(),input.autonomousShell());
     }
     @GetMapping("/api/r1/workflows/executions/{id}") @ResponseBody public Object view(@PathVariable String id,HttpSession session) {
         security.requireOperator(session);return workflows.view(id);

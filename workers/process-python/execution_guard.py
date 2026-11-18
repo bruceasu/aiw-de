@@ -141,6 +141,8 @@ class GuardBroker:
         self.writable = False
         self.usage = {"inputTokens": 0, "cachedTokens": 0, "outputTokens": 0}
         self.commands_run = []
+        self.shell_idle = threading.Event()
+        self.shell_idle.set()
         self.created_paths = set()
         self.file_changes = {}
         self._active = set()
@@ -217,7 +219,7 @@ class GuardBroker:
                 result = action()
                 if tool == "WRITE" and self._file_action(arguments) == "write" and arguments.get("expectedDigest") == "ABSENT":
                     self.created_paths.add(resource)
-                self.finish(operation, "SUCCEEDED", result)
+                self.finish(operation, "FAILED" if tool == "SHELL" and result["status"] != "completed" else "SUCCEEDED", result)
                 return result
             except Exception as error:
                 # A write/process could already have happened. Keep the workspace and task occupied.
@@ -625,6 +627,12 @@ class GuardBroker:
                     channel.leave()
         return self._invoke(name, args, call_id)
 
+    def shell_enabled(self):
+        return (self.writable and "task-shell-v1" in self.attempt.required_capabilities
+                and (self.allowed_tools is None or "SHELL" in self.allowed_tools)
+                and all(any(rule["tool"] == "SHELL" for rule in self.context.get(policy, {}).get("rules", []))
+                        for policy in ("originalPolicy", "currentPolicy")))
+
     def _invoke(self, name, args, call_id=None):
         if self.root is None: raise RuntimeError("GUARD_WORKSPACE_NOT_ATTACHED")
         if not isinstance(args, dict): raise RuntimeError("GUARD_TOOL_ARGUMENTS_INVALID")
@@ -634,15 +642,26 @@ class GuardBroker:
             "mkdir": ({"path"}, "WRITE"), "delete": ({"path", "expectedDigest"}, "WRITE"),
             "restore": ({"path", "trashId"}, "WRITE"),
             "git_status": (set(), "GIT"), "git_diff": (set(), "GIT"),
+            "run_shell": ({"command"}, "SHELL"),
             "git_commit": ({"message", "paths"}, "GIT"), "run_command": ({"commandId"}, "COMMAND"),
             "git_integrate": ({"sourceTaskId"}, "GIT"),
             "ask_question": ({"question", "context", "options", "answerRequirements"}, "QUESTION"),
         }
         if name not in schemas or set(args) != schemas[name][0]: raise RuntimeError("GUARD_TOOL_ARGUMENTS_INVALID")
         tool = schemas[name][1]
+        if tool == "SHELL":
+            command = args["command"]
+            if not self.shell_enabled() or not isinstance(command, str) or not command.strip() or len(command) > 4096 or "\0" in command:
+                raise RuntimeError("GUARD_SHELL_DENIED_OR_INVALID")
         if (tool in {"WRITE", "COMMAND"} or name in {"git_commit", "git_integrate"}) and not self.writable: raise RuntimeError("GUARD_ROLE_IS_READ_ONLY")
         resource = args.get("path", args.get("commandId", "."))
-        return self.operate(tool, resource, args, lambda: self._execute(name, args), call_id)
+        if tool != "SHELL":
+            return self.operate(tool, resource, args, lambda: self._execute(name, args), call_id)
+        self.shell_idle.clear()
+        try:
+            return self.operate(tool, resource, args, lambda: self._execute(name, args), call_id)
+        finally:
+            self.shell_idle.set()
 
     def _execute(self, name, args):
         if name == "ask_question":
@@ -660,6 +679,12 @@ class GuardBroker:
                     raise RuntimeError("GUARD_UPSTREAM_RESULT_NOT_FIXED")
                 return self.git.integrate(source["resultRevision"])
             return self.git.commit(args["paths"], args["message"])
+        if name == "run_shell":
+            from task_shell import run_shell
+            result = run_shell(self.root, args["command"], self.attempt)
+            self.commands_run.append({"command": args["command"], "status": result["status"], "exitCode": result["exitCode"],
+                                      "outputDigest": digest(result), "outputTruncated": result["outputTruncated"]})
+            return result
         if name == "run_command":
             from guarded_command import run_command
             commands = self.context["originalPolicy"]["commands"]

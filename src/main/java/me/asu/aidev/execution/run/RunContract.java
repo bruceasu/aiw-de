@@ -44,7 +44,7 @@ public final class RunContract {
             Map.entry("purpose",Set.of("task","host-action","history-summary")),
             Map.entry("status",Set.of("running","pending","authorized","serial","parallel","correctable","valid","validated","completed","error","succeeded","failed","unknown","possible")),
             Map.entry("phase",Set.of("host-action","candidate")),
-            Map.entry("tool",Set.of("MODEL","READ","SEARCH","WRITE","GIT","COMMAND","QUESTION")));
+            Map.entry("tool",Set.of("MODEL","READ","SEARCH","WRITE","GIT","COMMAND","SHELL","QUESTION")));
         for(var e:payload.entrySet()) {
             String key=e.getKey();Object value=e.getValue();
             if(numbers.contains(key)&&(value instanceof Integer||value instanceof Long)&&((Number)value).longValue()>=0&&((Number)value).longValue()<=Long.MAX_VALUE/2)continue;

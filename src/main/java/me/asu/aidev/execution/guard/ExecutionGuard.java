@@ -262,6 +262,7 @@ public class ExecutionGuard {
                 && !uncertain(task,input.lease().attemptId()) && unchanged(task,c)
                 && permits(original,input,repo.decode(String.valueOf(c.get("input_json")),Snapshot.class).task().baseRevision())
                 && permits(current,input,repo.decode(String.valueOf(c.get("input_json")),Snapshot.class).task().baseRevision());
+        if(input.tool()==Tool.SHELL) allowed=allowed && tasks.find(new TaskId(task)).orElseThrow().requiredCapabilities().contains(GuardContract.SHELL_CAPABILITY);
         if(input.tool()==Tool.COMMAND) allowed=allowed && original.commands().stream().anyMatch(cmd->cmd.id().equals(input.resource()) && current.commands().contains(cmd));
         if(repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_meter WHERE attempt_id=? AND settled=FALSE",Long.class,input.lease().attemptId())!=1) allowed=false;
         repo.jdbc().update("""

@@ -51,7 +51,7 @@ def _run_actions(request, on_session, conversation=None):
     bind(request, "host-action")
     broker = request.broker
     observations = []
-    schemas = definitions()
+    schemas = definitions(broker)
     protocol = os.environ.get("AIW_HOST_ACTION_PROTOCOL", "v1")
     if protocol not in {"v1", "v2"}:
         raise RuntimeError("HOST_ACTION_PROTOCOL_UNSUPPORTED")

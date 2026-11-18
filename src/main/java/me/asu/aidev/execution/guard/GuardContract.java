@@ -5,9 +5,10 @@ import java.util.*;
 /** Closed, versioned transport. A configuration describes needs; only a confirmed policy grants them. */
 public final class GuardContract {
     public static final String PROTOCOL = "aiw.execution.guard.v1";
+    public static final String SHELL_CAPABILITY = "task-shell-v1";
     public static final String CAPABILITY = "execution-guard-v1";
     private GuardContract() {}
-    public enum Tool { READ, SEARCH, WRITE, GIT, COMMAND, MODEL, QUESTION }
+    public enum Tool { READ, SEARCH, WRITE, GIT, COMMAND, SHELL, MODEL, QUESTION }
     public enum Dimension { TIME_MS, TASKS, COST_MICROS, LOOP_BACKJUMPS }
     public record Rule(Tool tool, String repositoryRef, String pathPrefix,
                        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL) String baseRevision) {
