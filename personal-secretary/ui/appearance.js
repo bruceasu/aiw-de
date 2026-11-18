@@ -56,21 +56,21 @@
   const sidebarKey = "aiw.sidebar.collapsed.v1";
   const defaults = { mode: "auto", dayStart: "08:00", nightStart: "19:00" };
   const source = document.currentScript.src;
-  const fallbackPortrait = new URL("appearance-secretary.png", source).href;
+  const fallbackPortrait = new URL("appearance-secretary.webp", source).href;
   const portraits = {
-    hud: new URL("appearance-hud.png", source).href,
-    rpg: new URL("appearance-rpg.png", source).href,
+    hud: new URL("appearance-hud.webp", source).href,
+    rpg: new URL("appearance-rpg.webp", source).href,
     lady: fallbackPortrait,
   };
   const expressions = {
-    hud: new URL("appearance-hud-wink.png", source).href,
-    rpg: new URL("appearance-rpg-wink.png", source).href,
+    hud: new URL("appearance-hud-wink.webp", source).href,
+    rpg: new URL("appearance-rpg-wink.webp", source).href,
     lady: null,
   };
   const avatars = {
-    hud: new URL("appearance-avatar-hud.png", source).href,
-    rpg: new URL("appearance-avatar-rpg.png", source).href,
-    lady: new URL("appearance-avatar-lady.png", source).href,
+    hud: new URL("appearance-avatar-hud.webp", source).href,
+    rpg: new URL("appearance-avatar-rpg.webp", source).href,
+    lady: new URL("appearance-avatar-lady.webp", source).href,
   };
   const failedImages = new Set();
   const expressionCache = new Map();
@@ -270,7 +270,7 @@
     if (document.getElementById("personal-app") && !document.getElementById("console-locale")) {
       const language = element("select", "appearance-language"); language.id = "console-locale";
       language.setAttribute("aria-label", "Language"); language.dataset.i18nSkip = "";
-      for (const [value, label] of [["en", "English"], ["zh", "简体中文"], ["ja", "日本語"]]) language.add(new Option(label, value));
+      for (const [value, label] of [["en", "English"], ["zh", "简体中文"]]) language.add(new Option(label, value));
       language.value = window.aiwI18n?.locale || "en"; controls.append(language);
     }
     const host = document.querySelector("#personal-app [data-appearance-controls]") || document.querySelector(".topbar-actions") || document.querySelector(".topbar");
@@ -291,7 +291,7 @@
       ["lady", "月夜主题", "深靛蓝、银紫与浅青色"],
     ]) {
       const tile = element("button", "appearance-preview appearance-preview-" + value); tile.type = "button";
-      const image = element("img"); image.src = avatars[value]; image.alt = "";
+      const image = element("img"); image.src = new URL("appearance-preview-" + value + ".webp", source).href; image.alt = "";
       tile.dataset.theme = value;
       tile.append(image, element("strong", "", text(label)), element("span", "", text(description)));
       tile.addEventListener("click", () => { select.value = value; updateFields(); }); previews.append(tile);

@@ -34,7 +34,7 @@
       if(target){
         if(![...$('wr-plan').options].some(o=>o.value===planId))$('wr-plan').add(new Option(planId,planId));
         $('wr-plan').value=planId;$('wr-attempt').value=target.attempt_id;
-      }else{$('wr-attempt').value='';$('wr-feedback').textContent=({zh:'所选任务和尝试不在当前可见记录中，未自动选择其它执行。',ja:'指定したタスクと試行は表示可能な記録にありません。別の実行は自動選択していません。'})[window.aiwI18n?.locale]||'The requested task and attempt are not visible. No other execution was selected.';}
+      }else{$('wr-attempt').value='';$('wr-feedback').textContent=({zh:'所选任务和尝试不在当前可见记录中，未自动选择其它执行。'})[window.aiwI18n?.locale]||'The requested task and attempt are not visible. No other execution was selected.';}
       initialNative=false;
     }
     catalogPlan=planId;catalogAt=Date.now();

@@ -96,7 +96,7 @@
   }
   async function refresh(internal=false){
     if(deferGuarded){
-      const message=({zh:'当前查看指定的原生执行。只有明确切换到专业任务来源后，才读取专业任务区；不会自动选择其它工作。',ja:'指定したネイティブ実行を表示中です。別の作業は自動選択しません。専門タスクを表示するには接続元を明示的に切り替えてください。'})[window.aiwI18n?.locale]||'Viewing the requested native execution. Switch explicitly to professional tasks to load that area; no other work is selected automatically.';
+      const message=({zh:'当前查看指定的原生执行。只有明确切换到专业任务来源后，才读取专业任务区；不会自动选择其它工作。'})[window.aiwI18n?.locale]||'Viewing the requested native execution. Switch explicitly to professional tasks to load that area; no other work is selected automatically.';
       $('wb-task').replaceChildren(new Option(message,''));$('wb-attempt').replaceChildren(new Option('—',''));feedback(message);sync();return;
     }
     if(loading||busy&&!internal)return;const generation=++epoch;loading=true;sync();

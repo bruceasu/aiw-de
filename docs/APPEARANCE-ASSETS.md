@@ -2,7 +2,7 @@
 
 ## Expression frames
 
-Assets: `../personal-secretary/ui/assets/appearance-rpg-wink.png` and `../personal-secretary/ui/assets/appearance-hud-wink.png`.
+Assets: `../personal-secretary/ui/assets/appearance-rpg-wink.webp` and `../personal-secretary/ui/assets/appearance-hud-wink.webp`.
 
 Created with the built-in imagegen edit tool. Each theme's original PNG was its edit target. Both calls used `transparent_background: true`. Final prompt for both edits:
 
@@ -13,7 +13,7 @@ The original secretary image is preserved. These images are shared by the Web UI
 
 ## RPG
 
-Asset: `../personal-secretary/ui/assets/appearance-rpg.png`
+Asset: `../personal-secretary/ui/assets/appearance-rpg.webp`
 
 Final prompt:
 
@@ -21,7 +21,7 @@ Create one production ready transparent PNG character sprite for a desktop assis
 
 ## HUD
 
-Asset: `../personal-secretary/ui/assets/appearance-hud.png`
+Asset: `../personal-secretary/ui/assets/appearance-hud.webp`
 
 Final prompt:
 
@@ -29,9 +29,9 @@ Create one production ready transparent PNG character sprite for a desktop AI as
 
 ## Lady avatar
 
-Asset: `../personal-secretary/ui/assets/appearance-avatar-lady.png`
+Asset: `../personal-secretary/ui/assets/appearance-avatar-lady.webp`
 
-Generated with the built-in imagegen tool using `appearance-secretary.png` as the character-identity reference and the HUD/RPG avatar images as framing/style references. The square transparent portrait keeps Lady's long dark-brown hair, warm brown eyes, navy jacket, white blouse and teal ribbon, with a restrained crescent ornament and moonlit silver-violet/pale-cyan highlights.
+Generated with the built-in imagegen tool using the original secretary portrait as the character-identity reference and the HUD/RPG avatar images as framing/style references. The square transparent portrait keeps Lady's long dark-brown hair, warm brown eyes, navy jacket, white blouse and teal ribbon, with a restrained crescent ornament and moonlit silver-violet/pale-cyan highlights.
 
 Final prompt:
 

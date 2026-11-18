@@ -155,16 +155,18 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                      "/appearance.js": ("appearance.js", "application/javascript"),
                      "/appearance.css": ("appearance.css", "text/css"),
                      "/i18n.js": ("i18n.js", "application/javascript")}
-            appearance = {"/appearance-secretary.png": "image/png", "/appearance-hud.png": "image/png", "/appearance-rpg.png": "image/png",
-                          "/appearance-hud-wink.png": "image/png", "/appearance-rpg-wink.png": "image/png",
-                          "/appearance-avatar-hud.png": "image/png", "/appearance-avatar-rpg.png": "image/png",
-                          "/appearance-avatar-lady.png": "image/png"}
+            appearance = {
+                f"/appearance-{name}.webp"
+                for name in ("secretary", "hud", "rpg", "hud-wink", "rpg-wink",
+                             "avatar-hud", "avatar-rpg", "avatar-lady",
+                             "preview-hud", "preview-rpg", "preview-lady")
+            }
             if self.path in appearance:
                 asset = Path(__file__).parent / "ui" / "assets" / self.path[1:]
                 if not asset.is_file():
                     self.respond(404, {"error": "Secretary appearance asset is missing"})
                     return
-                self.respond(200, asset.read_bytes(), appearance[self.path])
+                self.respond(200, asset.read_bytes(), "image/webp")
                 return
             if self.path in files:
                 name, mime = files[self.path]

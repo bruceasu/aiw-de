@@ -54,10 +54,10 @@
   const key = "aiw.appearance.v1";
   const defaults = { mode: "auto", dayStart: "08:00", nightStart: "19:00" };
   const source = document.currentScript.src;
-  const portraits = Object.fromEntries(["hud", "rpg"].map(theme => [theme, new URL("appearance-" + theme + ".png", source).href]));
-  const expressions = Object.fromEntries(["hud", "rpg"].map(theme => [theme, new URL("appearance-" + theme + "-wink.png", source).href]));
-  const fallbackPortrait = new URL("appearance-secretary.png", source).href;
-  const avatars = Object.fromEntries(["hud", "rpg"].map(theme => [theme, new URL("appearance-avatar-" + theme + ".png", source).href]));
+  const portraits = Object.fromEntries(["hud", "rpg"].map(theme => [theme, new URL("appearance-" + theme + ".webp", source).href]));
+  const expressions = Object.fromEntries(["hud", "rpg"].map(theme => [theme, new URL("appearance-" + theme + "-wink.webp", source).href]));
+  const fallbackPortrait = new URL("appearance-secretary.webp", source).href;
+  const avatars = Object.fromEntries(["hud", "rpg"].map(theme => [theme, new URL("appearance-avatar-" + theme + ".webp", source).href]));
   const failedImages = new Set();
   const expressionCache = new Map();
   const text = value => window.aiwI18n?.t(value) || value;
@@ -267,7 +267,7 @@
     if (document.getElementById("personal-app") && !document.getElementById("console-locale")) {
       const language = element("select", "appearance-language"); language.id = "console-locale";
       language.setAttribute("aria-label", "Language"); language.dataset.i18nSkip = "";
-      for (const [value, label] of [["en", "English"], ["zh", "简体中文"], ["ja", "日本語"]]) language.add(new Option(label, value));
+      for (const [value, label] of [["en", "English"], ["zh", "简体中文"]]) language.add(new Option(label, value));
       language.value = window.aiwI18n?.locale || "en"; controls.append(language);
     }
     const host = document.querySelector("#personal-app [data-appearance-controls]") || document.querySelector(".topbar-actions") || document.querySelector(".topbar");
@@ -283,7 +283,7 @@
     modeLabel.append(select); select.name = "mode"; form.append(modeLabel);
     for (const [value, label, description] of [["hud", "HUD · 专注控制台", "青色线框 / 几何面板"], ["rpg", "RPG · 秘书伙伴", "暖金装饰 / 任务日志"]]) {
       const tile = element("button", "appearance-preview appearance-preview-" + value); tile.type = "button";
-      const image = element("img"); image.src = avatars[value]; image.alt = "";
+      const image = element("img"); image.src = new URL("appearance-preview-" + value + ".webp", source).href; image.alt = "";
       tile.append(image, element("strong", "", label), element("span", "", description));
       tile.addEventListener("click", () => { select.value = value; updateFields(); }); previews.append(tile);
     }

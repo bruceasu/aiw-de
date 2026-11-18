@@ -53,7 +53,6 @@ work_directory="$secretary_root/build/pyinstaller"
   --paths "$secretary_root" --paths "$secretary_root/pet" \
   --collect-all PySide6 --collect-all shiboken6 \
   --add-data "$secretary_root/ui:ui" \
-  --add-data "$secretary_root/pet/desktop-assets:pet/desktop-assets" \
   "$entry_point"
 
 printf 'Package created at %s. No dependencies were installed by this script.\n' \

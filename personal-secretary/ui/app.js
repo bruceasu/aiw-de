@@ -1894,8 +1894,8 @@ function updateLocaleAvailability() {
   selector.disabled = !ready;
   status.hidden = ready;
   status.textContent = ready ? "" : window.aiwI18n
-    ? "语言组件初始化失败。Language initialization failed. 言語の初期化に失敗しました。"
-    : "语言脚本未加载，请重启个人服务。Language script missing; restart the personal service. 言語スクリプト未読込：個人サービスを再起動してください。";
+    ? "语言组件初始化失败。Language initialization failed."
+    : "语言脚本未加载，请重启个人服务。Language script missing; restart the personal service.";
   status.dataset.i18nSkip = "";
 }
 window.addEventListener("aiw:i18n-ready", updateLocaleAvailability);

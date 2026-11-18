@@ -8,20 +8,20 @@ Control Plane 保留自己的 HUD / RPG 主题；秘书 Web 与 Qt 桌面秘书�
 - **HUD**：银蓝发智能助理、青色光线与几何面板。
 - **Lady**：原有秘书形象，使用深靛蓝底色、银紫主色与浅青点缀，作为安静的月夜主题。
 - Control Plane、秘书 Web 与 Qt 内嵌工作台不再创建窗口内的伙伴浮层，也不显示欢迎区域的大幅人物插画，避免遮挡工作区。
-- 左上角品牌区使用圆形 Q 版秘书头像，私人对话中秘书回复旁使用 32px 头像；HUD / RPG / Lady 分别使用 `appearance-avatar-hud.png` / `appearance-avatar-rpg.png` / `appearance-avatar-lady.png`，随主题同步切换。头像素材缺失时尝试既有主题人物作为回退。头像没有全身位移动作；原有状态栏、计数和导航继续承担状态及操作入口。
-- 桌面 PET 随主题更换同一套透明 PNG。默认窗口和人物区域透明，不绘制人物背后的矩形面板。人物上下不显示装饰标题和说明；真实状态使用状态灯与图标计数，悬停可查看含义。只有显式使用 `-Opaque` / `--opaque` 时填充整个窗口背景。透明效果仍取决于桌面合成器。
+- 左上角品牌区使用圆形 Q 版秘书头像，私人对话中秘书回复旁使用 32px 头像；HUD / RPG / Lady 分别使用 `appearance-avatar-hud.webp` / `appearance-avatar-rpg.webp` / `appearance-avatar-lady.webp`，随主题同步切换。头像素材缺失时尝试既有主题人物作为回退。头像没有全身位移动作；原有状态栏、计数和导航继续承担状态及操作入口。
+- 桌面 PET 随主题更换同一套透明 WebP。默认窗口和人物区域透明，不绘制人物背后的矩形面板。人物上下不显示装饰标题和说明；真实状态使用状态灯与图标计数，悬停可查看含义。只有显式使用 `-Opaque` / `--opaque` 时填充整个窗口背景。透明效果仍取决于桌面合成器。
 
 人物由内置 imagegen 生成，素材及完整提示词见 [素材记录](APPEARANCE-ASSETS.md)。现有原人物保留供旧 Tk 界面和缺失素材时回退。
 
 ### 窗口内的 Q 版头像
 
-以现有 `appearance-rpg.png` / `appearance-hud.png` 为角色参考生成了 HUD 与 RPG 透明头像；本次再以原始秘书形象生成 `appearance-avatar-lady.png`，沿用相同的方形头肩构图，并加入月夜银紫与浅青光感。秘书实际使用的 PNG 均位于 `personal-secretary/ui/assets/`，不依赖用户目录。头像采用近景构图，确保缩小后面部仍清晰。
+以现有 `appearance-rpg.webp` / `appearance-hud.webp` 为角色参考生成了 HUD 与 RPG 透明头像；本次再以原始秘书形象生成 `appearance-avatar-lady.webp`，沿用相同的方形头肩构图，并加入月夜银紫与浅青光感。秘书实际使用的 WebP 均位于 `personal-secretary/ui/assets/`，不依赖用户目录。小头像使用 128 × 128 像素，主题预览使用 480 × 480 像素。立绘及表情使用 480 × 720 像素。
 
 生成要点（Easy English）：Create a square chibi secretary avatar. Use the reference only for character identity. Show the head and shoulders, with a large readable face and the full hair silhouette inside the frame. Keep a friendly professional expression, clean anime game UI shading and a transparent background. No text, frame, scenery, hands or full body. RPG uses brown hair, warm brown eyes, a teal ribbon and restrained gold details. HUD uses silver-blue hair, cyan eyes and a navy-and-white collar with cyan details.
 
 ## 语言、动作与状态
 
-秘书 Web 使用自己的 `personal-secretary/ui/i18n.js`，在“设置 → 外观与语言”提供主题与简体中文、English、日语切换，右上角不再展示偏好控件。默认使用已保存的语言；秘书首次使用时按浏览器语言选择支持的语言，否则使用英文。Control Plane 保留自己的语言资源和偏好设置入口。语言按服务 origin 分别保存；同 origin 的浏览器窗口同步切换。Qt 桌面保存语言偏好，并跟随内嵌页面更新窗口标题、托盘菜单和提示。旧 Tk 界面仍使用原文案，不在这次语言改动范围内。
+秘书 Web 使用自己的 `personal-secretary/ui/i18n.js`，在“设置 → 外观与语言”提供主题与简体中文和 English 切换，右上角不再展示偏好控件。默认使用已保存的语言；秘书首次使用时按浏览器语言选择支持的语言，否则使用英文。Control Plane 保留自己的语言资源和偏好设置入口。语言按服务 origin 分别保存；同 origin 的浏览器窗口同步切换。Qt 桌面保存语言偏好，并跟随内嵌页面更新窗口标题、托盘菜单和提示。
 
 翻译覆盖主题设置、秘书静态页面、常用动态状态与桌面菜单；日期和排序跟随所选语言。用户输入、模型回复、任务标题、原始 JSON、文件内容保持原文；后台返回的原始诊断也不会自动改写。
 
@@ -29,7 +29,7 @@ Control Plane 保留自己的 HUD / RPG 主题；秘书 Web 与 Qt 桌面秘书�
 
 人物区不再显示上下方的装饰文字。绿色状态点表示秘书可用，暖色表示暂停，灰色表示尚未就绪；图标计数分别表示进行中、待确认和已完成，悬停或辅助技术可读取标签。计数只取已有私人状态，不向模型发请求；没有私人状态时隐藏计数。人物素材加载失败时显示警告标记并尝试原人物回退，可通过提示判断是否需要重启更新后的服务。
 
-独立分发需包含秘书自己的 `ui/appearance.js`、`ui/appearance.css`、`ui/i18n.js` 和 `ui/assets/` 下的人物图片，包括三张 `appearance-avatar-*.png` 头像、`appearance-secretary.png` 与两张 `appearance-*-wink.png` 表情素材。更新这些资源后应重启个人服务并刷新页面，退出旧 Qt 进程再重新启动。
+独立分发需包含秘书自己的 `ui/appearance.js`、`ui/appearance.css`、`ui/i18n.js` 和 `ui/assets/` 下的全部 WebP 图片，包括小头像、主题预览、立绘和表情。更新这些资源后应重启个人服务并刷新页面，退出旧 Qt 进程再重新启动。
 
 ### 升级后语言没有变化
 
@@ -65,7 +65,7 @@ HUD 使用青色边角、细网格与几何面板。RPG 使用暖金边框、衬
 
 秘书工作区采用双层边框、分层面板和描边按钮：HUD 使用青色边角和网格，RPG 使用暖金双线与角饰，Lady 使用银紫圆角和浅青细线。导航和计数使用本地 SVG 线条图标，不依赖系统字体中的特殊符号。窗口内以品牌与消息头像表示秘书，不再提供人物浮动入口。
 
-Qt 外壳配套绘制 HUD 折角、RPG 暖金边框、Lady 银紫圆角、主题徽标和窗口控制图标，托盘图标也随主题切换。人物周围保留透明背景。这里实现的是效果图的边框、图标和面板语言，业务界面保留现有导航和信息布局；不是将效果图作为背景贴图。语言选项固定显示 English、简体中文、日本語，HTML 使用字符实体保护中文和日文名称。
+Qt 外壳配套绘制 HUD 折角、RPG 暖金边框、Lady 银紫圆角、主题徽标和窗口控制图标，托盘图标也随主题切换。人物周围保留透明背景。这里实现的是效果图的边框、图标和面板语言，业务界面保留现有导航和信息布局；不是将效果图作为背景贴图。语言选项固定显示 English、简体中文。
 
 窗口画板直接接收当前主题，外框、标题栏渐变、底栏、WebView 底色和菜单悬停色一同更新。主按钮的边框、渐变与悬停色也使用主题变量：RPG 为暖金，HUD 为青色，避免通用按钮样式覆盖 RPG 配色。Python 外壳更新须重新打开 Qt 桌面，CSS 更新须刷新页面；不需要修改模型或重新登录。
 
@@ -81,7 +81,7 @@ Qt 工作台默认使用透明顶层窗口和透明 WebEngine 背景。页面收
 
 ## 桌面实现
 
-Windows / Linux 使用 Python + PySide6 Qt WebEngine，共用秘书 Web 功能，不另建模型、授权、文件或平台业务入口。原 Tk 界面保留为 Windows 的显式 `-LegacyTk` 入口；三种主题的主要桌面实现为 Qt。
+Windows / Linux 使用 Python + PySide6 Qt WebEngine，共用秘书 Web 功能，不另建模型、授权、文件或平台业务入口。
 
 先在启动桌面的同一 Python 环境安装 `personal-secretary/pet/requirements-desktop.txt`，然后：
 
@@ -109,11 +109,11 @@ bash ./scripts/start-desktop.sh
 
 ### Control Plane 国际化
 
-Control Plane 的公共导航加载 `preferences.js`、`console-translations.js` 和 `i18n.js`，登录页也显式加载这三份脚本，沿用当前浏览器的语言偏好。`console-translations.js` 维护控制台专用的英文、简体中文、日文词条，补充授权、任务配置、问题、组合角色、Worker 工作台、执行记录和图计划等页面的静态说明及常见动态反馈。新增页面文案也应同时维护三语词条，不能仅接入语言下拉框。
+Control Plane 的公共导航加载 `preferences.js`、`console-translations.js` 和 `i18n.js`，登录页也显式加载这三份脚本，沿用当前浏览器的语言偏好。`console-translations.js` 维护控制台专用的英文和简体中文词条，补充授权、任务配置、问题、组合角色、Worker 工作台、执行记录和图计划等页面的静态说明及常见动态反馈。新增页面文案也应同时维护中英词条，不能仅接入语言下拉框。
 
 动态计数和系统字段前缀使用明确模式，编号、用户输入、原始 JSON、代码和凭证不送去模型翻译。执行记录与 Worker 工作台的数字、日期及授权到期显示使用当前语言。主题和语言仍分别按各自服务地址保存；控制台与秘书不自动共享不同端口的偏好。控制台静态资源随 Java 应用分发，已有运行实例可能需要重新启动才能加载新增资源；这里没有执行重启或浏览器验收。
 
-秘书服务从自己的 `ui/` 和 `ui/assets/` 目录提供外观脚本、样式、语言脚本与人物图片，不再读取 `src/main/resources/static/ui/`。Control Plane 保留自己的外观资源。既有 `pet/desktop-assets/secretary.png` 保留给旧 Tk 界面，并作为 Qt 人物素材缺失时的回退。
+秘书服务从自己的 `ui/` 和 `ui/assets/` 目录提供外观脚本、样式、语言脚本与人物图片，不再读取 `src/main/resources/static/ui/`。Control Plane 保留自己的外观资源。Qt 人物素材缺失时使用 `ui/assets/appearance-secretary.webp`。
 
 `scripts/compile-secretary-runtime.ps1` 包含 Python 源码和主题/秘书 JavaScript 的离线语法编译，不导入 Qt、不启动 GUI、不下载依赖、不调用模型。主题视觉、Windows WebEngine/透明窗、Qt 依赖版本和 Linux 不同合成器仍需单独运行验收；编译结果不代表这些行为已验证。
 

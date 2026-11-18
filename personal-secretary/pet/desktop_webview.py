@@ -88,8 +88,7 @@ def main():
     if not 25 <= companion_size_percent <= 125:
         companion_size_percent = 100
     saved_language = preferences.value(settings_key + "/language", "")
-    if saved_language in {"en", "zh", "ja"}: labels.language = saved_language
-    image_path = Path(__file__).parent / "desktop-assets/secretary.png"
+    if saved_language: labels.language = saved_language if saved_language in {"en", "zh"} else "en"
     portrait_root = _secretary_root / "ui" / "assets"
     def line_icon(name="hud", color="#64e4dc", size=64):
         bitmap = QPixmap(size, size); bitmap.fill(Qt.GlobalColor.transparent)
@@ -314,12 +313,12 @@ def main():
             self.greet_until = 0
             self.portraits = {}
             self.expressions = {}
-            portrait_files = {"hud": "appearance-hud.png", "rpg": "appearance-rpg.png", "lady": "appearance-secretary.png"}
+            portrait_files = {"hud": "appearance-hud.webp", "rpg": "appearance-rpg.webp", "lady": "appearance-secretary.webp"}
             for theme, filename in portrait_files.items():
                 portrait = QPixmap(str(portrait_root / filename))
-                if portrait.isNull(): portrait = QPixmap(str(image_path))
+                if portrait.isNull(): portrait = QPixmap(str(portrait_root / "appearance-secretary.webp"))
                 self.portraits[theme] = portrait.scaled(282, 352, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                wink = QPixmap() if theme == "lady" else QPixmap(str(portrait_root / f"appearance-{theme}-wink.png"))
+                wink = QPixmap() if theme == "lady" else QPixmap(str(portrait_root / f"appearance-{theme}-wink.webp"))
                 self.expressions[theme] = (wink if not wink.isNull() else portrait).scaled(282, 352, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             self.image = self.portraits[self.theme]
             self.press = None; self.dragged = False
@@ -599,7 +598,8 @@ def main():
         if not restored:
             restored = True
             saved_locale = preferences.value(settings_key + "/language", "")
-            if saved_locale in {"en", "zh", "ja"}:
+            if saved_locale:
+                saved_locale = saved_locale if saved_locale in {"en", "zh"} else "en"
                 workbench.page.runJavaScript("window.aiwI18n && window.aiwI18n.setLocale(" + json.dumps(saved_locale) + ")")
             saved = preferences.value(settings_key, "")
             try: saved = json.loads(saved)
@@ -607,7 +607,7 @@ def main():
             if pending_appearance is None and isinstance(saved, dict) and saved.get("mode") in {"auto", "hud", "rpg", "lady"}:
                 workbench.page.runJavaScript("try { window.AiwAppearance.setPreference(" + json.dumps(saved) + "); } catch (_) {}")
                 return
-            if saved_locale in {"en", "zh", "ja"}:
+            if saved_locale in {"en", "zh"}:
                 return
         appearance = value["appearance"]
         if pending_companion_size is not None:
@@ -627,7 +627,7 @@ def main():
                 companion_size_seeded = True
                 workbench.page.runJavaScript("window.AiwAppearance.setCompanionSize(" + str(companion_size_percent) + ")")
         language = value.get("locale", "en")
-        if language in {"en", "zh", "ja"} and labels.language != language:
+        if language in {"en", "zh"} and labels.language != language:
             labels.language = language
             preferences.setValue(settings_key + "/language", language)
             for action, source in menu_labels: action.setText(t(source))

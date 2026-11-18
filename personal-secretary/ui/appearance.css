@@ -200,8 +200,8 @@
   :root[data-appearance] .companion-stage,:root[data-appearance] .personal-app .companion-stage { display:none; }
   :root[data-appearance] .personal-app .appearance-layout > .view { grid-column:1; }
   :root[data-appearance] .personal-app .welcome { padding-right:180px; min-height:230px; }
-  :root[data-appearance] .personal-app .welcome::after { content:""; inset:10px 0 0 auto; width:180px; font-size:0; opacity:1; background:url("appearance-hud.png") center bottom / contain no-repeat; }
-  :root[data-appearance="rpg"] .personal-app .welcome::after { background-image:url("appearance-rpg.png"); }
+  :root[data-appearance] .personal-app .welcome::after { content:""; inset:10px 0 0 auto; width:180px; font-size:0; opacity:1; background:url("appearance-hud.webp") center bottom / contain no-repeat; }
+  :root[data-appearance="rpg"] .personal-app .welcome::after { background-image:url("appearance-rpg.webp"); }
 }
 @media(max-width:800px) {
   :root[data-appearance] .personal-app { grid-template-columns:minmax(0,1fr); }

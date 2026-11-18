@@ -30,7 +30,6 @@ $arguments = @(
     '--paths', $secretaryRoot, '--paths', (Join-Path $secretaryRoot 'pet'),
     '--collect-all', 'PySide6', '--collect-all', 'shiboken6',
     '--add-data', ((Join-Path $secretaryRoot 'ui') + ';ui'),
-    '--add-data', ((Join-Path $secretaryRoot 'pet\desktop-assets') + ';pet/desktop-assets'),
     $entryPoint
 )
 & $Python -m PyInstaller @arguments
