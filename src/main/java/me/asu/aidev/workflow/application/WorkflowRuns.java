@@ -827,7 +827,7 @@ public class WorkflowRuns {
         if(!manages(task.subjectId()))return;
         var run=load(task.subjectId(),false);
         if(!run.state.equals("STOPPING") || run.taskId==null || !currentTask(run).id().equals(taskId))return;
-        if(!tasks.cancelInactive(taskId,TaskState.READY,Instant.now()))throw new IllegalStateException("Stopped task changed before cancellation");
+        if(task.state()!=TaskState.CANCELLED && !tasks.cancelInactive(taskId,TaskState.READY,Instant.now()))throw new IllegalStateException("Stopped task changed before cancellation");
         finishStopped(run,currentTask(run));persist(run);
     }
     private boolean finishStopped(Run run,WorkTask task) {

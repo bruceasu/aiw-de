@@ -140,11 +140,12 @@ class PlanWorkspace:
                 gate.release()
             raise
 
-        def git(cwd, *args):
+        def git(cwd, *args, workspace_finalization=False):
             if broker:
                 from execution_guard import ControlledGit
                 return broker.operate("GIT", ".", {"action": "workspace", "args": list(args)},
-                                      lambda: ControlledGit(Path(cwd), attempt)._run(*args))
+                                      lambda: ControlledGit(Path(cwd), attempt)._run(*args),
+                                      workspace_finalization=workspace_finalization)
             return runtime_git(str(cwd), *args)
 
         try:
@@ -183,14 +184,17 @@ class PlanWorkspace:
     def finalize(self, task, read_only=False):
         if not self.base:
             return None
+        def git(*args):
+            return self.git(self.cwd, *args, workspace_finalization=True)
+
         if not read_only:
-            self.git(self.cwd, "add", "-A", "--", ".", ":(exclude).ai", ":(exclude).ai/**")
-            if self.git(self.cwd, "diff", "--cached", "--name-only"):
-                self.git(self.cwd, "-c", "user.name=AIW Worker", "-c", "user.email=worker@aiw.local",
-                         "commit", "--no-gpg-sign", "-m", "AIW " + task["taskId"])
-        revision = self.git(self.cwd, "rev-parse", "HEAD").strip()
+            git("add", "-A", "--", ".", ":(exclude).ai", ":(exclude).ai/**")
+            if git("diff", "--cached", "--name-only"):
+                git("-c", "user.name=AIW Worker", "-c", "user.email=worker@aiw.local",
+                    "commit", "--no-gpg-sign", "-m", "AIW " + task["taskId"])
+        revision = git("rev-parse", "HEAD").strip()
         if read_only and revision.lower() != self.base.lower(): raise RuntimeError("READ_ONLY_REVISION_CHANGED")
-        changed = self.git(self.cwd, "diff", "--name-only", "-z", self.base, revision)
+        changed = git("diff", "--name-only", "-z", self.base, revision)
         return {"resultRevision": revision, "changedFiles": sorted(filter(None, changed.split("\0")))}
 
     def handoff(self, task, report, result, checkpoint_tree_digest=None, tool_approval=None):

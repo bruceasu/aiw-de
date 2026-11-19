@@ -106,9 +106,9 @@ def definitions(broker=None):
                 "inputSchema": {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}}
     string = {"type": "string"}
     result = [
-        tool("read_skill_file", "Read declared task Skill data as base64; offsets and limits are bytes. No script execution.", {"ref": string, "path": string, "offset": {"type": "integer"}, "limit": {"type": "integer"}}),
+        tool("read_skill_file", "Read declared task Skill data as base64. Use the exact Skill name as ref, without a version suffix. Start at offset 0 and use at most 8192 bytes.", {"ref": string, "path": string, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 8192}}),
         tool("read", "Read UTF-8 lines: offset is a 1-based line number, limit is 1 to 500 lines. Keep sourceDigest for writes.", {"path": string, "offset": {"type": "integer", "minimum": 1}, "limit": {"type": "integer", "minimum": 1, "maximum": 500}}),
-        tool("ls", "List one visible folder.", {"path": string}),
+        tool("ls", "List one visible folder using a workspace-relative path with forward slashes. Use '.' for the workspace root.", {"path": string}),
         tool("grep", "Find literal text in one file.", {"path": string, "text": string}),
         tool("write", "Write one file only if its digest still matches. Use ABSENT for a new file.", {"path": string, "content": string, "expectedDigest": string}),
         tool("mkdir", "Create one folder inside the allowed workspace. Create parent folders in separate calls.", {"path": string}),
@@ -121,7 +121,7 @@ def definitions(broker=None):
         tool("ask_question", "Save one question and yield this task. Stop after the receipt. The answer will arrive in a new task.", {"question": string, "context": string, "options": {"type": "array", "items": string}, "answerRequirements": string}),
     ]
     if broker is not None and broker.shell_enabled():
-        result.append(tool("run_shell", "Run a project build, test or script from the task workspace. Uses PowerShell on Windows and sh on Linux. Nonzero exit codes are returned with output.", {"command": string}))
+        result.append(tool("run_shell", "Run a project build, test or script from the task workspace. Uses PowerShell on Windows. Nonzero exit codes are returned with output.", {"command": string}))
     from skill_files import text_enabled
     if text_enabled():
         result.insert(1, tool("read_skill_text", "Read declared UTF-8 Skill data by byte offset and limit <=8192. Follow nextOffset; no script execution.",

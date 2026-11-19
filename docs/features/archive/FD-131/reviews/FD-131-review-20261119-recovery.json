@@ -1,0 +1,39 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-131",
+  "source_event": "FD-131-000006-review-requested",
+  "human_report": "FD-131-review-20261119-recovery.md",
+  "data": {
+    "reviewer_session": "codex-fd131-independent-20261119-a1",
+    "comparison_base": "ce304f1e",
+    "reviewed_commit": "40e24ec977c17a662fbde5f03d272703a2b73cce",
+    "reviewed_fd_revision": 6,
+    "reviewed_fd_sha256": "feea09d00e46e5bdf747497e6bb3954ead9aefba647dfdb7046f56fe803b166d",
+    "recommendation": "verification-passed",
+    "review_type": "independent focused merge-recovery re-review",
+    "findings": [],
+    "acceptance": [
+      "保留 develop 的语言规则，并保留模板对应的两条中文权限文案。",
+      "R2 的自主命令默认关闭与失败重试行为仍匹配。",
+      "归档研究资料链接和相对交付分支的文件范围已核对。"
+    ],
+    "implementation_reported_checks": [
+      "合并后 node --check 通过",
+      "git diff --cached --check develop 通过"
+    ],
+    "actual_commands": [
+      "aiw fd show FD-131",
+      "aiw fd claim FD-131 FD-131-000006-review-requested --session codex-fd131-independent-20261119-a1",
+      "git status --short --branch",
+      "git rev-parse HEAD",
+      "git diff ce304f1e..40e24ec9",
+      "git show --cc 40e24ec9 -- src/main/resources/static/ui/workflows.js",
+      "git diff --check ce304f1e..40e24ec9",
+      "rg"
+    ],
+    "skipped": [
+      "没有重跑浏览器、编译、测试、服务、模型或网络"
+    ]
+  }
+}

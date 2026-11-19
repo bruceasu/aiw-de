@@ -118,6 +118,11 @@ class WindowsJob:
                 raise RuntimeError("WINDOWS_JOB_BOOTSTRAP_UNAVAILABLE")
         # os.read avoids buffering any of the JSON-RPC bytes after the gate.
         bootstrap = "import os,sys; gate=os.read(0,1); sys.exit(1) if gate!=b'G' else os.execv(sys.argv[1],sys.argv[1:])"
+        if merge_stderr:
+            # The caller needs the command's exit code, so keep the assigned
+            # launcher alive until the command exits.
+            bootstrap = ("import os,subprocess,sys; gate=os.read(0,1); "
+                         "sys.exit(1 if gate!=b'G' else subprocess.call(sys.argv[1:],stdin=subprocess.DEVNULL))")
         child = subprocess.Popen([str(interpreter), "-I", "-c", bootstrap, *argv], cwd=cwd,
             env=environment, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT if merge_stderr else subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)

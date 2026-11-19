@@ -127,12 +127,12 @@ class RunChannel:
             self.queue.append({"sequence": self.sequence, "eventType": event, "occurredAt": int(time.time() * 1000),
                                "payload": payload, "payloadDigest": hashlib.sha256(encoded(payload)).hexdigest()})
 
-    def _try_ready(self, admit):
+    def _try_ready(self, admit, *, workspace_finalization=False):
         self.attempt.check()
         with self.lock:
             if self.failed:
                 raise RuntimeError(self.failed)
-            if self.phase == "FINALIZING":
+            if self.phase == "FINALIZING" and not workspace_finalization:
                 raise RuntimeError("RUN_ALREADY_FINALIZING")
             if not self.paused and time.monotonic() - self.last_contact <= 5:
                 if admit:
@@ -140,12 +140,12 @@ class RunChannel:
                 return True
             return False
 
-    def _ready(self, admit):
-        while not self._try_ready(admit):
+    def _ready(self, admit, *, workspace_finalization=False):
+        while not self._try_ready(admit, workspace_finalization=workspace_finalization):
             self.stopped.wait(0.05)
 
-    def enter(self):
-        self._ready(True)
+    def enter(self, *, workspace_finalization=False):
+        self._ready(True, workspace_finalization=workspace_finalization)
 
     async def enter_async(self):
         import asyncio

@@ -31,8 +31,8 @@
     'Automatic starts paused; current execution continues':['已暂停后续自动启动，当前执行继续。'],
     'Arrangement disabled; current execution is unchanged':['安排已停用，当前执行不受影响。'],
     'User skipped the missed occurrence':['你已跳过本次安排。'],
-    'Allow autonomous project commands':['??????????'],
-    'Use only with a trusted Worker account. Commands run with that account?s file and network access.':['???????? Worker ?????????????????????'],
+    'Allow autonomous project commands':['允许自主运行项目命令'],
+    'Use only with a trusted Worker account. Commands have the same file and network access as the Worker account.':['请仅使用受信任的 Worker 账号。命令具有该账号的文件和网络访问权限。'],
     'Extra command profiles (optional, advanced)':['额外命令配置（可选，高级）'],
     'Most tasks should leave this empty. It describes fixed command profiles for a connected Linux or WSL Worker; it does not grant command permission. Each command still needs separate authorization.':['大多数任务留空即可。这里只描述连接的 Linux／WSL Worker 可用的固定命令，不会授予命令权限；每次执行仍须单独获准。'],
     'Most workflows should leave this empty. It describes fixed command profiles for a connected Linux or WSL Worker; it does not grant command permission. Each command still needs separate authorization.':['大多数工作流留空即可。这里只描述连接的 Linux／WSL Worker 可用的固定命令，不会授予命令权限；每次执行仍须单独获准。'],
@@ -617,8 +617,8 @@
     ]}});
     savedSpec='';$('[data-wf-input]').value='模拟售后规则 v1：签收后30天内产品故障可建议换货，超期转人工决定；需购买记录、签收日期、故障说明；实物损坏需照片。疑似运输损伤须核实包装和签收情况。本流程不实际退款、换货或发送消息。\n\n处理日期：2026-11-12。\n购买记录：已提供，订单 DEMO-001。\n签收日期：2026-11-09。\n客户说明：通电后无法启动，希望换货。\n\n以上全部是模拟资料。';
   }
-  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,workspaceTools:form.has('workspaceTools'),autonomousShell:form.has('autonomousShell'),commands:commands(e.target.elements.commands),...assignment($('[data-wf-member]').value),requiredSkills:taskSkills,sources:taskSources});taskRequest=newRequest();await library();await openRun(run.id);});};
-  $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){selectedRun=null;panel('task');}else showEditor();});
+  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,workspaceTools:form.has('workspaceTools'),autonomousShell:form.has('autonomousShell'),commands:commands(e.target.elements.commands),...assignment($('[data-wf-member]').value),requiredSkills:taskSkills,sources:taskSources});taskRequest=newRequest();e.target.elements.autonomousShell.checked=false;await library();await openRun(run.id);});};
+  $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){$('[data-wf-task-form]').elements.autonomousShell.checked=false;selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
   $$('[data-wf-drag-kind]').forEach(control=>{

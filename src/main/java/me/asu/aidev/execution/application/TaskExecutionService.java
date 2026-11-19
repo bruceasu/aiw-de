@@ -532,7 +532,10 @@ public class TaskExecutionService {
         };
         if(org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
             org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization() {
-                @Override public void afterCommit() { advance.run(); }
+                @Override public void afterCommit() {
+                    // SQLite can keep a writer transaction on this connection until Spring releases it.
+                    Thread.ofVirtual().name("guarded-completion-advance").start(advance);
+                }
             });
         } else advance.run();
     }

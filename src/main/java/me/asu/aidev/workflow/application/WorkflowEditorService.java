@@ -45,6 +45,7 @@ public class WorkflowEditorService {
 
     private static final List<Role> ROLES = List.of(
             new Role("general-work", "general-work", "REPORT", false),
+            new Role("workspace-work", "workspace-work", "REPORT", true),
             new Role("requirement-analysis", "software-requirements-analyst", "REPORT", false),
             new Role("solution-architecture", "solution-architect", "REPORT", false),
             new Role("implementation-planning", "implementation-planner", "REPORT", false),

@@ -22,6 +22,8 @@ def run():
     try:
         if os.environ.get("AIW_AGENT_RUNTIME", "codex-app-server") == "codex-app-server" and not os.environ.get("AIW_CODEX_GUARD_HOME"):
             os.environ.setdefault("AIW_CODEX_GUARD_MODE", "host-actions")
+            if os.environ.get("AIW_WORKER_LOOP_CONTROL", "false").lower() == "true":
+                os.environ.setdefault("AIW_HOST_ACTION_PROTOCOL", "v2")
         import process_worker
         original = process_worker.ControlPlaneClient
 

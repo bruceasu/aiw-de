@@ -1,0 +1,18 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "worker-report",
+  "fd_id": "FD-131",
+  "source_event": "FD-131-000003-changes-requested",
+  "human_report": "FD-131-worker-20261119-r2.md",
+  "data": {
+    "session": "fd131-worker-20261119-008b946c",
+    "finding": "P2",
+    "changes": [
+      "Clear autonomousShell after successful submission and at the new-task entry point"
+    ],
+    "checks": [
+      "node --check src/main/resources/static/ui/workflows.js",
+      "git diff --check"
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-131",
+  "source_event": "FD-131-000004-implementation-ready",
+  "human_report": "FD-131-review-20261119-r2.md",
+  "data": {
+    "reviewer_session": "codex-fd131-independent-20261119-a1",
+    "comparison_base": "15e097fa",
+    "reviewed_commit": "0e829c706271cf7ef05158374010707713043131",
+    "reviewed_fd_revision": 4,
+    "reviewed_fd_sha256": "b1443962a92d339ddfe26fe12db3177be57bd07610b1ff20122798e042b866d7",
+    "recommendation": "verification-passed",
+    "review_type": "independent focused static re-review",
+    "findings": [],
+    "resolved_findings": [
+      {
+        "severity": "P2",
+        "path": "src/main/resources/static/ui/workflows.js",
+        "line": 620,
+        "status": "resolved",
+        "evidence": "成功提交及进入简单任务入口均清除自主命令勾选。失败直接重试保留原请求 ID 及原表单。"
+      }
+    ],
+    "implementation_reported_checks": [
+      "node --check src/main/resources/static/ui/workflows.js 通过",
+      "Worker 的两条 Runtime、Plane 停止和 Java/S3 验收不受此次 UI 增量影响"
+    ],
+    "actual_commands": [
+      "aiw fd show FD-131",
+      "aiw fd claim FD-131 FD-131-000004-implementation-ready --session codex-fd131-independent-20261119-a1",
+      "git status --short --branch",
+      "git rev-parse HEAD",
+      "git diff 15e097fa..0e829c70 -- src/main/resources/static/ui/workflows.js",
+      "git diff --check 15e097fa..0e829c70",
+      "rg / Get-Content"
+    ],
+    "skipped": [
+      "未重跑浏览器、测试、编译、服务、模型及网络"
+    ],
+    "residual_risks": [
+      "浏览器点击流程由静态核对支持，未直接重跑。",
+      "自主命令一期仅 Windows，仍使用受信任 Worker 账号的主机权限。"
+    ]
+  }
+}

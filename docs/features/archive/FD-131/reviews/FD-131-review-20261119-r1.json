@@ -1,0 +1,48 @@
+{
+  "schema": "aiw.fd.evidence.v1",
+  "kind": "reviewer-report",
+  "fd_id": "FD-131",
+  "source_event": "FD-131-000002-review-requested",
+  "human_report": "FD-131-review-20261119-r1.md",
+  "data": {
+    "reviewer_session": "codex-fd131-independent-20261119-a1",
+    "comparison_base": "73e28002",
+    "reviewed_commit": "15e097faa33df023c0036c13652a49b5271dc967",
+    "reviewed_fd_revision": 2,
+    "reviewed_fd_sha256": "97a8e0cc1742122bd76c4bf85611e5c50715030d649d50a432c5d3a46335ccc6",
+    "recommendation": "changes-requested",
+    "review_type": "independent static implementation review",
+    "findings": [
+      {
+        "severity": "P2",
+        "path": "src/main/resources/static/ui/workflows.js",
+        "line": 620,
+        "title": "新建简单任务沿用上一个任务的自主命令授权",
+        "details": "提交成功只更新 taskRequest，新建任务只切面板，复用表单仍发送 autonomousShell: true。",
+        "requirement": "默认关闭自主命令并由任务明确授权",
+        "correction": "在成功提交和打开新建任务时清除此权限位，保留失败原请求的表单行为。"
+      }
+    ],
+    "implementation_reported_checks": [
+      "Windows 子进程树取消及异常退出",
+      "DeepSeek 与 Codex Java 端到端退出码 1、0",
+      "Plane 停止 ACK，无延后标记",
+      "普通 Java 和 Java/S3 冻结 Skill 对照"
+    ],
+    "actual_commands": [
+      "aiw fd show FD-131",
+      "aiw fd claim FD-131 FD-131-000002-review-requested --session codex-fd131-independent-20261119-a1",
+      "git status --short --branch",
+      "git rev-parse HEAD",
+      "git diff 73e28002..15e097fa",
+      "git diff --check 73e28002..15e097fa",
+      "rg / Get-Content"
+    ],
+    "skipped": [
+      "测试、编译、服务、模型和网络未由审查会话重跑"
+    ],
+    "residual_risks": [
+      "自主命令一期仅 Windows，使用受信任 Worker 账号的主机权限。"
+    ]
+  }
+}

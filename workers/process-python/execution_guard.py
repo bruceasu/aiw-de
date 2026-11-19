@@ -166,10 +166,13 @@ class GuardBroker:
         self.root = root.resolve(strict=True)
         self.git = LazyControlledGit(self.root, self.attempt)
 
-    def begin(self, tool, resource, arguments, call_id=None):
+    def begin(self, tool, resource, arguments, call_id=None, *, workspace_finalization=False):
         channel = getattr(self.attempt, "run_channel", None)
         if channel:
-            channel.enter()
+            if workspace_finalization and tool == "GIT":
+                channel.enter(workspace_finalization=True)
+            else:
+                channel.enter()
         try:
             return self._begin(tool, resource, arguments, call_id)
         except BaseException:
@@ -209,12 +212,13 @@ class GuardBroker:
             channel.leave()
         self.attempt.evidence.record("guard-finished", operation=operation, status=state.lower())
 
-    def operate(self, tool, resource, arguments, action, call_id=None):
+    def operate(self, tool, resource, arguments, action, call_id=None, *, workspace_finalization=False):
         from contextlib import nullcontext
         with nullcontext() if self.parallel_reads and tool in {"READ", "SEARCH"} else self.lock:
             if self._requires_approval(tool, resource, arguments):
                 return self._request_approval(tool, resource, arguments, call_id)
-            operation = self.begin(tool, resource, arguments, call_id)
+            operation = self.begin(tool, resource, arguments, call_id,
+                                   workspace_finalization=workspace_finalization)
             try:
                 result = action()
                 if tool == "WRITE" and self._file_action(arguments) == "write" and arguments.get("expectedDigest") == "ABSENT":
@@ -245,8 +249,8 @@ class GuardBroker:
             # Windows process/spawn runs without a filesystem/network sandbox.
             # Require explicit approval before any host command can run.
             needs_approval = sys.platform == "win32" or not _low_risk_command(command)
-            self.attempt.evidence.record("guard-command-risk", commandId=resource,
-                classification="LOW_RISK_CONFIGURED_COMMAND" if not needs_approval else "OWNER_APPROVAL_REQUIRED")
+            self.attempt.evidence.record("guard-command-risk", path=resource,
+                code="LOW_RISK_CONFIGURED_COMMAND" if not needs_approval else "OWNER_APPROVAL_REQUIRED")
             return needs_approval
         if tool != "WRITE" or not isinstance(arguments, dict):
             return False
@@ -269,7 +273,7 @@ class GuardBroker:
                     and len(old) <= 65536 and len(arguments["content"].encode()) <= 65536
                     and (resource in self.file_changes or len(self.file_changes) < 20))
         self.attempt.evidence.record("guard-write-risk", path=resource,
-            classification="ORDINARY_EXACT_FILE_EDIT" if ordinary else "LARGE_OR_BULK_REPLACEMENT")
+            code="ORDINARY_EXACT_FILE_EDIT" if ordinary else "LARGE_OR_BULK_REPLACEMENT")
         return not ordinary
 
     @staticmethod
@@ -621,7 +625,16 @@ class GuardBroker:
                 channel.enter()
             try:
                 reader = self.attempt.skill_files.read_text if name == "read_skill_text" else self.attempt.skill_files.read
-                return reader(**args)
+                try:
+                    result = reader(**args)
+                    self.attempt.evidence.record("skill-file-read", path="skill:" + args["ref"] + "/" + args["path"],
+                                                 digest=result["sha256"], status="succeeded")
+                    return result
+                except RuntimeError as error:
+                    if str(error) not in {"SKILL_FILE_NOT_DECLARED", "SKILL_FILES_INVALID_OR_CHANGED",
+                                          "SKILL_TEXT_RANGE_INVALID", "SKILL_TEXT_OFFSET_NOT_BOUNDARY"}:
+                        raise
+                    return {"error": "Use the exact Skill name without its version, a listed file path, and a byte limit of 1 to 8192."}
             finally:
                 if channel:
                     channel.leave()
@@ -655,6 +668,10 @@ class GuardBroker:
                 raise RuntimeError("GUARD_SHELL_DENIED_OR_INVALID")
         if (tool in {"WRITE", "COMMAND"} or name in {"git_commit", "git_integrate"}) and not self.writable: raise RuntimeError("GUARD_ROLE_IS_READ_ONLY")
         resource = args.get("path", args.get("commandId", "."))
+        if "path" in args and (not isinstance(resource, str) or len(resource) > 1024
+                or any(character in resource for character in ("\\", ":", "\0"))
+                or (resource != "." and any(part in {"", ".", ".."} for part in resource.split("/")))):
+            return {"error": "Use a workspace-relative path with forward slashes. Use '.' for the workspace root."}
         if tool != "SHELL":
             return self.operate(tool, resource, args, lambda: self._execute(name, args), call_id)
         self.shell_idle.clear()

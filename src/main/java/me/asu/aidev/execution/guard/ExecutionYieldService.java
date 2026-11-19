@@ -16,6 +16,8 @@ import static me.asu.aidev.execution.guard.GuardContract.*;
 @Service
 public class ExecutionYieldService {
     @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> unifiedWorkflows;
+    @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.execution.config.ExecutionConfigurations> configurations;
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final ExecutionGuard guard;
     private final ExecutionLedger ledger;private final WorkTaskRepository tasks;private final WorkerRepository workers;
@@ -82,6 +84,8 @@ public class ExecutionYieldService {
         repo.jdbc().update("UPDATE execution_attempt SET state='FAILED',finished_at_epoch_ms=?,stop_acknowledged_at_epoch_ms=? WHERE id=? AND state IN ('CLAIMED','RUNNING')",now.toEpochMilli(),now.toEpochMilli(),lease.attemptId());
         if(!workers.releaseCapacity(new WorkerId(lease.workerId()),now)) throw new IllegalStateException("Worker resource underflow");
         for(int i=concurrency.size()-1;i>=0;i--) concurrency.get(i).release(t,now);
+        var router=unifiedWorkflows==null?null:unifiedWorkflows.getIfAvailable();
+        if(router!=null)router.stopped(t.id());
     }
     @Transactional public Object humanStopped(String task,StopEvidence input) {
         boundary.lock();guard.owner(String.valueOf(guard.policyRow(String.valueOf(guard.contextRow(task).get("plan_id"))).get("owner_id")));
