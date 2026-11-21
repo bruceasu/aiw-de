@@ -1,4 +1,7 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 
 from context_window import Sources, sha
 
@@ -50,6 +53,47 @@ class TaskMaterialsTest(unittest.TestCase):
 
     def test_empty_materials_do_not_change_the_prompt(self):
         self.assertEqual(Sources().materials(()), "")
+
+    def test_sdk_only_offers_tools_supported_by_frozen_and_current_permissions(self):
+        from guarded_openai_tools import tools
+
+        rule = lambda kind: {"tool": kind, "repositoryRef": "workspace", "pathPrefix": "."}
+        broker = SimpleNamespace(writable=True, shell_enabled=lambda: False, attempt=SimpleNamespace(skill_files=None),
+            allowed_tools={"READ", "WRITE", "QUESTION"}, context={
+                "snapshot": {"task": {"repositoryRef": "workspace", "baseRevision": "rev"}},
+                "originalPolicy": {"rules": list(map(rule, ["READ", "WRITE", "QUESTION", "COMMAND"])), "commands": [{"id": "test"}]},
+                "currentPolicy": {"rules": list(map(rule, ["READ", "QUESTION", "COMMAND"])), "commands": [{"id": "test"}]},
+            })
+        self.assertEqual({tool.name for tool in tools(broker)}, {"read", "ls", "ask_question"})
+        broker.attempt.skill_files = object()
+        self.assertIn("read_skill_file", {tool.name for tool in tools(broker)})
+
+    def test_sdk_checks_path_overlap_and_actual_git_workspace(self):
+        from guarded_openai_tools import tools
+
+        with TemporaryDirectory() as directory:
+            scope = {"repositoryRef": "workspace", "pathPrefix": "."}
+            read = {**scope, "tool": "READ", "pathPrefix": "src"}
+            git = {**scope, "tool": "GIT"}
+            shell = {**scope, "tool": "SHELL"}
+            broker = SimpleNamespace(writable=True, shell_enabled=lambda: True,
+                root=Path(directory), allowed_tools=None, attempt=SimpleNamespace(skill_files=None), context={
+                    "snapshot": {"task": {"repositoryRef": "workspace", "baseRevision": "rev"}},
+                    "originalPolicy": {"rules": [read, git, shell]},
+                    "currentPolicy": {"rules": [{**read, "pathPrefix": "docs"}, git, shell]},
+                })
+            self.assertEqual({tool.name for tool in tools(broker)}, {"run_shell"})
+            broker.context["currentPolicy"]["rules"][0] = {**read, "pathPrefix": "src/main", "baseRevision": "other"}
+            self.assertEqual({tool.name for tool in tools(broker)}, {"run_shell"})
+            broker.context["currentPolicy"]["rules"][0]["baseRevision"] = "rev"
+            self.assertEqual({tool.name for tool in tools(broker)}, {"run_shell", "read", "ls"})
+            (broker.root / ".git").write_text("gitdir: linked", encoding="utf-8")
+            self.assertIn("git_status", {tool.name for tool in tools(broker)})
+
+    def test_no_frozen_skill_bundle_needs_no_skill_tools(self):
+        from skill_files import openai_tools
+
+        self.assertEqual(openai_tools(SimpleNamespace(attempt=SimpleNamespace(skill_files=None))), [])
 
 
 if __name__ == "__main__":

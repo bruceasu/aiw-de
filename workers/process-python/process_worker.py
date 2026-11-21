@@ -599,6 +599,7 @@ class ProcessSlot:
                 attempt.evidence.record("runtime-event", status="preparing-workspace")
                 try:
                     workspace = PlanWorkspace.materialize(self.config, task, broker)
+                    attempt.text_workspace = workspace.text_workspace
                 except Exception:
                     if native and task.get("checkpointInputs"):
                         attempt.resource_uncertain = True

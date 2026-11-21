@@ -171,7 +171,8 @@ class OpenAIApiRuntime:
             request.attempt.evidence.record("backend-versions", runtime=json.dumps(getattr(self, "versions", {}), sort_keys=True))
         else:
             from skill_files import openai_tools as resource_tools
-            tools = resource_tools(request) if request.profile.primary_skill == "goal-discussion" else _create_tools(context)
+            text_workspace = getattr(request.attempt, "text_workspace", False)
+            tools = resource_tools(request) if text_workspace or request.profile.primary_skill == "goal-discussion" else _create_tools(context)
         if not getattr(request, "model_only", False):
             tools.extend(_context_tools(request, sources))
             channel = getattr(request.attempt, "run_channel", None)

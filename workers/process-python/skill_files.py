@@ -163,6 +163,8 @@ class Reader:
 
 
 def openai_tools(request):
+    if getattr(request.attempt, "skill_files", None) is None:
+        return []
     from agents import function_tool
     import json
     @function_tool(name_override="read_skill_file", failure_error_function=None)

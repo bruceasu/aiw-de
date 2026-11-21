@@ -152,6 +152,21 @@ def safe_path(root, resource, missing=False):
     return target
 
 
+WORKSPACE_TOOLS = {
+    "read": ({"path", "offset", "limit"}, "READ"), "ls": ({"path"}, "READ"),
+    "grep": ({"path", "text"}, "SEARCH"), "write": ({"path", "content", "expectedDigest"}, "WRITE"),
+    "edit": ({"path", "oldText", "newText", "expectedDigest"}, "WRITE"),
+    "edit_many": ({"path", "edits", "expectedDigest"}, "WRITE"),
+    "mkdir": ({"path"}, "WRITE"), "delete": ({"path", "expectedDigest"}, "WRITE"),
+    "restore": ({"path", "trashId"}, "WRITE"),
+    "git_status": (set(), "GIT"), "git_diff": (set(), "GIT"),
+    "run_shell": ({"command"}, "SHELL"),
+    "git_commit": ({"message", "paths"}, "GIT"), "run_command": ({"commandId"}, "COMMAND"),
+    "git_integrate": ({"sourceTaskId"}, "GIT"),
+    "ask_question": ({"question", "context", "options", "answerRequirements"}, "QUESTION"),
+}
+
+
 class GuardBroker:
     def __init__(self, client, task, worker_id, attempt):
         self.client, self.task, self.attempt = client, task, attempt
@@ -720,21 +735,8 @@ class GuardBroker:
     def _invoke(self, name, args, call_id=None):
         if self.root is None: raise RuntimeError("GUARD_WORKSPACE_NOT_ATTACHED")
         if not isinstance(args, dict): raise RuntimeError("GUARD_TOOL_ARGUMENTS_INVALID")
-        schemas = {
-            "read": ({"path", "offset", "limit"}, "READ"), "ls": ({"path"}, "READ"),
-            "grep": ({"path", "text"}, "SEARCH"), "write": ({"path", "content", "expectedDigest"}, "WRITE"),
-            "edit": ({"path", "oldText", "newText", "expectedDigest"}, "WRITE"),
-            "edit_many": ({"path", "edits", "expectedDigest"}, "WRITE"),
-            "mkdir": ({"path"}, "WRITE"), "delete": ({"path", "expectedDigest"}, "WRITE"),
-            "restore": ({"path", "trashId"}, "WRITE"),
-            "git_status": (set(), "GIT"), "git_diff": (set(), "GIT"),
-            "run_shell": ({"command"}, "SHELL"),
-            "git_commit": ({"message", "paths"}, "GIT"), "run_command": ({"commandId"}, "COMMAND"),
-            "git_integrate": ({"sourceTaskId"}, "GIT"),
-            "ask_question": ({"question", "context", "options", "answerRequirements"}, "QUESTION"),
-        }
-        if name not in schemas or set(args) != schemas[name][0]: raise RuntimeError("GUARD_TOOL_ARGUMENTS_INVALID")
-        tool = schemas[name][1]
+        if name not in WORKSPACE_TOOLS or set(args) != WORKSPACE_TOOLS[name][0]: raise RuntimeError("GUARD_TOOL_ARGUMENTS_INVALID")
+        tool = WORKSPACE_TOOLS[name][1]
         if tool == "SHELL":
             command = args["command"]
             if not self.shell_enabled() or not isinstance(command, str) or not command.strip() or len(command) > 4096 or "\0" in command:

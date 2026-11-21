@@ -56,6 +56,8 @@ Python Worker 的 API Key 和 ChatGPT 连接每次模型调用默认最多使用
 
 ## 本机环境边界
 
+Python OpenAI SDK 仅展示当前任务可用的工作区与 Skill 工具。独立文字任务仍可读取已绑定的资料与 Skill。文件访问、审批和命令执行继续由现有策略逐次核验。
+
 工厂不会安装 Python 包、Codex 或 Git，不会登录账号或复制秘书凭证。Python 可从 PATH 查找，也可在高级设置中指定已安装解释器。
 
 - 工厂托管的 Codex Worker 默认使用 `host-actions`：复用现有 CLI 登录，通过与秘书相同的纯模型通道返回 JSON 工具请求，由平台受控 Broker 执行文件与 Git 操作。原生 Shell、浏览器、插件、多 Agent 等工具关闭并核对其生效状态；模型进程不获得工作区写权限。无需第二次登录或手动配置专用目录。显式指定 `AIW_CODEX_GUARD_HOME` 时保留原动态工具模式及其独立受控配置要求。

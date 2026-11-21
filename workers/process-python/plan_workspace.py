@@ -169,6 +169,7 @@ class PlanWorkspace:
         self.git, self.lock, self.base = git, lock, base
         self.assignment = {"baseRevision": base} if base else None
         self.handoff_cwd = str(handoff_cwd) if handoff_cwd is not None else self.cwd
+        self.text_workspace = handoff_cwd is not None
 
     @classmethod
     def materialize(cls, config, task, broker=None):
