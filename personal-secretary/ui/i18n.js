@@ -1174,6 +1174,11 @@
     '请查看当前正在执行和等待处理的工作。': 'Show the work currently running or waiting for attention.',
     '请总结本段对话的已确认决定和待解决问题。': 'Summarize the confirmed decisions and open questions in this conversation.',
     '查看这条回复的过程': 'View how this reply was handled',
+    '保存这条回复为私人草稿': 'Save this reply as a private draft',
+    '已保存到私人草稿': 'Saved in private drafts',
+    '已保存到私人草稿。': 'Saved in private drafts.',
+    '草稿已保存，请刷新查看。': 'Draft saved. Refresh to see it.',
+    '需求草稿': 'Requirements draft',
     '这条回复的处理过程': 'Processing details for this reply',
     '查看最近的全部运行': 'View all recent runs'
   });

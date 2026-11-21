@@ -684,7 +684,29 @@ function renderChat() {
       bubble.dataset.i18nSkip = "";
       if (kind === "assistant") bubble.append(markdownContent(text)); else bubble.textContent = text;
       item.append(node("small", "", label + (message.createdAt ? " · " + dateLabel(message.createdAt) : "")), bubble);
-      if (kind === "assistant") item.append(button("查看这条回复的过程", () => showMessageRuns(message.id)));
+      if (kind === "assistant") {
+        item.append(button("查看这条回复的过程", () => showMessageRuns(message.id)));
+        const draftId = "requirement-" + message.id;
+        const save = button("保存这条回复为私人草稿", async () => {
+          save.disabled = true;
+          try {
+            const { refreshed } = await post("record", { kind: "draft", id: draftId, revision: 0, data: {
+              title: (message.text || "").trim().split("\n")[0].slice(0, 80) || "需求草稿",
+              text, sourceMessageId: message.id
+            } });
+            save.textContent = "已保存到私人草稿";
+            feedback(refreshed ? "已保存到私人草稿。" : "草稿已保存，请刷新查看。", "ok");
+          } catch (error) {
+            feedback(errorMessage(error), "error");
+            save.disabled = false;
+          }
+        });
+        if (rows("drafts").some(draft => draft.id === draftId)) {
+          save.textContent = "已保存到私人草稿";
+          save.disabled = true;
+        }
+        item.append(save);
+      }
       if (kind === "assistant" && waitingConfirmations.some(decision => decision.messageId === message.id)) {
         item.append(button("查看待确认的文件操作", () => switchView("confirmations", true)));
       }

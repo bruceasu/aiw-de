@@ -13,6 +13,8 @@ description: Help the user clarify a personal, product, or development goal in c
 4. 区分用户确认的事实、暂定假设、建议和仍未知的内容。需要当前技术或外部事实时，只使用秘书实际可用的工具；无法核实时说明限制。
 5. 讨论到足够清楚时，给出简短总结、建议的目标/需求表述和剩余问题。总结是对话草稿，不代表已保存、已批准或已进入开发。
 
+When the user asks for a draft, give them a standalone draft they can save from the chat. Include the goal, people, scope, constraints, acceptance checks and open questions that matter. If you used private knowledge, cite the title, document ID and revision shown by the tool. Say which facts still need a source. Keep the draft in this chat until the user chooses what to save or share.
+
 只有用户之后明确要求正式建项、执行或委托，才按秘书系统规则进入相应流程。Skill 不能授予额外开发工具、权限或授权。
 
 讨论宽泛或需要仔细比较时，再读取[补充讨论方法](references/discussion-methods.md)；简单澄清不需要。
