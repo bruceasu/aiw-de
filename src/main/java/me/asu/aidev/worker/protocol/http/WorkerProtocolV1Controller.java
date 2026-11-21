@@ -210,7 +210,7 @@ public class WorkerProtocolV1Controller {
                 configurations==null?null:configurations.payload(task.id().value(),claimed.attemptId().value()),
                 skillFiles==null?null:skillFiles.payload(task.id().value(),claimed.attemptId().value()),
                 goalPolicy!=null&&goalPolicy.managed(task)?goalPolicy.frozen(task).images():List.of(),
-                workflowRuns.getObject().sources(task));
+                workflowRuns.getObject().sources(task),locations.stoppedAttempts(task));
     }
 
     private AiProfileCatalog.Guidance delegatedGuidance(me.asu.aidev.work.domain.WorkTask task,String runtime,int attempt) {
@@ -272,5 +272,7 @@ public class WorkerProtocolV1Controller {
             me.asu.aidev.execution.skills.SkillFileContract.Payload skillFiles,
             @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
             List<me.asu.aidev.goal.application.GoalImages.Image> modelImages,
-            List<me.asu.aidev.workflow.application.WorkflowRuns.Material> referenceMaterials) {}
+            List<me.asu.aidev.workflow.application.WorkflowRuns.Material> referenceMaterials,
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
+            List<String> stoppedAttempts) {}
 }

@@ -47,7 +47,7 @@
       section('Recovery advice', attempt?.diagnostic?.nextAction || 'Check the current task state before retrying.');
       const technical = el('details'); technical.append(el('summary', 'Technical details'));
       const fields = el('dl', undefined, 'kv');
-      for (const [name, value] of [['Task ID', data.task.id?.value], ['State', data.task.state], ['Worker', attempt?.workerId],
+      for (const [name, value] of [['Task ID', data.task.id?.value], ['State', data.displayState || data.task.state], ['Worker', attempt?.workerId],
         ['Attempt ID', attempt?.id], ['Failure category', attempt?.failureCategory], ['Error code / termination reason', attempt?.failureCode],
         ['Workspace', data.task.repositoryRef], ['Git baseline', data.task.baseRevision]]) {
         const item = el('dd', value ?? 'Not recorded', 'mono'); item.dataset.i18nSkip = ''; fields.append(el('dt', name), item);

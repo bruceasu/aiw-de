@@ -62,17 +62,22 @@
   function render() {
     const host=$('wr-state');host.replaceChildren();
     if(!state){host.append(node('p','所选尝试尚无已打开的运行通道。原有执行记录和停止流程仍可使用。','help'));$('wr-context').replaceChildren();$('wr-receipts').replaceChildren();controls();return;}
-    host.append(node('strong',labels[state.phase]||state.phase),node('p',(state.stale?'联系已过期；不能确认实时控制。':'最近联系：'+new Date(state.lastContact).toLocaleTimeString())+' · 指令版本 '+state.instructionRevision,'help'));
+    const title=state.stale&&state.attemptState==='RUNNING'
+      ?(window.aiwI18n?.locale==='zh'?'连接中断，结果待核对':'Connection lost. Result unconfirmed.')
+      :(labels[state.phase]||state.phase);
+    host.append(node('strong',title),node('p',(state.stale?'联系已过期；不能确认实时控制。':'最近联系：'+new Date(state.lastContact).toLocaleTimeString())+' · 指令版本 '+state.instructionRevision,'help'));
     const cap=state.capabilities;host.append(node('p','工具执行：'+(cap.toolExecutor==='HOST'?'Worker':'后端')+' · 暂停粒度：'+(cap.pauseBoundary==='TURN'?'后端回合结束并确认停止活动后':'单个宿主动作结束后')+' · 上下文：Worker 提交投影','help'));
     const context=$('wr-context');context.replaceChildren();
     for(const event of events.filter(e=>e.event_type==='progress-stalled').slice(-3)) {
       let code='';try{code=JSON.parse(event.payload_json).code;}catch(_){/* Older events may omit metadata. */}
-      const message=code==='MODEL_NO_PROGRESS'?'Repeated reads produced no new result after a reminder. The Worker stopped further model calls.':'Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.';
+      const message=code==='MODEL_NO_PROGRESS'?'Repeated reads produced no new result after a reminder. The Worker stopped further model calls.':code==='READ_PHASE_CHECK'?'The Worker has spent several turns reading. It will review the evidence and choose the next check.':'Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.';
       const notice=node('p',window.aiwI18n?.t(message)||message,'help');
       notice.append(document.createTextNode(' · '+new Date(event.occurred_ms).toLocaleTimeString(window.aiwI18n?.locale || 'en')));context.append(notice);
     }
     for(const event of events.filter(e=>e.event_type==='progress-review').slice(-3)) {
-      const notice=node('p',window.aiwI18n?.t('No change was observed. The Worker will ask the model to recheck the delivery conditions.') || 'No change was observed. The Worker will ask the model to recheck the delivery conditions.','help');
+      let code='';try{code=JSON.parse(event.payload_json).code;}catch(_){/* Older events may omit metadata. */}
+      const message=code==='LAST_COMMAND_NOT_PASSED'?'The last command did not pass. The Worker will review its relevance before delivery.':'No change was observed. The Worker will ask the model to recheck the delivery conditions.';
+      const notice=node('p',window.aiwI18n?.t(message)||message,'help');
       notice.append(document.createTextNode(' · '+new Date(event.occurred_ms).toLocaleTimeString(window.aiwI18n?.locale || 'en')));context.append(notice);
     }
     for(const event of events.filter(e=>e.event_type==='context-component').slice(-12)) {

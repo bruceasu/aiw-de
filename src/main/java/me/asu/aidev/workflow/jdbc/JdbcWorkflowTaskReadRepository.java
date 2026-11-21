@@ -44,6 +44,7 @@ public class JdbcWorkflowTaskReadRepository {
             return new Diagnostic(code,"The model runtime raised a classified exception. See the error code for its type; raw error text was omitted.",
                     "Check the Worker runtime and model configuration. Raw exception text is omitted to protect request data.",true);
         String summary=switch(code) {
+            case "WORKER_LEASE_EXPIRED" -> "The Worker stopped reporting before the lease expired. The result is unconfirmed.";
             case "MODEL_NO_PROGRESS" -> "Repeated reads produced no new result after a reminder. The Worker stopped further model calls.";
             case "MODEL_TOTAL_CALL_LIMIT" -> "The execution reached its configured model-call or turn limit.";
             case "MODEL_API_TIMEOUT" -> "The model API request timed out.";
@@ -66,6 +67,7 @@ public class JdbcWorkflowTaskReadRepository {
             default -> "The Worker reported an execution failure. Use the recorded code and attempt identity for diagnosis.";
         };
         String action=switch(code) {
+            case "WORKER_LEASE_EXPIRED" -> "Check the previous attempt and confirm it has stopped before retrying.";
             case "MODEL_NO_PROGRESS", "MODEL_TOTAL_CALL_LIMIT" -> "Review the recorded work and existing results. Then decide whether to clarify the task or retry. No automatic retry was requested by this guard.";
             case "MODEL_API_TIMEOUT" -> "Check the Worker network path and provider response time before retrying.";
             case "MODEL_API_CONNECTION_ERROR" -> "Check network access from the Worker to the configured model endpoint.";
@@ -95,19 +97,18 @@ public class JdbcWorkflowTaskReadRepository {
     @Transactional(readOnly = true)
     public List<Attempt> attempts(String taskId) {
         return jdbc.query("""
-                SELECT id, attempt_no, instruction_revision, worker_id, state,
-                       created_at_epoch_ms, started_at_epoch_ms, finished_at_epoch_ms,
-                       failure_category, termination_reason, completion_verdict,
-                       completion_summary, result_revision
-                  FROM execution_attempt
-                 WHERE task_id=?
-                 ORDER BY attempt_no DESC, created_at_epoch_ms DESC, id
+                SELECT a.*, CASE WHEN a.state IN ('CLAIMED','RUNNING')
+                    AND t.lease_expires_at_epoch_ms <= ? THEN 'INTERRUPTED' ELSE a.state END AS display_state
+                  FROM execution_attempt a LEFT JOIN work_task t ON t.id=a.task_id AND t.lease_token=a.lease_token
+                 WHERE a.task_id=?
+                 ORDER BY a.attempt_no DESC, a.created_at_epoch_ms DESC, a.id
                 """, (rs, n) -> new Attempt(rs.getString("id"), rs.getInt("attempt_no"),
-                rs.getInt("instruction_revision"), rs.getString("worker_id"), rs.getString("state"),
+                rs.getInt("instruction_revision"), rs.getString("worker_id"), rs.getString("display_state"),
                 instant(rs, "created_at_epoch_ms"), instant(rs, "started_at_epoch_ms"),
                 instant(rs, "finished_at_epoch_ms"), rs.getString("failure_category"),
-                code(rs.getString("termination_reason")), rs.getString("completion_verdict"),
-                rs.getString("completion_summary"), rs.getString("result_revision")), taskId);
+                "INTERRUPTED".equals(rs.getString("display_state"))?"WORKER_LEASE_EXPIRED":code(rs.getString("termination_reason")),
+                rs.getString("completion_verdict"), rs.getString("completion_summary"), rs.getString("result_revision")),
+                Instant.now().toEpochMilli(),taskId);
     }
 
     @Transactional(readOnly = true)

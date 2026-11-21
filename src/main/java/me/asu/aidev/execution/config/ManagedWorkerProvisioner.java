@@ -12,7 +12,7 @@ import org.springframework.transaction.support.*;
 public class ManagedWorkerProvisioner {
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.modelauth.ModelConnections modelConnections;
     public record Result(boolean starting,String message) {}
-    private static final class Slot {Process process;Path status;String worker;long since=System.nanoTime();String failure;String settingsVersion;String role;String repository;boolean stopping;}
+    private static final class Slot {Process process;Path status;String worker;long since=System.nanoTime();String failure;String settingsVersion;String role;String repository;boolean stopping;boolean runtimeFailure;}
     @org.springframework.beans.factory.annotation.Autowired private FactoryWorkerRegistry registrations;
     private boolean closed;
     private final Map<String,Slot> slots=new HashMap<>();
@@ -67,7 +67,7 @@ public class ManagedWorkerProvisioner {
         var existing=slots.get(key);
         if(existing!=null) {
             readStatus(existing);
-            if(existing.failure!=null && Objects.equals(existing.settingsVersion,settings.version()))return new Result(false,existing.failure);
+            if(existing.failure!=null && !existing.runtimeFailure && Objects.equals(existing.settingsVersion,settings.version()))return new Result(false,existing.failure);
             if(existing.process!=null&&!existing.process.isAlive()) {
                 if(registrations.busy(existing.worker)) return new Result(false,"The previous Worker still has an active lease; wait for recovery before restarting it.");
                 slots.remove(key);
@@ -193,7 +193,13 @@ public class ManagedWorkerProvisioner {
             if(!Objects.equals(slot.worker,value.path("workerId").asText())||!value.path("state").asText().equals("FAILED"))return;
             String code=value.path("code").asText();
             if(!code.matches("[A-Z][A-Z0-9_]{2,100}"))code="WORKER_INITIALIZATION_FAILED";
+            slot.runtimeFailure=Set.of("WORKER_EVIDENCE_FAILED","WORKER_EXECUTION_OUTCOME_UNCONFIRMED",
+                    "WORKER_HEARTBEAT_FAILED","WORKER_SLOT_FAILED").contains(code);
             String reason=switch(code) {
+                case "WORKER_EVIDENCE_FAILED" -> "Worker 无法写入执行记录，已退出。请检查该次执行的本地证据目录";
+                case "WORKER_EXECUTION_OUTCOME_UNCONFIRMED" -> "Worker 退出时无法确认执行结果";
+                case "WORKER_HEARTBEAT_FAILED" -> "Worker 无法向 Plane 上报心跳，已退出";
+                case "WORKER_SLOT_FAILED" -> "Worker 执行线程异常退出";
                 case "PYTHON_DEPENDENCY_MISSING" -> "Python 缺少 Worker 运行依赖，请使用已安装依赖的 Python 环境。";
                 case "PYTHON_VERSION_UNSUPPORTED" -> "Worker 要求 Python 3.11 或更高版本，请调整 Agent 工厂中的 Python 路径。";
                 case "OPENAI_AGENTS_SDK_MISSING" -> "当前 Python 环境缺少 OpenAI Agents SDK，请在该环境中安装 Worker 的 requirements.txt。";

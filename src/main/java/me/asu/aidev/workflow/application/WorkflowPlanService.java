@@ -34,6 +34,8 @@ public class WorkflowPlanService {
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<FactoryPlanLifecycle> factoryPlans;
     @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<WorkflowRuns> workflowRuns;
+    @org.springframework.beans.factory.annotation.Autowired
     private me.asu.aidev.workspace.application.ManagedWorkspaceService targetWorkspaces;
     public WorkflowPlan editableDraft(String id,String actor) {
         actor=actor(actor);
@@ -363,6 +365,7 @@ public class WorkflowPlanService {
         if(delegation!=null) delegation.allowHumanTask(task.id().value());
         tasks.recordControlEvent(UUID.randomUUID().toString(), task.id(), null,
                 "RETRY_FAILED", actor, reason.strip(), true, now);
+        if (workflowRuns != null) workflowRuns.getObject().restoreRecordedRetry(id);
         return get(id);
     }
 

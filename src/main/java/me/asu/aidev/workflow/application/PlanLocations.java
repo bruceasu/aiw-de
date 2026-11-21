@@ -29,6 +29,17 @@ public class PlanLocations {
         String scope=plan.isPresent()?plan.get().id():task.subjectType()+":"+task.subjectId();
         return allocate(scope,plan.map(p->p.spec().location()).orElse(null));
     }
+    public List<String> stoppedAttempts(WorkTask task) {
+        if(!"flexible-plan".equals(task.subjectType()))return List.of();
+        return jdbc.queryForList("""
+                SELECT a.id FROM execution_stop_evidence e JOIN execution_attempt a ON a.id=e.attempt_id
+                  JOIN work_task t ON t.id=a.task_id
+                 WHERE t.subject_type='flexible-plan' AND t.subject_id=?
+                   AND a.state IN ('FAILED','EXPIRED','CANCELLED')
+                   AND (t.lease_token IS NULL OR t.lease_token<>a.lease_token)
+                 ORDER BY a.finished_at_epoch_ms DESC,a.id LIMIT 100
+                """,String.class,task.subjectId());
+    }
     public record View(String location,boolean temporary,boolean cleaned) {}
     public View view(String planId) {
         var found=jdbc.query("SELECT location,temporary,cleaned_at_epoch_ms FROM plan_execution_location WHERE scope_id=?",

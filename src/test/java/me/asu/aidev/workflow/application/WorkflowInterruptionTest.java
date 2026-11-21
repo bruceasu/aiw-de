@@ -28,6 +28,7 @@ class WorkflowInterruptionTest {
     AuthorityRepository db;
     WorkTaskRepository tasks;
     ExecutionAttemptRepository attempts;
+    WorkflowPlan plan;
     WorkflowRuns workflows;
     WorkflowRuns.Run run;
     WorkTask task;
@@ -41,8 +42,9 @@ class WorkflowInterruptionTest {
         ObjectProvider<WorkflowPlanService> provider=mock(ObjectProvider.class);when(provider.getObject()).thenReturn(plans);
         workflows=new WorkflowRuns(db,boundary,null,provider,null,null,tasks,attempts,null);
         task=task("plan~work~work-1",TaskState.RUNNING);
-        when(tasks.find(task.id())).thenReturn(Optional.of(task));when(plans.effectiveSteps("plan")).thenReturn(List.of(task));
-        var plan=mock(WorkflowPlan.class);when(plan.state()).thenReturn(WorkflowPlan.State.COMPLETED);when(plans.get("plan")).thenReturn(plan);
+        when(tasks.find(task.id())).thenReturn(Optional.of(task));
+        when(plans.effectiveSteps("plan")).thenAnswer(call->List.of(tasks.find(task.id()).orElseThrow()));
+        plan=mock(WorkflowPlan.class);when(plan.state()).thenReturn(WorkflowPlan.State.COMPLETED);when(plans.get("plan")).thenReturn(plan);
         run=new WorkflowRuns.Run();run.id="plan";run.actor="owner";run.state="RUNNING";run.current="work";run.taskId=task.id().value();run.context="";
         run.spec=new WorkflowRuns.Spec("Task","Produce the requested result","work",List.of(
             new WorkflowRuns.Node("work","Work",WorkflowRuns.Kind.TASK,"Return the actual result","end",null,null,null,List.of()),
@@ -68,14 +70,53 @@ class WorkflowInterruptionTest {
         assertThat(workflows.canClaim(task("old-task",TaskState.READY))).isFalse();
         run.state="STOPPING";save();assertThat(workflows.canClaim(task)).isFalse();
     }
+    @Test void confirmedTaskDetailRetryRestoresClaimabilityOnce() {
+        jdbc.execute("CREATE TABLE work_task_control_event(task_id TEXT, action TEXT, warning_confirmed INTEGER, created_at_epoch_ms INTEGER)");
+        run.state="FAILED";save();
+        var ready=task(task.id().value(),TaskState.READY);
+        when(tasks.find(task.id())).thenReturn(Optional.of(ready));
+        when(plan.state()).thenReturn(WorkflowPlan.State.CONFIRMED);
+        workflows.assignPending(run.id);
+        assertThat(workflows.canClaim(ready)).isFalse();
+
+        jdbc.update("INSERT INTO work_task_control_event VALUES(?, 'RETRY_FAILED', 1, ?)",
+                ready.id().value(),ready.updatedAt().toEpochMilli());
+        workflows.assignPending(run.id);
+        workflows.restoreRecordedRetry(run.id);
+
+        assertThat(workflows.canClaim(ready)).isTrue();
+        assertThat(saved().events).extracting(WorkflowRuns.Event::type).containsExactly("RETRY");
+        verify(tasks,never()).retryFailed(any(),any());
+    }
     @Test void lateSuccessfulResultCanBeExplicitlyAccepted() {
         run.state="FAILED";save();
         var completed=task(task.id().value(),TaskState.COMPLETED);
         when(tasks.find(task.id())).thenReturn(Optional.of(completed));
         when(attempts.findCompletionReport(task.id())).thenReturn(Optional.of(new CompletionReport(CompletionVerdict.PASS,"Actual result")));
         var result=workflows.control("plan",0,"accept-result",null);
-        assertThat(result.state).isEqualTo("COMPLETED");assertThat(result.context).contains("Actual result");
+        assertThat(result.state).isEqualTo("COMPLETED");
+        assertThat(result.context).isEmpty();
+        assertThat(result.events).anyMatch(event->event.type().equals("RESULT")&&event.content().equals("Actual result"));
         verify(tasks,never()).retryFailed(any(),any());
+    }
+    @Test void largeAcceptedResultDoesNotFillWorkflowInput() {
+        run.context="User input ".repeat(5700);save();
+        var completed=task(task.id().value(),TaskState.COMPLETED);
+        when(tasks.find(task.id())).thenReturn(Optional.of(completed));
+        String report="Work report ".repeat(600).strip();
+        workflows.completed(completed,new CompletionReport(CompletionVerdict.PASS,report));
+        assertThat(saved().state).isEqualTo("COMPLETED");
+        assertThat(saved().context).isEqualTo(run.context);
+        assertThat(saved().events).anyMatch(event->event.type().equals("RESULT")&&event.content().equals(report));
+    }
+    @Test void previousResultContextIsBoundedAndDoesNotDuplicateTheFormalInput() {
+        run.completedTaskId=task.id().value();
+        run.events.add(new WorkflowRuns.Event(1L,"older","RESULT","Earlier evidence "+"a".repeat(2000)));
+        run.events.add(new WorkflowRuns.Event(2L,"work","RESULT","Latest formal result"));
+        run.events.add(new WorkflowRuns.Event(3L,"work","DRAFT_RESULT","Draft before supplement"));
+        assertThat(WorkflowRuns.resultContext(run,750,false)).hasSizeLessThanOrEqualTo(750)
+                .contains("Earlier evidence","Draft before supplement").doesNotContain("Latest formal result");
+        assertThat(WorkflowRuns.resultContext(run,750,true)).contains("Latest formal result");
     }
     @Test void unfinishedResultCannotBeAccepted() {
         run.state="FAILED";save();

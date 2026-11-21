@@ -500,6 +500,7 @@ class ProcessSlot:
             from openai_api_runtime import OpenAIApiRuntime
             self.runtime = OpenAIApiRuntime.from_env()
         self.slot_no = slot_no; self.config = config; self.client = client; self.stop_event = stop_event
+        self.exit_reason = None
         self.thread = threading.Thread(target=self._run, name=f"process-slot-{slot_no}", daemon=False)
     def start(self) -> None: self.thread.start()
     def join(self) -> None: self.thread.join()
@@ -517,7 +518,8 @@ class ProcessSlot:
                         print(f"slot {self.slot_no}: CONTROL_PLANE_POLL_FAILED", file=sys.stderr, flush=True)
                         self.stop_event.wait(self.config.poll_interval)
         except Exception as error:
-            print(f"slot {self.slot_no}: AGENT_RUNTIME_INITIALIZATION_FAILED", file=sys.stderr, flush=True); self.stop_event.set()
+            self.exit_reason = "WORKER_SLOT_FAILED"
+            print(f"slot {self.slot_no}: {self.exit_reason}", file=sys.stderr, flush=True); self.stop_event.set()
 
     def _execute_task(self, runtime_client: Any, task: dict[str, Any]) -> None:
         heartbeat = workspace = attempt = gate = None
@@ -525,10 +527,23 @@ class ProcessSlot:
         native = None
         session_id = None
         started = reporting = finished = cleaned = False
-        phase = "TOOL_ERROR"
+        phase = "CONFIGURATION"
         try:
             attempt = Attempt(self.config, task, self.force_event)
             with attempt_scope(attempt):
+                selection, reason = choose_ai_profile(task.get("aiGuidance"), self.config.runtime)
+                fallback_selection = selection
+                default_model = self.config.model or (self.runtime.config.model if self.config.runtime == "openai-agents" else None)
+                effective_selection = selection
+                if task.get("executionConfiguration") is None:
+                    effective_selection = step_selection(task, self.config.runtime, selection, default_model, self.config.reasoning_effort)
+                if task.get("aiGuidance") and effective_selection is not selection:
+                    selection, reason = effective_selection, "Step preference matches an approved profile"
+                self.client.start(task, self.config.worker_id, selection, reason)
+                started = True
+                attempt.evidence.record("attempt-running", status="running")
+                heartbeat = LeaseHeartbeat(self.client, task, self.config.worker_id, self.config.heartbeat_interval, attempt)
+                heartbeat.start()
                 from execution_configuration import load as load_configuration
                 prepared = load_configuration(self.config, task)
                 profile = prepared.profile if prepared else _profile(self.config, task.get("taskType"))
@@ -538,17 +553,6 @@ class ProcessSlot:
                 if skill_reader:
                     for name, digest, size, _asset_digest in skill_reader.evidence:
                         attempt.evidence.record("context-source", path="skill:" + name, digest=digest, bytes=size)
-                selection, reason = choose_ai_profile(task.get("aiGuidance"), self.config.runtime)
-                fallback_selection = selection
-                default_model = self.config.model or (self.runtime.config.model if self.config.runtime == "openai-agents" else None)
-                effective_selection = selection if prepared else step_selection(task, self.config.runtime, selection, default_model, self.config.reasoning_effort)
-                if task.get("aiGuidance") and effective_selection is not selection:
-                    selection, reason = effective_selection, "Step preference matches an approved profile"
-                self.client.start(task, self.config.worker_id, selection, reason)
-                started = True
-                attempt.evidence.record("attempt-running", status="running")
-                heartbeat = LeaseHeartbeat(self.client, task, self.config.worker_id, self.config.heartbeat_interval, attempt)
-                heartbeat.start()
                 if "execution-guard-v1" in task.get("requiredCapabilities", []):
                     from execution_guard import GuardBroker
                     broker = GuardBroker(self.client, task, self.config.worker_id, attempt)
@@ -563,6 +567,7 @@ class ProcessSlot:
                     raise RuntimeError("ROLE_TASK_TYPE_DENIED")
                 if task.get("taskType") != "EXTERNAL_WORK" or task.get("skillRef") not in {profile.primary_skill,profile.name}:
                     raise RuntimeError("ROLE_SKILL_DENIED")
+                phase = "TOOL_ERROR"
                 if broker:
                     broker.prepare_approved_inputs(task)
                 repair_id = None
@@ -575,6 +580,9 @@ class ProcessSlot:
                     repair_id = repair["repairId"]
                 # Location preparation is a Worker decision; no Control Plane Git assignment.
                 instruction = prepared.prompt(task, skill_reader) if prepared else _prompt(task, self.config, skill_reader)
+                if profile.writable or profile.name == "general-work":
+                    from progress_monitor import WORK_METHOD
+                    instruction += WORK_METHOD
                 if broker is None:
                     from native_run import open_run
                     native = open_run(self.config, self.client, task, attempt)
@@ -582,6 +590,7 @@ class ProcessSlot:
                         native.begin()
                         instruction += native.prompt()
                 from plan_workspace import PlanWorkspace
+                attempt.evidence.record("runtime-event", status="preparing-workspace")
                 try:
                     workspace = PlanWorkspace.materialize(self.config, task, broker)
                 except Exception:
@@ -624,6 +633,7 @@ class ProcessSlot:
                 instruction += "\nVerified handoff manifests:\n" + json.dumps(task.get("handoffInputs", []), ensure_ascii=False)
                 if len(instruction.encode("utf-8")) > setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024): raise RuntimeError("CONTEXT_BUDGET_EXCEEDED")
                 gate = workspace_lock(workspace.cwd, attempt)
+                attempt.evidence.record("runtime-event", status="preparing-context")
                 baseline = snapshot(workspace.cwd, attempt) if not profile.writable and not broker else None
                 selected = effective_selection["profile"] if effective_selection else None
                 for name in ("AGENTS.md", "CODEX.md"):
@@ -667,6 +677,7 @@ class ProcessSlot:
                         or (preferences.get("effort") and preferences["effort"] != request.reasoning_effort)):
                     settings_reason = "Invalid or unavailable Step preference; use Worker choice for unavailable fields"
                 attempt.evidence.record("ai-settings", model=request.model, effort=request.reasoning_effort, reason=settings_reason)
+                attempt.evidence.record("runtime-event", status="running-model")
                 try:
                     try:
                         final_response = self.runtime.run(runtime_client, request, set_session)
@@ -703,17 +714,24 @@ class ProcessSlot:
                 if native:
                     native.maybe_question(workspace, report, report["summary"])
                 phase = "TOOL_ERROR"
+                attempt.evidence.record("runtime-event", status="delivering-result")
                 if repair_id and report["verdict"] == "PASS":
                     from price_repair_materials import submission
                     attempt.check()
                     if heartbeat.ownership_lost.is_set(): raise RuntimeError("LEASE_LOST")
                     proposal = submission(workspace.cwd, task, self.config.worker_id, repair_id, report["summary"])
                     self.client.submit_price_repair(task, proposal)
+                from plan_workspace import REPORT_FILE_MAX_BYTES
+                full_report = report["summary"]
+                if len(full_report.encode("utf-8")) > REPORT_FILE_MAX_BYTES:
+                    raise RuntimeError("HANDOFF_REPORT_TOO_LARGE")
                 workspace_result = workspace.finalize(task, read_only=not profile.writable)
+                if task.get("subjectType") == "flexible-plan":
+                    report["summary"] = workspace.report_summary(task, full_report)
                 if profile.writable:
                     report["summary"] += "\n\nWorking directory: " + workspace.cwd
                 if broker: broker.record_delivery(workspace_result, report)
-                task["_handoff"] = workspace.handoff(task, report, workspace_result)
+                task["_handoff"] = workspace.handoff(task, report, workspace_result, full_report=full_report)
                 if native:
                     native.end()
                     native.channel.seal("native-final")
@@ -778,8 +796,10 @@ class ProcessSlot:
                     if attempt.reason == "stop-requested" and not attempt.resource_uncertain and not (broker and broker._active):
                         self.client._task_action(task, self.config.worker_id, "stop-acknowledgement", session_id)
                     else: self.client.fail(task, self.config.worker_id, session_id, failure_code, phase)
-                except ProtocolError: pass
-            print(f"attempt {task.get('attemptId')}: {status}", file=sys.stderr, flush=True)
+                except ProtocolError as report_error:
+                    print(f"attempt {task.get('attemptId')}: failure receipt HTTP {report_error.status}", file=sys.stderr, flush=True)
+            detail = f" ({phase}: {failure_code})" if attempt else ""
+            print(f"attempt {task.get('attemptId')}: {status}{detail}", file=sys.stderr, flush=True)
         finally:
             if heartbeat:
                 try: heartbeat.close()
@@ -794,7 +814,9 @@ class ProcessSlot:
                     except Exception: print("CRITICAL_EVIDENCE_OR_CLEANUP_FAILED", file=sys.stderr, flush=True)
                 attempt.close()
             if gate and not (attempt and attempt.resource_uncertain): gate.release()
-            if attempt and attempt.resource_uncertain: self.stop_event.set()
+            if attempt and attempt.resource_uncertain:
+                self.exit_reason = "WORKER_EVIDENCE_FAILED" if attempt.evidence.failed else "WORKER_EXECUTION_OUTCOME_UNCONFIRMED"
+                self.stop_event.set()
 
 def _profile(config: WorkerConfig, task_type: str | None = None) -> ProcessProfile:
     return get_profile(config.process_role, task_type)
@@ -915,9 +937,13 @@ def main() -> int:
     if client.usage_outbox: client.usage_outbox.start()
     print(f"registered worker={config.worker_id} role={profile.name} primarySkill={profile.primary_skill} capabilities={','.join(config.capabilities)} concurrency={config.max_concurrency}", flush=True)
     for slot in slots: slot.start()
+    exit_reason = None
     try:
         while not stop_event.wait(config.heartbeat_interval): client.worker_heartbeat(config.worker_id)
-    except (KeyboardInterrupt, ProtocolError): stop_event.set()
+    except KeyboardInterrupt: stop_event.set()
+    except ProtocolError:
+        exit_reason = "WORKER_HEARTBEAT_FAILED"
+        stop_event.set()
     finally:
         try: client.drain(config.worker_id)
         except ProtocolError: pass
@@ -925,6 +951,9 @@ def main() -> int:
         if client.usage_outbox: client.usage_outbox.close()
         try: client.offline(config.worker_id)
         except ProtocolError: pass
+    exit_reason = next((slot.exit_reason for slot in slots if slot.exit_reason), exit_reason)
+    if exit_reason:
+        raise RuntimeError(exit_reason)
     return 0
 
 

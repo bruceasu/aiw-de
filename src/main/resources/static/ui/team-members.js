@@ -27,7 +27,7 @@
     'Open execution':['查看执行'],'No assigned work in this snapshot':['当前快照没有关联工作'],'No members in this list':['此列表暂无成员'],
     'Execution history (latest 100)':['执行历史（最近 100 条）'],'No execution history':['暂无关联的执行历史'],'Current work shown':['当前快照中已显示的工作'],
     'RUNNING':['执行中'],'PAUSED':['后续步骤已暂停'],'WAITING_USER':['待你回答'],'STOPPING':['等待停止确认'],'STOPPED':['已停止'],'COMPLETED':['已完成'],'FAILED':['需要处理'],
-    'Member saved':['成员已保存'],'State updated':['成员状态已更新'],'Connection issue; process state is unconfirmed':['连接异常；进程状态尚未确认'],
+    'Member saved':['成员已保存'],'Saving member…':['正在保存成员…'],'Member saved. Refresh the list to display it.':['成员已保存。请刷新列表查看。'],'State updated':['成员状态已更新'],'Connection issue; process state is unconfirmed':['连接异常；进程状态尚未确认'],
     'Could not load members':['无法读取成员，请检查登录与连接'],
     'Request outcome is unknown. Refresh to check the original member before retrying.':['请求结果尚未确认。请先刷新核对原成员，再决定是否重试。'],
     'Discard unsaved edits?':['放弃未保存的修改？'],'Select up to eight registered platform Skills':['请选择最多 8 项已注册的平台 Skills'],
@@ -81,7 +81,7 @@
   function controls(){host.querySelectorAll('button').forEach(b=>b.disabled=busy||loading);$('[data-team-fields]').disabled=busy||loading;}
   async function request(path='',body){
     let response;
-    try{response=await fetch(root+path,{method:body===undefined?'GET':'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:body===undefined?undefined:JSON.stringify(body)});}
+    try{response=await fetch(root+path,{method:body===undefined?'GET':'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},signal:AbortSignal.timeout(20000),body:body===undefined?undefined:JSON.stringify(body)});}
     catch(_){throw new Error(body===undefined?'Could not load members':'Request outcome is unknown. Refresh to check the original member before retrying.');}
     if(response.redirected||!response.headers.get('content-type')?.includes('application/json'))throw new Error(body===undefined?'Could not load members':'Request outcome is unknown. Refresh to check the original member before retrying.');
     let result;try{result=await response.json();}catch(_){throw new Error(body===undefined?'Could not load members':'Request outcome is unknown. Refresh to check the original member before retrying.');}
@@ -201,7 +201,7 @@
   $('[data-team-new]').onclick=()=>act(async()=>{if(editing&&!window.confirm(t('Discard unsaved edits?')))return;if(!data)await load();show({id:'member-'+crypto.randomUUID(),revision:0,name:'',purpose:'',skills:[],notes:''});});
   $('[data-team-cancel]').onclick=()=>{editing=null;form.hidden=true;};
   $('[data-team-refresh]').onclick=()=>act(load);$('[data-team-archived]').onchange=()=>act(load);
-  form.onsubmit=event=>{event.preventDefault();act(async()=>{const selected=[...$('[data-team-skills]').selectedOptions].map(o=>o.value),allowed=selectedModels();if(selected.length>8)throw new Error('Select up to eight registered platform Skills');if(allowed.some(item=>!(data.modelProfiles||[]).some(current=>sameModel(item,current))))throw new Error('Registered profiles changed; explicitly reselect before saving');await request('',{id:editing.id,revision:editing.revision,name:form.elements.name.value,purpose:form.elements.purpose.value,skills:selected,notes:form.elements.notes.value,settings:{model:form.elements.model.value,effort:form.elements.effort.value,allowedProfiles:allowed,knowledge:references,experience:experiences}});editing=null;form.hidden=true;await load();status('Member saved');});};
+  form.onsubmit=event=>{event.preventDefault();act(async()=>{const selected=[...$('[data-team-skills]').selectedOptions].map(o=>o.value),allowed=selectedModels();if(selected.length>8)throw new Error('Select up to eight registered platform Skills');if(allowed.some(item=>!(data.modelProfiles||[]).some(current=>sameModel(item,current))))throw new Error('Registered profiles changed; explicitly reselect before saving');status('Saving member…');await request('',{id:editing.id,revision:editing.revision,name:form.elements.name.value,purpose:form.elements.purpose.value,skills:selected,notes:form.elements.notes.value,settings:{model:form.elements.model.value,effort:form.elements.effort.value,allowedProfiles:allowed,knowledge:references,experience:experiences}});editing=null;form.hidden=true;status('Member saved');try{await load();}catch(_){status('Member saved. Refresh the list to display it.');}});};
   window.addEventListener('aiw:locale-changed',()=>{translate();render();if(editing)modelOptions(selectedModels());renderReferences();renderExperience();const source=$('[data-team-experience-source]');if(source.options[0])source.options[0].textContent=t('Select an assigned execution');});translate();act(load);
   const timer=setInterval(()=>{if(!document.hidden&&!editing&&!busy&&!loading)act(load);},8000);window.addEventListener('pagehide',()=>clearInterval(timer));
 })();

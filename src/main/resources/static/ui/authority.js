@@ -211,8 +211,8 @@ for (const host of document.querySelectorAll("[data-authority-record-table]")) {
   source.textContent = JSON.stringify(rows, null, 2);
 }
 
-async function post(path, body = {}) {
-  const response = await fetch("/api/r1/authority" + path, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content }, body: JSON.stringify(body) });
+async function post(path, body = {}, apiBase = "/api/r1/authority") {
+  const response = await fetch(apiBase + path, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').content }, body: JSON.stringify(body) });
   if (response.status === 401) {
     const error = new Error("登录已失效，请重新登录后再提交。");
     error.needsLogin = true;
@@ -286,5 +286,70 @@ form("execution-control", value => post("/execution-policies/" + encodeURICompon
 form("execution-bind", value => post("/execution-contexts/" + encodeURIComponent(value.taskId) + "/bind", JSON.parse(value.context)));
 form("execution-increment", value => post("/execution-budgets/increment", { ...value, amount: Number(value.amount), cumulativeCeiling: Number(value.cumulativeCeiling), loopId: value.loopId || null }));
 form("execution-reconcile", value => post("/execution-effects/reconcile", value));
-form("execution-stopped", value => post("/execution-tasks/" + encodeURIComponent(value.taskId) + "/stopped", { attemptId: value.attemptId, evidenceRef: value.evidenceRef, evidenceDigest: value.evidenceDigest, allProcessesQuiescent: value.allProcessesQuiescent === "on" }));
+const stopForm = document.getElementById("execution-stopped");
+const stopTask = new URLSearchParams(location.search).get("stopTask");
+if (stopTask) document.getElementById("execution-stop-panel").open = true;
+if (stopForm) {
+  const choice = stopForm.elements.attemptId;
+  const evidence = document.getElementById("execution-stop-evidence");
+  const note = document.getElementById("execution-stop-evidence-note");
+  const next = document.getElementById("execution-stop-next");
+  const retry = document.getElementById("execution-stop-retry");
+  const back = document.getElementById("execution-stop-return");
+  let stoppedTask = null;
+  const updateEvidence = () => {
+    const selected = choice.selectedOptions[0].dataset;
+    const automatic = Boolean(selected.evidenceDigest);
+    const hasTask = Boolean(selected.task);
+    for (const [name, value] of [["evidenceRef", selected.evidenceRef], ["evidenceDigest", selected.evidenceDigest]]) {
+      const input = stopForm.elements.namedItem(name);
+      input.value = value || "";
+      input.readOnly = automatic;
+    }
+    evidence.hidden = !hasTask;
+    evidence.open = hasTask && !automatic;
+    stopForm.elements.allProcessesQuiescent.checked = false;
+    note.textContent = !hasTask ? "" : automatic ? "已带入本机 Worker 的退出记录，请核对后确认。"
+      : "Plane 未找到本机退出记录。请在 Worker 所在设备核验后补充证据。";
+  };
+  const selected = [...choice.options].find(option => stopTask && option.dataset.task === stopTask);
+  if (selected) choice.value = selected.value;
+  choice.addEventListener("change", updateEvidence);
+  updateEvidence();
+  form("execution-stopped", async value => {
+    const option = [...choice.options].find(option => option.value === value.attemptId);
+    if (!option?.dataset.task) throw new Error("请选择要确认停止的执行。");
+    await post("/execution-tasks/" + encodeURIComponent(option.dataset.task) + "/stopped", {
+      attemptId: value.attemptId, evidenceRef: value.evidenceRef, evidenceDigest: value.evidenceDigest,
+      allProcessesQuiescent: value.allProcessesQuiescent === "on"
+    });
+    option.remove();
+    choice.value = "";
+    updateEvidence();
+    stoppedTask = option.dataset.task;
+    retry.dataset.plan = option.dataset.plan;
+    back.href = "/ui/workflows?" + new URLSearchParams({execution: option.dataset.plan});
+    next.hidden = option.dataset.workflow !== "true";
+  });
+  retry.addEventListener("click", async () => {
+    const plan = retry.dataset.plan;
+    const task = stoppedTask;
+    if (!window.confirm("重试本步骤？原执行记录会保留，这会启动一次新的执行。")) return;
+    retry.disabled = true;
+    try {
+      const path = "/executions/" + encodeURIComponent(plan);
+      const response = await fetch("/api/r1/workflows" + path, { cache: "no-store", credentials: "same-origin" });
+      if (!response.ok || response.redirected) throw new Error("无法读取原工作流，请打开工作流核对。");
+      const current = await response.json();
+      if (current.run?.state !== "FAILED" || current.task?.id?.value !== task || current.task?.state !== "CANCELLED")
+        throw new Error("原步骤状态已变化，请打开工作流核对。");
+      await post(path + "/control", { version: current.run.version, action: "retry" }, "/api/r1/workflows");
+      location.href = "/ui/workflows?" + new URLSearchParams({execution: plan});
+    } catch (error) {
+      feedback(error.message, "error", error.needsLogin);
+    } finally {
+      retry.disabled = false;
+    }
+  });
+}
 form("execution-meter", value => post("/execution-meters/reconcile", { ...value, actualElapsedMs: value.actualElapsedMs === "" ? null : Number(value.actualElapsedMs), actualCostMicros: value.actualCostMicros === "" ? null : Number(value.actualCostMicros) }));

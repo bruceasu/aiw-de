@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 @Controller
 public class AuthorityPageController {
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.guard.ToolApprovals toolApprovals;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.FactoryWorkerRegistry factoryWorkers;
     public record PendingItem(String id,String kind,String state,String summary,String href,long recordedAt,boolean needsHuman,boolean canAct) {}
     private static String url(String value){return java.net.URLEncoder.encode(value,java.nio.charset.StandardCharsets.UTF_8);}
     private static String preview(String value){return value.substring(0,Math.min(240,value.length()));}
@@ -105,6 +106,58 @@ public class AuthorityPageController {
         model.addAttribute("executionEffects",repo.encode(repo.jdbc().queryForList("SELECT e.operation_id,e.task_id,e.attempt_id,e.tool_id,e.resource,e.state,e.result_digest,e.evidence_ref FROM execution_operation e JOIN execution_policy p ON p.plan_id=e.plan_id JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY e.started_ms DESC LIMIT 100",actor)));
         model.addAttribute("executionMeters",repo.encode(repo.jdbc().queryForList("SELECT m.attempt_id,m.task_id,m.settled,m.elapsed_ms,m.cost_micros,m.usage_unknown,m.time_unknown,m.price_json FROM execution_meter m JOIN execution_policy p ON p.plan_id=m.plan_id JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY m.started_ms DESC LIMIT 100",actor)));
         model.addAttribute("executionDeliveries",repo.encode(repo.jdbc().queryForList("SELECT d.task_id,d.attempt_id,d.digest,d.delivery_json,x.input_digest,x.config_digest FROM execution_delivery d JOIN execution_context x ON x.task_id=d.task_id JOIN execution_policy p ON p.plan_id=x.plan_id JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY d.created_ms DESC LIMIT 100",actor)));
+        model.addAttribute("stopCandidates",stopCandidates(actor,null));
         return "ui/authority";
+    }
+
+    @GetMapping("/api/r1/authority/execution-tasks/{task}/recovery") @ResponseBody
+    public Object recovery(@PathVariable String task,jakarta.servlet.http.HttpSession session) {
+        String actor=boundary.human();
+        if(actor==null||boundary.delegated()||!consoleSecurity.role(session).canApprove())
+            return org.springframework.http.ResponseEntity.status(403).body(Map.of("error","Approval permission is required to confirm a stop."));
+        var candidates=stopCandidates(actor,task);
+        if(candidates.isEmpty())return org.springframework.http.ResponseEntity.status(404).body(Map.of("error","No current execution is awaiting stop confirmation."));
+        var candidate=candidates.getFirst();
+        var effects=repo.jdbc().queryForList("""
+                SELECT operation_id AS id,tool_id AS tool,resource,evidence_ref AS evidenceRef
+                FROM execution_operation WHERE task_id=? AND state IN ('STARTED','UNKNOWN') ORDER BY started_ms,operation_id LIMIT 100
+                """,task);
+        return Map.of("candidate",candidate,"effects",effects);
+    }
+
+    private List<Map<String,Object>> stopCandidates(String actor,String task) {
+        return repo.jdbc().query("""
+                SELECT t.id AS task_id,a.id AS attempt_id,t.subject_id AS plan_id,a.attempt_no,a.worker_id,
+                       COALESCE(json_extract(wf.run_json,'$.spec.title'),json_extract(p.spec_json,'$.title'),t.subject_id) AS plan_title,
+                       t.lease_acquired_at_epoch_ms AS claimed_at,wf.id IS NOT NULL AS workflow,
+                       CASE WHEN f.worker_id IS NOT NULL AND w.status='OFFLINE'
+                                 AND w.registered_at_epoch_ms<=t.lease_acquired_at_epoch_ms THEN 1 ELSE 0 END AS local_exit
+                  FROM work_task t JOIN execution_attempt a ON a.task_id=t.id AND a.lease_token=t.lease_token
+                  JOIN flexible_workflow_plan p ON p.id=t.subject_id
+                  LEFT JOIN workflow_execution wf ON wf.id=p.id
+                  LEFT JOIN execution_context x ON x.task_id=t.id
+                  LEFT JOIN execution_policy ep ON ep.plan_id=x.plan_id
+                  LEFT JOIN plan_run_owner n ON n.plan_id=p.id
+                  JOIN authority_owner o ON o.id=COALESCE(ep.owner_id,n.owner_id)
+                  LEFT JOIN worker w ON w.id=a.worker_id
+                  LEFT JOIN factory_worker_registration f ON f.worker_id=w.id
+                 WHERE o.actor=? AND a.state='RUNNING' AND t.subject_type='flexible-plan'
+                   AND t.state IN ('RUNNING','YIELDING') AND (t.lease_expires_at_epoch_ms<=? OR a.stop_requested_at_epoch_ms IS NOT NULL)
+                   AND (x.task_id IS NOT NULL OR EXISTS (SELECT 1 FROM execution_run_session s WHERE s.attempt_id=a.id))
+                   AND (? IS NULL OR t.id=?)
+                 ORDER BY t.lease_expires_at_epoch_ms DESC,t.id LIMIT 100
+                """,(rs,i)->{
+                    var item=new LinkedHashMap<String,Object>();
+                    String worker=rs.getString("worker_id");
+                    item.put("taskId",rs.getString("task_id"));
+                    item.put("attemptId",rs.getString("attempt_id"));
+                    item.put("planId",rs.getString("plan_id"));
+                    item.put("workflow",rs.getBoolean("workflow"));
+                    item.put("label",preview(rs.getString("plan_title"))+" · #"+rs.getInt("attempt_no")+" · "+worker);
+                    var evidence=rs.getBoolean("local_exit")?factoryWorkers.exitEvidence(worker,rs.getLong("claimed_at")):null;
+                    item.put("evidenceRef",evidence==null?"":evidence.reference());
+                    item.put("evidenceDigest",evidence==null?"":evidence.digest());
+                    return item;
+                },actor,System.currentTimeMillis(),task,task);
     }
 }

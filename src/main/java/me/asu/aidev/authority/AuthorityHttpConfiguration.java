@@ -25,7 +25,8 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || method.equals("POST") && (Set.of("/professional-tasks","/sessions","/actions","/restrictions","/coordination","/question-replies","/goal-proposals","/personal-plans","/permission-actions/prepare","/agents/certificate-rotation/request").contains(path) || path.matches("/messages/[0-9a-f-]{36}/ack") || path.matches("/professional-tasks/[0-9a-f-]{36}/continue"));
     }
     private boolean humanRoute(String method,String path) {
-        if(method.equals("GET") && (path.matches("/agents/[^/]+/messages/dead") || path.matches("/agents/[^/]+/certificate-rotations"))) return true;
+        if(method.equals("GET") && (path.matches("/agents/[^/]+/messages/dead") || path.matches("/agents/[^/]+/certificate-rotations")
+                || path.matches("/execution-tasks/[^/]+/recovery"))) return true;
         return method.equals("POST") && (Set.of("/owners/bind","/agents/invitations","/grants","/managed-plans","/execution-policies","/execution-budgets/increment","/execution-effects/reconcile","/execution-meters/reconcile").contains(path)
                 || path.equals("/agents/invitations")
                 || path.matches("/execution-policies/[^/]+/(pause|resume|revoke)") || path.matches("/execution-contexts/[^/]+/bind")

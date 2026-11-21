@@ -81,6 +81,11 @@ class ProgressMonitorTest(unittest.TestCase):
         self.assertEqual(self.monitor.repetitions, 0)
         self.assertIsNone(self.monitor.delivery_feedback(True, "PASS"))
 
+    def test_confirmed_write_failure_does_not_count_as_a_change(self):
+        self.monitor.observe(read(0, '{"status":"error","error":"GUARD_FILE_VERSION_CONFLICT","hint":"Read again."}', name="write"))
+        self.assertFalse(self.monitor.may_have_changed)
+        self.assertIsNotNone(self.monitor.delivery_feedback(True, "PASS"))
+
     def test_user_supplement_resets_but_does_not_replay_old_tools(self):
         self.warn()
         history = [item for call in range(4) for item in read(call)]

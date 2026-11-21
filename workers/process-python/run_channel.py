@@ -10,8 +10,8 @@ import time
 
 PROTOCOL = "aiw.worker.loop.v1"
 EVENTS = {"model-request", "model-terminal", "tool-proposed", "runtime-event", "ai-settings", "context-projected", "context-component", "guard-intent", "guard-start", "guard-finished", "native-turn-started",
-          "host-batch-validated", "validation-failed", "validation-passed", "execution-quiescent", "delivery-pending", "progress-stalled", "progress-review"}
-FIELDS = set("bytes inputBytes outputBytes count durationMs inputTokens outputTokens cachedTokens complete truncated changed usageKnown visibility requestScope purpose status phase tool digest operation callId parentCallId sourceKind code model effort toolName runtimeEvent".split())
+          "host-batch-validated", "validation-failed", "validation-passed", "execution-quiescent", "delivery-pending", "progress-stalled", "progress-review", "workspace-lock"}
+FIELDS = set("bytes inputBytes outputBytes count durationMs inputTokens estimatedInputTokens inputTokenLimit outputTokens cachedTokens complete truncated changed usageKnown visibility requestScope purpose status phase tool digest operation callId parentCallId sourceKind code model effort toolName runtimeEvent".split())
 SOURCE_KINDS = set("instructions messages tools fixed_header observations new_observations task knowledge upstream skill configuration".split())
 
 
@@ -104,6 +104,8 @@ class RunChannel:
         elif event == "progress-stalled" and "tool" in values:
             values = {**values, "toolName": values["tool"]}
             values.pop("tool")
+        elif event == "workspace-lock":
+            values = {**values, "status": {"waiting": "pending", "acquired": "completed"}.get(values["status"], values["status"])}
         payload = {key: value for key, value in values.items() if key in FIELDS and value is not None
                    and not (isinstance(value, str) and not value.strip())}
         if payload.get("sourceKind") not in SOURCE_KINDS:

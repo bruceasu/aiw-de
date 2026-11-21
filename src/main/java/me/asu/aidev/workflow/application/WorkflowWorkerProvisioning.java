@@ -35,10 +35,17 @@ public class WorkflowWorkerProvisioning {
     }
     @org.springframework.scheduling.annotation.Scheduled(fixedDelayString="${aidev.workflow.worker-poll-ms:5000}")
     public void supply() {
-        var waiting=jdbc.queryForList("SELECT id FROM workflow_execution WHERE state='WAITING_MEMBER' AND id>? ORDER BY id LIMIT 20",String.class,memberAfter);
+        var waiting=jdbc.queryForList("""
+                SELECT w.id FROM workflow_execution w WHERE w.id>? AND (
+                    w.state='WAITING_MEMBER' OR (w.state='FAILED' AND EXISTS (
+                        SELECT 1 FROM work_task t JOIN work_task_control_event e ON e.task_id=t.id
+                        WHERE t.subject_type='flexible-plan' AND t.subject_id=w.id AND t.state='READY'
+                          AND e.action='RETRY_FAILED' AND e.warning_confirmed=1 AND e.created_at_epoch_ms=t.updated_at_epoch_ms
+                    ))) ORDER BY w.id LIMIT 20
+                """,String.class,memberAfter);
         memberAfter=waiting.isEmpty()?"":waiting.getLast();
         for(var id:waiting)try {workflows.getObject().assignPending(id);}
-        catch(RuntimeException error) {System.getLogger(getClass().getName()).log(System.Logger.Level.WARNING,"Team assignment remains pending for "+id+" ("+error.getClass().getSimpleName()+")");}
+        catch(RuntimeException error) {System.getLogger(getClass().getName()).log(System.Logger.Level.WARNING,"Workflow dispatch remains pending for "+id+" ("+error.getClass().getSimpleName()+")");}
         var config=settings.current();
         if(config==null || !config.automaticWorkers()) return;
         var ready=jdbc.queryForList("""

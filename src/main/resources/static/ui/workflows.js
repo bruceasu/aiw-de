@@ -44,6 +44,40 @@
     'Workspace task':['工作区任务'],
     'Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.':['不勾选时仅返回文本。不会因此授权其他主机路径；命令需要单独权限。'],
     'INTERRUPTED':['执行中断，结果待核对'],
+    'Review and confirm Worker stopped':['核对并确认 Worker 已停止'],
+    'Resolve interrupted execution':['核对中断并恢复'],
+    'Operation to check':['待核对操作'],
+    'Verified outcome':['核实结果'],
+    'Operation succeeded':['操作已成功'],
+    'Operation failed':['操作已失败'],
+    'Operation did not start':['操作未开始'],
+    'Evidence reference':['证据引用'],
+    'Evidence SHA-256':['证据 SHA-256'],
+    'Record verified outcome':['保存核实结果'],
+    'I verified that the Worker and its processes have stopped.':['我已核实 Worker 及其启动的进程均已停止。'],
+    'Confirm stopped':['确认已停止'],
+    'Close':['关闭'],
+    'Check the original workspace and record what happened before releasing the task.':['请先检查原工作区，记录待核对操作的实际结果。'],
+    'Local Worker exit evidence found. Verify the processes have stopped before confirming.':['已找到本机 Worker 的退出记录。请核实进程已停止后确认。'],
+    'Verify the original Worker has stopped and supply the evidence from its device.':['请在原 Worker 所在设备核实进程已停止，并填写那里的证据。'],
+    'Approval permission is required to confirm a stop.':['需要审批权限才能确认停止。'],
+    'No current execution is awaiting stop confirmation.':['当前没有等待确认停止的执行，请刷新。'],
+    'The execution changed. Reload before confirming.':['执行状态已变化，请刷新后再确认。'],
+    'Stop confirmed. Retry this step when ready.':['已确认停止。核对已有结果后可重做本步骤。'],
+    'The operation could not be confirmed. Reload its current state before submitting again.':['未能确认操作回执。请刷新状态后再提交。'],
+    'The model provider rejected the credentials or access. Check the connection in Agent Factory.':['模型服务拒绝了凭证或访问权限。请检查 Agent 工厂中的模型连接。'],
+    'The model provider did not find the requested model or endpoint. Check the configuration and retry.':['模型服务找不到所选模型或接口。请检查配置后重试。'],
+    'The model provider rejected the request. Check the model and reasoning settings.':['模型服务拒绝了请求。请检查模型和推理设置。'],
+    'The model provider reported a rate or quota limit. Check the quota before retrying.':['模型服务报告限流或配额不足。请核对配额后重试。'],
+    'workspace-lock':['工作区锁', 'Workspace lock'],
+    'Waiting for the workspace to become available':['等待工作区可用'],
+    'Preparing workspace':['准备工作区'],
+    'Preparing task context':['整理任务上下文'],
+    'Running model and tools':['运行模型和工具'],
+    'Writing final report':['整理最终报告'],
+    'DRAFT_RESULT':['补充前的结果草稿'],
+    'Delivering task result':['交付任务结果'],
+    'The workspace is locked and the Worker could not identify its owner. Check for an existing execution before retrying.':['工作区已锁定，Worker 无法识别持有者。重试前请检查是否有其他执行仍在使用该目录。'],
     'The Worker lease expired. Its process and external effects are not confirmed. Inspect the existing execution and request stop or reconcile it before choosing a retry.':['Worker 租约已过期，进程和外部操作的结果尚未确认。请先查看原执行并请求停止或核对结果，再决定是否重试。'],
     'An administrator revoked the original lease. Check existing results before explicitly choosing a retry; no work was automatically dispatched.':['管理员已撤销原租约。请核对已有结果后明确选择是否重试；没有自动重新派发。'],
     'RESULT_ACCEPTED':['已确认使用原结果'],
@@ -88,7 +122,12 @@
     'Source digest differs from content':['资料内容与摘要不一致，请重新加载。'],
     'Team member':['团队成员'],
     'Automatically choose member':['自动选择成员'],
-    'General execution (no team member)':['通用执行（不使用团队成员）'],
+    'General execution (no team member)':['使用通用 Worker（不指定成员）'],
+    'Automatic assignment uses a general Worker when no team members are configured.':['未配置团队成员时，自动分配会使用通用 Worker。'],
+    'GENERAL_ASSIGNED':['已转交通用 Worker','Assigned to a general Worker'],
+    'No team members are configured. The task will use a general Worker.':['未配置团队成员，本任务将交给通用 Worker。'],
+    'The selected team member has stopped accepting work. Resume that member to continue.':['所选成员已停止接单，恢复后可继续。'],
+    'CANCELLED':['已取消','Cancelled'],'BLOCKED':['等待处理','Blocked'],
     'Required Skills (optional, up to 8)':['所需 Skills（可选，最多 8 项）'],
     'WAITING_MEMBER':['等待合适成员', 'Waiting for a suitable member'],
     'MEMBER_ASSIGNED':['已选择成员', 'Member selected'],
@@ -200,8 +239,8 @@
   const route=new URLSearchParams(location.search);
   const pageMode=document.body.dataset.wfMode==='tasks'?'tasks':'workflows';
   let preparingGoal=route.get('goalVersion'), importAttempted=false;
-  async function api(path, data) {
-    const response = await fetch('/api/r1/workflows'+path, {method:data===undefined?'GET':'POST', credentials:'same-origin',
+  async function api(path, data, prefix='/api/r1/workflows') {
+    const response = await fetch(prefix+path, {method:data===undefined?'GET':'POST', credentials:'same-origin',cache:'no-store',
       headers:{'Content-Type':'application/json','X-CSRF-Token':$('meta[name="csrf-token"]').content}, body:data===undefined?undefined:JSON.stringify(data)});
     if(!response.ok) {const detail=await response.json().catch(()=>({}));throw new Error(detail.error || `${response.status} ${response.statusText}`);}
     return response.json();
@@ -214,7 +253,7 @@
     if(busy)return;busy=true;status('');
     const buttons=$$('button');buttons.forEach(b=>b.disabled=true);
     try {await work();} catch(error) {status(error instanceof TypeError?t('Request outcome is unknown. Check execution history before submitting again.'):t(error.message));}
-    finally {busy=false;buttons.forEach(b=>{if(b.isConnected)b.disabled=false;});if(currentView)controlButtons(currentView.run,currentView.task);}
+    finally {busy=false;buttons.forEach(b=>{if(b.isConnected)b.disabled=false;});if(currentView)controlButtons(currentView);}
   }
   function element(tag,text,className) {const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;}
   function button(label,callback) {const b=element('button',t(label),'btn ghost');b.type='button';b.onclick=callback;return b;}
@@ -455,22 +494,46 @@
   }
   function assignment(value){return {assignment:['AUTO','GENERAL'].includes(value)?value:'MEMBER',memberId:['AUTO','GENERAL'].includes(value)?null:value};}
   async function openRun(id) {if(id!==route.get('execution'))preparingGoal=null;selectedRun=id;signature='';panel('run');await refreshRun();}
-  function controlButtons(run,task) {
-    const allowed={pause:['RUNNING','WAITING_MEMBER'].includes(run.state),resume:run.state==='PAUSED',retry:run.state==='FAILED',
-      'accept-result':run.state==='FAILED'&&task?.state==='COMPLETED',stop:!['COMPLETED','STOPPED','STOPPING'].includes(run.state)};
+  function controlButtons({run,task,taskDisplayState}) {
+    const interrupted=taskDisplayState==='INTERRUPTED';
+    const allowed={pause:pageMode!=='tasks'&&!interrupted&&['RUNNING','WAITING_MEMBER'].includes(run.state),
+      resume:run.state==='PAUSED'&&!interrupted,retry:run.state==='FAILED'&&!interrupted&&!['CLAIMED','RUNNING','YIELDING'].includes(task?.state),
+      'accept-result':run.state==='FAILED'&&task?.state==='COMPLETED',stop:!interrupted&&!['COMPLETED','STOPPED','STOPPING'].includes(run.state)};
     $$('[data-wf-control]').forEach(b=>{b.hidden=!allowed[b.dataset.wfControl];b.disabled=busy;});
   }
   function renderActivity(data) {
     const activity=data.activity||{}, events=activity.events||[], connection=$('[data-wf-connection]');
-    const progress=events.filter(e=>e.event_type==='progress-stalled').at(-1);
+    const progress=events.filter(e=>e.event_type==='progress-stalled'||e.event_type==='progress-review').at(-1);
     let progressCode='';try{progressCode=JSON.parse(progress?.payload_json||'{}').code;}catch(_){/* Keep ordinary activity available. */}
     const progressMessage=progressCode==='MODEL_NO_PROGRESS'
       ?'Repeated reads produced no new result after a reminder. The Worker stopped further model calls.'
+      :progressCode==='READ_PHASE_CHECK'?'The Worker has spent several turns reading. It will review the evidence and choose the next check.'
+      :progressCode==='LAST_COMMAND_NOT_PASSED'?'The last command did not pass. The Worker will review its relevance before delivery.'
+      :progressCode==='NO_OBSERVED_CHANGE'?'No change was observed. The Worker will ask the model to recheck the delivery conditions.'
       :progressCode==='REPEATED_READ_RESULT'?'Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.':'';
     $('[data-wf-progress]').textContent=progressMessage?(window.aiwI18n?.t(progressMessage)||progressMessage):'';
     if(!activity.attemptId)connection.textContent=t('No Worker activity recorded yet');
     else connection.textContent=t(activity.phase)+' · '+t('Last contact')+': '+new Date(activity.lastContact).toLocaleString(window.aiwI18n?.locale||undefined)
       +(activity.stale&&activity.phase!=='SETTLED'?' · '+t('Connection delayed; execution state is not confirmed'):'');
+    if(!activity.stale&&activity.phase==='RUNNING') {
+      const stages={'preparing-workspace':'Preparing workspace','preparing-context':'Preparing task context',
+        'running-model':'Running model and tools','final-report-only':'Writing final report','delivering-result':'Delivering task result'};
+      for(const event of [...events].reverse()) {
+        if(!['workspace-lock','runtime-event'].includes(event.event_type))continue;
+        try {
+          const payload=JSON.parse(event.payload_json);
+          if(event.event_type==='workspace-lock') {
+            if(['pending','waiting'].includes(payload.status))connection.textContent=t('Waiting for the workspace to become available');
+            else if(['completed','acquired'].includes(payload.status))connection.textContent=t('Preparing workspace');
+            else continue;
+          } else {
+            if(!Object.hasOwn(stages,payload.runtimeEvent))continue;
+            connection.textContent=t(stages[payload.runtimeEvent]);
+          }
+          break;
+        } catch (_) { /* Try the preceding event when this one cannot be read. */ }
+      }
+    }
     let model=null,effort=null;
     for(const event of events){try{const payload=JSON.parse(event.payload_json);if(payload.model)model=payload.model;if(payload.effort)effort=payload.effort;}catch(_){/* Preserve other recorded activity. */}}
     $('[data-wf-model]').textContent=model?(model+(effort?' · '+effort:'')):t('Model not recorded');
@@ -557,18 +620,34 @@
   async function refreshRun() {
     if(!selectedRun)return;
     const id=selectedRun,data=await api('/executions/'+encodeURIComponent(id));if(id!==selectedRun)return;
-    currentView=data;renderActivity(data);renderUsage(data);renderAmendment(data);
+    currentView=data;renderActivity(data);renderUsage(data);
+    if(pageMode==='tasks')$('[data-wf-amendment]').hidden=true;else renderAmendment(data);
     const member=data.member||{};$('[data-wf-assigned-member]').textContent=member.id?t('Assigned member snapshot')+': '+member.name+' · v'+member.revision+(member.state==='DRAINING'?' · '+t(['READY','BLOCKED'].includes(data.task?.state)?'Resume the selected member to claim this work.':'Current work continues.'):''):'';
-    const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.report,data.preparation]);if(stamp===signature)return;signature=stamp;
+    const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.taskDisplayState,data.activity?.attemptId,data.activity?.stale,data.report,data.failureCode,data.preparation]);if(stamp===signature)return;signature=stamp;
     $('[data-wf-run-title]').textContent=run.spec.title;
-    $('[data-wf-run-state]').textContent=t(run.state);
+    const interrupted=data.taskDisplayState==='INTERRUPTED';
+    const failure=$('[data-wf-failure]'),code=data.failureCode;
+    failure.hidden=!code||run.state!=='FAILED';
+    if(!failure.hidden) {
+      const help=['MODEL_API_HTTP_401','MODEL_API_HTTP_403','MODEL_AUTH_REQUIRED'].includes(code)
+        ?'The model provider rejected the credentials or access. Check the connection in Agent Factory.'
+        :['MODEL_API_HTTP_400','MODEL_API_HTTP_422'].includes(code)?'The model provider rejected the request. Check the model and reasoning settings.'
+        :code==='MODEL_API_HTTP_404'?'The model provider did not find the requested model or endpoint. Check the configuration and retry.'
+        :['MODEL_API_HTTP_429','MODEL_QUOTA_OR_RATE_LIMIT'].includes(code)?'The model provider reported a rate or quota limit. Check the quota before retrying.'
+        :code==='WORKSPACE_LOCK_OWNER_UNKNOWN'?'The workspace is locked and the Worker could not identify its owner. Check for an existing execution before retrying.':'';
+      failure.textContent=help?t(help)+' ('+code+')':code;
+    }
+    $('[data-wf-run-state]').textContent=t(interrupted&&['RUNNING','FAILED'].includes(run.state)?'INTERRUPTED':run.state);
     const node=run.spec.nodes.find(n=>n.key===run.current),task=data.task;
-    $('[data-wf-run-current]').textContent=(node?.title||'')+(task?' · '+t(task.state):'');
-    graph($('[data-wf-run-graph]'),run.spec,run);controlButtons(run,task);
-    $('[data-wf-interrupted]').hidden=run.state!=='FAILED'||!run.events.some(e=>e.type==='INTERRUPTED');
+    $('[data-wf-run-current]').textContent=(node?.title||'')+(task?' · '+t(data.taskDisplayState||task.state):'');
+    const runGraph=$('[data-wf-run-graph]');runGraph.hidden=pageMode==='tasks';
+    if(!runGraph.hidden)graph(runGraph,run.spec,run);
+    controlButtons(data);
+    $('[data-wf-interrupted]').hidden=!interrupted&&(run.state!=='FAILED'||run.events.at(-1)?.type!=='INTERRUPTED');
+    $('[data-wf-confirm-stop]').hidden=!task||!(interrupted||run.state==='STOPPING'&&data.activity?.stale);
     const inspect=$('[data-wf-inspect]');inspect.hidden=!task||!data.activity?.attemptId;
     if(!inspect.hidden)inspect.href='/ui/configurations?'+new URLSearchParams({view:'workbench',source:task.requiredCapabilities.includes('execution-guard-v1')?'guarded':'native',plan:run.id,task:task.id.value||task.id,attempt:data.activity.attemptId})+'#worker-run';
-    $('[data-wf-supplement]').hidden=!['RUNNING','PAUSED','WAITING_USER','WAITING_MEMBER'].includes(run.state);
+    $('[data-wf-supplement]').hidden=interrupted||!['RUNNING','PAUSED','WAITING_USER','WAITING_MEMBER'].includes(run.state);
     const inputReceipts=$('[data-wf-input-receipts]');inputReceipts.replaceChildren();
     for(const input of run.inputs||[]) {
       const receipt=element('details',undefined,'wf-event');
@@ -579,13 +658,13 @@
     const options=$('[data-wf-answer-options]');options.replaceChildren();
     if(!answer.hidden)Object.keys(node.branches).forEach(choice=>options.append(button(choice,()=>act(()=>control('answer',choice)))));
     $('[data-wf-answer-form]').hidden=!!Object.keys(node?.branches||{}).length;
-    $('[data-wf-preparation]').textContent=(run.memberWait&&['WAITING_MEMBER','PAUSED'].includes(run.state)?t(run.memberWait)+(node?.requiredSkills?.length?' ('+node.requiredSkills.join(', ')+')':'')+(run.state==='WAITING_MEMBER'?' '+t('Assignment resumes automatically when a matching member is available.'):''):'') || data.preparation.map(p=>p.message).join('\n') || (task?.state==='READY'?t('Waiting for a compatible Worker'):'');
+    $('[data-wf-preparation]').textContent=(run.memberWait&&['WAITING_MEMBER','PAUSED'].includes(run.state)?t(run.memberWait)+(node?.requiredSkills?.length?' ('+node.requiredSkills.join(', ')+')':'')+(run.state==='WAITING_MEMBER'?' '+t('Assignment resumes automatically when a matching member is available.'):''):'') || data.preparation.map(p=>t(p.message)).join('\n') || (task?.state==='READY'?t('Waiting for a compatible Worker'):'');
     const detail=$('[data-wf-worker-detail]'), activityTask=task?.id.value||data.activity?.taskId;
     detail.hidden=!activityTask;detail.href=activityTask?'/ui/plans/'+encodeURIComponent(run.id)+'/tasks/'+encodeURIComponent(activityTask):'#';
     const timeline=$('[data-wf-timeline]');timeline.replaceChildren();
     for(const event of run.events) {
-      const section=element('details',undefined,'wf-event');section.open=['RESULT','FAILED','QUESTION','INTERRUPTED'].includes(event.type);
-      section.append(element('summary',new Date(event.time).toLocaleTimeString()+' · '+(run.spec.nodes.find(n=>n.key===event.node)?.title||'')+' · '+t(event.type)),element('pre',event.type==='INTERRUPTED'?t(event.content):event.content));timeline.append(section);
+      const section=element('details',undefined,'wf-event');section.open=['RESULT','DRAFT_RESULT','FAILED','QUESTION','INTERRUPTED'].includes(event.type);
+      section.append(element('summary',new Date(event.time).toLocaleTimeString()+' · '+(run.spec.nodes.find(n=>n.key===event.node)?.title||'')+' · '+t(event.type)),element('pre',['INTERRUPTED','WAITING_MEMBER','GENERAL_ASSIGNED'].includes(event.type)?t(event.content):event.content));timeline.append(section);
     }
     if(data.report&&!run.events.some(e=>e.type==='RESULT'&&e.content===data.report)){const section=element('details',undefined,'wf-event');section.append(element('summary',t('RESULT')),element('pre',data.report));timeline.append(section);}
     if(run.state==='COMPLETED'&&preparingGoal&&!importAttempted) {
@@ -604,6 +683,44 @@
     if(action==='retry'&&!window.confirm(t('Retry this step? Existing results will be retained; this starts another execution.')))return;
     if(action==='accept-result'&&!window.confirm(t('Use the recorded successful result and continue the workflow?')))return;
     await api('/executions/'+encodeURIComponent(selectedRun)+'/control',{version:currentView.run.version,action,answer});signature='';await refreshRun();await library();
+  }
+  const recoveryDialog=$('[data-wf-recovery]'),effectForm=$('[data-wf-effect-form]'),stopForm=$('[data-wf-stop-form]');
+  let recoveryCandidate=null;
+  async function loadRecovery(task,attempt) {
+    const path='/execution-tasks/'+encodeURIComponent(task);
+    const {candidate,effects}=await api(path+'/recovery',undefined,'/api/r1/authority');
+    const currentTask=currentView?.task?.id;
+    if(candidate.planId!==selectedRun||candidate.taskId!==task||(currentTask?.value||currentTask)!==task||
+        (attempt&&candidate.attemptId!==attempt))throw new Error('The execution changed. Reload before confirming.');
+    recoveryCandidate=candidate;
+    effectForm.reset();stopForm.reset();
+    effectForm.hidden=effects.length===0;stopForm.hidden=effects.length!==0;
+    effectForm.elements.operationId.replaceChildren(...effects.map(effect=>{
+      const option=new Option((effect.tool||'')+' · '+(effect.resource||''),effect.id);
+      option.dataset.evidenceRef=effect.evidenceRef||'';
+      return option;
+    }));
+    effectForm.elements.operationId.onchange();
+    const external=!candidate.evidenceDigest;
+    $('[data-wf-external-evidence]').hidden=!external;
+    stopForm.elements.evidenceRef.required=external;
+    stopForm.elements.evidenceDigest.required=external;
+    $('[data-wf-recovery-evidence]').textContent=t(effects.length
+      ?'Check the original workspace and record what happened before releasing the task.'
+      :external?'Verify the original Worker has stopped and supply the evidence from its device.'
+      :'Local Worker exit evidence found. Verify the processes have stopped before confirming.');
+  }
+  async function submitRecovery(form,work) {
+    if(!recoveryCandidate||form.dataset.sending)return;
+    form.dataset.sending='true';
+    const submit=form.querySelector('button');
+    submit.disabled=true;
+    $('[data-wf-recovery-status]').textContent='';
+    try {await work(new FormData(form),recoveryCandidate);}
+    catch(error){
+      $('[data-wf-recovery-status]').textContent=t(error instanceof TypeError||/^\d{3} /.test(error.message)
+        ?'The operation could not be confirmed. Reload its current state before submitting again.':error.message);
+    } finally {delete form.dataset.sending;submit.disabled=false;}
   }
   function example() {
     const n=(key,title,kind,instruction,next=null,branches={})=>({key,title,kind,instruction,next,branches});
@@ -638,6 +755,43 @@
     startRequest=newRequest();await library();await openRun(run.id);
   });
   $$('[data-wf-control]').forEach(b=>b.onclick=()=>act(()=>control(b.dataset.wfControl)));
+  $('[data-wf-confirm-stop]').onclick=()=>act(async()=>{
+    const id=currentView?.task?.id;
+    const task=id?.value||id;
+    if(!task)return;
+    recoveryCandidate=null;
+    $('[data-wf-recovery-status]').textContent='';
+    await loadRecovery(task,currentView.activity?.attemptId);
+    recoveryDialog.showModal();
+  });
+  $('[data-wf-recovery-close]').onclick=()=>recoveryDialog.close();
+  effectForm.elements.operationId.onchange=()=>{
+    effectForm.elements.evidenceRef.value=effectForm.elements.operationId.selectedOptions[0]?.dataset.evidenceRef||'';
+    effectForm.elements.evidenceDigest.value='';
+  };
+  effectForm.onsubmit=event=>{
+    event.preventDefault();
+    submitRecovery(effectForm,async(form,candidate)=>{
+      await api('/execution-effects/reconcile',Object.fromEntries(form),'/api/r1/authority');
+      await loadRecovery(candidate.taskId,candidate.attemptId);
+    });
+  };
+  stopForm.onsubmit=event=>{
+    event.preventDefault();
+    submitRecovery(stopForm,async(form,candidate)=>{
+      await api('/execution-tasks/'+encodeURIComponent(candidate.taskId)+'/stopped',{
+        attemptId:candidate.attemptId,evidenceRef:candidate.evidenceRef||form.get('evidenceRef').trim(),
+        evidenceDigest:candidate.evidenceDigest||form.get('evidenceDigest'),allProcessesQuiescent:form.has('quiescent')
+      },'/api/r1/authority');
+      recoveryCandidate=null;
+      recoveryDialog.close();
+      signature='';await refreshRun();await library();
+      if(currentView?.run.state==='FAILED'){
+        status(t('Stop confirmed. Retry this step when ready.'));
+        $('[data-wf-control="retry"]').focus();
+      }
+    });
+  };
   $('[data-wf-answer-form]').onsubmit=e=>{e.preventDefault();act(()=>control('answer',new FormData(e.target).get('answer')));};
   $('[data-wf-supplement-form]').onsubmit=e=>{e.preventDefault();act(async()=>{
     const form=new FormData(e.target);
@@ -666,7 +820,7 @@
     await api('/schedules',{requestId:scheduleRequest,spec:scheduleSpec,repeat:form.get('repeat'),zone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',firstAt:new Date(form.get('firstAt')).getTime()});
     $('[data-wf-schedule-editor]').hidden=true;scheduleSpec=null;await library();
   });};
-  window.addEventListener('aiw:locale-changed',()=>{translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(editing)renderSources($('[data-wf-definition-sources]'),editing.spec.sources||[],values=>editing.spec.sources=values);signature='';$('[data-wf-usage]').dataset.stamp='';$('[data-wf-amendment]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
+  window.addEventListener('aiw:locale-changed',()=>{translate();const member=$('[data-wf-member]');memberOptions(member,member.value);renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(editing)renderSources($('[data-wf-definition-sources]'),editing.spec.sources||[],values=>editing.spec.sources=values);signature='';$('[data-wf-usage]').dataset.stamp='';$('[data-wf-amendment]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
   translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(pageMode==='tasks')panel('task');else showEditor();act(async()=>{
     await library();
     if(route.get('execution'))await openRun(route.get('execution'));

@@ -9,7 +9,7 @@ def tools(broker):
     result = []
     unavailable=set()
     if not broker.writable:
-        unavailable.update({"write","mkdir","delete","restore","git_commit","git_integrate","run_command"})
+        unavailable.update({"write","edit","edit_many","mkdir","delete","restore","git_commit","git_integrate","run_command"})
     if not broker.context.get("originalPolicy", {}).get("commands"):
         unavailable.add("run_command")
     for definition in definitions(broker):

@@ -105,12 +105,18 @@ def definitions(broker=None):
         return {"type": "function", "name": name, "description": description,
                 "inputSchema": {"type": "object", "properties": properties, "required": list(properties), "additionalProperties": False}}
     string = {"type": "string"}
+    edit_fragment = {"type": "object", "properties": {"oldText": string, "newText": string},
+                     "required": ["oldText", "newText"], "additionalProperties": False}
     result = [
         tool("read_skill_file", "Read declared task Skill data as base64. Use the exact Skill name as ref, without a version suffix. Start at offset 0 and use at most 8192 bytes.", {"ref": string, "path": string, "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 8192}}),
         tool("read", "Read UTF-8 lines: offset is a 1-based line number, limit is 1 to 500 lines. Keep sourceDigest for writes.", {"path": string, "offset": {"type": "integer", "minimum": 1}, "limit": {"type": "integer", "minimum": 1, "maximum": 500}}),
         tool("ls", "List one visible folder using a workspace-relative path with forward slashes. Use '.' for the workspace root.", {"path": string}),
         tool("grep", "Find literal text in one file.", {"path": string, "text": string}),
-        tool("write", "Write one file only if its digest still matches. Use ABSENT for a new file.", {"path": string, "content": string, "expectedDigest": string}),
+        tool("write", "Create a new file. Supply the complete file content and use expectedDigest ABSENT. Use edit for an existing file.", {"path": string, "content": string, "expectedDigest": string}),
+        tool("edit", "Replace one unique exact text fragment in an existing file. Use sourceDigest from the latest read and the exact old text without added line numbers.", {"path": string, "oldText": string, "newText": string, "expectedDigest": string}),
+        tool("edit_many", "Make several edits in one file using one sourceDigest. All oldText fragments must be unique, must refer to the same original file, and must not overlap.", {
+            "path": string, "expectedDigest": string,
+            "edits": {"type": "array", "minItems": 1, "maxItems": 16, "items": edit_fragment}}),
         tool("mkdir", "Create one folder inside the allowed workspace. Create parent folders in separate calls.", {"path": string}),
         tool("delete", "Move one workspace file to protected .ai/trash only if its digest matches. Keep the returned trashId for recovery. No recursive deletion.", {"path": string, "expectedDigest": string}),
         tool("restore", "Restore one trashed workspace file by path and trashId. The destination must not exist.", {"path": string, "trashId": string}),
@@ -120,7 +126,11 @@ def definitions(broker=None):
         tool("run_command", "Run one explicitly authorized command profile. Prefer Python for cross-platform work; use PowerShell only for Windows-specific tasks. PowerShell commands require approval.", {"commandId": string}),
         tool("ask_question", "Save one question and yield this task. Stop after the receipt. The answer will arrive in a new task.", {"question": string, "context": string, "options": {"type": "array", "items": string}, "answerRequirements": string}),
     ]
-    if broker is not None and broker.shell_enabled():
+    shell = broker is not None and broker.shell_enabled()
+    root = getattr(broker, "root", None)
+    if isinstance(root, Path) and not shell and not (root / ".git").exists():
+        result = [item for item in result if not item["name"].startswith("git_")]
+    if shell:
         result.append(tool("run_shell", "Run a project build, test or script from the task workspace. Uses PowerShell on Windows. Nonzero exit codes are returned with output.", {"command": string}))
     from skill_files import text_enabled
     if text_enabled():

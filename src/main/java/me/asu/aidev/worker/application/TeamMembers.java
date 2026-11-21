@@ -253,14 +253,14 @@ public class TeamMembers implements TaskClaimPolicy {
         if(!supports(result,required))throw new IllegalArgumentException("Selected member lacks required Skills");
         return result;
     }
-    public record Selection(Profile member,String reason) {}
+    public record Selection(Profile member,String reason,boolean noMembers) {}
     /** Caller holds authority_lock until the selected snapshot and task are committed. */
     public Selection choose(String actor,List<String> required) {
         var candidates=db.jdbc().queryForList("SELECT * FROM worker_team_member WHERE actor=? AND state<>'ARCHIVED' ORDER BY id LIMIT 100",actor)
                 .stream().map(this::profile).toList();
-        if(candidates.isEmpty())return new Selection(null,"No team members exist. Create one in Agent factory.");
+        if(candidates.isEmpty())return new Selection(null,"No team members exist. Create one in Agent factory.",true);
         var matching=candidates.stream().filter(m->supports(m,required)).toList();
-        if(matching.isEmpty())return new Selection(null,"No member has all required Skills. Update the requirements or member settings.");
+        if(matching.isEmpty())return new Selection(null,"No member has all required Skills. Update the requirements or member settings.",false);
         var load=db.jdbc().queryForList("""
             SELECT a.member_id,
               SUM(CASE WHEN w.state IN ('READY','BLOCKED','CLAIMED','RUNNING','YIELDING','WAITING_INPUT') THEN 1 ELSE 0 END) AS pending,
@@ -280,7 +280,7 @@ public class TeamMembers implements TaskClaimPolicy {
         var chosen=matching.stream().filter(m->m.state().equals("ACTIVE"))
                 .min(Comparator.comparingLong((Profile m)->pending.getOrDefault(m.id(),0L))
                         .thenComparingLong(m->last.getOrDefault(m.id(),0L)).thenComparing(Profile::id)).orElse(null);
-        return new Selection(chosen,chosen==null?"Matching members have stopped accepting work. Resume a matching member.":null);
+        return new Selection(chosen,chosen==null?"Matching members have stopped accepting work. Resume a matching member.":null,false);
     }
     private static boolean pending(String state) {return Set.of("READY","BLOCKED","CLAIMED","RUNNING","YIELDING","WAITING_INPUT").contains(state);}
     private List<Map<String,Object>> discussionAssignments(String actor) {

@@ -66,7 +66,29 @@
 <section class="card"><h2>正式交付与来源</h2><p>每份交付绑定任务、Attempt、固定输入、配置摘要和本地 Git 成果；仅展示实际命令及明确未运行的检查。</p><div data-authority-record-table="deliveries"></div><details class="authority-record-details"><summary>查看完整交付内容与来源</summary><pre id="authority-records-deliveries" th:text="${executionDeliveries}"></pre></details></section>
 <section class="card"><h2>受控操作及未知消耗核对</h2><p>依据固定任务、Attempt 和证据核验。对账不会重放操作。只有确认全部执行和进程已静止，才能释放任务资源。</p><div data-authority-record-table="effects"></div><details class="authority-record-details"><summary>查看完整操作记录</summary><pre id="authority-records-effects" th:text="${executionEffects}"></pre></details><div data-authority-record-table="meters"></div><details class="authority-record-details"><summary>查看完整计量记录</summary><pre id="authority-records-meters" th:text="${executionMeters}"></pre></details>
 <details class="authority-disclosure"><summary>核对受控操作结果</summary><form id="execution-reconcile" class="form-grid authority-form"><label class="field">操作 ID<input name="operationId" required></label><label class="field">实际结论<select name="conclusion"><option>SUCCEEDED</option><option>FAILED</option><option>NOT_STARTED</option></select></label><label class="field">证据引用<input name="evidenceRef" required></label><label class="field">证据 SHA-256<input name="evidenceDigest" required pattern="[0-9a-f]{64}"></label><button class="btn warn-btn">确认实际效果，不自动重试</button></form></details>
-<details class="authority-disclosure"><summary>确认任务与进程停止</summary><form id="execution-stopped" class="form-grid authority-form"><label class="field">任务 ID<input name="taskId" required></label><label class="field">原 Attempt ID<input name="attemptId" required></label><label class="field">进程退出证据引用<input name="evidenceRef" required></label><label class="field">证据 SHA-256<input name="evidenceDigest" required pattern="[0-9a-f]{64}"></label><label class="field"><input type="checkbox" name="allProcessesQuiescent" required>我已核验全部进程和工具静止</label><button class="btn warn-btn">确认停止并取消此任务</button></form></details>
+<details class="authority-disclosure" id="execution-stop-panel">
+  <summary>确认任务与进程停止</summary>
+  <p class="help" th:if="${#lists.isEmpty(stopCandidates)}">当前没有待确认停止的执行。可刷新此页核对最新状态。</p>
+  <form th:unless="${#lists.isEmpty(stopCandidates)}" id="execution-stopped" class="form-grid authority-form">
+    <label class="field">选择中断的执行<select name="attemptId" required>
+      <option value="">选择计划和执行尝试</option>
+      <option th:each="candidate : ${stopCandidates}" th:value="${candidate.attemptId}" th:text="${candidate.label}"
+              th:attr="data-task=${candidate.taskId},data-plan=${candidate.planId},data-workflow=${candidate.workflow},data-evidence-ref=${candidate.evidenceRef},data-evidence-digest=${candidate.evidenceDigest}"></option>
+    </select></label>
+    <p id="execution-stop-evidence-note" class="help" role="status"></p>
+    <details id="execution-stop-evidence" hidden>
+      <summary>进程退出证据</summary>
+      <label class="field">退出证据引用<input name="evidenceRef" required></label>
+      <label class="field">证据 SHA-256<input name="evidenceDigest" required pattern="[0-9a-f]{64}"></label>
+    </details>
+    <label class="field"><input type="checkbox" name="allProcessesQuiescent" required>我已核验全部进程和工具已停止</label>
+    <button class="btn warn-btn" type="submit">确认停止并取消此任务</button>
+  </form>
+  <div id="execution-stop-next" class="form-actions" hidden>
+    <button id="execution-stop-retry" class="btn primary" type="button">重试本步骤</button>
+    <a id="execution-stop-return" class="btn ghost">查看原工作流</a>
+  </div>
+</details>
 <details class="authority-disclosure"><summary>按证据补充未知消耗</summary><form id="execution-meter" class="form-grid authority-form"><label class="field">原 Attempt ID<input name="attemptId" required></label><label class="field">核实执行毫秒数（仅未知维度）<input name="actualElapsedMs" type="number" min="0"></label><label class="field">核实费用微单位（仅未知维度）<input name="actualCostMicros" type="number" min="0"></label><label class="field">计量证据引用<input name="evidenceRef" required></label><label class="field">证据 SHA-256<input name="evidenceDigest" required pattern="[0-9a-f]{64}"></label><button class="btn warn-btn">确认真实消耗并结清对应预留</button></form></details></section>
 <section class="card"><h2>未知效果人工对账</h2><p>仅在你核验了原固定 attempt 的证据后确认结论。此操作不会重放动作或返还额度。</p><details class="authority-disclosure"><summary>核对未知外部效果</summary><form id="reconcile-effect" class="form-grid authority-form"><label class="field">任务 ID<input name="taskId" required></label><label class="field">原 attempt<input name="attempt" type="number" min="1" required></label><label class="field">已核验结论<select name="conclusion"><option value="NO_EFFECT_CONFIRMED">确认没有发生外部效果</option><option value="EFFECT_CONFIRMED">确认外部效果已发生</option></select></label><label class="field">证据引用<input name="evidenceRef" required maxlength="2000"></label><button class="btn warn-btn">确认对账，不执行重试</button></form></details></section>
 </section>

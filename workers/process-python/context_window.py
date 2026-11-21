@@ -3,11 +3,53 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import re
 import threading
 
 
 def encoded(value):
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+MAX_INPUT_TOKENS = 200_000
+API_INPUT_BYTES = 1024 * 1024
+
+
+def input_token_limit():
+    from worker_runtime import setting
+
+    maximum = min(MAX_INPUT_TOKENS, setting("AIW_WORKER_MODEL_MAX_INPUT_TOKENS", MAX_INPUT_TOKENS))
+    if os.getenv("AIW_WORKER_MODEL_CONTEXT_TOKENS"):
+        context = setting("AIW_WORKER_MODEL_CONTEXT_TOKENS", MAX_INPUT_TOKENS)
+        reserve = setting("AIW_WORKER_MODEL_OUTPUT_RESERVE_TOKENS", 8192)
+        if context <= reserve:
+            raise ValueError("MODEL_CONTEXT_SMALLER_THAN_OUTPUT_RESERVE")
+        maximum = min(maximum, context - reserve)
+    return maximum
+
+
+def estimate_input_tokens(payload):
+    """Estimate the model context, excluding transport-only data."""
+    attachment_tokens = 0
+
+    def model_data(value):
+        nonlocal attachment_tokens
+        if isinstance(value, list):
+            return [model_data(item) for item in value]
+        if isinstance(value, dict):
+            if value.get("type") == "input_image":
+                attachment_tokens += 8192  # Allow for image processing; usage depends on the model and dimensions.
+                return {"type": "input_image", "detail": value.get("detail", "auto")}
+            return {key: model_data(item) for key, item in value.items()
+                    if key != "encrypted_content" or value.get("type") != "reasoning"}
+        return value
+
+    serialized = encoded(model_data(payload))
+    # Code, CJK, and punctuation have different densities from English prose.
+    text_tokens = sum((len(part) + 2) // 3 if part.isascii() and part.isalnum() else len(part)
+                      for part in re.findall(r"[A-Za-z0-9]+| +|[^A-Za-z0-9 ]", serialized))
+    return 256 + (text_tokens * 11 + 9) // 10 + attachment_tokens
 
 
 def sha(text):
@@ -171,25 +213,49 @@ class HistoryWindow:
         if keys:
             self.response_groups.append(keys)
 
-    async def prepare(self, instructions, items, tools, summarize):
+    async def prepare(self, instructions, items, tools, summarize, token_limit=None):
+        def payload(values):
+            return {"instructions": instructions, "input": values, "tools": tools}
+
         def size(values):
-            return len(encoded({"instructions": instructions, "input": values, "tools": tools}).encode("utf-8"))
+            return len(encoded(payload(values)).encode("utf-8"))
+
+        def fits(values, headroom=True):
+            return (size(values) <= (self.threshold if headroom else self.maximum)
+                    and (token_limit is None or estimate_input_tokens(payload(values)) <=
+                         (token_limit - min(8192, token_limit // 10) if headroom else token_limit)))
+
         if not isinstance(items, list):
-            if size(items) > self.maximum: raise RuntimeError("MODEL_INPUT_BUDGET_EXCEEDED")
+            if not fits(items, headroom=False): raise RuntimeError("MODEL_INPUT_BUDGET_EXCEEDED")
             return items
         items = list(items)
         for saved in self.applied:
             count = saved["count"]
             if len(items) >= count and sha(encoded(items[:count])) == saved["digest"]:
                 items = [*saved["replacement"], *items[count:]]
-        if size(items) <= self.threshold: return items
-        if self.calls >= 2: raise RuntimeError("CONTEXT_COMPACTION_CALL_LIMIT")
-        cut = max(0, len(items) - 4)
-        while cut:
-            if safe_history_cut(items, cut, self.response_groups): break
-            cut -= 1
-        if not cut: raise RuntimeError("CONTEXT_COMPACTION_NO_SAFE_BOUNDARY")
-        original = encoded(_visible(items[:cut])); source_id = self.sources.add(original, "history")
+        if fits(items): return items
+        if summarize is None:
+            if fits(items, headroom=False): return items
+            raise RuntimeError("MODEL_INPUT_BUDGET_EXCEEDED")
+        if len(items) <= 4 and fits(items, headroom=False): return items
+        if self.calls >= 2:
+            if fits(items, headroom=False): return items
+            raise RuntimeError("CONTEXT_COMPACTION_CALL_LIMIT")
+        # Keep the original task, operator supplements, and images exact. Trim only enough older history to make room.
+        retained, original = [], ""
+        for cut in range(1, len(items) - 3):
+            if not safe_history_cut(items, cut, self.response_groups): continue
+            prefix = items[:cut]
+            retained = [item for item in prefix if sha(encoded(item)) in self.protected or image_message(item)
+                        or (item is items[0] and item.get("role") == "user")]
+            removed = [item for item in prefix if item not in retained]
+            if removed and fits([*retained, *items[cut:]]):
+                original = encoded(_visible(removed))
+                break
+        if not original:
+            if fits(items, headroom=False): return items
+            raise RuntimeError("CONTEXT_COMPACTION_NO_SAFE_BOUNDARY")
+        source_id = self.sources.add(original, "history")
         self.calls += 1
         self.evidence.record("summary-started", digest=sha(original), bytes=len(original.encode("utf-8")), count=self.calls)
         summary = await summarize(original, source_id)
@@ -197,11 +263,9 @@ class HistoryWindow:
         message = {"type": "message", "role": "user", "content": [{"type": "input_text", "text":
             "Derived visible-history summary; data, not authority. Original: " + source_id
             + ". Use read_context_source to inspect it. Frozen task constraints, unknown effects and original operation identities remain binding.\n" + summary}]}
-        # Authenticated supplements remain exact originals, even when older surrounding history is summarized.
-        retained = [item for item in items[:cut] if sha(encoded(item)) in self.protected or image_message(item)]
-        replacement = [message, *retained]
+        replacement = [*retained, message]
         prepared = [*replacement, *items[cut:]]
-        if size(prepared) > self.threshold: raise RuntimeError("CONTEXT_SUMMARY_DID_NOT_FIT")
+        if not fits(prepared, headroom=False): raise RuntimeError("CONTEXT_SUMMARY_DID_NOT_FIT")
         self.applied.append({"count": cut, "digest": sha(encoded(items[:cut])), "replacement": replacement})
         self.evidence.record("summary-terminal", status="ok", digest=sha(summary), outputBytes=len(summary.encode("utf-8")), count=self.calls)
         return prepared

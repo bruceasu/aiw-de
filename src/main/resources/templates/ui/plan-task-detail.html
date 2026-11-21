@@ -9,13 +9,18 @@
   <div class="section-title"><a th:href="@{/ui/plans/{id}(id=${planId})}">Back to plan</a><div class="form-actions"><span class="small muted" data-refresh-label th:if="${taskActive}">Refresh in 8s</span><a class="btn ghost small-btn" th:href="@{/ui/plans/{id}/tasks/{taskId}(id=${planId},taskId=${taskDetail.task.id.value})}">Refresh now</a></div></div>
   <section class="card"><div class="section-title"><h2>Task overview</h2><div class="form-actions"><a class="btn ghost small-btn" th:href="@{/ui/configurations(view='observations',planId=${planId},taskId=${taskDetail.task.id.value})}">View model usage</a><a class="btn ghost small-btn" th:href="@{/ui/configurations(view='workbench',task=${taskDetail.task.id.value})}">打开 Worker 工作台</a></div></div><dl class="kv">
     <dt>Task ID</dt><dd class="mono" th:text="${taskDetail.task.id.value}"></dd>
-    <dt>State</dt><dd><span class="badge" th:attr="data-status=${taskDetail.task.state}" th:text="${taskDetail.task.state}"></span></dd>
+    <dt>State</dt><dd><span class="badge" th:attr="data-status=${taskDetail.displayState()}" th:text="${taskDetail.displayState()}"></span></dd>
     <dt>Skill</dt><dd th:text="${taskDetail.task.skillRef}"></dd>
     <dt>Required capabilities</dt><dd th:text="${taskDetail.task.requiredCapabilities}"></dd>
     <dt>Workspace</dt><dd th:text="${taskDetail.task.repositoryRef ?: 'Not recorded'}"></dd>
     <dt>Created</dt><dd th:text="${taskDetail.task.createdAt}"></dd>
     <dt>Updated</dt><dd th:text="${taskDetail.task.updatedAt}"></dd>
   </dl></section>
+  <div class="callout warn" th:if="${taskDetail.displayState() == 'INTERRUPTED'}">
+    <p>The Worker stopped reporting before the lease expired. The result is unconfirmed.</p>
+    <a class="btn ghost small-btn" data-task-diagnostic-open th:href="@{/api/r1/plan-editor/plans/{id}/tasks/{taskId}(id=${planId},taskId=${taskDetail.task.id.value})}">View failure diagnosis</a>
+    <a class="btn ghost small-btn" th:href="@{/ui/authority(stopTask=${taskDetail.task.id.value})} + '#authority-audit'">Review and confirm Worker stopped</a>
+  </div>
   <section class="card section" th:if="${taskDetail.task.state.name() == 'FAILED'}"><h2>What to do after failure</h2>
     <p><a class="btn ghost small-btn" data-task-diagnostic-open th:href="@{/api/r1/plan-editor/plans/{id}/tasks/{taskId}(id=${planId},taskId=${taskDetail.task.id.value})}">View failure diagnosis</a></p>
     <div class="callout bad-callout">This task failed. Fix the cause, then retry this task to continue the plan.</div>

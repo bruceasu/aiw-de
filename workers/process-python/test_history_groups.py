@@ -1,8 +1,18 @@
+import asyncio
 import unittest
-from context_window import safe_history_cut, image_message
+from unittest.mock import Mock
+from context_window import HistoryWindow, safe_history_cut, image_message
 
 
 class HistoryGroupsTest(unittest.TestCase):
+    def test_final_request_can_use_headroom_without_spending_a_summary_call(self):
+        history = HistoryWindow(Mock(), 1600, Mock())
+        messages = [{"role": "user", "content": "x" * 230} for _ in range(5)]
+        self.assertEqual(messages, asyncio.run(history.prepare("Report", messages, [], None)))
+        self.assertEqual(0, history.calls)
+        with self.assertRaisesRegex(RuntimeError, "MODEL_INPUT_BUDGET_EXCEEDED"):
+            asyncio.run(history.prepare("Report", messages * 2, [], None))
+
     def test_reasoning_message_and_tool_group_is_atomic(self):
         items = [{"role": "user", "content": "task"},
                  {"type": "reasoning", "id": "rs-1"},

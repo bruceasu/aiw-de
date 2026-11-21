@@ -53,7 +53,8 @@ def load(task, profile, prepared=None):
     if not isinstance(refs, list) or not isinstance(packages, list) or not 1 <= len(packages) <= 16 or len(refs) != len(packages): _fail()
     expected = set((*profile.protocol_skills, profile.primary_skill))
     actual = {r.get("ref") for r in refs}
-    extra_allowed = "workflow-skill-bundles-v1" in task.get("requiredCapabilities", [])
+    extra_allowed = ("workflow-skill-bundles-v1" in task.get("requiredCapabilities", [])
+                     or (task.get("subjectType") == "flexible-plan" and profile.name == "general-work"))
     if len(actual) != len(refs) or not expected.issubset(actual) or (not extra_allowed and actual != expected): _fail()
     frozen, entries, evidence = {}, {}, []
     total = 0

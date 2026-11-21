@@ -17,6 +17,35 @@ from pathlib import Path
 PROTOCOL = "aiw.execution.guard.v1"
 CAPABILITY = "execution-guard-v1"
 PROTECTED = {".git", ".ai", ".env", ".codex", ".venv", "__pycache__"}
+TOOL_FAILURE_HINTS = {
+    "GUARD_TOOL_ARGUMENTS_INVALID": "Use the declared tool parameters.",
+    "GUARD_PATH_INVALID": "Use a workspace-relative path with forward slashes.",
+    "GUARD_PATH_DENIED": "Use an allowed workspace file. Do not try to access the protected path.",
+    "GUARD_PATH_ESCAPE": "Use a path inside the workspace.",
+    "GUARD_LINK_OR_REPARSE_DENIED": "Choose a path that does not pass through a link.",
+    "GUARD_HARDLINK_DENIED": "Choose a regular workspace file that does not share a hard link.",
+    "GUARD_PARENT_OR_FILE_MISSING": "List the parent directory and check the file name.",
+    "GUARD_PARENT_INVALID": "Choose an existing directory as the parent.",
+    "GUARD_NOT_DIRECTORY": "Choose an existing directory.",
+    "GUARD_READ_RANGE_INVALID": "Read from a line number of at least 1 with a limit between 1 and 500.",
+    "GUARD_OUTPUT_LIMIT": "Read fewer lines at a time.",
+    "GUARD_SEARCH_INVALID": "Search for non-empty text of at most 1024 characters.",
+    "GUARD_READ_FAILED": "Check the file path, permissions and text encoding, or use another source.",
+    "GUARD_FILE_INVALID_OR_TOO_LARGE": "Choose a regular workspace file of at most 2 MiB.",
+    "GUARD_FILE_LIMIT": "Choose a file of at most 2 MiB.",
+    "GUARD_FILE_VERSION_CONFLICT": "Read the current file again and use its exact digest before changing it.",
+    "GUARD_WRITE_LIMIT": "Limit a single file write to 2 MiB.",
+    "GUARD_EXISTING_FILE_REQUIRES_EDIT": "Write creates new files. Read the existing file and use edit with its current digest and the exact text to replace.",
+    "GUARD_EDIT_MATCH_REQUIRED": "Use edit with an exact, non-empty oldText that occurs once. Read a larger unique fragment if needed.",
+    "GUARD_EDIT_LIMIT": "Use smaller exact edits within the authorized workspace scope.",
+    "GUARD_EDIT_OVERLAP": "Combine overlapping edits into one exact replacement or select separate original fragments.",
+    "GUARD_RESTORE_TARGET_EXISTS": "The destination already exists. Inspect it before deciding how to proceed.",
+    "GUARD_ROLE_IS_READ_ONLY": "Use read-only tools and report the findings.",
+    "GUARD_COMMAND_DENIED": "Use only a command already allowed for this task.",
+    "GUARD_SHELL_DENIED_OR_INVALID": "Use the permitted file tools, or report that the task needs a command.",
+    "GUARD_GIT_REPOSITORY_REQUIRED": "No Git repository at the workspace root. Use the workspace file tools.",
+    "GUARD_GIT_INSPECTION_FAILED": "Git inspection failed. Continue with workspace file tools if Git is optional.",
+}
 
 
 def digest(value):
@@ -212,7 +241,7 @@ class GuardBroker:
             channel.leave()
         self.attempt.evidence.record("guard-finished", operation=operation, status=state.lower())
 
-    def operate(self, tool, resource, arguments, action, call_id=None, *, workspace_finalization=False):
+    def operate(self, tool, resource, arguments, action, call_id=None, *, workspace_finalization=False, git_inspection=False):
         from contextlib import nullcontext
         with nullcontext() if self.parallel_reads and tool in {"READ", "SEARCH"} else self.lock:
             if self._requires_approval(tool, resource, arguments):
@@ -223,17 +252,29 @@ class GuardBroker:
                 result = action()
                 if tool == "WRITE" and self._file_action(arguments) == "write" and arguments.get("expectedDigest") == "ABSENT":
                     self.created_paths.add(resource)
-                self.finish(operation, "FAILED" if tool == "SHELL" and result["status"] != "completed" else "SUCCEEDED", result)
-                return result
             except Exception as error:
                 # A write/process could already have happened. Keep the workspace and task occupied.
-                known = (tool in {"READ", "SEARCH"} or str(error).startswith(("GUARD_PATH_", "GUARD_LINK_", "GUARD_FILE_VERSION_", "GUARD_WRITE_LIMIT", "GUARD_READ_RANGE_", "GUARD_SEARCH_", "GUARD_ROLE_", "GUARD_RESTORE_", "GUARD_TRASH_"))) and not self.attempt.resource_uncertain
+                read_only = git_inspection or tool in {"READ", "SEARCH"}
+                code = str(error) if isinstance(error, RuntimeError) else ""
+                known = (read_only or code in TOOL_FAILURE_HINTS or code.startswith(("GUARD_LINK_", "GUARD_TRASH_"))) and not self.attempt.resource_uncertain
                 try: self.finish(operation, "FAILED" if known else "UNKNOWN", {"code": "OPERATION_FAILED" if known else "OPERATION_OUTCOME_REQUIRES_RECONCILIATION"})
                 except Exception:
                     self.attempt.resource_uncertain = True
                     raise
                 if not known: self.attempt.resource_uncertain = True
+                if git_inspection and known:
+                    self.attempt.check()
+                    code = "GUARD_GIT_INSPECTION_FAILED"
+                    return {"status": "error", "error": code, "hint": TOOL_FAILURE_HINTS[code]}
+                if read_only and known and isinstance(error, (OSError, UnicodeError)):
+                    raise RuntimeError("GUARD_READ_FAILED") from error
                 raise
+            try:
+                self.finish(operation, "FAILED" if tool == "SHELL" and result["status"] != "completed" else "SUCCEEDED", result)
+            except Exception:
+                self.attempt.resource_uncertain = True
+                raise
+            return result
 
     def _requires_approval(self, tool, resource, arguments):
         if tool == "COMMAND":
@@ -261,25 +302,17 @@ class GuardBroker:
                 raise RuntimeError("GUARD_FILE_VERSION_CONFLICT")
             # Every deletion is moved to a protected local trash before it disappears.
             return self.context.get("originalPolicy", {}).get("riskStrategyVersion", 0) != 1 and resource not in self.created_paths
-        if name != "write":
-            return False
-        path = safe_path(self.root, resource, missing=True)
-        if not path.exists():
-            return False
-        old = self._read(path)
-        if arguments.get("expectedDigest") != hashlib.sha256(old).hexdigest():
-            raise RuntimeError("GUARD_FILE_VERSION_CONFLICT")
-        ordinary = (self.context.get("originalPolicy", {}).get("riskStrategyVersion", 0) == 1
-                    and len(old) <= 65536 and len(arguments["content"].encode()) <= 65536
-                    and (resource in self.file_changes or len(self.file_changes) < 20))
-        self.attempt.evidence.record("guard-write-risk", path=resource,
-            code="ORDINARY_EXACT_FILE_EDIT" if ordinary else "LARGE_OR_BULK_REPLACEMENT")
-        return not ordinary
+        return False
+
+    def _ordinary_edit(self, resource):
+        return (self.context.get("originalPolicy", {}).get("riskStrategyVersion", 0) == 1
+                and (resource in self.file_changes or len(self.file_changes) < 20))
 
     @staticmethod
     def _file_action(arguments):
         # Actions come from the closed host argument schema, not a model-supplied risk label.
         if "content" in arguments: return "write"
+        if "oldText" in arguments or "edits" in arguments: return "edit"
         if "expectedDigest" in arguments: return "delete"
         if "trashId" in arguments: return "restore"
         return "mkdir"
@@ -300,14 +333,12 @@ class GuardBroker:
                 raise RuntimeError("GUARD_COMMAND_DENIED")
             version = command_digest(command)
         else:
-            if name not in {"write", "delete"}:
+            if name != "delete":
                 raise RuntimeError("TOOL_APPROVAL_ACTION_UNSUPPORTED")
-            path = safe_path(self.root, resource, missing=name == "write")
+            path = safe_path(self.root, resource)
             expected = arguments.get("expectedDigest")
             version = hashlib.sha256(self._read(path)).hexdigest() if path.exists() else "ABSENT"
             if expected != version or version == "ABSENT":
-                raise RuntimeError("GUARD_FILE_VERSION_CONFLICT")
-            if name == "delete" and not re.fullmatch(r"[0-9a-f]{64}", version):
                 raise RuntimeError("GUARD_FILE_VERSION_CONFLICT")
         operation = "OP-" + (digest({"attempt": self.task["attemptId"], "call": call_id}) if call_id else uuid.uuid4().hex)
         payload = {"protocol": PROTOCOL, "platformInstanceId": self.context["instanceId"], "lease": self.lease,
@@ -319,7 +350,7 @@ class GuardBroker:
         result = self.checkpoint()
         from worker_runtime import snapshot
         approval_id = "A-" + uuid.uuid4().hex
-        action_name = "EXECUTE_COMMAND" if name == "command" else "REPLACE_FILE" if name == "write" else "DELETE_FILE"
+        action_name = "EXECUTE_COMMAND" if name == "command" else "DELETE_FILE"
         artifact_operation = {key: value for key, value in payload.items() if key != "lease"}
         artifact_operation["sourceAttemptId"] = self.lease["attemptId"]
         artifact = {"operation": artifact_operation, "action": action_name,
@@ -610,7 +641,16 @@ class GuardBroker:
     def invoke(self, name, args, call_id=None):
         from tool_coordination import READ_ONLY
         with self.tool_coordinator.access(self.parallel_reads and name in READ_ONLY):
-            return self._invoke_checked(name, args, call_id)
+            if self.attempt.resource_uncertain:
+                raise RuntimeError("GUARD_RESOURCE_OUTCOME_UNCONFIRMED")
+            try:
+                return self._invoke_checked(name, args, call_id)
+            except RuntimeError as error:
+                code = str(error)
+                if self.attempt.resource_uncertain or code not in TOOL_FAILURE_HINTS:
+                    raise
+                self.attempt.check()
+                return {"status": "error", "error": code, "hint": TOOL_FAILURE_HINTS[code]}
 
     def _invoke_checked(self, name, args, call_id):
         if not self.accepting_tools:
@@ -652,6 +692,8 @@ class GuardBroker:
         schemas = {
             "read": ({"path", "offset", "limit"}, "READ"), "ls": ({"path"}, "READ"),
             "grep": ({"path", "text"}, "SEARCH"), "write": ({"path", "content", "expectedDigest"}, "WRITE"),
+            "edit": ({"path", "oldText", "newText", "expectedDigest"}, "WRITE"),
+            "edit_many": ({"path", "edits", "expectedDigest"}, "WRITE"),
             "mkdir": ({"path"}, "WRITE"), "delete": ({"path", "expectedDigest"}, "WRITE"),
             "restore": ({"path", "trashId"}, "WRITE"),
             "git_status": (set(), "GIT"), "git_diff": (set(), "GIT"),
@@ -667,13 +709,20 @@ class GuardBroker:
             if not self.shell_enabled() or not isinstance(command, str) or not command.strip() or len(command) > 4096 or "\0" in command:
                 raise RuntimeError("GUARD_SHELL_DENIED_OR_INVALID")
         if (tool in {"WRITE", "COMMAND"} or name in {"git_commit", "git_integrate"}) and not self.writable: raise RuntimeError("GUARD_ROLE_IS_READ_ONLY")
+        if tool == "GIT" and not (self.root / ".git").exists():
+            self.attempt.check()
+            code = "GUARD_GIT_REPOSITORY_REQUIRED"
+            return {"status": "error", "error": code, "hint": TOOL_FAILURE_HINTS[code]}
         resource = args.get("path", args.get("commandId", "."))
         if "path" in args and (not isinstance(resource, str) or len(resource) > 1024
                 or any(character in resource for character in ("\\", ":", "\0"))
                 or (resource != "." and any(part in {"", ".", ".."} for part in resource.split("/")))):
-            return {"error": "Use a workspace-relative path with forward slashes. Use '.' for the workspace root."}
+            raise RuntimeError("GUARD_PATH_INVALID")
+        if name == "write" and args["expectedDigest"] != "ABSENT":
+            raise RuntimeError("GUARD_EXISTING_FILE_REQUIRES_EDIT")
         if tool != "SHELL":
-            return self.operate(tool, resource, args, lambda: self._execute(name, args), call_id)
+            return self.operate(tool, resource, args, lambda: self._execute(name, args), call_id,
+                                git_inspection=name in {"git_status", "git_diff"})
         self.shell_idle.clear()
         try:
             return self.operate(tool, resource, args, lambda: self._execute(name, args), call_id)
@@ -772,23 +821,74 @@ class GuardBroker:
             output = "\n".join(lines[start - 1:start - 1 + limit])
             if len(output.encode()) > 65536: raise RuntimeError("GUARD_OUTPUT_LIMIT")
             return {"content": output, "totalLines": len(lines), "sourceDigest": hashlib.sha256(raw).hexdigest()}
-        content, expected = args["content"], args["expectedDigest"]
-        if not isinstance(content, str) or len(content.encode()) > 2 * 1024 * 1024: raise RuntimeError("GUARD_WRITE_LIMIT")
-        actual = hashlib.sha256(self._read(path)).hexdigest() if path.exists() else "ABSENT"
+        expected = args["expectedDigest"]
+        original = self._read(path) if path.exists() else None
+        if expected == "ABSENT" and original is not None and name == "write":
+            raise RuntimeError("GUARD_EXISTING_FILE_REQUIRES_EDIT")
+        actual = hashlib.sha256(original).hexdigest() if original is not None else "ABSENT"
         if expected != actual: raise RuntimeError("GUARD_FILE_VERSION_CONFLICT")
+        if name in {"edit", "edit_many"}:
+            if original is None:
+                raise RuntimeError("GUARD_PARENT_OR_FILE_MISSING")
+            edits = args["edits"] if name == "edit_many" else [{"oldText": args["oldText"], "newText": args["newText"]}]
+            if not isinstance(edits, list) or not 1 <= len(edits) <= 16:
+                raise RuntimeError("GUARD_TOOL_ARGUMENTS_INVALID")
+            if not self._ordinary_edit(args["path"]):
+                raise RuntimeError("GUARD_EDIT_LIMIT")
+            crlf = b"\r\n" in original and b"\n" not in original.replace(b"\r\n", b"")
+            regions = []
+            before_size = after_size = 0
+            for edit in edits:
+                if not isinstance(edit, dict) or set(edit) != {"oldText", "newText"}:
+                    raise RuntimeError("GUARD_TOOL_ARGUMENTS_INVALID")
+                before, after = edit["oldText"], edit["newText"]
+                if not isinstance(before, str) or not before or not isinstance(after, str):
+                    raise RuntimeError("GUARD_EDIT_MATCH_REQUIRED")
+                before, after = before.encode("utf-8"), after.encode("utf-8")
+                if crlf:
+                    before = before.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+                    after = after.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+                before_size += len(before)
+                after_size += len(after)
+                if max(before_size, after_size) > 65536:
+                    raise RuntimeError("GUARD_EDIT_LIMIT")
+                index = original.find(before)
+                if index < 0 or original.find(before, index + 1) >= 0:
+                    raise RuntimeError("GUARD_EDIT_MATCH_REQUIRED")
+                regions.append((index, index + len(before), after))
+            parts = []
+            end = 0
+            for start, stop, replacement in sorted(regions):
+                if start < end:
+                    raise RuntimeError("GUARD_EDIT_OVERLAP")
+                parts.extend((original[end:start], replacement))
+                end = stop
+            parts.append(original[end:])
+            data = b"".join(parts)
+        else:
+            content = args["content"]
+            if not isinstance(content, str):
+                raise RuntimeError("GUARD_TOOL_ARGUMENTS_INVALID")
+            data = content.encode("utf-8")
+        if len(data) > 2 * 1024 * 1024:
+            raise RuntimeError("GUARD_WRITE_LIMIT")
         temporary = path.with_name(".aiw-write-" + uuid.uuid4().hex)
         descriptor = os.open(temporary, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
         try:
-            with os.fdopen(descriptor, "wb") as stream: stream.write(content.encode());stream.flush();os.fsync(stream.fileno())
+            with os.fdopen(descriptor, "wb") as stream: stream.write(data);stream.flush();os.fsync(stream.fileno())
             safe_path(self.root, args["path"], missing=True)
-            # Staging a large replacement can take time. Recheck the exact
-            # baseline before publishing it, including ABSENT for creation.
-            current = hashlib.sha256(self._read(path)).hexdigest() if path.exists() else "ABSENT"
-            if current != expected: raise RuntimeError("GUARD_FILE_VERSION_CONFLICT")
-            os.replace(temporary, path)
+            if expected == "ABSENT":
+                try:
+                    os.link(temporary, path, follow_symlinks=False)
+                except FileExistsError:
+                    raise RuntimeError("GUARD_EXISTING_FILE_REQUIRES_EDIT") from None
+            else:
+                current = hashlib.sha256(self._read(path)).hexdigest() if path.exists() else "ABSENT"
+                if current != expected: raise RuntimeError("GUARD_FILE_VERSION_CONFLICT")
+                os.replace(temporary, path)
         finally:
             if temporary.exists(): temporary.unlink()
-        file_digest = hashlib.sha256(content.encode()).hexdigest()
+        file_digest = hashlib.sha256(data).hexdigest()
         self.file_changes[args["path"]] = {"path": args["path"], "state": "WRITTEN", "sha256": file_digest}
         return {"resultDigest": file_digest}
 
@@ -854,7 +954,7 @@ class ControlledGit:
 
     def _run(self, *argv, allowed=(0,)):
         self.attempt.check()
-        process = subprocess.Popen(["git", "-c", "core.hooksPath=" + os.devnull, "-c", "core.fsmonitor=false", "-c", "core.untrackedCache=false",
+        process = subprocess.Popen(["git", "--no-optional-locks", "-c", "core.hooksPath=" + os.devnull, "-c", "core.fsmonitor=false", "-c", "core.untrackedCache=false",
                                  "-c", "commit.gpgSign=false", "-c", "tag.gpgSign=false", "-c", "core.pager=cat", "-c", "gc.auto=0", "-c", "maintenance.auto=false", "-c", "rerere.enabled=false", *argv],
                                 cwd=self.root, env=self.environment, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, start_new_session=sys.platform != "win32")

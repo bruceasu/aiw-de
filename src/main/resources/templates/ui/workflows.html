@@ -2,12 +2,11 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" th:content="${csrfToken}">
   <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css?v=fd130-editor-1">
-  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=fd130-editor-1" defer></script>
+  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=task-recovery-4" defer></script>
 </head>
 <body th:attr="data-wf-mode=${workflowMode}"><div class="app"><aside th:replace="~{ui/fragments :: nav(${workflowMode})}"></aside><main class="main">
   <header th:replace="~{ui/fragments :: topbar(${workflowTitle},${workflowSubtitle})}"></header>
   <div class="content"><p class="help" data-wf-status role="status" aria-live="polite"></p>
-  <p class="help" data-wf-label="This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.">This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.</p>
   <p class="help" data-wf-member-status role="status"></p>
   <div class="wf-layout">
     <section class="card wf-library"><h2 data-wf-label="Library">Library</h2>
@@ -39,6 +38,7 @@
         <p class="help" data-wf-label="Text tasks use the same executor as workflow nodes. No Git repository is required.">Text tasks use the same executor as workflow nodes. No Git repository is required.</p>
         <form data-wf-task-form><label class="field"><span data-wf-label="What should be done?">What should be done?</span><textarea name="instruction" required maxlength="8000" rows="6"></textarea></label>
           <label class="field"><span data-wf-label="Team member">Team member</span><select name="memberId" data-wf-member data-i18n-skip><option value="AUTO">Automatically choose member</option><option value="GENERAL">General execution (no team member)</option></select></label>
+          <p class="help" data-wf-label="Automatic assignment uses a general Worker when no team members are configured.">Automatic assignment uses a general Worker when no team members are configured.</p>
           <div class="field"><span data-wf-label="Required Skills">Required Skills</span><p class="help" data-wf-label="Choose any number of installed Skills this task must use. Leave empty for automatic selection.">Choose any number of installed Skills this task must use. Leave empty for automatic selection.</p><p class="help" data-wf-label="Only catalogued Skills appear here. Write one-task instructions under Task sources; external downloads are not enabled.">Only catalogued Skills appear here. Write one-task instructions under Task sources; external downloads are not enabled.</p><div data-wf-skills class="wf-skill-picker"></div></div>
           <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input name="location" maxlength="4096"></label>
           <label class="field"><span><input type="checkbox" name="workspaceTools"><span data-wf-label="Work on files in this location">Work on files in this location</span></span></label>
@@ -68,6 +68,38 @@
       <section class="card" data-wf-run hidden><div class="wf-actions"><h2 data-wf-run-title></h2><span class="pill neutral" data-wf-run-state></span></div>
         <p data-wf-run-current></p><div data-wf-run-graph class="wf-graph"></div>
         <p class="help" data-wf-assigned-member data-i18n-skip></p>
+        <p class="help" data-wf-preparation></p>
+        <p class="help" data-wf-failure role="status" hidden></p>
+        <div class="wf-actions"><button class="btn ghost" data-wf-control="pause">Pause following steps</button><button class="btn primary" data-wf-control="resume">Resume workflow</button><button class="btn primary" data-wf-control="retry">Retry this step</button><button class="btn primary" data-wf-control="accept-result" data-wf-label="Use recorded result" hidden>Use recorded result</button><button class="btn ghost" data-wf-control="stop">Stop execution</button><button class="btn primary" type="button" data-wf-confirm-stop data-wf-label="Resolve interrupted execution" hidden>Resolve interrupted execution</button></div>
+        <p class="help" data-wf-interrupted data-wf-label="A lost connection does not mean the Worker stopped. Check the existing execution before retrying." hidden>A lost connection does not mean the Worker stopped. Check the existing execution before retrying.</p>
+        <dialog class="workspace-confirm wf-node-dialog" data-wf-recovery aria-labelledby="wf-recovery-title">
+          <div class="workspace-confirm__body">
+            <h2 id="wf-recovery-title" data-wf-label="Resolve interrupted execution">Resolve interrupted execution</h2>
+            <p class="help" data-wf-recovery-evidence></p>
+            <p role="status" data-wf-recovery-status></p>
+            <form data-wf-effect-form hidden>
+              <label class="field"><span data-wf-label="Operation to check">Operation to check</span><select name="operationId" required></select></label>
+              <label class="field"><span data-wf-label="Verified outcome">Verified outcome</span><select name="conclusion" required>
+                <option value=""></option>
+                <option value="SUCCEEDED" data-wf-label="Operation succeeded">Operation succeeded</option>
+                <option value="FAILED" data-wf-label="Operation failed">Operation failed</option>
+                <option value="NOT_STARTED" data-wf-label="Operation did not start">Operation did not start</option>
+              </select></label>
+              <label class="field"><span data-wf-label="Evidence reference">Evidence reference</span><input name="evidenceRef" required maxlength="1024"></label>
+              <label class="field"><span data-wf-label="Evidence SHA-256">Evidence SHA-256</span><input name="evidenceDigest" required pattern="[0-9a-f]{64}"></label>
+              <button class="btn primary" data-wf-label="Record verified outcome">Record verified outcome</button>
+            </form>
+            <form data-wf-stop-form hidden>
+              <div data-wf-external-evidence hidden>
+                <label class="field"><span data-wf-label="Evidence reference">Evidence reference</span><input name="evidenceRef" maxlength="1024"></label>
+                <label class="field"><span data-wf-label="Evidence SHA-256">Evidence SHA-256</span><input name="evidenceDigest" pattern="[0-9a-f]{64}"></label>
+              </div>
+              <label class="check"><input type="checkbox" name="quiescent" required><span data-wf-label="I verified that the Worker and its processes have stopped.">I verified that the Worker and its processes have stopped.</span></label>
+              <button class="btn primary" data-wf-label="Confirm stopped">Confirm stopped</button>
+            </form>
+          </div>
+          <div class="workspace-confirm__footer"><button class="btn ghost" type="button" data-wf-recovery-close data-wf-label="Close">Close</button></div>
+        </dialog>
         <section class="card">
           <h3 data-wf-label="Worker activity">Worker activity</h3>
           <p class="help" data-wf-label="Recent model and tool metadata. This is not the complete model conversation.">Recent model and tool metadata. This is not the complete model conversation.</p>
@@ -75,15 +107,13 @@
           <p class="help" data-wf-progress role="status" data-i18n-skip></p>
           <details><summary data-wf-label="Current task instructions">Current task instructions</summary><pre class="wf-instructions" data-wf-instructions data-i18n-skip></pre></details>
           <details><summary data-wf-label="Recent activity (up to 64 events)">Recent activity (up to 64 events)</summary><div data-wf-activity-events></div></details>
+          <p><a data-wf-worker-detail data-wf-label="Worker execution details">Worker execution details</a> <a data-wf-inspect data-wf-label="Inspect existing execution" hidden>Inspect existing execution</a></p>
         </section>
-        <section class="card">
-          <h3 data-wf-label="Recorded usage">Recorded usage</h3>
+        <details class="card">
+          <summary data-wf-label="Recorded usage">Recorded usage</summary>
           <p class="help" data-wf-label="Recorded calls include retries and summaries. Calls are not rounds. Cached input is part of input. Costs are estimates, not invoices.">Recorded calls include retries and summaries. Calls are not rounds. Cached input is part of input. Costs are estimates, not invoices.</p>
           <div data-wf-usage></div><a data-wf-usage-link data-wf-label="View recorded calls">View recorded calls</a>
-        </section>
-        <div class="wf-actions"><button class="btn ghost" data-wf-control="pause">Pause following steps</button><button class="btn primary" data-wf-control="resume">Resume workflow</button><button class="btn ghost" data-wf-control="retry">Retry this step</button><button class="btn primary" data-wf-control="accept-result" data-wf-label="Use recorded result" hidden>Use recorded result</button><button class="btn ghost" data-wf-control="stop">Stop execution</button><a class="btn ghost" data-wf-inspect data-wf-label="Inspect existing execution" hidden>Inspect existing execution</a></div>
-        <p class="help" data-wf-interrupted data-wf-label="A lost connection does not mean the Worker stopped. Check the existing execution before retrying." hidden>A lost connection does not mean the Worker stopped. Check the existing execution before retrying.</p>
-        <p class="help" data-wf-label="Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.">Pausing prevents following steps from starting. Current Worker work may continue. Stopping waits for Worker confirmation.</p>
+        </details>
         <section data-wf-amendment>
           <h3 data-wf-label="Adjust future steps">Adjust future steps</h3>
           <p class="help" data-wf-label="Pause the workflow first. A read-only Worker can suggest content or structural changes. Review the full diff and graph before applying. Resuming or stopping discards the suggestion.">Pause the workflow first. A read-only Worker can suggest content or structural changes. Review the full diff and graph before applying. Resuming or stopping discards the suggestion.</p>
@@ -109,7 +139,6 @@
         <section data-wf-answer hidden><h3 data-wf-question></h3><div data-wf-answer-options class="wf-actions"></div>
           <form data-wf-answer-form><label class="field"><span data-wf-label="Your answer">Your answer</span><textarea name="answer" required maxlength="8000" rows="3"></textarea></label><button class="btn primary" data-wf-label="Answer and continue">Answer and continue</button></form>
         </section>
-        <p class="help" data-wf-preparation></p><p><a data-wf-worker-detail data-wf-label="Worker execution details">Worker execution details</a></p>
         <h3 data-wf-label="Execution timeline">Execution timeline</h3><div data-wf-timeline></div>
       </section>
     </section>

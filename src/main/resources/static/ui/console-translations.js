@@ -52,6 +52,8 @@ window.aiwConsoleCatalog = [
   ["Edit a reusable workflow and follow each execution.","编辑可复用的工作流，查看每次执行的进展。"],
   ["Describe a simple task or run a reusable workflow.","直接处理简单任务，或运行可复用的工作流。"],
   ["No change was observed. The Worker will ask the model to recheck the delivery conditions.","尚未观察到修改。Worker 将请模型重新核对交付条件。"],
+  ["The Worker has spent several turns reading. It will review the evidence and choose the next check.","Worker 已连续多轮读取资料，将核对证据并选择下一项验证。"],
+  ["The last command did not pass. The Worker will review its relevance before delivery.","最后一次命令未通过。Worker 将在交付前确认这项检查是否必要。"],
   ["Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.","检测到重复读取且结果相同。Worker 将请模型重新考虑下一步。"],
   ["Repeated reads produced no new result after a reminder. The Worker stopped further model calls.","提醒后仍重复读取且没有新结果，Worker 已停止继续调用模型。"],
   ["The execution reached its configured model-call or turn limit.","本次执行已达到设定的模型调用或轮数上限。"],

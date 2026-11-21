@@ -12,6 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 /** Registration visibility is separate from immutable execution history. Only factory-owned IDs are retired. */
 @Service
 public class FactoryWorkerRegistry {
+    public record ExitEvidence(String reference,String digest) {}
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transaction;
     public FactoryWorkerRegistry(JdbcTemplate jdbc,PlatformTransactionManager transactions) {
@@ -42,6 +43,34 @@ public class FactoryWorkerRegistry {
     public boolean online(String id) {
         return jdbc.queryForObject("SELECT COUNT(*) FROM worker WHERE id=? AND status='ACTIVE' AND last_heartbeat_at_epoch_ms>=?",
                 Long.class,id,Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW).toEpochMilli())>0;
+    }
+    /** Returns the local launcher's receipt for review, never a stop decision. */
+    public ExitEvidence exitEvidence(String id,long claimedAt) {
+        if(!id.matches("factory-[0-9a-f]{24}"))return null;
+        Path directory=Path.of(System.getProperty("user.home"),".aiw","agent-factory","status");
+        Path file=directory.resolve(id+".json");
+        try {
+            if(!Files.isDirectory(directory,LinkOption.NOFOLLOW_LINKS)
+                    ||!Files.isRegularFile(file,LinkOption.NOFOLLOW_LINKS)
+                    ||Files.getLastModifiedTime(file,LinkOption.NOFOLLOW_LINKS).toMillis()<claimedAt)return null;
+            byte[] raw;
+            try(var stream=Files.newInputStream(file,LinkOption.NOFOLLOW_LINKS)) {raw=stream.readNBytes(8193);}
+            if(raw.length==0||raw.length>8192)return null;
+            var status=new com.fasterxml.jackson.databind.ObjectMapper().readTree(raw);
+            if(status==null||!id.equals(status.path("workerId").asText()))return null;
+            String state=status.path("state").asText();
+            if(!"STOPPED".equals(state)) {
+                if(!"FAILED".equals(state))return null;
+                // These runtime codes are emitted after the Python worker has joined its slots.
+                switch(status.path("code").asText()) {
+                    case "WORKER_SLOT_FAILED", "WORKER_EVIDENCE_FAILED", "WORKER_EXECUTION_OUTCOME_UNCONFIRMED", "WORKER_HEARTBEAT_FAILED" -> { }
+                    default -> { return null; }
+                }
+            }
+            return new ExitEvidence(file.toString(),java.util.HexFormat.of().formatHex(
+                    java.security.MessageDigest.getInstance("SHA-256").digest(raw)));
+        } catch(java.io.IOException ignored) {return null;}
+        catch(java.security.NoSuchAlgorithmException error) {throw new IllegalStateException(error);}
     }
     public boolean drainIdle(String id,String skill,String repository) {
         return Boolean.TRUE.equals(transaction.execute(status -> jdbc.update("""

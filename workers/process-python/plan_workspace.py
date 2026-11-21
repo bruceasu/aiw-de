@@ -22,26 +22,72 @@ def directory(root, *parts):
 
 
 class DirectoryLock:
-    """Shared by all Worker languages. An orphan is retained for explicit reconciliation."""
-    def __init__(self, root, attempt):
+    """Keep the shared directory lock and identify the exact Python attempt holding it."""
+    def __init__(self, root, attempt, attempt_id, stopped_attempts=()):
         parent = directory(root, ".ai", "locks")
         self.path = parent / "execution.lock"
+        self.owner = self.path / ("attempt-" + key(attempt_id))
+        stopped = {"attempt-" + key(identity) for identity in stopped_attempts if identity != attempt_id}
+        waiting = False
+        recovered = False
         while True:
             attempt.check()
             try:
                 self.path.mkdir()
                 break
             except FileExistsError:
+                if self.path.is_symlink() or getattr(self.path, "is_junction", lambda: False)():
+                    raise RuntimeError("WORKSPACE_LOCK_PATH_UNSAFE")
+                if self.reclaim(stopped):
+                    recovered = True
+                    continue
+                if not waiting:
+                    attempt.evidence.record("workspace-lock", status="waiting", code="WORKSPACE_LOCK_BUSY")
+                    waiting = True
                 time.sleep(0.05)
+        try:
+            self.owner.touch(exist_ok=False)
+        except OSError:
+            self.path.rmdir()
+            raise
         self.held = True
+        if waiting or recovered:
+            try:
+                attempt.evidence.record("workspace-lock", status="acquired",
+                                        code="WORKSPACE_LOCK_RECOVERED" if recovered else "WORKSPACE_LOCK_ACQUIRED")
+            except Exception:
+                self.release()
+                raise
+
+    def reclaim(self, stopped):
+        if not stopped:
+            return False
+        try:
+            markers = list(self.path.iterdir())
+            if len(markers) != 1:
+                return False
+            marker = markers[0]
+            if marker.name not in stopped or marker.is_symlink() or not marker.is_file():
+                return False
+            # Only the contender that removes this exact attempt's marker may remove the directory.
+            marker.unlink()
+        except FileNotFoundError:
+            return False
+        self.path.rmdir()
+        return True
 
     def release(self):
         if self.held:
+            self.owner.unlink()
             self.path.rmdir()
             self.held = False
 
 
-def input_manifests(task):
+REPORT_FILE_MAX_BYTES = 1024 * 1024
+REPORT_PREVIEW_CHARS = 4000
+
+
+def input_manifests(task, reports=None):
     result = []
     for item, checkpoint in [*((item, False) for item in task.get("inputs", [])), *((item, True) for item in task.get("checkpointInputs", []))]:
         ref = item.get("handoff")
@@ -67,9 +113,10 @@ def input_manifests(task):
                 or manifest.get("attemptId") != item["attemptId"]):
             raise RuntimeError("HANDOFF_SOURCE_MISMATCH")
         report = path.parent / "report.md"
-        if manifest.get("report") != "report.md" or report.is_symlink() or not report.is_file() or report.stat().st_size > 1024 * 1024:
+        if manifest.get("report") != "report.md" or report.is_symlink() or not report.is_file() or report.stat().st_size > REPORT_FILE_MAX_BYTES:
             raise RuntimeError("HANDOFF_REPORT_INVALID")
-        if hashlib.sha256(report.read_bytes()).hexdigest() != manifest.get("reportSha256"):
+        body = report.read_bytes()
+        if len(body) > REPORT_FILE_MAX_BYTES or hashlib.sha256(body).hexdigest() != manifest.get("reportSha256"):
             raise RuntimeError("HANDOFF_REPORT_HASH_MISMATCH")
         candidate = Path(manifest.get("workingDirectory", "")).resolve(strict=True)
         if not candidate.is_relative_to(root):
@@ -83,23 +130,28 @@ def input_manifests(task):
             manifest["checkpoint"] = True
         manifest["location"] = str(root)
         result.append(manifest)
+        if reports is not None and not checkpoint:
+            reports.append((item["taskId"], body.decode("utf-8")))
     return result
 
 
-def repositories(root):
-    result, visited = [], 0
-    for parent, names, _ in os.walk(root, followlinks=False):
+def has_nested_repository(root, attempt):
+    def raise_walk_error(error):
+        raise error
+
+    visited = 0
+    for parent, names, _ in os.walk(root, followlinks=False, onerror=raise_walk_error):
+        attempt.check()
         visited += 1
         if visited > 50000:
             raise RuntimeError("REPOSITORY_LAYOUT_LIMIT")
         current = Path(parent)
-        if (current / ".git").exists():
-            result.append(current)
-            if len(result) > 1:
-                break
+        if current != root and (current / ".git").exists():
+            return True
         names[:] = [n for n in names if n not in {".git", ".ai", ".aiw", "node_modules", ".venv"}
-                    and not (current / n).is_symlink()]
-    return result
+                    and not (current / n).is_symlink()
+                    and not getattr(current / n, "is_junction", lambda: False)()]
+    return False
 
 
 class PlanWorkspace:
@@ -115,13 +167,14 @@ class PlanWorkspace:
         root = Path(task["location"])
         root.mkdir(parents=True, exist_ok=True)
         root = root.resolve(strict=True)
-        gate = DirectoryLock(root, attempt)
+        gate = DirectoryLock(root, attempt, task["attemptId"], task.get("stoppedAttempts") or ())
         try:
             if broker:
                 broker.source_root = root
                 from formal_questions import verify_checkpoints
                 verify_checkpoints(broker)
-            manifests = input_manifests(task)
+            attempt.handoff_reports = []
+            manifests = input_manifests(task, attempt.handoff_reports if config.runtime == "openai-agents" else None)
             task["handoffInputs"] = manifests
             source = root
             # Check retained input while holding admission for this location.
@@ -151,13 +204,14 @@ class PlanWorkspace:
         try:
             if config.process_role == "goal-discussion" or task.get("subjectType") in {"goal-discussion", "workflow-recommendation"}:
                 cwd = directory(root, ".ai", "sandboxes", key(task["attemptId"]))
-                own_gate = DirectoryLock(cwd, attempt)
+                own_gate = DirectoryLock(cwd, attempt, task["attemptId"])
                 gate.release()
                 return cls(root, cwd, attempt, git, own_gate)
-            repos = repositories(root)
             has_git_permission = not broker or broker.allowed_tools is None or "GIT" in broker.allowed_tools
-            if len(repos) == 1 and repos[0] == root and has_git_permission:
+            if has_git_permission and (root / ".git").exists():
                 try:
+                    if has_nested_repository(root, attempt):
+                        return cls(root, source, attempt, git, gate)
                     base = git(source, "rev-parse", "--verify", "HEAD^{commit}").strip()
                     dirty = git(source, "status", "--porcelain", "--untracked-files=normal", "--", ".", ":(exclude).ai", ":(exclude).ai/**")
                     if not dirty:
@@ -167,7 +221,7 @@ class PlanWorkspace:
                         if os.name == "nt" and not broker:
                             from windows_workspace_acl import permit_workspace_read
                             permit_workspace_read(parent, cwd, root, writable=config.process_role in {"coder", "integrator", "repairer"})
-                        own_gate = DirectoryLock(cwd, attempt)
+                        own_gate = DirectoryLock(cwd, attempt, task["attemptId"])
                         gate.release()
                         return cls(root, cwd, attempt, git, own_gate, base)
                 except (RuntimeError, FileNotFoundError):
@@ -197,7 +251,27 @@ class PlanWorkspace:
         changed = git("diff", "--name-only", "-z", self.base, revision)
         return {"resultRevision": revision, "changedFiles": sorted(filter(None, changed.split("\0")))}
 
-    def handoff(self, task, report, result, checkpoint_tree_digest=None, tool_approval=None):
+    def report_summary(self, task, text):
+        if len(text) <= REPORT_PREVIEW_CHARS:
+            return text
+        path = self.root / ".ai" / "handoffs" / key(task["taskId"]) / key(task["attemptId"]) / "report.md"
+        reference = f"\n\nFull report on the Worker: {path}"
+        # Decision nodes read choice/reason from the inline JSON to select a branch.
+        structured = text.strip()
+        if structured.startswith(("```json\n", "```json\r\n")) and structured.endswith("```"):
+            structured = structured.split("\n", 1)[1][:-3].strip()
+        if structured.startswith("{"):
+            try:
+                decision = json.loads(structured)
+            except (ValueError, RecursionError):
+                decision = None
+            if isinstance(decision, dict) and isinstance(decision.get("choice"), str) and isinstance(decision.get("reason"), str):
+                return json.dumps({"choice": decision["choice"],
+                                   "reason": decision["reason"][:REPORT_PREVIEW_CHARS].rstrip() + reference},
+                                  ensure_ascii=False)
+        return text[:REPORT_PREVIEW_CHARS].rstrip() + "\n\n[Excerpt]" + reference
+
+    def handoff(self, task, report, result, checkpoint_tree_digest=None, tool_approval=None, *, full_report=None):
         target = directory(self.root, ".ai", "handoffs", key(task["taskId"]), key(task["attemptId"]))
         # Carry prior outputs across nodes and approval/question continuations. Bodies stay on disk.
         outputs = {}
@@ -208,11 +282,14 @@ class PlanWorkspace:
         broker = getattr(self.attempt, "guard_broker", None)
         for item in report.get("outputFiles", list(broker.file_changes.values()) if broker else []):
             outputs[item["path"]] = item
+        body = (report["summary"] if full_report is None else full_report).encode("utf-8")
+        if len(body) > REPORT_FILE_MAX_BYTES:
+            raise RuntimeError("HANDOFF_REPORT_TOO_LARGE")
         with (target / "report.md").open("xb") as file:
-            file.write(report["summary"].encode("utf-8"))
+            file.write(body)
         manifest = {"protocol": "aiw.handoff.v1", "taskId": task["taskId"], "attemptId": task["attemptId"],
                     "planId": task["planId"], "workingDirectory": self.cwd, "completedAt": time.time_ns() // 1000000,
-                    "report": "report.md", "reportSha256": key(report["summary"]), "verdict": report["verdict"], "gitResult": result,
+                    "report": "report.md", "reportSha256": hashlib.sha256(body).hexdigest(), "verdict": report["verdict"], "gitResult": result,
                     "deliverables": list(outputs.values())}
         if checkpoint_tree_digest is not None:
             manifest["checkpointTreeSha256"] = checkpoint_tree_digest

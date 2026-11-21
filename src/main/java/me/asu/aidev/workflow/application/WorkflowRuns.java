@@ -133,7 +133,7 @@ public class WorkflowRuns {
         public Proposal proposal;
         public Run() {}
     }
-    public record View(Run run,WorkTask task,String report,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity,ModelUsageView.Snapshot usage,Map<String,Object> member,ProposalView proposal) {}
+    public record View(Run run,WorkTask task,String taskDisplayState,String report,String failureCode,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity,ModelUsageView.Snapshot usage,Map<String,Object> member,ProposalView proposal) {}
     @org.springframework.beans.factory.annotation.Autowired private ModelUsageView modelUsage;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.application.TeamMembers team;
     @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<ExecutionRuns> executionRuns;
@@ -412,6 +412,29 @@ public class WorkflowRuns {
         if(run.context.length()+content.length()+2>64000) throw new IllegalStateException("Workflow context is full; preserve results and start a new execution");
         run.context+="\n\n"+content;
     }
+    static String resultContext(Run run,int maxChars,boolean includeLatest) {
+        String heading="\n\nRecent step results (excerpts):\n";
+        int remaining=Math.min(maxChars,2400)-heading.length();
+        var excerpts=new ArrayList<String>();
+        boolean skipLatest=!includeLatest&&run.completedTaskId!=null;
+        for(var entry:run.events.reversed()) {
+            boolean accepted=entry.type().equals("RESULT");
+            if(!accepted&&!entry.type().equals("DRAFT_RESULT"))continue;
+            if(skipLatest&&accepted){skipLatest=false;continue;}
+            String label=accepted?entry.node():"Prior draft";
+            int limit=Math.min(600,remaining-label.length()-3);
+            if(limit<2)break;
+            String content=entry.content();
+            if(content.length()>limit) {
+                int end=limit-1;
+                if(Character.isHighSurrogate(content.charAt(end-1)))end--;
+                content=content.substring(0,end)+"…";
+            }
+            String excerpt=label+": "+content;
+            excerpts.add(excerpt);remaining-=excerpt.length()+1;
+        }
+        return excerpts.isEmpty()?"":heading+String.join("\n",excerpts.reversed());
+    }
     private boolean startedNode(Run run,String key) {
         return run.visits.getOrDefault(key,0)>0||run.events.stream().anyMatch(e->e.node().equals(key)&&Set.of("DISPATCHED","QUESTION").contains(e.type()));
     }
@@ -470,7 +493,7 @@ public class WorkflowRuns {
         String basis;
         if(batch) {
             var destinations=run.spec.nodes().stream().map(n->Map.of("key",n.key(),"title",n.title(),"kind",n.kind(),"next",n.next()==null?"":n.next(),"branches",n.branches())).toList();
-            basis=db.encode(Map.of("goal",run.spec.goal(),"current",run.current,"context",run.context,"selectedNodes",selected,"destinations",destinations));
+            basis=db.encode(Map.of("goal",run.spec.goal(),"current",run.current,"context",run.context+resultContext(run,2400,true),"selectedNodes",selected,"destinations",destinations));
         } else {
             var node=selected.getFirst();var destinations=run.spec.nodes().stream().map(n->Map.of("key",n.key(),"title",n.title())).toList();
             basis=db.encode(Map.of("goal",run.spec.goal(),"node",node,"destinations",destinations));
@@ -508,7 +531,7 @@ public class WorkflowRuns {
         var graph=run.spec.nodes().stream().map(node->new StructureBasisNode(node.key(),node.title(),node.kind(),node.instruction(),node.next(),node.branches(),startedNode(run,node.key()),node.key().equals(run.current))).toList();
         var reserved=plan.spec().steps().stream().map(WorkflowPlanSpec.Step::key).toList();
         int available=32-plan.spec().steps().size();
-        String basis=db.encode(new StructureBasis("STRUCTURE",run.spec.goal(),run.current,run.context,run.spec.entry(),graph,
+        String basis=db.encode(new StructureBasis("STRUCTURE",run.spec.goal(),run.current,run.context+resultContext(run,2400,true),run.spec.entry(),graph,
                 plan.version(),reserved,available));
         if(basis.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>131072)
             throw new IllegalArgumentException("Workflow graph and context are too large for a structural suggestion");
@@ -728,12 +751,16 @@ public class WorkflowRuns {
         var member=team.assigned(run.id,node.key());
         if(member==null&&node.assignment()==Assignment.AUTO) {
             var choice=team.choose(run.actor,node.requiredSkills());
-            if(choice.member()==null) {
+            if(choice.member()==null&&!choice.noMembers()) {
                 run.state="WAITING_MEMBER";
                 if(!Objects.equals(run.memberWait,choice.reason()))event(run,"WAITING_MEMBER",choice.reason());
                 run.memberWait=choice.reason();return;
             }
-            member=choice.member();team.freeze(run.id,node.key(),member);event(run,"MEMBER_ASSIGNED",member.name());
+            if(choice.noMembers()) {
+                event(run,"GENERAL_ASSIGNED","No team members are configured. The task will use a general Worker.");
+            } else {
+                member=choice.member();team.freeze(run.id,node.key(),member);event(run,"MEMBER_ASSIGNED",member.name());
+            }
         }
         run.memberWait=null;
         for(var input:run.inputs)if(input.state.equals("QUEUED")) {
@@ -748,10 +775,10 @@ public class WorkflowRuns {
         run.visits.put(node.key(),round);run.sequence++;
         int index=0;while(!plan.spec().steps().get(index).key().equals(node.key())) index++;
         // A per-task context is frozen before task creation; the Plan definition remains immutable.
-        String context=run.context;
         var taskId=new TaskId(plan.id()+"~"+node.key()+"~work-"+round);
-        var instruction=instruction(run.spec,node)+"\nExecution input and prior results:\n"+context;
+        var instruction=instruction(run.spec,node)+"\nExecution input and user supplements:\n"+run.context;
         if(member!=null)instruction=team.context(member)+instruction;
+        instruction+=resultContext(run,16384-instruction.length(),false);
         List<Material> references;
         try {references=sources(run.spec,member);}catch(IllegalArgumentException error) {run.state="FAILED";event(run,"LIMIT",error.getMessage());return;}
         if(instruction.length()>16384) {run.state="FAILED";event(run,"LIMIT","Node input exceeds the current Worker instruction limit; no work was dispatched");return;}
@@ -775,10 +802,30 @@ public class WorkflowRuns {
     }
     /** One transaction per waiter; the existing scheduler supplies a bounded rotating batch. */
     @Transactional public void assignPending(String id) {
-        var run=load(id,false);if(!run.state.equals("WAITING_MEMBER"))return;
+        var run=load(id,false);
+        if(run.state.equals("FAILED")) {restoreRecordedRetry(run);return;}
+        if(!run.state.equals("WAITING_MEMBER"))return;
         String previousReason=run.memberWait;int previousEvents=run.events.size();
         run.state="RUNNING";advance(run);
         if(!run.state.equals("WAITING_MEMBER")||!Objects.equals(previousReason,run.memberWait)||previousEvents!=run.events.size())persist(run);
+    }
+    @Transactional public void restoreRecordedRetry(String id) {
+        if(manages(id))restoreRecordedRetry(load(id,false));
+    }
+    private void restoreRecordedRetry(Run run) {
+        if(!run.state.equals("FAILED"))return;
+        var task=currentTask(run);
+        if(task==null||task.state()!=TaskState.READY||tasks.findLease(task.id()).isPresent())return;
+        if(plans.getObject().get(run.id).state()!=WorkflowPlan.State.CONFIRMED)return;
+        boolean retried=db.jdbc().queryForObject("""
+                SELECT EXISTS(SELECT 1 FROM work_task_control_event
+                    WHERE task_id=? AND action='RETRY_FAILED' AND warning_confirmed=1 AND created_at_epoch_ms=?)
+                """, Boolean.class,task.id().value(),task.updatedAt().toEpochMilli());
+        if(!retried)return;
+        run.state="RUNNING";
+        run.sealedTaskId=null;run.sealedAttemptId=null;
+        event(run,"RETRY","User requested one retry of the current step");
+        persist(run);
     }
     @Transactional public void completed(WorkTask task,CompletionReport report) {
         var run=load(task.subjectId(),false);
@@ -807,10 +854,7 @@ public class WorkflowRuns {
                 run.state="FAILED";event(run,"FAILED","Invalid decision result: "+report.summary());return;
             }
         }
-        if(run.context.length()+report.summary().length()+node.title().length()+6>64000) {
-            run.state="FAILED";event(run,"FAILED","Workflow context is full; result retained in the task report");return;
-        }
-        event(run,"RESULT",report.summary());append(run,node.title()+":\n"+report.summary());
+        event(run,"RESULT",report.summary());
         run.completedTaskId=actualTask;run.current=next;run.taskId=null;advance(run);
     }
     private WorkTask currentTask(Run run) {
@@ -853,7 +897,15 @@ public class WorkflowRuns {
                 activity=executionRuns.getObject().read(new RunContract.Query(activityTask.id().value(),sessions.getFirst(),Math.max(0,last-64)));
             }
         }
-        return new View(run,task,report,provisioner.getObject().pending(run.id),activity,
+        String taskDisplayState=task==null?null:tasks.findLease(task.id()).filter(lease->!lease.expiresAt().isAfter(Instant.now()))
+                .map(lease->"INTERRUPTED").orElseGet(()->task.state().name());
+        String failureCode=null;
+        if(task!=null&&task.state()==TaskState.FAILED) {
+            var codes=db.jdbc().queryForList("SELECT termination_reason FROM execution_attempt WHERE task_id=? ORDER BY attempt_no DESC LIMIT 1",
+                    String.class,task.id().value());
+            if(!codes.isEmpty())failureCode=codes.getFirst();
+        }
+        return new View(run,task,taskDisplayState,report,failureCode,provisioner.getObject().pending(run.id),activity,
                 modelUsage.summary(owners.currentOwner(),new ModelUsageView.Query(run.id,null)),team.identity(run.memberWait!=null||activityTask==null?null:activityTask.id().value()),proposalView(run));
     }
     @Transactional public Run control(String id,long version,String action,String answer) {
@@ -880,7 +932,7 @@ public class WorkflowRuns {
                 else if(task.state()==TaskState.COMPLETED) {
                     if(run.inputs.stream().anyMatch(i->i.state.equals("QUEUED"))) {
                         var draft=attempts.findCompletionReport(task.id()).map(CompletionReport::summary).orElse("Result report unavailable");
-                        event(run,"RESULT",draft);append(run,"Prior draft before the user supplement:\n"+draft);
+                        event(run,"DRAFT_RESULT",draft);
                         run.taskId=null;advance(run);
                     } else consume(run,attempts.findCompletionReport(task.id()).orElse(null));
                 }

@@ -89,6 +89,16 @@ class RunChannelTest(unittest.TestCase):
         channel._accept(self.view(ack=1))
         self.assertEqual([item["sequence"] for item in channel.queue], [2])
 
+    def test_workspace_lock_uses_plane_status_values(self):
+        channel = self.channel()
+        channel.observe("runtime-event", {"status": "preparing-workspace"})
+        channel.observe("workspace-lock", {"status": "waiting", "code": "WORKSPACE_LOCK_BUSY", "path": "private"})
+        channel.observe("workspace-lock", {"status": "acquired", "code": "WORKSPACE_LOCK_RECOVERED"})
+        self.assertEqual([item["payload"] for item in channel.queue], [
+            {"runtimeEvent": "preparing-workspace"},
+            {"status": "pending", "code": "WORKSPACE_LOCK_BUSY"},
+            {"status": "completed", "code": "WORKSPACE_LOCK_RECOVERED"}])
+
     def test_seal_consumes_the_atomic_workbench_response(self):
         channel = self.channel()
         batch = {"phase": "RUNNING", "batchId": "boundary-1", "messages": [{"text": "follow up"}]}

@@ -10,6 +10,7 @@ import urllib.request
 
 from agent_runtime import HOST_ACTION_INSTRUCTIONS
 from automation_loop import parse_action
+from context_window import API_INPUT_BYTES, estimate_input_tokens, input_token_limit
 from worker_runtime import setting
 
 
@@ -38,9 +39,15 @@ class ResponsesConversation:
         if request.reasoning_effort and request.reasoning_effort != "default":
             payload["reasoning"] = {"effort": request.reasoning_effort}
         body = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode()
-        if len(body) > setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024):
+        if len(body) > setting("AIW_WORKER_MAX_INPUT_BYTES", API_INPUT_BYTES):
             raise RuntimeError("CONTEXT_BUDGET_EXCEEDED")
-        request.attempt.evidence.record("context-projected", inputBytes=len(body), status="complete", runtime=self.runtime)
+        tokens, limit = estimate_input_tokens(payload), input_token_limit()
+        within_limit = tokens <= limit
+        request.attempt.evidence.record("context-projected", inputBytes=len(body),
+                                        status="completed" if within_limit else "error", runtime=self.runtime,
+                                        estimatedInputTokens=tokens, inputTokenLimit=limit)
+        if not within_limit:
+            raise RuntimeError("MODEL_INPUT_TOKEN_BUDGET_EXCEEDED")
         token = request.credential_provider.access("CHATGPT_RESPONSES")
         wire = urllib.request.Request("https://api.openai.com/v1/responses", data=body, method="POST",
                     headers={"Content-Type": "application/json", "Accept": "text/event-stream", "Authorization": "Bearer " + token["accessToken"]})

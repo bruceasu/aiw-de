@@ -30,7 +30,8 @@ class Session:
 class GuardedCompletionTest(unittest.TestCase):
     def request(self, validator):
         attempt = SimpleNamespace(check=Mock(), evidence=Mock(), resource_uncertain=False, instruction_revision=3)
-        broker = SimpleNamespace(attempt=attempt, pending_question=None, model_started=Mock(side_effect=['op1', 'op2', 'op3']),
+        broker = SimpleNamespace(attempt=attempt, pending_question=None, shell_enabled=lambda: False,
+                                 model_started=Mock(side_effect=['op1', 'op2', 'op3']),
                                  model_finished=Mock(), finish=Mock(), context={'configurationDigest': 'a' * 64})
         return SimpleNamespace(attempt=attempt, broker=broker, instruction='Original fixed task', model='model',
                                reasoning_effort='high', candidate_validator=validator)

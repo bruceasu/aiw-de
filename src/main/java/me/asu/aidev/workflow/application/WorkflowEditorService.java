@@ -41,7 +41,13 @@ public class WorkflowEditorService {
     private org.springframework.beans.factory.ObjectProvider<WorkflowGitDeliveryService> gitDelivery;
     public record TaskDetail(WorkTask task, List<JdbcWorkflowTaskReadRepository.Attempt> attempts,
                              WorkflowPlanService.RetryEligibility retry,
-                             List<JdbcWorkflowTaskReadRepository.RetryEvent> retries) {}
+                             List<JdbcWorkflowTaskReadRepository.RetryEvent> retries) {
+        @com.fasterxml.jackson.annotation.JsonProperty("displayState")
+        public String displayState() {
+            return !attempts.isEmpty() && "INTERRUPTED".equals(attempts.getFirst().state())
+                    ? "INTERRUPTED" : task.state().name();
+        }
+    }
 
     private static final List<Role> ROLES = List.of(
             new Role("general-work", "general-work", "REPORT", false),

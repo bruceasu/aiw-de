@@ -60,6 +60,7 @@ class HostLoopContractTest(unittest.TestCase):
         from agent_runtime import AgentRunRequest
         attempt = SimpleNamespace(check=Mock(), evidence=SimpleNamespace(record=Mock()), resource_uncertain=False)
         broker = SimpleNamespace(attempt=attempt, context={}, pending_question=None, _active=False,
+                                 shell_enabled=lambda: False,
                                  model_started=Mock(return_value="model-operation"), model_finished=Mock(),
                                  invoke=Mock(return_value={"text": "read result"}))
         return AgentRunRequest(attempt, ".", SimpleNamespace(writable=False), "Analyze the assigned files.",

@@ -36,7 +36,7 @@ public final class RunContract {
     }
     public static void metadata(Map<String,Object> payload) {
         if(payload==null||payload.size()>16)throw new IllegalArgumentException("Bounded metadata required");
-        var numbers=Set.of("bytes","inputBytes","outputBytes","count","durationMs","inputTokens","outputTokens","cachedTokens");
+        var numbers=Set.of("bytes","inputBytes","outputBytes","count","durationMs","inputTokens","estimatedInputTokens","inputTokenLimit","outputTokens","cachedTokens");
         var booleans=Set.of("complete","truncated","changed","usageKnown");
         var strings=Map.ofEntries(
             Map.entry("visibility",Set.of("WORKER_PROJECTION","BACKEND_OPAQUE")),

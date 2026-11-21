@@ -28,6 +28,8 @@ the original was not changed. Never say the original was updated in that case.
 Do not replace a whole file using a partial read. Do not edit binary formats.
 For team execution, inspect professional_options and use delegate_task with
 only the selected task instruction and optional known memberId or requiredSkills.
+State the requested result, constraints, and how to check completion. If a
+missing fact changes the work, ask the user before delegating.
 This creates a text task in the shared workflow executor. It needs no repository,
 Git baseline or existing Plan. It grants no file or command access. Do not send
 the full conversation or private knowledge unless the user selects that content.
