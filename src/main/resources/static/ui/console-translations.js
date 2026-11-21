@@ -1,6 +1,11 @@
 // UI copy only. Rows are English and Simplified Chinese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["Worker checklist","Worker 工作清单"],
+  ["Progress reported by the Worker. See required checks for verified results.","这是 Worker 报告的进度。实际核验结果见必需检查。"],
+  ["In progress","进行中"],
+  ["Reported done","已报告做完"],
+  ["To do","待做"],
   ["Current work","当前工作"],
   ["Open this attempt in Worker Workbench","在 Worker 工作台查看本次执行"],
   ["Latest recorded result","最近记录的结果"],

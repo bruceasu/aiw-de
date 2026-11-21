@@ -54,6 +54,7 @@ public class ExecutionRuns {
         var result=new LinkedHashMap<String,Object>();result.put("protocol",PROTOCOL);
         result.put("progressEventsSupported",true);
         result.put("progressReviewSupported",true);
+        result.put("workChecklistSupported",guard.managed((String)run.get("task_id")));
         result.put("taskId",run.get("task_id"));result.put("attemptId",run.get("attempt_id"));result.put("instructionRevision",run.get("instruction_revision"));
         result.put("revision",run.get("revision"));result.put("acknowledgedSequence",run.get("ack_sequence"));result.put("lastContact",run.get("last_contact_ms"));
         String phase=(String)run.get("phase");
@@ -108,10 +109,14 @@ public class ExecutionRuns {
             if(event.sequence()<=previousSequence)throw new IllegalArgumentException("Events must be strictly ordered");
             previousSequence=event.sequence();
         }
-        var allowed=Set.of("model-request","model-terminal","tool-proposed","runtime-event","ai-settings","context-projected","context-component","guard-intent","guard-start","guard-finished","host-batch-validated","validation-failed","validation-passed","native-turn-started","execution-quiescent","delivery-pending","progress-stalled","progress-review","workspace-lock");
+        var allowed=Set.of("model-request","model-terminal","tool-proposed","runtime-event","ai-settings","context-projected","context-component","guard-intent","guard-start","guard-finished","host-batch-validated","validation-failed","validation-passed","native-turn-started","execution-quiescent","delivery-pending","progress-stalled","progress-review","workspace-lock","work-checklist");
         for(var event:input.events()) {
             if(event.sequence()<1||event.occurredAt()<1||!allowed.contains(event.eventType()))throw new IllegalArgumentException("Invalid run event");
-            metadata(event.payload());String json=repo.encode(event.payload());
+            if(event.eventType().equals("work-checklist")) {
+                if(!guard.managed(task))throw new SecurityException("Guarded task required for a work checklist");
+                checklist(event.payload());
+            } else metadata(event.payload());
+            String json=repo.encode(event.payload());
             if(json.getBytes(java.nio.charset.StandardCharsets.UTF_8).length>8192||!AuthorityRepository.hash(json).equals(event.payloadDigest()))throw new IllegalArgumentException("Event digest or size differs");
             String identity=AuthorityRepository.hash(repo.encode(event));
             if(event.sequence()<=ack) {
@@ -216,7 +221,7 @@ public class ExecutionRuns {
     }
 
     public record TaskProgress(String stage,String recentResult,java.time.Instant resultAt,java.time.Instant lastContact,
-                               String source,boolean connectionDelayed) {}
+                               String source,boolean connectionDelayed,List<ChecklistItem> checklist) {}
 
     @Transactional(readOnly=true) public TaskProgress taskProgress(String task,String attempt,String actor) {
         var sessions=repo.jdbc().queryForList("SELECT * FROM execution_run_session WHERE task_id=? AND attempt_id=?",task,attempt);
@@ -288,7 +293,29 @@ public class ExecutionRuns {
             if(recent!=null&&(stage!=null||!showStages))break;
         }
         return new TaskProgress(stage,recent,resultAt,java.time.Instant.ofEpochMilli(number(run,"last_contact_ms")),
-                state.get("sourceKind").toString().toLowerCase(Locale.ROOT),delayed);
+                state.get("sourceKind").toString().toLowerCase(Locale.ROOT),delayed,readChecklist(repo.jdbc().queryForList("""
+                        SELECT payload_json FROM execution_run_event WHERE attempt_id=? AND event_type='work-checklist'
+                         ORDER BY sequence_no DESC LIMIT 1
+                        """,String.class,attempt)));
+    }
+
+    private List<ChecklistItem> readChecklist(List<String> rows) {
+        return rows.isEmpty()?List.of():checklist(repo.decode(rows.getFirst(),Map.class));
+    }
+
+    /** This is used for the already assigned, authenticated claim, never as completion evidence. */
+    @Transactional(readOnly=true) public List<ChecklistItem> previousChecklist(String task,String attempt,int instructionRevision) {
+        if(!guard.managed(task))return List.of();
+        String owner=guard.context(task).ownerId();
+        return readChecklist(repo.jdbc().queryForList("""
+                SELECT e.payload_json FROM execution_run_event e WHERE e.event_type='work-checklist' AND e.attempt_id=(
+                    SELECT s.attempt_id FROM execution_run_session s JOIN execution_attempt a ON a.id=s.attempt_id
+                     WHERE s.owner_id=? AND s.instruction_revision=? AND s.attempt_id<>?
+                       AND s.task_id IN (?,(SELECT resumes_task_id FROM execution_context WHERE task_id=?))
+                       AND a.state NOT IN ('CLAIMED','RUNNING')
+                     ORDER BY a.created_at_epoch_ms DESC,a.id DESC LIMIT 1
+                ) ORDER BY e.sequence_no DESC LIMIT 1
+                """,String.class,owner,instructionRevision,attempt,task,task));
     }
     @Transactional public Object receipt(ReceiptQuery input) {
         String owner=owner();text(input.requestId(),80);var rows=repo.jdbc().queryForList("SELECT task_id,attempt_id FROM execution_run_command WHERE owner_id=? AND request_id=?",owner,input.requestId());

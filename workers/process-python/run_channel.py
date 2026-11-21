@@ -10,7 +10,7 @@ import time
 
 PROTOCOL = "aiw.worker.loop.v1"
 EVENTS = {"model-request", "model-terminal", "tool-proposed", "runtime-event", "ai-settings", "context-projected", "context-component", "guard-intent", "guard-start", "guard-finished", "native-turn-started",
-          "host-batch-validated", "validation-failed", "validation-passed", "execution-quiescent", "delivery-pending", "progress-stalled", "progress-review", "workspace-lock"}
+          "host-batch-validated", "validation-failed", "validation-passed", "execution-quiescent", "delivery-pending", "progress-stalled", "progress-review", "workspace-lock", "work-checklist"}
 FIELDS = set("bytes inputBytes outputBytes count durationMs inputTokens estimatedInputTokens inputTokenLimit outputTokens cachedTokens complete truncated changed usageKnown visibility requestScope purpose status phase tool digest operation callId parentCallId sourceKind code model effort toolName runtimeEvent".split())
 SOURCE_KINDS = set("instructions messages tools fixed_header observations new_observations task knowledge upstream skill configuration".split())
 
@@ -26,6 +26,7 @@ class RunChannel:
         self.configuration_digest = None
         self.progress_events_supported = False
         self.progress_review_supported = False
+        self.work_checklist_supported = False
         self.quiescent_sequence = None
         self.client = copy.copy(broker.client)
         self.client.timeout = min(self.client.timeout, 2)
@@ -67,6 +68,7 @@ class RunChannel:
         with self.lock:
             self.progress_events_supported = value.get("progressEventsSupported") is True
             self.progress_review_supported = value.get("progressReviewSupported") is True
+            self.work_checklist_supported = value.get("workChecklistSupported") is True
             self.revision = value["revision"]
             self.phase = value["phase"]
             self.configuration_digest = value.get("configurationDigest", self.configuration_digest)
@@ -108,9 +110,13 @@ class RunChannel:
             values = {**values, "status": {"waiting": "pending", "acquired": "completed"}.get(values["status"], values["status"])}
         payload = {key: value for key, value in values.items() if key in FIELDS and value is not None
                    and not (isinstance(value, str) and not value.strip())}
+        if event == "work-checklist":
+            if not self.work_checklist_supported:
+                return
+            payload = {"items": values["items"]}
         if payload.get("sourceKind") not in SOURCE_KINDS:
             payload.pop("sourceKind", None)
-        # Never copy path, instruction, model output, arguments, credentials or free-form errors.
+        # Only the dedicated checklist carries user-facing labels. Never copy raw tool or model data.
         with self.lock:
             if event == "progress-stalled" and not self.progress_events_supported:
                 return

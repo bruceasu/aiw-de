@@ -20,6 +20,13 @@
         <time class="muted" th:if="${taskProgress.resultAt != null}" th:datetime="${taskProgress.resultAt}" th:text="${taskProgress.resultAt}"></time></dd>
       <dt>Last contact</dt><dd><time th:datetime="${taskProgress.lastContact}" th:text="${taskProgress.lastContact}"></time></dd>
     </dl>
+    <div th:if="${taskProgress != null and !#lists.isEmpty(taskProgress.checklist)}">
+      <h3>Worker checklist</h3><p class="help">Progress reported by the Worker. See required checks for verified results.</p>
+      <ol class="compact-list"><li th:each="item : ${taskProgress.checklist}">
+        <span class="pill neutral" th:text="${item.state == 'current' ? 'In progress' : (item.state == 'done' ? 'Reported done' : 'To do')}"></span>
+        <span data-i18n-skip th:text="${item.label}"></span>
+      </li></ol>
+    </div>
   </section>
   <section class="card"><div class="section-title"><h2>Task overview</h2><div class="form-actions"><a class="btn ghost small-btn" th:href="@{/ui/configurations(view='observations',planId=${planId},taskId=${taskDetail.task.id.value})}">View model usage</a><a class="btn ghost small-btn" th:if="${taskProgress == null}" th:href="@{/ui/configurations(view='workbench',task=${taskDetail.task.id.value})}">打开 Worker 工作台</a></div></div><dl class="kv">
     <dt>Task ID</dt><dd class="mono" th:text="${taskDetail.task.id.value}"></dd>

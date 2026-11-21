@@ -532,6 +532,7 @@ class ProcessSlot:
         phase = "CONFIGURATION"
         try:
             attempt = Attempt(self.config, task, self.force_event)
+            attempt.previous_work_checklist = task.get("previousWorkChecklist") or []
             with attempt_scope(attempt):
                 selection, reason = choose_ai_profile(task.get("aiGuidance"), self.config.runtime)
                 fallback_selection = selection

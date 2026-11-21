@@ -12,6 +12,7 @@ public final class RunContract {
         public Open(String protocol,Lease lease,int instructionRevision,Map<String,String> capabilities) { this(protocol,lease,instructionRevision,capabilities,null); }
     }
     public record Event(long sequence,String eventType,long occurredAt,Map<String,Object> payload,String payloadDigest) {}
+    public record ChecklistItem(String label,String state) {}
     public record Events(Lease lease,List<Event> events) {}
     public record Receipt(long sequence,String status) {}
     public record Poll(Lease lease,List<Receipt> receipts) {}
@@ -57,6 +58,25 @@ public final class RunContract {
             if(key.equals("code")&&value instanceof String s&&s.matches("[A-Z][A-Z0-9_]{0,79}"))continue;
             throw new IllegalArgumentException("Unknown or unsafe run metadata field");
         }
+    }
+
+    public static List<ChecklistItem> checklist(Map<?,?> payload) {
+        if(payload==null||!payload.keySet().equals(Set.of("items"))||!(payload.get("items") instanceof List<?> items)||items.size()>5)
+            throw new IllegalArgumentException("A checklist contains up to five items");
+        var result=new ArrayList<ChecklistItem>();var labels=new HashSet<String>();boolean current=false;
+        for(Object value:items) {
+            if(!(value instanceof Map<?,?> item)||!item.keySet().equals(Set.of("label","state"))
+                    ||!(item.get("label") instanceof String label)||label.isBlank()||label.codePointCount(0,label.length())>160
+                    ||label.codePoints().anyMatch(Character::isISOControl)||!labels.add(label.strip())
+                    ||!(item.get("state") instanceof String state)||!Set.of("pending","current","done").contains(state))
+                throw new IllegalArgumentException("Invalid checklist item");
+            if(state.equals("current")) {
+                if(current)throw new IllegalArgumentException("Only one item may be current");
+                current=true;
+            }
+            result.add(new ChecklistItem(label,state));
+        }
+        return List.copyOf(result);
     }
     public static void id(String value) { text(value,128); }
 }

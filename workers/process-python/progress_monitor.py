@@ -85,8 +85,10 @@ class ProgressMonitor:
             if not call_id or call_id in self.seen or not call:
                 continue
             self.seen.add(call_id)
-            observed = True
             name = call.get("name")
+            if name == "update_work_checklist":
+                continue
+            observed = True
             names.append(name)
             output = item.get("output")
             if isinstance(output, str):

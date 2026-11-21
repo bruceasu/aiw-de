@@ -51,6 +51,7 @@ public class WorkerProtocolV1Controller {
     @Autowired private me.asu.aidev.authority.AuthorityRepository authorityRepository;
     @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.NativeQuestions> nativeQuestions;
     @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> workflowRuns;
+    @Autowired private me.asu.aidev.execution.run.ExecutionRuns executionRuns;
     private final TaskClaimService claims;
     private final TaskExecutionService executions;
     private final ExecutionAttemptRepository attempts;
@@ -210,7 +211,9 @@ public class WorkerProtocolV1Controller {
                 configurations==null?null:configurations.payload(task.id().value(),claimed.attemptId().value()),
                 skillFiles==null?null:skillFiles.payload(task.id().value(),claimed.attemptId().value()),
                 goalPolicy!=null&&goalPolicy.managed(task)?goalPolicy.frozen(task).images():List.of(),
-                workflowRuns.getObject().sources(task),locations.stoppedAttempts(task),workflowRuns.getObject().requiredChecks(task));
+                workflowRuns.getObject().sources(task),locations.stoppedAttempts(task),workflowRuns.getObject().requiredChecks(task),
+                runtimeType.startsWith("openai-agents:")&&task.requiredCapabilities().contains(me.asu.aidev.execution.guard.GuardContract.CAPABILITY)
+                        ?executionRuns.previousChecklist(task.id().value(),claimed.attemptId().value(),task.instructionRevision()):List.of());
     }
 
     private AiProfileCatalog.Guidance delegatedGuidance(me.asu.aidev.work.domain.WorkTask task,String runtime,int attempt) {
@@ -276,5 +279,7 @@ public class WorkerProtocolV1Controller {
             @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
             List<String> stoppedAttempts,
             @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
-            List<String> requiredCheckIds) {}
+            List<String> requiredCheckIds,
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
+            List<me.asu.aidev.execution.run.RunContract.ChecklistItem> previousWorkChecklist) {}
 }

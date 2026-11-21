@@ -1,5 +1,6 @@
 import hashlib
 import asyncio
+import json
 import threading
 import time
 import unittest
@@ -98,6 +99,40 @@ class RunChannelTest(unittest.TestCase):
             {"runtimeEvent": "preparing-workspace"},
             {"status": "pending", "code": "WORKSPACE_LOCK_BUSY"},
             {"status": "completed", "code": "WORKSPACE_LOCK_RECOVERED"}])
+
+    def test_optional_worker_checklist_is_bounded_and_does_not_mark_workspace_progress(self):
+        from agents.tool_context import ToolContext
+        from openai_api_runtime import _work_checklist_tool
+        from progress_monitor import ProgressMonitor
+
+        channel = self.channel()
+        current = {"label": "Check output", "state": "current"}
+        channel.observe("work-checklist", {"items": [current]})
+        self.assertEqual(channel.queue, [])
+        channel._accept({**self.view(), "workChecklistSupported": True})
+        channel.attempt.run_channel = channel
+        channel.attempt.evidence.record = Mock(side_effect=RuntimeError("EVIDENCE_FIELD_FORBIDDEN"))
+        tool = _work_checklist_tool(channel.attempt)
+
+        async def update(items):
+            arguments = json.dumps({"items": items})
+            context = ToolContext(context=None, tool_name=tool.name, tool_call_id="update", tool_arguments=arguments)
+            return await tool.on_invoke_tool(context, arguments)
+
+        asyncio.run(update([current]))
+        asyncio.run(update([current]))
+        self.assertIn("Invalid checklist", asyncio.run(update([current, {"label": "Other", "state": "current"}])))
+        self.assertEqual(channel.attempt.work_checklist, [current])
+        self.assertEqual(len(channel.queue), 1)
+        self.assertEqual(channel.queue[0]["payload"], {"items": [current]})
+        asyncio.run(update([]))
+        self.assertEqual(channel.queue[-1]["payload"], {"items": []})
+
+        monitor = ProgressMonitor(channel.attempt.evidence)
+        monitor.observe([{"type": "function_call", "call_id": "update", "name": tool.name},
+                         {"type": "function_call_output", "call_id": "update", "output": "recorded"}], writable=True)
+        self.assertFalse(monitor.may_have_changed)
+        channel.attempt.evidence.record.assert_not_called()
 
     def test_seal_consumes_the_atomic_workbench_response(self):
         channel = self.channel()
