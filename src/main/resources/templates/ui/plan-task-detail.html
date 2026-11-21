@@ -16,6 +16,15 @@
     <dt>Created</dt><dd th:text="${taskDetail.task.createdAt}"></dd>
     <dt>Updated</dt><dd th:text="${taskDetail.task.updatedAt}"></dd>
   </dl></section>
+  <section class="card section" th:unless="${#lists.isEmpty(requiredChecks)}">
+    <h2>Required checks</h2>
+    <div class="table-wrap"><table><thead><tr><th>Command ID</th><th>State</th><th>Exit code</th><th>Execution receipt</th></tr></thead>
+      <tbody><tr th:each="check : ${requiredChecks}">
+        <td class="mono" data-i18n-skip th:text="${check.id}"></td><td th:text="${check.status}"></td><td th:text="${check.exitCode}"></td>
+        <td><details th:if="${check.operationId != null}"><summary>View evidence</summary><code data-i18n-skip th:text="${check.operationId}"></code><br><code data-i18n-skip th:text="${check.outputDigest}"></code></details></td>
+      </tr></tbody></table></div>
+    <a class="btn ghost small-btn" th:href="@{/ui/tasks(execution=${planId})}">Open task execution</a>
+  </section>
   <div class="callout warn" th:if="${taskDetail.displayState() == 'INTERRUPTED'}">
     <p>The Worker stopped reporting before the lease expired. The result is unconfirmed.</p>
     <a class="btn ghost small-btn" data-task-diagnostic-open th:href="@{/api/r1/plan-editor/plans/{id}/tasks/{taskId}(id=${planId},taskId=${taskDetail.task.id.value})}">View failure diagnosis</a>

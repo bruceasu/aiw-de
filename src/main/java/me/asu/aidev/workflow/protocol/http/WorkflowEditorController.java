@@ -44,6 +44,8 @@ public class WorkflowEditorController {
     private me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository configuredHistory;
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.FactoryPlanLifecycle> factoryPlans;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> workflowRuns;
 
     @org.springframework.beans.factory.annotation.Autowired
     public void setConfiguredHistory(me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository history) {
@@ -131,6 +133,8 @@ public class WorkflowEditorController {
         model.addAttribute("page", "plans");
         model.addAttribute("planId", id);
         model.addAttribute("taskDetail", detail);
+        model.addAttribute("requiredChecks",detail.task().requiredCapabilities().contains(me.asu.aidev.workflow.application.WorkflowRuns.REQUIRED_CHECKS)
+                ?editor.requiredChecks(detail,workflowRuns.getObject().requiredChecks(detail.task())):List.of());
         model.addAttribute("attemptWarningMs", attemptWarningMs);
         model.addAttribute("taskActive", switch (detail.task().state()) {
             case READY, BLOCKED, CLAIMED, RUNNING -> true;

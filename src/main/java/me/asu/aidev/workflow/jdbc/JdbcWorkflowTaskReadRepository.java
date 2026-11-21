@@ -87,6 +87,42 @@ public class JdbcWorkflowTaskReadRepository {
         return new Diagnostic(code,summary,action,!"OPERATION_FAILED".equals(code));
     }
     public record RetryEvent(String actor, String reason, Instant requestedAt) {}
+    public record CheckResult(String id,String status,Integer exitCode,String operationId,String outputDigest) {}
+
+    public List<CheckResult> requiredChecks(String taskId,String attemptId,List<String> ids) {
+        if(ids.isEmpty())return List.of();
+        var recorded=new java.util.HashMap<String,CheckResult>();
+        if(attemptId!=null) {
+            var mapper=new com.fasterxml.jackson.databind.ObjectMapper();
+            for(String raw:jdbc.queryForList("SELECT delivery_json FROM execution_delivery WHERE task_id=? AND attempt_id=?",String.class,taskId,attemptId)) {
+                try {
+                    var delivery=mapper.readTree(raw);
+                    for(var line:delivery.path("commandsRun")) {
+                        var entry=mapper.readTree(line.asText());
+                        if(entry==null)continue;
+                        String id=entry.path("commandId").asText(), state=entry.path("checkStatus").asText();
+                        if(!ids.contains(id)||!java.util.Set.of("passed","failed","stale").contains(state)||!entry.path("exitCode").isIntegralNumber())continue;
+                        int exitCode=entry.path("exitCode").intValue();
+                        if((state.equals("passed")&&exitCode!=0)||(state.equals("failed")&&exitCode==0))continue;
+                        String operation=entry.path("operationId").asText(), digest=entry.path("outputDigest").asText();
+                        if(operation.isBlank()||!digest.matches("[0-9a-f]{64}"))continue;
+                        if(!Boolean.TRUE.equals(jdbc.queryForObject("""
+                                SELECT EXISTS(SELECT 1 FROM execution_operation WHERE task_id=? AND attempt_id=?
+                                    AND operation_id=? AND tool_id='COMMAND' AND resource=? AND state=? AND result_digest=?)
+                                """,Boolean.class,taskId,attemptId,operation,id,exitCode==0?"SUCCEEDED":"FAILED",digest)))continue;
+                        recorded.put(id,new CheckResult(id,switch(state) {
+                            case "passed" -> "Check passed";
+                            case "failed" -> "Check failed";
+                            default -> "Check needs rerun";
+                        },exitCode,operation,digest));
+                    }
+                    for(var line:delivery.path("checksNotRun"))if(ids.contains(line.asText()))
+                        recorded.putIfAbsent(line.asText(),new CheckResult(line.asText(),"Check not run",null,null,null));
+                } catch(com.fasterxml.jackson.core.JsonProcessingException ignored) { /* Unreadable evidence stays unrecorded. */ }
+            }
+        }
+        return ids.stream().map(id->recorded.getOrDefault(id,new CheckResult(id,"Not recorded",null,null,null))).toList();
+    }
 
     private final JdbcTemplate jdbc;
 

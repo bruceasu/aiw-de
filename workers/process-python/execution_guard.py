@@ -170,6 +170,10 @@ class GuardBroker:
         self.writable = False
         self.usage = {"inputTokens": 0, "cachedTokens": 0, "outputTokens": 0}
         self.commands_run = []
+        self.required_checks = tuple(task.get("requiredCheckIds", ()))
+        if "required-command-checks-v1" in task.get("requiredCapabilities", ()) and not self.required_checks:
+            raise RuntimeError("REQUIRED_CHECKS_MISSING")
+        self.check_receipts = {}
         self.shell_idle = threading.Event()
         self.shell_idle.set()
         self.created_paths = set()
@@ -270,7 +274,10 @@ class GuardBroker:
                     raise RuntimeError("GUARD_READ_FAILED") from error
                 raise
             try:
-                self.finish(operation, "FAILED" if tool == "SHELL" and result["status"] != "completed" else "SUCCEEDED", result)
+                failed = (tool == "SHELL" and result["status"] != "completed"
+                          or tool == "COMMAND" and resource in self.required_checks and result["exitCode"] != 0)
+                self.finish(operation, "FAILED" if failed else "SUCCEEDED", result)
+                self._observe_check_operation(tool, resource, arguments, result, operation)
             except Exception:
                 self.attempt.resource_uncertain = True
                 raise
@@ -530,6 +537,13 @@ class GuardBroker:
                     self._record_approved_command(command, result)
                     return {"status": "already-completed", "target": fixed["resource"], "resultDigest": approved["resultDigest"], "result": result}
                 return {"status": "already-completed", "target": fixed["resource"], "resultDigest": approved["resultDigest"]}
+            if state == "FAILED" and command_action and fixed["resource"] in self.required_checks:
+                try:
+                    result = self._read_approved_command_result(approved["approvalId"], approved["resultDigest"], command)
+                except FileNotFoundError:
+                    return {"status": "failed", "target": fixed["resource"]}
+                self._record_approved_command(command, result)
+                return {"status": "already-completed", "target": fixed["resource"], "resultDigest": approved["resultDigest"], "result": result}
             if state not in {"FAILED", "EXPIRED", "INVALIDATED"}:
                 raise RuntimeError("APPROVED_OPERATION_STATE_UNVERIFIED")
             self.attempt.evidence.record("approved-operation-not-applied", operation=fixed["operationId"], state=state)
@@ -573,7 +587,9 @@ class GuardBroker:
             result = self._execute(name, args)
             if command_action:
                 self._store_approved_command_result(approved["approvalId"], result, command)
-            self.finish(fixed["operationId"], "SUCCEEDED", result)
+            check_failed = command_action and fixed["resource"] in self.required_checks and result["exitCode"] != 0
+            self.finish(fixed["operationId"], "FAILED" if check_failed else "SUCCEEDED", result)
+            self._observe_check_operation(fixed["tool"], fixed["resource"], args, result, fixed["operationId"])
             response = {"status": "applied", "target": fixed["resource"], "resultDigest": digest(result)}
             if command_action:
                 response["result"] = result
@@ -637,6 +653,21 @@ class GuardBroker:
 
     def _record_approved_command(self, command, result):
         self.commands_run.append({"commandId": command["id"], "exitCode": result["exitCode"], "outputDigest": digest(result)})
+
+    def _observe_check_operation(self, tool, resource, arguments, result, operation):
+        if not self.required_checks:
+            return
+        if tool == "COMMAND" and resource in self.required_checks:
+            self.check_receipts[resource] = {"commandId": resource, "operationId": operation,
+                "outputDigest": digest(result), "exitCode": result["exitCode"],
+                "checkStatus": "passed" if result["exitCode"] == 0 else "failed"}
+        elif tool in {"WRITE", "COMMAND", "SHELL"} or tool == "GIT" and "sourceTaskId" in arguments:
+            for receipt in self.check_receipts.values():
+                receipt["checkStatus"] = "stale"
+
+    def unmet_required_checks(self):
+        return ", ".join(f"{key} ({status})" for key in self.required_checks
+                         if (status := self.check_receipts.get(key, {}).get("checkStatus", "not-run")) != "passed")
 
     def invoke(self, name, args, call_id=None):
         from tool_coordination import READ_ONLY
@@ -921,8 +952,9 @@ class GuardBroker:
         delivery = {"scope": self.context["snapshot"]["task"]["instruction"][:8192],
                     "baseline": self.context["snapshot"]["task"].get("baseRevision"),
                     "resultRevision": (result or {}).get("resultRevision"), "changes": (result or {}).get("changedFiles", sorted(self.file_changes)),
-                    "commandsRun": [json.dumps(c, sort_keys=True) for c in self.commands_run],
-                    "checksNotRun": [] if self.commands_run else ["No verification command was authorized and run"],
+                    "commandsRun": [json.dumps(c, sort_keys=True) for c in [*self.commands_run, *self.check_receipts.values()]],
+                    "checksNotRun": ([key for key in self.required_checks if key not in self.check_receipts]
+                                     if self.required_checks else ([] if self.commands_run else ["No verification command was authorized and run"])),
                     "unresolved": [] if report.get("verdict") == "PASS" else [report.get("summary", "Review required")],
                     "sources": self.context["snapshot"]["references"]}
         self.client._post(self.base + "/delivery", {"lease": self.lease, "delivery": delivery})

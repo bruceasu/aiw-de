@@ -2,6 +2,9 @@
   'use strict';
   const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
   const words = {
+    'Acceptance criteria (optional)':['验收条件（可选）'], 'Required checks':['必需检查'],
+    'Required checks need a compatible Python OpenAI Worker.':['必需检查需要兼容的 Python OpenAI Worker。'],
+    'Only select commands that verify the result. Select fewer commands if each requires separate approval.':['只选择核验产物的命令。若每条都需要单独审批，可合并为一次检查。'],
     'Plane schedules':['Plane 定时安排'], 'Arrange text work':['安排文字工作'],
     'Schedule':['定时安排'], 'Save arrangement':['保存安排'], 'No arrangements yet':['尚无定时安排'],
     'First time (browser time zone)':['首次时间（浏览器时区）'], 'Repeat':['重复方式'],
@@ -249,6 +252,28 @@
     try{const result=JSON.parse(control.value.trim()||'[]');if(!Array.isArray(result))throw Error();return result;}
     catch(_){throw Error(t('Commands must be a JSON array.'));}
   }
+  const taskForm=$('[data-wf-task-form]');
+  function renderRequiredChecks() {
+    const container=$('[data-wf-check-options]');
+    const selected=new Set([...container.querySelectorAll('input:checked')].map(input=>input.value));
+    let profiles=[];
+    try { profiles=commands(taskForm.elements.commands); } catch (_) { /* Editing incomplete JSON. Submit will show the error. */ }
+    const ids=[...new Set(profiles.map(profile=>profile?.id).filter(id=>typeof id==='string'&&id.trim()))];
+    const visible=taskForm.elements.workspaceTools.checked&&ids.length>0;
+    $('[data-wf-required-checks]').hidden=!visible;
+    container.replaceChildren();
+    if(!visible)return;
+    container.append(element('p',t('Only select commands that verify the result. Select fewer commands if each requires separate approval.'),'help'));
+    for(const id of ids) {
+      const label=element('label',undefined,'field'), checkbox=element('input');
+      checkbox.type='checkbox';checkbox.name='requiredCheckIds';checkbox.value=id;checkbox.checked=selected.has(id);
+      const title=element('span',id);title.dataset.i18nSkip='';label.append(checkbox,title);container.append(label);
+    }
+  }
+  taskForm.elements.commands.addEventListener('input',renderRequiredChecks);
+  taskForm.elements.workspaceTools.addEventListener('change',renderRequiredChecks);
+  window.addEventListener('aiw:locale-changed',renderRequiredChecks);
+  renderRequiredChecks();
   async function act(work) {
     if(busy)return;busy=true;status('');
     const buttons=$$('button');buttons.forEach(b=>b.disabled=true);
@@ -734,7 +759,7 @@
     ]}});
     savedSpec='';$('[data-wf-input]').value='模拟售后规则 v1：签收后30天内产品故障可建议换货，超期转人工决定；需购买记录、签收日期、故障说明；实物损坏需照片。疑似运输损伤须核实包装和签收情况。本流程不实际退款、换货或发送消息。\n\n处理日期：2026-11-12。\n购买记录：已提供，订单 DEMO-001。\n签收日期：2026-11-09。\n客户说明：通电后无法启动，希望换货。\n\n以上全部是模拟资料。';
   }
-  $('[data-wf-task-form]').onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(e.target),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),location:form.get('location')||null,workspaceTools:form.has('workspaceTools'),autonomousShell:form.has('autonomousShell'),commands:commands(e.target.elements.commands),...assignment($('[data-wf-member]').value),requiredSkills:taskSkills,sources:taskSources});taskRequest=newRequest();e.target.elements.autonomousShell.checked=false;await library();await openRun(run.id);});};
+  taskForm.onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(taskForm),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),acceptance:form.get('acceptance'),requiredCheckIds:form.getAll('requiredCheckIds'),location:form.get('location')||null,workspaceTools:form.has('workspaceTools'),autonomousShell:form.has('autonomousShell'),commands:commands(taskForm.elements.commands),...assignment($('[data-wf-member]').value),requiredSkills:taskSkills,sources:taskSources});taskRequest=newRequest();taskForm.elements.autonomousShell.checked=false;await library();await openRun(run.id);});};
   $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){$('[data-wf-task-form]').elements.autonomousShell.checked=false;selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
@@ -811,8 +836,9 @@
     if(!instruction)throw new Error('Schedule work must have an instruction');
     if(form.has('workspaceTools')||form.has('autonomousShell')||commands($('[data-wf-task-form]').elements.commands).length)throw new Error('Schedules currently support text workflows only');
     if(String(form.get('location')||'').trim())throw new Error('Schedules use temporary locations; attach selected text sources');
+    const acceptance=String(form.get('acceptance')||'').trim();
     arrange({title:instruction.slice(0,80),goal:instruction,entry:'task',nodes:[
-      {key:'task',title:'Task',kind:'TASK',instruction,next:'end',branches:{},...assignment($('[data-wf-member]').value),requiredSkills:taskSkills},
+      {key:'task',title:'Task',kind:'TASK',instruction,acceptance:acceptance||null,next:'end',branches:{},...assignment($('[data-wf-member]').value),requiredSkills:taskSkills},
       {key:'end',title:'Done',kind:'END',instruction:'',next:null,branches:{}}],sources:taskSources,commands:[]});
   });
   $('[data-wf-schedule-form]').onsubmit=e=>{e.preventDefault();act(async()=>{

@@ -25,14 +25,28 @@ import org.springframework.transaction.annotation.Transactional;
 /** Workflow routing reuses the existing task executor; it does not call models itself. */
 @Service
 public class WorkflowRuns {
+    public static final String REQUIRED_CHECKS = "required-command-checks-v1";
+    @org.springframework.beans.factory.annotation.Autowired
+    private me.asu.aidev.workflow.jdbc.JdbcWorkflowTaskReadRepository taskReadRepository;
     public enum Kind { TASK, DECISION, ASK, END }
     public enum Assignment { AUTO, MEMBER, GENERAL }
     public record Node(String key, String title, Kind kind, String instruction, String next,
-                       Map<String,String> branches,String memberId,Assignment assignment,List<String> requiredSkills,boolean workspaceTools) {
+                       Map<String,String> branches,String memberId,Assignment assignment,List<String> requiredSkills,boolean workspaceTools,
+                       @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
+                       List<String> requiredCheckIds,
+                       @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+                       String acceptance) {
+        public Node(String key,String title,Kind kind,String instruction,String next,Map<String,String> branches,String memberId,Assignment assignment,List<String> requiredSkills,boolean workspaceTools){
+            this(key,title,kind,instruction,next,branches,memberId,assignment,requiredSkills,workspaceTools,List.of(),null);
+        }
         public Node(String key,String title,Kind kind,String instruction,String next,Map<String,String> branches,String memberId,Assignment assignment,List<String> requiredSkills){
             this(key,title,kind,instruction,next,branches,memberId,assignment,requiredSkills,false);
         }
         public Node {
+            acceptance=acceptance==null||acceptance.isBlank()?null:text(acceptance,2000);
+            requiredCheckIds=requiredCheckIds==null?List.of():List.copyOf(requiredCheckIds);
+            if(!requiredCheckIds.isEmpty()&&(!workspaceTools||new HashSet<>(requiredCheckIds).size()!=requiredCheckIds.size()))
+                throw new IllegalArgumentException("Required checks must be unique configured workspace commands");
             if(workspaceTools&&kind!=Kind.TASK)throw new IllegalArgumentException("Only a task node can enable workspace tools");
             if(key==null || !key.matches("[a-z][a-z0-9_-]{0,31}")) throw new IllegalArgumentException("Invalid node key");
             title=text(title,160); Objects.requireNonNull(kind,"Node kind required");
@@ -75,11 +89,14 @@ public class WorkflowRuns {
             if(nodes==null || nodes.isEmpty() || nodes.size()>32) throw new IllegalArgumentException("A workflow needs 1 to 32 nodes");
             nodes=List.copyOf(nodes);var keys=new HashSet<String>();
             commands=commands==null?List.of():List.copyOf(commands);
-            if(commands.size()>16||commands.stream().map(GuardContract.Command::id).distinct().count()!=commands.size())throw new IllegalArgumentException("Select up to sixteen unique command profiles");
+            var commandIds=commands.stream().map(GuardContract.Command::id).collect(java.util.stream.Collectors.toSet());
+            if(commands.size()>16||commandIds.size()!=commands.size())throw new IllegalArgumentException("Select up to sixteen unique command profiles");
             if((autonomousShell||!commands.isEmpty())&&nodes.stream().noneMatch(Node::workspaceTools))throw new IllegalArgumentException("Commands require an explicit workspace task");
             for(var node:nodes) if(!keys.add(node.key())) throw new IllegalArgumentException("Duplicate node key");
             if(!keys.contains(entry)) throw new IllegalArgumentException("Entry node missing");
             for(var node:nodes) {
+                if(!commandIds.containsAll(node.requiredCheckIds()))
+                    throw new IllegalArgumentException("Required checks must refer to configured command IDs");
                 if(node.next()!=null && !keys.contains(node.next()) || !keys.containsAll(node.branches().values()))
                     throw new IllegalArgumentException("Unknown exit node");
                 if(node.kind()!=Kind.END && node.next()==null && node.branches().isEmpty())
@@ -169,10 +186,12 @@ public class WorkflowRuns {
     }
     @Transactional public Definition save(String id,long version,Spec spec) {
         String actor=actor();Objects.requireNonNull(spec,"Workflow required");
+        if(spec.nodes().stream().anyMatch(n->!n.requiredCheckIds().isEmpty()))
+            throw new IllegalArgumentException("Required command checks are currently supported on simple tasks");
         spec=new Spec(spec.title(),spec.goal(),spec.entry(),spec.nodes().stream().map(n->{
             if(n.assignment()!=null||n.kind()!=Kind.TASK&&n.kind()!=Kind.DECISION)return n;
             return new Node(n.key(),n.title(),n.kind(),n.instruction(),n.next(),n.branches(),n.memberId(),
-                    n.memberId()==null?Assignment.AUTO:Assignment.MEMBER,n.requiredSkills(),n.workspaceTools());
+                    n.memberId()==null?Assignment.AUTO:Assignment.MEMBER,n.requiredSkills(),n.workspaceTools(),n.requiredCheckIds(),n.acceptance());
         }).toList(),spec.sources(),spec.commands(),spec.autonomousShell());
         for(var node:spec.nodes()){team.requirements(node.requiredSkills());if(node.memberId()!=null)team.get(actor,node.memberId());}
         if(id==null) {
@@ -234,17 +253,24 @@ public class WorkflowRuns {
         return simple(request,instruction,location,memberId,assignment,requiredSkills,sources,workspaceTools,commands,false);
     }
     @Transactional public Run simple(String request,String instruction,String location,String memberId,Assignment assignment,List<String> requiredSkills,List<Material> sources,boolean workspaceTools,List<GuardContract.Command> commands,boolean autonomousShell) {
+        return simple(request,instruction,location,memberId,assignment,requiredSkills,sources,workspaceTools,commands,autonomousShell,null,List.of());
+    }
+    @Transactional public Run simple(String request,String instruction,String location,String memberId,Assignment assignment,List<String> requiredSkills,List<Material> sources,boolean workspaceTools,List<GuardContract.Command> commands,boolean autonomousShell,String acceptance,List<String> requiredChecks) {
         if(assignment==null)assignment=memberId==null?Assignment.AUTO:Assignment.MEMBER;
         requiredSkills=team.requirements(requiredSkills);
         sources=sources==null?List.of():List.copyOf(sources);
         commands=commands==null?List.of():List.copyOf(commands);
-        String digest=AuthorityRepository.hash(db.encode(autonomousShell
+        requiredChecks=requiredChecks==null?List.of():List.copyOf(requiredChecks);
+        acceptance=acceptance==null||acceptance.isBlank()?null:text(acceptance,2000);
+        var requestInputs=new ArrayList<>(autonomousShell
                 ? Arrays.asList("task",instruction,location,memberId,assignment,requiredSkills,sources,workspaceTools,commands,true)
-                : Arrays.asList("task",instruction,location,memberId,assignment,requiredSkills,sources,workspaceTools,commands)));
+                : Arrays.asList("task",instruction,location,memberId,assignment,requiredSkills,sources,workspaceTools,commands));
+        if(acceptance!=null||!requiredChecks.isEmpty())requestInputs.add(Arrays.asList(acceptance,requiredChecks));
+        String digest=AuthorityRepository.hash(db.encode(requestInputs));
         var previous=replay(request,digest);if(previous!=null)return previous;
         instruction=text(instruction,8000);
         var spec=new Spec(instruction.substring(0,Math.min(80,instruction.length())),instruction,"task",List.of(
-                new Node("task","Task",Kind.TASK,instruction,"end",Map.of(),memberId,assignment,requiredSkills,workspaceTools),new Node("end","Done",Kind.END,"",null,Map.of(),null,null,List.of())),sources,commands,autonomousShell);
+                new Node("task","Task",Kind.TASK,instruction,"end",Map.of(),memberId,assignment,requiredSkills,workspaceTools,requiredChecks,acceptance),new Node("end","Done",Kind.END,"",null,Map.of(),null,null,List.of())),sources,commands,autonomousShell);
         return start(request,digest,null,0,spec,"",location);
     }
     private String delegationKey(AuthorityBoundary.Principal agent,String request) {
@@ -345,6 +371,7 @@ public class WorkflowRuns {
         if(guarded){result.add(GuardContract.CAPABILITY);result.add("workflow-skill-bundles-v1");result.add("workspace-files-v1");result.add("worker-loop-v1");}
         if(autonomousShell&&node.workspaceTools())result.add(GuardContract.SHELL_CAPABILITY);
         if(commands&&node.workspaceTools())result.add("guarded-command-v1");
+        if(!node.requiredCheckIds().isEmpty())result.add(REQUIRED_CHECKS);
         if(sources)result.add("task-materials-v1");return Set.copyOf(result);
     }
     private WorkflowPlanSpec.Step workflowTaskSlot(Spec spec,Node node) {
@@ -358,6 +385,8 @@ public class WorkflowRuns {
                 +(node.workspaceTools()?"Use the host workspace tools and report actual outputs. Do not access other host paths.":"Return the requested text; do not create files.");
         if(node.workspaceTools()&&spec.autonomousShell())value+="\nYou may use run_shell for project builds, tests and debugging inside the workspace. Use Python for portable file or data operations. Report the commands and their actual results. Do not deploy, publish, or use credentials.";
         if(node.workspaceTools()&&!spec.commands().isEmpty())value+="\nConfigured command profiles (IDs are exact; do not invent others): "+db.encode(spec.commands());
+        if(node.acceptance()!=null)value+="\nAcceptance criteria:\n"+node.acceptance();
+        if(!node.requiredCheckIds().isEmpty())value+="\nRequired completion checks (run these configured command IDs after making changes): "+db.encode(node.requiredCheckIds());
         if(node.kind()==Kind.DECISION) value+="\nChoose exactly one declared branch. Return only one JSON object with string fields choice and reason."
                 +"\nAllowed choice values: "+db.encode(node.branches().keySet());
         else value+="\nBefore finishing, check the requested completion conditions against the actual result. Report what is done, what is missing, and which checks were run or not run. Do not run checks without authorization. Ask a formal question if essential input is missing; do not invent an answer or claim completion.";
@@ -365,6 +394,17 @@ public class WorkflowRuns {
     }
     public boolean manages(String plan) {
         return db.jdbc().queryForObject("SELECT COUNT(*) FROM workflow_execution WHERE id=?",Long.class,plan)>0;
+    }
+    public List<String> requiredChecks(WorkTask task) {
+        if(!task.requiredCapabilities().contains(REQUIRED_CHECKS))return List.of();
+        var run=load(task.subjectId(),false);
+        return run.spec.nodes().stream().filter(n->n.key().equals(run.spec.entry())).findFirst().orElseThrow().requiredCheckIds();
+    }
+    public void requireCheckPasses(WorkTask task,String attemptId) {
+        var ids=requiredChecks(task);
+        if(ids.isEmpty()||taskReadRepository.requiredChecks(task.id().value(),attemptId,ids).stream()
+                .anyMatch(check->!check.status().equals("Check passed")))
+            throw new IllegalStateException("Required checks need passing command receipts from this attempt");
     }
     /** Existing dispatch may finish while paused; stopped/failed or superseded tasks cannot be claimed. */
     public boolean canClaim(WorkTask task) {
@@ -614,7 +654,7 @@ public class WorkflowRuns {
         String next=(String)raw.get("next");
         if(coordinated&&visitedRoute(run,before.next(),next))throw new IllegalArgumentException();
         for(var branch:exits.entrySet())if(coordinated&&visitedRoute(run,before.branches().get(branch.getKey()),branch.getValue()))throw new IllegalArgumentException();
-        return new Node(before.key(),title,before.kind(),instruction,next,exits,before.memberId(),before.assignment(),before.requiredSkills(),before.workspaceTools());
+        return new Node(before.key(),title,before.kind(),instruction,next,exits,before.memberId(),before.assignment(),before.requiredSkills(),before.workspaceTools(),before.requiredCheckIds(),before.acceptance());
     }
     private Spec structuralCandidate(Run run,Map<?,?> raw,Map<?,?> basis) {
         if(raw==null||!raw.keySet().equals(Set.of("nodes"))||!(raw.get("nodes") instanceof List<?> rows)||rows.isEmpty()||rows.size()>32)
@@ -648,7 +688,7 @@ public class WorkflowRuns {
             } else {
                 if(before.kind()!=kind||!before.title().equals(title)||!before.instruction().equals(instruction)
                         ||!before.branches().keySet().equals(branches.keySet()))throw new IllegalArgumentException("Existing node identity, content, kind and branch labels are fixed");
-                candidate=new Node(key,title,kind,instruction,next,branches,before.memberId(),before.assignment(),before.requiredSkills(),before.workspaceTools());
+                candidate=new Node(key,title,kind,instruction,next,branches,before.memberId(),before.assignment(),before.requiredSkills(),before.workspaceTools(),before.requiredCheckIds(),before.acceptance());
                 if(startedNode(run,key)&&!key.equals(run.current)&&!candidate.equals(before))
                     throw new IllegalArgumentException("A previously started node cannot change");
             }

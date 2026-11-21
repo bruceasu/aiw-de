@@ -228,6 +228,7 @@ class OpenAIApiRuntime:
                 run_input = input_message(request.model_images, run_input)
             final_only = None
             shortened = False
+            previous_unmet_checks = ""
             while True:
                 active_agent = final_only if final_only is not None else agent
                 final_only = None
@@ -279,7 +280,13 @@ class OpenAIApiRuntime:
                 if (candidate.validate is not None and not getattr(request, "model_only", False)
                         and guarded_model.calls < self.config.max_turns):
                     commands = getattr(request.broker, "commands_run", ())
-                    feedback = guarded_model.progress.check_feedback(commands, candidate.last_verdict)
+                    unmet = request.broker.unmet_required_checks() if request.broker and candidate.last_verdict == "PASS" else ""
+                    if unmet:
+                        feedback = ("Required checks incomplete: " + unmet + ". Use the configured checks and report actual outcomes."
+                                    if unmet != previous_unmet_checks else None)
+                        previous_unmet_checks = unmet
+                    else:
+                        feedback = guarded_model.progress.check_feedback(commands, candidate.last_verdict)
                     if not feedback:
                         feedback = guarded_model.progress.delivery_feedback(request.profile.writable, candidate.last_verdict)
                     if feedback:

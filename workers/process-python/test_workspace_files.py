@@ -25,6 +25,32 @@ class WorkspaceFilesTest(unittest.TestCase):
         self.broker.tool_coordinator=ToolCoordinator(self.broker.attempt);self.broker.accepting_tools=True
         self.broker.begin=Mock(return_value="operation");self.broker.finish=Mock()
         self.broker._request_approval=Mock(return_value={"waiting":True})
+        self.broker.required_checks=();self.broker.check_receipts={}
+
+    def test_required_checks_use_finished_operations_and_invalidate_after_a_write(self):
+        broker = self.broker
+        broker.required_checks = ("json", "locale")
+
+        def record(command, exit_code):
+            broker._observe_check_operation("COMMAND", command, {"commandId": command},
+                                            {"exitCode": exit_code}, "op-" + command)
+
+        self.assertEqual(broker.unmet_required_checks(), "json (not-run), locale (not-run)")
+        with patch.object(broker, "_requires_approval", return_value=False):
+            result = broker.operate("COMMAND", "json", {"commandId": "json"}, lambda: {"exitCode": 1})
+        self.assertEqual(result["exitCode"], 1)
+        broker.finish.assert_called_with("operation", "FAILED", result)
+        record("locale", 0)
+        self.assertEqual(broker.unmet_required_checks(), "json (failed)")
+        record("json", 0)
+        self.assertEqual(broker.unmet_required_checks(), "")
+        broker.invoke("write", {"path": "result.json", "content": "{}", "expectedDigest": "ABSENT"})
+        self.assertEqual(broker.unmet_required_checks(), "json (stale), locale (stale)")
+        broker._observe_check_operation("SHELL", ".", {"command": "json"}, {"exitCode": 0}, "op-shell")
+        self.assertEqual(broker.unmet_required_checks(), "json (stale), locale (stale)")
+        record("json", 0)
+        record("locale", 0)
+        self.assertEqual(broker.unmet_required_checks(), "")
 
     def test_plain_directory_question_retains_tree_and_rejects_changed_resume(self):
         from formal_questions import ask, verify_checkpoints

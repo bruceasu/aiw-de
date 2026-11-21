@@ -169,6 +169,10 @@ public class WorkflowEditorService {
                 taskReads.retries(taskId));
     }
 
+    public List<JdbcWorkflowTaskReadRepository.CheckResult> requiredChecks(TaskDetail detail,List<String> ids) {
+        return taskReads.requiredChecks(detail.task().id().value(),detail.attempts().isEmpty()?null:detail.attempts().getFirst().id(),ids);
+    }
+
     public Detail detail(String id) {
         WorkflowPlan plan = plans.get(id);
         List<StepDetail> rows = new ArrayList<>();

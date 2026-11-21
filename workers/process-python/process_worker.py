@@ -104,7 +104,7 @@ class WorkerConfig:
             raise ValueError("WORKSPACE_ROLE_REQUIRES_GUARDED_ADAPTER")
         capabilities = {part.strip() for part in os.getenv("AIW_WORKER_CAPABILITIES", "").split(",") if part.strip()}
         role_capabilities = {"general-work", "workspace-work", "goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
-        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "model-images-v1", "worker-loop-turn-v1", "questions-v2", "price-repair-v1", "workspace-files-v1"} or part.startswith(("repo:", "native-config:", "handoff-store:", "fixed-worker-profile:")) or part in role_capabilities for part in capabilities):
+        if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "model-images-v1", "worker-loop-turn-v1", "questions-v2", "price-repair-v1", "workspace-files-v1", "required-command-checks-v1"} or part.startswith(("repo:", "native-config:", "handoff-store:", "fixed-worker-profile:")) or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
         capabilities.update(profile.capabilities)
         if process_role == "coder":
@@ -119,6 +119,8 @@ class WorkerConfig:
         if _bool_env("AIW_EXECUTION_GUARD", False):
             from guarded_preflight import capabilities as guarded_capabilities
             capabilities.update(guarded_capabilities(runtime, profile, str(Path(os.getenv("AIW_PROCESS_SKILLS_ROOT", Path(__file__).with_name("skills"))).resolve())))
+            if runtime == "openai-agents" and "guarded-command-v1" in capabilities:
+                capabilities.add("required-command-checks-v1")
             from formal_questions import storage_capability
             capabilities.update({"questions-v1", "workspace-files-v1", storage_capability()})
         elif "execution-guard-v1" in capabilities or "workflow-skill-bundles-v1" in capabilities or "task-shell-v1" in capabilities or "guarded-command-v1" in capabilities or "guarded-command-linux-v1" in capabilities or "questions-v1" in capabilities or any(c.startswith("checkpoint-store:") for c in capabilities):
@@ -708,6 +710,11 @@ class ProcessSlot:
                 report = _completion_report(profile.result_kind, final_response)
                 if native:
                     report = native.validate_report(report, report["summary"])
+                if broker:
+                    unmet = broker.unmet_required_checks()
+                    if unmet:
+                        report["verdict"] = "REPAIR_REQUIRED"
+                        report["summary"] = "Required checks incomplete: " + unmet + "\n\n" + report["summary"]
                 if not profile.writable and not broker and snapshot(workspace.cwd, attempt) != baseline:
                     raise RuntimeError("READ_ONLY_WORKSPACE_CHANGED")
                 attempt.evidence.record("report-validated", status="valid", digest=hashlib.sha256(final_response.encode("utf-8")).hexdigest())

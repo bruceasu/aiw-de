@@ -85,6 +85,9 @@ public class WorkflowWorkerProvisioning {
                                 && (stageReviewPolicy==null || stageReviewPolicy.canClaim(currentTask,w))
                                 && (nativeRuns==null || nativeRuns.canClaim(currentTask,w)));
                 if(!online) {
+                    if(required.contains(WorkflowRuns.REQUIRED_CHECKS)&&!config.runtime().equals("openai-agents")) {
+                        pending.put(id,new Preparation(id,task.subjectId(),"BLOCKED","Required checks need a compatible Python OpenAI Worker."));continue;
+                    }
                     if(required.contains("guarded-command-linux-v1")){
                         pending.put(id,new Preparation(id,task.subjectId(),"BLOCKED","This task requires a connected Linux/WSL Worker with the configured command adapter."));continue;
                     }

@@ -1,6 +1,14 @@
 // UI copy only. Rows are English and Simplified Chinese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["Required checks","必需检查"],
+  ["Command ID","命令 ID"],
+  ["Check passed","检查通过"],
+  ["Check failed","检查失败"],
+  ["Check not run","未运行检查"],
+  ["Check needs rerun","需要重新检查"],
+  ["Execution receipt","执行回执"],
+  ["Open task execution","打开任务执行"],
   ["Pending work","待处理"],
   ["Pending work · AIW:DE","待处理 · AIW:DE"],
   ["Review requests and open the exact execution record.","集中查看请求，直接进入对应执行记录。"],

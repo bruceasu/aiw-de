@@ -4,6 +4,8 @@
 
 这份清单跟踪已确认的 37 项简化与优化方向，不代表原系统只有这些功能。
 
+HelloAgents 对照后的新增工作见 [Agent 执行与协作改进清单](AGENT-IMPROVEMENT-BACKLOG.md)。
+
 原定 **37 项均已有具体优化交付**。后续确认的 Worker 成长（FD-124、125）、Windows 命令（FD-126）、Pet 桌面快捷入口（FD-127）及 SQL 新基线（FD-128）也已交付。FD-129 的实现、独立审查、本地交付和归档均已完成。FD-078 已取消并归档。FD-080 已强制归档；无测试独立静态审查通过，但强制归档审计记为 Reviewer verification skipped/not recorded。编译或静态审查不等于真实运行验收。
 
 ## 隔离分支收尾（清理受阻）

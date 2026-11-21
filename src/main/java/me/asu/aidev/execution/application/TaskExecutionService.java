@@ -413,6 +413,11 @@ public class TaskExecutionService {
         var taskBeforeCompletion = tasks.find(taskId)
                 .orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
         assertExecutionAllowed(taskBeforeCompletion);
+        if(taskBeforeCompletion.requiredCapabilities().contains(me.asu.aidev.workflow.application.WorkflowRuns.REQUIRED_CHECKS)) {
+            if(completionReport==null)throw new IllegalStateException("Completion report required for mandatory checks");
+            if(completionReport.verdict()==me.asu.aidev.execution.domain.CompletionVerdict.PASS)
+                unifiedWorkflows.getObject().requireCheckPasses(taskBeforeCompletion,guardLease(workerId,leaseToken).attemptId());
+        }
         var taskType = taskBeforeCompletion.type();
         if ((taskType == me.asu.aidev.work.domain.TaskType.CODE_REVIEW
                 || taskType == me.asu.aidev.work.domain.TaskType.VERIFICATION
