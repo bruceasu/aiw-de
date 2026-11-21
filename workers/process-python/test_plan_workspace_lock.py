@@ -8,6 +8,20 @@ from plan_workspace import DirectoryLock
 
 
 class WorkspaceLockTest(unittest.TestCase):
+    def test_paused_waiter_does_not_take_a_released_lock(self):
+        with TemporaryDirectory() as location:
+            root = Path(location)
+            lock = root / ".ai" / "locks" / "execution.lock"
+            lock.mkdir(parents=True)
+            channel = Mock()
+            channel.enter.side_effect = [None, RuntimeError("STOP_WAITING_WHILE_PAUSED")]
+            attempt = SimpleNamespace(check=Mock(), evidence=Mock(), run_channel=channel)
+            with patch("plan_workspace.time.sleep", side_effect=lambda _: lock.rmdir()):
+                with self.assertRaisesRegex(RuntimeError, "STOP_WAITING_WHILE_PAUSED"):
+                    DirectoryLock(root, attempt, "paused-attempt")
+            self.assertFalse(lock.exists())
+            channel.leave.assert_called_once_with()
+
     def test_waits_until_markerless_lock_is_released(self):
         with TemporaryDirectory() as location:
             root = Path(location)

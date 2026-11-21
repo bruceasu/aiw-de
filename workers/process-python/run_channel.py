@@ -238,13 +238,17 @@ async def local_read(attempt, read):
 
 
 def bind(request, runtime):
+    bind_attempt(request.attempt, request.broker, runtime)
+
+
+def bind_attempt(attempt, broker, runtime):
     enabled = os.environ.get("AIW_WORKER_LOOP_CONTROL", "false")
     if enabled not in {"true", "false"}:
         raise RuntimeError("WORKER_LOOP_CONTROL_SETTING_INVALID")
-    if enabled == "false" or getattr(request.attempt, "run_channel", None) is not None:
+    if enabled == "false" or getattr(attempt, "run_channel", None) is not None:
         return
-    if request.broker is None:
-        if "worker-loop-v1" in getattr(request.attempt, "required_capabilities", ()):
+    if broker is None:
+        if "worker-loop-v1" in getattr(attempt, "required_capabilities", ()):
             raise RuntimeError("WORKER_LOOP_CONTROL_REQUIRES_GUARDED_TASK")
         return  # Ordinary native tasks retain their actual NONE pause boundary.
     from run_contract import RuntimeCapabilities
@@ -257,4 +261,4 @@ def bind(request, runtime):
     capabilities = RuntimeCapabilities("HOST" if host else "BACKEND", "HOST", "WORKER_PROJECTION", "TOOL",
         "REQUEST" if api else "NONE", "SAME_ATTEMPT" if host and os.environ.get("AIW_CODEX_HOST_SESSION_REUSE") == "true" else "NONE",
         "TOOL", "BEST_EFFORT", "REQUEST" if api else "UNKNOWN", "REQUEST" if api else "BACKEND_TURN")
-    request.attempt.run_channel = RunChannel(request.broker, capabilities)
+    attempt.run_channel = RunChannel(broker, capabilities)

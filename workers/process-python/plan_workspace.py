@@ -30,27 +30,35 @@ class DirectoryLock:
         stopped = {"attempt-" + key(identity) for identity in stopped_attempts if identity != attempt_id}
         waiting = False
         recovered = False
+        channel = getattr(attempt, "run_channel", None)
         while True:
             attempt.check()
+            if channel:
+                channel.enter()
             try:
-                self.path.mkdir()
-                break
-            except FileExistsError:
-                if self.path.is_symlink() or getattr(self.path, "is_junction", lambda: False)():
-                    raise RuntimeError("WORKSPACE_LOCK_PATH_UNSAFE")
-                if self.reclaim(stopped):
-                    recovered = True
-                    continue
-                if not waiting:
-                    attempt.evidence.record("workspace-lock", status="waiting", code="WORKSPACE_LOCK_BUSY")
-                    waiting = True
-                time.sleep(0.05)
-        try:
-            self.owner.touch(exist_ok=False)
-        except OSError:
-            self.path.rmdir()
-            raise
-        self.held = True
+                try:
+                    self.path.mkdir()
+                except FileExistsError:
+                    if self.path.is_symlink() or getattr(self.path, "is_junction", lambda: False)():
+                        raise RuntimeError("WORKSPACE_LOCK_PATH_UNSAFE")
+                    if self.reclaim(stopped):
+                        recovered = True
+                        continue
+                    if not waiting:
+                        attempt.evidence.record("workspace-lock", status="waiting", code="WORKSPACE_LOCK_BUSY")
+                        waiting = True
+                else:
+                    try:
+                        self.owner.touch(exist_ok=False)
+                    except OSError:
+                        self.path.rmdir()
+                        raise
+                    self.held = True
+                    break
+            finally:
+                if channel:
+                    channel.leave()
+            time.sleep(0.05)
         if waiting or recovered:
             try:
                 attempt.evidence.record("workspace-lock", status="acquired",

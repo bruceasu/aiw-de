@@ -592,6 +592,9 @@ class ProcessSlot:
                         native.begin()
                         instruction += native.prompt()
                 from plan_workspace import PlanWorkspace
+                if broker is not None and self.config.runtime == "openai-agents":
+                    from run_channel import bind_attempt
+                    bind_attempt(attempt, broker, "openai-agents")
                 attempt.evidence.record("runtime-event", status="preparing-workspace")
                 try:
                     workspace = PlanWorkspace.materialize(self.config, task, broker)

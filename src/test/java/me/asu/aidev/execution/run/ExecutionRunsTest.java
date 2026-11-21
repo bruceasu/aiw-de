@@ -1,6 +1,7 @@
 package me.asu.aidev.execution.run;
 
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import me.asu.aidev.authority.*;
 import me.asu.aidev.execution.application.TaskExecutionService;
@@ -13,7 +14,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -25,7 +25,7 @@ class ExecutionRunsTest {
     ExecutionGuard guard;ExecutionWorkbench workbench;TaskExecutionService tasks;ExecutionRuns runs;
     GuardContract.Lease lease=new GuardContract.Lease("worker","attempt","lease");
 
-    @BeforeEach void setup() {
+    @BeforeEach void setup() throws java.io.IOException {
         var datasource=new DriverManagerDataSource("jdbc:sqlite:"+temp.resolve("runs.db"));
         jdbc=new JdbcTemplate(datasource);
         jdbc.execute("CREATE TABLE authority_lock(id INTEGER,version INTEGER)");jdbc.update("INSERT INTO authority_lock VALUES(1,0)");
@@ -36,14 +36,19 @@ class ExecutionRunsTest {
         jdbc.update("INSERT INTO execution_attempt VALUES('attempt','task','RUNNING','lease',NULL,NULL,1,NULL)");
         jdbc.execute("CREATE TABLE execution_operation(attempt_id TEXT,state TEXT)");
         jdbc.execute("CREATE TABLE execution_workbench_session(attempt_id TEXT)");
-        new ResourceDatabasePopulator(new ClassPathResource("db/migration/V28__worker_execution_runs.sql")).execute(datasource);
+        String schema=new ClassPathResource("db/migration/V1__initial_schema.sql").getContentAsString(StandardCharsets.UTF_8);
+        String runTables=schema.substring(schema.indexOf("CREATE TABLE execution_run_session"),schema.indexOf("CREATE INDEX execution_run_owner"));
+        for(String statement:runTables.split(";"))if(!statement.isBlank())jdbc.execute(statement);
         repo=new AuthorityRepository(jdbc);boundary=new AuthorityBoundary(repo);boundary.human("human");
         guard=mock(ExecutionGuard.class);workbench=mock(ExecutionWorkbench.class);tasks=mock(TaskExecutionService.class);
         when(guard.managed("task")).thenReturn(true);
         when(guard.context("task")).thenReturn(new ExecutionGuard.Context("guard","instance","task","plan","owner",1,"config","input",null,null,null,List.of()));
         @SuppressWarnings("unchecked") ObjectProvider<TaskExecutionService> provider=mock(ObjectProvider.class);when(provider.getObject()).thenReturn(tasks);
         runs=new ExecutionRuns(repo,boundary,guard,workbench,provider);
-        jdbc.update("INSERT INTO execution_run_session VALUES('attempt','task','owner',1,?,'digest','RUNNING',1,0,0,?)",repo.encode(caps()),System.currentTimeMillis());
+        jdbc.update("""
+                INSERT INTO execution_run_session(attempt_id,task_id,owner_id,instruction_revision,capabilities_json,open_digest,phase,revision,last_contact_ms)
+                VALUES('attempt','task','owner',1,?,'digest','RUNNING',1,?)
+                """,repo.encode(caps()),System.currentTimeMillis());
     }
     Map<String,String> caps() {
         return Map.of("requestLoopOwner","HOST","toolExecutor","HOST","contextVisibility","WORKER_PROJECTION","dispatchBoundary","TOOL",
@@ -74,6 +79,27 @@ class ExecutionRunsTest {
         assertThatThrownBy(()->runs.read(new Query("task","attempt",0))).isInstanceOf(SecurityException.class);
         assertThatThrownBy(()->runs.command(new Command("pause","task","attempt",1,1,"PAUSE"))).isInstanceOf(SecurityException.class);
         verifyNoInteractions(tasks);
+    }
+    @Test void taskProgressUsesOnlyTheExactOwnedAttemptAndKeepsStopState() {
+        var lock=Map.<String,Object>of("status","pending","code","WORKSPACE_LOCK_BUSY");
+        runs.events("task",new Events(lease,List.of(new Event(1,"workspace-lock",1000,lock,AuthorityRepository.hash(repo.encode(lock))))));
+        var waiting=runs.taskProgress("task","attempt","human");
+        assertThat(waiting.stage()).isEqualTo("Waiting for the workspace to become available");
+        assertThat(waiting.recentResult()).isNull();
+        assertThat(runs.taskProgress("task","missing","human")).isNull();
+        assertThat(runs.taskProgress("task","attempt","stranger")).isNull();
+
+        var result=Map.<String,Object>of("status","failed");
+        runs.events("task",new Events(lease,List.of(new Event(2,"guard-finished",1001,result,AuthorityRepository.hash(repo.encode(result))))));
+        assertThat(runs.taskProgress("task","attempt","human").recentResult()).isEqualTo("Operation failed");
+        jdbc.update("UPDATE execution_run_session SET last_contact_ms=0");
+        assertThat(runs.taskProgress("task","attempt","human").stage()).isEqualTo("Connection delayed; execution state is not confirmed");
+        jdbc.update("UPDATE execution_run_session SET phase='FINALIZING'");
+        var delivery=runs.taskProgress("task","attempt","human");
+        assertThat(delivery.stage()).isEqualTo("Delivering task result");
+        assertThat(delivery.connectionDelayed()).isTrue();
+        jdbc.update("UPDATE execution_attempt SET stop_requested_at_epoch_ms=1");
+        assertThat(runs.taskProgress("task","attempt","human").stage()).isEqualTo("Waiting for Worker stop confirmation");
     }
     @Test void unknownOrActiveOperationsPreventAppliedPauseReceipts() {
         runs.command(new Command("pause","task","attempt",1,1,"PAUSE"));

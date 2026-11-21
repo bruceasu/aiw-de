@@ -34,7 +34,10 @@ public class ExecutionRuns {
     }
     private String owner() {
         if(boundary.human()==null||boundary.delegated())throw new SecurityException("Authenticated human required");
-        var rows=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,boundary.human());
+        return owner(boundary.human());
+    }
+    private String owner(String actor) {
+        var rows=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
         if(rows.size()!=1)throw new SecurityException("Bind one owner first");return rows.getFirst();
     }
     private void owned(String owner,Map<String,Object> run) {
@@ -210,6 +213,82 @@ public class ExecutionRuns {
         }
         if(input.afterSequence()<0)throw new IllegalArgumentException("Invalid cursor");var run=session(input.taskId(),input.attemptId());owned(owner,run);
         var result=new LinkedHashMap<>(view(run));result.put("events",repo.jdbc().queryForList("SELECT sequence_no,event_type,occurred_ms,payload_json FROM execution_run_event WHERE attempt_id=? AND sequence_no>? ORDER BY sequence_no LIMIT 64",input.attemptId(),input.afterSequence()));return result;
+    }
+
+    public record TaskProgress(String stage,String recentResult,java.time.Instant resultAt,java.time.Instant lastContact,
+                               String source,boolean connectionDelayed) {}
+
+    @Transactional(readOnly=true) public TaskProgress taskProgress(String task,String attempt,String actor) {
+        var sessions=repo.jdbc().queryForList("SELECT * FROM execution_run_session WHERE task_id=? AND attempt_id=?",task,attempt);
+        if(sessions.isEmpty())return null;
+        var run=sessions.getFirst();
+        try {owned(owner(actor),run);} catch(SecurityException unavailable) {return null;}
+        var state=view(run);
+        String phase=String.valueOf(state.get("phase"));
+        String stage=switch(phase) {
+            case "PAUSING" -> "Waiting for pause acknowledgement";
+            case "PAUSED" -> "Execution paused";
+            case "STOPPING" -> "Waiting for Worker stop confirmation";
+            case "YIELDING" -> "Saving progress before waiting";
+            case "FINALIZING" -> "Delivering task result";
+            case "BROKEN" -> "Connection delayed; execution state is not confirmed";
+            default -> null;
+        };
+        boolean showStages="RUNNING".equals(phase);
+        boolean delayed=!"SETTLED".equals(phase)&&Boolean.TRUE.equals(state.get("stale"));
+        if(delayed) {
+            if(stage==null)stage="Connection delayed; execution state is not confirmed";
+            showStages=false;
+        }
+        String recent=null;java.time.Instant resultAt=null;
+        for(var event:repo.jdbc().queryForList("""
+                SELECT event_type,occurred_ms,payload_json FROM execution_run_event
+                 WHERE attempt_id=? ORDER BY sequence_no DESC LIMIT 64
+                """,attempt)) {
+            String type=(String)event.get("event_type");
+            Map<?,?> payload=repo.decode((String)event.get("payload_json"),Map.class);
+            String status=Objects.toString(payload.get("status"),"");
+            if(showStages&&stage==null)stage=switch(type) {
+                case "workspace-lock" -> switch(status) {
+                    case "pending" -> "Waiting for the workspace to become available";
+                    case "completed" -> "Preparing workspace";
+                    default -> null;
+                };
+                case "model-request", "native-turn-started" -> "Calling the model";
+                case "model-terminal" -> "Model outcome recorded";
+                case "guard-start" -> "MODEL".equals(payload.get("tool"))?"Calling the model":"Running a tool";
+                case "guard-finished" -> "Operation result recorded";
+                case "validation-failed", "validation-passed" -> "Checking delivery";
+                case "delivery-pending" -> "Delivering task result";
+                case "runtime-event" -> switch(Objects.toString(payload.get("runtimeEvent"),"")) {
+                    case "preparing-workspace" -> "Preparing workspace";
+                    case "preparing-context" -> "Preparing task context";
+                    case "running-model" -> "Running model and tools";
+                    case "final-report-only" -> "Writing final report";
+                    case "delivering-result" -> "Delivering task result";
+                    default -> null;
+                };
+                default -> null;
+            };
+            if(recent==null) {
+                recent=switch(type) {
+                    case "model-terminal" -> "error".equals(status)?"Model request failed":"Model outcome recorded";
+                    case "guard-finished" -> switch(status) {
+                        case "failed" -> "Operation failed";
+                        case "unknown" -> "Operation outcome unconfirmed";
+                        default -> "Operation result recorded";
+                    };
+                    case "validation-passed" -> "Report check recorded";
+                    case "validation-failed" -> "Report check failed";
+                    case "workspace-lock" -> "completed".equals(status)?"Workspace acquired":null;
+                    default -> null;
+                };
+                if(recent!=null)resultAt=java.time.Instant.ofEpochMilli(number(event,"occurred_ms"));
+            }
+            if(recent!=null&&(stage!=null||!showStages))break;
+        }
+        return new TaskProgress(stage,recent,resultAt,java.time.Instant.ofEpochMilli(number(run,"last_contact_ms")),
+                state.get("sourceKind").toString().toLowerCase(Locale.ROOT),delayed);
     }
     @Transactional public Object receipt(ReceiptQuery input) {
         String owner=owner();text(input.requestId(),80);var rows=repo.jdbc().queryForList("SELECT task_id,attempt_id FROM execution_run_command WHERE owner_id=? AND request_id=?",owner,input.requestId());

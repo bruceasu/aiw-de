@@ -46,6 +46,8 @@ public class WorkflowEditorController {
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.FactoryPlanLifecycle> factoryPlans;
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> workflowRuns;
+    @org.springframework.beans.factory.annotation.Autowired
+    private me.asu.aidev.execution.run.ExecutionRuns executionRuns;
 
     @org.springframework.beans.factory.annotation.Autowired
     public void setConfiguredHistory(me.asu.aidev.workflow.jdbc.JdbcConfiguredPlanHistoryRepository history) {
@@ -127,17 +129,36 @@ public class WorkflowEditorController {
     }
 
     @GetMapping("/ui/plans/{id}/tasks/{taskId}")
-    public String taskPage(@PathVariable String id, @PathVariable String taskId, Model model) {
+    public String taskPage(@PathVariable String id, @PathVariable String taskId, HttpSession session, Model model) {
         requireEnabled();
         var detail = editor.taskDetail(id, taskId);
         model.addAttribute("page", "plans");
         model.addAttribute("planId", id);
         model.addAttribute("taskDetail", detail);
+        var attempt=detail.attempts().isEmpty()?null:detail.attempts().getFirst();
+        var progress=attempt!=null&&security.signedIn(session)?executionRuns.taskProgress(taskId,attempt.id(),security.actor(session)):null;
+        String lifecycle=detail.displayState();
+        String stage=switch(lifecycle) {
+            case "READY" -> "Waiting for a Worker to claim this task";
+            case "BLOCKED" -> "Waiting for task prerequisites";
+            case "CLAIMED" -> "Claimed; waiting for the Worker to start";
+            case "WAITING_INPUT" -> "Waiting for a reply or approval";
+            case "YIELDING" -> "Saving progress before waiting";
+            case "CONTINUED" -> "Continued in a later task";
+            case "COMPLETED" -> attempt!=null&&"REPAIR_REQUIRED".equals(attempt.verdict())?"Result needs correction":"Result recorded";
+            case "FAILED" -> "Execution failed";
+            case "CANCELLED" -> "Execution cancelled";
+            case "INTERRUPTED" -> "Execution interrupted; result unconfirmed";
+            default -> progress!=null&&progress.stage()!=null?progress.stage():"Worker activity not recorded yet";
+        };
+        model.addAttribute("taskStage",stage);
+        model.addAttribute("taskProgress",progress);
+        model.addAttribute("latestAttempt",attempt);
         model.addAttribute("requiredChecks",detail.task().requiredCapabilities().contains(me.asu.aidev.workflow.application.WorkflowRuns.REQUIRED_CHECKS)
                 ?editor.requiredChecks(detail,workflowRuns.getObject().requiredChecks(detail.task())):List.of());
         model.addAttribute("attemptWarningMs", attemptWarningMs);
         model.addAttribute("taskActive", switch (detail.task().state()) {
-            case READY, BLOCKED, CLAIMED, RUNNING -> true;
+            case READY, BLOCKED, CLAIMED, RUNNING, YIELDING, WAITING_INPUT -> true;
             default -> false;
         });
         return "ui/plan-task-detail";
