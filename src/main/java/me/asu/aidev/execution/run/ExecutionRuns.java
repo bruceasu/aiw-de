@@ -221,7 +221,8 @@ public class ExecutionRuns {
     }
 
     public record TaskProgress(String stage,String recentResult,java.time.Instant resultAt,java.time.Instant lastContact,
-                               String source,boolean connectionDelayed,List<ChecklistItem> checklist) {}
+                               String source,boolean connectionDelayed,List<ChecklistItem> checklist,
+                               Long preparationMs,Long firstModelMs) {}
 
     @Transactional(readOnly=true) public TaskProgress taskProgress(String task,String attempt,String actor) {
         var sessions=repo.jdbc().queryForList("SELECT * FROM execution_run_session WHERE task_id=? AND attempt_id=?",task,attempt);
@@ -292,11 +293,35 @@ public class ExecutionRuns {
             }
             if(recent!=null&&(stage!=null||!showStages))break;
         }
+        var model=repo.jdbc().queryForList("""
+                SELECT request.occurred_ms AS sent_at,
+                       (SELECT prep.occurred_ms FROM execution_run_event prep
+                         WHERE prep.attempt_id=request.attempt_id AND prep.sequence_no<request.sequence_no
+                           AND prep.event_type='runtime-event' AND json_extract(prep.payload_json,'$.runtimeEvent')='preparing-workspace'
+                         ORDER BY prep.sequence_no LIMIT 1) AS prep_at,
+                       (SELECT terminal.payload_json FROM execution_run_event terminal
+                         WHERE terminal.attempt_id=request.attempt_id AND terminal.sequence_no>request.sequence_no
+                           AND terminal.event_type IN ('model-request','model-terminal') ORDER BY terminal.sequence_no LIMIT 1) AS next_payload,
+                       (SELECT terminal.event_type FROM execution_run_event terminal
+                         WHERE terminal.attempt_id=request.attempt_id AND terminal.sequence_no>request.sequence_no
+                           AND terminal.event_type IN ('model-request','model-terminal') ORDER BY terminal.sequence_no LIMIT 1) AS next_type
+                  FROM execution_run_event request WHERE request.attempt_id=? AND request.event_type='model-request'
+                   AND COALESCE(json_extract(request.payload_json,'$.status'),'')<>'error'
+                 ORDER BY request.sequence_no LIMIT 1
+                """,attempt);
+        Long preparationMs=null;Long firstModelMs=null;
+        if(!model.isEmpty()) {
+            var first=model.getFirst();long sent=number(first,"sent_at");
+            if(first.get("prep_at") instanceof Number start&&sent>=start.longValue())preparationMs=sent-start.longValue();
+            if("model-terminal".equals(first.get("next_type"))&&first.get("next_payload") instanceof String payload
+                    &&repo.decode(payload,Map.class).get("durationMs") instanceof Number duration&&duration.longValue()>=0)
+                firstModelMs=duration.longValue();
+        }
         return new TaskProgress(stage,recent,resultAt,java.time.Instant.ofEpochMilli(number(run,"last_contact_ms")),
                 state.get("sourceKind").toString().toLowerCase(Locale.ROOT),delayed,readChecklist(repo.jdbc().queryForList("""
                         SELECT payload_json FROM execution_run_event WHERE attempt_id=? AND event_type='work-checklist'
                          ORDER BY sequence_no DESC LIMIT 1
-                        """,String.class,attempt)));
+                        """,String.class,attempt)),preparationMs,firstModelMs);
     }
 
     private List<ChecklistItem> readChecklist(List<String> rows) {

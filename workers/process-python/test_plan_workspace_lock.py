@@ -4,10 +4,64 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, call, patch
 
-from plan_workspace import DirectoryLock
+from plan_workspace import DirectoryLock, PlanWorkspace, input_manifests
 
 
 class WorkspaceLockTest(unittest.TestCase):
+    def test_text_task_does_not_wait_for_shared_git_workspace_and_carries_its_location(self):
+        with TemporaryDirectory() as location:
+            root = Path(location).resolve()
+            (root / ".git").mkdir()
+            source = root / "previous-worktree"
+            source.mkdir()
+            attempt = SimpleNamespace(check=Mock(), evidence=Mock(), resource_uncertain=False)
+            shared = DirectoryLock(root, attempt, "active-file-task")
+            old_task = {"planId": "plan", "taskId": "files", "attemptId": "file-output"}
+            ref = PlanWorkspace(root, source, attempt, Mock(), None).handoff(old_task, {"summary": "Report", "verdict": "PASS"}, None)
+            task = {"location": location, "planId": "plan", "taskId": "text", "attemptId": "new-text",
+                    "subjectType": "flexible-plan", "requiredCapabilities": ["general-work"],
+                    "inputs": [{**old_task, "handoff": {**ref, "location": location}}]}
+            config = SimpleNamespace(runtime="openai-agents", process_role="general")
+            try:
+                with patch("worker_runtime.current_attempt", return_value=attempt), patch("worker_runtime.git") as git:
+                    workspace = PlanWorkspace.materialize(config, task)
+                self.assertNotEqual(Path(workspace.cwd), root)
+                self.assertEqual(Path(workspace.cwd).parent, root / ".ai" / "sandboxes")
+                self.assertTrue(shared.owner.is_file())
+                self.assertEqual(attempt.handoff_reports, [("files", "Report")])
+                self.assertIsNone(workspace.finalize(task, read_only=True))
+                next_ref = workspace.handoff(task, {"summary": "Text outcome", "verdict": "PASS"}, None)
+                next_input = {"inputs": [{**task, "handoff": {**next_ref, "location": location}}]}
+                self.assertEqual(input_manifests(next_input)[0]["workingDirectory"], str(source))
+                git.assert_not_called()
+                workspace.cleanup()
+            finally:
+                shared.release()
+
+    def test_text_question_checkpoint_reuses_private_workspace(self):
+        from worker_runtime import snapshot
+
+        with TemporaryDirectory() as location:
+            root = Path(location).resolve()
+            (root / ".git").mkdir()
+            (root / "project.txt").write_text("Project content outside the text sandbox", encoding="utf-8")
+            attempt = SimpleNamespace(check=Mock(), evidence=Mock(), resource_uncertain=False)
+            config = SimpleNamespace(runtime="openai-agents", process_role="general")
+            task = {"location": location, "planId": "plan", "taskId": "text", "attemptId": "initial",
+                    "subjectType": "flexible-plan", "requiredCapabilities": ["general-work"]}
+            with patch("worker_runtime.current_attempt", return_value=attempt), patch("worker_runtime.git") as git:
+                first = PlanWorkspace.materialize(config, task)
+                ref = first.handoff(task, {"summary": "Question", "verdict": "REPAIR_REQUIRED"}, None,
+                                    checkpoint_tree_digest=snapshot(first.cwd, attempt))
+                first.cleanup()
+                resume = {**task, "attemptId": "continuation", "taskId": "next",
+                          "checkpointInputs": [{**task, "handoff": {**ref, "location": location}}]}
+                workspace = PlanWorkspace.materialize(config, resume)
+                self.assertEqual(workspace.cwd, first.cwd)
+                self.assertEqual(workspace.handoff_cwd, str(root))
+                git.assert_not_called()
+                workspace.cleanup()
+
     def test_paused_waiter_does_not_take_a_released_lock(self):
         with TemporaryDirectory() as location:
             root = Path(location)

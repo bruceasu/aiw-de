@@ -1,6 +1,9 @@
 // UI copy only. Rows are English and Simplified Chinese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["Wait before first claim","首次领取前等待"],
+  ["Preparation before first model request","首次模型请求前准备"],
+  ["First model request duration","首次模型请求用时"],
   ["Repeated tool results produced no new evidence after a reminder. The Worker stopped further model calls.","提醒后工具仍重复返回相同结果，没有新证据，Worker 已停止继续调用模型。"],
   ["A tool returned the same failure repeatedly. The Worker will check the blocker before continuing.","工具反复返回同一失败，Worker 会先核对阻碍再决定下一步。"],
   ["Worker checklist","Worker 工作清单"],

@@ -15,6 +15,11 @@
     <p th:text="${taskStage}"></p>
     <p class="help" th:if="${taskProgress != null and taskProgress.connectionDelayed and taskStage != 'Connection delayed; execution state is not confirmed' and taskDetail.displayState() == 'RUNNING'}">Connection delayed; execution state is not confirmed</p>
     <p th:if="${taskDetail.displayState() == 'WAITING_INPUT'}"><a th:href="@{/ui/questions(planId=${planId})}">View pending decisions</a></p>
+    <dl class="kv" th:if="${latestAttempt != null}">
+      <dt>Wait before first claim</dt><dd th:text="${claimWaitMs != null ? claimWaitMs + ' ms' : 'Not recorded'}"></dd>
+      <dt>Preparation before first model request</dt><dd th:text="${taskProgress != null and taskProgress.preparationMs != null ? taskProgress.preparationMs + ' ms' : 'Not recorded'}"></dd>
+      <dt>First model request duration</dt><dd th:text="${taskProgress != null and taskProgress.firstModelMs != null ? taskProgress.firstModelMs + ' ms' : 'Not recorded'}"></dd>
+    </dl>
     <dl class="kv" th:if="${taskProgress != null}">
       <dt>Latest recorded result</dt><dd><span th:text="${taskProgress.recentResult ?: 'Not recorded'}"></span>
         <time class="muted" th:if="${taskProgress.resultAt != null}" th:datetime="${taskProgress.resultAt}" th:text="${taskProgress.resultAt}"></time></dd>

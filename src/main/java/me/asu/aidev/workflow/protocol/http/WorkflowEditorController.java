@@ -154,6 +154,7 @@ public class WorkflowEditorController {
         model.addAttribute("taskStage",stage);
         model.addAttribute("taskProgress",progress);
         model.addAttribute("latestAttempt",attempt);
+        model.addAttribute("claimWaitMs",attempt!=null&&attempt.attemptNo()==1?elapsed(detail.task().createdAt(),attempt.createdAt()):null);
         model.addAttribute("requiredChecks",detail.task().requiredCapabilities().contains(me.asu.aidev.workflow.application.WorkflowRuns.REQUIRED_CHECKS)
                 ?editor.requiredChecks(detail,workflowRuns.getObject().requiredChecks(detail.task())):List.of());
         model.addAttribute("attemptWarningMs", attemptWarningMs);
@@ -162,6 +163,10 @@ public class WorkflowEditorController {
             default -> false;
         });
         return "ui/plan-task-detail";
+    }
+
+    private static Long elapsed(Instant start,Instant end) {
+        return start==null||end==null||end.isBefore(start)?null:java.time.Duration.between(start,end).toMillis();
     }
 
     @PostMapping("/ui/plans/{id}/archive")

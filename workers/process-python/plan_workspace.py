@@ -16,7 +16,8 @@ def directory(root, *parts):
     for part in parts:
         current = current / part
         current.mkdir(exist_ok=True)
-        if current.is_symlink() or not current.is_dir() or current.resolve().parent != current.parent.resolve():
+        if (current.is_symlink() or getattr(current, "is_junction", lambda: False)()
+                or not current.is_dir() or current.resolve().parent != current.parent.resolve()):
             raise RuntimeError("HANDOFF_DIRECTORY_UNSAFE")
     return current
 
@@ -163,10 +164,11 @@ def has_nested_repository(root, attempt):
 
 
 class PlanWorkspace:
-    def __init__(self, root, cwd, attempt, git, lock, base=None):
+    def __init__(self, root, cwd, attempt, git, lock, base=None, *, handoff_cwd=None):
         self.root, self.cwd, self.attempt = root, str(cwd), attempt
         self.git, self.lock, self.base = git, lock, base
         self.assignment = {"baseRevision": base} if base else None
+        self.handoff_cwd = str(handoff_cwd) if handoff_cwd is not None else self.cwd
 
     @classmethod
     def materialize(cls, config, task, broker=None):
@@ -175,7 +177,14 @@ class PlanWorkspace:
         root = Path(task["location"])
         root.mkdir(parents=True, exist_ok=True)
         root = root.resolve(strict=True)
-        gate = DirectoryLock(root, attempt, task["attemptId"], task.get("stoppedAttempts") or ())
+        text_only = (broker is None and config.runtime == "openai-agents" and config.process_role == "general"
+                     and task.get("subjectType") == "flexible-plan" and "general-work" in task.get("requiredCapabilities", ()))
+        sandbox = None
+        if text_only and not task.get("checkpointInputs"):
+            parent = directory(root, ".ai", "sandboxes")
+            sandbox = parent / key(task["attemptId"])
+            sandbox.mkdir()
+        gate = DirectoryLock(sandbox or root, attempt, task["attemptId"], task.get("stoppedAttempts") or ())
         try:
             if broker:
                 broker.source_root = root
@@ -185,6 +194,7 @@ class PlanWorkspace:
             manifests = input_manifests(task, attempt.handoff_reports if config.runtime == "openai-agents" else None)
             task["handoffInputs"] = manifests
             source = root
+            latest = None
             # Check retained input while holding admission for this location.
             # A sole latest tree is a starting point, not an implicit branch merge.
             if manifests:
@@ -210,6 +220,16 @@ class PlanWorkspace:
             return runtime_git(str(cwd), *args)
 
         try:
+            if sandbox is not None:
+                return cls(root, sandbox, attempt, git, gate, handoff_cwd=source)
+            if text_only and latest and latest.get("checkpoint") and "projectDirectory" in latest:
+                parent = directory(root, ".ai", "sandboxes")
+                project = Path(latest["projectDirectory"]).resolve(strict=True)
+                if source.parent != parent or not re.fullmatch(r"[0-9a-f]{64}", source.name) or not project.is_relative_to(root):
+                    raise RuntimeError("HANDOFF_WORKING_DIRECTORY_UNSAFE")
+                own_gate = DirectoryLock(source, attempt, task["attemptId"], task.get("stoppedAttempts") or ())
+                gate.release()
+                return cls(root, source, attempt, git, own_gate, handoff_cwd=project)
             if config.process_role == "goal-discussion" or task.get("subjectType") in {"goal-discussion", "workflow-recommendation"}:
                 cwd = directory(root, ".ai", "sandboxes", key(task["attemptId"]))
                 own_gate = DirectoryLock(cwd, attempt, task["attemptId"])
@@ -296,11 +316,14 @@ class PlanWorkspace:
         with (target / "report.md").open("xb") as file:
             file.write(body)
         manifest = {"protocol": "aiw.handoff.v1", "taskId": task["taskId"], "attemptId": task["attemptId"],
-                    "planId": task["planId"], "workingDirectory": self.cwd, "completedAt": time.time_ns() // 1000000,
+                    "planId": task["planId"], "workingDirectory": self.handoff_cwd, "completedAt": time.time_ns() // 1000000,
                     "report": "report.md", "reportSha256": hashlib.sha256(body).hexdigest(), "verdict": report["verdict"], "gitResult": result,
                     "deliverables": list(outputs.values())}
         if checkpoint_tree_digest is not None:
             manifest["checkpointTreeSha256"] = checkpoint_tree_digest
+            if self.handoff_cwd != self.cwd:
+                manifest["projectDirectory"] = manifest["workingDirectory"]
+                manifest["workingDirectory"] = self.cwd
         if tool_approval is not None:
             manifest["toolApproval"] = tool_approval
         raw = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
