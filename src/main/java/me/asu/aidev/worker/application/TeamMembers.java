@@ -203,7 +203,7 @@ public class TeamMembers implements TaskClaimPolicy {
         if(!approved.isEmpty()&&(input.settings().model()!=null||input.settings().effort()!=null)&&approved.stream().filter(p->input.settings().allowedProfiles().isEmpty()||input.settings().allowedProfiles().contains(p)).noneMatch(p->matches(p,input.settings())))
             throw new IllegalArgumentException("Member defaults must match an approved workflow model profile");
         for(var experience:input.settings().experience())evidence(actor,input.id(),experience.sourceRun());
-        materials(new Profile(input.id(),input.revision(),name,purpose,selected,notes,"ACTIVE",input.settings()));
+        materials(new Profile(input.id(),input.revision(),name,purpose,selected,notes,"ACTIVE",input.settings()),List.of());
         long now=System.currentTimeMillis();String encoded=db.encode(selected);
         if(input.revision()==0) {
             var previous=db.jdbc().queryForList("SELECT * FROM worker_team_member WHERE id=?",input.id());
@@ -346,22 +346,58 @@ public class TeamMembers implements TaskClaimPolicy {
         var member=db.decode(frozen.getFirst(),com.fasterxml.jackson.databind.JsonNode.class).get("member");
         return member==null||member.isNull()?null:db.decode(member.toString(),Profile.class);
     }
-    public List<Material> materials(Profile member) {
+    /** Rank recent owner-scoped lessons. Store the returned IDs with the dispatched workflow node. */
+    public List<String> relevantLessons(Profile member,String location,String topic,List<String> requiredSkills) {
+        if(member==null)return List.of();
+        var wanted=new HashSet<>(member.skills());wanted.addAll(requiredSkills);
+        var words=new LinkedHashSet<String>();
+        var matcher=java.util.regex.Pattern.compile("\\p{IsHan}{2}|[a-z0-9][a-z0-9_-]{2,}")
+                .matcher(topic.toLowerCase(Locale.ROOT));
+        while(words.size()<32&&matcher.find()){
+            var word=matcher.group();
+            if(!Set.of("the","and","for","with","from","that","this","use","into","should","please").contains(word))words.add(word);
+        }
+        var rows=db.jdbc().queryForList("""
+            SELECT e.task_id,e.experience,a.profile_json,json_extract(w.run_json,'$.location') AS location
+              FROM worker_team_experience e
+              JOIN workflow_execution w ON w.id=e.run_id AND w.actor=e.actor
+              JOIN worker_team_task t ON t.task_id=e.task_id AND t.run_id=e.run_id
+              JOIN worker_team_assignment a ON a.run_id=t.run_id AND a.node_key=t.node_key AND a.member_id=e.member_id
+             WHERE e.actor=(SELECT actor FROM worker_team_member WHERE id=?)
+             ORDER BY e.created_ms DESC,e.task_id DESC LIMIT 128
+            """,member.id());
+        record Match(String id,int score) {}
+        return rows.stream().map(row->{
+            int score=location!=null&&location.equals(row.get("location"))?100:0;
+            var prior=db.decode((String)row.get("profile_json"),Profile.class);
+            if(!Collections.disjoint(wanted,prior.skills()))score+=40;
+            var text=((String)row.get("experience")).toLowerCase(Locale.ROOT);
+            for(var word:words)if(text.contains(word))score++;
+            return new Match((String)row.get("task_id"),score);
+        }).filter(match->match.score()>0).sorted(Comparator.comparingInt(Match::score).reversed())
+                .limit(8).map(Match::id).toList();
+    }
+    public List<Material> materials(Profile member,List<String> lessonIds) {
         if(member==null)return List.of();var result=new ArrayList<>(member.settings().knowledge());
         if(!member.notes().isBlank())result.add(new Material("knowledge","Member notes",member.notes(),null));
         var experience=new ArrayList<String>();
         member.settings().experience().forEach(e->experience.add("Source workflow: "+e.sourceRun()+"\nHuman-confirmed lesson:\n"+e.text()));
-        var shared=db.jdbc().queryForList("""
-            SELECT e.task_id,e.run_id,m.name,e.experience FROM worker_team_experience e
-              JOIN worker_team_member m ON m.id=e.member_id
-             WHERE e.actor=(SELECT actor FROM worker_team_member WHERE id=?)
-             ORDER BY e.created_ms DESC,e.task_id DESC LIMIT 8
-            """,member.id());
-        experience.addAll(shared.stream().map(e->{
-            String summary=(String)e.get("experience");
-            if(summary.length()>2000)summary=summary.substring(0,2000);
-            return "Source task: "+e.get("task_id")+"; Plan: "+e.get("run_id")+"; Worker: "+e.get("name")+"\nShared lesson:\n"+summary;
-        }).toList());
+        if(!lessonIds.isEmpty()){
+            var args=new ArrayList<>(lessonIds);args.addFirst(member.id());
+            var rows=db.jdbc().queryForList("""
+                SELECT e.task_id,e.run_id,e.experience,a.profile_json
+                  FROM worker_team_experience e
+                  JOIN worker_team_task t ON t.task_id=e.task_id AND t.run_id=e.run_id
+                  JOIN worker_team_assignment a ON a.run_id=t.run_id AND a.node_key=t.node_key AND a.member_id=e.member_id
+                 WHERE e.actor=(SELECT actor FROM worker_team_member WHERE id=?)
+                   AND e.task_id IN (
+                """+String.join(",",Collections.nCopies(lessonIds.size(),"?"))+")",args.toArray());
+            for(var id:lessonIds)for(var row:rows)if(id.equals(row.get("task_id"))){
+                var prior=db.decode((String)row.get("profile_json"),Profile.class);
+                experience.add("Source task: "+id+"; Plan: "+row.get("run_id")+"; Worker: "+prior.name()
+                        +" (profile revision "+prior.revision()+")\nShared lesson:\n"+row.get("experience"));
+            }
+        }
         if(!experience.isEmpty())result.add(new Material("knowledge","Member and team experience",String.join("\n\n",experience),null));
         return WorkflowRuns.checkedSources(result);
     }

@@ -122,7 +122,8 @@ public class GoalDiscussionService {
             "messages", draft.content().messages(), "userMessage", text,
             "sourceRevision", draft.revision(), "selectedSources", evidence(draft, selected)));
         if(member!=null)context.put("discussionMember",Map.of("id",member.id(),"revision",member.revision(),"name",member.name(),
-            "purpose",member.purpose(),"skills",member.skills(),"sources",team.materials(member)));
+            "purpose",member.purpose(),"skills",member.skills(),"sources",team.materials(member,
+                team.relevantLessons(member,null,draft.title()+" "+text+" "+draft.content().body(),List.of()))));
         String data = repo.encode(context);
         if (data.length() > 60000) throw new IllegalArgumentException("Selected context exceeds 60000 characters; select fewer sources or start a shorter discussion");
         String instruction = "Discuss this goal. Return only a plain text REPORT of 1 to 16000 characters. "

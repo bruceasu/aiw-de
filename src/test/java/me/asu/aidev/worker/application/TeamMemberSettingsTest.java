@@ -43,9 +43,38 @@ class TeamMemberSettingsTest {
         var settings=new TeamMembers.Settings(null,null,null,original,List.of(new TeamMembers.Experience("source-run","Review assumptions")));
         var member=new TeamMembers.Profile("member-test",1,"Reviewer","Review changes",List.of(),"A human note","ACTIVE",settings);
         original.clear();var members=new TeamMembers(null,null,null);
-        assertThat(members.materials(member)).hasSize(3);
-        assertThat(members.materials(member).getLast().content()).contains("source-run","Review assumptions");
+        assertThat(members.materials(member,List.of())).hasSize(3);
+        assertThat(members.materials(member,List.of()).getLast().content()).contains("source-run","Review assumptions");
         assertThat(members.context(member)).doesNotContain("Confirmed system facts","Review assumptions","A human note");
+    }
+    @Test void lessonRecallRanksRelevantOlderWorkAndKeepsOwnerAndSourceRevision() {
+        var connection=new org.springframework.jdbc.datasource.SingleConnectionDataSource("jdbc:sqlite::memory:",true);
+        try {
+            var jdbc=new org.springframework.jdbc.core.JdbcTemplate(connection);
+            jdbc.execute("CREATE TABLE worker_team_member(id TEXT,actor TEXT)");
+            jdbc.execute("CREATE TABLE worker_team_experience(task_id TEXT,actor TEXT,member_id TEXT,run_id TEXT,experience TEXT,created_ms INTEGER)");
+            jdbc.execute("CREATE TABLE workflow_execution(id TEXT,actor TEXT,run_json TEXT)");
+            jdbc.execute("CREATE TABLE worker_team_task(task_id TEXT,run_id TEXT,node_key TEXT)");
+            jdbc.execute("CREATE TABLE worker_team_assignment(run_id TEXT,node_key TEXT,member_id TEXT,profile_json TEXT)");
+            jdbc.update("INSERT INTO worker_team_member VALUES('member','owner')");
+            var db=new AuthorityRepository(jdbc);
+            var member=new TeamMembers.Profile("member",3,"Frozen name","Work",List.of(),"","ACTIVE",null);
+            var skillProfile=new TeamMembers.Profile("member",4,"Skill holder","Work",List.of("news-skill"),"","ACTIVE",null);
+            for(var id:List.of("project","skill","keyword","unrelated","other-owner")){
+                String actor=id.equals("other-owner")?"other":"owner";
+                String location=Set.of("project","other-owner").contains(id)?"news-project":"other-project";
+                jdbc.update("INSERT INTO workflow_execution VALUES(?,?,?)",id,actor,db.encode(Map.of("location",location)));
+                jdbc.update("INSERT INTO worker_team_task VALUES(?,?,'step')",id,id);
+                jdbc.update("INSERT INTO worker_team_assignment VALUES(?,'step','member',?)",id,db.encode(id.equals("skill")?skillProfile:member));
+                jdbc.update("INSERT INTO worker_team_experience VALUES(?,?,'member',?,?,?)",id,actor,id,
+                        id.equals("keyword")?"A JSON export lesson":"A precise data lesson",id.equals("project")?1:10);
+            }
+            var members=new TeamMembers(db,null,null);
+            var lessons=members.relevantLessons(member,"news-project","JSON export",List.of("news-skill"));
+            assertThat(lessons).containsExactly("project","skill","keyword");
+            assertThat(members.materials(member,List.of("project","other-owner")).getLast().content())
+                    .contains("Source task: project","Frozen name (profile revision 3)").doesNotContain("other-owner");
+        } finally {connection.destroy();}
     }
     @Test void aFixedDefaultDoesNotTurnIntoAnAutomaticSwitchingRange() {
         var db=mock(AuthorityRepository.class);

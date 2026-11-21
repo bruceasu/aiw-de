@@ -146,6 +146,7 @@ public class WorkflowRuns {
         public List<Supplement> inputs=new ArrayList<>();
         public String sealedTaskId,sealedAttemptId;
         public String completedTaskId;
+        public List<String> lessonIds=List.of();
         public String memberWait;
         public Proposal proposal;
         public Run() {}
@@ -333,7 +334,7 @@ public class WorkflowRuns {
             team.requirements(node.requiredSkills());
             if(node.memberId()!=null)assigned.put(node.key(),team.forRun(actor,node.memberId(),node.requiredSkills()));
         }
-        for(var member:assigned.values())sources(spec,member);
+        for(var member:assigned.values())sources(spec,member,List.of());
         if(input.length()>32000) throw new IllegalArgumentException("Input exceeds 32000 characters");
         boolean workspaceTools=spec.nodes().stream().anyMatch(Node::workspaceTools);
         var steps=spec.nodes().stream().filter(n->n.kind()==Kind.TASK || n.kind()==Kind.DECISION).map(n->
@@ -426,10 +427,13 @@ public class WorkflowRuns {
     public List<Material> sources(WorkTask task) {
         if(!task.subjectType().equals("flexible-plan"))return List.of();
         return db.jdbc().queryForList("SELECT run_json FROM workflow_execution WHERE id=?",String.class,task.subjectId())
-                .stream().findFirst().map(json->sources(db.decode(json,Run.class).spec,team.forTask(task.id().value()))).orElse(List.of());
+                .stream().findFirst().map(json->{
+                    var run=db.decode(json,Run.class);
+                    return sources(run.spec,team.forTask(task.id().value()),run.lessonIds);
+                }).orElse(List.of());
     }
-    private List<Material> sources(Spec spec,me.asu.aidev.worker.application.TeamMembers.Profile member) {
-        var result=new ArrayList<>(spec.sources());result.addAll(team.materials(member));return checkedSources(result);
+    private List<Material> sources(Spec spec,me.asu.aidev.worker.application.TeamMembers.Profile member,List<String> lessons) {
+        var result=new ArrayList<>(spec.sources());result.addAll(team.materials(member,lessons));return checkedSources(result);
     }
     private Run load(String id,boolean human) {
         // Member edits and task claims already use this lock. Keep a single lock order.
@@ -820,7 +824,10 @@ public class WorkflowRuns {
         if(member!=null)instruction=team.context(member)+instruction;
         instruction+=resultContext(run,16384-instruction.length(),false);
         List<Material> references;
-        try {references=sources(run.spec,member);}catch(IllegalArgumentException error) {run.state="FAILED";event(run,"LIMIT",error.getMessage());return;}
+        try {
+            run.lessonIds=team.relevantLessons(member,run.location,run.spec.goal()+" "+node.instruction()+" "+run.context,node.requiredSkills());
+            references=sources(run.spec,member,run.lessonIds);
+        }catch(IllegalArgumentException error) {run.state="FAILED";event(run,"LIMIT",error.getMessage());return;}
         if(instruction.length()>16384) {run.state="FAILED";event(run,"LIMIT","Node input exceeds the current Worker instruction limit; no work was dispatched");return;}
         // createExecution uses the original slot; append the execution input through the same task creation path.
         plans.getObject().createWorkflowExecution(plan,index,round,instruction,references.isEmpty()?Set.of():Set.of("task-materials-v1"),run.completedTaskId==null?Set.of():Set.of(new TaskId(run.completedTaskId)));
