@@ -151,15 +151,19 @@ public class TeamMembers implements TaskClaimPolicy {
         } else return;
         if(frozen.skills()==null||!frozen.skills().contains(ref)
                 ||db.jdbc().queryForObject("SELECT COUNT(*) FROM worker_team_skill_revision WHERE source_task_id=? AND skill_ref=?",Long.class,task.id().value(),ref)>0)return;
+        var packageSnapshot=skills.payload(task.id().value(),null);
+        if(packageSnapshot==null)return;
+        var base=packageSnapshot.references().stream().filter(item->item.ref().equals(ref)
+                && item.source().equals("member-revision")&&item.repositoryRef().equals(member)).findFirst().orElse(null);
+        if(base==null)return;
         // Serialize this member's revision number so concurrent task completions do not choose the same version.
-        ensureSkillBaselines(actor,member,frozen.skills());
-        db.jdbc().update("UPDATE worker_team_member SET updated_ms=updated_ms WHERE id=? AND actor=?",member,actor);
-        String previous=skills.defaultText(ref);var rows=db.jdbc().queryForList("SELECT content,content_hash FROM worker_team_skill_revision WHERE member_id=? AND skill_ref=? ORDER BY version DESC LIMIT 1",member,ref);
-        if(!rows.isEmpty()) {
-            var row=rows.getFirst();previous=(String)row.get("content");
-            if(!skillHash(previous).equals(row.get("content_hash")))throw new IllegalStateException("Stored member Skill revision is corrupted");
-        }
-        if(previous.equals(content))return;
+        if(db.jdbc().update("UPDATE worker_team_member SET updated_ms=updated_ms WHERE id=? AND actor=? AND state<>'ARCHIVED'",member,actor)!=1
+                ||!get(actor,member).skills().contains(ref))return;
+        var current=db.jdbc().queryForMap("SELECT version,content,content_hash FROM worker_team_skill_revision WHERE member_id=? AND skill_ref=? ORDER BY version DESC LIMIT 1",member,ref);
+        String previous=(String)current.get("content");
+        if(!skillHash(previous).equals(current.get("content_hash")))throw new IllegalStateException("Stored member Skill revision is corrupted");
+        if(!base.assetVersion().equals(current.get("version").toString())||!base.assetDigest().equals(current.get("content_hash"))
+                ||previous.equals(content))return;
         appendSkillRevision(member,ref,content,reason,task.id().value(),sourceRun,createdMs);
     }
     private void appendSkillRevision(String member,String ref,String content,String reason,String task,String run,long createdMs) {

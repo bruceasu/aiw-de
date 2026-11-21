@@ -31,8 +31,8 @@ public class KnowledgeService {
         this.members = members;
     }
 
-    /** Called inside the authoritative task-completion transaction. */
-    public void record(WorkTask task, CompletionReport report, WorkspaceResult workspaceResult, Instant completedAt) {
+    /** A guarded result can contribute growth once its current completion is ready to advance. */
+    public void recordGrowth(WorkTask task, CompletionReport report, Instant completedAt) {
         if (report != null && report.verdict() == CompletionVerdict.PASS
                 && report.experience() != null) {
             jdbc.update("""
@@ -42,10 +42,15 @@ public class KnowledgeService {
                       JOIN worker_team_assignment a ON a.run_id=t.run_id AND a.node_key=t.node_key
                       JOIN worker_team_member m ON m.id=a.member_id
                      WHERE t.task_id=?
+                    ON CONFLICT(task_id) DO NOTHING
                     """, report.experience(), completedAt.toEpochMilli(), task.id().value());
         }
         if(report!=null&&report.verdict()==CompletionVerdict.PASS&&report.skillUpdate()!=null)
             members.recordSkillUpdate(task,report.skillUpdate(),completedAt.toEpochMilli());
+    }
+
+    /** Called inside the authoritative task-completion transaction. */
+    public void record(WorkTask task, CompletionReport report, WorkspaceResult workspaceResult, Instant completedAt) {
         if (!isDocumentType(task.type())) return;
         if (report == null) throw new IllegalStateException("knowledge document requires a completion report");
         jdbc.update("""

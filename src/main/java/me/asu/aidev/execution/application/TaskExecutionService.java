@@ -458,6 +458,7 @@ public class TaskExecutionService {
             requestGuardedAdvance(guard.context(taskId.value()).planId());
             return new TaskCompletionResult(taskId,List.of(),List.of());
         }
+        knowledge.recordGrowth(completedTask, completionReport, now);
         List<TaskId> generated = completionDispatcher.dispatch(
                 new TaskCompletionContext(completedTask, workspaceResult, completionReport));
         List<TaskId> newlyReady = dependencyResolver.refreshDependents(taskId);
@@ -560,8 +561,10 @@ public class TaskExecutionService {
                 for(TaskFailureListener listener:failureListeners) listener.onFailed(task,(String)pending.get("failure_reason"));
             } else {
                 if(task.state()!=TaskState.COMPLETED) throw new IllegalStateException("Deferred completion is not a completed task");
-                completionDispatcher.dispatch(new TaskCompletionContext(task,
-                    guard.decode((String)pending.get("workspace_json"),WorkspaceResult.class),guard.decode((String)pending.get("report_json"),CompletionReport.class)));
+                var workspace=guard.decode((String)pending.get("workspace_json"),WorkspaceResult.class);
+                var report=guard.decode((String)pending.get("report_json"),CompletionReport.class);
+                knowledge.recordGrowth(task,report,task.updatedAt());
+                completionDispatcher.dispatch(new TaskCompletionContext(task,workspace,report));
                 dependencyResolver.refreshDependents(id);
             }
         }
