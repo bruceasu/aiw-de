@@ -1,6 +1,8 @@
 # 从目标到声明式图计划
 
-入口为 `/ui/workflow-graphs`。先绑定当前 owner，保存目标、范围和验收，获得 DRAFT；空目标骨架不可激活。配置同一 plan ID 的执行 policy、时间/成本/任务上限与定价，再连接支持配置/执行许可/正式问答的 Python Worker。两种 runtime 为 `openai-agents` 和 Unix/WSL 的 `codex-app-server`，不限定 SDK/CLI 版本，能力不满足时阻塞。
+日常编辑和运行请使用 `/ui/workflows`。本页记录仍保留的图 authority API 和历史图执行方式，独立图页面已退役。
+
+图 API 先绑定当前 owner，保存目标、范围和验收，获得 DRAFT。空目标骨架不可激活。配置同一 plan ID 的执行 policy、时间/成本/任务上限与定价，再连接支持配置、执行许可和正式问答的 Python Worker。两种 runtime 为 `openai-agents` 和 Unix/WSL 的 `codex-app-server`。
 
 请求只读规划使用注册 `planner`（implementation-planner）配置，经过同一个 Factory/guard/预算路径。规划任务可以正式提问、挂起和继续；结果从真实完成报告提取 `AIW_GRAPH_V1` 后的一个 JSON。模型失败和不合法候选保留诊断，人工编辑始终可用。候选需要载入编辑框、审阅并保存；不会自动批准或获得新权限。BLOCKED 规划用相同原请求重试 `/recommend`，不可通过改变内容重用请求 ID。
 
