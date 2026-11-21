@@ -79,6 +79,7 @@ class EvidenceUsageTest(unittest.TestCase):
                     guarded = module._GuardedModel.__new__(module._GuardedModel)
                     guarded._request = SimpleNamespace(attempt=attempt, broker=None)
                     guarded._config = SimpleNamespace(max_turns=4, max_input_bytes=1024)
+                    guarded._context = SimpleNamespace(work_started=False)
                     guarded.calls = 3
                     guarded.inputs = None
                     guarded.history = SimpleNamespace(response=Mock())

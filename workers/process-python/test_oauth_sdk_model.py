@@ -1,11 +1,13 @@
 """SDK interface doubles; no model, credentials, service, or network."""
 import asyncio
+import http.client
 import io
 import json
 import sys
+import urllib.error
 from types import ModuleType, SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import chatgpt_responses_runtime as oauth
 from automation_loop import ActionProtocolError
@@ -43,6 +45,59 @@ class OAuthSdkModelTest(unittest.TestCase):
         self.assertEqual(conversation._stream(stream('answer', 'answer'))[0], 'answer')
         with self.assertRaisesRegex(RuntimeError, 'MODEL_STREAM_TERMINAL_MISMATCH'):
             conversation._stream(stream('answer', 'different'))
+
+    def test_work_report_can_fill_the_shared_report_file_budget(self):
+        from plan_workspace import REPORT_FILE_MAX_BYTES
+
+        request = SimpleNamespace(model_images=[], model_only=False, credential_provider=object(),
+                                  attempt=SimpleNamespace(check=lambda: None))
+        conversation = oauth.ResponsesConversation(request, Mock())
+        report = "a" * REPORT_FILE_MAX_BYTES
+        events = ({"type": "response.output_text.delta", "delta": report},
+                  {"type": "response.completed", "response": {"status": "completed", "output": [{
+                      "type": "message", "status": "completed", "content": [{"type": "output_text", "text": report}]
+                  }]}})
+        stream = io.BytesIO("".join("data: " + json.dumps(event) + "\n\n" for event in events).encode())
+        self.assertEqual(conversation._stream(stream)[0], report)
+        request.model_only = True
+        stream.seek(0)
+        with patch.dict("os.environ", {"AIW_AGENT_MAX_OUTPUT_CHARS": "24000"}):
+            with self.assertRaisesRegex(RuntimeError, "MODEL_(OUTPUT|STREAM)_LIMIT"):
+                conversation._stream(stream)
+
+    def test_oauth_preserves_known_rejection_and_only_safe_preference_detail(self):
+        from ai_preferences import preference_rejected
+        from worker_runtime import failure_code
+
+        attempt = SimpleNamespace(check=Mock(), evidence=SimpleNamespace(record=Mock()), remaining=lambda: 20)
+        credential = SimpleNamespace(access=lambda _scope: {"accessToken": "dummy"})
+        request = SimpleNamespace(model_images=[], credential_provider=credential, attempt=attempt,
+                                  model="example", reasoning_effort="default")
+        conversation = oauth.ResponsesConversation(request, Mock())
+        for status, message, preference in ((400, "Model unsupported (private body)", True),
+                                             (422, "Invalid request (private body)", False),
+                                             (503, "Model unavailable (private body)", False)):
+            with self.subTest(status=status):
+                body = io.BytesIO(json.dumps({"error": {"message": message}}).encode())
+                rejection = urllib.error.HTTPError("https://example.invalid", status, "private error", {}, body)
+                with patch.object(oauth.urllib.request, "build_opener") as opener:
+                    opener.return_value.open.side_effect = rejection
+                    with self.assertRaises(RuntimeError) as result:
+                        conversation.run_turn("Task")
+                self.assertEqual(failure_code(result.exception, "MODEL_ERROR"), f"MODEL_API_HTTP_{status}")
+                self.assertEqual(preference_rejected(result.exception), preference)
+                self.assertNotIn("private", str(result.exception))
+                self.assertTrue(body.closed)
+
+        class TruncatedBody(io.BytesIO):
+            def read(self, *_args):
+                raise http.client.IncompleteRead(b"", 2)
+
+        with patch.object(oauth.urllib.request, "build_opener") as opener:
+            opener.return_value.open.side_effect = urllib.error.HTTPError(
+                "https://example.invalid", 404, "private error", {}, TruncatedBody())
+            with self.assertRaisesRegex(RuntimeError, "^MODEL_API_HTTP_404$"):
+                conversation.run_turn("Task")
 
     def invoke(self, output, tools):
         calls = []

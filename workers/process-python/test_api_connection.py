@@ -2,7 +2,7 @@
 import os
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from api_connection import check_auth, runtime_type
 from process_worker import choose_ai_profile
@@ -55,6 +55,86 @@ class ApiConnectionTest(unittest.TestCase):
         config = SimpleNamespace(provider="deepseek", protocol="chat-completions", reasoning_effort="high")
         result = _model_preferences(SimpleNamespace(reasoning_effort=None), config)
         self.assertEqual(result["extra_args"]["reasoning_effort"], "high")
+
+    def test_only_a_confirmed_preference_rejection_allows_fallback(self):
+        from openai_api_runtime import ApiRuntimeConfig, OpenAIApiRuntime
+
+        attempt = SimpleNamespace(check=Mock(), resource_uncertain=False)
+        request = SimpleNamespace(attempt=attempt)
+        runtime = OpenAIApiRuntime(ApiRuntimeConfig("", None, "test", "", 1000, 3, 1024, 1024, 1000))
+        for status, uncertain, expected in ((400, False, "AI_PREFERENCES_REJECTED"),
+                                            (404, True, "Model is not available"),
+                                            (503, False, "Model is not available"),
+                                            (None, False, "Model is not available")):
+            with self.subTest(status=status, uncertain=uncertain):
+                attempt.resource_uncertain = uncertain
+                error = RuntimeError("Model is not available")
+                error.status_code = status
+                with patch.object(runtime, "_run", side_effect=error):
+                    with self.assertRaisesRegex(RuntimeError, expected):
+                        runtime.run(None, request, Mock())
+
+
+class ConnectionExecutionTest(unittest.IsolatedAsyncioTestCase):
+    async def test_oauth_adapter_preserves_a_json_report_and_rejects_invalid_actions(self):
+        from automation_loop import ActionProtocolError
+        from chatgpt_responses_runtime import sdk_model
+
+        request = SimpleNamespace(attempt=SimpleNamespace(check=Mock()))
+        read = SimpleNamespace(name="read", params_json_schema={"type": "object"})
+        model = sdk_model(request, Mock())
+        with patch("chatgpt_responses_runtime.ResponsesConversation") as transport:
+            round_result = transport.return_value
+            round_result.last_usage = None
+            for text in ('{"choice":"accept","reason":"same record"}', '[{"title":"News"}]'):
+                round_result.run_turn.return_value = text
+                result = await model.get_response("", [], None, [read], None, [], None)
+                self.assertEqual(result.output[0].content[0].text, text)
+            round_result.run_turn.return_value = '{"action":"tool","name":"read","arguments":{}}'
+            result = await model.get_response("", [], None, [read], None, [], None)
+            self.assertEqual(result.output[0].name, "read")
+            round_result.run_turn.return_value = '{"action":"tool","name":"unlisted","arguments":{}}'
+            with self.assertRaisesRegex(ActionProtocolError, "HOST_ACTION_TOOL_INVALID"):
+                await model.get_response("", [], None, [read], None, [], None)
+
+    async def test_both_transports_mark_work_started_only_after_a_valid_response(self):
+        from openai_api_runtime import ApiRuntimeConfig, ToolContext, _GuardedModel
+
+        attempt = SimpleNamespace(check=Mock(), evidence=SimpleNamespace(record=Mock()))
+        request = SimpleNamespace(attempt=attempt, broker=None)
+        config = ApiRuntimeConfig("", None, "test", "", 1000, 3, 1024, 1024, 1000)
+        valid = {"output": [{"type": "message", "status": "completed", "content": []}]}
+        kwargs = dict(previous_response_id=None, conversation_id=None, prompt=None)
+        for streamed in (False, True):
+            with self.subTest(streamed=streamed):
+                context = ToolContext(request, 1024, 1000)
+                failed = True
+
+                async def respond(*args, **kwargs):
+                    self.assertFalse(context.work_started)
+                    if failed:
+                        raise RuntimeError("unsupported model")
+                    return valid
+
+                async def stream(*args, **kwargs):
+                    yield {"type": "response.completed", "response": await respond()}
+
+                model = _GuardedModel(SimpleNamespace(get_response=respond, stream_response=stream),
+                                      request, config, context, {})
+                model._prepare = AsyncMock(return_value=[])
+                args = ("", [], None, [], None, [], None)
+                with self.assertRaisesRegex(RuntimeError, "unsupported model"):
+                    if streamed:
+                        _ = [event async for event in model.stream_response(*args, **kwargs)]
+                    else:
+                        await model.get_response(*args, **kwargs)
+                self.assertFalse(context.work_started)
+                failed = False
+                if streamed:
+                    _ = [event async for event in model.stream_response(*args, **kwargs)]
+                else:
+                    await model.get_response(*args, **kwargs)
+                self.assertTrue(context.work_started)
 
 
 if __name__ == "__main__":

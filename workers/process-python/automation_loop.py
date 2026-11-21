@@ -75,7 +75,7 @@ def _matches(value, schema):
     raise RuntimeError("HOST_TOOL_SCHEMA_UNSUPPORTED")
 
 
-def parse_action(output, definitions):
+def parse_action(output, definitions, *, allow_json_report=False):
     text = output.strip()
     fenced = re.fullmatch(r"```(?:json)?[ \t]*\r?\n(.*?)\r?\n?```", text, re.DOTALL | re.IGNORECASE)
     if fenced:
@@ -86,6 +86,8 @@ def parse_action(output, definitions):
         raise
     except (ValueError, RecursionError) as error:
         raise ActionProtocolError("HOST_ACTION_JSON_INVALID") from error
+    if allow_json_report and (isinstance(action, list) or isinstance(action, dict) and "action" not in action):
+        return None
     if not isinstance(action, dict):
         raise ActionProtocolError("HOST_ACTION_INVALID")
     if action.get("action") == "finish":

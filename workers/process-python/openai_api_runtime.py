@@ -24,8 +24,9 @@ from context_window import API_INPUT_BYTES, estimate_input_tokens, input_token_l
 from worker_runtime import failure_code
 
 
-MODEL_REJECTIONS = {"MODEL_AUTH_REQUIRED", "MODEL_QUOTA_OR_RATE_LIMIT"} | {
-    f"MODEL_API_HTTP_{status}" for status in (400, 401, 403, 404, 422, 429)
+MODEL_PREFERENCE_REJECTIONS = {"MODEL_API_HTTP_400", "MODEL_API_HTTP_404", "MODEL_API_HTTP_422"}
+MODEL_REJECTIONS = MODEL_PREFERENCE_REJECTIONS | {
+    "MODEL_AUTH_REQUIRED", "MODEL_QUOTA_OR_RATE_LIMIT", "MODEL_API_HTTP_401", "MODEL_API_HTTP_403", "MODEL_API_HTTP_429"
 }
 FINAL_REPORT_ONLY = (
     "\nOnly the final model call remains. Return the required final report using recorded tool results. "
@@ -108,7 +109,8 @@ class OpenAIApiRuntime:
             raise RuntimeError("ATTEMPT_CANCELLED") from error
         except Exception as error:
             request.attempt.check()
-            if not context.work_started and preference_rejected(error):
+            if (not context.work_started and not getattr(request.attempt, "resource_uncertain", False)
+                    and failure_code(error, "MODEL_ERROR") in MODEL_PREFERENCE_REJECTIONS and preference_rejected(error)):
                 raise RuntimeError("AI_PREFERENCES_REJECTED") from None
             raise
 
@@ -185,7 +187,7 @@ class OpenAIApiRuntime:
             for tool in tools:
                 if hasattr(tool, "strict_json_schema"):
                     tool.strict_json_schema = False
-        guarded_model = _GuardedModel(base_model, request, self.config,
+        guarded_model = _GuardedModel(base_model, request, self.config, context,
                                       {tool.name: tool.params_json_schema for tool in tools}, sources)
         settings = _model_preferences(request, self.config)
         instructions = (HOST_ACTION_INSTRUCTIONS + "\n" + request.instruction
@@ -239,7 +241,6 @@ class OpenAIApiRuntime:
                 if chat_round or oauth:
                     # The adapter consumes a bounded native stream and returns only a completed round.
                     # Cancellation interrupts this task; individual tools still use the existing host broker.
-                    context.work_started = True
                     result = await Runner.run(active_agent, run_input, context=context, run_config=run_config,
                                               max_turns=max(1, self.config.max_turns - guarded_model.calls))
                 else:
@@ -249,7 +250,6 @@ class OpenAIApiRuntime:
                     if request.attempt.cancelled.is_set():
                         result.cancel(mode="immediate")
                     async for event in result.stream_events():
-                        if event.type == "run_item_stream_event": context.work_started = True
                         if request.attempt.cancelled.is_set(): result.cancel(mode="immediate")
                         if getattr(event, "type", "") == "run_item_stream_event":
                             await _record_runtime_event(request.attempt, getattr(event, "name", "unknown"))
@@ -318,10 +318,11 @@ class OpenAIApiRuntime:
 class _GuardedModel(Model):
     """Checks request size and Responses terminals before the Runner dispatches tools."""
 
-    def __init__(self, model: Any, request: AgentRunRequest, config: ApiRuntimeConfig, tool_names: set[str], sources=None):
+    def __init__(self, model: Any, request: AgentRunRequest, config: ApiRuntimeConfig, context: ToolContext, tool_names: set[str], sources=None):
         self._model = model
         self._request = request
         self._config = config
+        self._context = context
         self._tool_schemas = tool_names
         from context_window import Sources, HistoryWindow
         self.sources = sources if sources is not None else Sources()
@@ -561,6 +562,7 @@ class _GuardedModel(Model):
         return operation
 
     def _finish(self, operation, response):
+        self._context.work_started = True
         broker = self._request.broker
         if not broker: return
         raw = self._usage(response)
