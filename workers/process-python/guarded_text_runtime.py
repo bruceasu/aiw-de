@@ -85,16 +85,9 @@ def _run_actions(request, on_session, conversation=None):
     from progress_monitor import ProgressMonitor
     progress_monitor = ProgressMonitor(request.attempt.evidence)
     completion_corrections = 0
-    delivered_observations = inspected_observations = 0
+    delivered_observations = 0
     for turn in range(setting("AIW_AGENT_MAX_TURNS", 40)):
         request.attempt.check()
-        if getattr(getattr(request, "profile", None), "writable", False):
-            names = [item["action"]["name"] for item in observations[inspected_observations:]
-                     if item.get("action", {}).get("name")]
-            hint = progress_monitor.review_read_batch(names)
-            if hint:
-                observations.append({"action": {"action": "progress"}, "result": hint})
-        inspected_observations = len(observations)
         history = json.dumps(observations, ensure_ascii=False)
         prompt = header + "\nPrevious host actions and results:\n" + history
         if len(prompt.encode("utf-8")) > setting("AIW_WORKER_MAX_INPUT_BYTES", 1024 * 1024):

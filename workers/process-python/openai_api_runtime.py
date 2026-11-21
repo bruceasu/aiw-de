@@ -283,15 +283,15 @@ class OpenAIApiRuntime:
                 if (candidate.validate is not None and not getattr(request, "model_only", False)
                         and guarded_model.calls < self.config.max_turns):
                     commands = getattr(request.broker, "commands_run", ())
-                    unmet = request.broker.unmet_required_checks() if request.broker and candidate.last_verdict == "PASS" else ""
-                    if unmet:
+                    if getattr(request.broker, "required_checks", ()):
+                        unmet = request.broker.unmet_required_checks() if candidate.last_verdict == "PASS" else ""
                         feedback = ("Required checks incomplete: " + unmet + ". Use the configured checks and report actual outcomes."
-                                    if unmet != previous_unmet_checks else None)
+                                    if unmet and unmet != previous_unmet_checks else None)
                         previous_unmet_checks = unmet
                     else:
                         feedback = guarded_model.progress.check_feedback(commands, candidate.last_verdict)
-                    if not feedback:
-                        feedback = guarded_model.progress.delivery_feedback(request.profile.writable, candidate.last_verdict)
+                        if not feedback:
+                            feedback = guarded_model.progress.delivery_feedback(request.profile.writable, candidate.last_verdict)
                     if feedback:
                         run_input = [*history, {"role": "user", "content": feedback}]
                         continue
@@ -371,10 +371,8 @@ class _GuardedModel(Model):
                 input = workflow_inputs.project(input)
                 self.history.protected = workflow_inputs.protected_messages()
         self._request.attempt.check()
-        remind = self.progress.observe(input, self.history.protected, writable=self._request.profile.writable)
-        if (remind or self.progress.read_phase_hint) and isinstance(input, list):
-            from progress_monitor import REMINDER
-            input = [*input, {"role": "user", "content": REMINDER if remind else self.progress.read_phase_hint}]
+        if self.progress.observe(input, self.history.protected):
+            input = [*input, {"role": "user", "content": self.progress.reminder}]
         if "update_work_checklist" in self._tool_schemas:
             current = getattr(self._request.attempt, "work_checklist", None)
             previous = getattr(self._request.attempt, "previous_work_checklist", ()) if current is None else ()

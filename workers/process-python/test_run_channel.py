@@ -130,7 +130,7 @@ class RunChannelTest(unittest.TestCase):
 
         monitor = ProgressMonitor(channel.attempt.evidence)
         monitor.observe([{"type": "function_call", "call_id": "update", "name": tool.name},
-                         {"type": "function_call_output", "call_id": "update", "output": "recorded"}], writable=True)
+                         {"type": "function_call_output", "call_id": "update", "output": "recorded"}])
         self.assertFalse(monitor.may_have_changed)
         channel.attempt.evidence.record.assert_not_called()
 

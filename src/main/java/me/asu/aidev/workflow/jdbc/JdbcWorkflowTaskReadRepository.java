@@ -45,7 +45,7 @@ public class JdbcWorkflowTaskReadRepository {
                     "Check the Worker runtime and model configuration. Raw exception text is omitted to protect request data.",true);
         String summary=switch(code) {
             case "WORKER_LEASE_EXPIRED" -> "The Worker stopped reporting before the lease expired. The result is unconfirmed.";
-            case "MODEL_NO_PROGRESS" -> "Repeated reads produced no new result after a reminder. The Worker stopped further model calls.";
+            case "MODEL_NO_PROGRESS" -> "Repeated tool results produced no new evidence after a reminder. The Worker stopped further model calls.";
             case "MODEL_TOTAL_CALL_LIMIT" -> "The execution reached its configured model-call or turn limit.";
             case "MODEL_API_TIMEOUT" -> "The model API request timed out.";
             case "MODEL_API_CONNECTION_ERROR" -> "The Worker could not connect to the model API.";

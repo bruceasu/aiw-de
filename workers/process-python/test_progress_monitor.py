@@ -86,6 +86,55 @@ class ProgressMonitorTest(unittest.TestCase):
         self.assertFalse(self.monitor.may_have_changed)
         self.assertIsNotNone(self.monitor.delivery_feedback(True, "PASS"))
 
+    def test_new_reads_can_continue_without_a_fixed_read_phase_reminder(self):
+        for call in range(12):
+            self.assertFalse(self.monitor.observe(read(call, f"new evidence {call}")))
+        self.evidence.record.assert_not_called()
+
+    def test_repeated_confirmed_write_rejection_warns_then_stops(self):
+        def reject(call):
+            return read(call, {"status": "error", "error": "GUARD_FILE_VERSION_CONFLICT", "hint": f"Read again {call}."}, name="edit")
+        for call in range(3):
+            self.assertFalse(self.monitor.observe(reject(call)))
+        self.assertTrue(self.monitor.observe(reject(3)))
+        self.assertIn("same failure", self.monitor.reminder)
+        self.assertEqual(self.evidence.record.call_args.kwargs["code"], "REPEATED_TOOL_FAILURE")
+        self.assertFalse(self.monitor.may_have_changed)
+        for call in (4, 5):
+            self.assertFalse(self.monitor.observe(reject(call)))
+        with self.assertRaisesRegex(RuntimeError, "^MODEL_NO_PROGRESS$"):
+            self.monitor.observe(reject(6))
+
+    def test_failed_command_with_changed_diagnostics_is_new_evidence(self):
+        def command(call, digest):
+            return read(call, {"facts": {"exitCode": 1}, "sha256": digest, "modelPreviewComplete": False},
+                        {"commandId": "check-json"}, name="run_command")
+        for call in range(3):
+            self.assertFalse(self.monitor.observe(command(call, "a" * 64)))
+        self.assertTrue(self.monitor.observe(command(3, "a" * 64)))
+        self.assertTrue(self.monitor.may_have_changed)
+        self.assertFalse(self.monitor.observe(command(4, "b" * 64)))
+        self.assertEqual(self.monitor.repetitions, 0)
+
+    def test_repeated_confirmed_shell_timeout_also_stops_for_large_output(self):
+        from context_window import Sources
+
+        result = {"status": "timedOut", "exitCode": None, "output": "waiting\n" * 400, "outputTruncated": False}
+        for output in (result, Sources().model_result(result, 512)):
+            with self.subTest(output_type=type(output).__name__):
+                monitor = ProgressMonitor(self.evidence)
+                def timed_out(call):
+                    return read(call, output, {"command": "check"}, name="run_shell")
+
+                for call in range(3):
+                    self.assertFalse(monitor.observe(timed_out(call)))
+                self.assertTrue(monitor.observe(timed_out(3)))
+                self.assertTrue(monitor.may_have_changed)
+                for call in (4, 5):
+                    self.assertFalse(monitor.observe(timed_out(call)))
+                with self.assertRaisesRegex(RuntimeError, "^MODEL_NO_PROGRESS$"):
+                    monitor.observe(timed_out(6))
+
     def test_user_supplement_resets_but_does_not_replay_old_tools(self):
         self.warn()
         history = [item for call in range(4) for item in read(call)]

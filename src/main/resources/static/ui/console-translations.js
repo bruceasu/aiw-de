@@ -1,6 +1,8 @@
 // UI copy only. Rows are English and Simplified Chinese; identifiers and user
 // content must use data-i18n-skip. No network or model translation is used.
 window.aiwConsoleCatalog = [
+  ["Repeated tool results produced no new evidence after a reminder. The Worker stopped further model calls.","提醒后工具仍重复返回相同结果，没有新证据，Worker 已停止继续调用模型。"],
+  ["A tool returned the same failure repeatedly. The Worker will check the blocker before continuing.","工具反复返回同一失败，Worker 会先核对阻碍再决定下一步。"],
   ["Worker checklist","Worker 工作清单"],
   ["Progress reported by the Worker. See required checks for verified results.","这是 Worker 报告的进度。实际核验结果见必需检查。"],
   ["In progress","进行中"],

@@ -135,7 +135,8 @@ class Sources:
         if size <= max_bytes: return text
         source = self.add(text, "tool", required=False)
         facts = {key: item for key, item in value.items() if isinstance(item, (bool, int, float)) or item is None
-                 or key in {"sha256", "sourceDigest", "resultDigest", "encoding", "path"}} if isinstance(value, dict) else {}
+                 or key in {"sha256", "sourceDigest", "resultDigest", "encoding", "path"}
+                 or key == "status" and item == "timedOut"} if isinstance(value, dict) else {}
         preview = {"content": "The operation returned a large result. Read the original with read_context_source before relying on omitted content."
                         if source else "The operation returned a large result. Full output could not be retained; do not repeat an effect to recover output.",
                         "sourceId": source, "sha256": sha(text), "bytes": size, "fullOutputAvailable": source is not None,

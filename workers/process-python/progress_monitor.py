@@ -1,4 +1,4 @@
-"""Bound repeated read results without interpreting task content or retrying effects."""
+"""Bound repeated observations without interpreting task content or retrying effects."""
 from __future__ import annotations
 
 import hashlib
@@ -6,7 +6,8 @@ import json
 
 
 READ_TOOLS = frozenset({"read", "ls", "grep", "search", "read_context_source", "search_context_sources", "read_skill_file", "read_skill_text", "git_status", "git_diff"})
-REMINDER = (
+COMMAND_TOOLS = frozenset({"run_command", "run_shell"})
+READ_REMINDER = (
     "Several identical read operations returned the same result. Reconsider the next step "
     "using the evidence already collected. If more investigation is needed, explain what "
     "new information it should provide. Otherwise work toward the requested result, "
@@ -14,10 +15,9 @@ REMINDER = (
 )
 
 
-READ_PHASE_REMINDER = (
-    "Several turns collected information without taking a verification or delivery step. "
-    "Use the results to choose the next check that could confirm or disprove your current explanation. "
-    "If the evidence is already sufficient, proceed to the requested work. Otherwise name the specific missing evidence or blocker."
+FAILURE_REMINDER = (
+    "A tool has repeatedly returned the same failure. Use its recorded result to identify the blocker. "
+    "Change the approach only if you have new evidence, or report the failure and what is needed. Do not repeat a side effect."
 )
 
 WORK_METHOD = (
@@ -41,42 +41,26 @@ class ProgressMonitor:
         self.warned = False
         self.may_have_changed = False
         self.delivery_reminded = False
-        self.read_batches = 0
         self.check_reminded = False
-        self.read_phase_reminded = False
-        self.read_phase_hint = None
-
-    def review_read_batch(self, names):
-        if not names:
-            return None
-        if any(name not in READ_TOOLS for name in names):
-            self.read_batches = 0
-            return None
-        self.read_batches += 1
-        if self.read_batches < 4 or self.read_phase_reminded:
-            return None
-        self.read_phase_reminded = True
-        self.evidence.record("progress-stalled", status="possible", count=self.read_batches, code="READ_PHASE_CHECK")
-        return READ_PHASE_REMINDER
+        self.reminder = None
 
     def _reset(self):
         self.results.clear()
         self.repetitions = 0
         self.warned = False
 
-    def observe(self, items, context=(), *, writable=False):
-        self.read_phase_hint = None
+    def observe(self, items, context=()):
+        self.reminder = None
         if not isinstance(items, list):
             return False
         context = frozenset(context)
         if context != self.context:
             self._reset()
             self.context = context
-            self.read_batches = 0
         calls = {item.get("call_id"): item for item in items if isinstance(item, dict)
                  and item.get("type") == "function_call" and item.get("call_id")}
         warned_before = self.warned
-        observed, last_tool, names = False, None, []
+        observed, last_tool, last_failure = False, None, False
         for item in items:
             if not isinstance(item, dict) or item.get("type") not in {"function_call_output", "function_call_result"}:
                 continue
@@ -89,17 +73,27 @@ class ProgressMonitor:
             if name == "update_work_checklist":
                 continue
             observed = True
-            names.append(name)
             output = item.get("output")
             if isinstance(output, str):
                 try:
                     output = json.loads(output)
                 except (ValueError, RecursionError):
                     pass
-            if name not in READ_TOOLS:
-                if isinstance(output, dict) and output.get("status") == "error" and output.get("error") and output.get("hint"):
-                    # The broker confirmed failure. This does not establish a workspace change.
-                    continue
+            rejected = isinstance(output, dict) and output.get("status") == "error" and output.get("error") and output.get("hint")
+            command_failure = False
+            if not rejected and name in COMMAND_TOOLS and isinstance(output, dict):
+                facts = output.get("facts") if output.get("modelPreviewComplete") is False else output
+                exit_code = facts.get("exitCode") if isinstance(facts, dict) else None
+                timed_out = name == "run_shell" and isinstance(facts, dict) and facts.get("status") == "timedOut"
+                command_failure = timed_out or type(exit_code) is int and exit_code != 0
+                if command_failure:
+                    # An observed terminal failure can still have changed the workspace.
+                    self.may_have_changed = True
+                    output = {"exitCode": exit_code, "timedOut": timed_out,
+                              **{key: output[key] for key in ("stdout", "stderr", "output", "sha256") if key in output}}
+            if rejected:
+                output = {"rejected": output["error"]}
+            elif name not in READ_TOOLS and not command_failure:
                 # Unknown tools may have side effects. Never tell the model that
                 # work was not performed when the host cannot establish that.
                 self.may_have_changed = True
@@ -116,6 +110,7 @@ class ProgressMonitor:
                              ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
             signature = hashlib.sha256(raw).digest()
             last_tool = name
+            last_failure = bool(rejected or command_failure)
             if signature in self.results:
                 self.repetitions += 1
             else:
@@ -123,8 +118,6 @@ class ProgressMonitor:
                 self.repetitions = 0
                 self.warned = False
                 warned_before = False
-        if writable:
-            self.read_phase_hint = self.review_read_batch(names)
         # Decide after the whole batch: later reads or effects may provide progress.
         if not observed or self.repetitions < self.threshold:
             return False
@@ -134,8 +127,9 @@ class ProgressMonitor:
             raise RuntimeError("MODEL_NO_PROGRESS")
         if not self.warned:
             self.evidence.record("progress-stalled", status="possible", count=self.repetitions,
-                                 tool=last_tool, code="REPEATED_READ_RESULT")
+                                 tool=last_tool, code="REPEATED_TOOL_FAILURE" if last_failure else "REPEATED_READ_RESULT")
             self.warned = True
+            self.reminder = FAILURE_REMINDER if last_failure else READ_REMINDER
             return True
         return False
 

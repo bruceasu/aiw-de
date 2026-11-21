@@ -531,10 +531,11 @@
     const progress=events.filter(e=>e.event_type==='progress-stalled'||e.event_type==='progress-review').at(-1);
     let progressCode='';try{progressCode=JSON.parse(progress?.payload_json||'{}').code;}catch(_){/* Keep ordinary activity available. */}
     const progressMessage=progressCode==='MODEL_NO_PROGRESS'
-      ?'Repeated reads produced no new result after a reminder. The Worker stopped further model calls.'
+      ?'Repeated tool results produced no new evidence after a reminder. The Worker stopped further model calls.'
       :progressCode==='READ_PHASE_CHECK'?'The Worker has spent several turns reading. It will review the evidence and choose the next check.'
       :progressCode==='LAST_COMMAND_NOT_PASSED'?'The last command did not pass. The Worker will review its relevance before delivery.'
       :progressCode==='NO_OBSERVED_CHANGE'?'No change was observed. The Worker will ask the model to recheck the delivery conditions.'
+      :progressCode==='REPEATED_TOOL_FAILURE'?'A tool returned the same failure repeatedly. The Worker will check the blocker before continuing.'
       :progressCode==='REPEATED_READ_RESULT'?'Repeated reads returned the same result. The Worker will ask the model to reconsider its next step.':'';
     $('[data-wf-progress]').textContent=progressMessage?(window.aiwI18n?.t(progressMessage)||progressMessage):'';
     if(!activity.attemptId)connection.textContent=t('No Worker activity recorded yet');
