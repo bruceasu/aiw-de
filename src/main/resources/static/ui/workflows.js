@@ -177,6 +177,16 @@
     'This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.':['当前版本处理只读文本任务与判断，不修改文件、不实际退款或发送消息。'],
     'Library':['工作区'], 'Simple task':['简单任务'], 'New workflow':['新建工作流'],
     'After-sales example':['售后示例'], 'Saved workflows':['已保存工作流'],
+    'Implement and verify':['实现与验证'],
+    'Prepare a JSON record':['生成 JSON 记录'],
+    'Verify the delivered record':['验证交付记录'],
+    'Decide how to handle the findings':['决定如何处理验收问题'],
+    'Accepted':['验收通过'], 'Closed without acceptance':['结束，未通过验收'],
+    'Revise the result':['修改后重新验证'], 'Close without acceptance':['结束本次工作'],
+    'Convert the supplied record to one JSON object with three exact keys: title, language, source. Preserve the values exactly.':['将输入转换成一个 JSON 对象，键必须恰为 title、language、source，值须与输入完全相同。'],
+    'Deliver the JSON object in the formal result, with no surrounding prose. Apply any supplied correction.':['在正式结果中只交付 JSON 对象。若收到明确的修正要求，请按要求处理。'],
+    'Read the verified upstream report from the latest preparation step. Check the exact JSON keys and every value against the input. If the report or required data is missing, choose revise. State the missing or incorrect field in the reason. Use accept only when all checks pass.':['读取最近一次生成步骤的已校验交接报告。逐字段核对 JSON 键和值是否与原输入相符。报告或必要资料缺失时选 revise，说明缺失或错误的字段。所有检查通过才选 accept。'],
+    'Read the checks in the execution timeline. Supply a correction if you want to generate and verify a fresh result, or close this run without acceptance.':['查看执行时间线中的验收说明。可补充修正要求后重新生成和验证，也可结束本次工作。'],
     'Executions':['执行记录'], 'Refresh':['刷新'], 'Workflow definition':['工作流定义'],
     'Workflows':['工作流'], 'Describe a simple task or run a reusable workflow.':['直接处理简单任务，或运行可复用的工作流。'],
     'Text tasks use the same executor as workflow nodes. No Git repository is required.':['文本任务与工作流节点共用执行能力，无须 Git 仓库。'],
@@ -760,9 +770,28 @@
     ]}});
     savedSpec='';$('[data-wf-input]').value='模拟售后规则 v1：签收后30天内产品故障可建议换货，超期转人工决定；需购买记录、签收日期、故障说明；实物损坏需照片。疑似运输损伤须核实包装和签收情况。本流程不实际退款、换货或发送消息。\n\n处理日期：2026-11-12。\n购买记录：已提供，订单 DEMO-001。\n签收日期：2026-11-09。\n客户说明：通电后无法启动，希望换货。\n\n以上全部是模拟资料。';
   }
+  function verificationExample() {
+    showEditor({id:null,version:0,spec:{
+      title:t('Implement and verify'),
+      goal:t('Convert the supplied record to one JSON object with three exact keys: title, language, source. Preserve the values exactly.'),
+      entry:'prepare',
+      nodes:[
+        {key:'prepare',title:t('Prepare a JSON record'),kind:'TASK',next:'verify',
+          instruction:t('Deliver the JSON object in the formal result, with no surrounding prose. Apply any supplied correction.')},
+        {key:'verify',title:t('Verify the delivered record'),kind:'DECISION',branches:{accept:'accepted',revise:'findings'},
+          instruction:t('Read the verified upstream report from the latest preparation step. Check the exact JSON keys and every value against the input. If the report or required data is missing, choose revise. State the missing or incorrect field in the reason. Use accept only when all checks pass.')},
+        {key:'findings',title:t('Decide how to handle the findings'),kind:'ASK',branches:{[t('Revise the result')]:'prepare',[t('Close without acceptance')]:'closed'},
+          instruction:t('Read the checks in the execution timeline. Supply a correction if you want to generate and verify a fresh result, or close this run without acceptance.')},
+        {key:'accepted',title:t('Accepted'),kind:'END',instruction:''},
+        {key:'closed',title:t('Closed without acceptance'),kind:'END',instruction:''}
+      ]
+    }});
+    savedSpec='';$('[data-wf-input]').value='title: 明日のニュース\nlanguage: ja\nsource: sample-01';
+  }
   taskForm.onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(taskForm),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),acceptance:form.get('acceptance'),requiredCheckIds:form.getAll('requiredCheckIds'),location:form.get('location')||null,workspaceTools:form.has('workspaceTools'),autonomousShell:form.has('autonomousShell'),commands:commands(taskForm.elements.commands),...assignment($('[data-wf-member]').value),requiredSkills:taskSkills,sources:taskSources});taskRequest=newRequest();taskForm.elements.autonomousShell.checked=false;await library();await openRun(run.id);});};
   $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){$('[data-wf-task-form]').elements.autonomousShell.checked=false;selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
+  $('[data-wf-verify-sample]').onclick=verificationExample;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
   $$('[data-wf-drag-kind]').forEach(control=>{
     let dragEndedAt=0;control.onclick=()=>{if(Date.now()-dragEndedAt>400)addNode(control.dataset.wfDragKind);};

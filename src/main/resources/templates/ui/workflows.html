@@ -2,7 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" th:content="${csrfToken}">
   <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css?v=fd130-editor-1">
-  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=required-checks-1" defer></script>
+  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=verify-example-1" defer></script>
 </head>
 <body th:attr="data-wf-mode=${workflowMode}"><div class="app"><aside th:replace="~{ui/fragments :: nav(${workflowMode})}"></aside><main class="main">
   <header th:replace="~{ui/fragments :: topbar(${workflowTitle},${workflowSubtitle})}"></header>
@@ -13,6 +13,7 @@
       <div class="wf-actions"><button class="btn primary" data-wf-new="task" th:hidden="${workflowMode != 'tasks'}">Simple task</button><button class="btn primary" data-wf-new="workflow" th:hidden="${workflowMode == 'tasks'}">New workflow</button></div>
       <div th:hidden="${workflowMode == 'tasks'}">
       <button class="btn ghost" data-wf-sample>After-sales example</button>
+      <button class="btn ghost" data-wf-verify-sample data-wf-label="Implement and verify">Implement and verify</button>
       <h3 data-wf-label="Saved workflows">Saved workflows</h3><p class="help" data-wf-label="Open a saved workflow to edit it, make a separate copy, or schedule it. Starting it creates its own execution.">Open a saved workflow to edit it, make a separate copy, or schedule it. Starting it creates its own execution.</p><div data-wf-definitions></div>
       </div>
       <h3 data-wf-label="Executions">Executions</h3><div data-wf-executions></div>
