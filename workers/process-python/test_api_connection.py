@@ -76,6 +76,58 @@ class ApiConnectionTest(unittest.TestCase):
 
 
 class ConnectionExecutionTest(unittest.IsolatedAsyncioTestCase):
+    async def test_worker_turn_waits_for_stream_terminal_and_drains_tools_on_cancel(self):
+        import asyncio
+        from agents import FunctionTool
+        from openai_api_runtime import ToolContext, _model_turn, _tool_batch
+
+        output = [{"type": "function_call", "name": "read", "call_id": "first", "arguments": "{}"},
+                  {"type": "function_call", "name": "read", "call_id": "second", "arguments": "{}"}]
+
+        async def stream(*args, **kwargs):
+            yield {"type": "response.output_item.done", "item": output[0]}
+            yield {"type": "response.completed", "response": {"output": output}}
+
+        async def incomplete(*args, **kwargs):
+            yield {"type": "response.output_item.done", "item": output[0]}
+
+        with self.assertRaisesRegex(RuntimeError, "RESPONSES_TERMINAL_MISSING"):
+            await _model_turn(SimpleNamespace(stream_response=incomplete), "", [], None, [], streamed=True)
+        items = await _model_turn(SimpleNamespace(stream_response=stream), "", [], None, [], streamed=True)
+        attempt = SimpleNamespace(check=Mock(), evidence=Mock())
+        context = ToolContext(SimpleNamespace(attempt=attempt), 1024, 1000)
+        first_started, second_finished, release_first = (asyncio.Event() for _ in range(3))
+
+        async def invoke(tool_context, arguments):
+            if tool_context.tool_call_id == "first":
+                first_started.set()
+                await release_first.wait()
+            else:
+                second_finished.set()
+            return tool_context.tool_call_id
+
+        tools = [FunctionTool(name="read", description="Read fixture", params_json_schema={}, on_invoke_tool=invoke)]
+        pending = asyncio.create_task(_tool_batch(context, tools, items, parallel=True))
+        await asyncio.wait_for(first_started.wait(), 1)
+        await asyncio.wait_for(second_finished.wait(), 1)
+        pending.cancel()
+        await asyncio.sleep(0)
+        self.assertFalse(pending.done())
+        release_first.set()
+        with self.assertRaises(asyncio.CancelledError):
+            await pending
+        results = await _tool_batch(context, tools, items, parallel=True)
+        self.assertEqual([result["call_id"] for result in results], ["first", "second"])
+        self.assertEqual([result["output"] for result in results], ["first", "second"])
+
+        async def stuck(tool_context, arguments):
+            await asyncio.Event().wait()
+
+        limited = FunctionTool(name="read", description="Timeout fixture", params_json_schema={},
+                               on_invoke_tool=stuck, timeout_seconds=0.01)
+        result, = await _tool_batch(context, [limited], items[:1], parallel=False)
+        self.assertIn("timed out", result["output"])
+
     async def test_oauth_adapter_preserves_a_json_report_and_rejects_invalid_actions(self):
         from automation_loop import ActionProtocolError
         from chatgpt_responses_runtime import sdk_model

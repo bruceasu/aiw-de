@@ -468,16 +468,31 @@ public class WorkflowRuns {
             String label=accepted?entry.node():"Prior draft";
             int limit=Math.min(600,remaining-label.length()-3);
             if(limit<2)break;
-            String content=entry.content();
-            if(content.length()>limit) {
-                int end=limit-1;
-                if(Character.isHighSurrogate(content.charAt(end-1)))end--;
-                content=content.substring(0,end)+"…";
-            }
-            String excerpt=label+": "+content;
+            String excerpt=label+": "+excerpt(entry.content(),limit);
             excerpts.add(excerpt);remaining-=excerpt.length()+1;
         }
         return excerpts.isEmpty()?"":heading+String.join("\n",excerpts.reversed());
+    }
+    private static String excerpt(String content,int limit) {
+        if(content.length()<=limit)return content;
+        int end=limit-1;
+        if(Character.isHighSurrogate(content.charAt(end-1)))end--;
+        return content.substring(0,end)+"…";
+    }
+    static String dispatchHandoff(Run run,int maxChars) {
+        int remaining=Math.min(maxChars,2400);
+        String handoff="";
+        if(run.completedTaskId!=null) {
+            for(var entry:run.events.reversed()) {
+                if(!entry.type().equals("RESULT"))continue;
+                String heading="\n\nDirect upstream result (reference data)\nTask: "+run.completedTaskId
+                        +"\nStep: "+entry.node()+"\nSummary: ";
+                int limit=Math.min(600,remaining-heading.length());
+                if(limit>=2)handoff=heading+excerpt(entry.content(),limit);
+                break;
+            }
+        }
+        return handoff+resultContext(run,remaining-handoff.length(),false);
     }
     private boolean startedNode(Run run,String key) {
         return run.visits.getOrDefault(key,0)>0||run.events.stream().anyMatch(e->e.node().equals(key)&&Set.of("DISPATCHED","QUESTION").contains(e.type()));
@@ -793,6 +808,8 @@ public class WorkflowRuns {
         var plan=plans.getObject().get(run.id);
         if(plan.state()!=WorkflowPlan.State.CONFIRMED) {run.state="FAILED";event(run,"FAILED","Underlying execution is not active; no following work was dispatched");return;}
         var member=team.assigned(run.id,node.key());
+        boolean selectedMember=false;
+        boolean useGeneralWorker=false;
         if(member==null&&node.assignment()==Assignment.AUTO) {
             var choice=team.choose(run.actor,node.requiredSkills());
             if(choice.member()==null&&!choice.noMembers()) {
@@ -801,9 +818,9 @@ public class WorkflowRuns {
                 run.memberWait=choice.reason();return;
             }
             if(choice.noMembers()) {
-                event(run,"GENERAL_ASSIGNED","No team members are configured. The task will use a general Worker.");
+                useGeneralWorker=true;
             } else {
-                member=choice.member();team.freeze(run.id,node.key(),member);event(run,"MEMBER_ASSIGNED",member.name());
+                member=choice.member();selectedMember=true;
             }
         }
         run.memberWait=null;
@@ -816,20 +833,23 @@ public class WorkflowRuns {
                 .filter(p->p!=null && !p.review() && plan.spec().steps().get(p.step()).key().equals(node.key()))
                 .mapToInt(WorkflowTaskPosition::round).max().orElse(0);
         int round=Math.max(previousRound,run.visits.getOrDefault(node.key(),0))+1;
-        run.visits.put(node.key(),round);run.sequence++;
         int index=0;while(!plan.spec().steps().get(index).key().equals(node.key())) index++;
         // A per-task context is frozen before task creation; the Plan definition remains immutable.
         var taskId=new TaskId(plan.id()+"~"+node.key()+"~work-"+round);
         var instruction=instruction(run.spec,node)+"\nExecution input and user supplements:\n"+run.context;
         if(member!=null)instruction=team.context(member)+instruction;
-        instruction+=resultContext(run,16384-instruction.length(),false);
+        instruction+=dispatchHandoff(run,16384-instruction.length());
         List<Material> references;
         try {
             run.lessonIds=team.relevantLessons(member,run.location,run.spec.goal()+" "+node.instruction()+" "+run.context,node.requiredSkills());
             references=sources(run.spec,member,run.lessonIds);
         }catch(IllegalArgumentException error) {run.state="FAILED";event(run,"LIMIT",error.getMessage());return;}
         if(instruction.length()>16384) {run.state="FAILED";event(run,"LIMIT","Node input exceeds the current Worker instruction limit; no work was dispatched");return;}
-        // createExecution uses the original slot; append the execution input through the same task creation path.
+        if(selectedMember) {
+            team.freeze(run.id,node.key(),member);event(run,"MEMBER_ASSIGNED",member.name());
+        } else if(useGeneralWorker) {
+            event(run,"GENERAL_ASSIGNED","No team members are configured. The task will use a general Worker.");
+        }
         plans.getObject().createWorkflowExecution(plan,index,round,instruction,references.isEmpty()?Set.of():Set.of("task-materials-v1"),run.completedTaskId==null?Set.of():Set.of(new TaskId(run.completedTaskId)));
         if(member!=null)team.bind(run.id,node.key(),taskId.value(),member);
         else team.attachSkills(taskId.value(),node.requiredSkills());
@@ -845,6 +865,7 @@ public class WorkflowRuns {
             var policy=guard.policyRow(run.id);
             guard.bindPrepared(taskId.value(),new GuardContract.Bind(run.id,((Number)policy.get("revision")).longValue(),"WORKFLOW-"+taskId.value(),AuthorityRepository.hash(db.encode(Arrays.asList(run.spec,node.key(),round,member,references))),frozen),String.valueOf(policy.get("owner_id")));
         }
+        run.visits.put(node.key(),round);run.sequence++;
         run.taskId=taskId.value();event(run,"DISPATCHED",node.title());
     }
     /** One transaction per waiter; the existing scheduler supplies a bounded rotating batch. */

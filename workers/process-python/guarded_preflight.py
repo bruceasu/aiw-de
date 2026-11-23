@@ -101,8 +101,11 @@ def capabilities(runtime, profile, skills_root):
     if shell_executable() is not None:
         result.add("task-shell-v1")
     if runtime == "openai-agents":
-        from agents import FunctionTool, Runner
-        if not callable(getattr(Runner, "run_streamed", None)) or not callable(FunctionTool): raise RuntimeError("OPENAI_AGENTS_REQUIRED_APIS_UNAVAILABLE")
+        from agents import FunctionTool, OpenAIProvider
+        from agents.tool import invoke_function_tool
+        from agents.tool_context import ToolContext
+        if not all(callable(api) for api in (OpenAIProvider.get_model, FunctionTool, ToolContext, invoke_function_tool)):
+            raise RuntimeError("OPENAI_AGENTS_REQUIRED_APIS_UNAVAILABLE")
         result.add("task-materials-v1")
     else:
         from app_server_runtime import StdioSession, preflight

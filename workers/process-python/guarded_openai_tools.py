@@ -1,4 +1,4 @@
-"""Only broker function tools are registered with the OpenAI Agents Runner."""
+"""Expose workspace broker operations as SDK function tools."""
 import json
 import asyncio
 from agents import FunctionTool

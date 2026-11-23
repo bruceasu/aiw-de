@@ -117,6 +117,9 @@ class WorkflowInterruptionTest {
         assertThat(WorkflowRuns.resultContext(run,750,false)).hasSizeLessThanOrEqualTo(750)
                 .contains("Earlier evidence","Draft before supplement").doesNotContain("Latest formal result");
         assertThat(WorkflowRuns.resultContext(run,750,true)).contains("Latest formal result");
+        assertThat(WorkflowRuns.dispatchHandoff(run,750)).hasSizeLessThanOrEqualTo(750)
+                .contains("Task: "+run.completedTaskId,"Latest formal result","Draft before supplement");
+        assertThat(WorkflowRuns.dispatchHandoff(run,30)).isEmpty();
     }
     @Test void unfinishedResultCannotBeAccepted() {
         run.state="FAILED";save();
