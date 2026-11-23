@@ -710,17 +710,8 @@ class GuardBroker:
             if channel:
                 channel.enter()
             try:
-                reader = self.attempt.skill_files.read_text if name == "read_skill_text" else self.attempt.skill_files.read
-                try:
-                    result = reader(**args)
-                    self.attempt.evidence.record("skill-file-read", path="skill:" + args["ref"] + "/" + args["path"],
-                                                 digest=result["sha256"], status="succeeded")
-                    return result
-                except RuntimeError as error:
-                    if str(error) not in {"SKILL_FILE_NOT_DECLARED", "SKILL_FILES_INVALID_OR_CHANGED",
-                                          "SKILL_TEXT_RANGE_INVALID", "SKILL_TEXT_OFFSET_NOT_BOUNDARY"}:
-                        raise
-                    return {"error": "Use the exact Skill name without its version, a listed file path, and a byte limit of 1 to 8192."}
+                from skill_files import read_tool
+                return read_tool(self.attempt, name, **args)
             finally:
                 if channel:
                     channel.leave()

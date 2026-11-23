@@ -213,6 +213,14 @@ public class WorkflowEditorController {
         requireEnabled();
         return editor.taskDetail(id,taskId);
     }
+    public record TaskDiagnosisRequest(long taskVersion, String requestId) {}
+    public record TaskDiagnosis(String executionId) {}
+    @PostMapping("/api/r1/plan-editor/plans/{id}/tasks/{taskId}/diagnose") @ResponseBody
+    public TaskDiagnosis diagnoseTask(@PathVariable String id,@PathVariable String taskId,
+                                      @RequestBody TaskDiagnosisRequest request,HttpSession session) {
+        requireWrite(session);
+        return new TaskDiagnosis(editor.diagnoseTask(id,taskId,request.taskVersion(),request.requestId(),security.actor(session)));
+    }
     public record ReviewRecoveryRequest(long planVersion, String taskId, long taskVersion, String reason, boolean warningConfirmed) {}
     @PostMapping("/api/r1/plan-editor/plans/{id}/factory-review")
     @ResponseBody

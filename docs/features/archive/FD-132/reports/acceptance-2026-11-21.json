@@ -1,0 +1,13 @@
+{
+  "fd_id": "FD-132",
+  "kind": "test-report",
+  "markdown": "acceptance-2026-11-21.md",
+  "fd_revision": 5,
+  "implementation_commit": "1fa8feddec4d923b6e2b19ba9d9e24e425423bac",
+  "independent": false,
+  "status": "INCOMPLETE",
+  "results": [
+    {"id": "FD132-HANDOFF", "status": "not-run", "cause": "test-defect", "exit_codes": [1, 1]},
+    {"id": "FD132-RECOVERY", "status": "blocked", "cause": "test-defect", "exit_codes": [1, 1]}
+  ]
+}

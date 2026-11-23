@@ -69,6 +69,39 @@ class CompletionReportTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "COMPLETION_REPORT_CONFLICT"):
             _completion_report("REPORT", '{"verdict":"PASS","outcome":"BLOCKED"}')
 
+    def test_prose_followed_by_blocked_final_report_does_not_pass(self):
+        from native_run import input_question
+
+        summary = ('Missing requirements for this task.\n\n'
+                   '```json\n{"outcome":"BLOCKED_INPUT","completed":false,"verdict":"REPAIR_REQUIRED",'
+                   '"question":{"text":"Which APIs are required?"}}\n```')
+        self.assertEqual(_completion_report("REPORT", summary)["verdict"], "REPAIR_REQUIRED")
+        self.assertEqual(_completion_report("DELIVERY", summary)["verdict"], "REPAIR_REQUIRED")
+        self.assertEqual(input_question(summary)["question"], "Which APIs are required?")
+        with self.assertRaisesRegex(RuntimeError, "COMPLETION_REPORT_CONFLICT"):
+            _completion_report("REPORT", summary.replace("REPAIR_REQUIRED", "PASS"))
+        self.assertEqual(_completion_report("REPORT", summary+"\n\nThis is a quoted example.")["verdict"], "PASS")
+
+
+    def test_terminal_acceptance_report_cannot_pass_with_a_missing_file(self):
+        detail = {
+            "outcome": "COMPLETED",
+            "completed": True,
+            "acceptance_criteria_status": {
+                "create the Toolkit.java": "NOT_WRITTEN_ON_DISK - read-only task",
+            },
+        }
+        def output():
+            return "Source text follows.\n\n```java\nclass Toolkit {}\n```\n\n```json\n" + json.dumps(detail) + "\n```"
+
+        summary = output()
+        self.assertEqual(_completion_report("REPORT", summary), {"verdict": "REPAIR_REQUIRED", "summary": summary})
+        detail["verdict"] = "PASS"
+        with self.assertRaisesRegex(RuntimeError, "COMPLETION_REPORT_CONFLICT"):
+            _completion_report("REPORT", output())
+        detail["acceptance_criteria_status"]["create the Toolkit.java"] = "MET"
+        self.assertEqual(_completion_report("REPORT", output())["verdict"], "PASS")
+
 
 if __name__ == "__main__":
     unittest.main()

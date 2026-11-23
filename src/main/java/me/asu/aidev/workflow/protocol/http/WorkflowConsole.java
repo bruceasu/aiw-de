@@ -47,6 +47,9 @@ public class WorkflowConsole {
     @GetMapping("/api/r1/workflows") @ResponseBody public Object list(HttpSession session,@RequestParam(defaultValue="all") String kind) {
         security.requireOperator(session);return Map.of("definitions",workflows.definitions(),"executions",workflows.executions(kind));
     }
+    @GetMapping("/api/r1/workflows/caretaker-alerts") @ResponseBody public Object caretakerAlerts(HttpSession session) {
+        security.requireOperator(session);return workflows.caretakerAlerts();
+    }
     @PostMapping("/api/r1/workflows/definitions") @ResponseBody public Object save(@RequestBody Save input,HttpSession session) {
         security.requireOperator(session);return workflows.save(input.id(),input.version(),input.spec());
     }

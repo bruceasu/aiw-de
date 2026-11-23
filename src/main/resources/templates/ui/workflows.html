@@ -44,6 +44,10 @@
         <button type="button" class="btn ghost small-btn" data-wf-history-next data-wf-label="Next page">Next page</button>
       </div>
       <button class="btn ghost" data-wf-refresh>Refresh</button>
+      <section data-wf-caretaker hidden>
+        <h3 data-wf-label="Decisions requested by the caretaker">Decisions requested by the caretaker</h3>
+        <div data-wf-caretaker-list aria-live="polite"></div>
+      </section>
       <h3 data-wf-label="Plane schedules">Plane schedules</h3>
       <p class="help" data-wf-label="Pausing an arrangement leaves its current execution running. Use the execution page to stop that work.">Pausing an arrangement leaves its current execution running. Use the execution page to stop that work.</p>
       <details data-wf-schedule-editor hidden class="wf-event">
@@ -62,20 +66,20 @@
     </section>
     <section class="wf-content">
       <section class="card" data-wf-task hidden><h2 data-wf-label="Simple task">Simple task</h2>
-        <p class="help" data-wf-label="Text tasks use the same executor as workflow nodes. No Git repository is required.">Text tasks use the same executor as workflow nodes. No Git repository is required.</p>
+        <p class="help" data-wf-label="Leave the working location empty to use a temporary workspace.">Leave the working location empty to use a temporary workspace.</p>
         <form data-wf-task-form><label class="field"><span data-wf-label="What should be done?">What should be done?</span><textarea name="instruction" required maxlength="8000" rows="6"></textarea></label>
           <label class="field"><span data-wf-label="Acceptance criteria (optional)">Acceptance criteria (optional)</span><textarea name="acceptance" maxlength="2000" rows="2"></textarea></label>
           <label class="field"><span data-wf-label="Team member">Team member</span><select name="memberId" data-wf-member data-i18n-skip><option value="AUTO">Automatically choose member</option><option value="GENERAL">General execution (no team member)</option></select></label>
           <p class="help" data-wf-label="Automatic assignment uses a general Worker when no team members are configured.">Automatic assignment uses a general Worker when no team members are configured.</p>
           <div class="field"><span data-wf-label="Required Skills">Required Skills</span><p class="help" data-wf-label="Choose any number of installed Skills this task must use. Leave empty for automatic selection.">Choose any number of installed Skills this task must use. Leave empty for automatic selection.</p><p class="help" data-wf-label="Only catalogued Skills appear here. Write one-task instructions under Task sources; external downloads are not enabled.">Only catalogued Skills appear here. Write one-task instructions under Task sources; external downloads are not enabled.</p><div data-wf-skills class="wf-skill-picker"></div></div>
           <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input name="location" maxlength="4096"></label>
-          <label class="field"><span><input type="checkbox" name="workspaceTools"><span data-wf-label="Work on files in this location">Work on files in this location</span></span></label>
+          <label class="field"><span><input type="checkbox" name="workspaceTools" checked><span data-wf-label="Work on files in this location">Work on files in this location</span></span></label>
           <label class="field"><span><input type="checkbox" name="autonomousShell"><span data-wf-label="Allow autonomous project commands">Allow autonomous project commands</span></span></label><p class="help" data-wf-label="Use only with a trusted Worker account. Commands have the same file and network access as the Worker account.">Use only with a trusted Worker account. Commands have the same file and network access as the Worker account.</p>
           <p class="help" data-wf-label="Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.">Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.</p>
           <div data-wf-task-sources></div>
         <details><summary data-wf-label="Extra command profiles (optional, advanced)">Extra command profiles (optional, advanced)</summary><p class="help" data-wf-label="Most tasks should leave this empty. It describes fixed command profiles for a connected Linux or WSL Worker; it does not grant command permission. Each command still needs separate authorization.">Most tasks should leave this empty. It describes fixed command profiles for a connected Linux or WSL Worker; it does not grant command permission. Each command still needs separate authorization.</p><p class="help" data-wf-label="Use the task instructions above for natural-language requests. This box only lists fixed command IDs and arguments; unlisted commands cannot be selected by the Worker.">Use the task instructions above for natural-language requests. This box only lists fixed command IDs and arguments; unlisted commands cannot be selected by the Worker.</p><label class="field"><span data-wf-label="Command profiles (JSON)">Command profiles (JSON)</span><textarea name="commands" class="command-json" rows="5" maxlength="16000" spellcheck="false" aria-label="Command profiles JSON" placeholder="[]">[]</textarea></label></details>
           <fieldset class="field" data-wf-required-checks hidden><legend data-wf-label="Required checks">Required checks</legend><div data-wf-check-options></div></fieldset>
-          <button class="btn primary" data-wf-label="Run task">Run task</button><button type="button" class="btn ghost" data-wf-schedule-task data-wf-label="Arrange text work">Arrange text work</button></form>
+          <button class="btn primary" data-wf-label="Run task">Run task</button><button type="button" class="btn ghost" data-wf-schedule-task data-wf-label="Arrange text work" hidden>Arrange text work</button></form>
       </section>
       <section class="card" data-wf-editor hidden><h2 data-wf-label="Workflow definition">Workflow definition</h2>
         <label class="field"><span data-wf-label="Name">Name</span><input data-wf-title maxlength="160"></label>

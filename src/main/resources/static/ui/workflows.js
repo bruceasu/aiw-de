@@ -44,6 +44,7 @@
     'Commands must be a JSON array.':['命令配置必须是 JSON 数组。'],
     'This task requires a connected Linux/WSL Worker with the configured command adapter; the local factory does not enable commands automatically.':['此任务需要已接入的 Linux／WSL 受控命令 Worker；工厂不会自动开启本机命令能力。'],
     'Work on files in this location':['在此工作目录处理文件'],
+    'Leave the working location empty to use a temporary workspace.':['工作位置留空时，系统会分配临时工作目录。'],
     'Workspace task':['工作区任务'],
     'Without this option, the Worker only returns text. Other host paths remain blocked. Commands require separate permissions.':['不勾选时仅返回文本。不会因此授权其他主机路径；命令需要单独权限。'],
     'INTERRUPTED':['执行中断，结果待核对'],
@@ -184,7 +185,14 @@
     'Task archived.':['任务已归档。'], 'Deletion scheduled.':['已安排删除。'], 'Deletion cancelled.':['已撤销删除。'],
     'Delete after':['计划删除时间'],
     'Move this task to pending deletion? You can cancel within 30 days.':['将此任务移入待删除？30 天内可以撤销。'],
+    'Creating task…':['正在创建任务…'],
+    'Task created.':['任务已创建。'],
+    'Task created, but its details could not be loaded.':['任务已创建，但暂时无法加载详情。'],
     'After-sales example':['售后示例'], 'Saved workflows':['已保存工作流'],
+    'Decisions requested by the caretaker':['管家请你决定'],
+    'Preparing a diagnosis':['正在准备诊断'],
+    'Review recovery options':['查看恢复方案'],
+    'Open the failed task':['打开失败任务'],
     'Implement and verify':['实现与验证'],
     'Prepare a JSON record':['生成 JSON 记录'],
     'Verify the delivered record':['验证交付记录'],
@@ -254,8 +262,15 @@
   };
   const status = message => { $('[data-wf-status]').textContent = message; };
   let definitions=[], teamSkills=[], teamMembers=[], taskSources=[], taskSkills=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='', selectedNodeKey=null;
-  let scheduleSpec=null,scheduleRequest=crypto.randomUUID();
-  const newRequest = () => crypto.randomUUID();
+  function newRequest() {
+    if(typeof crypto.randomUUID==='function')return crypto.randomUUID();
+    const bytes=crypto.getRandomValues(new Uint8Array(16));
+    bytes[6]=(bytes[6]&0x0f)|0x40;
+    bytes[8]=(bytes[8]&0x3f)|0x80;
+    const hex=Array.from(bytes,byte=>byte.toString(16).padStart(2,'0')).join('');
+    return [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-');
+  }
+  let scheduleSpec=null,scheduleRequest=newRequest();
   let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest(), amendmentRequest=newRequest();
   const route=new URLSearchParams(location.search);
   const pageMode=document.body.dataset.wfMode==='tasks'?'tasks':'workflows';
@@ -271,13 +286,17 @@
     catch(_){throw Error(t('Commands must be a JSON array.'));}
   }
   const taskForm=$('[data-wf-task-form]');
-  function renderRequiredChecks() {
+  function renderTaskFileOptions() {
+    const fileTask=taskForm.elements.workspaceTools.checked;
+    taskForm.elements.autonomousShell.disabled=!fileTask;
+    taskForm.elements.commands.disabled=!fileTask;
+    $('[data-wf-schedule-task]').hidden=fileTask;
     const container=$('[data-wf-check-options]');
     const selected=new Set([...container.querySelectorAll('input:checked')].map(input=>input.value));
     let profiles=[];
-    try { profiles=commands(taskForm.elements.commands); } catch (_) { /* Editing incomplete JSON. Submit will show the error. */ }
+    try { if(fileTask)profiles=commands(taskForm.elements.commands); } catch (_) { /* Editing incomplete JSON. Submit will show the error. */ }
     const ids=[...new Set(profiles.map(profile=>profile?.id).filter(id=>typeof id==='string'&&id.trim()))];
-    const visible=taskForm.elements.workspaceTools.checked&&ids.length>0;
+    const visible=ids.length>0;
     $('[data-wf-required-checks]').hidden=!visible;
     container.replaceChildren();
     if(!visible)return;
@@ -288,10 +307,10 @@
       const title=element('span',id);title.dataset.i18nSkip='';label.append(checkbox,title);container.append(label);
     }
   }
-  taskForm.elements.commands.addEventListener('input',renderRequiredChecks);
-  taskForm.elements.workspaceTools.addEventListener('change',renderRequiredChecks);
-  window.addEventListener('aiw:locale-changed',renderRequiredChecks);
-  renderRequiredChecks();
+  taskForm.elements.commands.addEventListener('input',renderTaskFileOptions);
+  taskForm.elements.workspaceTools.addEventListener('change',renderTaskFileOptions);
+  window.addEventListener('aiw:locale-changed',renderTaskFileOptions);
+  renderTaskFileOptions();
   async function act(work) {
     if(busy)return;busy=true;status('');
     const buttons=$$('button:not(:disabled)');buttons.forEach(b=>b.disabled=true);
@@ -477,6 +496,24 @@
     container.append(svg);
   }
   function openNodeEditor(key){selectedNodeKey=key;renderNodes();$('[data-wf-node-dialog]').showModal();redraw();}
+  let caretakerStamp='';
+  async function refreshCaretaker() {
+    const rows=await api('/caretaker-alerts'), stamp=JSON.stringify(rows);
+    if(stamp===caretakerStamp)return;
+    caretakerStamp=stamp;
+    $('[data-wf-caretaker]').hidden=!rows.length;
+    const list=$('[data-wf-caretaker-list]');
+    list.replaceChildren();
+    for(const row of rows){
+      const item=element('div',undefined,'wf-event');
+      const title=element('strong',row.title||row.taskId);title.dataset.i18nSkip='';
+      const task=element('a',t('Open the failed task'),'btn ghost');
+      task.href='/ui/plans/'+encodeURIComponent(row.planId)+'/tasks/'+encodeURIComponent(row.taskId);
+      item.append(title,element('p',row.state==='PENDING'?t('Preparing a diagnosis'):t(row.state),'help'),task);
+      if(row.executionId)item.append(button('Review recovery options',()=>act(()=>openRun(row.executionId))));
+      list.append(item);
+    }
+  }
   let libraryRequest=0;
   let taskHistoryPage=1,taskHistoryRequest=0,taskHistoryTimer;
   async function refreshTaskHistory() {
@@ -556,7 +593,7 @@
   function localDateInput(value){const d=new Date(value);return new Date(value-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
   function arrange(spec){
     if(spec.nodes.some(n=>n.workspaceTools)||(spec.commands||[]).length)throw new Error('Schedules currently support text workflows only');
-    scheduleSpec=structuredClone(spec);scheduleRequest=crypto.randomUUID();
+    scheduleSpec=structuredClone(spec);scheduleRequest=newRequest();
     const details=$('[data-wf-schedule-editor]');details.hidden=false;details.open=true;
     $('[data-wf-schedule-title]').textContent=spec.title;
     $('[data-wf-schedule-content]').textContent=JSON.stringify(spec,null,2);
@@ -861,7 +898,23 @@
     }});
     savedSpec='';$('[data-wf-input]').value='title: 明日のニュース\nlanguage: ja\nsource: sample-01';
   }
-  taskForm.onsubmit=e=>{e.preventDefault();act(async()=>{const form=new FormData(taskForm),run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),acceptance:form.get('acceptance'),requiredCheckIds:form.getAll('requiredCheckIds'),location:form.get('location')||null,workspaceTools:form.has('workspaceTools'),autonomousShell:form.has('autonomousShell'),commands:commands(taskForm.elements.commands),...assignment($('[data-wf-member]').value),requiredSkills:taskSkills,sources:taskSources});taskRequest=newRequest();taskForm.elements.autonomousShell.checked=false;await library();await openRun(run.id);});};
+  taskForm.onsubmit=event=>{
+    event.preventDefault();
+    act(async()=>{
+      const form=new FormData(taskForm);
+      const workspaceTools=form.has('workspaceTools');
+      status(t('Creating task…'));
+      const run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),acceptance:form.get('acceptance'),requiredCheckIds:form.getAll('requiredCheckIds'),location:form.get('location')||null,workspaceTools,autonomousShell:form.has('autonomousShell'),commands:workspaceTools?commands(taskForm.elements.commands):[],...assignment($('[data-wf-member]').value),requiredSkills:taskSkills,sources:taskSources});
+      taskRequest=newRequest();
+      taskForm.elements.autonomousShell.checked=false;
+      taskForm.elements.workspaceTools.checked=taskForm.elements.workspaceTools.defaultChecked;
+      renderTaskFileOptions();
+      status(t('Task created.'));
+      library().catch(()=>{});
+      try { await openRun(run.id); }
+      catch(error) { status(t('Task created, but its details could not be loaded.')+' '+t(error.message)); }
+    });
+  };
   $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){$('[data-wf-task-form]').elements.autonomousShell.checked=false;selectedRun=null;panel('task');}else showEditor();});
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-verify-sample]').onclick=verificationExample;
@@ -937,7 +990,7 @@
   $('[data-wf-schedule-task]').onclick=()=>act(()=>{
     const form=new FormData($('[data-wf-task-form]')),instruction=String(form.get('instruction')||'').trim();
     if(!instruction)throw new Error('Schedule work must have an instruction');
-    if(form.has('workspaceTools')||form.has('autonomousShell')||commands($('[data-wf-task-form]').elements.commands).length)throw new Error('Schedules currently support text workflows only');
+    if(form.has('workspaceTools'))throw new Error('Schedules currently support text workflows only');
     if(String(form.get('location')||'').trim())throw new Error('Schedules use temporary locations; attach selected text sources');
     const acceptance=String(form.get('acceptance')||'').trim();
     arrange({title:instruction.slice(0,80),goal:instruction,entry:'task',nodes:[
@@ -964,10 +1017,18 @@
     $('[data-wf-history-prev]').onclick=()=>{clearTimeout(taskHistoryTimer);if(taskHistoryPage>1){taskHistoryPage--;loadHistory();}};
     $('[data-wf-history-next]').onclick=()=>{clearTimeout(taskHistoryTimer);taskHistoryPage++;loadHistory();};
   }
-  translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(pageMode==='tasks')panel('task');else showEditor();act(async()=>{
-    await library();
-    if(route.get('execution'))await openRun(route.get('execution'));
-    else if(route.get('definition'))showEditor(await api('/definitions/'+encodeURIComponent(route.get('definition'))));
-  });
+  translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);
+  if(pageMode==='tasks')panel('task');else showEditor();
+  if(pageMode==='tasks'&&!route.get('execution')&&!route.get('definition')) {
+    library().catch(error=>{if(!busy&&!selectedRun)status(t(error.message));});
+  } else {
+    act(async()=>{
+      await library();
+      if(route.get('execution'))await openRun(route.get('execution'));
+      else if(route.get('definition'))showEditor(await api('/definitions/'+encodeURIComponent(route.get('definition'))));
+    });
+  }
   setInterval(()=>{if(selectedRun&&!busy&&!document.hidden&&!(preparingGoal&&importAttempted))act(refreshRun);},4000);
+  refreshCaretaker().catch(()=>{});
+  setInterval(()=>{if(!document.hidden)refreshCaretaker().catch(()=>{});},8000);
 })();

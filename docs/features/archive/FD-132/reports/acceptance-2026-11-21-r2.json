@@ -1,0 +1,13 @@
+{
+  "fd_id": "FD-132",
+  "kind": "test-report",
+  "markdown": "acceptance-2026-11-21-r2.md",
+  "fd_revision": 5,
+  "implementation_commit": "1fa8feddec4d923b6e2b19ba9d9e24e425423bac",
+  "independent": false,
+  "status": "PASS",
+  "results": [
+    {"id": "FD132-HANDOFF", "status": "passed", "command": "python tests/fd132/handoff.py", "exit_code": 0},
+    {"id": "FD132-RECOVERY", "status": "passed", "command": "node tests/fd132/recovery.mjs", "exit_code": 0}
+  ]
+}

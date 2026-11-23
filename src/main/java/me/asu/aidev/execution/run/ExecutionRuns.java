@@ -224,6 +224,23 @@ public class ExecutionRuns {
                                String source,boolean connectionDelayed,List<ChecklistItem> checklist,
                                Long preparationMs,Long firstModelMs) {}
 
+    @Transactional(readOnly=true)
+    public List<Map<String,Object>> taskDiagnosticEvents(String task,String attempt,String actor) {
+        var sessions=repo.jdbc().queryForList("SELECT * FROM execution_run_session WHERE task_id=? AND attempt_id=?",task,attempt);
+        if(sessions.isEmpty())return List.of();
+        owned(owner(actor),sessions.getFirst());
+        return repo.jdbc().queryForList("""
+                SELECT sequence_no,event_type,
+                       json_extract(payload_json,'$.status') AS status,
+                       json_extract(payload_json,'$.code') AS code,
+                       COALESCE(json_extract(payload_json,'$.toolName'),json_extract(payload_json,'$.tool')) AS tool,
+                       json_extract(payload_json,'$.runtimeEvent') AS stage
+                  FROM execution_run_event WHERE attempt_id=? AND event_type IN
+                    ('runtime-event','model-terminal','tool-proposed','guard-finished','execution-quiescent','validation-failed')
+                 ORDER BY sequence_no DESC LIMIT 16
+                """,attempt);
+    }
+
     @Transactional(readOnly=true) public TaskProgress taskProgress(String task,String attempt,String actor) {
         var sessions=repo.jdbc().queryForList("SELECT * FROM execution_run_session WHERE task_id=? AND attempt_id=?",task,attempt);
         if(sessions.isEmpty())return null;

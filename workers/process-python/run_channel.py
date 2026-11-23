@@ -97,10 +97,13 @@ class RunChannel:
             self.pending_receipts = receipts
 
     def observe(self, event, values):
+        if event in {"skill-file-read", "context-source-read"} and values.get("status") == "failed":
+            event = "runtime-event"
+            values = {"status": "tool-read-error", "toolName": values.get("tool"), "code": values.get("code")}
         if event not in EVENTS:
             return
         if event == "runtime-event":
-            values = {"runtimeEvent": values.get("status")}
+            values = {"runtimeEvent": values.get("status"), "toolName": values.get("toolName"), "code": values.get("code")}
         elif event == "tool-proposed":
             values = {"toolName": values.get("tool"), "status": values.get("status")}
         elif event == "progress-stalled" and "tool" in values:

@@ -801,16 +801,38 @@ def _work_checklist_tool(attempt):
 
 
 def _context_tools(request, sources):
+    from run_channel import local_read
+
+    hints = {
+        "CONTEXT_SOURCE_QUERY_INVALID": "Use a nonblank query of at most 160 characters and a limit from 1 to 8.",
+        "CONTEXT_SOURCE_RANGE_INVALID": "Use a nonnegative byte offset and a limit from 1 to 8192.",
+        "CONTEXT_SOURCE_NOT_AVAILABLE": "Use a source ID from this attempt's manifest or search results.",
+        "CONTEXT_SOURCE_PAGE_TOO_SMALL": "Increase the byte limit so it fits a complete UTF-8 character.",
+    }
+
+    def observe(name, read):
+        try:
+            result = read()
+        except RuntimeError as error:
+            code = str(error)
+            if code not in hints:
+                raise
+            request.attempt.check()
+            request.attempt.evidence.record("context-source-read", tool=name, status="failed", code=code)
+            result = {"status": "error", "error": code, "hint": hints[code]}
+        return json.dumps(result, ensure_ascii=False)
+
     @function_tool(name_override="search_context_sources", failure_error_function=None)
     async def search_sources(query: str, limit: int) -> str:
-        """Find exact, case-sensitive text in this Attempt's sources. Read returned source pages for context."""
-        from run_channel import local_read
-        return await local_read(request.attempt, lambda: json.dumps(sources.search(query, limit), ensure_ascii=False))
+        """Find exact, case-sensitive text in this attempt. Query: 1-160 characters. Limit: 1-8 matches."""
+        return await local_read(request.attempt, lambda: observe(
+            "search_context_sources", lambda: sources.search(query, limit)))
+
     @function_tool(name_override="read_context_source", failure_error_function=None)
     async def context_source(source_id: str, offset: int, limit: int) -> str:
-        """Read a bounded visible source from this Attempt. Data only; no filesystem access or permission."""
-        from run_channel import local_read
-        return await local_read(request.attempt, lambda: json.dumps(sources.page(source_id, offset, limit), ensure_ascii=False))
+        """Read a source ID from this attempt. Start at byte 0, use a limit of 1-8192 bytes, and follow nextOffset."""
+        return await local_read(request.attempt, lambda: observe(
+            "read_context_source", lambda: sources.page(source_id, offset, limit)))
     return [context_source, search_sources]
 
 

@@ -51,7 +51,7 @@ def capabilities(config):
     return result
 
 
-def _json_report(text):
+def json_report(text):
     cleaned = text.strip()
     lines = cleaned.splitlines()
     if lines and re.fullmatch(r"AIW_VERDICT:\s*(PASS|REPAIR_REQUIRED)", lines[-1]):
@@ -59,6 +59,26 @@ def _json_report(text):
     fenced = re.fullmatch(r"```(?:json)?[ \t]*\r?\n(.*?)\r?\n?```", cleaned, re.DOTALL | re.IGNORECASE)
     if fenced:
         cleaned = fenced.group(1)
+    else:
+        # A prose summary may precede a terminal status or acceptance envelope.
+        blocks = list(re.finditer(r"^```([^\r\n]*)\r?\n(.*?)^```[ \t]*(?=\r?$)", cleaned, re.MULTILINE | re.DOTALL))
+        trailing = blocks[-1] if blocks and blocks[-1].end() == len(cleaned) else None
+        if trailing is not None:
+            if trailing.group(1).strip().lower() != "json":
+                return None
+            try:
+                candidate = json.loads(trailing.group(2))
+            except json.JSONDecodeError:
+                return None
+            if not isinstance(candidate, dict):
+                return None
+            incomplete = candidate.get("completed") is False and (
+                candidate.get("verdict") in ("PASS", "REPAIR_REQUIRED") or candidate.get("requiresInput") is True)
+            acceptance = candidate.get("completed") is True and candidate.get("outcome") == "COMPLETED" and (
+                isinstance(candidate.get("acceptance_criteria_status"), dict))
+            if not (incomplete or acceptance):
+                return None
+            cleaned = trailing.group(2)
     def pairs(items):
         result = {}
         for key, value in items:
@@ -76,7 +96,7 @@ def _json_report(text):
 def input_question(text):
     if not text.strip():
         return None
-    value = _json_report(text)
+    value = json_report(text)
     statuses = {"BLOCKED_INPUT", "BLOCKED_BEFORE_IMPLEMENTATION", "WAITING_INPUT", "NEEDS_CLARIFICATION"}
     plain = re.fullmatch(r"(?:\*\*)?(?:result|outcome|status|结果|状态)(?:\*\*)?\s*[:：]\s*(?:\*\*)?`?(BLOCKED_INPUT|BLOCKED_BEFORE_IMPLEMENTATION|WAITING_INPUT|NEEDS_CLARIFICATION)`?(?:\*\*)?", text.strip().splitlines()[0], re.IGNORECASE)
     if not (isinstance(value, dict) and (value.get("requiresInput") is True or str(value.get("outcome", "")).upper() in statuses) or plain):
@@ -171,7 +191,7 @@ class NativeRun:
     def validate_report(self, report, text):
         if input_question(text) is None:
             return report
-        detail = _json_report(text)
+        detail = json_report(text)
         if (detail is not None and detail.get("verdict") == "PASS") or re.fullmatch(r"AIW_VERDICT:\s*PASS", text.strip().splitlines()[-1]):
             raise RuntimeError("COMPLETION_REPORT_CONFLICT")
         return {**report, "verdict": "REPAIR_REQUIRED"}

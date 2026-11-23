@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 public class WorkflowWorkerProvisioning {
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.application.TeamMembers team;
     @org.springframework.beans.factory.annotation.Autowired private org.springframework.beans.factory.ObjectProvider<WorkflowRuns> workflows;
+    @org.springframework.beans.factory.annotation.Autowired private org.springframework.beans.factory.ObjectProvider<WorkflowEditorService> editor;
     @org.springframework.beans.factory.annotation.Autowired private WorkflowReviewClaimPolicy stageReviewPolicy;
     @org.springframework.beans.factory.annotation.Autowired private FactoryReviewClaimPolicy factoryReviewPolicy;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.run.NativeRunClaimPolicy nativeRuns;
@@ -23,6 +24,7 @@ public class WorkflowWorkerProvisioning {
     private final Map<String,Preparation> pending=new java.util.concurrent.ConcurrentHashMap<>();
     private String after="";
     private String memberAfter="";
+    private String caretakerAfter="";
     public List<Preparation> pending(String planId) {return pending.values().stream().filter(p -> p.planId().equals(planId)).toList();}
     private final JdbcTemplate jdbc;
     private final WorkTaskRepository tasks;
@@ -33,8 +35,37 @@ public class WorkflowWorkerProvisioning {
             AgentFactorySettings settings,ManagedWorkerProvisioner provisioner) {
         this.jdbc=jdbc;this.tasks=tasks;this.workers=workers;this.settings=settings;this.provisioner=provisioner;
     }
+    private void diagnoseFailedTasks() {
+        var failed=jdbc.queryForList("""
+                SELECT t.id AS task_id,t.subject_id AS plan_id,a.id AS attempt_id,o.actor
+                  FROM work_task t JOIN flexible_workflow_plan p ON p.id=t.subject_id
+                  JOIN plan_run_owner o ON o.plan_id=p.id
+                  JOIN execution_attempt a ON a.task_id=t.id AND a.attempt_no=t.attempt_no
+                 WHERE t.subject_type='flexible-plan' AND t.state='FAILED' AND a.state='FAILED'
+                   AND p.state='CONFIRMED' AND t.id>?
+                   AND NOT EXISTS (SELECT 1 FROM web_console_plan_archive ar WHERE ar.plan_id=p.id)
+                   AND NOT EXISTS (SELECT 1 FROM workflow_execution d WHERE
+                       (d.actor=o.actor AND d.request_id='caretaker:' || a.id) OR
+                       (d.id=p.id AND (d.request_id LIKE 'caretaker:%' OR d.request_id LIKE 'diagnose-%')))
+                 ORDER BY t.id LIMIT 2
+                """,caretakerAfter);
+        caretakerAfter=failed.isEmpty()?"":(String)failed.getLast().get("task_id");
+        for(var source:failed) {
+            String task=(String)source.get("task_id"), attempt=(String)source.get("attempt_id"), actor=(String)source.get("actor");
+            try {
+                var reader=editor.getObject();
+                var detail=reader.taskDetail((String)source.get("plan_id"),task);
+                if(!detail.attempts().isEmpty()&&detail.attempts().getFirst().id().equals(attempt))
+                    workflows.getObject().startCaretaker(task,attempt,actor,reader.diagnosisEvidence(detail,actor));
+            } catch(RuntimeException error) {
+                System.getLogger(getClass().getName()).log(System.Logger.Level.WARNING,
+                        "Caretaker diagnosis pending for "+task+" ("+error.getClass().getSimpleName()+")");
+            }
+        }
+    }
     @org.springframework.scheduling.annotation.Scheduled(fixedDelayString="${aidev.workflow.worker-poll-ms:5000}")
     public void supply() {
+        diagnoseFailedTasks();
         var waiting=jdbc.queryForList("""
                 SELECT w.id FROM workflow_execution w WHERE w.id>? AND (
                     w.state='WAITING_MEMBER' OR (w.state='FAILED' AND EXISTS (

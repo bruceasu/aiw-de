@@ -80,6 +80,17 @@
     <p class="help">Use the workflow editor for new work. Existing execution records stay here.</p>
     <div class="form-actions"><a class="btn ghost" th:if="${canOperate}" href="/ui/workflows">Open workflows</a><a class="btn ghost" href="/ui/workers">View Workers →</a></div>
   </section>
+  <section class="card section" th:if="${canOperate and (taskDetail.displayState() == 'FAILED' or taskDetail.displayState() == 'INTERRUPTED')}"
+           th:attr="data-task-caretaker=@{/api/r1/plan-editor/plans/{id}/tasks/{taskId}/diagnose(id=${planId},taskId=${taskDetail.task.id.value})},data-executions=@{/api/r1/workflows/executions/},data-run-page=@{/ui/tasks},data-version=${taskDetail.task.version},data-csrf=${csrfToken}">
+    <h2>Plane task caretaker</h2>
+    <p class="help">Uses recent attempt evidence to suggest a recovery action. You decide what happens next.</p>
+    <div class="form-actions">
+      <button class="btn ghost" type="button" data-caretaker-start>Diagnose with caretaker</button>
+      <a class="btn ghost" data-caretaker-run hidden>Open diagnosis execution</a>
+    </div>
+    <p data-caretaker-status role="status"></p>
+    <pre data-caretaker-report class="task-report" data-i18n-skip hidden></pre>
+  </section>
   <section class="card section"><h2>Execution history</h2><p class="empty" th:if="${#lists.isEmpty(taskDetail.attempts)}">No Worker has claimed this task yet. Check Fleet matching and task prerequisites.</p>
     <article class="task-attempt" th:each="attempt : ${taskDetail.attempts}" data-attempt-duration
              th:attr="data-state=${attempt.state},data-started-at=${attempt.startedAt ?: attempt.createdAt},data-warning-ms=${attemptWarningMs}">

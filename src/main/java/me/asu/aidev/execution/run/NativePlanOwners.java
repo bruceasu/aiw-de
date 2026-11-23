@@ -96,6 +96,21 @@ public class NativePlanOwners {
         if(active&&plan.state()!=WorkflowPlan.State.CONFIRMED)throw new IllegalStateException("Plan is not confirmed for execution");
         return new Basis(owner,plan.id(),((Number)row.get("source_version")).longValue(),(String)row.get("source_digest"),task);
     }
+    /** Internal caretaker port. A failed, already bound Plan is the authority source. */
+    @Transactional public Object bindCaretaker(Bind input,String failedTask) {
+        boundary.lock();
+        var row=repo.jdbc().queryForMap("""
+                SELECT o.owner_id,p.created_by FROM work_task t
+                  JOIN flexible_workflow_plan p ON p.id=t.subject_id
+                  JOIN plan_run_owner o ON o.plan_id=p.id
+                 WHERE t.id=? AND t.subject_type='flexible-plan' AND t.state='FAILED'
+                   AND p.state='CONFIRMED'
+                """,failedTask);
+        String owner=(String)row.get("owner_id"),actor=(String)row.get("created_by");
+        if(!actor.equals(repo.actor(owner)))throw new SecurityException("Failed Plan Owner changed");
+        grants.human(actor,"A05");
+        return bind(input,owner,actor);
+    }
     public String owner(String plan) {
         var rows=repo.jdbc().queryForList("SELECT owner_id FROM plan_run_owner WHERE plan_id=?",String.class,plan);
         if(rows.size()!=1)throw new SecurityException("Explicit Plan run Owner required");return rows.getFirst();

@@ -1,4 +1,67 @@
 (() => {
+  const panel = document.querySelector('[data-task-caretaker]');
+  if (!panel) return;
+  const button = panel.querySelector('[data-caretaker-start]');
+  const status = panel.querySelector('[data-caretaker-status]');
+  const report = panel.querySelector('[data-caretaker-report]');
+  const link = panel.querySelector('[data-caretaker-run]');
+  const key = 'aiw-task-caretaker:' + panel.dataset.taskCaretaker + ':' + panel.dataset.version;
+  const stored = JSON.parse(sessionStorage.getItem(key) || 'null') || {};
+  let remaining = 0;
+
+  async function jsonResponse(url, options) {
+    const response = await fetch(url, options);
+    if (!response.ok || response.redirected || !response.headers.get('content-type')?.includes('application/json'))
+      throw new Error('Could not load the task diagnosis. Check the session and refresh the task.');
+    return response.json();
+  }
+
+  async function showDiagnosis() {
+    const runPage = new URL(panel.dataset.runPage, location.origin);
+    runPage.searchParams.set('execution', stored.executionId);
+    link.href = runPage;
+    link.hidden = false;
+    button.textContent = 'Refresh caretaker diagnosis';
+    const data = await jsonResponse(panel.dataset.executions + encodeURIComponent(stored.executionId), {cache: 'no-store'});
+    report.textContent = data.report || '';
+    report.hidden = !data.report;
+    if (data.run.state === 'COMPLETED') {
+      status.textContent = data.report ? 'Diagnosis ready.' : 'No diagnosis report was recorded.';
+    } else if (['FAILED', 'STOPPED', 'STOPPING', 'PAUSED', 'WAITING_USER'].includes(data.run.state) || data.taskDisplayState === 'INTERRUPTED') {
+      status.textContent = 'The diagnosis needs attention. Open its execution for details.';
+    } else {
+      status.textContent = 'Waiting for the caretaker Worker.';
+      if (--remaining > 0) setTimeout(refresh, 3000);
+    }
+  }
+
+  async function refresh() {
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+      if (!stored.executionId) {
+        stored.requestId ||= crypto.randomUUID();
+        sessionStorage.setItem(key, JSON.stringify(stored));
+        const url = new URL(panel.dataset.taskCaretaker, location.origin);
+        url.searchParams.set('_csrf', panel.dataset.csrf);
+        status.textContent = 'Requesting task diagnosis…';
+        const reply = await jsonResponse(url, {method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({requestId: stored.requestId, taskVersion: Number(panel.dataset.version)})});
+        stored.executionId = reply.executionId;
+        sessionStorage.setItem(key, JSON.stringify(stored));
+      }
+      await showDiagnosis();
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+  button.addEventListener('click', () => { remaining = 40; refresh(); });
+  if (stored.executionId) { remaining = 40; refresh(); }
+})();
+
+(() => {
   const opener = document.querySelector('[data-task-diagnostic-open]')
     || document.querySelector('a[href^="/api/r1/plan-editor/plans/"][href*="/tasks/"]');
   if (!opener) return;

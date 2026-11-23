@@ -423,12 +423,21 @@ def _completion_report(result_kind: str, final_response: str) -> dict[str, Any]:
         if fenced:
             encoded = fenced.group(1)
         try: detail = json.loads(encoded)
-        except json.JSONDecodeError: detail = None
+        except json.JSONDecodeError:
+            from native_run import json_report
+            detail = json_report(summary)
+        criteria = (detail.get("acceptance_criteria_status") if isinstance(detail, dict)
+                    and detail.get("completed") is True and detail.get("outcome") == "COMPLETED" else None)
+        unmet = isinstance(criteria, dict) and any(
+            status is False or isinstance(status, str) and re.match(
+                r"^(?:NOT_WRITTEN_ON_DISK|NOT_MET|NOT_DONE|UNMET|MISSING|FAILED|BLOCKED|INCOMPLETE|PARTIAL)\b",
+                status.strip(), re.IGNORECASE)
+            for status in criteria.values())
         blocked = isinstance(detail, dict) and (
             str(detail.get("outcome", "")).upper().startswith(("BLOCKED", "FAILED", "INCOMPLETE"))
-            or detail.get("completed") is False)
+            or detail.get("completed") is False or unmet)
         status_line = re.fullmatch(
-            r"(?:\*\*)?(?:result|outcome|status|结果|状态)(?:\*\*)?\s*[:：]\s*(?:\*\*)?\s*`?(?:BLOCKED|FAILED|INCOMPLETE)(?:_[A-Z0-9]+)?`?(?:\*\*)?",
+            r"(?:\*\*)?(?:result|outcome|status|结果|状态)(?:\*\*)?\s*[:：]\s*(?:\*\*)?\s*`?(?:BLOCKED|FAILED|INCOMPLETE)(?:_[A-Z0-9]+)*`?(?:\*\*)?",
             summary.splitlines()[0].strip(), re.IGNORECASE)
         if result_kind == "REPORT" and isinstance(detail, dict) and "verdict" in detail:
             verdict = detail["verdict"]
