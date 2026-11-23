@@ -176,6 +176,14 @@
     'INPUT_RESERVED':['准备使用补充'], 'INPUT_APPLIED':['补充已生效'], 'INPUT_UNKNOWN':['补充生效结果未确认'],
     'This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.':['当前版本处理只读文本任务与判断，不修改文件、不实际退款或发送消息。'],
     'Library':['工作区'], 'Simple task':['简单任务'], 'New workflow':['新建工作流'],
+    'Task history':['任务历史'], 'Search tasks':['检索任务'], 'View':['视图'], 'Status':['状态'],
+    'Current tasks':['当前任务'], 'Archived tasks':['已归档'], 'Pending deletion':['待删除'], 'All states':['全部状态'],
+    'Previous page':['上一页'], 'Next page':['下一页'],
+    'No tasks match these filters.':['没有符合筛选条件的任务。'],
+    'Archive':['归档'], 'Delete':['删除'], 'Cancel deletion':['撤销删除'],
+    'Task archived.':['任务已归档。'], 'Deletion scheduled.':['已安排删除。'], 'Deletion cancelled.':['已撤销删除。'],
+    'Delete after':['计划删除时间'],
+    'Move this task to pending deletion? You can cancel within 30 days.':['将此任务移入待删除？30 天内可以撤销。'],
     'After-sales example':['售后示例'], 'Saved workflows':['已保存工作流'],
     'Implement and verify':['实现与验证'],
     'Prepare a JSON record':['生成 JSON 记录'],
@@ -286,7 +294,7 @@
   renderRequiredChecks();
   async function act(work) {
     if(busy)return;busy=true;status('');
-    const buttons=$$('button');buttons.forEach(b=>b.disabled=true);
+    const buttons=$$('button:not(:disabled)');buttons.forEach(b=>b.disabled=true);
     try {await work();} catch(error) {status(error instanceof TypeError?t('Request outcome is unknown. Check execution history before submitting again.'):t(error.message));}
     finally {busy=false;buttons.forEach(b=>{if(b.isConnected)b.disabled=false;});if(currentView)controlButtons(currentView);}
   }
@@ -469,8 +477,73 @@
     container.append(svg);
   }
   function openNodeEditor(key){selectedNodeKey=key;renderNodes();$('[data-wf-node-dialog]').showModal();redraw();}
+  let libraryRequest=0;
+  let taskHistoryPage=1,taskHistoryRequest=0,taskHistoryTimer;
+  async function refreshTaskHistory() {
+    const request=++taskHistoryRequest;
+    const view=$('[data-wf-history-view]').value;
+    const query=new URLSearchParams({view,state:$('[data-wf-history-state]').value,q:$('[data-wf-history-search]').value,page:taskHistoryPage});
+    let result;
+    try { result=await api('/tasks/history?'+query); }
+    catch(error) { if(request===taskHistoryRequest)throw error;return; }
+    if(request!==taskHistoryRequest)return;
+    if(!result.tasks.length&&taskHistoryPage>1) {
+      taskHistoryPage=1;
+      return refreshTaskHistory();
+    }
+    const list=$('[data-wf-executions]');
+    list.replaceChildren();
+    if(!result.tasks.length)list.append(element('p',t('No tasks match these filters.'),'help'));
+    for(const row of result.tasks) {
+      const entry=element('article',undefined,'wf-history-entry');
+      const open=button('',()=>act(()=>openRun(row.id)));
+      open.textContent=row.title||row.id;
+      open.dataset.i18nSkip='';
+      open.classList.add('wf-item');
+      open.append(element('small',t(row.state)+' · '+new Date(row.updated_ms).toLocaleString()));
+      entry.append(open);
+      if(row.location)entry.append(element('p',row.location,'help'));
+      if(row.delete_after_epoch_ms)entry.append(element('p',t('Delete after')+' '+new Date(row.delete_after_epoch_ms).toLocaleString(),'help'));
+      if(row.state==='COMPLETED'){
+        const actions=element('div',undefined,'wf-history-actions');
+        if(view==='current')actions.append(button('Archive',()=>manageTaskHistory(row.id,'archive')));
+        if(document.body.dataset.wfAdmin==='true') {
+          if(view!=='deleting'){
+            const remove=button('Delete',()=>manageTaskHistory(row.id,'schedule-delete'));
+            remove.classList.replace('ghost','danger');
+            actions.append(remove);
+          } else if(row.delete_after_epoch_ms>Date.now()){
+            actions.append(button('Cancel deletion',()=>manageTaskHistory(row.id,'undo-delete')));
+          }
+        }
+        if(actions.childElementCount)entry.append(actions);
+      }
+      list.append(entry);
+    }
+    $('[data-wf-history-pagination]').hidden=result.page===1&&!result.hasMore;
+    $('[data-wf-history-page]').textContent=String(result.page);
+    $('[data-wf-history-prev]').disabled=result.page===1;
+    $('[data-wf-history-next]').disabled=!result.hasMore;
+  }
+  function manageTaskHistory(id,action) {
+    if(action==='schedule-delete'&&!window.confirm(t('Move this task to pending deletion? You can cancel within 30 days.')))return;
+    act(async()=>{
+      await api('/tasks/'+encodeURIComponent(id)+'/history',{action});
+      status(t(({archive:'Task archived.','schedule-delete':'Deletion scheduled.','undo-delete':'Deletion cancelled.'})[action]));
+    }).then(()=>refreshTaskHistory().catch(error=>status(t(error.message))));
+  }
   async function library() {
-    const [data,schedules]=await Promise.all([api('?kind='+pageMode),api('/schedules')]);definitions=data.definitions;
+    const request=++libraryRequest;
+    if(pageMode==='tasks') {
+      const [,schedules]=await Promise.all([refreshTaskHistory(),api('/schedules')]);
+      if(request!==libraryRequest)return;
+      loadMembers();
+      renderSchedules(schedules);
+      return;
+    }
+    const [data,schedules]=await Promise.all([api('?kind='+pageMode),api('/schedules')]);
+    if(request!==libraryRequest)return;
+    definitions=data.definitions;
     const list=$('[data-wf-definitions]');list.replaceChildren();
     if(!definitions.length)list.append(element('p',t('No saved workflows'),'help'));
     definitions.forEach(d=>{const b=button('',()=>showEditor(d));b.textContent=d.spec.title;b.dataset.i18nSkip='';b.classList.add('wf-item');const copy=button('Make a copy',()=>showEditor({id:null,version:0,spec:structuredClone(d.spec)}));list.append(b,copy,button('Schedule',()=>act(()=>arrange(d.spec))));});
@@ -877,6 +950,20 @@
     $('[data-wf-schedule-editor]').hidden=true;scheduleSpec=null;await library();
   });};
   window.addEventListener('aiw:locale-changed',()=>{translate();const member=$('[data-wf-member]');memberOptions(member,member.value);renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(editing)renderSources($('[data-wf-definition-sources]'),editing.spec.sources||[],values=>editing.spec.sources=values);signature='';$('[data-wf-usage]').dataset.stamp='';$('[data-wf-amendment]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
+  if(pageMode==='tasks') {
+    const loadHistory=()=>refreshTaskHistory().catch(error=>status(t(error.message)));
+    const filterHistory=(delay=0)=>{
+      clearTimeout(taskHistoryTimer);
+      ++taskHistoryRequest;
+      taskHistoryPage=1;
+      taskHistoryTimer=setTimeout(loadHistory,delay);
+    };
+    $('[data-wf-history-search]').addEventListener('input',()=>filterHistory(250));
+    $('[data-wf-history-view]').addEventListener('change',()=>filterHistory());
+    $('[data-wf-history-state]').addEventListener('change',()=>filterHistory());
+    $('[data-wf-history-prev]').onclick=()=>{clearTimeout(taskHistoryTimer);if(taskHistoryPage>1){taskHistoryPage--;loadHistory();}};
+    $('[data-wf-history-next]').onclick=()=>{clearTimeout(taskHistoryTimer);taskHistoryPage++;loadHistory();};
+  }
   translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(pageMode==='tasks')panel('task');else showEditor();act(async()=>{
     await library();
     if(route.get('execution'))await openRun(route.get('execution'));

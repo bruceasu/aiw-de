@@ -59,6 +59,21 @@ public class WorkflowConsole {
     @PostMapping("/api/r1/workflows/tasks") @ResponseBody public Object simple(@RequestBody Simple input,HttpSession session) {
         security.requireOperator(session);return workflows.simple(input.requestId(),input.instruction(),input.location(),input.memberId(),input.assignment(),input.requiredSkills(),input.sources(),input.workspaceTools(),input.commands(),input.autonomousShell(),input.acceptance(),input.requiredCheckIds());
     }
+    @GetMapping("/api/r1/workflows/tasks/history") @ResponseBody
+    public WorkflowRuns.TaskHistory taskHistory(HttpSession session,@RequestParam(defaultValue="current") String view,
+            @RequestParam(defaultValue="") String state,@RequestParam(defaultValue="") String q,@RequestParam(defaultValue="1") int page) {
+        security.requireOperator(session);
+        return workflows.taskHistory(view,state,q,page);
+    }
+    @PostMapping("/api/r1/workflows/tasks/{id}/history") @ResponseBody
+    public Map<String,String> manageTask(@PathVariable String id,@RequestBody Map<String,String> input,HttpSession session) {
+        String action=input.getOrDefault("action","");
+        if(action.equals("archive"))security.requireOperator(session);
+        else if(Set.of("schedule-delete","undo-delete").contains(action))security.requireAdmin(session);
+        else throw new IllegalArgumentException("Unknown task history action");
+        workflows.manageCompletedTask(id,action);
+        return Map.of("action",action);
+    }
     @GetMapping("/api/r1/workflows/executions/{id}") @ResponseBody public Object view(@PathVariable String id,HttpSession session) {
         security.requireOperator(session);return workflows.view(id);
     }

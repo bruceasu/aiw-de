@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" th:content="${csrfToken}">
-  <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css?v=fd130-editor-1">
-  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=verify-example-1" defer></script>
+  <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css?v=task-history-1">
+  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=task-history-1" defer></script>
 </head>
-<body th:attr="data-wf-mode=${workflowMode}"><div class="app"><aside th:replace="~{ui/fragments :: nav(${workflowMode})}"></aside><main class="main">
+<body th:attr="data-wf-mode=${workflowMode},data-wf-admin=${canAdmin}"><div class="app"><aside th:replace="~{ui/fragments :: nav(${workflowMode})}"></aside><main class="main">
   <header th:replace="~{ui/fragments :: topbar(${workflowTitle},${workflowSubtitle})}"></header>
   <div class="content"><p class="help" data-wf-status role="status" aria-live="polite"></p>
   <p class="help" data-wf-member-status role="status"></p>
@@ -16,7 +16,33 @@
       <button class="btn ghost" data-wf-verify-sample data-wf-label="Implement and verify">Implement and verify</button>
       <h3 data-wf-label="Saved workflows">Saved workflows</h3><p class="help" data-wf-label="Open a saved workflow to edit it, make a separate copy, or schedule it. Starting it creates its own execution.">Open a saved workflow to edit it, make a separate copy, or schedule it. Starting it creates its own execution.</p><div data-wf-definitions></div>
       </div>
-      <h3 data-wf-label="Executions">Executions</h3><div data-wf-executions></div>
+      <h3 th:if="${workflowMode == 'tasks'}" data-wf-label="Task history">Task history</h3>
+      <h3 th:unless="${workflowMode == 'tasks'}" data-wf-label="Executions">Executions</h3>
+      <div th:if="${workflowMode == 'tasks'}" class="wf-history-filters">
+        <label class="field"><span data-wf-label="Search tasks">Search tasks</span><input type="search" data-wf-history-search maxlength="160"></label>
+        <label class="field"><span data-wf-label="View">View</span><select data-wf-history-view>
+          <option value="current" data-wf-label="Current tasks">Current tasks</option>
+          <option value="archived" data-wf-label="Archived tasks">Archived tasks</option>
+          <option value="deleting" data-wf-label="Pending deletion">Pending deletion</option>
+        </select></label>
+        <label class="field"><span data-wf-label="Status">Status</span><select data-wf-history-state>
+          <option value="" data-wf-label="All states">All states</option>
+          <option value="RUNNING" data-wf-label="RUNNING">RUNNING</option>
+          <option value="WAITING_MEMBER" data-wf-label="WAITING_MEMBER">WAITING_MEMBER</option>
+          <option value="WAITING_USER" data-wf-label="WAITING_USER">WAITING_USER</option>
+          <option value="PAUSED" data-wf-label="PAUSED">PAUSED</option>
+          <option value="STOPPING" data-wf-label="STOPPING">STOPPING</option>
+          <option value="COMPLETED" data-wf-label="COMPLETED">COMPLETED</option>
+          <option value="FAILED" data-wf-label="FAILED">FAILED</option>
+          <option value="STOPPED" data-wf-label="STOPPED">STOPPED</option>
+        </select></label>
+      </div>
+      <div data-wf-executions></div>
+      <div th:if="${workflowMode == 'tasks'}" class="wf-history-pagination" data-wf-history-pagination hidden>
+        <button type="button" class="btn ghost small-btn" data-wf-history-prev data-wf-label="Previous page">Previous page</button>
+        <span data-wf-history-page aria-live="polite"></span>
+        <button type="button" class="btn ghost small-btn" data-wf-history-next data-wf-label="Next page">Next page</button>
+      </div>
       <button class="btn ghost" data-wf-refresh>Refresh</button>
       <h3 data-wf-label="Plane schedules">Plane schedules</h3>
       <p class="help" data-wf-label="Pausing an arrangement leaves its current execution running. Use the execution page to stop that work.">Pausing an arrangement leaves its current execution running. Use the execution page to stop that work.</p>

@@ -60,7 +60,7 @@ public class WorkflowPlanArchiveService {
             if (!passed) return false;
         }
         return plans.steps(id).stream().allMatch(task -> task.state() == TaskState.COMPLETED
-                || task.state() == TaskState.FAILED || task.state() == TaskState.CANCELLED);
+                || task.state() == TaskState.FAILED || task.state() == TaskState.CANCELLED || task.state() == TaskState.CONTINUED);
     }
 
     @Transactional

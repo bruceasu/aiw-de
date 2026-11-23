@@ -28,6 +28,7 @@ public class WorkflowRuns {
     public static final String REQUIRED_CHECKS = "required-command-checks-v1";
     @org.springframework.beans.factory.annotation.Autowired
     private me.asu.aidev.workflow.jdbc.JdbcWorkflowTaskReadRepository taskReadRepository;
+    @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<WorkflowPlanArchiveService> archives;
     public enum Kind { TASK, DECISION, ASK, END }
     public enum Assignment { AUTO, MEMBER, GENERAL }
     public record Node(String key, String title, Kind kind, String instruction, String next,
@@ -226,6 +227,67 @@ public class WorkflowRuns {
             row.put("title",run.spec.title());
         }
         return rows;
+    }
+    public record TaskHistory(List<Map<String,Object>> tasks,int page,boolean hasMore) {}
+
+    public TaskHistory taskHistory(String view,String state,String search,int page) {
+        if(page<1||page>10000)throw new IllegalArgumentException("Invalid task history page");
+        String archiveFilter=switch(view) {
+            case "current" -> "a.plan_id IS NULL";
+            case "archived" -> "a.plan_id IS NOT NULL AND a.delete_after_epoch_ms IS NULL";
+            case "deleting" -> "a.delete_after_epoch_ms IS NOT NULL";
+            default -> throw new IllegalArgumentException("Unknown task history view");
+        };
+        var parameters=new ArrayList<Object>();
+        parameters.add(actor());
+        String sql="""
+                SELECT w.id,w.state,w.updated_ms,w.run_json,l.location,a.delete_after_epoch_ms
+                  FROM workflow_execution w
+                  JOIN flexible_workflow_plan p ON p.id=w.id
+                  LEFT JOIN plan_execution_location l ON l.scope_id=w.id
+                  LEFT JOIN web_console_plan_archive a ON a.plan_id=w.id
+                 WHERE w.actor=? AND w.definition_id IS NULL AND
+                """+archiveFilter;
+        if(!state.isBlank()) {
+            sql+=" AND w.state=?";
+            parameters.add(state);
+        }
+        String query=search.strip();
+        if(query.length()>160)throw new IllegalArgumentException("Task search is limited to 160 characters");
+        if(!query.isEmpty()) {
+            String match="%"+query.toLowerCase(Locale.ROOT).replace("!","!!").replace("%","!%").replace("_","!_")+"%";
+            sql+="""
+                 AND (LOWER(w.id) LIKE ? ESCAPE '!' OR LOWER(p.spec_json) LIKE ? ESCAPE '!'
+                    OR LOWER(COALESCE(l.location,'')) LIKE ? ESCAPE '!'
+                    OR EXISTS (SELECT 1 FROM work_task t WHERE t.subject_type='flexible-plan'
+                        AND t.subject_id=w.id AND LOWER(t.id) LIKE ? ESCAPE '!'))
+                """;
+            parameters.addAll(Collections.nCopies(4,match));
+        }
+        int size=20;
+        parameters.add(size+1);
+        parameters.add((page-1)*size);
+        var rows=db.jdbc().queryForList(sql+" ORDER BY w.updated_ms DESC,w.id DESC LIMIT ? OFFSET ?",parameters.toArray());
+        boolean more=rows.size()>size;
+        if(more)rows.removeLast();
+        for(var row:rows)row.put("title",db.decode((String)row.remove("run_json"),Run.class).spec.title());
+        return new TaskHistory(rows,page,more);
+    }
+
+    @Transactional public void manageCompletedTask(String id,String action) {
+        var run=load(id,true);
+        if(run.definitionId!=null||!"COMPLETED".equals(run.state))
+            throw new IllegalStateException("Only completed simple tasks can be managed from task history");
+        var service=archives.getObject();
+        switch(action) {
+            case "archive" -> service.archive(id,run.actor);
+            case "schedule-delete" -> {
+                if(!service.archived(id))service.archive(id,run.actor);
+                service.scheduleDeletion(id,run.actor);
+            }
+            case "undo-delete" -> service.undoDeletion(id);
+            default -> throw new IllegalArgumentException("Unknown task history action");
+        }
     }
     private Run replay(String request,String digest) {
         return replay(actor(),request,digest);
