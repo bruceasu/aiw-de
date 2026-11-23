@@ -37,7 +37,18 @@ public class WorkflowConsole {
         security.requireOperator(session);return workflows.decideProposal(id,input.version(),input.proposalId(),input.apply());
     }
     @GetMapping("/ui/workflows") public String page(Model model) {return page(model,"workflows");}
-    @GetMapping("/ui/tasks") public String tasks(Model model) {return page(model,"tasks");}
+    @GetMapping("/ui/tasks") public String tasks(@RequestParam(required=false) String execution, Model model) {
+        return taskPage(model,execution==null||execution.isBlank()?"list":"detail",execution);
+    }
+    @GetMapping("/ui/tasks/new") public String newTask(Model model) {return taskPage(model,"new",null);}
+    @GetMapping("/ui/tasks/{id}") public String taskDetail(@PathVariable String id,Model model) {
+        return taskPage(model,"detail",id);
+    }
+    private String taskPage(Model model,String taskPage,String execution) {
+        model.addAttribute("taskPage",taskPage);
+        model.addAttribute("taskExecution",execution);
+        return page(model,"tasks");
+    }
     private String page(Model model,String mode) {
         model.addAttribute("page",mode);model.addAttribute("workflowMode",mode);
         model.addAttribute("workflowTitle",mode.equals("tasks")?"Simple task":"Workflows");
@@ -74,7 +85,7 @@ public class WorkflowConsole {
         if(action.equals("archive"))security.requireOperator(session);
         else if(Set.of("schedule-delete","undo-delete").contains(action))security.requireAdmin(session);
         else throw new IllegalArgumentException("Unknown task history action");
-        workflows.manageCompletedTask(id,action);
+        workflows.manageFinishedTask(id,action);
         return Map.of("action",action);
     }
     @GetMapping("/api/r1/workflows/executions/{id}") @ResponseBody public Object view(@PathVariable String id,HttpSession session) {

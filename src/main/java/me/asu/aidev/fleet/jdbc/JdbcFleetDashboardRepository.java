@@ -82,7 +82,7 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
                          JOIN worker_team_member tm ON tm.id=ma.member_id
                          WHERE mt.task_id=wt.id AND tm.state<>'ACTIVE') THEN FALSE ELSE TRUE END AS team_allowed
                   FROM work_task wt
-                 WHERE wt.state NOT IN ('COMPLETED','CANCELLED')
+                 WHERE wt.state NOT IN ('COMPLETED','CANCELLED','CONTINUED')
                  ORDER BY wt.priority DESC,wt.created_at_epoch_ms,wt.id
                 """, (rs, n) -> new TaskRow(
                 rs.getString("id"), rs.getString("task_type"), rs.getString("state"),
@@ -187,10 +187,10 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
         List<WorkerRow> activeWorkers = workers.stream().filter(w -> "ACTIVE".equals(w.status())).toList();
         for (TaskRow task : tasks) {
             switch (task.state()) {
-                case "BLOCKED" -> blocked++;
+                case "BLOCKED", "WAITING_INPUT" -> blocked++;
                 case "READY" -> ready++;
                 case "CLAIMED" -> claimed++;
-                case "RUNNING" -> running++;
+                case "RUNNING", "YIELDING" -> running++;
                 case "FAILED" -> failed++;
                 default -> throw new IllegalStateException("unexpected unfinished task state: " + task.state());
             }
@@ -286,7 +286,7 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
         int claimed = 0, running = 0;
         List<FleetDashboard.ActiveLeaseSummary> leases = new ArrayList<>();
         for (TaskRow task : tasks) {
-            if (!"CLAIMED".equals(task.state()) && !"RUNNING".equals(task.state())) continue;
+            if (!holdsLease(task)) continue;
             if ("CLAIMED".equals(task.state())) claimed++;
             else running++;
             leases.add(new FleetDashboard.ActiveLeaseSummary(
@@ -299,11 +299,18 @@ public class JdbcFleetDashboardRepository implements FleetDashboardRepository {
         int leasedTasks = claimed + running;
         int autonomousLeasedTasks = (int) tasks.stream()
                 .filter(t -> AUTONOMOUS_SUBJECT.equals(t.subjectType()))
-                .filter(t -> "CLAIMED".equals(t.state()) || "RUNNING".equals(t.state()))
+                .filter(JdbcFleetDashboardRepository::holdsLease)
                 .count();
         return new FleetDashboard.ExecutionFleet(
                 leasedTasks, claimed, running, running, workerActiveLeaseCount - leasedTasks,
                 runActiveSlotCount - autonomousLeasedTasks, limited(leases, detailLimit));
+    }
+
+    private static boolean holdsLease(TaskRow task) {
+        return switch (task.state()) {
+            case "CLAIMED", "RUNNING", "YIELDING" -> true;
+            default -> false;
+        };
     }
 
     private static boolean admissionAllowed(TaskRow task) {

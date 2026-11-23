@@ -178,13 +178,25 @@
     'This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.':['当前版本处理只读文本任务与判断，不修改文件、不实际退款或发送消息。'],
     'Library':['工作区'], 'Simple task':['简单任务'], 'New workflow':['新建工作流'],
     'Task history':['任务历史'], 'Search tasks':['检索任务'], 'View':['视图'], 'Status':['状态'],
+    'New task':['新建任务'], 'Back to task list':['返回任务列表'], 'Back to workflow list':['返回工作流列表'], 'Working location':['工作目录'],
+    'Updated':['更新时间'], 'Actions':['操作'], 'Archived':['已归档'],
+    'Only finished simple tasks with no active work can be managed from task history':['任务仍有未结束的工作或租约，暂时无法归档或删除。'],
+    'Add a step':['添加步骤'], 'Workflow diagram':['业务流程图'], 'Step activity':['步骤记录'],
+    'Select a step to edit it. Drag an output dot to connect steps.':['点击步骤编辑属性，拖动输出端连接步骤。'],
+    'Agent task':['Agent 任务'], 'Field rule':['字段规则'], 'Field name':['字段名'], 'Expected value':['预期值'],
+    'Rule input':['规则数据'], 'Run input JSON':['本次运行的 JSON 输入'], 'Latest Agent result':['最近的 Agent 正式结果（完整 JSON，最多 4,000 字符）'],
+    'Match':['匹配'], 'Otherwise':['其他情况'], 'Set as entry step':['设为入口步骤'], 'Entry step':['入口步骤'],
+    'No recorded activity for this step.':['此步骤暂无运行记录。'], 'RULE_RESULT':['规则判定'],
+    'Rule steps need a JSON object as input.':['字段规则读取 JSON 对象，例如 {"status":"approved"}。'],
+    'This workflow needs JSON input for each run':['此工作流每次运行都需要提供 JSON 输入。'],
     'Current tasks':['当前任务'], 'Archived tasks':['已归档'], 'Pending deletion':['待删除'], 'All states':['全部状态'],
     'Previous page':['上一页'], 'Next page':['下一页'],
     'No tasks match these filters.':['没有符合筛选条件的任务。'],
     'Archive':['归档'], 'Delete':['删除'], 'Cancel deletion':['撤销删除'],
     'Task archived.':['任务已归档。'], 'Deletion scheduled.':['已安排删除。'], 'Deletion cancelled.':['已撤销删除。'],
     'Delete after':['计划删除时间'],
-    'Move this task to pending deletion? You can cancel within 30 days.':['将此任务移入待删除？30 天内可以撤销。'],
+    'Delete task?':['删除任务？'],
+    'This task will move to Pending deletion. You can cancel within 30 days.':['任务将移入「待删除」，30 天内可以撤销。'],
     'Creating task…':['正在创建任务…'],
     'Task created.':['任务已创建。'],
     'Task created, but its details could not be loaded.':['任务已创建，但暂时无法加载详情。'],
@@ -274,6 +286,8 @@
   let taskRequest=newRequest(), startRequest=newRequest(), inputRequest=newRequest(), amendmentRequest=newRequest();
   const route=new URLSearchParams(location.search);
   const pageMode=document.body.dataset.wfMode==='tasks'?'tasks':'workflows';
+  const taskPage=document.body.dataset.wfTaskPage||'list';
+  const taskExecution=document.body.dataset.wfTaskExecution||route.get('execution');
   let preparingGoal=route.get('goalVersion'), importAttempted=false;
   async function api(path, data, prefix='/api/r1/workflows') {
     const response = await fetch(prefix+path, {method:data===undefined?'GET':'POST', credentials:'same-origin',cache:'no-store',
@@ -326,9 +340,19 @@
       e.dataset.wfOriginal ||= e.textContent;e.textContent=t(e.dataset.wfOriginal);
     });
   }
-  function panel(name) {['task','editor','run'].forEach(p=>$(`[data-wf-${p}]`).hidden=p!==name);}
-  function singleSpec() {return {title:t('New workflow'),goal:'',entry:'task',nodes:[
-    {key:'task',title:t('Task'),kind:'TASK',instruction:'',next:'end',branches:{},assignment:'AUTO',requiredSkills:[]},
+  function panel(name) {
+    ['task','editor','run'].forEach(p=>$(`[data-wf-${p}]`).hidden=p!==name);
+    if(pageMode==='workflows'){
+      $('.wf-library').hidden=Boolean(name);
+      $('.wf-content').hidden=!name;
+      $('[data-wf-workflow-back]').hidden=!name;
+    }
+  }
+  const workflowKinds={RULE:'Field rule',ASK:'Ask user',TASK:'Agent task',DECISION:'LLM decision',END:'Done'};
+  const ruleDefaults=()=>({source:'INPUT',field:'status',expected:'approved'});
+  const branchLabel=(node,choice)=>node.kind==='RULE'?t(choice==='match'?'Match':'Otherwise'):choice;
+  function singleSpec() {return {title:t('New workflow'),goal:'',entry:'rule',nodes:[
+    {key:'rule',title:t('Field rule'),kind:'RULE',instruction:'',next:null,branches:{match:'end',otherwise:'end'},rule:ruleDefaults()},
     {key:'end',title:t('Done'),kind:'END',instruction:'',next:null,branches:{}}]};}
   function showEditor(definition) {
     selectedRun=null;editing=structuredClone(definition || {id:null,version:0,spec:singleSpec()});
@@ -337,7 +361,10 @@
     $('[data-wf-commands]').value=JSON.stringify(editing.spec.commands||[],null,2);
     $('[data-wf-shell]').checked=Boolean(editing.spec.autonomousShell);
     renderSources($('[data-wf-definition-sources]'),editing.spec.sources,values=>editing.spec.sources=values);
-    for(const n of editing.spec.nodes)if(['TASK','DECISION'].includes(n.kind))n.assignment ||= n.memberId?'MEMBER':definition?.id?'GENERAL':'AUTO';
+    for(const node of editing.spec.nodes) {
+      node.branches ||= {};
+      if(['TASK','DECISION'].includes(node.kind))node.assignment ||= node.memberId?'MEMBER':definition?.id?'GENERAL':'AUTO';
+    }
     $('[data-wf-title]').value=editing.spec.title;$('[data-wf-goal]').value=editing.spec.goal;
     $('[data-wf-input]').value='';startRequest=newRequest();savedSpec=definition?JSON.stringify(editing.spec):'';
     panel('editor');renderNodes();graph($('[data-wf-definition-graph]'),editing.spec);status('');
@@ -395,16 +422,23 @@
     editing.spec.nodes=editing.spec.nodes.filter(item=>item.key!==key);
     for(const item of editing.spec.nodes){if(item.next===key)item.next=bypass;for(const choice of Object.keys(item.branches||{}))if(item.branches[choice]===key)item.branches[choice]=bypass;}
     if(editing.spec.entry===key)editing.spec.entry=editing.spec.nodes[0]?.key||'end';
-    if($('[data-wf-node-dialog]').open)$('[data-wf-node-dialog]').close();
     selectedNodeKey=editing.spec.nodes.find(item=>item.kind!=='END')?.key||'end';renderNodes();redraw();
   }
   function addNode(kind='TASK'){
     const source=editing.spec.nodes.find(item=>item.key===selectedNodeKey&&item.kind!=='END')||[...editing.spec.nodes].reverse().find(item=>item.kind!=='END');
     const endIndex=editing.spec.nodes.findIndex(item=>item.kind==='END'),key='step'+newRequest().replaceAll('-','').slice(0,8);
-    const branch=kind==='DECISION'||kind==='ASK',node={key,title:t(({TASK:'Task',DECISION:'LLM decision',ASK:'Ask user'})[kind]||'Task'),kind,instruction:'',next:branch?null:'end',branches:branch?{'Option 1':'end'}:{},assignment:'AUTO',requiredSkills:[]};
+    const node={key,title:t(workflowKinds[kind]),kind,instruction:'',next:'end',branches:{}};
+    if(['TASK','DECISION'].includes(kind)){node.assignment='AUTO';node.requiredSkills=[];}
+    if(kind==='RULE'){node.rule=ruleDefaults();node.branches={match:'end',otherwise:'end'};node.next=null;}
+    if(kind==='DECISION'){node.branches={yes:'end',no:'end'};node.next=null;}
     editing.spec.nodes.splice(endIndex<0?editing.spec.nodes.length:endIndex,0,node);
     if(source){
-      if(source.kind==='TASK'){node.next=source.next||'end';source.next=key;}
+      if(source.kind==='RULE'){source.branches.match=key;}
+      else if(source.kind==='TASK'||source.kind==='ASK'&&!Object.keys(source.branches).length){
+        if(node.next)node.next=source.next||'end';
+        else for(const branch of Object.keys(node.branches))node.branches[branch]=source.next||'end';
+        source.next=key;
+      }
       else {source.branches||={};if(!Object.keys(source.branches).length&&source.next)source.branches.Continue=source.next;let choice='Option '+(Object.keys(source.branches).length+1);while(choice in source.branches)choice+=' ';source.branches[choice]=key;source.next=null;}
     }
     selectedNodeKey=key;renderNodes();redraw();status(t('Step added. Save the workflow to keep this change.'));
@@ -413,7 +447,8 @@
     if(sourceKey===targetKey){status(t('Connect a step to itself is not allowed.'));return;}
     const source=editing.spec.nodes.find(item=>item.key===sourceKey),target=editing.spec.nodes.find(item=>item.key===targetKey);
     if(!source||!target||source.kind==='END')return;
-    if(source.kind==='TASK'){source.next=targetKey;source.branches={};}
+    if(source.kind==='RULE'){source.branches.match=targetKey;}
+    else if(source.kind==='TASK'){source.next=targetKey;source.branches={};}
     else {source.branches||={};if(!Object.keys(source.branches).length&&source.next)source.branches.Continue=source.next;let choice='Option '+(Object.keys(source.branches).length+1);while(choice in source.branches)choice+=' ';source.branches[choice]=targetKey;source.next=null;}
     selectedNodeKey=sourceKey;renderNodes();redraw();status(t('Connected steps. Save the workflow to keep this change.'));
   }
@@ -423,10 +458,33 @@
       if(node.key!==selectedNodeKey)continue;
       const section=element('section',undefined,'wf-node-editor');section.id='wf-node-'+node.key;
       const row=element('div',undefined,'wf-node-fields'),kind=element('select');
-      for(const [value,label] of [['TASK','Task'],['DECISION','LLM decision'],['ASK','Ask user'],['END','Done']])kind.append(new Option(t(label),value));
-      kind.value=node.kind;kind.onchange=()=>{node.kind=kind.value;if(node.kind!=='TASK')node.workspaceTools=false;if(!['TASK','DECISION'].includes(node.kind)){node.memberId=null;node.assignment=null;node.requiredSkills=[];}else node.assignment ||= 'AUTO';node.branches={};node.next=node.kind==='END'||node.kind==='DECISION'?null:'end';if(node.kind==='DECISION')node.branches={'yes':'end','no':'end'};renderNodes();redraw();};
+      for(const [value,label] of Object.entries(workflowKinds))kind.append(new Option(t(label),value));
+      kind.value=node.kind;
+      kind.disabled=node.kind==='END';
+      kind.onchange=()=>{
+        node.kind=kind.value;
+        if(node.kind!=='TASK')node.workspaceTools=false;
+        if(!['TASK','DECISION'].includes(node.kind)){node.memberId=null;node.assignment=null;node.requiredSkills=[];}
+        else node.assignment ||= 'AUTO';
+        delete node.rule;
+        node.branches={};node.next='end';
+        if(node.kind==='RULE'){node.rule=ruleDefaults();node.branches={match:'end',otherwise:'end'};node.next=null;}
+        if(node.kind==='DECISION'){node.branches={yes:'end',no:'end'};node.next=null;}
+        if(node.kind==='END'){node.instruction='';node.next=null;}
+        renderNodes();redraw();
+      };
       row.append(field('Title',input(node.title,v=>{node.title=v;redraw();},160)),field('Type',kind));section.append(row);
-      if(node.kind!=='END') {
+      if(node.key===editing.spec.entry)section.append(element('p',t('Entry step'),'help'));
+      else if(node.kind!=='END')section.append(button('Set as entry step',()=>{editing.spec.entry=node.key;renderNodes();redraw();}));
+      if(node.kind==='RULE'){
+        const source=element('select');
+        source.append(new Option(t('Run input JSON'),'INPUT'),new Option(t('Latest Agent result'),'TASK_RESULT'));
+        source.value=node.rule.source;source.onchange=()=>node.rule.source=source.value;
+        section.append(field('Rule input',source),field('Field name',input(node.rule.field,v=>node.rule.field=v,64)),
+          field('Expected value',input(node.rule.expected,v=>node.rule.expected=v,1000)),
+          field('Match',target(node.branches.match,v=>{node.branches.match=v;redraw();})),
+          field('Otherwise',target(node.branches.otherwise,v=>{node.branches.otherwise=v;redraw();})));
+      } else if(node.kind!=='END') {
         const instruction=element('textarea');instruction.value=node.instruction;instruction.rows=3;instruction.maxLength=8000;instruction.oninput=()=>node.instruction=instruction.value;
         section.append(field('Instruction',instruction));
         if(node.kind==='TASK'){const files=element('input');files.type='checkbox';files.checked=!!node.workspaceTools;files.onchange=()=>node.workspaceTools=files.checked;section.append(field('Work on files in this location',files));}
@@ -441,49 +499,56 @@
         }
         if(node.kind==='TASK'||node.kind==='ASK'&&!Object.keys(node.branches).length)section.append(field('Next step',target(node.next,v=>node.next=v)));
       }
-      section.append(button('Delete step',()=>removeNode(node.key)));list.append(section);
+      if(node.kind!=='END')section.append(button('Delete step',()=>removeNode(node.key)));
+      list.append(section);
     }
-    const dialog=$('[data-wf-node-dialog]');if(dialog.open)dialog.querySelector('[data-wf-label="Edit step"]').textContent=t('Edit step');
-    const selected=editing.spec.nodes.find(item=>item.key===selectedNodeKey),deleteButton=$('[data-wf-delete-node]');deleteButton.disabled=!selected||selected.kind==='END';$('[data-wf-open-node]').disabled=!selected;
   }
   function graph(container,spec,run) {
     container.replaceChildren();if(!spec?.nodes.length)return;
+    const editable=container.hasAttribute('data-wf-definition-graph');
+    const inspectable=!!run&&container.hasAttribute('data-wf-run-graph');
     const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
     const make=(tag,attrs)=>{const e=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));return e;};
     const nodes=spec.nodes,positions=new Map(nodes.map((n,i)=>[n.key,{x:80+(i%2)*310,y:30+Math.floor(i/2)*135}]));
     svg.setAttribute('viewBox',`0 0 760 ${Math.ceil(nodes.length/2)*135+20}`);svg.setAttribute('width','760');svg.setAttribute('height',Math.ceil(nodes.length/2)*135+20);
-    svg.setAttribute('role','img');svg.setAttribute('aria-label',spec.title);
+    svg.setAttribute('role',editable||inspectable?'group':'img');svg.setAttribute('aria-label',spec.title);
     const marker=make('marker',{id:container.hasAttribute('data-wf-run-graph')?'wf-arrow-run':'wf-arrow-definition',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6,markerHeight:6,orient:'auto'});
     marker.append(make('path',{d:'M 0 0 L 10 5 L 0 10 z'}));const defs=make('defs',{});defs.append(marker);svg.append(defs);
     const taken=new Set();let previous=null;
     for(const event of run?.events||[]){if(previous&&previous!==event.node)taken.add(previous+'\n'+event.node);previous=event.node;}
     for(const n of nodes) {
-      const from=positions.get(n.key),edges=n.next?[[t('Next step'),n.next]]:Object.entries(n.branches);
+      const from=positions.get(n.key),edges=n.next?[[t('Next step'),n.next]]:Object.entries(n.branches||{});
       edges.forEach(([choice,key],i)=>{const to=positions.get(key);if(!to)return;
         const path=make('path',{d:`M ${from.x+220} ${from.y+30} C ${from.x+270+30*i} ${from.y+30}, ${to.x-50-30*i} ${to.y+30}, ${to.x} ${to.y+30}`,'marker-end':`url(#${marker.id})`,class:taken.has(n.key+'\n'+key)?'wf-taken':''});svg.append(path);
-        if(n.branches&&Object.keys(n.branches).length){const label=make('text',{x:(from.x+to.x)/2+120,y:(from.y+to.y)/2+82+i*15});label.textContent=choice;svg.append(label);}
+        if(n.branches&&Object.keys(n.branches).length){const label=make('text',{x:(from.x+to.x)/2+120,y:(from.y+to.y)/2+82+i*15});label.textContent=branchLabel(n,choice);svg.append(label);}
       });
     }
-    const visited=new Set(run?.events.filter(e=>['RESULT','ANSWER','COMPLETED'].includes(e.type)).map(e=>e.node)||[]);
+    const visited=new Set(run?.events.filter(e=>['RESULT','ANSWER','COMPLETED','RULE_RESULT'].includes(e.type)).map(e=>e.node)||[]);
     for(const n of nodes) {
-      const p=positions.get(n.key),group=make('g',{class:run?.current===n.key?'wf-current':visited.has(n.key)?'wf-visited':!run&&selectedNodeKey===n.key?'wf-selected':''});
-      if(!run)group.dataset.nodeKey=n.key;
-      group.append(make('rect',{x:p.x,y:p.y,width:220,height:60,rx:n.kind==='DECISION'?22:8}));
-      const kind=make('text',{x:p.x+12,y:p.y+21});kind.textContent=t(n.workspaceTools?'Workspace task':{TASK:'Task',DECISION:'LLM decision',ASK:'Ask user',END:'Done'}[n.kind]);
+      const p=positions.get(n.key),group=make('g',{class:run?.current===n.key?(run.state==='FAILED'?'wf-failed':'wf-current'):visited.has(n.key)?'wf-visited':editable&&selectedNodeKey===n.key?'wf-selected':''});
+      if(editable)group.dataset.nodeKey=n.key;
+      group.append(make('rect',{x:p.x,y:p.y,width:220,height:60,rx:['DECISION','RULE'].includes(n.kind)?22:8}));
+      const kind=make('text',{x:p.x+12,y:p.y+21});kind.textContent=t(n.workspaceTools?'Workspace task':workflowKinds[n.kind]);
       const title=make('text',{x:p.x+12,y:p.y+44});title.textContent=n.title.length>22?n.title.slice(0,21)+'…':n.title;
       const tooltip=make('title',{});tooltip.textContent=n.title+'\n'+n.instruction;group.append(kind,title,tooltip);
-      if(!run){
-        group.setAttribute('tabindex','0');group.style.cursor='pointer';
+      if(editable||inspectable) {
+        group.setAttribute('tabindex','0');group.setAttribute('role','button');group.setAttribute('aria-label',n.title);group.style.cursor='pointer';
+      }
+      if(editable){
         const inputPort=make('circle',{cx:p.x,cy:p.y+30,r:6,class:'wf-port wf-input-port'}),outputPort=make('circle',{cx:p.x+220,cy:p.y+30,r:7,class:'wf-port wf-output-port'});
-        group.append(inputPort,outputPort);
+        group.append(inputPort);if(n.kind!=='END')group.append(outputPort);
         group.onclick=()=>{selectedNodeKey=n.key;renderNodes();redraw();};
         group.ondblclick=()=>openNodeEditor(n.key);
-        group.onkeydown=e=>{if(e.key==='Enter')openNodeEditor(n.key);};
+        group.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openNodeEditor(n.key);}};
         outputPort.onpointerdown=e=>{e.preventDefault();e.stopPropagation();svg.dataset.connectSource=n.key;svg.dataset.connectX=String(e.clientX);svg.dataset.connectY=String(e.clientY);};
+      } else if(inspectable) {
+        const select=()=>{selectedRunStep=n.key;renderRunStep(run,n.key);};
+        group.onclick=select;
+        group.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select();}};
       }
       svg.append(group);
     }
-    if(!run){
+    if(editable){
       svg.onpointerup=e=>{
         const source=svg.dataset.connectSource;if(!source)return;delete svg.dataset.connectSource;
         if(Math.hypot(e.clientX-Number(svg.dataset.connectX),e.clientY-Number(svg.dataset.connectY))<8)return;
@@ -491,11 +556,11 @@
         if(target)connectNodes(source,target);
       };
       container.ondragover=e=>{if(Array.from(e.dataTransfer.types).includes('text/plain'))e.preventDefault();};
-      container.ondrop=e=>{e.preventDefault();const kind=e.dataTransfer.getData('text/plain');if(['TASK','DECISION','ASK'].includes(kind))addNode(kind);};
+      container.ondrop=e=>{e.preventDefault();const kind=e.dataTransfer.getData('text/plain');if(['RULE','TASK','DECISION','ASK'].includes(kind))addNode(kind);};
     }
     container.append(svg);
   }
-  function openNodeEditor(key){selectedNodeKey=key;renderNodes();$('[data-wf-node-dialog]').showModal();redraw();}
+  function openNodeEditor(key){selectedNodeKey=key;renderNodes();redraw();$('[data-wf-nodes] input')?.focus();}
   let caretakerStamp='';
   async function refreshCaretaker() {
     const rows=await api('/caretaker-alerts'), stamp=JSON.stringify(rows);
@@ -515,7 +580,36 @@
     }
   }
   let libraryRequest=0;
-  let taskHistoryPage=1,taskHistoryRequest=0,taskHistoryTimer;
+  const urlPage=Number(route.get('page'))||1;
+  let taskHistoryPage=Number.isInteger(urlPage)&&urlPage>=1&&urlPage<=10000?urlPage:1;
+  let taskHistoryRequest=0,taskHistoryTimer,taskHistoryHasMore=false;
+  function taskListUrl(path='/ui/tasks') {
+    const params=new URLSearchParams();
+    if(taskPage==='list'){
+      params.set('q',$('[data-wf-history-search]').value.trim());
+      params.set('state',$('[data-wf-history-state]').value);
+      params.set('view',$('[data-wf-history-view]').value);
+      params.set('page',String(taskHistoryPage));
+    } else {
+      for(const key of ['q','state','view','page'])if(route.has(key))params.set(key,route.get(key));
+    }
+    for(const [key,value] of [...params]){
+      if(!value||key==='view'&&value==='current'||key==='page'&&value==='1')params.delete(key);
+    }
+    return params.size?path+'?'+params:path;
+  }
+  function updateTaskListUrl() {
+    window.history.replaceState(null,'',taskListUrl());
+    $('[data-wf-new-task]').href=taskListUrl('/ui/tasks/new');
+  }
+  function emptyTable(host,columns,label) {
+    const row=element('tr'),cell=element('td',t(label),'empty');
+    cell.colSpan=columns;row.append(cell);host.append(row);
+  }
+  function updatedCell(value) {
+    const cell=element('td'),date=new Date(value),time=element('time',date.toLocaleString());
+    time.dateTime=date.toISOString();cell.append(time);return cell;
+  }
   async function refreshTaskHistory() {
     const request=++taskHistoryRequest;
     const view=$('[data-wf-history-view]').value;
@@ -526,55 +620,67 @@
     if(request!==taskHistoryRequest)return;
     if(!result.tasks.length&&taskHistoryPage>1) {
       taskHistoryPage=1;
+      updateTaskListUrl();
       return refreshTaskHistory();
     }
+    taskHistoryHasMore=result.hasMore;
     const list=$('[data-wf-executions]');
     list.replaceChildren();
-    if(!result.tasks.length)list.append(element('p',t('No tasks match these filters.'),'help'));
+    if(!result.tasks.length)emptyTable(list,5,'No tasks match these filters.');
     for(const row of result.tasks) {
-      const entry=element('article',undefined,'wf-history-entry');
-      const open=button('',()=>act(()=>openRun(row.id)));
-      open.textContent=row.title||row.id;
-      open.dataset.i18nSkip='';
-      open.classList.add('wf-item');
-      open.append(element('small',t(row.state)+' · '+new Date(row.updated_ms).toLocaleString()));
-      entry.append(open);
-      if(row.location)entry.append(element('p',row.location,'help'));
-      if(row.delete_after_epoch_ms)entry.append(element('p',t('Delete after')+' '+new Date(row.delete_after_epoch_ms).toLocaleString(),'help'));
-      if(row.state==='COMPLETED'){
-        const actions=element('div',undefined,'wf-history-actions');
-        if(view==='current')actions.append(button('Archive',()=>manageTaskHistory(row.id,'archive')));
-        if(document.body.dataset.wfAdmin==='true') {
-          if(view!=='deleting'){
-            const remove=button('Delete',()=>manageTaskHistory(row.id,'schedule-delete'));
-            remove.classList.replace('ghost','danger');
-            actions.append(remove);
-          } else if(row.delete_after_epoch_ms>Date.now()){
-            actions.append(button('Cancel deletion',()=>manageTaskHistory(row.id,'undo-delete')));
-          }
-        }
-        if(actions.childElementCount)entry.append(actions);
-      }
-      list.append(entry);
+      const entry=element('tr'),name=element('td'),open=element('a',row.title||row.id);
+      open.href=taskListUrl('/ui/tasks/'+encodeURIComponent(row.id));open.dataset.i18nSkip='';
+      name.append(open,element('small',row.id,'wf-task-id mono'));
+      const state=element('td');
+      state.append(element('span',t(row.state),'pill neutral'));
+      if(row.delete_after_epoch_ms)state.append(element('small',t('Delete after')+' '+new Date(row.delete_after_epoch_ms).toLocaleString(),'wf-task-id'));
+      const actions=element('td'),buttons=element('div',undefined,'wf-history-actions');
+      renderTaskActions(buttons,row.id,row.title,{manageable:row.manageable,archived:view!=='current',deleteAfter:row.delete_after_epoch_ms});
+      if(buttons.childElementCount)actions.append(buttons);
+      entry.append(name,state,element('td',row.location||'—'),updatedCell(row.updated_ms),actions);list.append(entry);
     }
     $('[data-wf-history-pagination]').hidden=result.page===1&&!result.hasMore;
     $('[data-wf-history-page]').textContent=String(result.page);
     $('[data-wf-history-prev]').disabled=result.page===1;
     $('[data-wf-history-next]').disabled=!result.hasMore;
   }
-  function manageTaskHistory(id,action) {
-    if(action==='schedule-delete'&&!window.confirm(t('Move this task to pending deletion? You can cancel within 30 days.')))return;
-    act(async()=>{
+  function renderTaskActions(host,id,title,management) {
+    host.replaceChildren();
+    if(!management?.manageable)return;
+    if(!management.archived)host.append(button('Archive',()=>manageTaskHistory(id,'archive')));
+    if(document.body.dataset.wfAdmin==='true') {
+      if(!management.deleteAfter){
+        const remove=button('Delete',()=>manageTaskHistory(id,'schedule-delete',title||id));
+        remove.classList.replace('ghost','danger');
+        host.append(remove);
+      } else if(management.deleteAfter>Date.now()){
+        host.append(button('Cancel deletion',()=>manageTaskHistory(id,'undo-delete')));
+      }
+    }
+  }
+  async function manageTaskHistory(id,action,target) {
+    if(action==='schedule-delete'){
+      if(busy)return;
+      busy=true;
+      try {
+        if(!await window.aiwConfirm(t('This task will move to Pending deletion. You can cancel within 30 days.'),{
+          title:t('Delete task?'),target,acceptLabel:t('Delete'),danger:true
+        }))return;
+      } finally {busy=false;}
+    }
+    return act(async()=>{
       await api('/tasks/'+encodeURIComponent(id)+'/history',{action});
       status(t(({archive:'Task archived.','schedule-delete':'Deletion scheduled.','undo-delete':'Deletion cancelled.'})[action]));
-    }).then(()=>refreshTaskHistory().catch(error=>status(t(error.message))));
+      if(taskPage==='list')await refreshTaskHistory();
+      else {signature='';await refreshRun();}
+    });
   }
   async function library() {
     const request=++libraryRequest;
     if(pageMode==='tasks') {
+      if(taskPage!=='list')return;
       const [,schedules]=await Promise.all([refreshTaskHistory(),api('/schedules')]);
       if(request!==libraryRequest)return;
-      loadMembers();
       renderSchedules(schedules);
       return;
     }
@@ -582,23 +688,38 @@
     if(request!==libraryRequest)return;
     definitions=data.definitions;
     const list=$('[data-wf-definitions]');list.replaceChildren();
-    if(!definitions.length)list.append(element('p',t('No saved workflows'),'help'));
-    definitions.forEach(d=>{const b=button('',()=>showEditor(d));b.textContent=d.spec.title;b.dataset.i18nSkip='';b.classList.add('wf-item');const copy=button('Make a copy',()=>showEditor({id:null,version:0,spec:structuredClone(d.spec)}));list.append(b,copy,button('Schedule',()=>act(()=>arrange(d.spec))));});
+    if(!definitions.length)emptyTable(list,2,'No saved workflows');
+    for(const definition of definitions){
+      const row=element('tr'),name=element('td'),actions=element('td'),controls=element('div',undefined,'wf-history-actions');
+      const link=element('a',definition.spec.title);
+      link.href='/ui/workflows?definition='+encodeURIComponent(definition.id);link.dataset.i18nSkip='';
+      name.append(link);
+      controls.append(button('Make a copy',()=>showEditor({id:null,version:0,spec:definition.spec})),
+        button('Schedule',()=>act(()=>arrange(definition.spec))));
+      actions.append(controls);row.append(name,actions);list.append(row);
+    }
     const runs=$('[data-wf-executions]');runs.replaceChildren();
-    if(!data.executions.length)runs.append(element('p',t('No executions yet'),'help'));
-    data.executions.forEach(r=>{const b=button('',()=>act(()=>openRun(r.id)));b.textContent=r.title||r.id;b.dataset.i18nSkip='';b.classList.add('wf-item');b.append(element('small',t(r.state)+' · '+new Date(r.updated_ms).toLocaleString()));runs.append(b);});
+    if(!data.executions.length)emptyTable(runs,3,'No executions yet');
+    for(const run of data.executions){
+      const row=element('tr'),name=element('td'),state=element('td'),link=element('a',run.title||run.id);
+      link.href='/ui/workflows?execution='+encodeURIComponent(run.id);link.dataset.i18nSkip='';
+      name.append(link);state.append(element('span',t(run.state),'pill neutral'));
+      row.append(name,state,updatedCell(run.updated_ms));runs.append(row);
+    }
     loadMembers();
     renderSchedules(schedules);
   }
   function localDateInput(value){const d=new Date(value);return new Date(value-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
   function arrange(spec){
     if(spec.nodes.some(n=>n.workspaceTools)||(spec.commands||[]).length)throw new Error('Schedules currently support text workflows only');
+    if(spec.nodes.some(n=>n.rule?.source==='INPUT'))throw new Error('This workflow needs JSON input for each run');
     scheduleSpec=structuredClone(spec);scheduleRequest=newRequest();
     const details=$('[data-wf-schedule-editor]');details.hidden=false;details.open=true;
     $('[data-wf-schedule-title]').textContent=spec.title;
     $('[data-wf-schedule-content]').textContent=JSON.stringify(spec,null,2);
     $('[data-wf-schedule-zone]').textContent=t('Time zone')+': '+Intl.DateTimeFormat().resolvedOptions().timeZone;
     $('[data-wf-schedule-form]').elements.firstAt.value=localDateInput(Date.now()+3600000);
+    details.scrollIntoView({block:'nearest'});
   }
   function renderSchedules(rows){
     const host=$('[data-wf-schedules]');host.replaceChildren();
@@ -638,13 +759,35 @@
     select.value=value||'AUTO';
   }
   function assignment(value){return {assignment:['AUTO','GENERAL'].includes(value)?value:'MEMBER',memberId:['AUTO','GENERAL'].includes(value)?null:value};}
-  async function openRun(id) {if(id!==route.get('execution'))preparingGoal=null;selectedRun=id;signature='';panel('run');await refreshRun();}
-  function controlButtons({run,task,taskDisplayState}) {
+  let selectedRunStep=null;
+  async function openRun(id) {
+    if(pageMode==='tasks'&&taskPage!=='detail'){
+      window.location.assign(taskListUrl('/ui/tasks/'+encodeURIComponent(id)));
+      return;
+    }
+    if(id!==taskExecution)preparingGoal=null;
+    selectedRun=id;selectedRunStep=null;signature='';panel('run');
+    await refreshRun();
+  }
+  function renderRunStep(run,key) {
+    const host=$('[data-wf-run-node]'),node=run.spec.nodes.find(item=>item.key===key);
+    if(!node)return;
+    host.replaceChildren(element('h4',node.title),element('p',t(workflowKinds[node.kind]),'help'));
+    const events=run.events.filter(event=>event.node===key);
+    if(!events.length)host.append(element('p',t('No recorded activity for this step.'),'help'));
+    for(const event of events) {
+      const item=element('details',undefined,'wf-event');
+      item.open=['RESULT','RULE_RESULT','QUESTION','FAILED'].includes(event.type);
+      item.append(element('summary',new Date(event.time).toLocaleTimeString()+' · '+t(event.type)),element('pre',event.content));
+      host.append(item);
+    }
+  }
+  function controlButtons({run,task,taskDisplayState,management}) {
     const interrupted=taskDisplayState==='INTERRUPTED';
     const allowed={pause:pageMode!=='tasks'&&!interrupted&&['RUNNING','WAITING_MEMBER'].includes(run.state),
       resume:run.state==='PAUSED'&&!interrupted,retry:run.state==='FAILED'&&!interrupted&&!['CLAIMED','RUNNING','YIELDING'].includes(task?.state),
       'accept-result':run.state==='FAILED'&&task?.state==='COMPLETED',stop:!interrupted&&!['COMPLETED','STOPPED','STOPPING'].includes(run.state)};
-    $$('[data-wf-control]').forEach(b=>{b.hidden=!allowed[b.dataset.wfControl];b.disabled=busy;});
+    $$('[data-wf-control]').forEach(b=>{b.hidden=management?.archived||!allowed[b.dataset.wfControl];b.disabled=busy;});
   }
   function renderActivity(data) {
     const activity=data.activity||{}, events=activity.events||[], connection=$('[data-wf-connection]');
@@ -725,7 +868,7 @@
     const changedRun=host.dataset.run!==run.id;host.dataset.run=run.id;host.dataset.stamp=stamp;
     if(changedRun){form.reset();amendmentRequest=newRequest();}
     const previous=[...select.selectedOptions].map(option=>option.value);select.replaceChildren();
-    run.spec.nodes.filter(n=>n.kind!=='END'&&!(run.visits?.[n.key])&&!run.events.some(e=>e.node===n.key&&['DISPATCHED','QUESTION'].includes(e.type))).forEach(n=>select.add(new Option(n.title,n.key)));
+    run.spec.nodes.filter(n=>!['END','RULE'].includes(n.kind)&&!(run.visits?.[n.key])&&!run.events.some(e=>e.node===n.key&&['DISPATCHED','QUESTION'].includes(e.type))).forEach(n=>select.add(new Option(n.title,n.key)));
     for(const option of select.options)option.selected=previous.includes(option.value);
     form.hidden=run.state!=='PAUSED'||!!proposal;syncAmendmentMode();result.replaceChildren();
     if(!proposal)return;
@@ -767,9 +910,9 @@
     if(!selectedRun)return;
     const id=selectedRun,data=await api('/executions/'+encodeURIComponent(id));if(id!==selectedRun)return;
     currentView=data;renderActivity(data);renderUsage(data);
-    if(pageMode==='tasks')$('[data-wf-amendment]').hidden=true;else renderAmendment(data);
+    if(pageMode==='tasks'||data.run.spec.simpleTask)$('[data-wf-amendment]').hidden=true;else renderAmendment(data);
     const member=data.member||{};$('[data-wf-assigned-member]').textContent=member.id?t('Assigned member snapshot')+': '+member.name+' · v'+member.revision+(member.state==='DRAINING'?' · '+t(['READY','BLOCKED'].includes(data.task?.state)?'Resume the selected member to claim this work.':'Current work continues.'):''):'';
-    const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.taskDisplayState,data.activity?.attemptId,data.activity?.stale,data.report,data.failureCode,data.preparation]);if(stamp===signature)return;signature=stamp;
+    const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.taskDisplayState,data.activity?.attemptId,data.activity?.stale,data.report,data.failureCode,data.preparation,data.management]);if(stamp===signature)return;signature=stamp;
     $('[data-wf-run-title]').textContent=run.spec.title;
     const interrupted=data.taskDisplayState==='INTERRUPTED';
     const failure=$('[data-wf-failure]'),code=data.failureCode;
@@ -785,9 +928,24 @@
     }
     $('[data-wf-run-state]').textContent=t(interrupted&&['RUNNING','FAILED'].includes(run.state)?'INTERRUPTED':run.state);
     const node=run.spec.nodes.find(n=>n.key===run.current),task=data.task;
-    $('[data-wf-run-current]').textContent=(node?.title||'')+(task?' · '+t(data.taskDisplayState||task.state):'');
-    const runGraph=$('[data-wf-run-graph]');runGraph.hidden=pageMode==='tasks';
-    if(!runGraph.hidden)graph(runGraph,run.spec,run);
+    $('[data-wf-run-current]').textContent=(pageMode==='tasks'||run.spec.simpleTask?run.id:node?.title||'')+(task?' · '+t(data.taskDisplayState||task.state):'');
+    const overview=$('[data-wf-task-overview]'),management=$('[data-wf-task-management]');
+    overview.hidden=pageMode!=='tasks';
+    if(!overview.hidden){
+      $('[data-wf-task-instruction]').textContent=run.spec.goal;
+      $('[data-wf-task-location]').textContent=run.location?t('Working location')+' · '+run.location:'';
+    }
+    renderTaskActions(management,run.id,run.spec.title,pageMode==='tasks'?data.management:null);
+    if(pageMode==='tasks'&&data.management?.archived)management.prepend(element('span',t('Archived'),'pill neutral'));
+    if(pageMode==='tasks'&&data.management?.deleteAfter)management.append(
+      element('span',t('Delete after')+' '+new Date(data.management.deleteAfter).toLocaleString(),'help'));
+    management.hidden=!management.childElementCount;
+    const workbench=$('[data-wf-run-workbench]');
+    workbench.hidden=pageMode==='tasks'||!!run.spec.simpleTask;
+    if(!workbench.hidden) {
+      graph($('[data-wf-run-graph]'),run.spec,run);
+      renderRunStep(run,run.spec.nodes.some(item=>item.key===selectedRunStep)?selectedRunStep:run.current);
+    }
     controlButtons(data);
     $('[data-wf-interrupted]').hidden=!interrupted&&(run.state!=='FAILED'||run.events.at(-1)?.type!=='INTERRUPTED');
     $('[data-wf-confirm-stop]').hidden=!task||!(interrupted||run.state==='STOPPING'&&data.activity?.stale);
@@ -869,16 +1027,14 @@
     } finally {delete form.dataset.sending;submit.disabled=false;}
   }
   function example() {
-    const n=(key,title,kind,instruction,next=null,branches={})=>({key,title,kind,instruction,next,branches});
-    showEditor({id:null,version:0,spec:{title:'客户售后申请',goal:'根据提供的售后规则和客户资料，给出有依据的处理建议与回复草稿。只生成文字，不实际换货、退款或发送消息。',entry:'check',nodes:[
-      n('check','核对必要资料','DECISION','检查是否有购买记录、签收日期、故障说明。涉及实物损坏还需要照片或明确的照片描述。缺少资料时说明具体缺项。',null,{'资料齐全':'eligibility','需要补充':'details'}),
-      n('details','补充申请资料','ASK','请根据上一条判断列出的缺项补充资料。','check'),
-      n('eligibility','判断售后处理方式','DECISION','根据参考规则、处理日期和签收日期判断。疑似运输损伤时先让人类判断，不擅自认定责任。',null,{'建议换货':'draft','人工决定':'human'}),
-      n('human','确认特殊申请','ASK','该申请需要人工决定，请核对上一步说明后选择。',null,{'同意生成建议':'draft','结束处理':'end'}),
-      n('draft','生成处理建议','TASK','整理适用规则、事实依据、处理建议及客户回复草稿。明确尚未实际办理或发送。','end'),
-      n('end','处理结束','END','')
+    showEditor({id:null,version:0,spec:{title:'售后申请受理',goal:'检查申请是否附有购买凭证，记录人工受理决定。',entry:'receipt',nodes:[
+      {key:'receipt',title:'检查购买凭证',kind:'RULE',instruction:'',rule:{source:'INPUT',field:'hasReceipt',expected:'true'},branches:{match:'confirm',otherwise:'missing'}},
+      {key:'confirm',title:'确认受理',kind:'ASK',instruction:'申请已附购买凭证。是否受理？',branches:{'受理':'accepted','拒绝':'declined'}},
+      {key:'accepted',title:'已受理',kind:'END',instruction:''},
+      {key:'declined',title:'未受理',kind:'END',instruction:''},
+      {key:'missing',title:'缺购买凭证',kind:'END',instruction:''}
     ]}});
-    savedSpec='';$('[data-wf-input]').value='模拟售后规则 v1：签收后30天内产品故障可建议换货，超期转人工决定；需购买记录、签收日期、故障说明；实物损坏需照片。疑似运输损伤须核实包装和签收情况。本流程不实际退款、换货或发送消息。\n\n处理日期：2026-11-12。\n购买记录：已提供，订单 DEMO-001。\n签收日期：2026-11-09。\n客户说明：通电后无法启动，希望换货。\n\n以上全部是模拟资料。';
+    savedSpec='';$('[data-wf-input]').value=JSON.stringify({order:'DEMO-001',hasReceipt:true},null,2);
   }
   function verificationExample() {
     showEditor({id:null,version:0,spec:{
@@ -915,7 +1071,7 @@
       catch(error) { status(t('Task created, but its details could not be loaded.')+' '+t(error.message)); }
     });
   };
-  $$('[data-wf-new]').forEach(b=>b.onclick=()=>{if(b.dataset.wfNew==='task'){$('[data-wf-task-form]').elements.autonomousShell.checked=false;selectedRun=null;panel('task');}else showEditor();});
+  $$('[data-wf-new]').forEach(b=>b.onclick=()=>showEditor());
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-verify-sample]').onclick=verificationExample;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
@@ -924,10 +1080,6 @@
     control.ondragstart=event=>event.dataTransfer.setData('text/plain',control.dataset.wfDragKind);
     control.ondragend=()=>dragEndedAt=Date.now();
   });
-  $('[data-wf-open-node]').onclick=()=>selectedNodeKey&&openNodeEditor(selectedNodeKey);
-  $('[data-wf-delete-node]').onclick=()=>removeNode(selectedNodeKey);
-  $('[data-wf-node-close]').onclick=()=> $('[data-wf-node-dialog]').close();
-  $('[data-wf-node-dialog]').addEventListener('click',event=>{if(event.target===$('[data-wf-node-dialog]'))event.target.close();});
   $('[data-wf-save]').onclick=()=>act(async()=>{editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));editing.spec.autonomousShell=$('[data-wf-shell]').checked;editing=await api('/definitions',editing);savedSpec=JSON.stringify(editing.spec);startRequest=newRequest();await library();status(t('Workflow saved'));});
   $('[data-wf-start]').onclick=()=>act(async()=>{
     editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));editing.spec.autonomousShell=$('[data-wf-shell]').checked;
@@ -993,42 +1145,60 @@
     if(form.has('workspaceTools'))throw new Error('Schedules currently support text workflows only');
     if(String(form.get('location')||'').trim())throw new Error('Schedules use temporary locations; attach selected text sources');
     const acceptance=String(form.get('acceptance')||'').trim();
-    arrange({title:instruction.slice(0,80),goal:instruction,entry:'task',nodes:[
-      {key:'task',title:'Task',kind:'TASK',instruction,acceptance:acceptance||null,next:'end',branches:{},...assignment($('[data-wf-member]').value),requiredSkills:taskSkills},
-      {key:'end',title:'Done',kind:'END',instruction:'',next:null,branches:{}}],sources:taskSources,commands:[]});
+    arrange({title:instruction.slice(0,80),goal:instruction,entry:'task',simpleTask:true,nodes:[
+      {key:'task',title:'Task',kind:'TASK',instruction,acceptance:acceptance||null,next:null,branches:{},...assignment($('[data-wf-member]').value),requiredSkills:taskSkills}],sources:taskSources,commands:[]});
   });
   $('[data-wf-schedule-form]').onsubmit=e=>{e.preventDefault();act(async()=>{
     const form=new FormData(e.target);
     await api('/schedules',{requestId:scheduleRequest,spec:scheduleSpec,repeat:form.get('repeat'),zone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',firstAt:new Date(form.get('firstAt')).getTime()});
-    $('[data-wf-schedule-editor]').hidden=true;scheduleSpec=null;await library();
+    $('[data-wf-schedule-editor]').hidden=true;scheduleSpec=null;
+    if(pageMode==='tasks'&&taskPage==='new')window.location.assign(taskListUrl());
+    else await library();
   });};
   window.addEventListener('aiw:locale-changed',()=>{translate();const member=$('[data-wf-member]');memberOptions(member,member.value);renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(editing)renderSources($('[data-wf-definition-sources]'),editing.spec.sources||[],values=>editing.spec.sources=values);signature='';$('[data-wf-usage]').dataset.stamp='';$('[data-wf-amendment]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
-  if(pageMode==='tasks') {
+  if(pageMode==='tasks'&&taskPage==='list') {
+    const search=$('[data-wf-history-search]'),view=$('[data-wf-history-view]'),state=$('[data-wf-history-state]');
+    search.value=(route.get('q')||'').slice(0,160);
+    if([...view.options].some(option=>option.value===route.get('view')))view.value=route.get('view');
+    if([...state.options].some(option=>option.value===route.get('state')))state.value=route.get('state');
+    updateTaskListUrl();
     const loadHistory=()=>refreshTaskHistory().catch(error=>status(t(error.message)));
     const filterHistory=(delay=0)=>{
       clearTimeout(taskHistoryTimer);
       ++taskHistoryRequest;
       taskHistoryPage=1;
+      taskHistoryHasMore=false;
+      updateTaskListUrl();
       taskHistoryTimer=setTimeout(loadHistory,delay);
     };
-    $('[data-wf-history-search]').addEventListener('input',()=>filterHistory(250));
-    $('[data-wf-history-view]').addEventListener('change',()=>filterHistory());
-    $('[data-wf-history-state]').addEventListener('change',()=>filterHistory());
-    $('[data-wf-history-prev]').onclick=()=>{clearTimeout(taskHistoryTimer);if(taskHistoryPage>1){taskHistoryPage--;loadHistory();}};
-    $('[data-wf-history-next]').onclick=()=>{clearTimeout(taskHistoryTimer);taskHistoryPage++;loadHistory();};
+    search.addEventListener('input',()=>filterHistory(250));
+    view.addEventListener('change',()=>filterHistory());
+    state.addEventListener('change',()=>filterHistory());
+    $('[data-wf-history-refresh]').onclick=()=>act(library);
+    $('[data-wf-history-prev]').onclick=()=>{clearTimeout(taskHistoryTimer);if(taskHistoryPage>1){taskHistoryPage--;updateTaskListUrl();loadHistory();}};
+    $('[data-wf-history-next]').onclick=()=>{clearTimeout(taskHistoryTimer);if(taskHistoryHasMore){taskHistoryPage++;taskHistoryHasMore=false;updateTaskListUrl();loadHistory();}};
   }
   translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);
-  if(pageMode==='tasks')panel('task');else showEditor();
-  if(pageMode==='tasks'&&!route.get('execution')&&!route.get('definition')) {
-    library().catch(error=>{if(!busy&&!selectedRun)status(t(error.message));});
+  if(pageMode==='tasks') {
+    const back=$('[data-wf-back]');if(back)back.href=taskListUrl();
+    if(taskPage==='new') {
+      panel('task');$('[data-wf-task]').append($('[data-wf-schedule-editor]'));loadMembers();
+    } else if(taskPage==='detail') {
+      act(()=>openRun(taskExecution));
+    } else {
+      panel('');library().catch(error=>{if(!busy&&!selectedRun)status(t(error.message));});
+    }
   } else {
+    panel('');
     act(async()=>{
-      await library();
       if(route.get('execution'))await openRun(route.get('execution'));
       else if(route.get('definition'))showEditor(await api('/definitions/'+encodeURIComponent(route.get('definition'))));
+      await library();
     });
   }
   setInterval(()=>{if(selectedRun&&!busy&&!document.hidden&&!(preparingGoal&&importAttempted))act(refreshRun);},4000);
-  refreshCaretaker().catch(()=>{});
-  setInterval(()=>{if(!document.hidden)refreshCaretaker().catch(()=>{});},8000);
+  if(pageMode!=='tasks'||taskPage==='list'){
+    refreshCaretaker().catch(()=>{});
+    setInterval(()=>{if(!document.hidden)refreshCaretaker().catch(()=>{});},8000);
+  }
 })();

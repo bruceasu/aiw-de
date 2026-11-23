@@ -4,6 +4,8 @@ import java.nio.file.Path;
 import java.util.Map;
 import me.asu.aidev.authority.AuthorityBoundary;
 import me.asu.aidev.authority.AuthorityRepository;
+import me.asu.aidev.workflow.domain.WorkflowPlan;
+import me.asu.aidev.workflow.port.WorkflowPlanRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -19,6 +21,8 @@ class WorkflowTaskHistoryTest {
     JdbcTemplate jdbc;
     AuthorityRepository db;
     WorkflowRuns workflows;
+    WorkflowPlanService plans;
+    WorkflowPlanRepository planStore;
 
     @BeforeEach void setup() {
         jdbc=new JdbcTemplate(new DriverManagerDataSource("jdbc:sqlite:"+directory.resolve("history.db")));
@@ -26,11 +30,15 @@ class WorkflowTaskHistoryTest {
         jdbc.execute("CREATE TABLE flexible_workflow_plan(id TEXT PRIMARY KEY,spec_json TEXT)");
         jdbc.execute("CREATE TABLE plan_execution_location(scope_id TEXT PRIMARY KEY,location TEXT)");
         jdbc.execute("CREATE TABLE web_console_plan_archive(plan_id TEXT PRIMARY KEY,delete_after_epoch_ms INTEGER)");
-        jdbc.execute("CREATE TABLE work_task(id TEXT PRIMARY KEY,subject_id TEXT,subject_type TEXT)");
+        jdbc.execute("CREATE TABLE work_task(id TEXT PRIMARY KEY,subject_id TEXT,subject_type TEXT,state TEXT,lease_token TEXT)");
         db=new AuthorityRepository(jdbc);
         var boundary=mock(AuthorityBoundary.class);
         when(boundary.human()).thenReturn("owner");
-        workflows=new WorkflowRuns(db,boundary,null,null,null,null,null,null,null);
+        plans=mock(WorkflowPlanService.class);
+        planStore=mock(WorkflowPlanRepository.class);
+        @SuppressWarnings("unchecked") ObjectProvider<WorkflowPlanService> provider=mock(ObjectProvider.class);
+        when(provider.getObject()).thenReturn(plans);
+        workflows=new WorkflowRuns(db,boundary,planStore,provider,null,null,null,null,null);
     }
 
     void task(String id,String actor,String state,long time,String title) {
@@ -41,7 +49,8 @@ class WorkflowTaskHistoryTest {
                 new WorkflowRuns.Node("end","Done",WorkflowRuns.Kind.END,"",null,null,null,null,null)),null);
         jdbc.update("INSERT INTO workflow_execution VALUES(?,NULL,?,?,?,0,?)",id,actor,state,db.encode(run),time);
         jdbc.update("INSERT INTO flexible_workflow_plan VALUES(?,?)",id,db.encode(Map.of("goal",title)));
-        jdbc.update("INSERT INTO work_task VALUES(?,?,'flexible-plan')",id+"~task~work-1",id);
+        jdbc.update("INSERT INTO work_task VALUES(?,?,'flexible-plan',?,NULL)",id+"~task~work-1",id,
+                state.equals("STOPPED")?"CANCELLED":state);
     }
 
     @Test void scopedSearchAndPagingIncludeOlderTasksAndSeparateArchiveViews() {
@@ -65,20 +74,48 @@ class WorkflowTaskHistoryTest {
         assertThat(workflows.taskHistory("deleting","","",1).tasks()).extracting(row->row.get("id")).containsExactly("deleting");
     }
 
-    @Test void onlyCompletedOwnedTasksReachArchiveService() {
+    @Test void onlyFinishedOwnedTasksWithoutLeasesOrUnfinishedWorkReachArchiveService() {
         task("mine","owner","COMPLETED",1,"Done");
         task("pending","owner","RUNNING",2,"Pending");
         task("foreign","another-owner","COMPLETED",3,"Foreign");
+        task("failed","owner","FAILED",4,"Failed");
+        task("stopped","owner","STOPPED",5,"Stopped");
+        task("leased","owner","FAILED",6,"Leased");
+        task("unfinished","owner","FAILED",7,"Unfinished");
+        jdbc.update("UPDATE work_task SET lease_token='lease' WHERE subject_id='leased'");
+        jdbc.update("INSERT INTO work_task VALUES('replacement','unfinished','flexible-plan','READY',NULL)");
+        jdbc.update("INSERT INTO work_task VALUES('continuation','failed','flexible-plan','CONTINUED',NULL)");
         var service=mock(WorkflowPlanArchiveService.class);
         ObjectProvider<?> provider=mock(ObjectProvider.class);
         doReturn(service).when(provider).getObject();
         ReflectionTestUtils.setField(workflows,"archives",provider);
-        assertThatThrownBy(()->workflows.manageCompletedTask("pending","archive")).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(()->workflows.manageCompletedTask("foreign","schedule-delete")).isInstanceOf(java.util.NoSuchElementException.class);
+        assertThat(workflows.taskHistory("current","","",1).tasks())
+                .filteredOn(row->Boolean.TRUE.equals(row.get("manageable")))
+                .extracting(row->row.get("id")).containsExactly("stopped","failed","mine");
+        for(String id:java.util.List.of("pending","leased","unfinished")) {
+            assertThatThrownBy(()->workflows.manageFinishedTask(id,"archive")).isInstanceOf(IllegalStateException.class);
+        }
+        assertThatThrownBy(()->workflows.manageFinishedTask("foreign","schedule-delete")).isInstanceOf(java.util.NoSuchElementException.class);
         verifyNoInteractions(service);
-        workflows.manageCompletedTask("mine","schedule-delete");
-        var order=inOrder(service);
+        when(plans.get("failed")).thenReturn(new WorkflowPlan("failed",WorkflowPlan.State.CONFIRMED,2,null,
+                "owner","owner",null,null,null));
+        when(planStore.transition(eq("failed"),eq(2L),eq(WorkflowPlan.State.CONFIRMED),eq(WorkflowPlan.State.STOPPED),
+                eq("owner"),eq("Workflow execution FAILED"),any())).thenReturn(true);
+        workflows.manageFinishedTask("mine","schedule-delete");
+        workflows.manageFinishedTask("failed","schedule-delete");
+        workflows.manageFinishedTask("stopped","archive");
+        workflows.manageFinishedTask("failed","undo-delete");
+        var order=inOrder(service,planStore);
         order.verify(service).archive("mine","owner");
         order.verify(service).scheduleDeletion("mine","owner");
+        order.verify(planStore).transition(eq("failed"),eq(2L),eq(WorkflowPlan.State.CONFIRMED),eq(WorkflowPlan.State.STOPPED),
+                eq("owner"),eq("Workflow execution FAILED"),any());
+        order.verify(service).archive("failed","owner");
+        order.verify(service).scheduleDeletion("failed","owner");
+        order.verify(service).archive("stopped","owner");
+        order.verify(service).undoDeletion("failed");
+        when(service.archived("failed")).thenReturn(true);
+        assertThatThrownBy(()->workflows.control("failed",0,"retry",null))
+                .isInstanceOf(IllegalStateException.class).hasMessage("Archived tasks cannot be changed");
     }
 }

@@ -59,6 +59,8 @@ public class WorkflowSchedules {
         if(!Set.of("ONCE","DAILY","WEEKLY").contains(input.repeat()))throw new IllegalArgumentException("Choose once, daily or weekly");
         if(input.spec().nodes().stream().anyMatch(WorkflowRuns.Node::workspaceTools)||!input.spec().commands().isEmpty())
             throw new IllegalArgumentException("Schedules currently support text workflows only");
+        if(input.spec().nodes().stream().anyMatch(n->n.rule()!=null&&n.rule().source().equals("INPUT")))
+            throw new IllegalArgumentException("This workflow needs JSON input for each run");
         if(input.spec().nodes().stream().noneMatch(n->n.kind()==WorkflowRuns.Kind.TASK||n.kind()==WorkflowRuns.Kind.DECISION))throw new IllegalArgumentException("A working node is required");
         var zone=ZoneId.of(input.zone());String digest=AuthorityRepository.hash(repo.encode(input));
         var existing=repo.jdbc().queryForList("SELECT * FROM workflow_schedule WHERE id=?",input.requestId());

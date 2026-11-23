@@ -146,6 +146,19 @@ public class WorkflowPlanService {
     public WorkflowPlan draft(WorkflowPlanSpec spec, String actor) {
         if (spec == null) throw new IllegalArgumentException("plan specification is required");
         WorkflowEditorService.validateSpec(spec, false);
+        return insertDraft(spec,actor);
+    }
+
+    @Transactional
+    WorkflowPlan draftBusinessWorkflow(String goal,String location,String actor) {
+        // A Plan carries ownership and retention even when the business run submits no Worker task.
+        var step=new WorkflowPlanSpec.Step("workflow-only",Set.of("business-workflow"),Set.of(),"business-workflow",
+                "Business workflow without Agent tasks",null,null,Set.of(),null,null,
+                WorkflowPlanSpec.ReviewMode.SELF,WorkflowPlanSpec.ReviewRisk.LOW);
+        return insertDraft(new WorkflowPlanSpec(goal,WorkflowPlanSpec.Source.MANAGER,List.of(step),location),actor);
+    }
+
+    private WorkflowPlan insertDraft(WorkflowPlanSpec spec,String actor) {
         actor = actor(actor);
         Instant now = Instant.now();
         WorkflowPlan plan = new WorkflowPlan("FP-" + UUID.randomUUID(), WorkflowPlan.State.DRAFT, 0,

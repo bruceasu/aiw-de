@@ -34,6 +34,10 @@ public class AuthorityRepository {
         try { return json.readValue(value,type); }
         catch(Exception error) { throw new IllegalArgumentException("Invalid platform action structure"); }
     }
+    public <T> T decodeComplete(String value,Class<T> type) {
+        try { return json.readerFor(type).with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readValue(value); }
+        catch(Exception error) { throw new IllegalArgumentException("Invalid complete JSON value"); }
+    }
     public static String hash(String value) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
         catch(java.security.NoSuchAlgorithmException error) { throw new IllegalStateException(error); }

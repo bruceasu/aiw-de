@@ -1,23 +1,41 @@
 <!doctype html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" th:content="${csrfToken}">
-  <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css?v=task-history-1">
-  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=task-history-1" defer></script>
+  <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css?v=wide-lists-1">
+  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=wide-lists-2" defer></script>
 </head>
-<body th:attr="data-wf-mode=${workflowMode},data-wf-admin=${canAdmin}"><div class="app"><aside th:replace="~{ui/fragments :: nav(${workflowMode})}"></aside><main class="main">
+<body th:attr="data-wf-mode=${workflowMode},data-wf-admin=${canAdmin},data-wf-task-page=${taskPage},data-wf-task-execution=${taskExecution}"><div class="app"><aside th:replace="~{ui/fragments :: nav(${workflowMode})}"></aside><main class="main">
   <header th:replace="~{ui/fragments :: topbar(${workflowTitle},${workflowSubtitle})}"></header>
   <div class="content"><p class="help" data-wf-status role="status" aria-live="polite"></p>
   <p class="help" data-wf-member-status role="status"></p>
+  <div class="wf-actions" th:if="${workflowMode == 'tasks' and taskPage != 'list'}">
+    <a class="btn ghost" href="/ui/tasks" data-wf-back data-wf-label="Back to task list">Back to task list</a>
+  </div>
+  <div class="wf-actions" th:hidden="${workflowMode == 'tasks'}">
+    <a class="btn ghost" href="/ui/workflows" data-wf-workflow-back data-wf-label="Back to workflow list" hidden>Back to workflow list</a>
+    <button type="button" class="btn ghost" data-wf-refresh data-wf-label="Refresh">Refresh</button>
+  </div>
   <div class="wf-layout">
-    <section class="card wf-library"><h2 data-wf-label="Library">Library</h2>
-      <div class="wf-actions"><button class="btn primary" data-wf-new="task" th:hidden="${workflowMode != 'tasks'}">Simple task</button><button class="btn primary" data-wf-new="workflow" th:hidden="${workflowMode == 'tasks'}">New workflow</button></div>
+    <section class="card wf-library" th:hidden="${workflowMode == 'tasks' and taskPage != 'list'}">
       <div th:hidden="${workflowMode == 'tasks'}">
-      <button class="btn ghost" data-wf-sample>After-sales example</button>
-      <button class="btn ghost" data-wf-verify-sample data-wf-label="Implement and verify">Implement and verify</button>
-      <h3 data-wf-label="Saved workflows">Saved workflows</h3><p class="help" data-wf-label="Open a saved workflow to edit it, make a separate copy, or schedule it. Starting it creates its own execution.">Open a saved workflow to edit it, make a separate copy, or schedule it. Starting it creates its own execution.</p><div data-wf-definitions></div>
+        <div class="wf-actions wf-task-list-head">
+          <h2 data-wf-label="Saved workflows">Saved workflows</h2>
+          <button type="button" class="btn ghost" data-wf-sample data-wf-label="After-sales example">After-sales example</button>
+          <button type="button" class="btn ghost" data-wf-verify-sample data-wf-label="Implement and verify">Implement and verify</button>
+          <button type="button" class="btn primary" data-wf-new="workflow" data-wf-label="New workflow">New workflow</button>
+        </div>
+        <div class="table-wrap wf-workflow-table">
+          <table>
+            <thead><tr><th scope="col" data-wf-label="Name">Name</th><th scope="col" data-wf-label="Actions">Actions</th></tr></thead>
+            <tbody data-wf-definitions></tbody>
+          </table>
+        </div>
       </div>
-      <h3 th:if="${workflowMode == 'tasks'}" data-wf-label="Task history">Task history</h3>
-      <h3 th:unless="${workflowMode == 'tasks'}" data-wf-label="Executions">Executions</h3>
+      <div th:if="${workflowMode == 'tasks'}" class="wf-actions wf-task-list-head">
+        <h2 data-wf-label="Task history">Task history</h2>
+        <button type="button" class="btn ghost" data-wf-history-refresh data-wf-label="Refresh">Refresh</button>
+        <a class="btn primary" href="/ui/tasks/new" data-wf-new-task data-wf-label="New task">New task</a>
+      </div>
       <div th:if="${workflowMode == 'tasks'}" class="wf-history-filters">
         <label class="field"><span data-wf-label="Search tasks">Search tasks</span><input type="search" data-wf-history-search maxlength="160"></label>
         <label class="field"><span data-wf-label="View">View</span><select data-wf-history-view>
@@ -37,13 +55,32 @@
           <option value="STOPPED" data-wf-label="STOPPED">STOPPED</option>
         </select></label>
       </div>
-      <div data-wf-executions></div>
+      <div th:if="${workflowMode == 'tasks'}" class="table-wrap wf-task-history-table">
+        <table>
+          <thead><tr>
+            <th scope="col" data-wf-label="Task">Task</th>
+            <th scope="col" data-wf-label="Status">Status</th>
+            <th scope="col" data-wf-label="Working location">Working location</th>
+            <th scope="col" data-wf-label="Updated">Updated</th>
+            <th scope="col" data-wf-label="Actions">Actions</th>
+          </tr></thead>
+          <tbody data-wf-executions></tbody>
+        </table>
+      </div>
+      <div th:unless="${workflowMode == 'tasks'}">
+        <h3 data-wf-label="Executions">Executions</h3>
+        <div class="table-wrap wf-workflow-table">
+          <table>
+            <thead><tr><th scope="col" data-wf-label="Name">Name</th><th scope="col" data-wf-label="Status">Status</th><th scope="col" data-wf-label="Updated">Updated</th></tr></thead>
+            <tbody data-wf-executions></tbody>
+          </table>
+        </div>
+      </div>
       <div th:if="${workflowMode == 'tasks'}" class="wf-history-pagination" data-wf-history-pagination hidden>
         <button type="button" class="btn ghost small-btn" data-wf-history-prev data-wf-label="Previous page">Previous page</button>
         <span data-wf-history-page aria-live="polite"></span>
         <button type="button" class="btn ghost small-btn" data-wf-history-next data-wf-label="Next page">Next page</button>
       </div>
-      <button class="btn ghost" data-wf-refresh>Refresh</button>
       <section data-wf-caretaker hidden>
         <h3 data-wf-label="Decisions requested by the caretaker">Decisions requested by the caretaker</h3>
         <div data-wf-caretaker-list aria-live="polite"></div>
@@ -64,8 +101,8 @@
       </details>
       <div data-wf-schedules></div>
     </section>
-    <section class="wf-content">
-      <section class="card" data-wf-task hidden><h2 data-wf-label="Simple task">Simple task</h2>
+    <section class="wf-content" th:hidden="${workflowMode == 'tasks' and taskPage == 'list'}">
+      <section class="card" data-wf-task hidden><h2 data-wf-label="New task">New task</h2>
         <p class="help" data-wf-label="Leave the working location empty to use a temporary workspace.">Leave the working location empty to use a temporary workspace.</p>
         <form data-wf-task-form><label class="field"><span data-wf-label="What should be done?">What should be done?</span><textarea name="instruction" required maxlength="8000" rows="6"></textarea></label>
           <label class="field"><span data-wf-label="Acceptance criteria (optional)">Acceptance criteria (optional)</span><textarea name="acceptance" maxlength="2000" rows="2"></textarea></label>
@@ -86,20 +123,41 @@
         <label class="field"><span data-wf-label="Goal and completion conditions">Goal and completion conditions</span><textarea data-wf-goal maxlength="8000" rows="3"></textarea></label>
         <div data-wf-definition-sources></div>
         <p class="help" data-wf-label="Saved workflows are reusable. Every start creates a separate run from a frozen copy; later edits do not change existing runs.">Saved workflows are reusable. Every start creates a separate run from a frozen copy; later edits do not change existing runs.</p>
-        <div class="wf-editor-toolbar"><p class="help" data-wf-label="Drag a step onto the diagram to add it. Drag an output dot to another step to connect them. Double-click a step to edit it, or select it and use Edit selected step.">Drag a step onto the diagram to add it. Drag an output dot to another step to connect them. Double-click a step to edit it, or select it and use Edit selected step.</p><div class="wf-actions"><button class="btn ghost" type="button" data-wf-open-node disabled data-wf-label="Edit selected step">Edit selected step</button><button class="btn ghost" type="button" data-wf-delete-node disabled data-wf-label="Delete selected step">Delete selected step</button></div></div>
-        <div class="wf-node-palette"><button class="btn ghost" type="button" draggable="true" data-wf-add-node data-wf-drag-kind="TASK" data-wf-label="Task">Task</button><button class="btn ghost" type="button" draggable="true" data-wf-drag-kind="DECISION" data-wf-label="Decision">Decision</button><button class="btn ghost" type="button" draggable="true" data-wf-drag-kind="ASK" data-wf-label="Ask user">Ask user</button></div>
-        <div data-wf-definition-graph class="wf-graph"></div>
-        <dialog class="workspace-confirm wf-node-dialog" data-wf-node-dialog aria-labelledby="wf-node-dialog-title"><div class="workspace-confirm__top"><span data-wf-label="Edit step">Edit step</span></div><div class="workspace-confirm__body"><h2 id="wf-node-dialog-title" data-wf-label="Step settings">Step settings</h2><div data-wf-nodes></div></div><div class="workspace-confirm__footer"><button class="btn primary" type="button" data-wf-node-close data-wf-label="Done">Done</button></div></dialog>
+        <div class="wf-builder">
+          <section class="wf-builder-panel"><h3 data-wf-label="Add a step">Add a step</h3>
+            <div class="wf-node-palette">
+              <button class="btn ghost" type="button" draggable="true" data-wf-drag-kind="RULE" data-wf-label="Field rule">Field rule</button>
+              <button class="btn ghost" type="button" draggable="true" data-wf-drag-kind="ASK" data-wf-label="Ask user">Ask user</button>
+              <button class="btn ghost" type="button" draggable="true" data-wf-drag-kind="TASK" data-wf-label="Agent task">Agent task</button>
+              <button class="btn ghost" type="button" draggable="true" data-wf-drag-kind="DECISION" data-wf-label="LLM decision">LLM decision</button>
+            </div>
+          </section>
+          <section class="wf-builder-panel wf-canvas-panel"><h3 data-wf-label="Workflow diagram">Workflow diagram</h3>
+            <p class="help" data-wf-label="Select a step to edit it. Drag an output dot to connect steps.">Select a step to edit it. Drag an output dot to connect steps.</p>
+            <div data-wf-definition-graph class="wf-graph"></div>
+          </section>
+          <section class="wf-builder-panel"><h3 data-wf-label="Step settings">Step settings</h3><div data-wf-nodes></div></section>
+        </div>
         <label class="field"><span><input type="checkbox" data-wf-shell><span data-wf-label="Allow autonomous project commands">Allow autonomous project commands</span></span></label><p class="help" data-wf-label="Use only with a trusted Worker account. Commands have the same file and network access as the Worker account.">Use only with a trusted Worker account. Commands have the same file and network access as the Worker account.</p>
         <details><summary data-wf-label="Extra command profiles (optional, advanced)">Extra command profiles (optional, advanced)</summary><p class="help" data-wf-label="Most workflows should leave this empty. It describes fixed command profiles for a connected Linux or WSL Worker; it does not grant command permission. Each command still needs separate authorization.">Most workflows should leave this empty. It describes fixed command profiles for a connected Linux or WSL Worker; it does not grant command permission. Each command still needs separate authorization.</p><p class="help" data-wf-label="Use the task instructions above for natural-language requests. This box only lists fixed command IDs and arguments; unlisted commands cannot be selected by the Worker.">Use the task instructions above for natural-language requests. This box only lists fixed command IDs and arguments; unlisted commands cannot be selected by the Worker.</p><label class="field"><span data-wf-label="Command profiles (JSON)">Command profiles (JSON)</span><textarea data-wf-commands class="command-json" rows="5" maxlength="16000" spellcheck="false" aria-label="Command profiles JSON" placeholder="[]">[]</textarea></label></details>
         <div class="wf-actions"><button class="btn primary" data-wf-save>Save workflow</button></div>
         <hr><label class="field"><span data-wf-label="Information for this run">Information for this run</span><textarea data-wf-input maxlength="32000" rows="6"></textarea></label><p class="help" data-wf-label="Enter facts or case details that change each time you run this workflow. Shared documents and methods belong under Task sources above.">Enter facts or case details that change each time you run this workflow. Shared documents and methods belong under Task sources above.</p>
+        <p class="help" data-wf-label="Rule steps need a JSON object as input.">Rule steps need a JSON object as input.</p>
         <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input data-wf-location maxlength="4096"></label>
         <p class="help" data-wf-label="Starting freezes this definition for this execution. Later edits do not change existing executions.">Starting freezes this definition for this execution. Later edits do not change existing executions.</p>
         <button class="btn primary" data-wf-start>Start execution</button>
       </section>
       <section class="card" data-wf-run hidden><div class="wf-actions"><h2 data-wf-run-title></h2><span class="pill neutral" data-wf-run-state></span></div>
-        <p data-wf-run-current></p><div data-wf-run-graph class="wf-graph"></div>
+        <p data-wf-run-current></p>
+        <div data-wf-task-overview hidden>
+          <h3 data-wf-label="Instruction">Instruction</h3><p class="wf-instructions" data-wf-task-instruction></p>
+          <p class="help" data-wf-task-location></p>
+        </div>
+        <div class="wf-history-actions" data-wf-task-management hidden></div>
+        <div class="wf-run-workbench" data-wf-run-workbench hidden>
+          <div data-wf-run-graph class="wf-graph"></div>
+          <section class="wf-builder-panel"><h3 data-wf-label="Step activity">Step activity</h3><div data-wf-run-node></div></section>
+        </div>
         <p class="help" data-wf-assigned-member data-i18n-skip></p>
         <p class="help" data-wf-preparation></p>
         <p class="help" data-wf-failure role="status" hidden></p>
