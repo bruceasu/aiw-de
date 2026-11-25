@@ -243,6 +243,13 @@ public class WorkflowRuns {
         return db.jdbc().query("SELECT id,version,spec_json FROM workflow_definition WHERE id=? AND actor=?",
                 (rs,i)->new Definition(rs.getString(1),rs.getLong(2),db.decode(rs.getString(3),Spec.class)),id,actor()).stream().findFirst().orElseThrow();
     }
+    private static final String VISIBLE_EXECUTION="""
+             NOT (e.definition_id IS NULL AND EXISTS (
+                 SELECT 1 FROM web_console_plan_archive a
+                  WHERE a.plan_id=e.id AND a.delete_after_epoch_ms<=?
+             ))
+            """;
+
     public List<Map<String,Object>> executions(String kind) {
         String scope=switch(kind) {
             case "all" -> "";
@@ -250,7 +257,8 @@ public class WorkflowRuns {
             case "workflows" -> " AND definition_id IS NOT NULL";
             default -> throw new IllegalArgumentException("Unknown execution kind");
         };
-        var rows=db.jdbc().queryForList("SELECT id,definition_id,version,state,updated_ms,run_json FROM workflow_execution WHERE actor=?"+scope+" ORDER BY updated_ms DESC LIMIT 100",actor());
+        var rows=db.jdbc().queryForList("SELECT id,definition_id,version,state,updated_ms,run_json FROM workflow_execution e WHERE actor=?"
+                +scope+" AND "+VISIBLE_EXECUTION+" ORDER BY updated_ms DESC LIMIT 100",actor(),System.currentTimeMillis());
         for(var row:rows) {
             var run=db.decode((String)row.remove("run_json"),Run.class);
             row.put("title",run.spec.title());
@@ -269,11 +277,12 @@ public class WorkflowRuns {
         String archiveFilter=switch(view) {
             case "current" -> "a.plan_id IS NULL";
             case "archived" -> "a.plan_id IS NOT NULL AND a.delete_after_epoch_ms IS NULL";
-            case "deleting" -> "a.delete_after_epoch_ms IS NOT NULL";
+            case "deleting" -> "a.delete_after_epoch_ms>?";
             default -> throw new IllegalArgumentException("Unknown task history view");
         };
         var parameters=new ArrayList<Object>();
         parameters.add(actor());
+        if("deleting".equals(view))parameters.add(System.currentTimeMillis());
         String sql="""
                 SELECT w.id,w.state,w.updated_ms,w.run_json,l.location,a.delete_after_epoch_ms,
                        NOT EXISTS (%s) AS no_unfinished_tasks
@@ -1165,8 +1174,16 @@ public class WorkflowRuns {
         if(!discardProposal(run))return false;
         run.state="STOPPED";event(run,"STOPPED","No active Worker execution remains");endPlan(run,WorkflowPlan.State.STOPPED);return true;
     }
+    public void requireVisibleExecution(String id,String actor) {
+        if(db.jdbc().queryForList("SELECT e.id FROM workflow_execution e WHERE e.id=? AND e.actor=? AND "+VISIBLE_EXECUTION,
+                String.class,id,actor,System.currentTimeMillis()).isEmpty())
+            throw new NoSuchElementException("Workflow or execution not found.");
+    }
+
     @Transactional public View view(String id) {
-        var run=load(id,true);var task=currentTask(run);
+        var run=load(id,true);
+        requireVisibleExecution(id,run.actor);
+        var task=currentTask(run);
         if(run.proposal!=null&&proposalView(run).status().equals("STOPPED")&&discardProposal(run))persist(run);
         if(run.state.equals("RUNNING") && task!=null && Set.of(TaskState.FAILED,TaskState.CANCELLED).contains(task.state())) {
             run.state="FAILED";event(run,"FAILED","Worker task "+task.id().value()+" is "+task.state()+"; inspect its execution details");persist(run);

@@ -1,18 +1,24 @@
 package me.asu.aidev.workflow.application;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.Map;
 import me.asu.aidev.authority.AuthorityBoundary;
 import me.asu.aidev.authority.AuthorityRepository;
+import me.asu.aidev.webconsole.security.WebConsoleSecurityService;
 import me.asu.aidev.workflow.domain.WorkflowPlan;
+import me.asu.aidev.workflow.jdbc.JdbcWorkflowPlanArchiveRepository;
 import me.asu.aidev.workflow.port.WorkflowPlanRepository;
+import me.asu.aidev.workflow.protocol.http.WorkflowConsole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.ui.ExtendedModelMap;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -29,7 +35,7 @@ class WorkflowTaskHistoryTest {
         jdbc.execute("CREATE TABLE workflow_execution(id TEXT PRIMARY KEY,definition_id TEXT,actor TEXT,state TEXT,run_json TEXT,version INTEGER,updated_ms INTEGER)");
         jdbc.execute("CREATE TABLE flexible_workflow_plan(id TEXT PRIMARY KEY,spec_json TEXT)");
         jdbc.execute("CREATE TABLE plan_execution_location(scope_id TEXT PRIMARY KEY,location TEXT)");
-        jdbc.execute("CREATE TABLE web_console_plan_archive(plan_id TEXT PRIMARY KEY,delete_after_epoch_ms INTEGER)");
+        jdbc.execute("CREATE TABLE web_console_plan_archive(plan_id TEXT PRIMARY KEY,delete_after_epoch_ms INTEGER,delete_requested_by TEXT,delete_requested_at_epoch_ms INTEGER)");
         jdbc.execute("CREATE TABLE work_task(id TEXT PRIMARY KEY,subject_id TEXT,subject_type TEXT,state TEXT,lease_token TEXT)");
         db=new AuthorityRepository(jdbc);
         var boundary=mock(AuthorityBoundary.class);
@@ -60,7 +66,8 @@ class WorkflowTaskHistoryTest {
         task("deleting","owner","COMPLETED",34,"Pending removal");
         task("foreign","another-owner","COMPLETED",35,"Release validation");
         jdbc.update("INSERT INTO plan_execution_location VALUES('older','D:/Projects/Release_2026')");
-        jdbc.update("INSERT INTO web_console_plan_archive VALUES('archived',NULL),('deleting',999999)");
+        jdbc.update("INSERT INTO web_console_plan_archive(plan_id,delete_after_epoch_ms) VALUES('archived',NULL),('deleting',?)",
+                System.currentTimeMillis()+60_000);
         var first=workflows.taskHistory("current","","",1);
         assertThat(first.tasks()).hasSize(20);
         assertThat(first.hasMore()).isTrue();
@@ -72,6 +79,46 @@ class WorkflowTaskHistoryTest {
         assertThat(workflows.taskHistory("current","","%",1).tasks()).isEmpty();
         assertThat(workflows.taskHistory("archived","","",1).tasks()).extracting(row->row.get("id")).containsExactly("archived");
         assertThat(workflows.taskHistory("deleting","","",1).tasks()).extracting(row->row.get("id")).containsExactly("deleting");
+    }
+
+    @Test void expiredSimpleTaskDisappearsFromListsAndDetailsWhilePurgeKeepsRecords() {
+        var now=Instant.now();
+        task("expired","owner","FAILED",1,"Expired task");
+        task("future","owner","COMPLETED",2,"Pending task");
+        task("workflow","owner","COMPLETED",3,"Reusable workflow");
+        jdbc.update("UPDATE workflow_execution SET definition_id='workflow-1' WHERE id='workflow'");
+        jdbc.update("INSERT INTO work_task VALUES('continuation','expired','flexible-plan','CONTINUED',NULL)");
+        jdbc.update("""
+                INSERT INTO web_console_plan_archive(plan_id,delete_after_epoch_ms) VALUES
+                ('expired',?),('future',?),('workflow',?)
+                """,now.toEpochMilli(),now.plusSeconds(60).toEpochMilli(),now.toEpochMilli());
+
+        assertThat(workflows.taskHistory("deleting","","",1).tasks()).extracting(row->row.get("id")).containsExactly("future");
+        assertThat(workflows.taskHistory("deleting","","Expired task",1).tasks()).isEmpty();
+        assertThat(workflows.executions("tasks")).extracting(row->row.get("id")).containsExactly("future");
+        assertThat(workflows.executions("all")).extracting(row->row.get("id")).containsExactly("workflow","future");
+        assertThatThrownBy(()->workflows.view("expired")).isInstanceOf(java.util.NoSuchElementException.class);
+
+        var security=mock(WebConsoleSecurityService.class);
+        var session=new MockHttpSession();
+        when(security.actor(session)).thenReturn("owner");
+        var console=new WorkflowConsole(workflows,security);
+        assertThatThrownBy(()->console.taskDetail("expired",new ExtendedModelMap(),session))
+                .isInstanceOf(java.util.NoSuchElementException.class);
+        assertThatThrownBy(()->console.tasks("expired",new ExtendedModelMap(),session))
+                .isInstanceOf(java.util.NoSuchElementException.class);
+        assertThat(console.taskDetail("future",new ExtendedModelMap(),session)).isEqualTo("ui/workflows");
+        assertThat(console.missing().getStatusCode().value()).isEqualTo(404);
+
+        var archives=new JdbcWorkflowPlanArchiveRepository(jdbc);
+        assertThat(archives.dueIds(now)).containsExactly("workflow");
+        assertThat(archives.purge("expired",now)).isFalse();
+        assertThat(archives.undoDeletion("expired",now)).isFalse();
+        assertThat(archives.undoDeletion("future",now)).isTrue();
+        assertThat(workflows.taskHistory("archived","","",1).tasks()).extracting(row->row.get("id")).containsExactly("future");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM work_task WHERE subject_id='expired'",Integer.class)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM flexible_workflow_plan WHERE id='expired'",Integer.class)).isEqualTo(1);
+        assertThat(archives.deleteAfter("expired")).contains(Instant.ofEpochMilli(now.toEpochMilli()));
     }
 
     @Test void onlyFinishedOwnedTasksWithoutLeasesOrUnfinishedWorkReachArchiveService() {

@@ -196,7 +196,7 @@
     'Task archived.':['任务已归档。'], 'Deletion scheduled.':['已安排删除。'], 'Deletion cancelled.':['已撤销删除。'],
     'Delete after':['计划删除时间'],
     'Delete task?':['删除任务？'],
-    'This task will move to Pending deletion. You can cancel within 30 days.':['任务将移入「待删除」，30 天内可以撤销。'],
+    'This task will move to Pending deletion. You can cancel within 30 days. After that it disappears from Simple tasks. Audit, usage and delivery records are retained.':['任务将移入「待删除」。30 天内可以撤销，到期后会从「简单任务」移除，后台保留审计、模型用量和交付记录。'],
     'Creating task…':['正在创建任务…'],
     'Task created.':['任务已创建。'],
     'Task created, but its details could not be loaded.':['任务已创建，但暂时无法加载详情。'],
@@ -667,7 +667,7 @@
       if(busy)return;
       busy=true;
       try {
-        if(!await window.aiwConfirm(t('This task will move to Pending deletion. You can cancel within 30 days.'),{
+        if(!await window.aiwConfirm(t('This task will move to Pending deletion. You can cancel within 30 days. After that it disappears from Simple tasks. Audit, usage and delivery records are retained.'),{
           title:t('Delete task?'),target,acceptLabel:t('Delete'),danger:true
         }))return;
       } finally {busy=false;}

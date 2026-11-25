@@ -37,11 +37,13 @@ public class WorkflowConsole {
         security.requireOperator(session);return workflows.decideProposal(id,input.version(),input.proposalId(),input.apply());
     }
     @GetMapping("/ui/workflows") public String page(Model model) {return page(model,"workflows");}
-    @GetMapping("/ui/tasks") public String tasks(@RequestParam(required=false) String execution, Model model) {
-        return taskPage(model,execution==null||execution.isBlank()?"list":"detail",execution);
+    @GetMapping("/ui/tasks") public String tasks(@RequestParam(required=false) String execution, Model model,HttpSession session) {
+        return execution==null||execution.isBlank()?taskPage(model,"list",null):taskDetail(execution,model,session);
     }
     @GetMapping("/ui/tasks/new") public String newTask(Model model) {return taskPage(model,"new",null);}
-    @GetMapping("/ui/tasks/{id}") public String taskDetail(@PathVariable String id,Model model) {
+    @GetMapping("/ui/tasks/{id}") public String taskDetail(@PathVariable String id,Model model,HttpSession session) {
+        security.requireOperator(session);
+        workflows.requireVisibleExecution(id,security.actor(session));
         return taskPage(model,"detail",id);
     }
     private String taskPage(Model model,String taskPage,String execution) {

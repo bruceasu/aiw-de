@@ -19,6 +19,10 @@ public class JdbcWorkflowPlanArchiveRepository {
         this.taskOutputs = taskOutputs;
     }
     private static final String TASKS = "SELECT id FROM work_task WHERE subject_type='flexible-plan' AND subject_id=?";
+    private static final String PHYSICAL_PURGE_ELIGIBLE = """
+            NOT EXISTS (SELECT 1 FROM workflow_execution w
+                        WHERE w.id=web_console_plan_archive.plan_id AND w.definition_id IS NULL)
+            """;
     private final JdbcTemplate jdbc;
 
     public JdbcWorkflowPlanArchiveRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
@@ -63,20 +67,20 @@ public class JdbcWorkflowPlanArchiveRepository {
 
     public List<String> dueIds(Instant now) {
         return jdbc.query("""
-                SELECT plan_id FROM web_console_plan_archive WHERE delete_after_epoch_ms<=?
+                SELECT plan_id FROM web_console_plan_archive WHERE delete_after_epoch_ms<=? AND %s
                  ORDER BY delete_after_epoch_ms,plan_id
-                """, (rs, row) -> rs.getString(1), now.toEpochMilli());
+                """.formatted(PHYSICAL_PURGE_ELIGIBLE), (rs, row) -> rs.getString(1), now.toEpochMilli());
     }
 
     @Transactional
     public boolean purge(String id, Instant now) {
         if(managedPlans!=null) managedPlans.serializePlan(id);
-        if(jdbc.queryForObject("SELECT COUNT(*) FROM plan_execution_location WHERE scope_id=? AND temporary=1 AND cleaned_at_epoch_ms IS NULL",Long.class,id)>0)
-            throw new IllegalStateException("Retain Plan history until its owned temporary directory has been released");
         if (jdbc.update("""
                 UPDATE web_console_plan_archive SET delete_after_epoch_ms=delete_after_epoch_ms
-                 WHERE plan_id=? AND delete_after_epoch_ms<=?
-                """, id, now.toEpochMilli()) != 1) return false;
+                 WHERE plan_id=? AND delete_after_epoch_ms<=? AND %s
+                """.formatted(PHYSICAL_PURGE_ELIGIBLE), id, now.toEpochMilli()) != 1) return false;
+        if(jdbc.queryForObject("SELECT COUNT(*) FROM plan_execution_location WHERE scope_id=? AND temporary=1 AND cleaned_at_epoch_ms IS NULL",Long.class,id)>0)
+            throw new IllegalStateException("Retain Plan history until its owned temporary directory has been released");
         Integer active = jdbc.queryForObject("""
                 SELECT COUNT(*) FROM work_task WHERE subject_type='flexible-plan' AND subject_id=?
                   AND state NOT IN ('COMPLETED','FAILED','CANCELLED')
