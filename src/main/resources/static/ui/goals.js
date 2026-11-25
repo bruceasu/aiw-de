@@ -82,24 +82,53 @@
     $('goal-show-active').setAttribute('aria-pressed', String(!showDeleted));
     $('goal-show-deleted').setAttribute('aria-pressed', String(showDeleted));
     $('goal-list').replaceChildren();
-    const rows = goals.filter(row => row.deleted === showDeleted);
+    const query = $('goal-list-search').value.trim().toLocaleLowerCase();
+    const rows = goals.filter(row => row.deleted === showDeleted && [row.title,row.id].some(value=>value.toLocaleLowerCase().includes(query)));
     rows.forEach(row => {
-      const item = node('div', null, 'goal-list-row');
-      const b = node('button', row.title, 'btn ghost goal-list-item'); b.type = 'button';
-      b.setAttribute('aria-current', String(current?.id === row.id));
-      b.onclick = () => run(async () => { clean(); await load(row.id); });
+      const item = $('goal-list').insertRow(), link = node('a',row.title,'record-name');
+      link.href='/ui/goals?goal='+encodeURIComponent(row.id);
+      link.dataset.consoleIcon='goals';link.dataset.i18nSkip='';
+      link.onclick = event => {
+        if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+        event.preventDefault();
+        run(async () => { clean(); await load(row.id); $('goal-back').focus(); });
+      };
       const action = node('button', row.deleted ? '恢复' : '删除', `btn ${row.deleted ? 'ghost' : 'danger'} small-btn goal-list-action`);
       action.type = 'button'; action.setAttribute('aria-label', `${row.deleted ? '恢复' : '删除'}目标：${row.title}`);
       action.onclick = () => run(() => changeDeleted(row, !row.deleted));
-      b.disabled = busy; action.disabled = busy;
-      item.append(b, action); $('goal-list').append(item);
+      action.disabled = busy;
+      item.insertCell().append(link);
+      const badge=node('span',text(row.deleted?'Deleted':'Current wishes'),'badge');badge.dataset.status=row.deleted?'OFFLINE':'ACTIVE';
+      item.insertCell().append(badge);
+      item.insertCell().textContent='v'+row.revision;
+      item.insertCell().append(action);
     });
-    if (!rows.length) $('goal-list').append(node('p', showDeleted ? 'No wishes are resting in the archive.' : 'The pool is quiet. Plant your first wish when you are ready.', 'goal-list-empty'));
+    if (!rows.length) {
+      const cell=$('goal-list').insertRow().insertCell();cell.colSpan=4;cell.className='empty';
+      cell.textContent=text(query?'No matching wishes':showDeleted?'No wishes are resting in the archive.':'The pool is quiet. Plant your first wish when you are ready.');
+    }
   }
+  $('goal-list-search').oninput=renderList;
+  function updateGoalLocation(id,title) {
+    const url=id?'/ui/goals?goal='+encodeURIComponent(id):'/ui/goals';
+    if(location.pathname+location.search!==url)history.replaceState(null,'',url);
+    window.dispatchEvent(new Event('aiw:desktop-location'));
+    if(title)window.dispatchEvent(new CustomEvent('aiw:desktop-content',{detail:{title}}));
+  }
+  $('goal-back').onclick=()=>run(async()=>{
+    clean();
+    if($('goal-message').value.trim()&&!await window.aiwConfirm(text('Discard the unsent message?'),{title:text('Back to wish list')}))return;
+    clearSelection();
+    await list();
+    $('goal-list-search').focus();
+  });
   function clearSelection() {
+    const detail=$('goal-detail');
+    if(window.aiwDesktopWindow?.has(detail)){window.aiwDesktopWindow.close(detail);return;}
     if ($('goal-discussion-dialog').open) $('goal-discussion-dialog').close();
     current = null; data = null; dirty = false;
-    $('goal-detail').hidden = true; $('goal-empty').hidden = false;
+    $('goal-detail').hidden = true; $('goal-catalogue').hidden = false;
+    updateGoalLocation();
     $('goal-message').value = '';
   }
   const discussionDialog = $('goal-discussion-dialog');
@@ -208,7 +237,10 @@
     if (preserveEdits && (dirty || current?.id !== id)) { scheduleReplies(); return; }
     data = latest; current = data.draft; dirty = false;
     showDeleted = current.deleted;
-    $('goal-detail').hidden = false; $('goal-empty').hidden = true;
+    const detail=$('goal-detail');
+    detail.hidden = false;
+    $('goal-catalogue').hidden = !window.aiwDesktopWindow;
+    updateGoalLocation(current.id,current.title);
     $('goal-title').value = current.title; $('goal-body').value = current.content.body;
     $('goal-missing').value = current.content.missing; $('goal-backend').value = current.content.backend;
     $('goal-discussion-subtitle').textContent = current.title;
@@ -219,6 +251,16 @@
     $('goal-detail').querySelectorAll('input,textarea,select,button').forEach(el => { el.disabled = current.deleted; });
     discussionDialog.querySelectorAll('input,textarea,select,button').forEach(el => { el.disabled = current.deleted; });
     $('goal-restore').disabled = false; $('goal-reload').disabled = false;
+    $('goal-back').disabled = false;
+    if(window.aiwDesktopWindow?.has(detail)){
+      if(!preserveEdits)window.aiwDesktopWindow.open(detail,{title:current.title});
+    }else if(window.aiwDesktopWindow){
+      const notice=$('goal-status'),marker=document.createComment('wish feedback');
+      notice.before(marker);detail.prepend(notice);
+      window.aiwDesktopWindow.open(detail,{title:current.title,icon:'goals',canClose:()=>!busy,canMinimize:()=>!busy,
+        beforeClose:()=>!dirty&&!$('goal-message').value.trim()||window.aiwConfirm(text('Discard unsaved wish changes?'),{title:text('Back to wish list')}),
+        onClose:()=>{marker.replaceWith(notice);clearSelection();renderList();}});
+    }
     $('goal-messages').replaceChildren();
     current.content.messages.forEach(m => {
       const box = node('div', null, 'goal-message'); box.append(node('strong', `${m.role}${m.stale ? ' · Older goal context' : ''}`), node('p',m.text));

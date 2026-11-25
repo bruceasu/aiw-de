@@ -73,7 +73,10 @@
       if(!m.work.length)work.append(text('span',t('No visible current work')));
       if(m.visibleWorkCount>3||m.visibleWorkCount>m.work.length)work.append(text('small',t('Active work shown')+': '+m.work.length+' / '+m.visibleWorkCount));
       const events=m.work.flatMap(w=>w.events||[]).sort((a,b)=>b.time-a.time),recent=text('td');recent.append(text('span',events.length?t(events[0].toolName||events[0].runtimeEvent||events[0].type):t('Last heartbeat')),text('small',date(events[0]?.time||m.worker.lastHeartbeatAt)));
-      const state=text('td');state.append(text('span',t(label[category(m)]),'pill neutral'),text('small',t(m.managementStatus)));if(stale(m))state.append(text('small',t('A connection issue does not confirm the remote process has stopped.')));
+      const state=text('td'),badge=text('span',t(label[category(m)]),'badge');
+      badge.dataset.status=category(m)==='IDLE'?'ACTIVE':category(m);
+      state.append(badge,text('small',t(m.managementStatus)));
+      if(stale(m))state.append(text('small',t('A connection issue does not confirm the remote process has stopped.')));
       const actions=text('td'),open=text('button',t(category(m)==='PENDING'?'Handle':'View'),'btn ghost');open.type='button';open.dataset.workerId=m.worker.workerId;open.onclick=()=>openDetail(m.worker.workerId);actions.append(open);tr.append(name,work,recent,state,actions);list.append(tr);
     }
     if(!members.length){const cell=text('td',t('No matching Workers'),'empty');cell.colSpan=5;const row=text('tr');row.append(cell);list.append(row);}
@@ -88,7 +91,18 @@
     const button=text('button',t(label),'btn ghost');button.type='submit';button.dataset.focus=action;button.disabled=action==='drain'?m.managementStatus!=='ACTIVE':m.managementStatus==='OFFLINE'||m.worker.activeLeases>0;
     form.append(csrf,button,text('p',t(help),'help'));form.onsubmit=()=>window.confirm(t(label)+'? '+t(help));host.append(form);
   }
-  function openDetail(id){selected=id;selectedAttempt=null;const m=snapshot.members.find(m=>m.worker.workerId===id);if(m?.work.length===1)selectedAttempt=m.work[0].attempt_id;renderDetail();dialog.showModal();}
+  function closeDetail(){
+    const id=selected;selected=null;dialog.hidden=true;
+    ([...document.querySelectorAll('[data-worker-id]')].find(n=>n.dataset.workerId===id)||$('[data-workers-search]')).focus();
+  }
+  function openDetail(id){
+    selected=id;selectedAttempt=null;
+    const member=snapshot.members.find(item=>item.worker.workerId===id);
+    if(member?.work.length===1)selectedAttempt=member.work[0].attempt_id;
+    renderDetail();
+    dialog.hidden=false;
+    window.aiwDesktopWindow?.open(dialog,{title:$('#workers-detail-title').textContent||id,icon:'workers',onClose:closeDetail});
+  }
   function renderDetail(){
     const m=snapshot.members.find(m=>m.worker.workerId===selected),host=$('[data-workers-detail-body]'),notice=$('[data-workers-detail-notice]'),select=$('[data-workers-work]');
     const focused=host.contains(document.activeElement)?document.activeElement.dataset.focus:null;
@@ -129,7 +143,9 @@
     catch(_){loadFailed=true;$('[data-workers-feedback]').textContent=t('Refresh failed; the previous snapshot is retained.');if(selected)renderDetail();}
     finally{busy=false;$('[data-workers-refresh]').disabled=false;}
   }
-  $('[data-workers-close]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{const id=selected;selected=null;([...document.querySelectorAll('[data-worker-id]')].find(n=>n.dataset.workerId===id)||$('[data-workers-search]')).focus();});
+  $('[data-workers-close]').onclick=()=>{
+    if(window.aiwDesktopWindow?.has(dialog))window.aiwDesktopWindow.close(dialog);else closeDetail();
+  };
   $('[data-workers-work]').onchange=e=>{selectedAttempt=e.target.value||null;renderDetail();};
   for(const key of ['search','status','source'])$('[data-workers-'+key+']').addEventListener(key==='search'?'input':'change',render);
   $('[data-workers-refresh]').onclick=refresh;window.addEventListener('aiw:locale-changed',()=>{translate();render();});

@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" th:content="${csrfToken}">
-  <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css?v=wide-lists-1">
-  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=runtime-profiles-1" defer></script>
+  <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css?v=module-lists-1">
+  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=module-lists-1" defer></script>
 </head>
 <body th:attr="data-wf-mode=${workflowMode},data-wf-admin=${canAdmin},data-wf-task-page=${taskPage},data-wf-task-execution=${taskExecution}"><div class="app"><aside th:replace="~{ui/fragments :: nav(${workflowMode})}"></aside><main class="main">
   <header th:replace="~{ui/fragments :: topbar(${workflowTitle},${workflowSubtitle})}"></header>
@@ -16,7 +16,7 @@
     <button type="button" class="btn ghost" data-wf-refresh data-wf-label="Refresh">Refresh</button>
   </div>
   <div class="wf-layout">
-    <section class="card wf-library" th:hidden="${workflowMode == 'tasks' and taskPage != 'list'}">
+    <section class="card wf-library console-list" th:hidden="${workflowMode == 'tasks' and taskPage != 'list'}">
       <div th:hidden="${workflowMode == 'tasks'}">
         <div class="wf-actions wf-task-list-head">
           <h2 data-wf-label="Saved workflows">Saved workflows</h2>

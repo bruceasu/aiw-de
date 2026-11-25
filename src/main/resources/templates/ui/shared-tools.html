@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" th:content="${csrfToken}"><title>工具目录</title>
   <link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css">
-  <script src="/ui/appearance.js"></script><script src="/ui/shared-tools.js" defer></script>
+  <script src="/ui/appearance.js"></script><script src="/ui/shared-tools.js?v=list-1" defer></script>
 </head>
 <body>
 <div class="app">
@@ -13,8 +13,8 @@
     <header th:replace="~{ui/fragments :: topbar('工具目录','登记和查找 MCP 与 HTTP 工具。')}"></header>
     <div class="content">
       <p id="tool-status" class="help" role="status"></p>
-      <section class="command-panel">
-        <form id="tool-search" class="form-actions">
+      <section class="command-panel console-list">
+        <form id="tool-search" class="console-list-toolbar">
           <label class="field">关键字<input name="q" type="search" maxlength="120" placeholder="名称、标识或操作"></label>
           <label class="field">类型<select name="kind"><option value="">全部</option><option>MCP</option><option>HTTP</option></select></label>
           <label class="field">状态<select name="state"><option value="ALL">全部</option><option value="ENABLED">启用</option><option value="DISABLED">停用</option></select></label>
@@ -28,13 +28,20 @@
           </table>
           <p id="tools-empty" class="empty" hidden>没有匹配的工具。</p>
         </div>
-        <div class="form-actions">
+        <div class="console-list-pagination">
           <button class="btn ghost" type="button" id="tools-prev" disabled>上一页</button>
+          <span id="tools-page" class="muted" aria-live="polite">1</span>
           <button class="btn ghost" type="button" id="tools-next" disabled>下一页</button>
         </div>
       </section>
+      <section id="tool-detail" class="card section" hidden aria-label="工具详情">
+          <h2 id="tool-detail-title"></h2>
+          <p id="tool-detail-description"></p>
+          <pre id="tool-detail-schema" class="code"></pre>
+      </section>
       <section id="tool-editor" class="card section" th:if="${canAdmin}" hidden>
         <h2 id="tool-editor-title">登记工具</h2>
+        <p id="tool-editor-status" class="help" role="status"></p>
         <form id="tool-edit">
           <label class="field">工具标识<input name="id" maxlength="64" pattern="[a-z][a-z0-9._\-]{0,63}" required></label>
           <label class="field">名称<input name="title" maxlength="160" required></label>

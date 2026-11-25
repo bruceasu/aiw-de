@@ -5,13 +5,13 @@
   <meta name="csrf-token" th:content="${csrfToken}"><title>Agent 身份与证书 · AIW:DE</title>
   <link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css">
   <link rel="stylesheet" href="/ui/authority.css"><script src="/ui/appearance.js"></script>
-  <script src="/ui/agents.js?v=agent-roles-1" defer></script>
+  <script src="/ui/agents.js?v=module-windows-1" defer></script>
 </head>
 <body><div class="app authority-page"><nav th:replace="~{ui/fragments :: nav('agents')}"></nav><main class="main">
   <header th:replace="~{ui/fragments :: topbar('Agent 身份与证书','配对独立 Agent，并管理远程客户端证书信任')} "></header>
   <div class="content">
     <p id="agent-feedback" class="authority-feedback" role="status" aria-live="polite" hidden></p>
-    <section class="card agent-invitation-section">
+    <section class="card agent-invitation-section" id="agent-invitation-editor" hidden>
       <h2>创建一次性配对邀请</h2>
       <p>本机档案只接受回环连接和一次性邀请。远程档案要求 HTTPS、Control Plane TLS 服务端证书和 Agent 客户端 mTLS 证书；证书由部署的 CA 签发，Control Plane 固定配对时的客户端证书指纹。Agent 配对后先进入待批准状态；随后可在此页一次确认注册、精确 Grant 和当前进程启用。</p>
       <form id="agent-invitation" class="form-grid authority-form">
@@ -31,13 +31,15 @@
         <pre class="agent-pairing-code"><code id="agent-pairing-code"></code></pre>
       </section>
     </section>
-    <section class="card agent-paired-section">
-      <h2>已配对的代理</h2>
+    <section class="card agent-paired-section console-list">
+      <div class="section-title"><h2 data-console-icon="agents">已配对的代理</h2><button type="button" class="btn primary" id="agent-invitation-open">创建配对邀请</button></div>
       <p>在这里确认身份、启用或停用当前进程。通过「Agent 权限」查看或调整秘书的业务授权。</p>
-      <div id="agent-list" class="record-list">
-        <article class="authority-record" th:each="agent : ${agents}" th:attr="data-agent-id=${agent['agent_id']},data-agent-active=${agent['identity_kind'] == 'AGENT' and agent['approval_state'] == 'APPROVED'},data-agent-remote=${agent['connection_profile'] == 'REMOTE'}">
-          <h3 th:text="${agent['agent_id']}"></h3>
-          <p>档案：<code th:text="${agent['connection_profile']}"></code> · 状态：<span th:text="${agent['revoked'] ? '已撤销' : (agent['approval_state'] == 'PENDING' ? '等待授权确认' : (agent['enabled'] ? '已启用' : '已批准，进程未启用'))}"></span></p>
+      <div class="table-wrap"><table aria-label="已配对的代理"><thead><tr><th scope="col">Agent</th><th scope="col">连接类型</th><th scope="col">状态</th><th scope="col">管理</th></tr></thead><tbody id="agent-list">
+        <tr th:each="agent : ${agents}" th:attr="data-agent-id=${agent['agent_id']},data-agent-active=${agent['identity_kind'] == 'AGENT' and agent['approval_state'] == 'APPROVED'},data-agent-remote=${agent['connection_profile'] == 'REMOTE'}">
+          <th scope="row" data-console-icon="agents" th:text="${agent['agent_id']}"></th>
+          <td><code th:text="${agent['connection_profile']}"></code></td>
+          <td><span class="badge" th:attr="data-status=${agent['revoked'] ? 'OFFLINE' : (agent['enabled'] ? 'ACTIVE' : 'WAITING_APPROVAL')}" th:text="${agent['revoked'] ? '已撤销' : (agent['approval_state'] == 'PENDING' ? '等待授权确认' : (agent['enabled'] ? '已启用' : '已批准，进程未启用'))}"></span></td>
+          <td><details data-agent-detail><summary>查看详情</summary><div class="agent-record-detail">
           <p th:if="${agent['connection_profile'] == 'REMOTE'}">当前客户端证书 SHA-256：<code th:text="${agent['client_cert_sha256']}"></code></p>
           <form data-approve-agent th:if="${agent['approval_state'] == 'PENDING' and !agent['revoked']}" class="form-grid authority-form">
             <input type="hidden" name="generation" th:value="${agent['generation']}">
@@ -54,9 +56,10 @@
           <div data-agent-rotations th:if="${agent['connection_profile'] == 'REMOTE'}"></div>
           <button class="btn danger" type="button" data-revoke-agent th:if="${agent['identity_kind'] == 'AGENT'}">撤销 Agent 凭据</button>
           <p class="callout warn-callout" th:if="${agent['identity_kind'] == 'REVOKED_AGENT'}">此 Agent 凭据已撤销，必须重新配对。</p>
-        </article>
-        <p class="authority-empty" th:if="${agents.empty}">尚无已配对 Agent。</p>
-      </div>
+          </div></details></td>
+        </tr>
+        <tr th:if="${agents.empty}"><td class="empty" colspan="4">尚无已配对 Agent。</td></tr>
+      </tbody></table></div>
     </section>
     <p class="help"><a href="/ui/authority">打开 Agent 权限</a></p>
   </div>

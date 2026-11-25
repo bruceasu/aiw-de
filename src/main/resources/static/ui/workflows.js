@@ -285,7 +285,10 @@
     const locale = window.aiwI18n?.locale || document.documentElement.lang;
     return words[value]?.[locale?.startsWith('zh') ? 0 : 1] || value;
   };
-  const status = message => { $('[data-wf-status]').textContent = message; };
+  const status = message => {
+    const modalStatus = $('.desktop-window[open] [data-wf-window-status]');
+    (modalStatus || $('[data-wf-status]')).textContent = message;
+  };
   let definitions=[], teamSkills=[], teamMembers=[], factoryProfiles=[], taskSources=[], taskSkills=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='', selectedNodeKey=null;
   let sharedTools=[], taskSharedTools=[];
   let toolDecision=null;
@@ -349,6 +352,50 @@
   function element(tag,text,className) {const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;}
   function taskTitle(title) {
     return title==='Plane task caretaker'||title==='Manager diagnosis'?t('Manager diagnosis'):title;
+  }
+  function workWindow(section,title,icon,onClose,focus) {
+    if(!section.querySelector('[data-wf-window-status]')){
+      const message=element('p',undefined,'help');
+      message.dataset.wfWindowStatus='';message.setAttribute('role','status');
+      section.prepend(message);
+    }
+    window.aiwDesktopWindow.open(section,{title,icon,onClose,focus,container:$('.main>.content'),canClose:()=>!busy,canMinimize:()=>!busy});
+  }
+  function showNewTask() {
+    const section=$('[data-wf-task]');
+    if(window.aiwDesktopWindow.has(section)){
+      workWindow(section,t('New task'),'tasks');
+      return;
+    }
+    section.prepend($('[data-wf-member-status]'));
+    section.append($('[data-wf-schedule-editor]'));
+    section.hidden=false;
+    workWindow(section,t('New task'),'tasks',()=>{
+      section.hidden=true;
+      if(taskPage==='new')location.assign(taskListUrl());
+    },taskForm.elements.instruction);
+    status('');
+    loadMembers();
+    loadProfiles().catch(error=>status(t(error.message)));
+    if(document.body.dataset.wfAdmin==='true')loadSharedTools().catch(error=>status(t(error.message)));
+  }
+  function openEditorWindow(definition) {
+    const section=$('[data-wf-editor]'),desktop=window.aiwDesktopWindow;
+    if(desktop?.has(section)){
+      if((definition?.id||null)===(editing?.id||null)){workWindow(section,'','');return;}
+      if(!window.confirm(t('Discard unsaved edits?')))return;
+      desktop.close(section);
+    }
+    showEditor(definition);
+    if(!desktop)return;
+    $('.wf-library').hidden=false;
+    workWindow(section,definition?.spec.title||t('New workflow'),'workflows',()=>{
+      editing=null;panel('');
+      if(new URLSearchParams(location.search).has('definition')){
+        history.replaceState(null,'','/ui/workflows');
+        window.dispatchEvent(new Event('aiw:desktop-location'));
+      }
+    },$('[data-wf-title]'));
   }
   function button(label,callback) {const b=element('button',t(label),'btn ghost');b.type='button';b.onclick=callback;return b;}
   function translate() {
@@ -717,6 +764,7 @@
   function updateTaskListUrl() {
     window.history.replaceState(null,'',taskListUrl());
     $('[data-wf-new-task]').href=taskListUrl('/ui/tasks/new');
+    window.dispatchEvent(new Event('aiw:desktop-location'));
   }
   function emptyTable(host,columns,label) {
     const row=element('tr'),cell=element('td',t(label),'empty');
@@ -746,9 +794,14 @@
     for(const row of result.tasks) {
       const title=taskTitle(row.title),entry=element('tr'),name=element('td'),open=element('a',title||row.id);
       open.href=taskListUrl('/ui/tasks/'+encodeURIComponent(row.id));open.dataset.i18nSkip='';
+      open.className='record-name';open.dataset.consoleIcon='tasks';
+      open.addEventListener('click',event=>{
+        if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||!window.aiwDesktopWindow)return;
+        event.preventDefault();act(()=>openRun(row.id));
+      });
       name.append(open,element('small',row.id,'wf-task-id mono'));
       const state=element('td');
-      state.append(element('span',t(row.state),'pill neutral'));
+      const badge=element('span',t(row.state),'badge');badge.dataset.status=row.state;state.append(badge);
       if(row.delete_after_epoch_ms)state.append(element('small',t('Delete after')+' '+new Date(row.delete_after_epoch_ms).toLocaleString(),'wf-task-id'));
       const actions=element('td'),buttons=element('div',undefined,'wf-history-actions');
       renderTaskActions(buttons,row.id,title,{manageable:row.manageable,archived:view!=='current',deleteAfter:row.delete_after_epoch_ms});
@@ -759,6 +812,7 @@
     $('[data-wf-history-page]').textContent=String(result.page);
     $('[data-wf-history-prev]').disabled=result.page===1;
     $('[data-wf-history-next]').disabled=!result.hasMore;
+    window.dispatchEvent(new Event('aiw:desktop-content'));
   }
   function renderTaskActions(host,id,title,management) {
     host.replaceChildren();
@@ -788,7 +842,7 @@
       await api('/tasks/'+encodeURIComponent(id)+'/history',{action});
       status(t(({archive:'Task archived.','schedule-delete':'Deletion scheduled.','undo-delete':'Deletion cancelled.'})[action]));
       if(taskPage==='list')await refreshTaskHistory();
-      else {signature='';await refreshRun();}
+      if(selectedRun===id){signature='';await refreshRun();}
     });
   }
   async function library() {
@@ -809,8 +863,14 @@
       const row=element('tr'),name=element('td'),actions=element('td'),controls=element('div',undefined,'wf-history-actions');
       const link=element('a',definition.spec.title);
       link.href='/ui/workflows?definition='+encodeURIComponent(definition.id);link.dataset.i18nSkip='';
+      link.className='record-name';link.dataset.consoleIcon='workflows';
+      link.addEventListener('click',event=>{
+        if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||!window.aiwDesktopWindow)return;
+        event.preventDefault();
+        openEditorWindow(definition);
+      });
       name.append(link);
-      controls.append(button('Make a copy',()=>showEditor({id:null,version:0,spec:definition.spec})),
+      controls.append(button('Make a copy',()=>openEditorWindow({id:null,version:0,spec:definition.spec})),
         button('Schedule',()=>act(()=>arrange(definition.spec))));
       actions.append(controls);row.append(name,actions);list.append(row);
     }
@@ -819,7 +879,12 @@
     for(const run of data.executions){
       const row=element('tr'),name=element('td'),state=element('td'),link=element('a',run.title||run.id);
       link.href='/ui/workflows?execution='+encodeURIComponent(run.id);link.dataset.i18nSkip='';
-      name.append(link);state.append(element('span',t(run.state),'pill neutral'));
+      link.addEventListener('click',event=>{
+        if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||!window.aiwDesktopWindow)return;
+        event.preventDefault();act(()=>openRun(run.id));
+      });
+      link.className='record-name';link.dataset.consoleIcon='workflows';
+      const badge=element('span',t(run.state),'badge');badge.dataset.status=run.state;name.append(link);state.append(badge);
       row.append(name,state,updatedCell(run.updated_ms));runs.append(row);
     }
     loadMembers();
@@ -895,13 +960,31 @@
   function assignment(value){return {assignment:['AUTO','GENERAL'].includes(value)?value:'MEMBER',memberId:['AUTO','GENERAL'].includes(value)?null:value};}
   let selectedRunStep=null;
   async function openRun(id) {
-    if(pageMode==='tasks'&&taskPage!=='detail'){
+    if(pageMode==='tasks'&&(taskPage==='new'||taskPage!=='detail'&&!window.aiwDesktopWindow)){
       window.location.assign(taskListUrl('/ui/tasks/'+encodeURIComponent(id)));
       return;
     }
+    const section=$('[data-wf-run]'),editor=$('[data-wf-editor]');
+    const onDesktop=window.aiwDesktopWindow;
+    if(onDesktop?.has(section)){
+      if(selectedRun===id){workWindow(section,'','');return;}
+      onDesktop.close(section);
+    }
+    if(onDesktop?.has(editor))onDesktop.close(editor);
+    if(onDesktop?.has($('[data-wf-task]')))onDesktop.close($('[data-wf-task]'));
     if(id!==taskExecution)preparingGoal=null;
     selectedRun=id;selectedRunStep=null;signature='';panel('run');
     await refreshRun();
+    if(!onDesktop||selectedRun!==id||section.hidden)return;
+    if(pageMode==='workflows')$('.wf-library').hidden=false;
+    const title=$('[data-wf-run-title]').textContent||id;
+    const href=pageMode==='tasks'?taskListUrl('/ui/tasks/'+encodeURIComponent(id)):'/ui/workflows?execution='+encodeURIComponent(id);
+    window.dispatchEvent(new CustomEvent('aiw:desktop-record',{detail:{href,title}}));
+    workWindow(section,title,pageMode,()=>{
+      selectedRun=null;currentView=null;signature='';panel('');
+      if(taskPage==='detail')location.assign(taskListUrl());
+      else if(pageMode==='workflows'&&route.has('execution'))location.assign('/ui/workflows');
+    });
   }
   function renderRunStep(run,key) {
     const host=$('[data-wf-run-node]'),node=run.spec.nodes.find(item=>item.key===key);
@@ -1049,6 +1132,8 @@
     const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.taskDisplayState,data.activity?.attemptId,data.activity?.stale,data.report,data.failureCode,data.preparation,data.management,data.taskCapabilities]);if(stamp===signature)return;signature=stamp;
     const title=taskTitle(run.spec.title);
     $('[data-wf-run-title]').textContent=title;
+    if(taskPage==='detail'||route.get('execution')===run.id)
+      requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('aiw:desktop-content', {detail:{title}})));
     const profile=data.runtimeProfile;
     $('[data-wf-runtime-profile]').textContent=profile?.id?t('Runtime profile')+' · '+profile.id+' v'+profile.version+' · '+profile.model:'';
     const grants=$('[data-wf-shared-tool-grants]');
@@ -1139,6 +1224,7 @@
       await library();const definition=await api('/definitions/'+encodeURIComponent(result.workflowId));
       showEditor(definition);preparingGoal=null;
       history.replaceState(null,'','/ui/workflows?definition='+encodeURIComponent(result.workflowId));
+      window.dispatchEvent(new Event('aiw:desktop-location'));
     }
   }
   async function control(action,answer) {
@@ -1230,7 +1316,7 @@
       catch(error) { status(t('Task created, but its details could not be loaded.')+' '+t(error.message)); }
     });
   };
-  $$('[data-wf-new]').forEach(b=>b.onclick=()=>showEditor());
+  $$('[data-wf-new]').forEach(b=>b.onclick=()=>openEditorWindow());
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-verify-sample]').onclick=verificationExample;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
@@ -1315,10 +1401,18 @@
     await api('/schedules',{requestId:scheduleRequest,spec:scheduleSpec,repeat:form.get('repeat'),zone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',firstAt:new Date(form.get('firstAt')).getTime()});
     $('[data-wf-schedule-editor]').hidden=true;scheduleSpec=null;
     if(pageMode==='tasks'&&taskPage==='new')window.location.assign(taskListUrl());
-    else await library();
+    else {
+      window.aiwDesktopWindow?.close($('[data-wf-task]'));
+      await library();
+    }
   });};
   window.addEventListener('aiw:locale-changed',()=>{translate();const member=$('[data-wf-member]');memberOptions(member,member.value);renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(editing)renderSources($('[data-wf-definition-sources]'),editing.spec.sources||[],values=>editing.spec.sources=values);signature='';$('[data-wf-usage]').dataset.stamp='';$('[data-wf-amendment]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
   if(pageMode==='tasks'&&taskPage==='list') {
+    $('[data-wf-new-task]').addEventListener('click',event=>{
+      if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||!window.aiwDesktopWindow)return;
+      event.preventDefault();
+      if(!busy)showNewTask();
+    });
     const search=$('[data-wf-history-search]'),view=$('[data-wf-history-view]'),state=$('[data-wf-history-state]');
     search.value=(route.get('q')||'').slice(0,160);
     if([...view.options].some(option=>option.value===route.get('view')))view.value=route.get('view');
@@ -1347,19 +1441,22 @@
   if(pageMode==='tasks') {
     const back=$('[data-wf-back]');if(back)back.href=taskListUrl();
     if(taskPage==='new') {
-      panel('task');$('[data-wf-task]').append($('[data-wf-schedule-editor]'));loadMembers();
+      window.addEventListener('DOMContentLoaded',()=>{
+        if(window.aiwDesktopWindow)showNewTask();
+        else {panel('task');$('[data-wf-task]').append($('[data-wf-schedule-editor]'));loadMembers();}
+      },{once:true});
     } else if(taskPage==='detail') {
-      act(()=>openRun(taskExecution));
+      window.addEventListener('DOMContentLoaded',()=>act(()=>openRun(taskExecution)),{once:true});
     } else {
       panel('');library().catch(error=>{if(!busy&&!selectedRun)status(t(error.message));});
     }
   } else {
     panel('');
-    act(async()=>{
+    window.addEventListener('DOMContentLoaded',()=>act(async()=>{
       if(route.get('execution'))await openRun(route.get('execution'));
-      else if(route.get('definition'))showEditor(await api('/definitions/'+encodeURIComponent(route.get('definition'))));
+      else if(route.get('definition'))openEditorWindow(await api('/definitions/'+encodeURIComponent(route.get('definition'))));
       await library();
-    });
+    }),{once:true});
   }
   setInterval(()=>{if(selectedRun&&!busy&&!document.hidden&&!(preparingGoal&&importAttempted))act(refreshRun);},4000);
   if(pageMode!=='tasks'||taskPage==='list'){

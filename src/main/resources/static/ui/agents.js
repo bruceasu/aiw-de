@@ -95,6 +95,26 @@ async function loadRotations(card) {
   } catch (error) { host.textContent = error.message; }
 }
 document.querySelectorAll('[data-agent-id][data-agent-active="true"][data-agent-remote="true"]').forEach(loadRotations);
+document.getElementById('agent-invitation-open').onclick=()=>{
+  const editor=document.getElementById('agent-invitation-editor');
+  editor.hidden=false;
+  if(!window.aiwDesktopWindow)return;
+  if(window.aiwDesktopWindow.has(editor)){window.aiwDesktopWindow.open(editor,{});return;}
+  const feedback=document.getElementById('agent-feedback'),marker=document.createComment('agent feedback');
+  feedback.before(marker);editor.prepend(feedback);
+  window.aiwDesktopWindow.open(editor,{title:'创建配对邀请',icon:'agents',focus:document.getElementById('agent-profile'),
+    onClose:()=>{marker.replaceWith(feedback);editor.hidden=true;}});
+};
+document.querySelectorAll('[data-agent-detail]').forEach(details=>{
+  const trigger=details.querySelector('summary');
+  const content=details.querySelector('.agent-record-detail');
+  trigger.addEventListener('click',event=>{
+    if(!window.aiwDesktopWindow)return;
+    event.preventDefault();
+    const title=details.closest('[data-agent-id]').dataset.agentId;
+    window.aiwDesktopWindow.open(content,{title,icon:'agents',container:details.parentElement});
+  });
+});
 document.querySelectorAll("[data-control-agent]").forEach(form => form.addEventListener("submit", async event => {
   event.preventDefault();
   const button = event.submitter;

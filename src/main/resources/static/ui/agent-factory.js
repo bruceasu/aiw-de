@@ -184,17 +184,24 @@
     element.addEventListener("click", action);return element;
   }
   function renderConnections() {
-    const list = byId("model-auth-connections");list.replaceChildren();
-    if (!connections.length) { list.textContent = t(vault === null
+    const list = byId("model-auth-connections");
+    const expanded = new Set([...list.querySelectorAll("details[open]")].map(item=>item.dataset.connection));
+    list.replaceChildren();
+    if (!connections.length) { emptyRow(list,4,vault === null
       ? (authError ? "暂无法读取已保存的连接，请重新检查登录配置。" : "正在读取登录连接…")
       : "尚无 Plane 保存的登录连接。请先在上方选择登录方式，再新增连接。");return; }
     for (const item of connections) {
-      const row = document.createElement("article");row.className = "card";
-      const title = document.createElement("h3");title.textContent = item.label;
-      const description = document.createElement("p");description.textContent = kindName(item.kind) + " · " + t(labels[item.state] || item.state);
-      const actions = document.createElement("div");actions.className = "actions";
+      const row=list.insertRow(), title=document.createElement("strong");
+      title.dataset.consoleIcon="authority";title.textContent=item.label;row.insertCell().append(title);
+      row.insertCell().textContent=kindName(item.kind);
+      row.insertCell().append(stateBadge(item.state==="READY"?"ACTIVE":item.state==="DISCONNECTED"?"OFFLINE":item.state,labels[item.state]||item.state));
+      const details=document.createElement("details"),summary=document.createElement("summary"),actions=document.createElement("div");
+      details.dataset.connection=item.id;details.open=expanded.has(item.id);
+      summary.textContent=t("Connection actions");actions.className="form-actions agent-record-detail";
+      details.append(summary,actions);row.insertCell().append(details);
       const active = busy.has(item.id), matches = runtime.value === (item.kind === "CHATGPT_RESPONSES" ? "openai-agents" : "codex-app-server");
       actions.append(button("用于当前工厂", () => {
+        byId("factory-profile-detail").open=true;
         mode.value = item.kind === "CHATGPT_RESPONSES" ? "chatgpt" : "codex-plane";synchronize({ requestedRef: item.id });
         status.textContent = t("已选择连接，保存工厂设置后生效。");
       }, !matches || item.state !== "READY" || active));
@@ -208,7 +215,6 @@
         const result = await call(authRoot, "disconnect", { id: item.id, version: item.version });await reloadConnections();
         authStatus.textContent = item.label + t(result.remoteRevocationConfirmed ? "：已断开，并收到远端撤销确认。" : "：已在本机断开，远端撤销未确认；可在 ChatGPT 设置中断开应用。");
       }), active || item.state === "DISCONNECTED"));
-      row.append(title, description, actions);list.append(row);
     }
   }
   async function runAction(key, action) {
@@ -224,7 +230,7 @@
     if (results[1].status === "fulfilled") environment = results[1].value;
     if (results[0].status === "rejected") { vault = null;authError = results[0].reason.message;authStatus.textContent = authError;synchronize({ preserveModel: true });return; }
     connectionState(results[0].value);
-    authStatus.textContent = t(vault ? "已保存连接如下。操作目标以每张连接卡片的名称为准。" : errors[storage?.vaultState] || errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
+    authStatus.textContent = t(vault ? "已读取登录连接。" : errors[storage?.vaultState] || errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
     synchronize({ preserveModel: true });
   }
   async function importFile(file, target = null) {
@@ -277,11 +283,57 @@
   }
   function renderWorkers(workers) {
     const target = byId("factory-workers");target.replaceChildren();
-    if (!workers.length) target.textContent = t("尚无平台启动的本机 Worker。有任务需要时才启动。");
+    if (!workers.length) emptyRow(target,3,"尚无平台启动的本机 Worker。有任务需要时才启动。");
     for (const worker of workers) {
-      const row = document.createElement("p");row.dataset.i18nSkip = "";
-      row.textContent = worker.workerId + " · " + worker.state + (worker.message ? " · " + worker.message : ""); target.append(row);
+      const row=target.insertRow();
+      row.insertCell().textContent=worker.workerId;
+      row.insertCell().append(stateBadge(worker.state,{STARTING:'启动中',RUNNING:'运行中',FAILED:'启动失败',STOPPED:'已停止'}[worker.state]||worker.state));
+      row.insertCell().textContent=worker.message||'—';
     }
+  }
+  function stateBadge(state,label) {
+    const badge=document.createElement("span");
+    badge.className="badge";
+    badge.dataset.status=state;
+    badge.textContent=t(label);
+    return badge;
+  }
+  function emptyRow(rows,columns,message) {
+    const cell=rows.insertRow().insertCell();
+    cell.colSpan=columns;cell.className="empty";cell.textContent=t(message);
+  }
+  function openProfile(id) {
+    const detail=byId("factory-profile-detail");
+    if(window.aiwDesktopWindow?.has(detail)&&id===profileChoice.value){window.aiwDesktopWindow.open(detail,{});return;}
+    window.aiwDesktopWindow?.close(detail);
+    detail.open=true;
+    profileChoice.value=id;
+    profileChoice.dispatchEvent(new Event("change"));
+    if(window.aiwDesktopWindow){
+      const marker=document.createComment("factory status");
+      status.before(marker);detail.prepend(status);
+      window.aiwDesktopWindow.open(detail,{title:id||t("新建运行配置"),icon:"agent-factory",focus:profileId,
+        canClose:()=>!fields.disabled,canMinimize:()=>!fields.disabled,onClose:()=>{marker.replaceWith(status);detail.open=false;}});
+    }
+    profileId.focus();
+  }
+  function renderProfiles() {
+    const rows=byId("factory-profiles");
+    rows.replaceChildren();
+    for(const profile of profiles.items) {
+      const row=rows.insertRow(),name=button(profile.id,()=>openProfile(profile.id));
+      name.dataset.consoleIcon="agent-factory";
+      name.dataset.profileId=profile.id;
+      row.insertCell().append(name,document.createTextNode(" v"+profile.version));
+      row.insertCell().textContent=profile.settings.model;
+      row.insertCell().append(stateBadge(profile.enabled?"ACTIVE":"OFFLINE",profile.enabled?"已启用":"已停用"));
+      const labels=[];
+      if(profile.id===profiles.defaultId)labels.push(t("任务默认"));
+      if(profile.id===profiles.managerDefaultId)labels.push(t("经理默认"));
+      row.insertCell().textContent=labels.join(" · ")||"—";
+    }
+    if(!profiles.items.length)emptyRow(rows,4,"暂无运行配置。");
+    byId("factory-profile-new").disabled=false;
   }
   function settingsInput() {
     return { runtime: runtime.value, model: modelInput.value.trim(), effort: form.elements.effort.value,
@@ -308,6 +360,7 @@
     profileChoice.value=preferred||profiles.defaultId||"";
     profileId.value=profileChoice.value||"factory-default";
     profileId.readOnly=Boolean(profileChoice.value);
+    renderProfiles();
     syncProfileOptions();
   }
   function syncProfileOptions() {
@@ -315,6 +368,10 @@
     byId("factory-profile-enabled").checked=current?.enabled??true;
     byId("factory-profile-default").checked=current?.id===profiles.defaultId;
     byId("factory-profile-manager").checked=current?.id===profiles.managerDefaultId;
+    byId("factory-profiles").querySelectorAll("[data-profile-id]").forEach(button=>{
+      if(button.dataset.profileId===current?.id)button.setAttribute("aria-current","true");
+      else button.removeAttribute("aria-current");
+    });
   }
   profileChoice.addEventListener("change",()=>{
     revision++;
@@ -322,7 +379,15 @@
     syncProfileOptions();
     const profile=profiles.items.find(item=>item.id===profileChoice.value);
     if(profile)showSavedSettings(profile.settings,new URLSearchParams());
+    else {
+      form.reset();
+      profileChoice.value="";
+      profileId.value="";
+      syncProfileOptions();
+      showSavedSettings(null,new URLSearchParams());
+    }
   });
+  byId("factory-profile-new").addEventListener("click",()=>openProfile(""));
   runtime.addEventListener("change", () => { apiProvider.value = "";apiProtocol.value = "responses";modes();synchronize(); });
   apiProvider.addEventListener("change", () => { apiProtocol.value = "responses";modes(apiProvider.value === "deepseek" ? "api-key" : "");synchronize(); });
   apiProtocol.addEventListener("change", () => synchronize());
@@ -390,7 +455,10 @@
       save.disabled = false;synchronize({ preserveModel: true });renderWorkers(result.managedWorkers || []);
       status.textContent = t("已读取工厂设置，并保留你正在编辑的页面选择。保存后才会生效。");return;
     }
-    showSavedSettings(saved,new URLSearchParams(location.search));
+    const params=new URLSearchParams(location.search);
+    if (params.has("runtime")||params.has("model")||params.has("effort")||params.has("credentialRef"))
+      byId("factory-profile-detail").open=true;
+    showSavedSettings(saved,params);
     fields.disabled=false;save.disabled=false;
     renderWorkers(result.managedWorkers || []);status.textContent = t(saved ? "工厂设置已载入。" : "请按顺序选择执行方式、登录方式和模型，再保存设置。");
     authStatus.textContent = authError || t(vault ? "已保存连接如下。新增与更新操作分别处理，不会隐式覆盖其他连接。" : errors[storage?.vaultState] || errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);

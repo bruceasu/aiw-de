@@ -11,12 +11,21 @@
     const list=$('[data-pending-records]'),filter=$('[data-pending-filter]').value,query=$('[data-pending-search]').value.trim().toLocaleLowerCase();list.replaceChildren();
     const rows=records.filter(row=>(filter==='all'||filter==='action'&&row.needsHuman&&row.canAct||filter==='waiting'&&!row.needsHuman)
       &&(!query||(row.summary+' '+t(kinds[row.kind])).toLocaleLowerCase().includes(query)));
-    if(!rows.length)list.append(element('p',t('No matching records in this list.'),'help'));
+    if(!rows.length){
+      const cell=list.insertRow().insertCell();cell.colSpan=4;cell.className='empty';
+      cell.textContent=t('No matching records in this list.');
+    }
     for(const row of rows){
-      const card=element('article',undefined,'card'),state=row.needsHuman?(row.canAct?'Waiting for your decision':'A different role is required')
+      const entry=list.insertRow(),state=row.needsHuman?(row.canAct?'Waiting for your decision':'A different role is required')
         :row.state==='ANSWERED'?'Answered, not yet applied':row.state==='APPROVED'?'Allowed, not yet executed':'Waiting for Worker acknowledgement';
-      card.append(element('h3',t(kinds[row.kind])),element('p',row.kind==='TOOL_APPROVAL'?t(actions[row.summary]||row.summary):row.summary),element('p',t(state),'help'));
-      const link=element('a',t(row.needsHuman&&row.canAct?'Open and respond':'View the record'),'btn ghost');link.href=row.href;card.append(link);list.append(card);
+      const name=element('span',row.kind==='TOOL_APPROVAL'?t(actions[row.summary]||row.summary):row.summary,'record-name');
+      name.dataset.consoleIcon=row.kind==='WORKFLOW'?'workflows':row.kind==='TOOL_APPROVAL'?'tools':row.kind==='AUTHORIZATION'?'authority':'questions';
+      entry.insertCell().append(name);
+      entry.insertCell().textContent=t(kinds[row.kind]);
+      const badge=element('span',t(state),'badge');badge.dataset.status=row.needsHuman?'WAITING_APPROVAL':'RUNNING';
+      entry.insertCell().append(badge);
+      const link=element('a',t(row.needsHuman&&row.canAct?'Open and respond':'View the record'),'btn ghost small-btn');
+      link.href=row.href;entry.insertCell().append(link);
     }
     if(observedAt)$('[data-pending-status]').textContent=t('Last read')+': '+new Date(observedAt).toLocaleString(window.aiwI18n?.locale||undefined)+' · '+rows.length+' / '+records.length;
   }

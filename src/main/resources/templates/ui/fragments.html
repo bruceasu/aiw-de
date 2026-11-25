@@ -1,22 +1,46 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"><body>
-<nav class="sidebar" th:fragment="nav(active)">
-  <div class="brand" data-i18n-skip><div class="brand-mark" title="AI Worker" aria-label="AI Worker">AIW</div><span>Digital Employee</span></div>
-  <a th:if="${canOperate}" th:classappend="${active == 'goals' ? 'active' : ''}" href="/ui/goals">Wish Pool</a>
-  <a th:if="${canOperate}" th:classappend="${active == 'tasks' ? 'active' : ''}" href="/ui/tasks">Simple task</a>
-  <a th:classappend="${active == 'workflows' ? 'active' : ''}" href="/ui/workflows">Workflows</a>
-  <a th:if="${canOperate}" th:classappend="${active == 'skills' ? 'active' : ''}" href="/ui/skills">Skills</a>
-  <a th:if="${canOperate}" th:classappend="${active == 'tools' ? 'active' : ''}" href="/ui/tools">工具目录</a>
-  <a th:if="${canOperate}" th:classappend="${active == 'agent-factory' ? 'active' : ''}" href="/ui/agent-factory">Agent factory</a>
-  <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Employees</a>
-  <a th:classappend="${active == 'agents' ? 'active' : ''}" href="/ui/agents">Agent 管理</a>
-  <a th:classappend="${active == 'authority' ? 'active' : ''}" href="/ui/authority">Agent 权限</a>
-  <a th:if="${canOperate or canApprove}" th:classappend="${active == 'questions' ? 'active' : ''}" href="/ui/questions">Pending work</a>
-  <a th:classappend="${active == 'system' ? 'active' : ''}" href="/ui/system">System</a>
-  <div class="sidebar-footer">
-    <div class="sidebar-note"><strong th:text="${consolePrincipal}">local-console</strong><br/><span th:text="${consoleAuthEnabled ? consoleRole : 'Local access'}">Local access</span><br/>Authority remains in the Control Plane.</div>
-    <button class="sidebar-preferences" type="button" data-preferences-open aria-haspopup="dialog" aria-controls="console-preferences"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Personalization</span></button>
+<nav class="desktop-shell" th:fragment="nav(active)" aria-label="Control Plane" th:attr="data-desktop-area=${active},data-desktop-user=${consolePrincipal}">
+  <link rel="stylesheet" href="/ui/desktop.css?v=module-windows-1">
+  <div class="desktop-menu-bar">
+  <a class="desktop-brand" href="/ui" aria-label="System overview" data-i18n-skip><span>AIW</span><strong>Control Plane</strong></a>
+  <details class="desktop-menu" data-desktop-menu><summary>Menu</summary>
+  <div class="desktop-menu-items">
+  <a th:classappend="${active == 'desktop' ? 'active' : ''}" data-console-icon="desktop" href="/ui">System overview</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'goals' ? 'active' : ''}" data-console-icon="goals" href="/ui/goals">Wish Pool</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'tasks' ? 'active' : ''}" data-console-icon="tasks" href="/ui/tasks">Simple task</a>
+  <a th:classappend="${active == 'workflows' ? 'active' : ''}" data-console-icon="workflows" href="/ui/workflows">Workflows</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'skills' ? 'active' : ''}" data-console-icon="skills" href="/ui/skills">Skills</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'tools' ? 'active' : ''}" data-console-icon="tools" href="/ui/tools">工具目录</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'agent-factory' ? 'active' : ''}" data-console-icon="agent-factory" href="/ui/agent-factory">Agent factory</a>
+  <a th:classappend="${active == 'workers' ? 'active' : ''}" data-console-icon="workers" href="/ui/workers">Employees</a>
+  <a th:classappend="${active == 'agents' ? 'active' : ''}" data-console-icon="agents" href="/ui/agents">Agent 管理</a>
+  <a th:classappend="${active == 'authority' ? 'active' : ''}" data-console-icon="authority" href="/ui/authority">Agent 权限</a>
+  <a th:if="${canOperate or canApprove}" th:classappend="${active == 'questions' ? 'active' : ''}" data-console-icon="questions" href="/ui/questions">Pending work</a>
+  <a th:classappend="${active == 'system' ? 'active' : ''}" data-console-icon="system" href="/ui/system">System</a>
+  <div class="desktop-account">
+    <span th:text="${consoleAuthEnabled ? consoleRole : 'Local access'}">Local access</span>
+    <a th:unless="${consoleAuthEnabled}" class="btn ghost small-btn" href="/ui/login">Sign in</a>
+    <form th:if="${consoleAuthEnabled and !consoleLocalMode}" action="/ui/logout" method="post">
+      <input type="hidden" name="_csrf" th:value="${csrfToken}"/>
+      <button class="btn ghost small-btn" type="submit">Sign out</button>
+    </form>
+  </div>
+  </div></details>
+  <div class="desktop-indicators">
+    <a th:if="${canOperate or canApprove}" data-console-icon="questions" href="/ui/questions">Pending work</a>
+    <button class="sidebar-preferences" type="button" data-preferences-open aria-label="Personalization" aria-haspopup="dialog" aria-controls="console-preferences"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Personalization</span></button>
     <div class="sidebar-clock" data-clock-container data-i18n-skip><time data-sidebar-clock>--:--:--</time><span data-sidebar-date></span></div>
+  </div>
+  </div>
+  <div class="desktop-tabs" data-desktop-tabs role="group" aria-label="Open pages" hidden></div>
+  <div class="desktop-window-tray" data-desktop-windows role="group" aria-label="Minimized windows" hidden></div>
+  <div class="desktop-dock" role="group" aria-label="Dock">
+    <a data-console-icon="desktop" href="/ui" th:attr="aria-current=${active == 'desktop' ? 'page' : null}">System overview</a>
+    <a th:if="${canOperate}" data-console-icon="tasks" href="/ui/tasks" th:attr="aria-current=${active == 'tasks' ? 'page' : null}">Simple task</a>
+    <a data-console-icon="workflows" href="/ui/workflows" th:attr="aria-current=${active == 'workflows' ? 'page' : null}">Workflows</a>
+    <a data-console-icon="workers" href="/ui/workers" th:attr="aria-current=${active == 'workers' ? 'page' : null}">Employees</a>
+    <a th:if="${canOperate}" data-console-icon="goals" href="/ui/goals" th:attr="aria-current=${active == 'goals' ? 'page' : null}">Wish Pool</a>
   </div>
   <dialog id="console-preferences" class="workspace-confirm console-confirm preferences-panel" data-preferences-dialog aria-labelledby="console-preferences-title">
     <div class="workspace-confirm__top"><span>Personalization</span></div>
@@ -30,21 +54,12 @@
     <div class="workspace-confirm__footer"><button class="btn ghost" type="button" data-preferences-reset>Restore defaults</button><button class="btn primary" type="button" data-preferences-close>Done</button></div>
   </dialog>
   <script src="/ui/preferences.js?v=zh-en-1" defer></script>
-  <script src="/ui/console-translations.js?v=zh-en-1" defer></script>
+  <script src="/ui/console-translations.js?v=module-windows-1" defer></script>
   <script src="/ui/i18n.js?v=agent-roles-1" defer></script>
+  <script src="/ui/desktop.js?v=module-windows-1" defer></script>
+  <script src="/ui/desktop-windows.js?v=1" defer></script>
 </nav>
-<header class="topbar" th:fragment="topbar(title, subtitle)">
-  <div><h1 th:text="${title}">Title</h1><p th:text="${subtitle}">Subtitle</p></div>
-  <div class="topbar-actions">
-    <span class="pill neutral" th:text="${consoleAuthEnabled ? consoleRole : 'Local access'}">Local access</span>
-    <a th:unless="${consoleAuthEnabled}" class="btn primary small-btn" href="/ui/login">Sign in</a>
-    <span th:if="${consoleLocalMode}" class="pill neutral">Local administrator</span>
-    <form th:if="${consoleAuthEnabled and !consoleLocalMode}" action="/ui/logout" method="post" class="inline-form">
-      <input type="hidden" name="_csrf" th:value="${csrfToken}"/>
-      <button class="btn ghost small-btn" type="submit">Sign out</button>
-    </form>
-  </div>
-</header>
+<h1 class="desktop-page-title" th:fragment="topbar(title, subtitle)" th:text="${title}">Title</h1>
 <div th:fragment="flash" class="flash-stack">
   <div th:if="${successMessage}" class="flash success" th:text="${successMessage}"></div>
   <div th:if="${errorMessage}" class="flash error" th:text="${errorMessage}"></div>

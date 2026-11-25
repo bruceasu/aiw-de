@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" th:content="${csrfToken}"><title>Agent 工厂设置 · AIW:DE</title>
-<link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/authority.css"><link rel="stylesheet" href="/ui/workers.css?v=fd130-factory-1"><script src="/ui/team-members.js?v=fd130-factory-1" defer></script></head>
+<link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/authority.css"><link rel="stylesheet" href="/ui/workers.css?v=fd130-factory-1"><script src="/ui/team-members.js?v=list-1" defer></script></head>
 <body><div class="app authority-page factory-page"><nav th:replace="~{ui/fragments :: nav('agent-factory')}"></nav><main class="main"><header th:replace="~{ui/fragments :: topbar('Agent factory','Create the team and configure shared execution settings.')}"></header>
 <div class="content"><section class="card factory-intro"><h2>Two parts of the team</h2><p>Team members are persistent specialist identities. Workers are the running processes assigned to perform their work. Creating a member saves its role and Skills; it does not start a Worker.</p></section><div th:replace="~{ui/team-members :: manager('factory')}"></div><section class="card"><h2>Shared model and execution settings</h2><p>Choose how new Workers run and which saved model connection they use. These settings affect new work only; existing tasks keep their original connection.</p>
 <p id="factory-status" class="callout" role="status" aria-live="polite">正在读取…</p>
+<div class="console-list">
+  <div class="section-title"><h3 data-console-icon="agent-factory">运行 Profile</h3><button class="btn ghost" id="factory-profile-new" type="button" disabled>新建运行配置</button></div>
+  <div class="table-wrap"><table aria-label="运行 Profile"><thead><tr><th scope="col">名称</th><th scope="col">模型</th><th scope="col">状态</th><th scope="col">用途</th></tr></thead><tbody id="factory-profiles"></tbody></table></div>
+</div>
+<details id="factory-profile-detail" class="authority-disclosure"><summary>运行配置详情</summary>
 <form id="factory-settings"><fieldset id="factory-fields" disabled>
 <div class="form-grid">
-<label class="field">已保存的运行配置<select id="factory-profile-choice"><option value="">新建运行配置</option></select></label>
+<select id="factory-profile-choice" hidden><option value="">新建运行配置</option></select>
 <label class="field">配置名称<input id="factory-profile-id" required maxlength="64" pattern="[a-z][a-z0-9._-]{0,63}" placeholder="例如 fast-text"></label>
 </div>
 <div class="form-actions">
@@ -60,15 +65,15 @@ $env:AIW_MODEL_CREDENTIAL_KEY = [Convert]::ToBase64String($modelCredentialBytes)
 <label class="field authority-full" id="factory-codex-home" hidden>Worker 本机 Codex 登录目录<input name="guardHome" maxlength="2048" placeholder="留空使用 Worker 默认 Codex 环境"></label>
 </div><p class="help">目录查询使用已保存的本机程序路径。修改路径后，可先手动填写模型并保存，再重新读取目录。工厂不会自动安装依赖。</p></details>
 <p class="help">这里只设置模型、认证来源和启动方式。计划、文件、命令及预算权限仍由原授权决定。</p></fieldset>
-<button class="btn primary" id="factory-save" type="submit" disabled>保存工厂设置</button></form></section>
-<section class="card"><h2>已保存的登录连接</h2><p>每个连接的操作只作用于该连接。新增账户请使用上方登录设置；选择或登录成功后，仍需保存工厂设置才会用于新 Worker。</p>
+<button class="btn primary" id="factory-save" type="submit" disabled>保存工厂设置</button></form></details></section>
+<section class="card console-list"><h2 data-console-icon="authority">已保存的登录连接</h2><p>新增账户可在运行配置详情中设置。要让新 Worker 使用所选连接，请保存运行配置。</p>
 <p id="model-auth-status" class="callout" role="status" aria-live="polite">正在读取连接状态…</p><button class="btn ghost" id="model-auth-cancel" type="button" hidden>取消当前登录</button>
-<div id="model-auth-connections"></div><button class="btn ghost" id="model-auth-reload" type="button" disabled>重新读取连接状态</button></section>
-<section class="card"><h2>本机 Worker 状态</h2><div id="factory-workers" role="status"></div><button class="btn ghost" id="factory-refresh" type="button">刷新状态</button></section>
+<div class="table-wrap"><table aria-label="已保存的登录连接"><thead><tr><th scope="col">连接名称</th><th scope="col">类型</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead><tbody id="model-auth-connections"></tbody></table></div><button class="btn ghost" id="model-auth-reload" type="button" disabled>重新读取连接状态</button></section>
+<section class="card console-list"><div class="section-title"><h2 data-console-icon="workers">本机 Worker 状态</h2><button class="btn ghost" id="factory-refresh" type="button">刷新状态</button></div><div class="table-wrap"><table aria-label="本机 Worker 状态"><thead><tr><th scope="col">Worker</th><th scope="col">状态</th><th scope="col">说明</th></tr></thead><tbody id="factory-workers"></tbody></table></div></section>
 <section class="card" data-worker-access th:data-endpoint="@{/api/r1/worker-access}" data-i18n-skip>
 <details><summary data-w-text="External Worker access"></summary><p data-w-text="Keep the same Worker ID when reconnecting. Each credential belongs to that ID. Remote Workers manage their own model credentials."></p>
 <form data-access-form><div class="form-grid"><label class="field"><span data-w-text="Worker ID"></span><input name="workerId" required maxlength="128" pattern="[A-Za-z0-9][A-Za-z0-9._:\-]{0,127}" autocomplete="off"></label><label class="field"><span data-w-text="Label"></span><input name="label" required maxlength="120" autocomplete="off"></label></div><button class="btn primary" type="submit" data-w-text="Create access credential"></button></form>
 <p data-access-status role="status" aria-live="polite"></p><div data-access-secret hidden><p data-w-text="Shown once. Store this as AIW_WORKER_TOKEN on the Worker device. Use AIW_WORKER_ID above and an HTTPS AIW_CONTROL_PLANE_URL. Loopback HTTP is allowed."></p><input data-access-token type="password" readonly autocomplete="off" aria-label="AIW_WORKER_TOKEN"><button class="btn ghost" type="button" data-access-reveal data-w-text="Show or hide token"></button></div>
 <button class="btn ghost" type="button" data-access-refresh data-w-text="Refresh credentials"></button><div data-access-list></div>
 <p data-w-text="Stopping new work permits current work to finish. Revoking blocks further protocol requests; it does not stop a remote process. Resolve any interrupted work separately."></p></details></section>
-</div></main></div><script src="/ui/agent-factory.js?v=runtime-profiles-1" defer></script><script th:src="@{/ui/worker-access.js}" defer></script><script src="/ui/console.js"></script></body></html>
+</div></main></div><script src="/ui/agent-factory.js?v=list-1" defer></script><script th:src="@{/ui/worker-access.js}" defer></script><script src="/ui/console.js"></script></body></html>
