@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WorkTaskService {
+    @Autowired private me.asu.aidev.execution.tools.SharedToolAccess sharedToolAccess;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.FactoryTaskProfiles factoryProfiles;
     @org.springframework.beans.factory.annotation.Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.modelauth.ModelConnections> modelConnections;
     private me.asu.aidev.execution.skills.SkillFiles skillFiles;
     @Autowired public void setSkillFiles(me.asu.aidev.execution.skills.SkillFiles value) { skillFiles=value; }
@@ -55,7 +57,21 @@ public class WorkTaskService {
 
     @Transactional public WorkTask createReplacing(CreateWorkTaskCommand command,TaskId source) {
         var created=createInternal(command,false,source);
+        if(factoryProfiles!=null&&"flexible-plan".equals(created.subjectType())){
+            var original=tasks.find(source).orElseThrow();
+            if(factoryProfiles.read(original)!=null){
+                if(!original.subjectType().equals(created.subjectType())||!original.subjectId().equals(created.subjectId()))
+                    throw new SecurityException("Replacement cannot transfer a runtime binding to another plan.");
+                factoryProfiles.inherit(source.value(),created.id().value());
+            }
+        }
         if(modelConnections!=null)modelConnections.getObject().replaced(source,created.id());
+        if(sharedToolAccess!=null&&created.requiredCapabilities().contains(me.asu.aidev.execution.tools.SharedToolAccess.CAPABILITY)) {
+            var original=tasks.find(source).orElseThrow();
+            if(!original.subjectType().equals(created.subjectType())||!original.subjectId().equals(created.subjectId()))
+                throw new SecurityException("Replacement cannot transfer shared tool grants to another plan.");
+            sharedToolAccess.inherit(source.value(),created.id().value());
+        }
         return created;
     }
 

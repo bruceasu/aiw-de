@@ -13,10 +13,14 @@ import org.springframework.web.bind.annotation.*;
 public class WorkflowConsole {
     private final WorkflowRuns workflows;
     private final WebConsoleSecurityService security;
+    @org.springframework.beans.factory.annotation.Autowired
+    private me.asu.aidev.execution.skills.SkillFiles platformSkills;
+    @org.springframework.beans.factory.annotation.Autowired
+    private me.asu.aidev.execution.config.AgentFactorySettings factory;
     public WorkflowConsole(WorkflowRuns workflows,WebConsoleSecurityService security) {this.workflows=workflows;this.security=security;}
     public record Save(String id,long version,WorkflowRuns.Spec spec) {}
     public record Start(String requestId,String definitionId,long version,String input,String location) {}
-    public record Simple(String requestId,String instruction,String location,String memberId,WorkflowRuns.Assignment assignment,java.util.List<String> requiredSkills,java.util.List<WorkflowRuns.Material> sources,boolean workspaceTools,java.util.List<me.asu.aidev.execution.guard.GuardContract.Command> commands,boolean autonomousShell,String acceptance,List<String> requiredCheckIds) {}
+    public record Simple(String requestId,String instruction,String location,String memberId,WorkflowRuns.Assignment assignment,java.util.List<String> requiredSkills,java.util.List<WorkflowRuns.Material> sources,boolean workspaceTools,java.util.List<me.asu.aidev.execution.guard.GuardContract.Command> commands,boolean autonomousShell,String acceptance,List<String> requiredCheckIds,String runtimeProfile,List<me.asu.aidev.execution.tools.SharedToolAccess.Ref> sharedTools) {}
     public record Control(long version,String action,String answer) {}
     public record Supplement(String requestId,String text,String mode) {}
     public record Amendment(long version,String requestId,String node,List<String> nodes,String change,String mode) {
@@ -26,6 +30,7 @@ public class WorkflowConsole {
     public record AmendmentDecision(long version,String proposalId,boolean apply) {}
     @PostMapping("/api/r1/workflows/executions/{id}/amendments") @ResponseBody public Object propose(@PathVariable String id,@RequestBody Amendment input,HttpSession session) {
         security.requireOperator(session);
+        requireSharedToolAdmin(id,session);
         if("STRUCTURE".equals(input.mode()))return workflows.proposeStructure(id,input.version(),input.requestId(),input.change());
         if(input.mode()!=null&&!input.mode().isBlank()&&!"CONTENT".equals(input.mode()))throw new IllegalArgumentException("Unknown amendment mode");
         var nodes=input.nodes();
@@ -34,9 +39,29 @@ public class WorkflowConsole {
                 :workflows.propose(id,input.version(),input.requestId(),input.node(),input.change());
     }
     @PostMapping("/api/r1/workflows/executions/{id}/amendments/decision") @ResponseBody public Object decide(@PathVariable String id,@RequestBody AmendmentDecision input,HttpSession session) {
+        requireSharedToolAdmin(id,session);
         security.requireOperator(session);return workflows.decideProposal(id,input.version(),input.proposalId(),input.apply());
     }
     @GetMapping("/ui/workflows") public String page(Model model) {return page(model,"workflows");}
+    @GetMapping("/api/r1/workflows/runtime-profiles") @ResponseBody public Object runtimeProfiles(HttpSession session) {
+        security.requireOperator(session);
+        return factory.runtimeProfiles().items().stream().filter(p->p.enabled()).map(p->Map.of(
+                "id",p.id(),"version",p.version(),"model",p.settings().model(),"runtime",p.settings().runtime())).toList();
+    }
+    @GetMapping("/ui/skills") public String skillsPage() {return "ui/platform-skills";}
+    @GetMapping("/api/r1/workflows/skills") @ResponseBody public Object skills(HttpSession session) {
+        security.requireOperator(session);
+        return platformSkills.catalogue(security.actor(session));
+    }
+    @GetMapping("/api/r1/workflows/skills/{ref}/versions") @ResponseBody public Object skillVersions(HttpSession session,@PathVariable String ref) {
+        security.requireOperator(session);
+        return platformSkills.versions(security.actor(session),ref);
+    }
+    @PostMapping("/api/r1/workflows/skills") @ResponseBody public Object saveSkill(HttpSession session,
+            @RequestBody me.asu.aidev.execution.skills.SkillFiles.CatalogueEdit edit) {
+        security.requireOperator(session);
+        return platformSkills.saveCatalogue(security.actor(session),edit);
+    }
     @GetMapping("/ui/tasks") public String tasks(@RequestParam(required=false) String execution, Model model,HttpSession session) {
         return execution==null||execution.isBlank()?taskPage(model,"list",null):taskDetail(execution,model,session);
     }
@@ -64,16 +89,23 @@ public class WorkflowConsole {
         security.requireOperator(session);return workflows.caretakerAlerts();
     }
     @PostMapping("/api/r1/workflows/definitions") @ResponseBody public Object save(@RequestBody Save input,HttpSession session) {
-        security.requireOperator(session);return workflows.save(input.id(),input.version(),input.spec());
+        security.requireOperator(session);
+        if(input.spec()!=null&&input.spec().nodes().stream().anyMatch(n->!n.sharedTools().isEmpty()))security.requireAdmin(session);
+        return workflows.save(input.id(),input.version(),input.spec());
     }
     @GetMapping("/api/r1/workflows/definitions/{id}") @ResponseBody public Object definition(@PathVariable String id,HttpSession session) {
         security.requireOperator(session);return workflows.definition(id);
     }
     @PostMapping("/api/r1/workflows/start") @ResponseBody public Object start(@RequestBody Start input,HttpSession session) {
-        security.requireOperator(session);return workflows.start(input.requestId(),input.definitionId(),input.version(),input.input(),input.location());
+        security.requireOperator(session);
+        if(!security.role(session).canAdmin()&&workflows.definition(input.definitionId()).spec().nodes().stream().anyMatch(n->!n.sharedTools().isEmpty()))
+            security.requireAdmin(session);
+        return workflows.start(input.requestId(),input.definitionId(),input.version(),input.input(),input.location());
     }
     @PostMapping("/api/r1/workflows/tasks") @ResponseBody public Object simple(@RequestBody Simple input,HttpSession session) {
-        security.requireOperator(session);return workflows.simple(input.requestId(),input.instruction(),input.location(),input.memberId(),input.assignment(),input.requiredSkills(),input.sources(),input.workspaceTools(),input.commands(),input.autonomousShell(),input.acceptance(),input.requiredCheckIds());
+        security.requireOperator(session);
+        if(input.sharedTools()!=null&&!input.sharedTools().isEmpty())security.requireAdmin(session);
+        return workflows.simple(input.requestId(),input.instruction(),input.location(),input.memberId(),input.assignment(),input.requiredSkills(),input.sources(),input.workspaceTools(),input.commands(),input.autonomousShell(),input.acceptance(),input.requiredCheckIds(),input.runtimeProfile(),input.sharedTools());
     }
     @GetMapping("/api/r1/workflows/tasks/history") @ResponseBody
     public WorkflowRuns.TaskHistory taskHistory(HttpSession session,@RequestParam(defaultValue="current") String view,
@@ -94,7 +126,11 @@ public class WorkflowConsole {
         security.requireOperator(session);return workflows.view(id);
     }
     @PostMapping("/api/r1/workflows/executions/{id}/control") @ResponseBody public Object control(@PathVariable String id,@RequestBody Control input,HttpSession session) {
+        if("retry".equals(input.action()))requireSharedToolAdmin(id,session);
         security.requireOperator(session);return workflows.control(id,input.version(),input.action(),input.answer());
+    }
+    private void requireSharedToolAdmin(String id,HttpSession session) {
+        if(!security.role(session).canAdmin()&&workflows.hasSharedTools(id,security.actor(session)))security.requireAdmin(session);
     }
     @PostMapping("/api/r1/workflows/executions/{id}/inputs") @ResponseBody public Object supplement(@PathVariable String id,@RequestBody Supplement input,HttpSession session) {
         security.requireOperator(session);return workflows.supplement(id,input.requestId(),input.text(),input.mode());

@@ -28,10 +28,11 @@ public final class SkillFileContract {
             if(!PROTOCOL.equals(protocol) || ref==null || !ref.matches("[A-Za-z0-9][A-Za-z0-9._-]{0,95}")) throw new IllegalArgumentException("Invalid Skill identity");
             files=validate(files);
             if(!manifest(files).equals(manifestDigest) || !Objects.equals(version,"files-"+manifestDigest)) throw new IllegalArgumentException("Skill manifest mismatch");
-            if(!Set.of("platform-builtin","platform-asset","member-revision").contains(source) || ownerId==null || repositoryRef==null || assetVersion==null
+            if(!Set.of("platform-builtin","platform-asset","member-revision","platform-skill").contains(source) || ownerId==null || repositoryRef==null || assetVersion==null
                     || source.equals("platform-builtin") && (!ownerId.isEmpty() || !repositoryRef.isEmpty())
                     || source.equals("platform-asset") && (ownerId.isBlank() || repositoryRef.isBlank())
                     || source.equals("member-revision") && (ownerId.isBlank() || !repositoryRef.matches("member-[a-f0-9-]{36}") || !assetVersion.matches("(?:0|[1-9][0-9]{0,9})"))
+                    || source.equals("platform-skill") && (ownerId.isBlank() || !repositoryRef.isEmpty() || !assetVersion.matches("[1-9][0-9]{0,9}"))
                     || assetVersion.length()>64 || assetDigest==null || !assetDigest.matches("[0-9a-f]{64}"))
                 throw new IllegalArgumentException("Invalid Skill source scope");
         }

@@ -1,7 +1,7 @@
 # FD-152: Control Plane 经理与通用 Python Worker 两期计划
 
-**Status:** Design
-**Revision:** 1
+**Status:** Complete
+**Revision:** 6
 **Review policy:** Independent
 **Priority:** Medium
 **Evidence policy:** Markdown
@@ -82,11 +82,17 @@ Profile 由稳定 ID 和不可变版本组成。编辑创建下一版，启停�
 
 选型顺序为 **提交者明确指定 → 工作流节点明确指定 → 经理在满足条件的候选中选择 → 工厂默认**。提交者与节点约束冲突时要求解决冲突。经理只在任务或 SOP 有额外选型条件时参与纯模型选择；能唯一确定候选时由 Java 直接采用。显式指定的项停用、连接失效或没有兼容执行环境时显示原因。已派发任务在普通配置编辑后仍使用固定版本；凭据撤销与权限收回在开始和调用时生效。
 
+用户确认，首期按执行节点独立绑定模型连接。同一工作流可以在不同节点选择不同连接。每个任务固定配置与连接版本，续接继承来源任务的固定配置。连接凭据只能由匹配的 Worker 使用，保留账号归属与实时授权校验。
+
+工作流节点可设置固定 `runtimeProfile` 或 `runtimeProfileCandidates`，两种设置互斥。候选列表最多 16 个。进入该节点后，经理只收到节点标题、指令、验收要求及候选配置描述。选型期间暂缓派发。Plane 核对执行版本、候选和配置版本后才创建任务。失败保留记录，由操作者决定是否重试。
+
 ### 1.4 平台 Skills 与任务资料
 
 Skill 目录保存稳定标识、显示名、说明、归属、启用状态和版本。每次保存的新内容带版本号、摘要和变更记录。查看历史可以读取确切版本，恢复历史内容会创建新版本。首期维护可审核的文本说明并复用任务 Skill 文件的读取与摘要核验。
 
 任务、工作流节点及员工可以引用具体版本或当前启用版本。Plane 派发时解析为精确版本并校验访问授权。明确引用缺失或停用的 Skill 时阻塞。已派发任务读取原有快照。Skill 内容作为任务资料传给模型；文件、命令及后续共享工具的权限仍由任务授权决定。
+
+简单任务和业务节点可用 `custom-example` 选择当前启用版本，也可用 `custom-example@2` 固定启用的历史版本。每项任务只选同一 Skill 的一个版本。停用整项 Skill 后，新的任务无法选用该 Skill 的历史版本，已派发任务保留原快照。
 
 ### 1.5 Java 经理与 Python 纯模型调用
 
@@ -125,13 +131,21 @@ Java 以固定可执行文件和参数启动本机 Python。通过标准输入�
 
 Plane 工具条目包含稳定标识、版本、工具种类、连接引用、允许的操作、入参结构、访问范围、审批规则、启用状态。MCP 或 HTTP 连接由管理员登记，凭据按连接授权取用。共享工具入口接受当前任务已授权的工具 ID 和符合结构的业务参数。调用目标、允许动作和凭据来自已审核的连接配置。Worker 可检索本次租约下有效的工具和参数说明。
 
+目录框架先行。管理员在 `/ui/tools` 或 `POST /api/r1/tools` 登记一个具体操作，管理端可查看其服务地址。目录从现有数据库按关键字、协议及状态分页检索。已登记的在线 Worker 可调用 `POST /api/r1/worker-protocol/v1/workers/{workerId}/tool-catalog/search` 查看已启用条目的操作和入参元数据。目录保存写入版本及启停审计。
+
 派发时固定工具引用，调用时复核租约、当前权限和工具状态。执行记录以操作 ID 关联请求摘要、调用结果、任务、尝试和授权。遇到未知结果保留原操作供核对。首个交付只覆盖一个真实只读业务查询，完成从注册、探测可用性、按任务授权、调用到撤销的链路。文件、编辑和受控命令继续在 Worker 本机执行。
+
+当前调用实现覆盖 Python Worker 的共享 HTTPS GET 与 MCP 只读调用。部署使用 `AIW_SHARED_HTTP_ENDPOINTS` 和 `AIW_SHARED_MCP_ENDPOINTS` 精确登记可执行地址。目录启用和管理员在节点或简单任务选中的 `{id, revision}` 都必须满足。入参为声明过的平面字符串、整数或布尔值。HTTP 使用查询参数，MCP 使用 2026-07-28 Streamable HTTP 的 JSON 响应模式调用固定的 `tools/call`。Plane 以操作 ID 去重，保存摘要和状态，限制响应和每任务的调用数量。待核对状态阻止结算成功与重试。管理员在详情可以撤销授权、查看操作状态，或在租约结束后记录人工核对。MCP 凭据绑定、SSE 回包和远程探测在接入所需的服务时分别验证。
 
 ### 2.2 专业员工与 2.3 自动恢复
 
 专业员工配置保存职责、可复用 Skills、Profile 偏好、能力要求和交付标准。派发时解析并记录实际配置版本。工具权限随任务确认。一个员工可由不同的兼容 Worker 承载，也可以将通用员工一次成功派工的配置沉淀为专业员工。
 
+专业配置沿用现有团队成员身份，支持平台 Skills 的当前或历史版本、首选运行配置、所需能力和默认验收标准。显式任务或节点配置优先。冻结成员档案、Skill 内容及运行配置分别留在派发记录中。实际 Worker 由运行配置与能力查询决定。
+
 自动恢复以确定条件和正式执行证据触发。每项规则定义动作、适用范围、次数限制、停止条件和人工审批点。相同的失败与规则只消费一次相同恢复决策。重试前核对原任务、版本、权限、操作结果和资源是否已释放。权限扩大、发布、删除或未知结果交有权限的人决定。经理的模型输出提供建议，执行由 Plane 按已配置规则核验。
+
+首条规则使用 `AIW_MANAGER_AUTOMATIC_RATE_LIMIT_RETRY` 启用。仅纯文本任务的首次 `MODEL_API_RATE_LIMIT` 符合触发条件。Plane 等待 60 秒、复核原租约结束且无待处理输入或工具操作，最多重试一次并记录控制事件。其他失败保留既有人工处理流程。
 
 ### 阶段依赖与设计核对
 
@@ -141,19 +155,20 @@ Plane 工具条目包含稳定标识、版本、工具种类、连接引用、�
 
 ## Scope
 
-首期覆盖通用 Python Worker、能力匹配和并行、多 Profile、平台 Skills、经理纯模型调用，以及简单任务和业务工作流的端到端验证。下一期覆盖共享工具、专业员工配置及经理的受限自动恢复。本 FD 为两期设计稿。
+首期覆盖通用 Python Worker、能力匹配和并行、多 Profile、平台 Skills、经理纯模型调用，以及简单任务和业务工作流的端到端验证。下一期覆盖共享工具、专业员工配置及经理的受限自动恢复。用户确认以 DuckDuckGo 的 Instant Answer 接口和本地时区 MCP 服务验收共享工具。
 
 ## Work items
 
-- [ ] 1.1 定义通用任务和 Worker 能力契约，实现注册、匹配、领取与开工核验。
-- [ ] 1.2 按容量和上限启动兼容进程，验证租约和写入互斥。
-- [ ] 1.3 交付多 Profile、默认项和派发选型。
-- [ ] 1.4 交付平台 Skills 的管理和版本固定。
-- [ ] 1.5 接入 Java 调用 Python 的纯模型入口，校验经理建议和失败路径。
-- [ ] 1.6 打通简单任务、工作流执行节点和任务详情。
-- [ ] 2.1 注册工具并接入一个只读 MCP 或 HTTP API。
-- [ ] 2.2 保存专业员工配置，验证可跨兼容 Worker 使用。
-- [ ] 2.3 交付带审批边界的自动恢复规则。
+- [x] 1.1 定义通用任务和 Worker 能力契约，实现注册、匹配、领取与开工核验。
+- [x] 1.2 按容量和上限启动兼容进程，验证租约和写入互斥。
+- [x] 1.3 交付多 Profile、默认项和派发选型。
+- [x] 1.4 交付平台 Skills 的管理和版本固定。
+- [x] 1.5 接入 Java 调用 Python 的纯模型入口，校验经理建议和失败路径。
+- [x] 1.6 打通简单任务、工作流执行节点和任务详情。
+- [x] 2.1a 实现 MCP 与 HTTP 工具目录的登记、启停和检索。
+- [x] 2.1b 实现任务级访问授权并接入一个只读 MCP 或 HTTP 工具。
+- [x] 2.2 保存专业员工配置，验证可跨兼容 Worker 使用。
+- [x] 2.3 交付带审批边界的自动恢复规则。
 
 ## Acceptance
 
@@ -173,10 +188,31 @@ Plane 工具条目包含稳定标识、版本、工具种类、连接引用、�
 
 ## Verification
 
-- 设计依据为本次对话，以及工厂配置、进程启动和 Python 模型适配的静态核对。
-- 实施后计划执行适用的 Java 和 Python 编译检查、独立复审。复审重点为公开契约、权限、租约与并发。运行验收按独立授权执行。
-- 接口验收在新数据环境核对重复提交、并行领取和审计。进程启动器与纯模型桥可用可控响应验证失败路径，真实模型与真实工具连接有单独的端到端证据。
-- 当前为设计阶段，尚未实施或执行编译、测试、部署。
+- 本地 Java 离线 `compile`、`FactoryTaskProfilesTest`（1 条）通过。后者用 SQLite 验证两个任务各自固定 Profile、快照续接，以及 Runtime 和连接类型匹配。Python 修改文件语法检查、控制台 JavaScript `node --check` 通过。
+- 用户授权的两项实测使用 FD 工作树内的新 SQLite、临时项目、环回 Plane 和现有 DeepSeek 连接。SQLite 三项迁移均应用成功。Worker `factory-ad897929eca2dbeeb83a5e8d`（PID `7808`）连续完成两项任务。两项详情均记录 `acceptance-deepseek` v1 与实际授权范围。
+- `FP-9aaeb14a-c695-406a-8907-75e062d1db8d` 在指定目录将 `Toolkit.java` 的 `value()` 改为返回 `2`，实际执行 `python test_toolkit.py`，退出码 `0`，输出 `FD152_TEST_OK`。测试基于源码内容断言。
+- `FP-cd03c2fe-7c78-491f-923a-e02db763f5e5` 通过任务附带的 `README.md` 完成只读核对，返回 `FD152-DOC-CHERRY` 并正确识别没有到期日。三份项目文件的 SHA-256 在该任务前后一致。报告与 SQLite 证据保存在工作树忽略目录 `target/fd152-live-17198b14`，验收进程已停止。
+- 实测修复了无首次提交的 Git 目录准备失败、Windows 长路径下的锁与报告写入失败，以及完成后详情不保留运行配置和授权的问题。
+- 本地回归使用了 `mvn -o -Dmaven.repo.local=D:/.m2/repository -Dtest=WorkflowBusinessRoutingTest,FactoryTaskProfilesTest test`，6 条通过。测试覆盖流程规则和人工确认、经理选择失败与显式重试、丢弃过期选择，以及目录重叠和过期租约的停止证据。目录用例运行于本地 SQLite，尚未验证真实并发领取。
+- 真实经理选型使用授权的一次 DeepSeek 调用。首次启动在发出模型请求前失败，修复纯模型上下文初始化后，执行 `FP-f741d18e-b1e9-4000-833b-979522b08767` 从两个候选选择了 `quick-receipt` v1。Plane 写入请求与完成审计并派发了固定版本的任务。SQLite 证据在 `target/fd152-manager-j9sgg1kp`，该任务保持待领取，Worker 尝试数为 0。验收 Plane 已停止。
+- 工作流和简单任务支持显式引用历史 Skill 版本。仍待运行验收 Skill 版本变更与阻塞恢复、多实例并行领取、完整售后补件和审批流程、模型超时与其他账号连接。经理纯模型入口支持本机 Codex、本地 OpenAI API 密钥和 DeepSeek Chat Completions。工作流节点的自动选型已在 DeepSeek 路径实测。
+- 共享工具目录的 Java 离线编译、Python 与 JavaScript 语法检查通过。`mvn -o -Dmaven.repo.local=D:/.m2/repository -Dtest=SharedToolCatalogTest test` 的 2 条本地用例通过，覆盖 SQLite 迁移、两类登记、筛选与分页、启停审计、并发编辑版本冲突，以及 Worker 身份绑定和服务地址隐藏。未启动完整 Plane 或连接真实 MCP 或 HTTP 服务。
+- 共享任务授权、专业员工及恢复规则的 Java 离线编译与 Python、JavaScript 语法检查通过。`mvn -o -Dmaven.repo.local=D:/.m2/repository -Dtest=SharedToolCatalogTest,WorkflowBusinessRoutingTest test` 的 8 条本地用例通过，覆盖授权版本和租约核验入口、越权与撤销、人工核对、一次限流重试及工具操作排除。调用测试停在准入和人工核对，未发出外部请求。真实 HTTPS 响应、完整浏览器交互、定时器调度及双 Worker 的专业员工任务仍待联调。
+- 隔离 Plane 按 Worker 协议完成两项真实工具验收，SQLite 迁移至 V5。HTTPS 执行 `FP-75f1636a-fa27-439e-a227-43b59b6ff503` 查询 DuckDuckGo Instant Answer，首次 Java 默认客户端标识收到 403，使用本产品的客户端标识后收到 200，标题为 `Ada Lovelace`，有 16 条关联条目。MCP 执行 `FP-326d535d-657e-430c-b62a-bbe8448c1860` 调用本机 SDK 2.3.0 时区服务，将 `2026-07-01T09:00:00+09:00` 转为纽约的 `2026-06-30T20:00:00-04:00`。每项只有一条已完成操作记录，重复操作 ID 未重发，撤销后新调用返回 403。记录在 `target/fd152-tools-vb8cznfo`。验收由协议测试客户端领取任务，无额外模型调用。隔离 Plane 和 MCP 服务均已停止。
+- 在 FD 工作树以 `python target/fd152-final-acceptance.py` 启动环回 Plane、隔离 SQLite 和本机模型替身。首次验收因合成员工 ID 格式和工作流布尔字段缺失停在测试数据准备，证据在 `target/fd152-final-1r584nd0`。修正测试数据后，执行 `FP-235cb700-a09d-445f-a618-1b9d62a66dc1` 完成售后流程：缺少凭证时等待补件，收到合成凭证后只派发一次资料核对，由工厂启动的 Python Worker `factory-4c3bd54fe1f6bb0126c9bb4a` 完成，结果规则推进到审批，人工批准后结束于 `returned`。替身提供固定模型输出。原始证据在 `target/fd152-final-feo54q70`。
+- 同次验收发现，保存引用平台目录 Skill 的专业员工返回 422 `Unknown platform Skill`。静态核对定位到 `TeamMembers.ensureSkillBaselines`，现有初始化将目录引用送到只读取随包 Skill 的 `defaultText`。应只为随包 Skill 建立员工基线，目录 Skill 继续按独立版本读取。双 Worker、竞争领取和 Skill 停用尚未取得运行证据。
+- 同次验收中，经理执行 `FP-20b7e9e9-a385-43c5-b5fc-b8dfeafe8c95` 首次使用受控阻塞的本机 Python 进程触发 Java 的 125 秒截止时间。进程退出后，工作流记录 `MANAGER_MODEL_FAILED`，对应审计为 `MANAGER_SELECTION_REQUESTED` 和 `MANAGER_SELECTION_FAILED`，未派发节点。人工重试后用本机模型替身选出 `fixture-main` v1，追加请求和成功审计，并派发了节点。超时原因见工作流日志，审计的失败摘要为通用描述。证据在同一隔离目录的 `outcomes.json`。本轮未使用外部模型。
+- 修复 `TeamMembers.ensureSkillBaselines`，平台目录 Skill 保持由目录管理版本，员工基线只处理随包 Skill。离线 `mvn -o -Dmaven.repo.local=D:/.m2/repository -DskipTests compile` 通过。在环回 Plane 上执行 `python target/fd152-worker-acceptance.py`。首次复验已观察两个写任务并行，随后模型替身因为缺少写入参数 `expectedDigest` 被 Worker 拒绝。修正替身并按预算复验一次，四项均通过。测试使用隔离 SQLite、临时 Git 项目和两个实际由工厂启动的 Python Worker。模型响应来自本机替身。
+- 工厂上限设为 2。执行 `FP-25a44262-49f1-47f7-bbe6-e7139dad1362` 和 `FP-f7487741-6559-4acd-853a-99428677ea9b` 同时运行在 Worker `factory-8a53d5a7773505c6ca6ee2d4` 与 `factory-cffabc81b24cdb11ebe0f203` 上，均完成实际文件写入。两项均使用同一专业员工 `member-15200000-0000-4000-8000-000000000001` 第 1 版、`custom-receipt` v1 的相同摘要及 `fixture-main` v1。员工更新至第 2 版后，仍在运行的第一个任务报告原职责和默认验收标记。
+- 同目录的 `FP-d310fcac-d842-493c-ba48-d740c8dc7ee0` 在第一个任务持有租约且第二个 Worker 有空闲容量时仍未领取，随后于首个任务完成后 65 毫秒开始。第三次写入完成，核对两个项目的三个文件内容均符合预期。两 Worker 的领取请求经本机代理同步转发，竞争执行 `FP-5f1afa93-09b7-4773-bcad-db74b42b0f61` 时分别返回 204 和 200，运行中只有一个有效租约，结算后只有一次完成记录。
+- Skill 执行 `FP-66dfb146-1171-4b1f-b691-f7c5d71158fe` 保留并报告 v1 的内容，后派发的 `FP-dcbed92b-7fec-4ee5-9e58-947c7f8637e9` 报告 v2 的内容。停用后引用历史 v1 的新执行 `FP-84af8b7a-4219-41de-b441-6b1d21882482` 进入 `WAITING_MEMBER` 并记录 Skill 配置阻塞，未创建任务。复验原始证据位于 `target/fd152-final-vjytcq6j/outcomes.json`，隔离进程已停止。
+- 独立复审要求修正满额时的异构 Worker 回收、无 Profile 写任务目录互斥、显式 Profile 覆盖员工偏好，以及经理超时后的进程树确认。已登记事件 `FD-152-000003-changes-requested`。复审查阅了隔离验收记录，未重新执行测试。待修正后独立复核。 [复审报告](reviews/review-e96d84d1.md)
+- 修复代码提交为 `278db898`。回收判断加入任务能力、运行时及模型连接兼容校验，保留无活跃租约保护。目录准入独立于 Profile，旧记录按物理路径参与占用，领取响应传递实际占用目录。固定 Profile 优先于员工默认模型，明确配置的员工模型许可仍在派发和开工时校验。
+- 修复后离线 `mvn -o -Dmaven.repo.local=D:/.m2/repository -DskipTests compile` 通过。首轮 `python target/fd152-review-acceptance.py` 中，模拟注册的写 Worker 缺少固定工作配置和问题能力，首次领取未达到测试前置条件。补齐登记能力后，`python target/fd152-review-acceptance.py --skip-manager` 通过三项。无 Profile 的父目录任务 `FP-7a0bd93b-7c0f-40e6-b788-470600276d99` 返回规范目录，持有租约期间，无 Profile 子目录任务 `FP-eff1bd40-68d6-47a7-b284-a00a0608c7d4` 和明确指定 Profile 的子目录任务 `FP-0477b602-df7e-492e-9513-6d39cd48fff6` 均未获租约。目录用例由协议客户端领取。
+- 实际 Worker 上限为 1 时，员工的两个任务 `FP-30ba0dce-e781-4241-ba40-de3fd890f712`、`FP-a1faa721-cd5b-49db-8da1-ae557c2f677f` 分别使用 Chat Completions 与 Responses 的本机替身。第一项完成后，旧 Worker 变为 `OFFLINE`，工厂启动兼容 Worker，第二项按显式 `fixture-other` v1 完成。此用例验证协议不兼容时回收容量及显式 Profile 优先，使用本机 API 替身。证据在 `target/fd152-review-fix-jdsq5k5g/outcomes.json`。
+- 经理执行 `FP-b91b3b75-2227-4583-8cf8-f4d0da800ac8` 在首轮补验通过。125 秒截止时核对阻塞的 Python 进程及其子进程均已退出，失败审计明确写入 `Manager inference timed out.`，该节点未派发。人工重试后写入新的请求和成功审计，并派发 `fixture-main` v1。确认不退出的已知进程会保留待确认状态，并阻止后续模型进程启动。此用例覆盖实际父子进程和本机替身，没有再次访问外部模型。结果在 `target/fd152-review-fix-mtw9xg0n/outcomes.json`。
+- 已将上述隔离验收的 JSON 与本机验收脚本复制到仓库本地 `.ai/fd/FD-152/acceptance`，核对复制前后 SHA-256 一致，供工作树清理后查阅。全量测试、浏览器端端到端交互及部署未执行。
+- 独立复核确认原四项发现均已处理。复核涵盖修复代码与隔离验收原始证据，使用本机模型替身的异构协议验收未覆盖真实 OAuth 账号切换。 [独立复核报告](reviews/recheck-dcf2eae0.md)
 
 ## Sources
 
@@ -185,3 +221,5 @@ Plane 工具条目包含稳定标识、版本、工具种类、连接引用、�
 - [FD-151 经理与秘书权限分区](../archive/FD-151/FD-151_AGENT.md)
 - [Worker Pull 现行契约](../../../openspec/specs/worker-pull-protocol/spec.md)
 - [任务编排现行契约](../../../openspec/specs/task-orchestration/spec.md)
+
+**Completed:** 2026-11-25

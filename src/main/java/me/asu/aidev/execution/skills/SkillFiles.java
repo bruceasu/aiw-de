@@ -14,6 +14,10 @@ public class SkillFiles {
     public record Index(Map<String,List<String>> files,Map<String,List<String>> profiles) {}
     public record Frozen(List<Bundle> packages) { public Frozen { packages=List.copyOf(packages); } }
     public record MemberRevision(int version,String content) {}
+    public static final String CATALOGUE_CAPABILITY="platform-skill-catalog-v1";
+    public record CatalogueVersion(String ref,int version,boolean enabled,String title,String content,String digest,long createdMs) {}
+    public record CatalogueEdit(String ref,int expectedVersion,boolean enabled,String title,String content) {}
+    @org.springframework.beans.factory.annotation.Autowired private AuthorityBoundary boundary;
     private final AuthorityRepository repo;
     private final Map<String,Bundle> builtin=new HashMap<>();
     private final Index index;
@@ -76,6 +80,70 @@ public class SkillFiles {
     }
     public boolean managed(String task) { return repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_task_skills WHERE task_id=?",Long.class,task)>0; }
     public List<String> available() { return builtin.keySet().stream().sorted().toList(); }
+    private static final String PLATFORM_REF="custom-[a-z][a-z0-9-]{0,63}";
+    public static boolean platformReference(String ref) {return ref!=null&&ref.matches(PLATFORM_REF+"(?:@[1-9][0-9]{0,9})?");}
+    public static String referenceId(String selection) {return selection.split("@",2)[0];}
+    public List<CatalogueVersion> catalogue(String actor) {
+        return repo.jdbc().query("""
+                SELECT skill_ref,version,enabled,title,content,digest,created_ms FROM platform_skill_version s
+                 WHERE actor=? AND version=(SELECT MAX(v.version) FROM platform_skill_version v
+                                           WHERE v.actor=s.actor AND v.skill_ref=s.skill_ref)
+                 ORDER BY skill_ref
+                """,SkillFiles::readVersion,actor);
+    }
+    public List<String> available(String actor) {
+        var names=new LinkedHashSet<>(available());
+        repo.jdbc().query("""
+                SELECT s.skill_ref,s.version FROM platform_skill_version s
+                 WHERE s.actor=? AND s.enabled AND (
+                    SELECT latest.enabled FROM platform_skill_version latest
+                    WHERE latest.actor=s.actor AND latest.skill_ref=s.skill_ref ORDER BY latest.version DESC LIMIT 1
+                 ) ORDER BY s.skill_ref,s.version DESC
+                """,rs->{
+            String ref=rs.getString(1);
+            names.add(ref);names.add(ref+"@"+rs.getInt(2));
+        },actor);
+        return List.copyOf(names);
+    }
+    public List<CatalogueVersion> versions(String actor,String ref) {
+        if(ref==null||!ref.matches(PLATFORM_REF))throw new IllegalArgumentException("Invalid platform Skill reference");
+        return repo.jdbc().query("""
+                SELECT skill_ref,version,enabled,title,content,digest,created_ms
+                 FROM platform_skill_version WHERE actor=? AND skill_ref=? ORDER BY version DESC
+                """,SkillFiles::readVersion,actor,ref);
+    }
+    private static CatalogueVersion readVersion(java.sql.ResultSet rs,int row) throws java.sql.SQLException {
+        return new CatalogueVersion(rs.getString(1),rs.getInt(2),rs.getBoolean(3),rs.getString(4),rs.getString(5),rs.getString(6),rs.getLong(7));
+    }
+    @org.springframework.transaction.annotation.Transactional
+    public CatalogueVersion saveCatalogue(String actor,CatalogueEdit edit) {
+        if(edit==null||edit.ref()==null||!edit.ref().matches(PLATFORM_REF)||edit.title()==null||edit.title().isBlank()||edit.title().length()>160
+                ||edit.content()==null||edit.content().isBlank()||edit.content().indexOf(0)>=0
+                ||edit.content().getBytes(StandardCharsets.UTF_8).length>131072)throw new IllegalArgumentException("Invalid platform Skill");
+        boundary.lock();
+        int prior=repo.jdbc().queryForObject("SELECT COALESCE(MAX(version),0) FROM platform_skill_version WHERE actor=? AND skill_ref=?",
+                Integer.class,actor,edit.ref());
+        if(edit.expectedVersion()!=prior)throw new IllegalStateException("The Skill changed; reload before editing.");
+        int next=Math.incrementExact(prior);String digest=hash(edit.content().getBytes(StandardCharsets.UTF_8));long now=System.currentTimeMillis();
+        repo.jdbc().update("INSERT INTO platform_skill_version VALUES(?,?,?,?,?,?,?,?)",actor,edit.ref(),
+                next,edit.enabled(),edit.title().strip(),edit.content(),digest,now);
+        return new CatalogueVersion(edit.ref(),next,edit.enabled(),edit.title().strip(),edit.content(),digest,now);
+    }
+    private Bundle fromCatalogue(String actor,String name) {
+        String ref=referenceId(name);
+        long version=ref.equals(name)?0:Long.parseLong(name.substring(ref.length()+1));
+        var selected=repo.jdbc().query("""
+                SELECT s.skill_ref,s.version,s.enabled,s.title,s.content,s.digest,s.created_ms
+                 FROM platform_skill_version s WHERE s.actor=? AND s.skill_ref=? AND (?=0 OR s.version=?)
+                   AND (SELECT latest.enabled FROM platform_skill_version latest
+                        WHERE latest.actor=s.actor AND latest.skill_ref=s.skill_ref ORDER BY latest.version DESC LIMIT 1)
+                 ORDER BY s.version DESC LIMIT 1
+                """,SkillFiles::readVersion,actor,ref,version,version).stream().findFirst().filter(CatalogueVersion::enabled)
+                .orElseThrow(()->new IllegalArgumentException("Platform Skill unavailable: "+name));
+        byte[] raw=selected.content().getBytes(StandardCharsets.UTF_8);
+        if(!hash(raw).equals(selected.digest()))throw new IllegalStateException("Platform Skill content corrupted");
+        return bundle(ref,"platform-skill",actor,"",Integer.toString(selected.version()),selected.digest(),List.of(file("SKILL.md",raw)));
+    }
     public String defaultText(String ref) {
         var value=builtin.get(ref);if(value==null)throw new IllegalArgumentException("Unknown platform Skill");
         return new String(Base64.getDecoder().decode(value.files().stream().filter(f->f.path().equals("SKILL.md")).findFirst().orElseThrow().base64()),StandardCharsets.UTF_8);
@@ -91,6 +159,13 @@ public class SkillFiles {
         if(original!=null)original.packages().forEach(b->packages.put(b.ref(),b));
         if(selected.isEmpty()&&packages.isEmpty())return;
         for(String name:selected) {
+            if(platformReference(name)) {
+                var selectedVersion=fromCatalogue(actor,name);
+                var existing=packages.putIfAbsent(selectedVersion.ref(),selectedVersion);
+                if(existing!=null&&!existing.assetVersion().equals(selectedVersion.assetVersion()))
+                    throw new IllegalArgumentException("Choose one version of platform Skill "+selectedVersion.ref());
+                continue;
+            }
             var value=builtin.get(name);if(value==null)throw new IllegalArgumentException("Unknown platform Skill");
             var revision=revisions.get(name);
             if(revision==null) {packages.put(name,value);continue;}

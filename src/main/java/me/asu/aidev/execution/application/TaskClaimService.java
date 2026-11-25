@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskClaimService {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.FactoryTaskProfiles factoryProfiles;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.authority.AuthorityBoundary workerBoundary;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.modelauth.ModelConnections modelConnections;
     @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> unifiedWorkflows;
@@ -131,6 +132,9 @@ public class TaskClaimService {
             var workflow=unifiedWorkflows==null?null:unifiedWorkflows.getIfAvailable();
             if(workflow!=null&&!workflow.canClaim(candidate))continue;
             boolean configured = configurations != null && configurations.managed(candidate.id().value());
+            boolean fixed = factoryProfiles!=null&&factoryProfiles.read(candidate)!=null;
+            if(fixed&&!factoryProfiles.canClaim(candidate,worker))continue;
+            if(factoryProfiles!=null&&!factoryProfiles.workspaceAvailable(candidate,true))continue;
             // Factory tasks carry immutable reviewed model guidance in their binding.
             // Keep ordinary external tasks on the existing global catalog policy.
             if (configured && !configurations.canClaim(candidate.id().value(), worker)) continue;
@@ -139,13 +143,14 @@ public class TaskClaimService {
                 int currentScore = (int) skills.stream().filter(worker.capabilities()::contains).count();
                 boolean betterAvailable = available.stream().anyMatch(other -> !other.id().equals(workerId)
                         && other.supports(candidate.requiredCapabilities())
-                        && (configured ? configurations.canClaim(candidate.id().value(), other) : aiProfiles.canRun(candidate.type(), other.runtimeType()))
+                        && (fixed ? factoryProfiles.canClaim(candidate,other) : configured ? configurations.canClaim(candidate.id().value(), other) : aiProfiles.canRun(candidate.type(), other.runtimeType()))
                         && skills.stream().filter(other.capabilities()::contains).count() > currentScore);
                 if (betterAvailable) continue;
             }
             if ((recommendationPolicy == null || !recommendationPolicy.managed(candidate))
                     && (goalPolicy == null || !goalPolicy.managed(candidate))
                     && !configured
+                    && !fixed
                     && !aiProfiles.canRun(candidate.type(), worker.runtimeType())) continue;
             boolean allowed = true;
             for (TaskClaimPolicy policy : claimPolicies) {

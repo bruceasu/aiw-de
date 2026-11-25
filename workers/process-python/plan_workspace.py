@@ -11,13 +11,23 @@ def key(value):
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def filesystem_path(path):
+    if os.name != "nt":
+        return path
+    value = str(path.absolute())
+    if value.startswith("\\\\?\\"):
+        return path
+    return Path("\\\\?\\UNC\\" + value[2:] if value.startswith("\\\\") else "\\\\?\\" + value)
+
+
 def directory(root, *parts):
     current = root
     for part in parts:
         current = current / part
-        current.mkdir(exist_ok=True)
-        if (current.is_symlink() or getattr(current, "is_junction", lambda: False)()
-                or not current.is_dir() or current.resolve().parent != current.parent.resolve()):
+        physical = filesystem_path(current)
+        physical.mkdir(exist_ok=True)
+        if (physical.is_symlink() or getattr(physical, "is_junction", lambda: False)()
+                or not physical.is_dir() or physical.resolve().parent != filesystem_path(current.parent).resolve()):
             raise RuntimeError("HANDOFF_DIRECTORY_UNSAFE")
     return current
 
@@ -25,7 +35,7 @@ def directory(root, *parts):
 class DirectoryLock:
     """Keep the shared directory lock and identify the exact Python attempt holding it."""
     def __init__(self, root, attempt, attempt_id, stopped_attempts=()):
-        parent = directory(root, ".ai", "locks")
+        parent = filesystem_path(directory(root, ".ai", "locks"))
         self.path = parent / "execution.lock"
         self.owner = self.path / ("attempt-" + key(attempt_id))
         stopped = {"attempt-" + key(identity) for identity in stopped_attempts if identity != attempt_id}
@@ -110,8 +120,10 @@ def input_manifests(task, reports=None):
         for parent in [path, *path.parents]:
             if parent == root:
                 break
-            if parent.is_symlink() or getattr(parent, "is_junction", lambda: False)():
+            physical = filesystem_path(parent)
+            if physical.is_symlink() or getattr(physical, "is_junction", lambda: False)():
                 raise RuntimeError("HANDOFF_PATH_UNSAFE")
+        path = filesystem_path(path)
         if not path.is_file() or path.stat().st_size > 1024 * 1024:
             raise RuntimeError("HANDOFF_CAPACITY_EXCEEDED")
         raw = path.read_bytes()
@@ -176,15 +188,20 @@ class PlanWorkspace:
         from worker_runtime import current_attempt, git as runtime_git
         attempt = current_attempt()
         root = Path(task["location"])
+        expected = task.get("workspaceCanonicalPath")
+        if expected and root.resolve() != Path(expected):
+            raise RuntimeError("WORKSPACE_LOCATION_CHANGED")
         root.mkdir(parents=True, exist_ok=True)
         root = root.resolve(strict=True)
-        text_only = (broker is None and config.runtime == "openai-agents" and config.process_role == "general"
+        if expected and root != Path(expected):
+            raise RuntimeError("WORKSPACE_LOCATION_CHANGED")
+        text_only = (broker is None and config.runtime == "openai-agents" and config.process_role in {"general", "task"}
                      and task.get("subjectType") == "flexible-plan" and "general-work" in task.get("requiredCapabilities", ()))
         sandbox = None
         if text_only and not task.get("checkpointInputs"):
             parent = directory(root, ".ai", "sandboxes")
             sandbox = parent / key(task["attemptId"])
-            sandbox.mkdir()
+            filesystem_path(sandbox).mkdir()
         gate = DirectoryLock(sandbox or root, attempt, task["attemptId"], task.get("stoppedAttempts") or ())
         try:
             if broker:
@@ -212,11 +229,12 @@ class PlanWorkspace:
                 gate.release()
             raise
 
-        def git(cwd, *args, workspace_finalization=False):
+        def git(cwd, *args, workspace_finalization=False, missing_head_ok=False):
             if broker:
                 from execution_guard import ControlledGit
+                allowed = (0, 1) if missing_head_ok else (0,)
                 return broker.operate("GIT", ".", {"action": "workspace", "args": list(args)},
-                                      lambda: ControlledGit(Path(cwd), attempt)._run(*args),
+                                      lambda: ControlledGit(Path(cwd), attempt)._run(*args, allowed=allowed),
                                       workspace_finalization=workspace_finalization)
             return runtime_git(str(cwd), *args)
 
@@ -241,7 +259,9 @@ class PlanWorkspace:
                 try:
                     if has_nested_repository(root, attempt):
                         return cls(root, source, attempt, git, gate)
-                    base = git(source, "rev-parse", "--verify", "HEAD^{commit}").strip()
+                    base = git(source, "rev-parse", "--verify", "--quiet", "HEAD^{commit}", missing_head_ok=True).strip()
+                    if not base:
+                        return cls(root, source, attempt, git, gate)
                     dirty = git(source, "status", "--porcelain", "--untracked-files=normal", "--", ".", ":(exclude).ai", ":(exclude).ai/**")
                     if not dirty:
                         parent = directory(root, ".ai", "worktrees", key(task["planId"]))
@@ -314,7 +334,7 @@ class PlanWorkspace:
         body = (report["summary"] if full_report is None else full_report).encode("utf-8")
         if len(body) > REPORT_FILE_MAX_BYTES:
             raise RuntimeError("HANDOFF_REPORT_TOO_LARGE")
-        with (target / "report.md").open("xb") as file:
+        with filesystem_path(target / "report.md").open("xb") as file:
             file.write(body)
         manifest = {"protocol": "aiw.handoff.v1", "taskId": task["taskId"], "attemptId": task["attemptId"],
                     "planId": task["planId"], "workingDirectory": self.handoff_cwd, "completedAt": time.time_ns() // 1000000,
@@ -328,7 +348,7 @@ class PlanWorkspace:
         if tool_approval is not None:
             manifest["toolApproval"] = tool_approval
         raw = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
-        with (target / "manifest.json").open("xb") as file:
+        with filesystem_path(target / "manifest.json").open("xb") as file:
             file.write(raw)
         return {"manifest": (target / "manifest.json").relative_to(self.root).as_posix(),
                 "sha256": hashlib.sha256(raw).hexdigest()}

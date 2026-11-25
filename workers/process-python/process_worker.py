@@ -99,14 +99,17 @@ class WorkerConfig:
             raise ValueError("AIW_AGENT_ALLOW_SHELL is not supported by the Python API runtime")
         if process_role in {"release-readiness", "orchestrator"}:
             raise ValueError("ROLE_NONEXECUTABLE")
-        profile = get_profile(process_role)
-        if process_role == "workspace" and not _bool_env("AIW_EXECUTION_GUARD", False):
+        guarded = _bool_env("AIW_EXECUTION_GUARD", False)
+        profiles = (get_profile("general"), get_profile("workspace")) if process_role == "task" and guarded else (
+            get_profile("general" if process_role == "task" else process_role),)
+        if process_role == "workspace" and not guarded:
             raise ValueError("WORKSPACE_ROLE_REQUIRES_GUARDED_ADAPTER")
         capabilities = {part.strip() for part in os.getenv("AIW_WORKER_CAPABILITIES", "").split(",") if part.strip()}
         role_capabilities = {"general-work", "workspace-work", "goal-discussion", "requirement-analysis", "solution-architecture", "implementation-planning", "coding", "integration", "repair", "code-review", "verification", "integration-verification", "workflow-review", "release-readiness", "development-orchestration"}
         if any(part == "*" or part in {"flexible-work-v1", "execution-config-v1", "skill-files-v1", "model-images-v1", "worker-loop-turn-v1", "questions-v2", "price-repair-v1", "workspace-files-v1", "required-command-checks-v1"} or part.startswith(("repo:", "native-config:", "handoff-store:", "fixed-worker-profile:")) or part in role_capabilities for part in capabilities):
             raise ValueError("ROLE_CAPABILITY_DENIED")
-        capabilities.update(profile.capabilities)
+        for profile in profiles:
+            capabilities.update(profile.capabilities)
         if process_role == "coder":
             capabilities.add("price-repair-v1")
         if runtime == "openai-agents" and not os.getenv("AIW_MODEL_CREDENTIAL_REF"):
@@ -115,10 +118,14 @@ class WorkerConfig:
             from model_credentials import capability
             capabilities.add(capability())
         from skill_files import CAPABILITY as skill_files_capability
-        capabilities.add(skill_files_capability)
-        if _bool_env("AIW_EXECUTION_GUARD", False):
+        capabilities.update({skill_files_capability,"platform-skill-catalog-v1"})
+        if process_role == "task":
+            capabilities.add("workflow-runtime-profile-v1")
+        if process_role == "task" and runtime == "openai-agents":
+            capabilities.add("shared-http-tools-v1")
+        if guarded:
             from guarded_preflight import capabilities as guarded_capabilities
-            capabilities.update(guarded_capabilities(runtime, profile, str(Path(os.getenv("AIW_PROCESS_SKILLS_ROOT", Path(__file__).with_name("skills"))).resolve())))
+            capabilities.update(guarded_capabilities(runtime, profiles[0], str(Path(os.getenv("AIW_PROCESS_SKILLS_ROOT", Path(__file__).with_name("skills"))).resolve()), profiles[1:]))
             if runtime == "openai-agents" and "guarded-command-v1" in capabilities:
                 capabilities.add("required-command-checks-v1")
             from formal_questions import storage_capability
@@ -168,7 +175,7 @@ class WorkerConfig:
             heartbeat_interval=float(os.getenv("AIW_WORKER_HEARTBEAT_SECONDS", "20")),
             http_timeout=float(os.getenv("AIW_WORKER_HTTP_TIMEOUT_SECONDS", "15")),
         )
-        if runtime in {"codex-app-server", "openai-agents"} and not _bool_env("AIW_EXECUTION_GUARD", False):
+        if not guarded or process_role == "task":
             from native_run import capabilities as native_capabilities
             result = replace(result, capabilities=tuple(sorted(set(result.capabilities) | native_capabilities(result))))
         return result
@@ -208,6 +215,19 @@ class ControlPlaneClient:
         return result
 
     def worker_heartbeat(self, worker_id: str) -> None: self._post(f"/workers/{_quote(worker_id)}/heartbeat", None)
+    def search_tool_catalog(self, worker_id: str, query: str = "", kind: str | None = None,
+                            after: str | None = None, limit: int = 25) -> dict[str, Any]:
+        return self._post(f"/workers/{_quote(worker_id)}/tool-catalog/search",
+                          {"query": query, "kind": kind, "after": after, "limit": limit},
+                          max_response_bytes=2_000_000)
+
+    def task_shared_tools(self, task, worker_id):
+        lease = {"workerId": worker_id, "attemptId": task["attemptId"], "leaseToken": task["leaseToken"]}
+        path = f"/tasks/{_quote(task['taskId'])}/shared-tools"
+        entries = self._post(path + "/discover", lease, max_response_bytes=131072)
+        from shared_tool_runtime import tools
+        return tools(self, path, lease, entries, current_attempt())
+
     def drain(self, worker_id: str) -> None: self._post(f"/workers/{_quote(worker_id)}/drain", None)
     def offline(self, worker_id: str) -> None: self._post(f"/workers/{_quote(worker_id)}/offline", None)
     def claim(self, worker_id: str) -> dict[str, Any] | None: return self._post("/tasks/claim", {"workerId": worker_id, "capabilitiesDigest": self.capabilities_digest}, allow_no_content=True)
@@ -543,6 +563,11 @@ class ProcessSlot:
             attempt = Attempt(self.config, task, self.force_event)
             attempt.previous_work_checklist = task.get("previousWorkChecklist") or []
             with attempt_scope(attempt):
+                if self.config.process_role == "task" and task.get("skillRef") == "workspace-work" and (
+                    "execution-guard-v1" not in task.get("requiredCapabilities", []) or
+                    "workspace-work" not in self.config.capabilities
+                ):
+                    raise RuntimeError("WORKSPACE_TASK_REQUIRES_GUARDED_ADAPTER")
                 selection, reason = choose_ai_profile(task.get("aiGuidance"), self.config.runtime)
                 fallback_selection = selection
                 default_model = self.config.model or (self.runtime.config.model if self.config.runtime == "openai-agents" else None)
@@ -556,9 +581,13 @@ class ProcessSlot:
                 attempt.evidence.record("attempt-running", status="running")
                 heartbeat = LeaseHeartbeat(self.client, task, self.config.worker_id, self.config.heartbeat_interval, attempt)
                 heartbeat.start()
+                if "shared-http-tools-v1" in attempt.required_capabilities:
+                    attempt.shared_tools = self.client.task_shared_tools(task,self.config.worker_id)
+                    if not attempt.shared_tools:
+                        raise RuntimeError("SHARED_TOOL_GRANTS_UNAVAILABLE")
                 from execution_configuration import load as load_configuration
                 prepared = load_configuration(self.config, task)
-                profile = prepared.profile if prepared else _profile(self.config, task.get("taskType"))
+                profile = prepared.profile if prepared else _profile(self.config, task.get("taskType"), task.get("skillRef"))
                 from skill_files import load as load_skill_files
                 skill_reader = load_skill_files(task, profile, prepared)
                 attempt.skill_files = skill_reader
@@ -715,6 +744,9 @@ class ProcessSlot:
                         raise YieldRequested("WORKER_YIELD_WAITING") from error
                     if str(error) == "UNRESOLVED_TOOL_FAILURE": phase = "OUTPUT_INVALID"
                     raise
+                if getattr(attempt, "shared_tool_unknown", False):
+                    phase = "TOOL_ERROR"
+                    raise RuntimeError("SHARED_TOOL_OUTCOME_UNKNOWN")
                 if broker and broker.pending_question:
                     raise YieldRequested("QUESTION_WAITING")
                 if broker and broker.pending_approval:
@@ -839,8 +871,16 @@ class ProcessSlot:
                 self.exit_reason = "WORKER_EVIDENCE_FAILED" if attempt.evidence.failed else "WORKER_EXECUTION_OUTCOME_UNCONFIRMED"
                 self.stop_event.set()
 
-def _profile(config: WorkerConfig, task_type: str | None = None) -> ProcessProfile:
-    return get_profile(config.process_role, task_type)
+def _profile(config: WorkerConfig, task_type: str | None = None, skill_ref: str | None = None) -> ProcessProfile:
+    role = config.process_role
+    if role == "task":
+        if skill_ref == "workspace-work" and "workspace-work" in config.capabilities:
+            role = "workspace"
+        elif skill_ref in {None, "general-work"}:
+            role = "general"
+        else:
+            raise RuntimeError("TASK_EXECUTION_CAPABILITY_MISSING")
+    return get_profile(role, task_type)
 
 
 def _read_skill_package(skills_root: str, skill_name: str) -> str:
@@ -854,8 +894,8 @@ def _read_skill_package(skills_root: str, skill_name: str) -> str:
     return content
 
 
-def _skill_context(config: WorkerConfig, task_type=None) -> str:
-    profile = _profile(config, task_type)
+def _skill_context(config: WorkerConfig, task_type=None, skill_ref=None) -> str:
+    profile = _profile(config, task_type, skill_ref)
     parts = [
         "R2 PROCESS AUTHORITY BOUNDARY:\n"
         "- The Control Plane owns lifecycle state, scheduling, durable IDs, approval and authoritative commits.\n"
@@ -904,7 +944,7 @@ def _workspace_context(task: dict[str, Any], cwd: str) -> str:
 
 def _prompt(task: dict[str, Any], config: WorkerConfig, skill_reader=None) -> str:
     task_type = task.get("taskType")
-    profile = _profile(config, task_type)
+    profile = _profile(config, task_type, task.get("skillRef"))
     if profile.task_types and task_type not in profile.task_types:
         raise RuntimeError(f"profile {profile.name} cannot execute task type {task_type}; allowed={profile.task_types}")
     if not profile.task_types:
@@ -924,7 +964,7 @@ def _prompt(task: dict[str, Any], config: WorkerConfig, skill_reader=None) -> st
         f"Profile instruction: {profile.instruction}\n"
         f"Permission boundary: {permission}\n"
         f"Task ID: {task['taskId']}\nTask type: {task_type}\nAttempt: {task.get('attemptNo')}{skill_line}\n\n"
-        f"=== Frozen R2 process context ===\n{skill_reader.prompt() if skill_reader else _skill_context(config, task_type)}\n\n"
+        f"=== Frozen R2 process context ===\n{skill_reader.prompt() if skill_reader else _skill_context(config, task_type, skill_ref)}\n\n"
         f"=== Current authoritative work instruction ===\n{instruction}\n\n"
         "Execute only this bounded task. Preserve the Control Plane authority boundary. "
         "For read-only roles, do not change repository files. For writable roles, work only inside the assigned workspace."

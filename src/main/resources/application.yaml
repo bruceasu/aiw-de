@@ -23,9 +23,15 @@ spring:
     locations: classpath:db/migration
 
 aidev:
+  shared-tools:
+    http-endpoints: ${AIW_SHARED_HTTP_ENDPOINTS:}
+    mcp-endpoints: ${AIW_SHARED_MCP_ENDPOINTS:}
   remote-access: ${AIW_REMOTE_ACCESS:false}
   manager:
+    automatic-rate-limit-retry: ${AIW_MANAGER_AUTOMATIC_RATE_LIMIT_RETRY:false}
     automatic-diagnosis: ${AIW_MANAGER_AUTOMATIC_DIAGNOSIS:true}
+  plans:
+    execution-store-id: ${AIW_HANDOFF_STORE_ID:}
   model-auth:
     directory: ${AIW_MODEL_CREDENTIAL_DIR:${user.home}/.aiw/model-credentials}
     # Optional deployment override. Windows otherwise protects a per-installation key with CurrentUser DPAPI.

@@ -9,6 +9,10 @@
     'Team members':['团队成员'],'Create in Agent factory':['到 Agent 工厂创建'],'Create member':['创建成员'],'Create team member':['创建团队成员'],'Refresh members':['刷新成员'],
     'A team member is a stable specialist identity with responsibilities and Skills. A Worker is the running process that performs a task; creating a member does not start a process or grant tools.':['团队成员是长期保留的专业角色身份，包含职责和 Skills。Worker 是实际执行任务的运行进程；创建成员不会启动进程，也不会授予工具权限。'],
     'Optional model preferences':['可选的模型偏好'],
+    'Platform Skills (up to 8)':['平台 Skills（最多 8 项）'],
+    'Default acceptance criteria':['默认验收标准'],
+    'Required execution capabilities':['所需执行能力'],
+    'Preferred runtime profile':['首选运行配置'],
     'Leave defaults blank to inherit the task or Worker settings. Defaults guide model choice; they are not a cost limit.':['默认值留空时继承任务或 Worker 的设置。默认值用于选择模型，并不是费用上限。'],
     'Allowed profiles limit which registered models this member can use when switching. They are not a token or spending budget.':['允许的模型方案限制成员切换时可用的已登记模型；它不是 Token 或费用预算。'],
     'Open team':['查看团队'],
@@ -98,7 +102,12 @@
       card.append(raw('p',member.model?[member.model,member.effort].filter(Boolean).join(' · '):t('Inherit task or Worker default'),'help'));
       const skillPanel=node('details',null,'team-skill-panel');skillPanel.append(node('summary',t('Skill versions')));
       if(!member.skills.length)skillPanel.append(node('p',t('No Skills configured'),'help'));
-      for(const skill of member.skills){const row=node('div',null,'record-actions');row.append(raw('span',skill),button('View versions',()=>openSkillHistory(member.id,skill)));skillPanel.append(row);}
+      for(const skill of member.skills){
+        const row=node('div',null,'record-actions');
+        row.append(raw('span',skill));
+        if(!skill.startsWith('custom-'))row.append(button('View versions',()=>openSkillHistory(member.id,skill)));
+        skillPanel.append(row);
+      }
       const selectedHistory=skillHistories.get(member.id);if(selectedHistory&&member.skills.includes(selectedHistory.ref))renderSkillHistory(skillPanel,member,selectedHistory);else if(selectedHistory)skillHistories.delete(member.id);
       skillPanel.open=openSkillPanels.has(member.id);skillPanel.ontoggle=()=>{if(skillPanel.open)openSkillPanels.add(member.id);else openSkillPanels.delete(member.id);};
       card.append(skillPanel);
@@ -164,11 +173,17 @@
   function show(profile){
     editing=profile;form.hidden=false;form.elements.name.value=profile.name;form.elements.purpose.value=profile.purpose;form.elements.notes.value=profile.notes;
     const settings=profile.settings||{};form.elements.model.value=settings.model||'';form.elements.effort.value=settings.effort||'';
+    form.elements.acceptance.value=settings.acceptance||'';
+    form.elements.requiredCapabilities.value=(settings.requiredCapabilities||[]).join(', ');
+    const runtime=form.elements.runtimeProfile;
+    runtime.replaceChildren(new Option(t('Inherit task or Worker default'),''));
+    for(const id of new Set([...(data.runtimeProfiles||[]),settings.runtimeProfile].filter(Boolean)))runtime.add(new Option(id,id));
+    runtime.value=settings.runtimeProfile||'';
     modelOptions(settings.allowedProfiles||[]);
     references=[...(settings.knowledge||[])];experiences=(settings.experience||[]).map(item=>({...item}));renderReferences();renderExperience();$('[data-team-files]').value='';
     const source=$('[data-team-experience-source]');source.replaceChildren(new Option(t('Select an assigned execution'),''));
     if(profile.revision>0)request('/'+encodeURIComponent(profile.id)+'/history').then(runs=>{if(editing!==profile)return;for(const run of runs)source.add(new Option(run.title||run.id,run.id));}).catch(error=>status(error.message));
-    const choice=$('[data-team-skills]');choice.replaceChildren();for(const id of data.skills){const option=new Option(id,id);option.selected=profile.skills.includes(id);choice.add(option);}requestAnimationFrame(()=>form.elements.name.focus());
+    const choice=$('[data-team-skills]');choice.replaceChildren();for(const id of new Set([...(data.workflowSkills||data.skills),...profile.skills])){const option=new Option(id,id);option.selected=profile.skills.includes(id);choice.add(option);}requestAnimationFrame(()=>form.elements.name.focus());
   }
   async function edit(id){if(editing&&!window.confirm(t('Discard unsaved edits?')))return;show(await request('/'+encodeURIComponent(id)));}
   const sameModel=(a,b)=>a?.id===b?.id&&['provider','runtime','model','effort','fast','level'].every(key=>a?.profile?.[key]===b?.profile?.[key]);
@@ -201,7 +216,8 @@
   $('[data-team-new]').onclick=()=>act(async()=>{if(editing&&!window.confirm(t('Discard unsaved edits?')))return;if(!data)await load();show({id:'member-'+crypto.randomUUID(),revision:0,name:'',purpose:'',skills:[],notes:''});});
   $('[data-team-cancel]').onclick=()=>{editing=null;form.hidden=true;};
   $('[data-team-refresh]').onclick=()=>act(load);$('[data-team-archived]').onchange=()=>act(load);
-  form.onsubmit=event=>{event.preventDefault();act(async()=>{const selected=[...$('[data-team-skills]').selectedOptions].map(o=>o.value),allowed=selectedModels();if(selected.length>8)throw new Error('Select up to eight registered platform Skills');if(allowed.some(item=>!(data.modelProfiles||[]).some(current=>sameModel(item,current))))throw new Error('Registered profiles changed; explicitly reselect before saving');status('Saving member…');await request('',{id:editing.id,revision:editing.revision,name:form.elements.name.value,purpose:form.elements.purpose.value,skills:selected,notes:form.elements.notes.value,settings:{model:form.elements.model.value,effort:form.elements.effort.value,allowedProfiles:allowed,knowledge:references,experience:experiences}});editing=null;form.hidden=true;status('Member saved');try{await load();}catch(_){status('Member saved. Refresh the list to display it.');}});};
+  form.onsubmit=event=>{event.preventDefault();act(async()=>{const selected=[...$('[data-team-skills]').selectedOptions].map(o=>o.value),allowed=selectedModels();if(selected.length>8)throw new Error('Select up to eight registered platform Skills');if(allowed.some(item=>!(data.modelProfiles||[]).some(current=>sameModel(item,current))))throw new Error('Registered profiles changed; explicitly reselect before saving');status('Saving member…');await request('',{id:editing.id,revision:editing.revision,name:form.elements.name.value,purpose:form.elements.purpose.value,skills:selected,notes:form.elements.notes.value,settings:{model:form.elements.model.value,effort:form.elements.effort.value,allowedProfiles:allowed,knowledge:references,experience:experiences,
+    runtimeProfile:form.elements.runtimeProfile.value,acceptance:form.elements.acceptance.value,requiredCapabilities:form.elements.requiredCapabilities.value.split(',').map(value=>value.trim()).filter(Boolean)}});editing=null;form.hidden=true;status('Member saved');try{await load();}catch(_){status('Member saved. Refresh the list to display it.');}});};
   window.addEventListener('aiw:locale-changed',()=>{translate();render();if(editing)modelOptions(selectedModels());renderReferences();renderExperience();const source=$('[data-team-experience-source]');if(source.options[0])source.options[0].textContent=t('Select an assigned execution');});translate();act(load);
   const timer=setInterval(()=>{if(!document.hidden&&!editing&&!busy&&!loading)act(load);},8000);window.addEventListener('pagehide',()=>clearInterval(timer));
 })();

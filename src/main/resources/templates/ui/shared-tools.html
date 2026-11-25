@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" th:content="${csrfToken}"><title>工具目录</title>
+  <link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css">
+  <script src="/ui/appearance.js"></script><script src="/ui/shared-tools.js" defer></script>
+</head>
+<body>
+<div class="app">
+  <nav th:replace="~{ui/fragments :: nav('tools')}"></nav>
+  <main class="main">
+    <header th:replace="~{ui/fragments :: topbar('工具目录','登记和查找 MCP 与 HTTP 工具。')}"></header>
+    <div class="content">
+      <p id="tool-status" class="help" role="status"></p>
+      <section class="command-panel">
+        <form id="tool-search" class="form-actions">
+          <label class="field">关键字<input name="q" type="search" maxlength="120" placeholder="名称、标识或操作"></label>
+          <label class="field">类型<select name="kind"><option value="">全部</option><option>MCP</option><option>HTTP</option></select></label>
+          <label class="field">状态<select name="state"><option value="ALL">全部</option><option value="ENABLED">启用</option><option value="DISABLED">停用</option></select></label>
+          <button class="btn primary" type="submit">检索</button>
+          <button class="btn ghost" type="button" id="new-tool" th:if="${canAdmin}">登记工具</button>
+        </form>
+        <div class="table-wrap">
+          <table aria-label="共享工具">
+            <thead><tr><th>名称</th><th>类型</th><th>操作</th><th>状态</th><th>入参</th><th th:if="${canAdmin}">管理</th></tr></thead>
+            <tbody id="tool-results"></tbody>
+          </table>
+          <p id="tools-empty" class="empty" hidden>没有匹配的工具。</p>
+        </div>
+        <div class="form-actions">
+          <button class="btn ghost" type="button" id="tools-prev" disabled>上一页</button>
+          <button class="btn ghost" type="button" id="tools-next" disabled>下一页</button>
+        </div>
+      </section>
+      <section id="tool-editor" class="card section" th:if="${canAdmin}" hidden>
+        <h2 id="tool-editor-title">登记工具</h2>
+        <form id="tool-edit">
+          <label class="field">工具标识<input name="id" maxlength="64" pattern="[a-z][a-z0-9._\-]{0,63}" required></label>
+          <label class="field">名称<input name="title" maxlength="160" required></label>
+          <label class="field">说明<textarea name="description" rows="3" maxlength="2000"></textarea></label>
+          <label class="field">类型<select name="kind"><option>MCP</option><option>HTTP</option></select></label>
+          <label class="field">服务地址<input name="endpoint" type="url" maxlength="2048" placeholder="https://tools.example.org/mcp" autocomplete="off" required></label>
+          <label class="field"><span id="tool-operation-label">MCP 工具名称</span><input name="operation" maxlength="120" required></label>
+          <label id="tool-http-method" class="field" hidden>HTTP 方法<select name="httpMethod">
+            <option>GET</option><option>HEAD</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option>
+          </select></label>
+          <label class="field">入参结构（JSON）<textarea name="inputSchema" rows="6" maxlength="8192" required></textarea></label>
+          <label class="field"><span><input name="enabled" type="checkbox"> 启用检索</span></label>
+          <div class="form-actions"><button class="btn primary" type="submit">保存</button><button class="btn ghost" id="tool-cancel" type="button">取消</button></div>
+        </form>
+      </section>
+    </div>
+  </main>
+</div>
+</body>
+</html>

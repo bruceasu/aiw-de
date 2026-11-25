@@ -21,6 +21,7 @@ import me.asu.aidev.workflow.port.WorkflowPlanRepository;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import me.asu.aidev.execution.tools.SharedToolAccess;
 
 /** Workflow routing reuses the existing task executor; it does not call models itself. */
 @Service
@@ -46,7 +47,28 @@ public class WorkflowRuns {
                        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
                        String acceptance,
                        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
-                       FieldRule rule) {
+                       FieldRule rule,
+                       @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+                       String runtimeProfile,
+                       @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
+                       List<String> runtimeProfileCandidates,
+                       @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
+                       List<SharedToolAccess.Ref> sharedTools) {
+        public Node(String key,String title,Kind kind,String instruction,String next,Map<String,String> branches,String memberId,
+                    Assignment assignment,List<String> requiredSkills,boolean workspaceTools,List<String> requiredCheckIds,String acceptance,
+                    FieldRule rule,String runtimeProfile,List<String> runtimeProfileCandidates) {
+            this(key,title,kind,instruction,next,branches,memberId,assignment,requiredSkills,workspaceTools,requiredCheckIds,
+                    acceptance,rule,runtimeProfile,runtimeProfileCandidates,List.of());
+        }
+        public Node(String key,String title,Kind kind,String instruction,String next,Map<String,String> branches,String memberId,
+                    Assignment assignment,List<String> requiredSkills,boolean workspaceTools,List<String> requiredCheckIds,String acceptance,
+                    FieldRule rule,String runtimeProfile) {
+            this(key,title,kind,instruction,next,branches,memberId,assignment,requiredSkills,workspaceTools,requiredCheckIds,acceptance,rule,runtimeProfile,List.of());
+        }
+        public Node(String key,String title,Kind kind,String instruction,String next,Map<String,String> branches,String memberId,
+                    Assignment assignment,List<String> requiredSkills,boolean workspaceTools,List<String> requiredCheckIds,String acceptance,FieldRule rule) {
+            this(key,title,kind,instruction,next,branches,memberId,assignment,requiredSkills,workspaceTools,requiredCheckIds,acceptance,rule,null);
+        }
         public Node(String key,String title,Kind kind,String instruction,String next,Map<String,String> branches,String memberId,Assignment assignment,List<String> requiredSkills,boolean workspaceTools,List<String> requiredCheckIds,String acceptance) {
             this(key,title,kind,instruction,next,branches,memberId,assignment,requiredSkills,workspaceTools,requiredCheckIds,acceptance,null);
         }
@@ -57,6 +79,17 @@ public class WorkflowRuns {
             this(key,title,kind,instruction,next,branches,memberId,assignment,requiredSkills,false);
         }
         public Node {
+            sharedTools=sharedTools==null?List.of():List.copyOf(sharedTools);
+            if(!sharedTools.isEmpty()&&(kind!=Kind.TASK&&kind!=Kind.DECISION||sharedTools.size()>8
+                    ||sharedTools.stream().map(SharedToolAccess.Ref::id).distinct().count()!=sharedTools.size()))
+                throw new IllegalArgumentException("An execution node can authorize up to eight distinct shared tool revisions.");
+            if(runtimeProfile!=null&&(!runtimeProfile.matches("[a-z][a-z0-9._-]{0,63}")||kind!=Kind.TASK&&kind!=Kind.DECISION))
+                throw new IllegalArgumentException("Only an execution node can select a runtime profile.");
+            runtimeProfileCandidates=runtimeProfileCandidates==null?List.of():List.copyOf(runtimeProfileCandidates);
+            if(!runtimeProfileCandidates.isEmpty()&&(runtimeProfile!=null||kind!=Kind.TASK&&kind!=Kind.DECISION
+                    ||runtimeProfileCandidates.size()>16||new HashSet<>(runtimeProfileCandidates).size()!=runtimeProfileCandidates.size()
+                    ||runtimeProfileCandidates.stream().anyMatch(id->!id.matches("[a-z][a-z0-9._-]{0,63}"))))
+                throw new IllegalArgumentException("Choose up to sixteen candidate runtime profiles or one fixed profile for an execution node.");
             acceptance=acceptance==null||acceptance.isBlank()?null:text(acceptance,2000);
             requiredCheckIds=requiredCheckIds==null?List.of():List.copyOf(requiredCheckIds);
             if(!requiredCheckIds.isEmpty()&&(!workspaceTools||new HashSet<>(requiredCheckIds).size()!=requiredCheckIds.size()))
@@ -176,16 +209,20 @@ public class WorkflowRuns {
         public String completedTaskId;
         public List<String> lessonIds=List.of();
         public String memberWait;
+        public boolean selectingRuntimeProfile;
+        public me.asu.aidev.execution.config.ManagerProfileSelection.Result runtimeSelection;
         public Proposal proposal;
         public Run() {}
     }
     public record TaskManagement(boolean manageable,boolean archived,Long deleteAfter) {}
-    public record View(Run run,WorkTask task,String taskDisplayState,String report,String failureCode,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity,ModelUsageView.Snapshot usage,Map<String,Object> member,ProposalView proposal,TaskManagement management) {}
+    public record View(Run run,WorkTask task,String taskDisplayState,String report,String failureCode,List<WorkflowWorkerProvisioning.Preparation> preparation,Object activity,ModelUsageView.Snapshot usage,Map<String,Object> member,ProposalView proposal,TaskManagement management,Map<String,Object> runtimeProfile,Map<String,Object> taskCapabilities) {}
     @org.springframework.beans.factory.annotation.Autowired private ModelUsageView modelUsage;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.application.TeamMembers team;
     @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<ExecutionRuns> executionRuns;
     @org.springframework.beans.factory.annotation.Autowired private ExecutionGuard guard;
     @org.springframework.beans.factory.annotation.Autowired private SkillFiles skillFiles;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.FactoryTaskProfiles runtimeProfiles;
+    @org.springframework.beans.factory.annotation.Autowired private SharedToolAccess sharedToolAccess;
     @org.springframework.beans.factory.annotation.Autowired private ObjectProvider<me.asu.aidev.authority.BusinessActionPermissions> actionPermissions;
     @org.springframework.beans.factory.annotation.Value("${aidev.agent-factory.worker-root:workers/process-python}") private String workerRoot="workers/process-python";
     private final AuthorityRepository db;
@@ -222,9 +259,9 @@ public class WorkflowRuns {
         spec=new Spec(spec.title(),spec.goal(),spec.entry(),spec.nodes().stream().map(n->{
             if(n.assignment()!=null||n.kind()!=Kind.TASK&&n.kind()!=Kind.DECISION)return n;
             return new Node(n.key(),n.title(),n.kind(),n.instruction(),n.next(),n.branches(),n.memberId(),
-                    n.memberId()==null?Assignment.AUTO:Assignment.MEMBER,n.requiredSkills(),n.workspaceTools(),n.requiredCheckIds(),n.acceptance());
+                    n.memberId()==null?Assignment.GENERAL:Assignment.MEMBER,n.requiredSkills(),n.workspaceTools(),n.requiredCheckIds(),n.acceptance(),n.rule(),n.runtimeProfile(),n.runtimeProfileCandidates(),n.sharedTools());
         }).toList(),spec.sources(),spec.commands(),spec.autonomousShell());
-        for(var node:spec.nodes()){team.requirements(node.requiredSkills());if(node.memberId()!=null)team.get(actor,node.memberId());}
+        for(var node:spec.nodes()){team.requirements(actor,node.requiredSkills());if(node.memberId()!=null)team.get(actor,node.memberId());}
         if(id==null) {
             if(version!=0) throw new IllegalArgumentException("New workflow has version zero");
             id="WF-"+UUID.randomUUID();
@@ -382,9 +419,16 @@ public class WorkflowRuns {
         return simple(request,instruction,location,memberId,assignment,requiredSkills,sources,workspaceTools,commands,autonomousShell,null,List.of());
     }
     @Transactional public Run simple(String request,String instruction,String location,String memberId,Assignment assignment,List<String> requiredSkills,List<Material> sources,boolean workspaceTools,List<GuardContract.Command> commands,boolean autonomousShell,String acceptance,List<String> requiredChecks) {
+        return simple(request,instruction,location,memberId,assignment,requiredSkills,sources,workspaceTools,commands,autonomousShell,acceptance,requiredChecks,null);
+    }
+    @Transactional public Run simple(String request,String instruction,String location,String memberId,Assignment assignment,List<String> requiredSkills,List<Material> sources,boolean workspaceTools,List<GuardContract.Command> commands,boolean autonomousShell,String acceptance,List<String> requiredChecks,String runtimeProfile) {
+        return simple(request,instruction,location,memberId,assignment,requiredSkills,sources,workspaceTools,commands,autonomousShell,
+                acceptance,requiredChecks,runtimeProfile,List.of());
+    }
+    @Transactional public Run simple(String request,String instruction,String location,String memberId,Assignment assignment,List<String> requiredSkills,List<Material> sources,boolean workspaceTools,List<GuardContract.Command> commands,boolean autonomousShell,String acceptance,List<String> requiredChecks,String runtimeProfile,List<SharedToolAccess.Ref> sharedTools) {
         if(request!=null&&request.startsWith("caretaker:"))throw new IllegalArgumentException("Reserved request identifier");
-        if(assignment==null)assignment=memberId==null?Assignment.AUTO:Assignment.MEMBER;
-        requiredSkills=team.requirements(requiredSkills);
+        if(assignment==null)assignment=memberId==null?Assignment.GENERAL:Assignment.MEMBER;
+        requiredSkills=requiredSkills==null?List.of():List.copyOf(requiredSkills);
         sources=sources==null?List.of():List.copyOf(sources);
         commands=commands==null?List.of():List.copyOf(commands);
         requiredChecks=requiredChecks==null?List.of():List.copyOf(requiredChecks);
@@ -393,11 +437,13 @@ public class WorkflowRuns {
                 ? Arrays.asList("task",instruction,location,memberId,assignment,requiredSkills,sources,workspaceTools,commands,true)
                 : Arrays.asList("task",instruction,location,memberId,assignment,requiredSkills,sources,workspaceTools,commands));
         if(acceptance!=null||!requiredChecks.isEmpty())requestInputs.add(Arrays.asList(acceptance,requiredChecks));
+        if(runtimeProfile!=null)requestInputs.add(runtimeProfile);
+        if(sharedTools!=null&&!sharedTools.isEmpty())requestInputs.add(sharedTools);
         String digest=AuthorityRepository.hash(db.encode(requestInputs));
         var previous=replay(request,digest);if(previous!=null)return previous;
         instruction=text(instruction,8000);
         var spec=new Spec(instruction.substring(0,Math.min(80,instruction.length())),instruction,"task",List.of(
-                new Node("task","Task",Kind.TASK,instruction,null,Map.of(),memberId,assignment,requiredSkills,workspaceTools,requiredChecks,acceptance)),sources,commands,autonomousShell,true);
+                new Node("task","Task",Kind.TASK,instruction,null,Map.of(),memberId,assignment,requiredSkills,workspaceTools,requiredChecks,acceptance,null,runtimeProfile,List.of(),sharedTools)),sources,commands,autonomousShell,true);
         return start(request,digest,null,0,spec,"",location);
     }
     private String delegationKey(AuthorityBoundary.Principal agent,String request) {
@@ -408,7 +454,7 @@ public class WorkflowRuns {
     /** Authenticated machine port. A text task cannot expand workspace or command permissions. */
     @Transactional public Run delegate(AuthorityBoundary.Principal agent,String request,String instruction,String member,List<String> skills) {
         String key=delegationKey(agent,request),actor=db.actor(agent.owner());
-        instruction=text(instruction,8000);skills=team.requirements(skills);
+        instruction=text(instruction,8000);skills=skills==null?List.of():List.copyOf(skills);
         String digest=AuthorityRepository.hash(db.encode(Arrays.asList("delegated-task",instruction,member,skills)));
         var previous=replay(actor,key,digest);if(previous!=null)return previous;
         var spec=new Spec(instruction.substring(0,Math.min(80,instruction.length())),instruction,"task",List.of(
@@ -474,12 +520,13 @@ public class WorkflowRuns {
         return start(request,digest,null,0,spec,"",null,null,null,0,task);
     }
     private Run start(String request,String digest,String definition,long definitionVersion,Spec spec,String input,String declaredLocation,AuthorityBoundary.Principal agent,String schedule,long due,String failedTask) {
+        if((agent!=null||schedule!=null)&&spec.nodes().stream().anyMatch(n->!n.sharedTools().isEmpty()))
+            throw new SecurityException("Shared tool grants require an administrator starting the workflow in the Console.");
         String actor=failedTask!=null?db.jdbc().queryForObject("SELECT o.actor FROM work_task t JOIN plan_run_owner o ON o.plan_id=t.subject_id WHERE t.id=?",String.class,failedTask):
                 schedule!=null?db.jdbc().queryForObject("SELECT actor FROM workflow_schedule WHERE id=? AND state='ACTIVE' AND next_ms=?",String.class,schedule,due):agent==null?actor():db.actor(agent.owner());
         input=input==null?"":input;
         var assigned=new LinkedHashMap<String,me.asu.aidev.worker.application.TeamMembers.Profile>();
         for(var node:spec.nodes()){
-            team.requirements(node.requiredSkills());
             if(node.memberId()!=null)assigned.put(node.key(),team.forRun(actor,node.memberId(),node.requiredSkills()));
         }
         for(var member:assigned.values())sources(spec,member,List.of());
@@ -545,6 +592,9 @@ public class WorkflowRuns {
         if(autonomousShell&&node.workspaceTools())result.add(GuardContract.SHELL_CAPABILITY);
         if(commands&&node.workspaceTools())result.add("guarded-command-v1");
         if(!node.requiredCheckIds().isEmpty())result.add(REQUIRED_CHECKS);
+        if(node.requiredSkills().stream().anyMatch(me.asu.aidev.execution.skills.SkillFiles::platformReference))
+            result.add(me.asu.aidev.execution.skills.SkillFiles.CATALOGUE_CAPABILITY);
+        if(!node.sharedTools().isEmpty())result.add(SharedToolAccess.CAPABILITY);
         if(sources)result.add("task-materials-v1");return Set.copyOf(result);
     }
     private WorkflowPlanSpec.Step workflowTaskSlot(Spec spec,Node node) {
@@ -848,7 +898,7 @@ public class WorkflowRuns {
         String next=(String)raw.get("next");
         if(coordinated&&visitedRoute(run,before.next(),next))throw new IllegalArgumentException();
         for(var branch:exits.entrySet())if(coordinated&&visitedRoute(run,before.branches().get(branch.getKey()),branch.getValue()))throw new IllegalArgumentException();
-        return new Node(before.key(),title,before.kind(),instruction,next,exits,before.memberId(),before.assignment(),before.requiredSkills(),before.workspaceTools(),before.requiredCheckIds(),before.acceptance());
+        return new Node(before.key(),title,before.kind(),instruction,next,exits,before.memberId(),before.assignment(),before.requiredSkills(),before.workspaceTools(),before.requiredCheckIds(),before.acceptance(),before.rule(),before.runtimeProfile(),before.runtimeProfileCandidates(),before.sharedTools());
     }
     private Spec structuralCandidate(Run run,Map<?,?> raw,Map<?,?> basis) {
         if(raw==null||!raw.keySet().equals(Set.of("nodes"))||!(raw.get("nodes") instanceof List<?> rows)||rows.isEmpty()||rows.size()>32)
@@ -882,7 +932,7 @@ public class WorkflowRuns {
             } else {
                 if(before.kind()!=kind||!before.title().equals(title)||!before.instruction().equals(instruction)
                         ||!before.branches().keySet().equals(branches.keySet()))throw new IllegalArgumentException("Existing node identity, content, kind and branch labels are fixed");
-                candidate=new Node(key,title,kind,instruction,next,branches,before.memberId(),before.assignment(),before.requiredSkills(),before.workspaceTools(),before.requiredCheckIds(),before.acceptance(),before.rule());
+                candidate=new Node(key,title,kind,instruction,next,branches,before.memberId(),before.assignment(),before.requiredSkills(),before.workspaceTools(),before.requiredCheckIds(),before.acceptance(),before.rule(),before.runtimeProfile(),before.runtimeProfileCandidates(),before.sharedTools());
                 if(startedNode(run,key)&&!key.equals(run.current)&&!candidate.equals(before))
                     throw new IllegalArgumentException("A previously started node cannot change");
             }
@@ -1027,6 +1077,35 @@ public class WorkflowRuns {
         if(run.sequence>=64) {run.state="FAILED";event(run,"LIMIT","Workflow reached 64 working steps; no further work was dispatched");return;}
         var plan=plans.getObject().get(run.id);
         if(plan.state()!=WorkflowPlan.State.CONFIRMED) {run.state="FAILED";event(run,"FAILED","Underlying execution is not active; no following work was dispatched");return;}
+        me.asu.aidev.execution.config.AgentFactorySettings.RuntimeProfile selectedRuntime;
+        try {
+            team.requirements(run.actor,node.requiredSkills());
+            if(!node.runtimeProfileCandidates().isEmpty()&&run.runtimeSelection==null) {
+                run.state="WAITING_MEMBER";
+                run.selectingRuntimeProfile=true;
+                run.memberWait="Waiting for the manager to select a runtime profile.";
+                event(run,"WAITING_PROFILE",run.memberWait);
+                return;
+            }
+            var selected=run.runtimeSelection;
+            selectedRuntime=runtimeProfiles==null?null:runtimeProfiles.resolve(selected==null?node.runtimeProfile():selected.profileId());
+            if(selected!=null&&(selectedRuntime==null||selectedRuntime.version()!=selected.version()
+                    ||!node.runtimeProfileCandidates().contains(selected.profileId())))
+                throw new IllegalArgumentException("The selected runtime profile changed before dispatch.");
+        }
+        catch(IllegalArgumentException unavailable) {
+            if(run.runtimeSelection!=null) {
+                run.runtimeSelection=null;
+                run.state="FAILED";
+                event(run,"PROFILE_UNAVAILABLE",unavailable.getMessage());
+                return;
+            }
+            run.state="WAITING_MEMBER";
+            String reason=unavailable.getMessage();
+            if(!Objects.equals(run.memberWait,reason))event(run,"WAITING_CONFIGURATION",reason);
+            run.memberWait=reason;
+            return;
+        }
         var member=team.assigned(run.id,node.key());
         boolean selectedMember=false;
         boolean useGeneralWorker=false;
@@ -1043,6 +1122,27 @@ public class WorkflowRuns {
                 member=choice.member();selectedMember=true;
             }
         }
+        List<String> selectedSkills=node.requiredSkills();
+        try {
+            if(member!=null) {
+                selectedSkills=team.taskSkills(member,node.requiredSkills());
+                team.requirements(run.actor,selectedSkills);
+                if(node.runtimeProfile()==null&&run.runtimeSelection==null&&member.settings().runtimeProfile()!=null)
+                    selectedRuntime=runtimeProfiles.resolve(member.settings().runtimeProfile());
+                if(selectedRuntime!=null)
+                    team.validateFixedProfile(member,runtimeProfiles.guidance(selectedRuntime).allowedProfiles().getFirst());
+            }
+            if(!node.sharedTools().isEmpty()) {
+                if(selectedRuntime==null||!selectedRuntime.settings().runtime().equals("openai-agents"))
+                    throw new IllegalArgumentException("Shared tools require a Python OpenAI Agents runtime profile.");
+                sharedToolAccess.validate(node.sharedTools());
+            }
+        } catch(IllegalArgumentException unavailable) {
+            run.state="WAITING_MEMBER";
+            if(!Objects.equals(run.memberWait,unavailable.getMessage()))event(run,"WAITING_CONFIGURATION",unavailable.getMessage());
+            run.memberWait=unavailable.getMessage();
+            return;
+        }
         run.memberWait=null;
         for(var input:run.inputs)if(input.state.equals("QUEUED")) {
             append(run,"User supplement: "+input.text);input.state="CONTEXT";
@@ -1057,7 +1157,11 @@ public class WorkflowRuns {
         // A per-task context is frozen before task creation; the Plan definition remains immutable.
         var taskId=new TaskId(plan.id()+"~"+node.key()+"~work-"+round);
         var instruction=instruction(run.spec,node)+"\nExecution input and user supplements:\n"+run.context;
-        if(member!=null)instruction=team.context(member)+instruction;
+        if(member!=null) {
+            instruction=team.context(member)+instruction;
+            if(node.acceptance()==null&&member.settings().acceptance()!=null)
+                instruction+="\nAcceptance criteria:\n"+member.settings().acceptance();
+        }
         instruction+=dispatchHandoff(run,16384-instruction.length());
         List<Material> references;
         try {
@@ -1070,9 +1174,17 @@ public class WorkflowRuns {
         } else if(useGeneralWorker) {
             event(run,"GENERAL_ASSIGNED","No team members are configured. The task will use a general Worker.");
         }
-        plans.getObject().createWorkflowExecution(plan,index,round,instruction,references.isEmpty()?Set.of():Set.of("task-materials-v1"),run.completedTaskId==null?Set.of():Set.of(new TaskId(run.completedTaskId)));
-        if(member!=null)team.bind(run.id,node.key(),taskId.value(),member);
-        else team.attachSkills(taskId.value(),node.requiredSkills());
+        var executionCapabilities=new HashSet<String>();
+        if(member!=null)executionCapabilities.addAll(member.settings().requiredCapabilities());
+        if(selectedSkills.stream().anyMatch(SkillFiles::platformReference))executionCapabilities.add(SkillFiles.CATALOGUE_CAPABILITY);
+        if(!references.isEmpty())executionCapabilities.add("task-materials-v1");
+        if(selectedRuntime!=null)executionCapabilities.add(locations.executionStoreCapability());
+        plans.getObject().createWorkflowExecution(plan,index,round,instruction,executionCapabilities,
+                run.completedTaskId==null?Set.of():Set.of(new TaskId(run.completedTaskId)));
+        if(runtimeProfiles!=null)runtimeProfiles.bind(taskId.value(),selectedRuntime);
+        if(!node.sharedTools().isEmpty())sharedToolAccess.bind(taskId.value(),node.sharedTools());
+        if(member!=null)team.bind(run.id,node.key(),taskId.value(),member,node.requiredSkills());
+        else if(!node.requiredSkills().isEmpty())skillFiles.member(taskId.value(),node.requiredSkills(),run.actor,null,Map.of());
         if(plan.spec().steps().get(index).requiredSkills().contains(GuardContract.CAPABILITY)){
             var packages=skillFiles.payload(taskId.value(),"pre-dispatch");
             var frozen=new ArrayList<>(packages.packages().stream().map(p->new GuardContract.FrozenRef("skill",p.ref(),p.version(),p.assetDigest())).toList());
@@ -1087,18 +1199,75 @@ public class WorkflowRuns {
         }
         run.visits.put(node.key(),round);run.sequence++;
         run.taskId=taskId.value();event(run,"DISPATCHED",node.title());
+        run.runtimeSelection=null;
+    }
+    public record ProfileRequest(long version,me.asu.aidev.execution.config.ManagerProfileSelection.Request input) {}
+
+    public ProfileRequest pendingProfile(String id) {
+        return db.jdbc().queryForList("SELECT run_json FROM workflow_execution WHERE id=? AND state='WAITING_MEMBER'",String.class,id)
+                .stream().findFirst().map(json->db.decode(json,Run.class)).filter(run->run.selectingRuntimeProfile).map(run->{
+                    var node=node(run);
+                    String description=run.spec.title()+" / "+node.title()+"\n"+node.instruction();
+                    if(node.acceptance()!=null)description+="\nAcceptance: "+node.acceptance();
+                    return new ProfileRequest(run.version,new me.asu.aidev.execution.config.ManagerProfileSelection.Request(
+                            description.substring(0,Math.min(description.length(),4000)),node.runtimeProfileCandidates()));
+                }).orElse(null);
+    }
+
+    @Transactional public void finishProfile(String id,long version,me.asu.aidev.execution.config.ManagerProfileSelection.Result decision,String failure) {
+        var run=load(id,false);
+        if(run.version!=version||!run.state.equals("WAITING_MEMBER")||!run.selectingRuntimeProfile)return;
+        run.selectingRuntimeProfile=false;
+        run.memberWait=null;
+        if(decision==null) {
+            run.state="FAILED";
+            event(run,"MANAGER_MODEL_FAILED",failure);
+        } else {
+            run.runtimeSelection=decision;
+            run.state="RUNNING";
+            event(run,"PROFILE_SELECTED",db.encode(decision));
+            continueRun(run);
+        }
+        persist(run);
     }
     /** One transaction per waiter; the existing scheduler supplies a bounded rotating batch. */
     @Transactional public void assignPending(String id) {
         var run=load(id,false);
         if(run.state.equals("FAILED")) {restoreRecordedRetry(run);return;}
-        if(!run.state.equals("WAITING_MEMBER"))return;
+        if(!run.state.equals("WAITING_MEMBER")||run.selectingRuntimeProfile)return;
         String previousReason=run.memberWait;int previousEvents=run.events.size();
         run.state="RUNNING";continueRun(run);
         if(!run.state.equals("WAITING_MEMBER")||!Objects.equals(previousReason,run.memberWait)||previousEvents!=run.events.size())persist(run);
     }
     @Transactional public void restoreRecordedRetry(String id) {
         if(manages(id))restoreRecordedRetry(load(id,false));
+    }
+    @Transactional public boolean recoverModelRateLimit(String id,String taskId,String attemptId) {
+        var run=load(id,false);
+        if(!Set.of("RUNNING","FAILED").contains(run.state)||!taskId.equals(run.taskId)||!run.inputs.isEmpty())return false;
+        var task=currentTask(run);
+        if(task==null||task.state()!=TaskState.FAILED||!"general-work".equals(task.skillRef())
+                ||task.requiredCapabilities().contains(GuardContract.CAPABILITY)
+                ||task.requiredCapabilities().contains(SharedToolAccess.CAPABILITY)
+                ||plans.getObject().get(id).state()!=WorkflowPlan.State.CONFIRMED)return false;
+        long cutoff=System.currentTimeMillis()-60_000;
+        if(db.jdbc().queryForObject("""
+                SELECT COUNT(*) FROM execution_attempt a JOIN work_task t ON t.id=a.task_id
+                 WHERE a.id=? AND t.id=? AND t.attempt_no=1 AND a.attempt_no=t.attempt_no
+                   AND t.lease_token IS NULL AND a.state='FAILED' AND a.termination_reason='MODEL_API_RATE_LIMIT'
+                   AND a.finished_at_epoch_ms<=? AND a.stop_requested_at_epoch_ms IS NULL
+                   AND NOT EXISTS (SELECT 1 FROM execution_operation e WHERE e.attempt_id=a.id)
+                   AND NOT EXISTS (SELECT 1 FROM work_task_control_event e WHERE e.task_id=t.id AND e.action='AUTO_RETRY_RATE_LIMIT')
+                   AND NOT EXISTS (SELECT 1 FROM web_console_plan_archive x WHERE x.plan_id=t.subject_id)
+                """,Long.class,attemptId,taskId,cutoff)!=1)return false;
+        var now=Instant.now();
+        if(!tasks.retryFailed(task.id(),now))return false;
+        tasks.recordControlEvent(UUID.randomUUID().toString(),task.id(),attemptId,"AUTO_RETRY_RATE_LIMIT",
+                "control-plane:manager","Confirmed rate limit in a text task with no tool operations. One permitted retry.",false,now);
+        run.state="RUNNING";run.sealedTaskId=null;run.sealedAttemptId=null;
+        event(run,"AUTO_RETRY_RATE_LIMIT","One retry after a confirmed model rate limit.");
+        persist(run);
+        return true;
     }
     private void restoreRecordedRetry(Run run) {
         if(!run.state.equals("FAILED"))return;
@@ -1180,6 +1349,11 @@ public class WorkflowRuns {
             throw new NoSuchElementException("Workflow or execution not found.");
     }
 
+    public boolean hasSharedTools(String id,String actor) {
+        return db.jdbc().queryForList("SELECT run_json FROM workflow_execution WHERE id=? AND actor=?",String.class,id,actor)
+                .stream().map(json->db.decode(json,Run.class)).anyMatch(run->run.spec.nodes().stream().anyMatch(n->!n.sharedTools().isEmpty()));
+    }
+
     @Transactional public View view(String id) {
         var run=load(id,true);
         requireVisibleExecution(id,run.actor);
@@ -1189,9 +1363,10 @@ public class WorkflowRuns {
             run.state="FAILED";event(run,"FAILED","Worker task "+task.id().value()+" is "+task.state()+"; inspect its execution details");persist(run);
         }
         if(finishStopped(run,task))persist(run);
-        String report=task==null?null:attempts.findCompletionReport(task.id()).map(CompletionReport::summary).orElse(null);
         var activityTask=task==null?plans.getObject().effectiveSteps(run.id).stream()
                 .max(Comparator.comparing(WorkTask::createdAt).thenComparing(t->t.id().value())).orElse(null):task;
+        var evidenceTask=task!=null?task:run.completedTaskId==null?null:tasks.find(new TaskId(run.completedTaskId)).orElse(null);
+        String report=evidenceTask==null?null:attempts.findCompletionReport(evidenceTask.id()).map(CompletionReport::summary).orElse(null);
         Object activity=Map.of();
         if(activityTask!=null) {
             var sessions=db.jdbc().queryForList("SELECT s.attempt_id FROM execution_run_session s JOIN execution_attempt a ON a.id=s.attempt_id WHERE s.task_id=? ORDER BY a.attempt_no DESC LIMIT 1",String.class,activityTask.id().value());
@@ -1213,8 +1388,28 @@ public class WorkflowRuns {
             var service=archives.getObject();
             management=new TaskManagement(!hasUnfinishedTasks(id),service.archived(id),service.deleteAfter(id).map(Instant::toEpochMilli).orElse(null));
         }
+        var fixed=runtimeProfiles==null||evidenceTask==null?null:runtimeProfiles.read(evidenceTask);
+        var profile=fixed==null?Map.<String,Object>of():Map.<String,Object>of("id",fixed.id(),"version",fixed.version(),
+                "runtime",fixed.settings().runtime(),"model",fixed.settings().model(),
+                "provider",fixed.settings().apiProvider(),"protocol",fixed.settings().apiProtocol());
+        var capabilities=new LinkedHashMap<String,Object>();
+        if(evidenceTask!=null){
+            String evidenceId=evidenceTask.id().value();
+            if(sharedToolAccess!=null&&evidenceTask.requiredCapabilities().contains(SharedToolAccess.CAPABILITY)) {
+                capabilities.put("sharedTools",sharedToolAccess.bindings(evidenceId));
+                capabilities.put("sharedToolOperations",sharedToolAccess.receipts(run.actor,evidenceId));
+            }
+            var payload=skillFiles==null?null:skillFiles.payload(evidenceId,"display");
+            if(payload!=null)capabilities.put("skills",payload.references().stream()
+                    .map(ref->Map.of("id",ref.ref(),"version",ref.assetVersion(),"digest",ref.assetDigest())).toList());
+            if(guard!=null&&guard.managed(evidenceId)){
+                var policy=guard.context(evidenceId).originalPolicy();
+                capabilities.put("tools",policy.rules().stream().map(r->r.tool().name()).distinct().sorted().toList());
+                capabilities.put("commands",policy.commands().stream().map(GuardContract.Command::id).toList());
+            }
+        }
         return new View(run,task,taskDisplayState,report,failureCode,provisioner.getObject().pending(run.id),activity,
-                modelUsage.summary(owners.currentOwner(),new ModelUsageView.Query(run.id,null)),team.identity(run.memberWait!=null||activityTask==null?null:activityTask.id().value()),proposalView(run),management);
+                modelUsage.summary(owners.currentOwner(),new ModelUsageView.Query(run.id,null)),team.identity(run.memberWait!=null||activityTask==null?null:activityTask.id().value()),proposalView(run),management,profile,capabilities);
     }
     @Transactional public Run control(String id,long version,String action,String answer) {
         var run=load(id,true);
@@ -1236,7 +1431,7 @@ public class WorkflowRuns {
             case "resume" -> {
                 if(!run.state.equals("PAUSED"))throw new IllegalStateException("Workflow is not paused");
                 if(!discardProposal(run))break;
-                run.state="RUNNING";run.memberWait=null;event(run,"RESUMED","Workflow resumed");
+                run.state="RUNNING";run.memberWait=null;run.selectingRuntimeProfile=false;event(run,"RESUMED","Workflow resumed");
                 var task=currentTask(run);
                 if(task==null)continueRun(run);
                 else if(task.state()==TaskState.COMPLETED) {
@@ -1263,6 +1458,8 @@ public class WorkflowRuns {
             case "retry" -> {
                 if(!run.state.equals("FAILED"))throw new IllegalStateException("Only a failed step can retry");
                 var task=currentTask(run);
+                if(task!=null&&sharedToolAccess!=null&&task.requiredCapabilities().contains(SharedToolAccess.CAPABILITY))
+                    sharedToolAccess.requireSettled(task.id().value());
                 if(task!=null && tasks.findLease(task.id()).isPresent())throw new IllegalStateException("Wait for the original execution to end");
                 run.sealedTaskId=null;run.sealedAttemptId=null;
                 if(task!=null && task.state()==TaskState.FAILED && run.inputs.isEmpty()) {

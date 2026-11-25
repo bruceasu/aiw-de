@@ -18,10 +18,19 @@ public class PlanLocations {
     private final JdbcTemplate jdbc;
     private final WorkflowPlanRepository plans;
     private final Path temporaryRoot;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.authority.AuthorityBoundary authority;
+    @Value("${aidev.plans.execution-store-id:}")
+    private String executionStoreId="";
 
     public PlanLocations(JdbcTemplate jdbc, WorkflowPlanRepository plans,
             @Value("${aidev.plans.temporary-root:data/plan-locations}") String root) {
         this.jdbc=jdbc; this.plans=plans; this.temporaryRoot=Path.of(root).toAbsolutePath().normalize();
+    }
+    public String executionStoreId() {
+        return executionStoreId.isBlank()?"plane-"+authority.instance():executionStoreId.strip();
+    }
+    public String executionStoreCapability() {
+        return "handoff-store:"+me.asu.aidev.authority.AuthorityRepository.hash(executionStoreId());
     }
     @Transactional
     public String forTask(WorkTask task) {

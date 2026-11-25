@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" th:content="${csrfToken}"><title>平台 Skills</title>
+  <link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css">
+  <script src="/ui/appearance.js"></script><script src="/ui/platform-skills.js" defer></script>
+</head>
+<body><div class="app">
+  <nav th:replace="~{ui/fragments :: nav('skills')}"></nav>
+  <main class="main">
+    <header th:replace="~{ui/fragments :: topbar('平台 Skills','维护可复用的任务说明，并查看派发可用版本。')}"></header>
+    <div class="content">
+      <p id="skill-status" class="help" role="status"></p>
+      <section class="card">
+        <form id="skill-edit">
+          <label class="field">已保存的 Skill<select id="skill-choice"><option value="">新建 Skill</option></select></label>
+          <label class="field">标识<input name="ref" pattern="custom-[a-z][a-z0-9-]{0,63}" maxlength="71" placeholder="custom-document-check" required></label>
+          <label class="field">名称<input name="title" maxlength="160" required></label>
+          <label class="field">说明<textarea name="content" rows="14" maxlength="131072" required></textarea></label>
+          <label class="field"><span><input name="enabled" type="checkbox" checked> 启用</span></label>
+          <div class="form-actions"><button class="btn primary">保存新版</button><button type="button" class="btn ghost" id="skill-reload">刷新</button></div>
+        </form>
+      </section>
+      <section class="card section" id="skill-history" hidden><h2>版本历史</h2>
+        <label class="field">选择版本<select id="skill-versions"></select></label>
+        <pre id="skill-version-content"></pre>
+        <button type="button" class="btn ghost" id="skill-use-version">载入编辑器</button>
+      </section>
+    </div>
+  </main>
+</div></body></html>

@@ -2,7 +2,9 @@ package me.asu.aidev.execution.config;
 
 import java.nio.file.*;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 import me.asu.aidev.worker.domain.WorkerLiveness;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,13 @@ public class FactoryWorkerRegistry {
         return jdbc.queryForObject("SELECT COUNT(*) FROM worker WHERE id=? AND status='ACTIVE' AND last_heartbeat_at_epoch_ms>=?",
                 Long.class,id,Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW).toEpochMilli())>0;
     }
+    public List<String> liveWorkers() {
+        return jdbc.queryForList("""
+                SELECT w.id FROM worker w JOIN factory_worker_registration f ON f.worker_id=w.id
+                 WHERE f.retired_at_epoch_ms IS NULL AND w.status IN ('ACTIVE','DRAINING')
+                   AND w.last_heartbeat_at_epoch_ms>=?
+                """,String.class,Instant.now().minus(WorkerLiveness.HEARTBEAT_WINDOW).toEpochMilli());
+    }
     /** Returns the local launcher's receipt for review, never a stop decision. */
     public ExitEvidence exitEvidence(String id,long claimedAt) {
         if(!id.matches("factory-[0-9a-f]{24}"))return null;
@@ -73,17 +82,29 @@ public class FactoryWorkerRegistry {
         catch(java.security.NoSuchAlgorithmException error) {throw new IllegalStateException(error);}
     }
     public boolean drainIdle(String id,String skill,String repository) {
-        return Boolean.TRUE.equals(transaction.execute(status -> jdbc.update("""
+        return drainIdle(id,skill,repository,false);
+    }
+    public boolean drainIdle(String id,String skill,String repository,boolean alsoWorkspace) {
+        return drainIdle(id,skill,repository,alsoWorkspace,task -> true);
+    }
+    public boolean drainIdle(String id,String skill,String repository,boolean alsoWorkspace,Predicate<String> compatible) {
+        return Boolean.TRUE.equals(transaction.execute(status -> {
+            var queued=jdbc.queryForList("""
+                    SELECT t.id FROM work_task t WHERE t.state='READY'
+                      AND (t.skill_ref=? OR (? AND t.skill_ref='workspace-work'))
+                      AND (t.repository_ref=? OR t.repository_ref IS NULL)
+                      AND NOT EXISTS (SELECT 1 FROM worker_team_task mt
+                        JOIN worker_team_assignment ma ON ma.run_id=mt.run_id AND ma.node_key=mt.node_key
+                        JOIN worker_team_member tm ON tm.id=ma.member_id WHERE mt.task_id=t.id AND tm.state<>'ACTIVE')
+                    """,String.class,skill,alsoWorkspace,repository);
+            if(queued.stream().anyMatch(compatible))return false;
+            return jdbc.update("""
                 UPDATE worker SET status='DRAINING' WHERE id=? AND status='ACTIVE' AND active_leases=0
                  AND EXISTS (SELECT 1 FROM factory_worker_registration f WHERE f.worker_id=worker.id)
                  AND NOT EXISTS (SELECT 1 FROM work_task t WHERE t.current_worker_id=worker.id AND t.state IN ('CLAIMED','RUNNING'))
                  AND NOT EXISTS (SELECT 1 FROM execution_attempt a WHERE a.worker_id=worker.id AND a.state IN ('CLAIMED','RUNNING'))
-                 AND NOT EXISTS (SELECT 1 FROM work_task t WHERE t.state='READY' AND t.skill_ref=?
-                      AND (t.repository_ref=? OR t.repository_ref IS NULL)
-                      AND NOT EXISTS (SELECT 1 FROM worker_team_task mt
-                        JOIN worker_team_assignment ma ON ma.run_id=mt.run_id AND ma.node_key=mt.node_key
-                        JOIN worker_team_member tm ON tm.id=ma.member_id WHERE mt.task_id=t.id AND tm.state<>'ACTIVE'))
-                """,id,skill,repository)==1));
+                """,id)==1;
+        }));
     }
     public void stopped(String id) {
         jdbc.update("UPDATE worker SET status='OFFLINE' WHERE id=? AND status='DRAINING' AND active_leases=0",id);

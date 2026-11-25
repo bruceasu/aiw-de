@@ -32,7 +32,7 @@ def complete_text(settings, instruction, cancelled, on_evidence=None):
         raise RuntimeError("MODEL_INPUT_BUDGET_EXCEEDED")
     cancelled = cancelled if cancelled is not None else threading.Event()
     evidence = ModelEvidence()
-    attempt = Attempt(None, None, cancelled, evidence=evidence, timeout_ms=120000)
+    attempt = Attempt(None, {}, cancelled, evidence=evidence, timeout_ms=120000)
     profile = ProcessProfile("personal-secretary", "", (), (), (), "", "", False, "text")
     try:
         with tempfile.TemporaryDirectory(prefix="aiw-model-") as workspace:
@@ -50,7 +50,8 @@ def complete_text(settings, instruction, cancelled, on_evidence=None):
                 if not key:
                     raise RuntimeError("OPENAI_API_KEY_REQUIRED")
                 runtime = OpenAIApiRuntime(ApiRuntimeConfig(key, settings.get("endpoint") or None,
-                    settings["model"], settings.get("effort", ""), 120000, 1, 256000, 32000, 60000))
+                    settings["model"], settings.get("effort", ""), 120000, 1, 256000, 32000, 60000,
+                    provider=settings.get("apiProvider", "openai"), protocol=settings.get("apiProtocol", "responses")))
             else:
                 raise RuntimeError("AGENT_RUNTIME_UNSUPPORTED")
             result = runtime.run(None, request, lambda *_args: None)

@@ -129,8 +129,12 @@ public class AuthorityTaskPolicy implements WorkerTaskClaimPolicy,TaskExecutionP
         if(retired(task) || !live(task,true) || !independent(task,worker)) throw new IllegalStateException("Admission changed or Worker history is not independent");
     }
     public void selection(WorkTask task,String profile,String version) {
-        if(members!=null&&members.forTask(task.id().value())!=null&&profiles.hasPolicy(task.type())) {
-            var allowed=members.guidance(task,new AiProfileCatalog.Guidance(profiles.version(),profiles.approved(task.type()),null,""),preferences!=null&&preferences.explicitForTask(task)!=null);
+        selection(task,profile,version,null);
+    }
+    public void selection(WorkTask task,String profile,String version,AiProfileCatalog.Guidance fixed) {
+        if(members!=null&&members.forTask(task.id().value())!=null&&(fixed!=null||profiles.hasPolicy(task.type()))) {
+            var candidates=fixed==null?new AiProfileCatalog.Guidance(profiles.version(),profiles.approved(task.type()),null,""):fixed;
+            var allowed=members.guidance(task,candidates,fixed!=null||preferences!=null&&preferences.explicitForTask(task)!=null);
             if(!allowed.version().equals(version)||allowed.allowedProfiles().stream().noneMatch(p->p.id().equals(profile)))
                 throw new IllegalStateException("Actual model selection violates the frozen member settings");
         }

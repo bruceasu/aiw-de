@@ -6,6 +6,15 @@
 <div class="content"><section class="card factory-intro"><h2>Two parts of the team</h2><p>Team members are persistent specialist identities. Workers are the running processes assigned to perform their work. Creating a member saves its role and Skills; it does not start a Worker.</p></section><div th:replace="~{ui/team-members :: manager('factory')}"></div><section class="card"><h2>Shared model and execution settings</h2><p>Choose how new Workers run and which saved model connection they use. These settings affect new work only; existing tasks keep their original connection.</p>
 <p id="factory-status" class="callout" role="status" aria-live="polite">正在读取…</p>
 <form id="factory-settings"><fieldset id="factory-fields" disabled>
+<div class="form-grid">
+<label class="field">已保存的运行配置<select id="factory-profile-choice"><option value="">新建运行配置</option></select></label>
+<label class="field">配置名称<input id="factory-profile-id" required maxlength="64" pattern="[a-z][a-z0-9._-]{0,63}" placeholder="例如 fast-text"></label>
+</div>
+<div class="form-actions">
+<label><input type="checkbox" id="factory-profile-enabled" checked>启用</label>
+<label><input type="checkbox" id="factory-profile-default">任务默认</label>
+<label><input type="checkbox" id="factory-profile-manager">经理默认</label>
+</div>
 <h3>1. 执行与登录</h3><div class="form-grid">
 <label class="field">模型执行方式<select name="runtime" required><option value="" disabled selected>请选择模型执行方式</option><option value="codex-app-server">Codex App Server（通过本机 Codex）</option><option value="openai-agents">OpenAI 兼容 API</option></select></label>
 <label class="field" id="factory-api-provider-field" hidden>模型服务商<select name="apiProvider" id="factory-api-provider"><option value="" disabled selected>请选择模型服务商</option><option value="openai">OpenAI</option><option value="deepseek">DeepSeek</option></select></label>
@@ -62,4 +71,4 @@ $env:AIW_MODEL_CREDENTIAL_KEY = [Convert]::ToBase64String($modelCredentialBytes)
 <p data-access-status role="status" aria-live="polite"></p><div data-access-secret hidden><p data-w-text="Shown once. Store this as AIW_WORKER_TOKEN on the Worker device. Use AIW_WORKER_ID above and an HTTPS AIW_CONTROL_PLANE_URL. Loopback HTTP is allowed."></p><input data-access-token type="password" readonly autocomplete="off" aria-label="AIW_WORKER_TOKEN"><button class="btn ghost" type="button" data-access-reveal data-w-text="Show or hide token"></button></div>
 <button class="btn ghost" type="button" data-access-refresh data-w-text="Refresh credentials"></button><div data-access-list></div>
 <p data-w-text="Stopping new work permits current work to finish. Revoking blocks further protocol requests; it does not stop a remote process. Resolve any interrupted work separately."></p></details></section>
-</div></main></div><script src="/ui/agent-factory.js?v=fd085-deepseek-20261108" defer></script><script th:src="@{/ui/worker-access.js}" defer></script><script src="/ui/console.js"></script></body></html>
+</div></main></div><script src="/ui/agent-factory.js?v=runtime-profiles-1" defer></script><script th:src="@{/ui/worker-access.js}" defer></script><script src="/ui/console.js"></script></body></html>

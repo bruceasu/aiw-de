@@ -16,6 +16,7 @@ import static me.asu.aidev.modelauth.ModelAuthContract.*;
 /** Plane coordinates file references; Python owns tokens. Workers receive exact-task short-lived access only. */
 @Service
 public class ModelConnections {
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.FactoryTaskProfiles factoryProfiles;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.workflow.application.WorkflowAiPreferences workflowPreferences;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.guard.ExecutionAccounting accounting;
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;private final AuthorityGrantService grants;
@@ -273,7 +274,13 @@ public class ModelConnections {
     public boolean canClaim(WorkTask task,Worker worker) {
         try {
             var row=forWorker(worker);var bindings=repo.jdbc().queryForList("SELECT * FROM model_auth_task WHERE task_id=?",task.id().value());
-            var plans=repo.jdbc().queryForList("SELECT * FROM model_auth_plan WHERE subject_type=? AND subject_id=?",task.subjectType(),task.subjectId());
+            var fixed=factoryProfiles==null?null:factoryProfiles.read(task);
+            var plans=fixed==null?repo.jdbc().queryForList("SELECT * FROM model_auth_plan WHERE subject_type=? AND subject_id=?",task.subjectType(),task.subjectId()):List.<Map<String,Object>>of();
+            if(fixed!=null){
+                var config=fixed.settings();
+                if(config.credentialRef()==null&&row!=null||config.credentialRef()!=null&&(row==null
+                        ||!config.credentialRef().equals(row.get("id"))||config.credentialVersion()!=number(row,"version")))return false;
+            }
             if(row==null)return bindings.isEmpty()&&plans.isEmpty();
             if(!plans.isEmpty()&&(!row.get("id").equals(plans.getFirst().get("connection_id"))||number(row,"version")!=number(plans.getFirst(),"connection_version")))return false;
             // Subscription usage has no verified API-key currency price. Never borrow that price table.
@@ -287,14 +294,15 @@ public class ModelConnections {
         if(!canClaim(task,worker))throw new SecurityException("MODEL_CREDENTIAL_SCOPE_DENIED");
         var row=forWorker(worker);if(row==null)return;
         requireWorkerProof(workerMapping(worker.id().value(),worker.runtimeType(),worker.capabilities()));
-        if(Set.of("flexible-plan","configured-plan").contains(task.subjectType())) {
+        var runtimeProfile=factoryProfiles==null?null:factoryProfiles.read(task);
+        if(runtimeProfile==null&&Set.of("flexible-plan","configured-plan").contains(task.subjectType())) {
             repo.jdbc().update("INSERT INTO model_auth_plan VALUES(?,?,?,?) ON CONFLICT(subject_type,subject_id) DO NOTHING",task.subjectType(),task.subjectId(),row.get("id"),number(row,"version"));
             if(!canClaim(task,worker))throw new SecurityException("MODEL_PLAN_CONNECTION_CHANGED");
         }
         var fixed=repo.jdbc().queryForList("SELECT model FROM model_auth_worker WHERE worker_id=? AND connection_id=? AND connection_version=?",String.class,worker.id().value(),row.get("id"),number(row,"version"));
         if(fixed.size()!=1)throw new SecurityException("MODEL_WORKER_BINDING_REQUIRED");
         var preferred=workflowPreferences==null?null:workflowPreferences.forTask(task);
-        String model=preferred!=null&&preferred.model()!=null?preferred.model():fixed.getFirst();
+        String model=runtimeProfile!=null?runtimeProfile.settings().model():preferred!=null&&preferred.model()!=null?preferred.model():fixed.getFirst();
         repo.jdbc().update("INSERT INTO model_auth_task VALUES(?,?,?,?,?,?) ON CONFLICT(task_id) DO NOTHING",task.id().value(),row.get("id"),number(row,"version"),row.get("owner_actor"),runtime(row),model);
     }
     public void replaced(me.asu.aidev.work.domain.TaskId source,me.asu.aidev.work.domain.TaskId successor) {

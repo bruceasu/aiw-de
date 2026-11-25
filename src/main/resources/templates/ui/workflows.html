@@ -2,7 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" th:content="${csrfToken}">
   <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css?v=wide-lists-1">
-  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=task-retention-1" defer></script>
+  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=runtime-profiles-1" defer></script>
 </head>
 <body th:attr="data-wf-mode=${workflowMode},data-wf-admin=${canAdmin},data-wf-task-page=${taskPage},data-wf-task-execution=${taskExecution}"><div class="app"><aside th:replace="~{ui/fragments :: nav(${workflowMode})}"></aside><main class="main">
   <header th:replace="~{ui/fragments :: topbar(${workflowTitle},${workflowSubtitle})}"></header>
@@ -105,8 +105,11 @@
       <section class="card" data-wf-task hidden><h2 data-wf-label="New task">New task</h2>
         <p class="help" data-wf-label="Leave the working location empty to use a temporary workspace.">Leave the working location empty to use a temporary workspace.</p>
         <form data-wf-task-form><label class="field"><span data-wf-label="What should be done?">What should be done?</span><textarea name="instruction" required maxlength="8000" rows="6"></textarea></label>
+          <label class="field"><span data-wf-label="Runtime profile">Runtime profile</span><select name="runtimeProfile" data-wf-profile><option value="" data-wf-label="Factory default">Factory default</option></select></label>
+          <div th:if="${canAdmin}" class="field"><span data-wf-label="Shared read-only tools">Shared read-only tools</span><div data-wf-shared-tool-picker class="wf-skill-picker"></div></div>
+          <button type="button" class="btn ghost" data-wf-manager-profile data-wf-label="Ask manager to choose profile">Ask manager to choose profile</button>
           <label class="field"><span data-wf-label="Acceptance criteria (optional)">Acceptance criteria (optional)</span><textarea name="acceptance" maxlength="2000" rows="2"></textarea></label>
-          <label class="field"><span data-wf-label="Team member">Team member</span><select name="memberId" data-wf-member data-i18n-skip><option value="AUTO">Automatically choose member</option><option value="GENERAL">General execution (no team member)</option></select></label>
+          <label class="field"><span data-wf-label="Team member">Team member</span><select name="memberId" data-wf-member data-i18n-skip><option value="AUTO">Automatically choose member</option><option value="GENERAL" selected>General execution (no team member)</option></select></label>
           <p class="help" data-wf-label="Automatic assignment uses a general Worker when no team members are configured.">Automatic assignment uses a general Worker when no team members are configured.</p>
           <div class="field"><span data-wf-label="Required Skills">Required Skills</span><p class="help" data-wf-label="Choose any number of installed Skills this task must use. Leave empty for automatic selection.">Choose any number of installed Skills this task must use. Leave empty for automatic selection.</p><p class="help" data-wf-label="Only catalogued Skills appear here. Write one-task instructions under Task sources; external downloads are not enabled.">Only catalogued Skills appear here. Write one-task instructions under Task sources; external downloads are not enabled.</p><div data-wf-skills class="wf-skill-picker"></div></div>
           <label class="field"><span data-wf-label="Working location (optional)">Working location (optional)</span><input name="location" maxlength="4096"></label>
@@ -148,6 +151,20 @@
         <button class="btn primary" data-wf-start>Start execution</button>
       </section>
       <section class="card" data-wf-run hidden><div class="wf-actions"><h2 data-wf-run-title></h2><span class="pill neutral" data-wf-run-state></span></div>
+        <p class="help" data-wf-runtime-profile></p>
+        <div data-wf-shared-tool-grants class="form-actions"></div>
+        <dialog class="workspace-confirm console-confirm" data-wf-tool-confirm aria-labelledby="wf-tool-confirm-title">
+          <form data-wf-tool-confirm-form>
+            <div class="workspace-confirm__body">
+              <h3 id="wf-tool-confirm-title" data-wf-tool-confirm-title></h3>
+              <p data-wf-tool-confirm-item></p>
+              <label class="field" data-wf-tool-confirm-evidence><span data-wf-label="Evidence reviewed">Evidence reviewed</span><textarea name="reason" maxlength="1000" rows="3"></textarea></label>
+            </div>
+            <div class="workspace-confirm__footer"><button class="btn ghost" type="button" data-wf-tool-confirm-cancel data-wf-label="Cancel">Cancel</button><button class="btn primary" type="submit" data-wf-label="Confirm">Confirm</button></div>
+          </form>
+        </dialog>
+        <p class="help" data-wf-execution-skills></p>
+        <p class="help" data-wf-execution-tools></p>
         <p data-wf-run-current></p>
         <div data-wf-task-overview hidden>
           <h3 data-wf-label="Instruction">Instruction</h3><p class="wf-instructions" data-wf-task-instruction></p>

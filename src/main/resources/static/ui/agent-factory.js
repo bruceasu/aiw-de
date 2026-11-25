@@ -4,6 +4,8 @@
   if (!form) return;
   const byId = id => document.getElementById(id);
   const fields = byId("factory-fields"), save = byId("factory-save"), status = byId("factory-status");
+  const profileChoice=byId("factory-profile-choice"),profileId=byId("factory-profile-id");
+  let profiles={revision:"initial",defaultId:null,managerDefaultId:null,items:[]};
   const runtime = form.elements.runtime, mode = byId("factory-auth-mode"), credential = byId("factory-credential");
   const apiProvider = form.elements.apiProvider, apiProtocol = form.elements.apiProtocol;
   const modelChoice = byId("factory-model-choice"), modelInput = form.elements.model, modelStatus = byId("factory-model-status");
@@ -288,6 +290,39 @@
       executable: runtime.value === "codex-app-server" ? form.elements.executable.value : "", guardHome: mode.value === "codex-local" ? form.elements.guardHome.value : "",
       credentialRef: plane() ? credential.value || null : null, credentialVersion: plane() ? Number(form.elements.credentialVersion.value) || null : null };
   }
+  function profileInput() {
+    return {expectedRevision:profiles.revision,id:profileId.value,settings:settingsInput(),
+      enabled:byId("factory-profile-enabled").checked,taskDefault:byId("factory-profile-default").checked,
+      managerDefault:byId("factory-profile-manager").checked};
+  }
+  function loadProfiles(state,preferred) {
+    profiles=state;
+    profileChoice.replaceChildren(new Option(t("新建运行配置"),""));
+    for(const profile of profiles.items) {
+      const labels=[profile.id,"v"+profile.version];
+      if(!profile.enabled)labels.push(t("已停用"));
+      if(profile.id===profiles.defaultId)labels.push(t("任务默认"));
+      if(profile.id===profiles.managerDefaultId)labels.push(t("经理默认"));
+      profileChoice.add(new Option(labels.join(" · "),profile.id));
+    }
+    profileChoice.value=preferred||profiles.defaultId||"";
+    profileId.value=profileChoice.value||"factory-default";
+    profileId.readOnly=Boolean(profileChoice.value);
+    syncProfileOptions();
+  }
+  function syncProfileOptions() {
+    const current=profiles.items.find(item=>item.id===profileChoice.value);
+    byId("factory-profile-enabled").checked=current?.enabled??true;
+    byId("factory-profile-default").checked=current?.id===profiles.defaultId;
+    byId("factory-profile-manager").checked=current?.id===profiles.managerDefaultId;
+  }
+  profileChoice.addEventListener("change",()=>{
+    revision++;
+    profileId.value=profileChoice.value;profileId.readOnly=Boolean(profileChoice.value);
+    syncProfileOptions();
+    const profile=profiles.items.find(item=>item.id===profileChoice.value);
+    if(profile)showSavedSettings(profile.settings,new URLSearchParams());
+  });
   runtime.addEventListener("change", () => { apiProvider.value = "";apiProtocol.value = "responses";modes();synchronize(); });
   apiProvider.addEventListener("change", () => { apiProtocol.value = "responses";modes(apiProvider.value === "deepseek" ? "api-key" : "");synchronize(); });
   apiProtocol.addEventListener("change", () => synchronize());
@@ -322,13 +357,14 @@
   });
   form.addEventListener("submit", async event => {
     event.preventDefault(); if (save.disabled || !form.reportValidity()) return;
-    const input = settingsInput(), snapshot = JSON.stringify(input), chosen = selected();save.disabled = true;fields.disabled = true;
+    const change=profileInput(),input=change.settings,snapshot=JSON.stringify(change),chosen=selected();save.disabled=true;fields.disabled=true;
     try {
       const detail = runtime.selectedOptions[0].textContent + (runtime.value === "openai-agents" ? " · " + input.apiProvider + " / " + input.apiProtocol : "") + "\n" + mode.selectedOptions[0].textContent + (chosen && plane() ? " · " + chosen.label : "") + "\n" + input.model + " / " + input.effort;
       if (!await window.aiwConfirm(t("保存以下工厂设置？") + "\n" + detail)) return;
-      if (JSON.stringify(settingsInput()) !== snapshot) throw new Error(t("设置在确认期间发生变化，请重新核对后保存。"));
-      const result = await call(factoryRoot, "settings", input);saved = result.settings || input;renderWorkers(result.managedWorkers || []);
-      const stillConfirmed = JSON.stringify(settingsInput()) === snapshot;
+      if (JSON.stringify(profileInput()) !== snapshot) throw new Error(t("设置在确认期间发生变化，请重新核对后保存。"));
+      const result = await call(factoryRoot, "profiles", change);
+      const stillConfirmed=JSON.stringify(profileInput())===snapshot;
+      loadProfiles(result.runtimeProfiles,change.id);saved=input;
       contextKey = null;synchronize({ preserveModel: true });
       status.textContent = t(stillConfirmed ? "工厂设置已保存，正在按已保存的运行环境重新读取模型目录。" : "已保存刚才确认的设置；页面选择随后发生变化，当前选择尚未保存。");
     }
@@ -348,22 +384,28 @@
       if (results[2].status === "fulfilled") environment = results[2].value;
     }
     if (results[0].status === "rejected") { status.textContent = results[0].reason.message;authStatus.textContent = authError;synchronize({ preserveModel: true });return; }
-    const result = results[0].value; saved = result.settings || null;const params = new URLSearchParams(location.search);
+    const result = results[0].value; saved = result.settings || null;
+    loadProfiles(result.runtimeProfiles);
     if (revision !== startedRevision) {
       save.disabled = false;synchronize({ preserveModel: true });renderWorkers(result.managedWorkers || []);
       status.textContent = t("已读取工厂设置，并保留你正在编辑的页面选择。保存后才会生效。");return;
     }
-    for (const name of ["runtime", "model", "effort", "python", "executable", "guardHome"]) {
-      const value = saved?.[name] ?? (["runtime", "model", "effort"].includes(name) ? params.get(name) : null);
-      if (name === "effort" && value === "xhigh" && runtime.value === "codex-app-server") form.elements.effort.add(new Option("xhigh", "xhigh"));
-      if (name === "effort" && value === "max" && saved?.apiProvider === "deepseek") form.elements.effort.add(new Option("max", "max"));
-      if (value != null) form.elements[name].value = value;
-    }
-    apiProvider.value = saved?.apiProvider || (saved?.runtime === "openai-agents" ? "openai" : "");apiProtocol.value = saved?.apiProtocol || "responses";
-    form.elements.automaticWorkers.checked = saved?.automaticWorkers ?? true;
-    modes(saved?.runtime ? saved.credentialRef ? (saved.runtime === "codex-app-server" ? "codex-plane" : "chatgpt") : (saved.runtime === "codex-app-server" ? "codex-local" : "api-key") : "");
-    fields.disabled = false;save.disabled = false;showModel(modelInput.value);synchronize({ requestedRef: saved?.credentialRef || "", preserveModel: true });
+    showSavedSettings(saved,new URLSearchParams(location.search));
+    fields.disabled=false;save.disabled=false;
     renderWorkers(result.managedWorkers || []);status.textContent = t(saved ? "工厂设置已载入。" : "请按顺序选择执行方式、登录方式和模型，再保存设置。");
     authStatus.textContent = authError || t(vault ? "已保存连接如下。新增与更新操作分别处理，不会隐式覆盖其他连接。" : errors[storage?.vaultState] || errors.MODEL_CREDENTIAL_VAULT_NOT_CONFIGURED);
   })().catch(error => { status.textContent = error.message; });
+  function showSavedSettings(settings,params) {
+    for(const name of ["runtime","model","effort","python","executable","guardHome"]) {
+      const value=settings?.[name]??(["runtime","model","effort"].includes(name)?params.get(name):null);
+      if(name==="effort"&&value&&![...form.elements.effort.options].some(option=>option.value===value))
+        form.elements.effort.add(new Option(value,value));
+      if(value!=null)form.elements[name].value=value;
+    }
+    apiProvider.value=settings?.apiProvider||(settings?.runtime==="openai-agents"?"openai":"");
+    apiProtocol.value=settings?.apiProtocol||"responses";
+    form.elements.automaticWorkers.checked=settings?.automaticWorkers??true;
+    modes(settings?.runtime?settings.credentialRef?(settings.runtime==="codex-app-server"?"codex-plane":"chatgpt"):(settings.runtime==="codex-app-server"?"codex-local":"api-key"):"");
+    showModel(modelInput.value);synchronize({requestedRef:settings?.credentialRef||"",preserveModel:true});
+  }
 })();

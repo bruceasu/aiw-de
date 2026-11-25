@@ -203,6 +203,18 @@
     'After-sales example':['售后示例'], 'Saved workflows':['已保存工作流'],
     'Decisions requested by the manager':['经理请你决定'],
     'Manager diagnosis':['经理诊断'],
+    'Runtime profile':['运行配置'], 'Factory default':['工厂默认'],
+    'Manager selects':['由经理选择'], 'Candidate runtime profiles':['候选运行配置'],
+    'Shared read-only tools':['共享只读工具'], 'Revoke tool grant':['撤销工具授权'],
+    'Reconcile tool result':['核对工具操作'], 'Evidence reviewed':['已核对的证据'],
+    'No shared tools are enabled for execution.':['当前没有可执行的共享工具。'],
+    'Current Skill version':['当前 Skill 版本'],
+    'Waiting for the manager to select a runtime profile.':['等待经理选择运行配置。'],
+    'Select at least one candidate runtime profile.':['请至少选择一个候选运行配置。'],
+    'WAITING_PROFILE':['等待运行配置'], 'PROFILE_SELECTED':['已选择运行配置'],
+    'MANAGER_MODEL_FAILED':['经理选型失败'], 'PROFILE_UNAVAILABLE':['运行配置不可用'],
+    'Ask manager to choose profile':['请经理选择运行配置'],
+    'Pinned Skills':['固定 Skills'], 'Granted tools':['任务授权工具'],
     'Preparing a diagnosis':['正在准备诊断'],
     'Review recovery options':['查看恢复方案'],
     'Open the failed task':['打开失败任务'],
@@ -274,7 +286,9 @@
     return words[value]?.[locale?.startsWith('zh') ? 0 : 1] || value;
   };
   const status = message => { $('[data-wf-status]').textContent = message; };
-  let definitions=[], teamSkills=[], teamMembers=[], taskSources=[], taskSkills=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='', selectedNodeKey=null;
+  let definitions=[], teamSkills=[], teamMembers=[], factoryProfiles=[], taskSources=[], taskSkills=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='', selectedNodeKey=null;
+  let sharedTools=[], taskSharedTools=[];
+  let toolDecision=null;
   function newRequest() {
     if(typeof crypto.randomUUID==='function')return crypto.randomUUID();
     const bytes=crypto.getRandomValues(new Uint8Array(16));
@@ -410,14 +424,76 @@
   const redraw=()=>graph($('[data-wf-definition-graph]'),editing.spec);
   function renderSkillPicker(host,values,change){
     host.replaceChildren();
-    for(const skill of new Set([...teamSkills,...values])){
+    const choices=new Map();
+    for(const value of new Set([...teamSkills,...values])){
+      const ref=value.split('@')[0];
+      if(!choices.has(ref))choices.set(ref,[]);
+      if(ref!==value)choices.get(ref).push(value);
+    }
+    for(const [skill,versions] of choices){
+      const selected=values.find(value=>value.split('@')[0]===skill);
       const label=element('label',undefined,'wf-skill-option'),checkbox=element('input');
-      checkbox.type='checkbox';checkbox.checked=values.includes(skill);checkbox.disabled=!checkbox.checked&&values.length>=8;
-      checkbox.onchange=()=>{const next=checkbox.checked?[...values,skill]:values.filter(value=>value!==skill);change(next);renderSkillPicker(host,next,change);};
+      checkbox.type='checkbox';checkbox.checked=Boolean(selected);checkbox.disabled=!checkbox.checked&&values.length>=8;
+      checkbox.onchange=()=>{const next=checkbox.checked?[...values,skill]:values.filter(value=>value!==selected);change(next);renderSkillPicker(host,next,change);};
       label.append(checkbox,element('span',skill));host.append(label);
+      if(selected&&versions.length){
+        const select=element('select');
+        select.setAttribute('aria-label',skill+' · '+t('Current Skill version'));
+        select.add(new Option(t('Current Skill version'),skill));
+        for(const version of versions)select.add(new Option('v'+version.split('@')[1],version));
+        select.value=selected;
+        select.onchange=()=>{
+          const next=values.map(value=>value===selected?select.value:value);
+          change(next);renderSkillPicker(host,next,change);
+        };
+        label.after(select);
+      }
     }
     if(!host.children.length)host.append(element('p',t('No installed Skills are available. You can write a task-specific method in Task sources.'),'help'));
   }
+  function renderSharedTools(host,values,change) {
+    host.replaceChildren();
+    const choices=new Map(sharedTools.map(item=>[item.id,item]));
+    for(const ref of values)if(!choices.has(ref.id))choices.set(ref.id,ref);
+    if(!choices.size)host.append(element('p',t('No shared tools are enabled for execution.'),'help'));
+    for(const item of choices.values()){
+      const chosen=values.find(ref=>ref.id===item.id), ref=chosen||{id:item.id,revision:item.revision};
+      const label=element('label',undefined,'wf-skill-option'),box=element('input');
+      box.type='checkbox';box.checked=Boolean(chosen);box.disabled=!chosen&&values.length>=8;
+      box.onchange=()=>{
+        const updated=box.checked?[...values,ref]:values.filter(value=>value.id!==ref.id);
+        change(updated);renderSharedTools(host,updated,change);
+      };
+      label.append(box,element('span',(item.title||ref.id)+' · v'+ref.revision));host.append(label);
+    }
+  }
+  async function loadSharedTools(){
+    sharedTools=await api('/executable',undefined,'/api/r1/tools');
+    const simple=$('[data-wf-shared-tool-picker]');
+    if(simple)renderSharedTools(simple,taskSharedTools,values=>taskSharedTools=values);
+    if(editing&&!$('[data-wf-editor]').hidden)renderNodes();
+  }
+  function confirmToolDecision(label,item,action){
+    const dialog=$('[data-wf-tool-confirm]'),form=$('[data-wf-tool-confirm-form]');
+    $('[data-wf-tool-confirm-title]').textContent=t(label);
+    $('[data-wf-tool-confirm-item]').textContent=item;
+    form.elements.reason.value='';
+    form.elements.reason.required=action==='reconcile';
+    $('[data-wf-tool-confirm-evidence]').hidden=action!=='reconcile';
+    dialog.showModal();
+  }
+  $('[data-wf-tool-confirm-cancel]').onclick=()=>$('[data-wf-tool-confirm]').close();
+  $('[data-wf-tool-confirm-form]').onsubmit=event=>{
+    event.preventDefault();
+    const chosen=toolDecision;
+    if(!chosen)return;
+    const reason=event.target.elements.reason.value.trim();
+    act(async()=>{
+      const body=chosen.action==='revoke'?chosen.ref:{operationId:chosen.operationId,reason};
+      await api('/tasks/'+encodeURIComponent(chosen.taskId)+'/'+chosen.action,body,'/api/r1/tools');
+      $('[data-wf-tool-confirm]').close();toolDecision=null;signature='';await refreshRun();
+    });
+  };
   function removeNode(key){
     const node=editing.spec.nodes.find(item=>item.key===key);if(!node||node.kind==='END'){status(t('The selected step cannot be deleted.'));return;}
     const branching=Object.keys(node.branches||{}).length>0,hasIncoming=editing.spec.nodes.some(item=>item.next===key||Object.values(item.branches||{}).includes(key));
@@ -468,7 +544,7 @@
       kind.onchange=()=>{
         node.kind=kind.value;
         if(node.kind!=='TASK')node.workspaceTools=false;
-        if(!['TASK','DECISION'].includes(node.kind)){node.memberId=null;node.assignment=null;node.requiredSkills=[];}
+        if(!['TASK','DECISION'].includes(node.kind)){node.memberId=null;node.assignment=null;node.requiredSkills=[];delete node.runtimeProfile;delete node.runtimeProfileCandidates;delete node.sharedTools;}
         else node.assignment ||= 'AUTO';
         delete node.rule;
         node.branches={};node.next='end';
@@ -491,6 +567,42 @@
       } else if(node.kind!=='END') {
         const instruction=element('textarea');instruction.value=node.instruction;instruction.rows=3;instruction.maxLength=8000;instruction.oninput=()=>node.instruction=instruction.value;
         section.append(field('Instruction',instruction));
+        if(['TASK','DECISION'].includes(node.kind)){
+          const profile=element('select');
+          profileOptions(profile,node.runtimeProfile||'');
+          profile.add(new Option(t('Manager selects'),'@manager'));
+          if(node.runtimeProfileCandidates)profile.value='@manager';
+          profile.onchange=()=>{
+            delete node.runtimeProfileCandidates;
+            delete node.runtimeProfile;
+            if(profile.value==='@manager')node.runtimeProfileCandidates=[];
+            else if(profile.value)node.runtimeProfile=profile.value;
+            renderNodes();
+          };
+          section.append(field('Runtime profile',profile));
+          if(document.body.dataset.wfAdmin==='true'){
+            const picker=element('div',undefined,'wf-skill-picker');
+            renderSharedTools(picker,node.sharedTools||[],values=>{if(values.length)node.sharedTools=values;else delete node.sharedTools;});
+            section.append(field('Shared read-only tools',picker));
+          }
+          if(node.runtimeProfileCandidates){
+            profile.setCustomValidity(node.runtimeProfileCandidates.length?'':t('Select at least one candidate runtime profile.'));
+            const picker=element('div',undefined,'wf-skill-picker');
+            const available=new Map(factoryProfiles.map(item=>[item.id,item.id+' · '+item.model]));
+            for(const id of node.runtimeProfileCandidates)if(!available.has(id))available.set(id,id);
+            for(const [id,label] of available){
+              const box=element('input');box.type='checkbox';box.checked=node.runtimeProfileCandidates.includes(id);
+              box.onchange=()=>{
+                if(box.checked&&node.runtimeProfileCandidates.length<16)node.runtimeProfileCandidates.push(id);
+                else if(!box.checked)node.runtimeProfileCandidates=node.runtimeProfileCandidates.filter(value=>value!==id);
+                else box.checked=false;
+                profile.setCustomValidity(node.runtimeProfileCandidates.length?'':t('Select at least one candidate runtime profile.'));
+              };
+              const option=element('label');option.append(box,document.createTextNode(label));picker.append(option);
+            }
+            section.append(field('Candidate runtime profiles',picker));
+          }
+        }
         if(node.kind==='TASK'){const files=element('input');files.type='checkbox';files.checked=!!node.workspaceTools;files.onchange=()=>node.workspaceTools=files.checked;section.append(field('Work on files in this location',files));}
         if(['TASK','DECISION'].includes(node.kind)){const select=element('select');select.dataset.i18nSkip='';memberOptions(select,node.memberId||node.assignment||'GENERAL');select.onchange=()=>Object.assign(node,assignment(select.value));section.append(field('Team member',select));const skillField=element('div',undefined,'field');skillField.append(element('span',t('Required Skills')),element('p',t('Choose any number of installed Skills this step must use. Leave empty for automatic selection.'),'help'));const picker=element('div',undefined,'wf-skill-picker');renderSkillPicker(picker,node.requiredSkills||[],values=>node.requiredSkills=values);skillField.append(picker);section.append(skillField);}
         if(node.kind==='DECISION'||node.kind==='ASK') {
@@ -750,7 +862,7 @@
     if(teamLoading)return;teamLoading=true;
     try{
       const response=await fetch('/api/r1/team-members',{credentials:'same-origin'});if(!response.ok||response.redirected)throw new Error();
-      const team=await response.json();if(!Array.isArray(team.members))throw new Error();teamMembers=team.members;teamSkills=team.skills||[];
+      const team=await response.json();if(!Array.isArray(team.members))throw new Error();teamMembers=team.members;teamSkills=team.workflowSkills||team.skills||[];
       memberOptions($('[data-wf-member]'),$('[data-wf-member]').value);renderSkillPicker($('[data-wf-skills]'),taskSkills,values=>taskSkills=values);if(editing&&!$('[data-wf-editor]').hidden)renderNodes();
       $('[data-wf-member-status]').textContent='';
     }catch(_){$('[data-wf-member-status]').textContent=t('Member catalog unavailable; existing assignments are preserved.');}
@@ -762,6 +874,24 @@
     if(value&&![...select.options].some(o=>o.value===value))select.add(new Option(t('Member unavailable')+' · '+value,value));
     select.value=value||'AUTO';
   }
+  function profileOptions(select,current=''){
+    select.replaceChildren(new Option(t('Factory default'),''));
+    for(const profile of factoryProfiles)select.add(new Option(profile.id+' · '+profile.model,profile.id));
+    if(current&&!factoryProfiles.some(p=>p.id===current))select.add(new Option(current,current));
+    select.value=current;
+  }
+  async function loadProfiles(){
+    factoryProfiles=await api('/runtime-profiles');
+    const select=$('[data-wf-profile]');
+    profileOptions(select,select.value);
+    if(editing&&!$('[data-wf-editor]').hidden)renderNodes();
+  }
+  $('[data-wf-manager-profile]').onclick=()=>act(async()=>{
+    const task=taskForm.elements.instruction.value.trim();
+    const result=await api('/profile-recommendation',{task,candidates:factoryProfiles.map(p=>p.id)},'/api/r1/authority/agent-factory');
+    $('[data-wf-profile]').value=result.profileId;
+    status(result.profileId+' · '+result.reason);
+  });
   function assignment(value){return {assignment:['AUTO','GENERAL'].includes(value)?value:'MEMBER',memberId:['AUTO','GENERAL'].includes(value)?null:value};}
   let selectedRunStep=null;
   async function openRun(id) {
@@ -916,9 +1046,32 @@
     currentView=data;renderActivity(data);renderUsage(data);
     if(pageMode==='tasks'||data.run.spec.simpleTask)$('[data-wf-amendment]').hidden=true;else renderAmendment(data);
     const member=data.member||{};$('[data-wf-assigned-member]').textContent=member.id?t('Assigned member snapshot')+': '+member.name+' · v'+member.revision+(member.state==='DRAINING'?' · '+t(['READY','BLOCKED'].includes(data.task?.state)?'Resume the selected member to claim this work.':'Current work continues.'):''):'';
-    const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.taskDisplayState,data.activity?.attemptId,data.activity?.stale,data.report,data.failureCode,data.preparation,data.management]);if(stamp===signature)return;signature=stamp;
+    const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.taskDisplayState,data.activity?.attemptId,data.activity?.stale,data.report,data.failureCode,data.preparation,data.management,data.taskCapabilities]);if(stamp===signature)return;signature=stamp;
     const title=taskTitle(run.spec.title);
     $('[data-wf-run-title]').textContent=title;
+    const profile=data.runtimeProfile;
+    $('[data-wf-runtime-profile]').textContent=profile?.id?t('Runtime profile')+' · '+profile.id+' v'+profile.version+' · '+profile.model:'';
+    const grants=$('[data-wf-shared-tool-grants]');
+    grants.replaceChildren();
+    const toolTask=run.taskId||run.completedTaskId, toolAdmin=document.body.dataset.wfAdmin==='true';
+    for(const ref of data.taskCapabilities?.sharedTools||[]){
+      grants.append(element('span',ref.id+' · v'+ref.revision));
+      if(toolTask&&toolAdmin&&run.taskId)grants.append(button('Revoke tool grant',()=>{
+        toolDecision={action:'revoke',taskId:toolTask,ref};
+        confirmToolDecision('Revoke tool grant',ref.id+' · v'+ref.revision,'revoke');
+      }));
+    }
+    for(const operation of data.taskCapabilities?.sharedToolOperations||[]){
+      grants.append(element('span',operation.toolId+' · '+t(operation.state)));
+      if(toolTask&&toolAdmin&&['UNKNOWN','STARTED'].includes(operation.state)&&['FAILED','STOPPED'].includes(run.state))
+        grants.append(button('Reconcile tool result',()=>{
+          toolDecision={action:'reconcile',taskId:toolTask,operationId:operation.operationId};
+          confirmToolDecision('Reconcile tool result',operation.toolId+' · '+operation.operationId,'reconcile');
+        }));
+    }
+    const capabilities=data.taskCapabilities||{},skills=capabilities.skills||[],tools=[...(capabilities.tools||[]),...(capabilities.commands||[])];
+    $('[data-wf-execution-skills]').textContent=skills.length?t('Pinned Skills')+' · '+skills.map(skill=>skill.id+' @'+skill.version).join(' · '):'';
+    $('[data-wf-execution-tools]').textContent=tools.length?t('Granted tools')+' · '+tools.join(' · '):'';
     const interrupted=data.taskDisplayState==='INTERRUPTED';
     const failure=$('[data-wf-failure]'),code=data.failureCode;
     failure.hidden=!code||run.state!=='FAILED';
@@ -967,7 +1120,8 @@
     const options=$('[data-wf-answer-options]');options.replaceChildren();
     if(!answer.hidden)Object.keys(node.branches).forEach(choice=>options.append(button(choice,()=>act(()=>control('answer',choice)))));
     $('[data-wf-answer-form]').hidden=!!Object.keys(node?.branches||{}).length;
-    $('[data-wf-preparation]').textContent=(run.memberWait&&['WAITING_MEMBER','PAUSED'].includes(run.state)?t(run.memberWait)+(node?.requiredSkills?.length?' ('+node.requiredSkills.join(', ')+')':'')+(run.state==='WAITING_MEMBER'?' '+t('Assignment resumes automatically when a matching member is available.'):''):'') || data.preparation.map(p=>t(p.message)).join('\n') || (task?.state==='READY'?t('Waiting for a compatible Worker'):'');
+    const profileFailure=run.state==='FAILED'&&['MANAGER_MODEL_FAILED','PROFILE_UNAVAILABLE'].includes(run.events.at(-1)?.type)?run.events.at(-1).content:'';
+    $('[data-wf-preparation]').textContent=(run.memberWait&&['WAITING_MEMBER','PAUSED'].includes(run.state)?t(run.memberWait)+(!run.selectingRuntimeProfile&&node?.requiredSkills?.length?' ('+node.requiredSkills.join(', ')+')':''):'') || profileFailure || data.preparation.map(p=>t(p.message)).join('\n') || (task?.state==='READY'?t('Waiting for a compatible Worker'):'');
     const detail=$('[data-wf-worker-detail]'), activityTask=task?.id.value||data.activity?.taskId;
     detail.hidden=!activityTask;detail.href=activityTask?'/ui/plans/'+encodeURIComponent(run.id)+'/tasks/'+encodeURIComponent(activityTask):'#';
     const timeline=$('[data-wf-timeline]');timeline.replaceChildren();
@@ -1065,7 +1219,7 @@
       const form=new FormData(taskForm);
       const workspaceTools=form.has('workspaceTools');
       status(t('Creating task…'));
-      const run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),acceptance:form.get('acceptance'),requiredCheckIds:form.getAll('requiredCheckIds'),location:form.get('location')||null,workspaceTools,autonomousShell:form.has('autonomousShell'),commands:workspaceTools?commands(taskForm.elements.commands):[],...assignment($('[data-wf-member]').value),requiredSkills:taskSkills,sources:taskSources});
+      const run=await api('/tasks',{requestId:taskRequest,instruction:form.get('instruction'),acceptance:form.get('acceptance'),requiredCheckIds:form.getAll('requiredCheckIds'),location:form.get('location')||null,workspaceTools,autonomousShell:form.has('autonomousShell'),commands:workspaceTools?commands(taskForm.elements.commands):[],...assignment($('[data-wf-member]').value),runtimeProfile:form.get('runtimeProfile')||null,requiredSkills:taskSkills,sources:taskSources,sharedTools:taskSharedTools});
       taskRequest=newRequest();
       taskForm.elements.autonomousShell.checked=false;
       taskForm.elements.workspaceTools.checked=taskForm.elements.workspaceTools.defaultChecked;
@@ -1085,7 +1239,10 @@
     control.ondragstart=event=>event.dataTransfer.setData('text/plain',control.dataset.wfDragKind);
     control.ondragend=()=>dragEndedAt=Date.now();
   });
-  $('[data-wf-save]').onclick=()=>act(async()=>{editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));editing.spec.autonomousShell=$('[data-wf-shell]').checked;editing=await api('/definitions',editing);savedSpec=JSON.stringify(editing.spec);startRequest=newRequest();await library();status(t('Workflow saved'));});
+  $('[data-wf-save]').onclick=()=>act(async()=>{
+    if(editing.spec.nodes.some(node=>node.runtimeProfileCandidates?.length===0))throw new Error(t('Select at least one candidate runtime profile.'));
+    editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));editing.spec.autonomousShell=$('[data-wf-shell]').checked;editing=await api('/definitions',editing);savedSpec=JSON.stringify(editing.spec);startRequest=newRequest();await library();status(t('Workflow saved'));
+  });
   $('[data-wf-start]').onclick=()=>act(async()=>{
     editing.spec.title=$('[data-wf-title]').value;editing.spec.goal=$('[data-wf-goal]').value;editing.spec.commands=commands($('[data-wf-commands]'));editing.spec.autonomousShell=$('[data-wf-shell]').checked;
     if(!editing.id||savedSpec!==JSON.stringify(editing.spec))throw new Error(t('Save changes before starting'));
@@ -1151,7 +1308,7 @@
     if(String(form.get('location')||'').trim())throw new Error('Schedules use temporary locations; attach selected text sources');
     const acceptance=String(form.get('acceptance')||'').trim();
     arrange({title:instruction.slice(0,80),goal:instruction,entry:'task',simpleTask:true,nodes:[
-      {key:'task',title:'Task',kind:'TASK',instruction,acceptance:acceptance||null,next:null,branches:{},...assignment($('[data-wf-member]').value),requiredSkills:taskSkills}],sources:taskSources,commands:[]});
+      {key:'task',title:'Task',kind:'TASK',instruction,acceptance:acceptance||null,next:null,branches:{},...assignment($('[data-wf-member]').value),runtimeProfile:form.get('runtimeProfile')||null,requiredSkills:taskSkills}],sources:taskSources,commands:[]});
   });
   $('[data-wf-schedule-form]').onsubmit=e=>{e.preventDefault();act(async()=>{
     const form=new FormData(e.target);
@@ -1184,6 +1341,9 @@
     $('[data-wf-history-next]').onclick=()=>{clearTimeout(taskHistoryTimer);if(taskHistoryHasMore){taskHistoryPage++;taskHistoryHasMore=false;updateTaskListUrl();loadHistory();}};
   }
   translate();renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);
+  if(pageMode!=='tasks'||taskPage==='new')loadProfiles().catch(error=>status(t(error.message)));
+  if(document.body.dataset.wfAdmin==='true'&&(pageMode!=='tasks'||taskPage==='new'))
+    loadSharedTools().catch(error=>status(t(error.message)));
   if(pageMode==='tasks') {
     const back=$('[data-wf-back]');if(back)back.href=taskListUrl();
     if(taskPage==='new') {

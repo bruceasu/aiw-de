@@ -11,19 +11,24 @@ import org.springframework.transaction.support.*;
 @Service
 public class ManagedWorkerProvisioner {
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.modelauth.ModelConnections modelConnections;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.work.port.WorkTaskRepository tasks;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.worker.port.WorkerRepository workers;
+    @org.springframework.beans.factory.annotation.Autowired private FactoryTaskProfiles taskProfiles;
     public record Result(boolean starting,String message) {}
-    private static final class Slot {Process process;Path status;String worker;long since=System.nanoTime();String failure;String settingsVersion;String role;String repository;boolean stopping;boolean runtimeFailure;}
+    private static final class Slot {Process process;Path status;String worker;long since=System.nanoTime();String failure;String settingsVersion;String role;String repository;boolean stopping;boolean runtimeFailure;boolean guarded;}
     @org.springframework.beans.factory.annotation.Autowired private FactoryWorkerRegistry registrations;
     private boolean closed;
     private final Map<String,Slot> slots=new HashMap<>();
     private final AgentFactorySettings settings;private final WorkspaceRegistry workspaces;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.authority.WorkerAccess access;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.workflow.application.PlanLocations planLocations;
     @org.springframework.beans.factory.annotation.Value("${server.port:8080}") private int port;
     @org.springframework.beans.factory.annotation.Value("${server.ssl.enabled:false}") private boolean tls;
     @org.springframework.beans.factory.annotation.Value("${aidev.agent-factory.control-plane-url:}") private String controlPlaneUrl;
     @org.springframework.beans.factory.annotation.Value("${server.servlet.context-path:}") private String contextPath;
     @org.springframework.beans.factory.annotation.Value("${aidev.agent-factory.worker-root:workers/process-python}") private String workerRoot;
     @org.springframework.beans.factory.annotation.Value("${aidev.agent-factory.max-workers:4}") private int maximum;
+    @org.springframework.beans.factory.annotation.Value("${aidev.agent-factory.max-workers-per-configuration:4}") private int maximumPerConfiguration;
     public ManagedWorkerProvisioner(AgentFactorySettings settings,WorkspaceRegistry workspaces) {this.settings=settings;this.workspaces=workspaces;}
     public synchronized Result request(String repository,String runtime,boolean commandRequired) {
         return request(repository,runtime,commandRequired,"coder");
@@ -48,22 +53,31 @@ public class ManagedWorkerProvisioner {
         return request(null,runtime,false,"planner");
     }
     public synchronized Result requestWorkflow(String repository,String runtime,String role,boolean guarded,boolean commandRequired) {
-        if(!Set.of("general","workspace","requirements","architect","planner","coder","stage-reviewer").contains(role))
+        return requestWorkflow(repository,runtime,role,guarded,commandRequired,null);
+    }
+    public synchronized Result requestWorkflow(String repository,String runtime,String role,boolean guarded,boolean commandRequired,
+            AgentFactorySettings.RuntimeProfile fixed) {
+        if(!Set.of("task","general","workspace","requirements","architect","planner","coder","stage-reviewer").contains(role))
             throw new IllegalArgumentException("Unsupported workflow role");
-        return request(repository,runtime,commandRequired,role,guarded);
+        return request(repository,runtime,commandRequired,role,guarded,fixed);
     }
     private Result request(String repository,String runtime,boolean commandRequired,String role) {
         return request(repository,runtime,commandRequired,role,"coder".equals(role));
     }
     private Result request(String repository,String runtime,boolean commandRequired,String role,boolean guarded) {
+        return request(repository,runtime,commandRequired,role,guarded,null);
+    }
+    private Result request(String repository,String runtime,boolean commandRequired,String role,boolean guarded,AgentFactorySettings.RuntimeProfile fixed) {
         if(closed)return new Result(false,"平台正在停止，不能启动新的 Worker。");
-        var config=settings.current();
+        var config=fixed==null?settings.current():fixed.settings();
         if(config==null||!config.automaticWorkers())return new Result(false,"本机 Worker 自动启动尚未启用。请在 Agent 工厂设置中启用；外部 Worker 可继续自行接入。");
         if(!config.runtime().equals(runtime))return new Result(false,"当前工厂默认运行时已变化，请重新选择模型后准备任务。");
         if(commandRequired&&!windowsHost())return new Result(false,"Local command adapter is not available on this platform; connect a compatible Linux/WSL or Windows Worker.");
         Path root=Path.of(workerRoot).toAbsolutePath().normalize();
         if(!Files.isRegularFile(root.resolve("managed_worker.py")))return new Result(false,"未找到随平台安装的 Worker 程序，请检查平台安装目录。");
-        String key=compatibilityKey(role+(guarded?":guarded":":native")+(commandRequired?":commands":""),repository,config);
+        String family=compatibilityKey(role+(guarded?":guarded":":native")+(commandRequired?":commands":""),repository,config);
+        String key="task".equals(role)?availableInstanceKey(AuthorityRepository.hash(family+"\n"+planLocations.executionStoreId())):family;
+        if(key==null)return new Result(false,"The Worker configuration has reached its instance limit.");
         var existing=slots.get(key);
         if(existing!=null) {
             readStatus(existing);
@@ -79,14 +93,15 @@ public class ManagedWorkerProvisioner {
                 return new Result(true,"正在启动并等待本机 Worker 完成能力登记。");
             }
         }
-        long running=slots.values().stream().filter(slot->slot.process==null?slot.failure==null:slot.process.isAlive()).count();
-        if(running>=Math.max(1,maximum)) {
+        var running=new HashSet<>(registrations.liveWorkers());
+        slots.values().stream().filter(slot->slot.process==null?slot.failure==null:slot.process.isAlive()).forEach(slot->running.add(slot.worker));
+        if(running.size()>=Math.max(1,maximum)) {
             if(slots.values().stream().anyMatch(s -> s.stopping) || releaseIdle())
                 return new Result(true,"An unused Worker is draining to make room for this role; preparation will continue.");
             return new Result(false,"平台管理的本机 Worker 已达到数量限制，请等待现有任务完成或接入外部 Worker。");
         }
         String directory="";
-        var slot=new Slot();slot.worker="factory-"+key.substring(0,24);slot.settingsVersion=settings.version();slot.role=role;slot.repository=repository;
+        var slot=new Slot();slot.worker="factory-"+key.substring(0,24);slot.settingsVersion=settings.version();slot.role=role;slot.repository=repository;slot.guarded=guarded;
         if(registrations.busy(slot.worker)) return new Result(false,"The previous Worker still has an active lease; wait for recovery before restarting it.");
         registrations.remember(slot.worker,key);slots.put(key,slot);
         Runnable start=()->start(slot,config,key,repository,directory,root,role,guarded,commandRequired);
@@ -96,6 +111,23 @@ public class ManagedWorkerProvisioner {
         });
         else Thread.ofVirtual().name("factory-worker-start").start(start);
         return new Result(true,"正在启动并等待本机 Worker 完成能力登记。");
+    }
+    private String availableInstanceKey(String family) {
+        String reusable=null;
+        var live=new HashSet<>(registrations.liveWorkers());
+        for(int instance=0;instance<Math.max(1,maximumPerConfiguration);instance++){
+            String key=instance==0?family:AuthorityRepository.hash(family+"\n"+instance);
+            String worker="factory-"+key.substring(0,24);
+            var slot=slots.get(key);
+            if(slot!=null) {
+                readStatus(slot);
+                boolean starting=slot.process==null && slot.failure==null;
+                if(starting || slot.process!=null && slot.process.isAlive() && !live.contains(worker))return key;
+            }
+            if((slot==null||slot.process==null||!slot.process.isAlive())&&!live.contains(worker)
+                    && !registrations.busy(worker) && reusable==null)reusable=key;
+        }
+        return reusable;
     }
     static String compatibilityKey(String role,String repository,AgentFactorySettings.Settings config) {
         return AuthorityRepository.hash(String.join("\n",role,Objects.toString(repository,""),config.runtime(),config.model(),
@@ -111,13 +143,17 @@ public class ManagedWorkerProvisioner {
                 case "requirements" -> "software-requirements-analyst";
                 case "architect" -> "solution-architect";
                 case "planner" -> "implementation-planner";
-                case "general" -> "general-work";
+                case "task","general" -> "general-work";
                 case "workspace" -> "workspace-work";
                 case "stage-reviewer" -> "workflow-stage-reviewer";
                 case "coder" -> "coding-work-package-executor";
                 default -> null;
             };
-            if(skill==null || !registrations.drainIdle(slot.worker,skill,slot.repository)) continue;
+            if(skill==null)continue;
+            var worker=workers.find(new me.asu.aidev.worker.domain.WorkerId(slot.worker)).orElse(null);
+            if(worker==null||!registrations.drainIdle(slot.worker,skill,slot.repository,"task".equals(slot.role)&&slot.guarded,
+                    id -> tasks.find(new me.asu.aidev.work.domain.TaskId(id)).filter(task -> worker.supports(task.requiredCapabilities())
+                            &&taskProfiles.canClaim(task,worker)&&modelConnections.canClaim(task,worker)).isPresent()))continue;
             slot.stopping=true;
             Runnable stop=() -> stopIdle(entry.getKey(),slot);
             if(TransactionSynchronizationManager.isSynchronizationActive()) TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -170,8 +206,9 @@ public class ManagedWorkerProvisioner {
             if(Files.isSymbolicLink(slot.status))throw new java.io.IOException("Unsafe status path");
             Files.deleteIfExists(slot.status);
             env.put("AIW_FACTORY_STATUS_FILE",slot.status.toString());env.put("AIW_WORKER_ID",slot.worker);env.put("AIW_PROCESS_ROLE",role);env.put("AIW_WORKER_MAX_CONCURRENCY","1");
+            if("task".equals(role))env.put("AIW_HANDOFF_STORE_ID",planLocations.executionStoreId());
             env.remove("AIW_WORKER_CAPABILITIES");
-            env.put("AIW_DYNAMIC_CONFIG",Boolean.toString(guarded&&!Set.of("general","workspace").contains(role)));
+            env.put("AIW_DYNAMIC_CONFIG",Boolean.toString(guarded&&!Set.of("task","general","workspace").contains(role)));
             env.put("AIW_EXECUTION_GUARD",Boolean.toString(guarded));env.put("AIW_WORKER_LOOP_CONTROL",Boolean.toString(guarded));
             env.put("AIW_GUARD_COMMAND_ENABLED",Boolean.toString(commandRequired&&windowsHost()));
             if(!guarded){env.put("AIW_CODEX_SANDBOX","coder".equals(role)?"workspace-write":"read-only");env.put("AIW_AGENT_ALLOW_SHELL","false");}

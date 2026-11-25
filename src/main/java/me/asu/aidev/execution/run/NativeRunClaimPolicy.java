@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 public class NativeRunClaimPolicy implements WorkerTaskClaimPolicy {
     @org.springframework.beans.factory.annotation.Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.NativeQuestions> questions;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.ai.application.AiProfileCatalog profiles;
+    @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.FactoryTaskProfiles factoryProfiles;
     @org.springframework.beans.factory.annotation.Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.authority.AuthorityTaskPolicy> policy;
     private final NativePlanOwners owners;private final ExecutionGuard guard;
     public NativeRunClaimPolicy(NativePlanOwners owners,ExecutionGuard guard) { this.owners=owners;this.guard=guard; }
@@ -22,8 +23,10 @@ public class NativeRunClaimPolicy implements WorkerTaskClaimPolicy {
         try {
             owners.task(task.id().value(),true);
             if(worker!=null) {
-                var current=profiles.guidance(task.type(),worker.runtimeType(),null);
-                current=policy.getObject().guidance(task,worker.runtimeType(),current);
+                var fixed=factoryProfiles==null?null:factoryProfiles.read(task);
+                if(fixed!=null&&!factoryProfiles.canClaim(task,worker))return false;
+                var current=fixed==null?policy.getObject().guidance(task,worker.runtimeType(),
+                        profiles.guidance(task.type(),worker.runtimeType(),null)):factoryProfiles.guidance(fixed);
                 questions.getObject().pinGuidance(task,worker.runtimeType(),current);
             }
             return worker==null||worker.capabilities().containsAll(java.util.Set.of(NativePlanOwners.CAPABILITY,me.asu.aidev.questions.QuestionContract.LOCATION_CAPABILITY))&&worker.capabilities().stream().anyMatch(c->c.matches("native-config:[0-9a-f]{64}"))&&worker.capabilities().stream().anyMatch(c->c.matches("handoff-store:[0-9a-f]{64}"))&&(worker.runtimeType().startsWith("codex-app-server:")||worker.runtimeType().startsWith("openai-agents:"));

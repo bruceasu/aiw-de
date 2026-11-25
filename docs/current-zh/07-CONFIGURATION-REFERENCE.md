@@ -105,6 +105,18 @@ Goal Workshop（`/ui/goals`）同样要求真实登录，使用当前账号的ac
 
 「Agent 权限」分为经理权限和秘书授权。经理是 Control Plane 内置角色，自动故障诊断默认启用。设置 `AIW_MANAGER_AUTOMATIC_DIAGNOSIS=false` 并重启 Control Plane 可停用自动诊断。用户仍可在符合条件的任务详情中手动请求诊断。秘书授权按动作、范围、次数和期限管理。外部 Agent 的配对和当前进程的启停在「Agent 管理」中处理。
 
+FD-152 的工厂运行配置可指定任务默认项与经理默认项。简单任务和工作流节点可以另选配置，派发后固定配置与连接版本。平台 Skills 可从独立目录保存和查看历史。工厂以 `aidev.agent-factory.max-workers` 和 `aidev.agent-factory.max-workers-per-configuration` 限制 Worker 实例数。新任务使用 Plane 的执行存储标识；需要接入同一共享位置的外部通用 Worker，应配置与 Plane 一致的 `AIW_HANDOFF_STORE_ID` 并验证实际挂载。
+
+在工作流执行节点选择「由经理选择」，并指定一个或多个候选运行配置。进入该节点后才开始选型，选定的版本随任务一同派发。经理的本地 API 密钥通过对应服务商的环境变量设置。为任务选择平台 Skill 时，可用当前版本，也可以在版本列表选择一个启用的历史版本。API 使用 `custom-example@2` 表示固定到第二版。
+
+「工具目录」位于 `/ui/tools`。管理员可以登记远程 MCP 工具或 HTTP 操作、维护入参 JSON 以及启停检索。Console API 的列表入口为 `GET /api/r1/tools`。在线 Worker 使用自身 Bearer 凭据查询已启用条目的操作元数据。
+
+配置 `AIW_SHARED_HTTP_ENDPOINTS` 或 `AIW_SHARED_MCP_ENDPOINTS` 后，管理员可为简单任务或工作流节点授权目录中对应地址的工具。变量接受用逗号分隔的完整地址，默认为空。HTTP 执行限定为 HTTPS GET。MCP 使用 2026-07-28 Streamable HTTP 的 JSON 响应，支持 HTTPS 和 `127.0.0.1` 的 HTTP。任务固定工具版本，Plane 检查租约和授权。可在任务详情撤销授权或核对未知操作。入参支持平面的字符串、整数和布尔值。
+
+FD-152 的样例服务可用 `python tests/fd152/timezone_mcp.py --port 8765` 启动。它使用 Python MCP SDK 2.x 和 IANA 时区数据库。用 `http://127.0.0.1:8765/mcp` 登记操作 `convert_time`，入参为带明确偏移的 ISO 8601 时间 `instant` 和 IANA 时区 `target_zone`。
+
+在团队成员设置中，可以维护平台 Skills、首选运行配置、能力要求和默认验收标准。设定用于派发匹配，工具授权仍由任务单独保存。设置 `AIW_MANAGER_AUTOMATIC_RATE_LIMIT_RETRY=true` 可以让经理在确认纯文本任务首次遇到模型限流且原租约结束后，等待一分钟再自动重试一次。该设置默认关闭。
+
 旧独立图页面 `/ui/workflow-graphs` 和旧软件开发工作台 `/ui/software-development` 已退役，不提供兼容页面或跳转。统一使用 `/ui/workflows` 查看、编辑和执行工作流，简单任务使用 `/ui/tasks`。旧 authority API 与历史记录的进一步清理单独实施；页面退役不代表已删除历史结果。
 
 在工作流执行详情中，可先暂停后续步骤，再选择尚未派发的节点，填写调整要求并生成建议。建议由一项独立可见的只读任务生成，需要支持任务资料读取的 Python SDK Worker；用量记录在该任务。审阅原说明、建议说明和流程图预览后，点击确认才修改本次执行。目标、资料、成员、Skills、权限和已派发节点不改；执行版本变化后旧建议失效。继续或停止会先请求停止尚在生成的建议，必须等待实际结束证据，不能把请求当作已完成。

@@ -177,6 +177,7 @@ class OpenAIApiRuntime:
             tools = resource_tools(request) if text_workspace or request.profile.primary_skill == "goal-discussion" else _create_tools(context)
         if not getattr(request, "model_only", False):
             tools.extend(_context_tools(request, sources))
+            tools.extend(getattr(request.attempt, "shared_tools", ()))
             channel = getattr(request.attempt, "run_channel", None)
             if request.broker is not None and request.profile.writable and getattr(channel, "work_checklist_supported", False):
                 tools.append(_work_checklist_tool(request.attempt))

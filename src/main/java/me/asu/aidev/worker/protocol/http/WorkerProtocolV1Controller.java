@@ -10,21 +10,27 @@ import me.asu.aidev.execution.domain.CompletionVerdict;
 import me.asu.aidev.execution.domain.LeaseToken;
 import me.asu.aidev.execution.domain.WorkspaceResult;
 import me.asu.aidev.execution.port.ExecutionAttemptRepository;
+import me.asu.aidev.execution.tools.SharedToolCatalog;
 import me.asu.aidev.work.application.TaskCompletionResult;
 import me.asu.aidev.work.domain.TaskId;
 import me.asu.aidev.worker.application.RegisterWorkerCommand;
 import me.asu.aidev.worker.application.WorkerService;
 import me.asu.aidev.worker.domain.WorkerId;
+import me.asu.aidev.worker.domain.WorkerLiveness;
+import me.asu.aidev.worker.domain.WorkerStatus;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Stable transport adapter for the R3/R4 worker protocol semantics.
@@ -34,6 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/r1/worker-protocol/v1")
 public class WorkerProtocolV1Controller {
+    @Autowired private me.asu.aidev.execution.config.FactoryTaskProfiles factoryProfiles;
     @Autowired private me.asu.aidev.workflow.application.PlanLocations locations;
     @Autowired private me.asu.aidev.execution.application.TaskHandoffs handoffs;
     @Autowired private me.asu.aidev.execution.pricing.ModelPriceRepairResults priceRepairResults;
@@ -49,6 +56,9 @@ public class WorkerProtocolV1Controller {
     public void setGoalPolicy(me.asu.aidev.goal.application.GoalTaskPolicy policy) { this.goalPolicy = policy; }
     private final WorkerService workers;
     @Autowired private me.asu.aidev.authority.AuthorityRepository authorityRepository;
+    @Autowired private me.asu.aidev.authority.AuthorityBoundary authorityBoundary;
+    @Autowired private SharedToolCatalog sharedTools;
+    @Autowired private me.asu.aidev.execution.tools.SharedToolAccess sharedToolAccess;
     @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.questions.NativeQuestions> nativeQuestions;
     @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> workflowRuns;
     @Autowired private me.asu.aidev.execution.run.ExecutionRuns executionRuns;
@@ -104,6 +114,39 @@ public class WorkerProtocolV1Controller {
     @PostMapping("/workers/{workerId}/heartbeat")
     public void workerHeartbeat(@PathVariable String workerId) {
         workers.heartbeat(new WorkerId(workerId));
+    }
+
+    public record ToolSearch(String query,SharedToolCatalog.Kind kind,String after,Integer limit) {}
+
+    @PostMapping("/workers/{workerId}/tool-catalog/search")
+    public SharedToolCatalog.Page searchToolCatalog(@PathVariable String workerId,
+            @RequestHeader(value="Authorization",required=false) String bearer,@RequestBody ToolSearch request) {
+        if(bearer==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Worker credential required for tool discovery");
+        try {authorityBoundary.requireWorker(workerId,true);}
+        catch(SecurityException mismatch) {throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Worker identity mismatch");}
+        var worker=workers.get(new WorkerId(workerId));
+        if(WorkerLiveness.observedStatus(worker.status(),worker.lastHeartbeatAt(),Instant.now())!=WorkerStatus.ACTIVE)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"An active Worker is required for tool discovery");
+        return sharedTools.search(request.query(),request.kind(),SharedToolCatalog.State.ENABLED,request.after(),
+                request.limit()==null?25:request.limit());
+    }
+
+    @PostMapping("/tasks/{taskId}/shared-tools/discover")
+    public List<SharedToolCatalog.Item> discoverTaskTools(@PathVariable String taskId,
+            @RequestHeader(value="Authorization",required=false) String bearer,
+            @RequestBody me.asu.aidev.execution.guard.GuardContract.Lease lease) {
+        if(bearer==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Worker credential required for task tool discovery");
+        try {return sharedToolAccess.discover(taskId,lease);}
+        catch(SecurityException denied) {throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Task tool discovery denied");}
+    }
+
+    @PostMapping("/tasks/{taskId}/shared-tools/invoke")
+    public me.asu.aidev.execution.tools.SharedToolAccess.Result invokeTaskTool(@PathVariable String taskId,
+            @RequestHeader(value="Authorization",required=false) String bearer,
+            @RequestBody me.asu.aidev.execution.tools.SharedToolAccess.Call call) {
+        if(bearer==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Worker credential required for tool invocation");
+        try {return sharedToolAccess.invoke(taskId,call);}
+        catch(SecurityException denied) {throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Task tool invocation denied");}
     }
 
     @PostMapping("/workers/{workerId}/drain")
@@ -197,23 +240,26 @@ public class WorkerProtocolV1Controller {
 
     private ClaimedTaskResponse toResponse(ClaimedTask claimed,String runtimeType) {
         var task=claimed.task();var lease=claimed.lease();
+        var fixed=factoryProfiles==null?null:factoryProfiles.read(task);
         return new ClaimedTaskResponse(task.id().value(),task.type().name(),task.subjectType(),task.subjectId(),
                 task.requiredCapabilities(),task.skillRef(),task.instruction(),task.instructionRevision(),task.priority().value(),
                 claimed.attemptId().value(),claimed.attemptNo(),lease.token().value(),lease.acquiredAt(),lease.expiresAt(),
                 task.subjectId(),me.asu.aidev.execution.pricing.ModelPriceRepairDispatch.SUBJECT.equals(task.subjectType()) ? null : locations.forTask(task),"aiw.handoff.v1",
                 claimed.inputs().stream().map(input->new TaskInputResponse(input.taskId().value(),input.taskType().name(),
                     input.completionVerdict()==null?null:input.completionVerdict().name(),input.completionSummary(),input.attemptId(),handoffs.input(input.attemptId()))).toList(),
-                configurations!=null && configurations.managed(task.id().value())?configurations.binding(task.id().value()).guidance()
+                fixed!=null?factoryProfiles.guidance(fixed)
+                    :configurations!=null && configurations.managed(task.id().value())?configurations.binding(task.id().value()).guidance()
                     :goalPolicy!=null && goalPolicy.managed(task)?goalPolicy.guidance(task,runtimeType)
                     :recommendationPolicy!=null && recommendationPolicy.managed(task)?recommendationPolicy.guidance(task,runtimeType)
                     :delegatedGuidance(task,runtimeType,claimed.attemptNo()),
-                configurations!=null && configurations.managed(task.id().value())?null:workflowAiPreferences==null?null:workflowAiPreferences.forTask(task),
+                fixed!=null||configurations!=null && configurations.managed(task.id().value())?null:workflowAiPreferences==null?null:workflowAiPreferences.forTask(task),
                 configurations==null?null:configurations.payload(task.id().value(),claimed.attemptId().value()),
                 skillFiles==null?null:skillFiles.payload(task.id().value(),claimed.attemptId().value()),
                 goalPolicy!=null&&goalPolicy.managed(task)?goalPolicy.frozen(task).images():List.of(),
                 workflowRuns.getObject().sources(task),locations.stoppedAttempts(task),workflowRuns.getObject().requiredChecks(task),
                 runtimeType.startsWith("openai-agents:")&&task.requiredCapabilities().contains(me.asu.aidev.execution.guard.GuardContract.CAPABILITY)
-                        ?executionRuns.previousChecklist(task.id().value(),claimed.attemptId().value(),task.instructionRevision()):List.of());
+                        ?executionRuns.previousChecklist(task.id().value(),claimed.attemptId().value(),task.instructionRevision()):List.of(),
+                factoryProfiles==null||!"workspace-work".equals(task.skillRef())?null:factoryProfiles.canonicalLocation(task));
     }
 
     private AiProfileCatalog.Guidance delegatedGuidance(me.asu.aidev.work.domain.WorkTask task,String runtime,int attempt) {
@@ -281,5 +327,7 @@ public class WorkerProtocolV1Controller {
             @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
             List<String> requiredCheckIds,
             @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_EMPTY)
-            List<me.asu.aidev.execution.run.RunContract.ChecklistItem> previousWorkChecklist) {}
+            List<me.asu.aidev.execution.run.RunContract.ChecklistItem> previousWorkChecklist,
+            @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+            String workspaceCanonicalPath) {}
 }

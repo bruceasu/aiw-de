@@ -5,6 +5,8 @@
   <a th:if="${canOperate}" th:classappend="${active == 'goals' ? 'active' : ''}" href="/ui/goals">Wish Pool</a>
   <a th:if="${canOperate}" th:classappend="${active == 'tasks' ? 'active' : ''}" href="/ui/tasks">Simple task</a>
   <a th:classappend="${active == 'workflows' ? 'active' : ''}" href="/ui/workflows">Workflows</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'skills' ? 'active' : ''}" href="/ui/skills">Skills</a>
+  <a th:if="${canOperate}" th:classappend="${active == 'tools' ? 'active' : ''}" href="/ui/tools">工具目录</a>
   <a th:if="${canOperate}" th:classappend="${active == 'agent-factory' ? 'active' : ''}" href="/ui/agent-factory">Agent factory</a>
   <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Employees</a>
   <a th:classappend="${active == 'agents' ? 'active' : ''}" href="/ui/agents">Agent 管理</a>

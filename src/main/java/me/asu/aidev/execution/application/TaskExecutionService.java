@@ -32,6 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TaskExecutionService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private me.asu.aidev.execution.tools.SharedToolAccess sharedToolAccess;
+    @Autowired private me.asu.aidev.execution.config.FactoryTaskProfiles factoryProfiles;
     @Autowired private me.asu.aidev.authority.AuthorityBoundary workerBoundary;
     @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.workflow.application.WorkflowRuns> unifiedWorkflows;
     private me.asu.aidev.execution.run.NativeRunLifecycle nativeRuns;
@@ -150,19 +153,26 @@ public class TaskExecutionService {
         assertExecutionAllowed(task);
         if (!tasks.lock(taskId)) throw new IllegalStateException("task not found: " + taskId.value());
         task = tasks.find(taskId).orElseThrow();
+        var fixed=factoryProfiles==null?null:factoryProfiles.read(task);
         if(authorityPolicy!=null) authorityPolicy.starting(task,workerId.value());
         // Discussion selection is checked below against its frozen backend and member range.
-        if(authorityPolicy!=null && !(goalPolicy!=null&&goalPolicy.managed(task))) authorityPolicy.selection(task,profileId,profileVersion);
+        if(authorityPolicy!=null && !(goalPolicy!=null&&goalPolicy.managed(task)))
+            authorityPolicy.selection(task,profileId,profileVersion,fixed==null?null:factoryProfiles.guidance(fixed));
         if(nativeQuestions!=null && "flexible-plan".equals(task.subjectType())) {
             var runtime=workers.find(workerId).orElseThrow().runtimeType();
-            var approved=aiProfiles.guidance(task.type(),runtime,null);
-            if(authorityPolicy!=null)approved=authorityPolicy.guidance(task,runtime,approved);
+            var approved=fixed==null?aiProfiles.guidance(task.type(),runtime,null):factoryProfiles.guidance(fixed);
+            if(authorityPolicy!=null&&fixed==null)approved=authorityPolicy.guidance(task,runtime,approved);
             nativeQuestions.getObject().validateSelection(task,runtime,profileId,profileVersion,approved);
         }
         if (task.state() == TaskState.CLAIMED && attempts.stopRequested(leaseToken, workerId)) {
             throw new IllegalStateException("Worker stop requested before task start; acknowledge stop instead");
         }
-        if(configurations!=null && configurations.managed(taskId.value())) {
+        if(fixed!=null) {
+            var worker=workers.find(workerId).orElseThrow();
+            if(!factoryProfiles.canClaim(task,worker))throw new IllegalStateException("Worker runtime differs from the frozen task profile.");
+            var selection=factoryProfiles.select(fixed,profileId,profileVersion,selectionReason);
+            if(!attempts.attachAiSelection(leaseToken,workerId,selection))throw new IllegalStateException("Cannot attach the frozen task profile.");
+        } else if(configurations!=null && configurations.managed(taskId.value())) {
             AiSelection selection=configurations.select(taskId.value(),workerId.value(),profileId,profileVersion,selectionReason,attempts.findAttemptId(leaseToken).orElseThrow().value());
             if(!attempts.attachAiSelection(leaseToken,workerId,selection)) throw new IllegalStateException("Cannot attach prepared AI selection");
         } else if (goalPolicy != null && goalPolicy.managed(task)) {
@@ -413,6 +423,8 @@ public class TaskExecutionService {
         var taskBeforeCompletion = tasks.find(taskId)
                 .orElseThrow(() -> new IllegalStateException("task not found: " + taskId.value()));
         assertExecutionAllowed(taskBeforeCompletion);
+        if(sharedToolAccess!=null&&taskBeforeCompletion.requiredCapabilities().contains(me.asu.aidev.execution.tools.SharedToolAccess.CAPABILITY))
+            sharedToolAccess.requireSettled(taskId.value());
         if(taskBeforeCompletion.requiredCapabilities().contains(me.asu.aidev.workflow.application.WorkflowRuns.REQUIRED_CHECKS)) {
             if(completionReport==null)throw new IllegalStateException("Completion report required for mandatory checks");
             if(completionReport.verdict()==me.asu.aidev.execution.domain.CompletionVerdict.PASS)

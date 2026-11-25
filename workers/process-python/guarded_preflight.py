@@ -80,22 +80,24 @@ def protocol_capability(model=False, process_spawn=False):
         return "guard-protocol:" + hashlib.sha256(raw).hexdigest()
 
 
-def capabilities(runtime, profile, skills_root):
+def capabilities(runtime, profile, skills_root, additional_profiles=()):
     if not os.environ.get("AIW_WORKER_TOKEN", "").strip(): raise RuntimeError("GUARDED_MACHINE_TOKEN_REQUIRED")
     result = {"execution-guard-v1", "workflow-skill-bundles-v1"}
     from execution_guard import digest
     from worker_runtime import skill_package
-    result.add("fixed-profile:" + digest(asdict(profile)))
     from process_profiles import PROFILE_DIR, PROFILES, ROLE_FILES
-    filename = next((ROLE_FILES[role] for role, loaded in PROFILES.items() if loaded is profile), None)
-    if filename is None:
-        raise RuntimeError("GUARDED_PROFILE_SOURCE_NOT_LOADED")
-    source = (PROFILE_DIR / (filename + ".toml")).read_text(encoding="utf-8")
-    result.add("fixed-worker-profile:" + profile.name + ":" + hashlib.sha256(source.encode("utf-8")).hexdigest())
+    for supported in (profile, *additional_profiles):
+        result.add("fixed-profile:" + digest(asdict(supported)))
+        filename = next((ROLE_FILES[role] for role, loaded in PROFILES.items() if loaded is supported), None)
+        if filename is None:
+            raise RuntimeError("GUARDED_PROFILE_SOURCE_NOT_LOADED")
+        source = (PROFILE_DIR / (filename + ".toml")).read_text(encoding="utf-8")
+        result.add("fixed-worker-profile:" + supported.name + ":" + hashlib.sha256(source.encode("utf-8")).hexdigest())
     from native_run import storage_capability
     result.add(storage_capability())
     if os.environ.get("AIW_DYNAMIC_CONFIG", "").lower() != "true":
-        for name in set((*profile.protocol_skills, profile.primary_skill)):
+        for name in {name for supported in (profile, *additional_profiles)
+                     for name in (*supported.protocol_skills, supported.primary_skill)}:
             result.add("fixed-skill:" + name + ":" + hashlib.sha256(skill_package(skills_root, name).encode()).hexdigest())
     from task_shell import shell_executable
     if shell_executable() is not None:

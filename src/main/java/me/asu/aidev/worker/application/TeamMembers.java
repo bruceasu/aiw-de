@@ -24,11 +24,16 @@ public class TeamMembers implements TaskClaimPolicy {
     private final AuthorityBoundary boundary;
     private final SkillFiles skills;
     @Autowired private AiProfileCatalog models;
+    @Autowired private org.springframework.beans.factory.ObjectProvider<me.asu.aidev.execution.config.AgentFactorySettings> factory;
     public TeamMembers(AuthorityRepository db,AuthorityBoundary boundary,SkillFiles skills) {this.db=db;this.boundary=boundary;this.skills=skills;}
     public record Experience(String sourceRun,String text) {
         public Experience {sourceRun=TeamMembers.text(sourceRun,80,false);text=TeamMembers.text(text,2000,false);}
     }
-    public record Settings(String model,String effort,List<AiProfileCatalog.NamedProfile> allowedProfiles,List<Material> knowledge,List<Experience> experience) {
+    public record Settings(String model,String effort,List<AiProfileCatalog.NamedProfile> allowedProfiles,List<Material> knowledge,List<Experience> experience,
+                           String runtimeProfile,List<String> requiredCapabilities,String acceptance) {
+        public Settings(String model,String effort,List<AiProfileCatalog.NamedProfile> allowedProfiles,List<Material> knowledge,List<Experience> experience) {
+            this(model,effort,allowedProfiles,knowledge,experience,null,List.of(),null);
+        }
         public Settings {
             model=TeamMembers.text(model,160,true);if(model.isEmpty())model=null;
             if(model!=null&&!me.asu.aidev.modelauth.ModelAuthContract.modelName(model))throw new IllegalArgumentException("Invalid member model name");
@@ -39,6 +44,15 @@ public class TeamMembers implements TaskClaimPolicy {
             if(allowedProfiles.size()>8||new HashSet<>(allowedProfiles).size()!=allowedProfiles.size()||knowledge.size()>6||experience.size()>8)
                 throw new IllegalArgumentException("Select up to eight model profiles, six sources and eight experiences");
             if(knowledge.stream().anyMatch(m->!m.kind().equals("knowledge")))throw new IllegalArgumentException("Member references must be knowledge, not executable Skills");
+            runtimeProfile=TeamMembers.text(runtimeProfile,64,true);
+            if(runtimeProfile.isEmpty())runtimeProfile=null;
+            else if(!runtimeProfile.matches("[a-z][a-z0-9._-]{0,63}"))throw new IllegalArgumentException("Invalid member runtime profile.");
+            requiredCapabilities=requiredCapabilities==null?List.of():List.copyOf(requiredCapabilities);
+            if(requiredCapabilities.size()>8||new HashSet<>(requiredCapabilities).size()!=requiredCapabilities.size()
+                    ||requiredCapabilities.stream().anyMatch(capability->!capability.matches("[a-z][a-z0-9-]{0,63}")))
+                throw new IllegalArgumentException("Select up to eight distinct execution capability labels.");
+            acceptance=TeamMembers.text(acceptance,2000,true);
+            if(acceptance.isEmpty())acceptance=null;
         }
     }
     public record Profile(String id,long revision,String name,String purpose,List<String> skills,String notes,String state,Settings settings) {
@@ -112,7 +126,11 @@ public class TeamMembers implements TaskClaimPolicy {
     }
     private void ensureSkillBaselines(String actor,String member,List<String> selected) {
         var missing=new ArrayList<String>();
-        for(String ref:selected)if(db.jdbc().queryForObject("SELECT COUNT(*) FROM worker_team_skill_revision WHERE member_id=? AND skill_ref=? AND version=0",Long.class,member,ref)==0)missing.add(ref);
+        for(String ref:selected) {
+            if(SkillFiles.platformReference(ref))continue;
+            if(db.jdbc().queryForObject("SELECT COUNT(*) FROM worker_team_skill_revision WHERE member_id=? AND skill_ref=? AND version=0",
+                    Long.class,member,ref)==0)missing.add(ref);
+        }
         if(missing.isEmpty())return;
         if(db.jdbc().update("UPDATE worker_team_member SET updated_ms=updated_ms WHERE id=? AND actor=?",member,actor)!=1)
             throw new IllegalArgumentException("Member not found");
@@ -195,13 +213,18 @@ public class TeamMembers implements TaskClaimPolicy {
               JOIN workflow_execution r ON r.id=a.run_id JOIN worker_team_member m ON m.id=a.member_id
              WHERE m.actor=? AND r.state NOT IN ('COMPLETED','STOPPED') ORDER BY r.updated_ms DESC,r.id LIMIT 200
             """,actor);
-        return Map.of("members",members,"work",work,"runs",runs,"limit",100,"workLimit",200,"skills",skills.available(),"modelProfiles",models==null?List.of():models.approved(TaskType.EXTERNAL_WORK),"observedAt",System.currentTimeMillis());
+        return Map.of("members",members,"work",work,"runs",runs,"limit",100,"workLimit",200,"skills",skills.available(),
+                "workflowSkills",skills.available(actor),"modelProfiles",models==null?List.of():models.approved(TaskType.EXTERNAL_WORK),
+                "runtimeProfiles",factory==null?List.of():factory.getObject().runtimeProfiles().items().stream()
+                        .filter(p->p.enabled()).map(p->p.id()).toList(),"observedAt",System.currentTimeMillis());
     }
     @Transactional public Profile save(String actor,Save input) {
         if(input==null||input.revision()<0)throw new IllegalArgumentException("Member input and revision required");id(input.id());boundary.lock();
         String name=text(input.name(),80,false),purpose=text(input.purpose(),4000,false),notes=text(input.notes(),8000,true);
-        var selected=input.skills()==null?List.<String>of():input.skills();
-        if(selected.size()>8||new HashSet<>(selected).size()!=selected.size()||!skills.available().containsAll(selected))throw new IllegalArgumentException("Select up to eight registered platform Skills");
+        var selected=requirements(actor,input.skills());
+        if(input.settings().runtimeProfile()!=null&&(factory==null||factory.getObject().runtimeProfiles().items().stream()
+                .noneMatch(p->p.enabled()&&p.id().equals(input.settings().runtimeProfile()))))
+            throw new IllegalArgumentException("Select an enabled member runtime profile.");
         var approved=models==null?List.<AiProfileCatalog.NamedProfile>of():models.approved(TaskType.EXTERNAL_WORK);
         if(!approved.containsAll(input.settings().allowedProfiles()))throw new IllegalArgumentException("Select only approved workflow model profiles");
         if(!approved.isEmpty()&&(input.settings().model()!=null||input.settings().effort()!=null)&&approved.stream().filter(p->input.settings().allowedProfiles().isEmpty()||input.settings().allowedProfiles().contains(p)).noneMatch(p->matches(p,input.settings())))
@@ -243,13 +266,20 @@ public class TeamMembers implements TaskClaimPolicy {
         return get(actor,member);
     }
     public List<String> requirements(List<String> selected) {
+        return requirements(null,selected);
+    }
+    public List<String> requirements(String actor,List<String> selected) {
         if(selected==null)return List.of();
-        if(selected.size()>8||new HashSet<>(selected).size()!=selected.size()||!skills.available().containsAll(selected))
-            throw new IllegalArgumentException("Select up to eight registered platform Skills");
+        var available=actor!=null&&selected.stream().anyMatch(SkillFiles::platformReference)?skills.available(actor):skills.available();
+        if(selected.size()>8||!available.containsAll(selected))
+            throw new IllegalArgumentException("Select up to eight enabled platform Skills");
+        if(selected.stream().map(SkillFiles::referenceId).distinct().count()!=selected.size())
+            throw new IllegalArgumentException("Choose one version of each platform Skill");
         return List.copyOf(selected);
     }
     private boolean supports(Profile member,List<String> required) {
-        var available=new HashSet<>(member.skills());available.add("general-work");return available.containsAll(required);
+        var available=new HashSet<>(member.skills());available.add("general-work");
+        return required.stream().allMatch(ref->SkillFiles.platformReference(ref)||available.contains(ref));
     }
     public Profile forRun(String actor,String member,List<String> required) {
         var result=get(actor,member);
@@ -408,6 +438,11 @@ public class TeamMembers implements TaskClaimPolicy {
     private boolean matches(AiProfileCatalog.NamedProfile profile,Settings settings) {
         return (settings.model()==null||settings.model().equals(profile.profile().model()))&&(settings.effort()==null||settings.effort().equals(profile.profile().effort()));
     }
+    public void validateFixedProfile(Profile member,AiProfileCatalog.NamedProfile selected) {
+        var allowed=member.settings().allowedProfiles();
+        if(!allowed.isEmpty()&&!allowed.contains(selected))
+            throw new IllegalArgumentException("The selected runtime profile is outside the member's approved profiles.");
+    }
     public AiProfileCatalog.Guidance guidance(WorkTask task,AiProfileCatalog.Guidance normal,boolean taskOverride) {
         if(normal==null)return null;var member=forTask(task.id().value());if(member==null)return normal;var settings=member.settings();
         if(settings.allowedProfiles().isEmpty()&&(taskOverride||settings.model()==null&&settings.effort()==null))return normal;
@@ -427,10 +462,19 @@ public class TeamMembers implements TaskClaimPolicy {
         return Map.of("sourceRun",runId,"state",run.state,"node",latest.node(),"type",latest.type(),"content",content.substring(0,Math.min(2000,content.length())),"truncated",content.length()>2000);
     }
     public void bind(String run,String node,String task,Profile member) {
+        bind(run,node,task,member,List.of());
+    }
+    public void bind(String run,String node,String task,Profile member,List<String> required) {
         db.jdbc().update("INSERT INTO worker_team_task VALUES(?,?,?)",task,run,node);
         String actor=db.jdbc().queryForObject("SELECT actor FROM worker_team_member WHERE id=?",String.class,member.id());
         ensureSkillBaselines(actor,member.id(),member.skills());
-        skills.member(task,member.skills(),actor,member.id(),latestSkillRevisions(member.id()));
+        skills.member(task,taskSkills(member,required),actor,member.id(),latestSkillRevisions(member.id()));
+    }
+    public List<String> taskSkills(Profile member,List<String> required) {
+        var selected=new LinkedHashMap<String,String>();
+        member.skills().forEach(ref->selected.put(SkillFiles.referenceId(ref),ref));
+        required.stream().filter(SkillFiles::platformReference).forEach(ref->selected.put(SkillFiles.referenceId(ref),ref));
+        return List.copyOf(selected.values());
     }
     private Map<String,SkillFiles.MemberRevision> latestSkillRevisions(String member) {
         var revisions=new HashMap<String,SkillFiles.MemberRevision>();
