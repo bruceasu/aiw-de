@@ -20,6 +20,8 @@ public class WorkflowWorkerProvisioning {
     @org.springframework.beans.factory.annotation.Autowired private WorkflowReviewClaimPolicy stageReviewPolicy;
     @org.springframework.beans.factory.annotation.Autowired private FactoryReviewClaimPolicy factoryReviewPolicy;
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.run.NativeRunClaimPolicy nativeRuns;
+    @org.springframework.beans.factory.annotation.Value("${aidev.manager.automatic-diagnosis:true}")
+    private boolean managerAutomaticDiagnosis = true;
     public record Preparation(String taskId,String planId,String state,String message) {}
     private final Map<String,Preparation> pending=new java.util.concurrent.ConcurrentHashMap<>();
     private String after="";
@@ -59,13 +61,13 @@ public class WorkflowWorkerProvisioning {
                     workflows.getObject().startCaretaker(task,attempt,actor,reader.diagnosisEvidence(detail,actor));
             } catch(RuntimeException error) {
                 System.getLogger(getClass().getName()).log(System.Logger.Level.WARNING,
-                        "Caretaker diagnosis pending for "+task+" ("+error.getClass().getSimpleName()+")");
+                        "Manager diagnosis pending for "+task+" ("+error.getClass().getSimpleName()+")");
             }
         }
     }
     @org.springframework.scheduling.annotation.Scheduled(fixedDelayString="${aidev.workflow.worker-poll-ms:5000}")
     public void supply() {
-        diagnoseFailedTasks();
+        if(managerAutomaticDiagnosis) diagnoseFailedTasks();
         var waiting=jdbc.queryForList("""
                 SELECT w.id FROM workflow_execution w WHERE w.id>? AND (
                     w.state='WAITING_MEMBER' OR (w.state='FAILED' AND EXISTS (

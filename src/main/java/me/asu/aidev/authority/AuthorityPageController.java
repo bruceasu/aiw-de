@@ -80,6 +80,8 @@ public class AuthorityPageController {
         return "ui/agent-factory";
     }
     @GetMapping("/ui/authority") public String authorityPage(Model model) {
+    @org.springframework.beans.factory.annotation.Value("${aidev.manager.automatic-diagnosis:true}")
+    private boolean managerAutomaticDiagnosis = true;
         return page(model);
     }
     /** Keep the existing plan-management bookmark. */
@@ -90,14 +92,15 @@ public class AuthorityPageController {
     public String page(Model model) {
         String actor=Objects.requireNonNull(boundary.human(),"Authenticated human required");
         var owners=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
-        model.addAttribute("owners",owners);
+        model.addAttribute("managerAutomaticDiagnosis",managerAutomaticDiagnosis);
         model.addAttribute("accountingMode",accounting.mode());
         model.addAttribute("accountingEnforced",accounting.enforced());
         model.addAttribute("drafts",repo.encode(plans.list().stream().filter(p->p.state()==me.asu.aidev.workflow.domain.WorkflowPlan.State.DRAFT && p.createdBy().equals(actor))
                 .map(p->Map.of("planId",p.id(),"version",p.version(),"specDigest",AuthorityRepository.hash(repo.encode(p.spec())),"businessSpec",p.spec())).toList()));
-        model.addAttribute("workers",repo.jdbc().queryForList("SELECT worker_id,owner_id,generation,worker_boot,enabled_boot,read_scope FROM authority_identity WHERE identity_kind='AGENT' AND approval_state='APPROVED' AND owner_id IN (SELECT id FROM authority_owner WHERE actor=?)",actor).stream().map(row->{
-            var result=new LinkedHashMap<>(row);result.put("enabled",boundary.boot().equals(result.remove("enabled_boot")));return result;
-        }).toList());
+        model.addAttribute("delegates",repo.jdbc().queryForList("""
+                SELECT i.worker_id,i.owner_id FROM authority_identity i JOIN authority_owner o ON o.id=i.owner_id
+                 WHERE o.actor=? AND i.identity_kind='AGENT' AND i.approval_state='APPROVED' ORDER BY i.worker_id
+                """,actor));
         model.addAttribute("grants",repo.encode(repo.grants().stream().filter(g->owners.contains(g.owner())).toList()));
         model.addAttribute("targets",repo.encode(repo.jdbc().queryForList("SELECT target_key,generation,paused,restriction_revision FROM authority_target WHERE owner_id IN (SELECT id FROM authority_owner WHERE actor=?)",actor)));
         model.addAttribute("receipts",repo.encode(repo.jdbc().queryForList("SELECT request_id,state,result_json,updated_ms FROM authority_receipt WHERE owner_id IN (SELECT id FROM authority_owner WHERE actor=?) ORDER BY updated_ms DESC LIMIT 100",actor)));

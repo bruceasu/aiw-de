@@ -2,36 +2,36 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" th:content="${csrfToken}"><title>Agent 权限 · AIW:DE</title>
-<link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/authority.css?v=permission-multiselect-1"><script src="/ui/authority.js?v=agent-protocol-2" defer></script><link rel="stylesheet" href="/ui/action-permissions.css?v=permission-multiselect-1"><script src="/ui/action-permissions.js?v=permission-multiselect-1" defer></script></head>
+<link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/authority.css?v=permission-multiselect-1"><script src="/ui/authority.js?v=agent-roles-1" defer></script><link rel="stylesheet" href="/ui/action-permissions.css?v=permission-multiselect-1"><script src="/ui/action-permissions.js?v=permission-multiselect-1" defer></script></head>
 <body><div class="app authority-page"><nav th:replace="~{ui/fragments :: nav('authority')}"></nav><main class="main">
-<header th:replace="~{ui/fragments :: topbar('Agent 权限','为 Agent 开通具体的平台操作；普通聊天不需要授权')}"></header>
+<header th:replace="~{ui/fragments :: topbar('Agent 权限','查看经理的系统权限，管理秘书的代理授权')}"></header>
 <div class="content">
 <section class="authority-intro" aria-labelledby="authority-intro-title">
-<div class="authority-intro-copy"><span class="authority-eyebrow">Agent 权限</span><h2 id="authority-intro-title">先连接 Agent，再给它具体权限</h2><p>只有 Agent 需要在专业平台执行指定操作时，才需要在这里授权。普通聊天、查询资料和保存文件无需设置权限。</p>
-<ol class="authority-steps" aria-label="授权顺序"><li><span>01</span>在 Agent 管理中连接</li><li><span>02</span>勾选允许的操作</li><li><span>03</span>核对范围、次数和期限</li></ol></div>
-<div class="authority-intro-actions"><a class="btn ghost" href="/ui/agents">打开 Agent 管理 <span aria-hidden="true">↗</span></a><a class="authority-refresh" href="/ui/authority" data-authority-refresh>刷新状态</a></div>
+<div class="authority-intro-copy"><h2 id="authority-intro-title">系统管理与个人代办</h2><p>经理负责系统运行。秘书在当前账号授予的范围内代办事项。</p></div>
+<div class="authority-intro-actions"><a class="btn ghost" href="/ui/agents">Agent 管理</a><a class="authority-refresh" href="/ui/authority" data-authority-refresh>刷新状态</a></div>
 </section>
 <div class="authority-tabs" role="tablist" aria-label="授权管理分区" data-authority-navigation>
-<button type="button" id="authority-tab-permissions" role="tab" aria-controls="authority-permissions" aria-selected="true" data-authority-tab="authority-permissions">动作授权</button>
-<button type="button" id="authority-tab-plans" role="tab" aria-controls="authority-plans" aria-selected="false" tabindex="-1" data-authority-tab="authority-plans">计划委托</button>
-<button type="button" id="authority-tab-execution" role="tab" aria-controls="authority-execution" aria-selected="false" tabindex="-1" data-authority-tab="authority-execution">执行设置</button>
-<button type="button" id="authority-tab-audit" role="tab" aria-controls="authority-audit" aria-selected="false" tabindex="-1" data-authority-tab="authority-audit">历史记录</button>
-<button type="button" id="authority-tab-identity" role="tab" aria-controls="authority-identity" aria-selected="false" tabindex="-1" data-authority-tab="authority-identity">Agent 连接</button>
+<button type="button" id="authority-tab-manager" role="tab" aria-controls="authority-manager" aria-selected="true" data-authority-tab="authority-manager">经理权限</button>
+<button type="button" id="authority-tab-permissions" role="tab" aria-controls="authority-permissions" aria-selected="false" tabindex="-1" data-authority-tab="authority-permissions">秘书授权</button>
 </div>
 <p id="authority-result" class="authority-feedback" role="status" aria-live="polite" hidden></p>
 <noscript><p class="callout warn-callout">此页面需要 JavaScript 切换分区和提交操作。</p></noscript>
-<section id="authority-identity" class="authority-panel" aria-labelledby="authority-identity-title" data-authority-panel hidden>
-<div class="authority-panel-heading"><div><h2 id="authority-identity-title">Agent 连接与运行状态</h2><p>配对和证书管理在 Agent 管理页面完成；这里仅查看已登记身份及控制当前运行进程。</p></div><a class="btn ghost" href="/ui/agents">打开 Agent 管理</a></div>
-<div class="authority-overview" aria-label="当前账户概览"><div><span>绑定身份</span><strong data-authority-owner-count th:text="${owners.size()}">0</strong><small>当前登录人</small></div><div><span>已登记 Agent</span><strong data-authority-agent-count th:text="${workers.size()}">0</strong><small>已配对身份</small></div><div><span>授权记录</span><strong data-authority-count="grants">—</strong><small>含已撤销记录</small></div><div><span>执行策略</span><strong data-authority-count="policies">—</strong><small>工具范围与用量</small></div></div>
-<section class="card"><h2>已连接的 Agent</h2><div id="authority-agent-list"></div>
-<details class="authority-disclosure"><summary>启用或停用 Agent</summary><form id="control-agent" class="form-grid authority-form"><label class="field">Agent<select name="agentId" data-authority-agent-select required><option value="">请选择 Agent</option></select></label><label class="field">操作<select name="operation"><option value="enable">启用</option><option value="disable">停用</option></select></label><details class="authority-record-details authority-full"><summary>当前进程信息</summary><div class="form-grid"><label class="field">进程代次<input name="generation" type="number" min="1" readonly required></label><label class="field">Agent 启动标识<input name="agentBoot" readonly></label></div></details><button class="btn primary" type="submit">确认更改</button></form></details>
+<section id="authority-manager" class="authority-panel" aria-labelledby="authority-manager-title" data-authority-panel>
+<div class="authority-panel-heading"><div><h2 id="authority-manager-title">Control Plane 内置经理</h2><p>负责巡察系统、处理阻塞、管理员工以及维护许愿池。</p></div><span class="pill neutral">内置角色</span></div>
+<section class="card"><h2>自动故障诊断</h2>
+<p><span class="pill neutral" th:text="${managerAutomaticDiagnosis ? '已启用' : '已停用'}"></span> 系统按现有任务归属和执行证据安排诊断，恢复操作由有权限的用户决定。</p>
+<p class="help">部署设置 <code>AIW_MANAGER_AUTOMATIC_DIAGNOSIS</code> 控制自动诊断，重启 Control Plane 后生效。</p>
 </section>
+<section class="card"><h2>管理入口</h2><div class="form-actions">
+<a class="btn ghost" href="/ui/workers">员工与运行状态</a><a class="btn ghost" th:if="${canOperate}" href="/ui/goals">许愿池</a>
+<a class="btn ghost" href="#authority-execution">员工执行策略</a><a class="btn ghost" href="#authority-audit">执行审计与核对</a>
+</div></section>
 </section>
-<section id="authority-permissions" class="authority-panel" aria-labelledby="authority-permissions-title" data-authority-panel>
-<div class="authority-panel-heading"><div><h2 id="authority-permissions-title">给 Agent 开通操作权限</h2><p>选择具体操作，再为每项设置范围、次数和到期时间。普通聊天与文件操作不在这里授权。</p></div></div>
+<section id="authority-permissions" class="authority-panel" aria-labelledby="authority-permissions-title" data-authority-panel hidden>
+<div class="authority-panel-heading"><div><h2 id="authority-permissions-title">当前账号的秘书授权</h2><p>选择替你代办的已配对代理，逐项设置动作、范围、次数和期限。</p></div><a class="btn ghost" href="#authority-plans">计划委托</a></div>
 <section class="card"><h2>选择允许的操作</h2><p>可以一次勾选多项。系统会为每项建立独立授权；每项都有自己的次数上限。不会因为同属一个功能而自动授权整组。</p>
 <form id="issue-action-permission"><fieldset id="permission-fields" class="form-grid authority-form permission-fields" disabled><input type="hidden" name="ownerId">
-<label class="field">选择Agent<select name="agentId" data-authority-agent-select required><option value="">请选择Agent</option></select></label>
+<label class="field">代办代理<select name="agentId" data-authority-agent-select required><option value="">请选择已配对代理</option></select></label>
 <div class="field authority-full permission-picker"><span>允许的操作</span><p class="help">勾选需要开放的操作。灰色项目表示当前身份不能授予。</p><div id="permission-action-groups" class="permission-action-groups" aria-describedby="permission-selection-count"></div><div class="permission-selection-summary"><strong id="permission-selection-count" aria-live="polite">尚未选择操作</strong><button id="permission-clear-selection" class="btn ghost" type="button" disabled>清空选择</button></div></div>
 <label class="field">授权到期时间<input id="permission-expiry" type="datetime-local" required><small>从确认时开始生效，使用此设备显示的本地时间。</small></label>
 <label class="field">每项授权的累计次数<input id="permission-maximum" type="number" value="1" min="1" max="2147483647" step="1" required><small>例如选择 3 项并填 5 次，表示每项各可执行最多 5 次。</small></label>
@@ -47,7 +47,7 @@
 <details class="authority-disclosure" th:if="${accountingEnforced}"><summary>补充动作额度</summary><form id="supplement-budget" class="form-grid authority-form"><label class="field">目标键<input name="target" required></label><label class="field">动作<input name="action" required></label><label class="field">增加额度<input name="amount" type="number" required min="1"></label><button class="btn primary">确认补充，保留历史消费</button></form></details></section>
 </section>
 <section id="authority-plans" class="authority-panel" aria-labelledby="authority-plans-title" data-authority-panel hidden>
-<div class="authority-panel-heading"><div><h2 id="authority-plans-title">计划委托</h2><p>仅在需要 Agent 协调推进已确认的计划时使用。</p></div></div>
+<div class="authority-panel-heading"><div><h2 id="authority-plans-title">秘书计划委托</h2><p>将指定计划的日常推进委托给当前账号的代理。</p></div><a class="btn ghost" href="#authority-permissions">返回秘书授权</a></div>
 <section class="card"><h2>托管已确认 Plan</h2><p>只接收当前登录人创建的干净草稿。确认完整业务内容后，个人Agent才能申请原 Plan 范围内的正常推进；超额修复和发布仍需各自能力。</p><div data-authority-record-table="drafts"></div><details class="authority-record-details"><summary>查看草稿完整业务内容与摘要</summary><pre id="authority-records-drafts" th:text="${drafts}"></pre></details><form id="manage-plan" class="form-grid authority-form"><input type="hidden" name="ownerId"><label class="field">选择Agent<select name="agentId" data-authority-agent-select required><option value="">请选择Agent</option></select></label><label class="field">Plan ID<input name="planId" required></label><label class="field">当前版本<input name="version" type="number" required></label><label class="field">已确认内容摘要<input name="specDigest" required></label><label class="field">到期时间<input name="expiresAt" type="datetime-local" required></label><button class="btn primary">确认托管此精确 Plan</button></form></section>
 </section>
 <section id="authority-execution" class="authority-panel" aria-labelledby="authority-execution-title" data-authority-panel hidden>
@@ -92,6 +92,6 @@
 <details class="authority-disclosure"><summary>按证据补充未知消耗</summary><form id="execution-meter" class="form-grid authority-form"><label class="field">原 Attempt ID<input name="attemptId" required></label><label class="field">核实执行毫秒数（仅未知维度）<input name="actualElapsedMs" type="number" min="0"></label><label class="field">核实费用微单位（仅未知维度）<input name="actualCostMicros" type="number" min="0"></label><label class="field">计量证据引用<input name="evidenceRef" required></label><label class="field">证据 SHA-256<input name="evidenceDigest" required pattern="[0-9a-f]{64}"></label><button class="btn warn-btn">确认真实消耗并结清对应预留</button></form></details></section>
 <section class="card"><h2>未知效果人工对账</h2><p>仅在你核验了原固定 attempt 的证据后确认结论。此操作不会重放动作或返还额度。</p><details class="authority-disclosure"><summary>核对未知外部效果</summary><form id="reconcile-effect" class="form-grid authority-form"><label class="field">任务 ID<input name="taskId" required></label><label class="field">原 attempt<input name="attempt" type="number" min="1" required></label><label class="field">已核验结论<select name="conclusion"><option value="NO_EFFECT_CONFIRMED">确认没有发生外部效果</option><option value="EFFECT_CONFIRMED">确认外部效果已发生</option></select></label><label class="field">证据引用<input name="evidenceRef" required maxlength="2000"></label><button class="btn warn-btn">确认对账，不执行重试</button></form></details></section>
 </section>
-<div id="authority-identities" hidden><span th:each="worker : ${workers}" data-authority-identity th:attr="data-agent=${worker['worker_id']},data-owner=${worker['owner_id']},data-generation=${worker['generation']},data-boot=${worker['worker_boot']},data-enabled=${worker['enabled']},data-read-scope=${worker['read_scope']}"></span></div>
+<div id="authority-identities" hidden><span th:each="delegate : ${delegates}" data-authority-identity th:attr="data-agent=${delegate['worker_id']},data-owner=${delegate['owner_id']}"></span></div>
 <p class="authority-page-note">本页展示打开时的记录。操作完成后刷新状态；页面中的记录数量不代表执行成功。</p>
 </div></main></div><dialog id="permission-confirm" class="workspace-confirm" aria-labelledby="permission-confirm-title"><div class="workspace-confirm__top">动作授权确认</div><div class="workspace-confirm__body"><h2 id="permission-confirm-title"></h2><p id="permission-confirm-note"></p></div><div class="workspace-confirm__target"><span>本次授权对象与范围</span><strong id="permission-confirm-target"></strong></div><div class="workspace-confirm__footer"><button id="permission-confirm-dismiss" type="button" class="btn ghost">返回</button><button id="permission-confirm-submit" type="button" class="btn primary">确认</button></div></dialog><script src="/ui/console.js"></script></body></html>

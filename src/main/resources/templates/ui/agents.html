@@ -5,7 +5,7 @@
   <meta name="csrf-token" th:content="${csrfToken}"><title>Agent 身份与证书 · AIW:DE</title>
   <link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css">
   <link rel="stylesheet" href="/ui/authority.css"><script src="/ui/appearance.js"></script>
-  <script src="/ui/agents.js" defer></script>
+  <script src="/ui/agents.js?v=agent-roles-1" defer></script>
 </head>
 <body><div class="app authority-page"><nav th:replace="~{ui/fragments :: nav('agents')}"></nav><main class="main">
   <header th:replace="~{ui/fragments :: topbar('Agent 身份与证书','配对独立 Agent，并管理远程客户端证书信任')} "></header>
@@ -33,7 +33,7 @@
     </section>
     <section class="card agent-paired-section">
       <h2>已配对的代理</h2>
-      <p>Agent 连接后，只需确认身份并启用当前进程。此步骤不授予具体业务动作；后续授权在明确任务和目标时单独设置。Agent 重启或远程证书轮换后，仍需重新启用当前进程。</p>
+      <p>在这里确认身份、启用或停用当前进程。通过「Agent 权限」查看或调整秘书的业务授权。</p>
       <div id="agent-list" class="record-list">
         <article class="authority-record" th:each="agent : ${agents}" th:attr="data-agent-id=${agent['agent_id']},data-agent-active=${agent['identity_kind'] == 'AGENT' and agent['approval_state'] == 'APPROVED'},data-agent-remote=${agent['connection_profile'] == 'REMOTE'}">
           <h3 th:text="${agent['agent_id']}"></h3>
@@ -44,6 +44,12 @@
             <input type="hidden" name="agentBoot" th:value="${agent['worker_boot']}">
             <p class="help full" th:if="${agent['worker_boot'] == null}">等待 Agent 完成受限握手后，才能确认当前进程。</p>
             <button class="btn primary" type="submit" th:disabled="${agent['worker_boot'] == null}">确认 Agent 身份并启用当前进程</button>
+          </form>
+          <form data-control-agent th:if="${agent['identity_kind'] == 'AGENT' and agent['approval_state'] == 'APPROVED'}" class="form-actions">
+            <input type="hidden" name="generation" th:value="${agent['generation']}">
+            <input type="hidden" name="agentBoot" th:value="${agent['worker_boot']}">
+            <button class="btn ghost" type="submit" name="operation" value="enable" th:if="${!agent['enabled']}" th:disabled="${agent['worker_boot'] == null}">启用当前进程</button>
+            <button class="btn ghost" type="submit" name="operation" value="disable" th:if="${agent['enabled']}">停用当前进程</button>
           </form>
           <div data-agent-rotations th:if="${agent['connection_profile'] == 'REMOTE'}"></div>
           <button class="btn danger" type="button" data-revoke-agent th:if="${agent['identity_kind'] == 'AGENT'}">撤销 Agent 凭据</button>

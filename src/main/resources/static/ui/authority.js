@@ -1,64 +1,24 @@
 "use strict";
 const result = document.getElementById("authority-result");
-const identities = new Map([...document.querySelectorAll("[data-authority-identity]")].map(node => {
-  let readScope = null;
-  try { const scope = JSON.parse(node.dataset.readScope); if (Array.isArray(scope)) readScope = scope; } catch (_) { /* Keep unknown scope distinct from an empty scope. */ }
-  const identity = { agentId: node.dataset.agent, ownerId: node.dataset.owner, generation: Number(node.dataset.generation), agentBoot: node.dataset.boot || null, enabled: node.dataset.enabled === "true", readScope };
-  return [identity.agentId, identity];
-}));
-const agentLabel = identity => identity.agentId.length > 20 ? `${identity.agentId.slice(0, 8)}...${identity.agentId.slice(-4)}` : identity.agentId;
+const identities = new Map([...document.querySelectorAll("[data-authority-identity]")].map(node => [node.dataset.agent, node.dataset.owner]));
+const agentLabel = id => id.length > 20 ? `${id.slice(0, 8)}...${id.slice(-4)}` : id;
 
 function syncAgentSelection(select) {
-  const identity = identities.get(select.value);
-  const current = select.form;
-  const owner = current?.elements.namedItem("ownerId");
-  if (owner) owner.value = identity?.ownerId || "";
-  if (current?.id === "control-agent") {
-    current.elements.namedItem("generation").value = identity?.generation || "";
-    current.elements.namedItem("agentBoot").value = identity?.agentBoot || "";
-  }
+  const owner = select.form?.elements.namedItem("ownerId");
+  if (owner) owner.value = identities.get(select.value) || "";
 }
-function renderIdentities(preferred = "") {
+function renderIdentities() {
   for (const select of document.querySelectorAll("[data-authority-agent-select]")) {
     const previous = select.value;
-    select.replaceChildren(new Option(identities.size ? "Select Agent" : "No paired Agent", ""));
-    for (const identity of identities.values()) {
-      const option = new Option(agentLabel(identity), identity.agentId);
-      option.title = identity.agentId;
+    select.replaceChildren(new Option(identities.size ? "请选择已配对代理" : "请先在 Agent 管理中完成配对", ""));
+    for (const agentId of identities.keys()) {
+      const option = new Option(agentLabel(agentId), agentId);
+      option.title = agentId;
       select.append(option);
     }
-    select.value = identities.has(previous) ? previous : identities.has(preferred) ? preferred : identities.size === 1 ? identities.keys().next().value : "";
+    select.value = identities.has(previous) ? previous : identities.size === 1 ? identities.keys().next().value : "";
     syncAgentSelection(select);
   }
-  const count = document.querySelector("[data-authority-agent-count]");
-  if (count) count.textContent = String(identities.size);
-  const host = document.getElementById("authority-agent-list");
-  if (!host) return;
-  host.replaceChildren();
-  if (!identities.size) {
-    host.className = "authority-empty";
-    host.textContent = "No paired Agents. Create a one-time pairing invitation on the Agents page.";
-    return;
-  }
-  host.className = "table-wrap";
-  const table = document.createElement("table");
-  table.className = "authority-table";
-  table.setAttribute("aria-label", "Paired Agents");
-  const heading = table.createTHead().insertRow();
-  for (const label of ["Agent", "Control Plane status", "Process session"]) {
-    const cell = document.createElement("th"); cell.scope = "col"; cell.textContent = label; heading.append(cell);
-  }
-  const body = table.createTBody();
-  for (const identity of identities.values()) {
-    const row = body.insertRow();
-    row.insertCell().textContent = agentLabel(identity);
-    const badge = document.createElement("span");
-    badge.className = "authority-state " + (identity.enabled ? "authority-state--ok" : "authority-state--muted");
-    badge.textContent = identity.enabled ? "Enabled" : "Disabled";
-    row.insertCell().append(badge);
-    row.insertCell().textContent = identity.agentBoot ? "Session established" : "Waiting for Agent";
-  }
-  host.append(table);
 }
 
 function feedback(message, tone = "success", needsLogin = false) {
@@ -78,12 +38,12 @@ const navigation = document.querySelector("[data-authority-navigation]");
 const tabs = [...document.querySelectorAll("[data-authority-tab]")];
 const panels = [...document.querySelectorAll("[data-authority-panel]")];
 function activatePanel(hash, updateUrl = false) {
-  const active = tabs.find(tab => `#${tab.dataset.authorityTab}` === hash) || tabs[0];
-  const target = active.dataset.authorityTab;
+  const target = panels.find(panel => `#${panel.id}` === hash)?.id || tabs[0].dataset.authorityTab;
+  const active = tabs.find(tab => tab.dataset.authorityTab === target);
   for (const tab of tabs) {
     const selected = tab === active;
     tab.setAttribute("aria-selected", String(selected));
-    tab.tabIndex = selected ? 0 : -1;
+    tab.tabIndex = selected || !active && tab === tabs[0] ? 0 : -1;
   }
   for (const panel of panels) panel.hidden = panel.id !== target;
   if (updateUrl) {
@@ -163,7 +123,7 @@ function recordCell(row, column) {
     cell.textContent = (format === "action" ? actionLabels : dimensionLabels)[value] || String(value);
     cell.title = String(value);
   } else if (format === "worker") {
-    cell.textContent = agentLabel(identities.get(value) || { agentId: String(value) });
+    cell.textContent = agentLabel(String(value));
     cell.title = String(value);
   } else {
     cell.textContent = typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -268,13 +228,6 @@ function form(id, submit) {
 async function hash(value) { return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))), byte => byte.toString(16).padStart(2, "0")).join(""); }
 document.querySelectorAll("[data-authority-agent-select]").forEach(select => select.addEventListener("change", () => syncAgentSelection(select)));
 renderIdentities();
-form("control-agent", value => {
-  const identity = identities.get(value.agentId);
-  if (!identity) throw new Error("Select a paired Agent.");
-  if (value.operation === "enable" && !identity.agentBoot) throw new Error("The Agent must establish a process session before it can be enabled.");
-  return post("/agents/" + encodeURIComponent(value.agentId) + "/" + value.operation,
-    { generation: Number(value.generation), agentBoot: value.agentBoot || null });
-});
 form("revoke-grant", value => post("/grants/" + encodeURIComponent(value.id) + "/revoke"));
 form("target-control", async value => post("/targets/" + await hash(value.target) + "/" + value.operation, { target: value.target, generation: Number(value.generation) }));
 form("revoke-restriction", value => post("/restrictions/" + encodeURIComponent(value.id) + "/revoke"));

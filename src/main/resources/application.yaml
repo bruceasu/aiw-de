@@ -24,6 +24,8 @@ spring:
 
 aidev:
   remote-access: ${AIW_REMOTE_ACCESS:false}
+  manager:
+    automatic-diagnosis: ${AIW_MANAGER_AUTOMATIC_DIAGNOSIS:true}
   model-auth:
     directory: ${AIW_MODEL_CREDENTIAL_DIR:${user.home}/.aiw/model-credentials}
     # Optional deployment override. Windows otherwise protects a per-installation key with CurrentUser DPAPI.

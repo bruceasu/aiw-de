@@ -95,6 +95,20 @@ async function loadRotations(card) {
   } catch (error) { host.textContent = error.message; }
 }
 document.querySelectorAll('[data-agent-id][data-agent-active="true"][data-agent-remote="true"]').forEach(loadRotations);
+document.querySelectorAll("[data-control-agent]").forEach(form => form.addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = event.submitter;
+  const agentId = form.closest("[data-agent-id]").dataset.agentId;
+  if (!button || button.disabled) return;
+  button.disabled = true;
+  try {
+    await post(`/agents/${encodeURIComponent(agentId)}/${button.value}`, {
+      generation: Number(form.elements.generation.value),
+      agentBoot: form.elements.agentBoot.value || null
+    });
+    window.location.reload();
+  } catch (error) { show(error.message, true); button.disabled = false; }
+}));
 document.querySelectorAll("[data-revoke-agent]").forEach(button => button.addEventListener("click", async () => {
   const card = button.closest("[data-agent-id]");
   const agentId = card?.dataset.agentId;
