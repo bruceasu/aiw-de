@@ -8,7 +8,7 @@ import static me.asu.aidev.execution.config.ConfigurationContract.*;
 
 @RestController
 public class ConfigurationController {
-    private final AuthorityRepository repo;private final ExecutionConfigurations configs;private final AgentFactory factory;
+    private final AuthorityRepository repo;private final ExecutionConfigurations configs;
     private final ConfigurationUiOptions uiOptions;
     @org.springframework.beans.factory.annotation.Autowired private ExecutionWorkbench workbench;
     @org.springframework.beans.factory.annotation.Autowired private CapabilityPacks capabilityPacks;
@@ -24,7 +24,7 @@ public class ConfigurationController {
     public Object reconcilePlan(@RequestBody me.asu.aidev.workflow.application.FactoryPlanLifecycle.Reconcile input) {
         return planLifecycle.reconcile(input);
     }
-    public ConfigurationController(AuthorityRepository repo,ExecutionConfigurations configs,AgentFactory factory,ConfigurationUiOptions uiOptions) { this.repo=repo;this.configs=configs;this.factory=factory;this.uiOptions=uiOptions; }
+    public ConfigurationController(AuthorityRepository repo,ExecutionConfigurations configs,ConfigurationUiOptions uiOptions) { this.repo=repo;this.configs=configs;this.uiOptions=uiOptions; }
     private <T> T read(String raw,Class<T> type) { if(raw.length()>32768) throw new IllegalArgumentException("Bounded declarative request required");return repo.decode(raw,type); }
     public record Empty() {}
     public record PriceAction(String provider, String action) {}
@@ -63,7 +63,6 @@ public class ConfigurationController {
     @PostMapping("/api/r1/authority/execution-configurations/price-repair-decision") public Object priceRepairDecision(@RequestBody String raw) {
         return modelPriceRepairReview.decide(configs.currentOwner(),read(raw,me.asu.aidev.execution.pricing.ModelPriceRepairReview.Decision.class));
     }
-    @PostMapping("/api/r1/authority/execution-configurations/prepare") public Object prepare(@RequestBody String raw) { return factory.prepare(read(raw,Intent.class)); }
     @PostMapping("/api/r1/authority/execution-configurations/state") public Object state(@RequestBody String raw,@RequestParam(defaultValue="method") String kind) {
         if("capability-packs".equals(kind)) {read(raw,Empty.class);return capabilityPacks.list();}
         if("capability-pack".equals(kind)) return capabilityPacks.lookup(read(raw,CapabilityPacks.Lookup.class));
@@ -77,7 +76,7 @@ public class ConfigurationController {
         if(role(kind)) return configs.role(read(raw,PreparedConfigRef.class));
         read(raw,Empty.class);String owner=configs.currentOwner();
         return Map.of("protocol",PROTOCOL,"categories",configs.categories(),"methods",configs.catalogue().methods(),
-                "assets",configs.catalogue().assets().stream().map(Asset::reference).toList(),"preparations",factory.preparations(owner),"uiOptions",uiOptions.snapshot(),"roles",configs.roleChoices(owner),"capabilityPacks",capabilityPacks.list(),
+                "assets",configs.catalogue().assets().stream().map(Asset::reference).toList(),"uiOptions",uiOptions.snapshot(),"roles",configs.roleChoices(owner),"capabilityPacks",capabilityPacks.list(),
                 "configurations",repo.jdbc().queryForList("SELECT id,revision,digest,repository_ref FROM execution_configuration WHERE owner_id=? ORDER BY id,revision",owner),
                 "workers",repo.jdbc().queryForList("SELECT c.worker_id,w.runtime_type,w.status,c.capabilities_json FROM execution_worker_configuration c JOIN worker w ON w.id=c.worker_id WHERE NOT EXISTS (SELECT 1 FROM factory_worker_registration f WHERE f.worker_id=w.id AND f.retired_at_epoch_ms IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM worker_registration_retirement r WHERE r.worker_id=w.id) ORDER BY c.worker_id"));
     }

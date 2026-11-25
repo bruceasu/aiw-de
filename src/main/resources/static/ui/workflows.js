@@ -201,7 +201,8 @@
     'Task created.':['任务已创建。'],
     'Task created, but its details could not be loaded.':['任务已创建，但暂时无法加载详情。'],
     'After-sales example':['售后示例'], 'Saved workflows':['已保存工作流'],
-    'Decisions requested by the caretaker':['管家请你决定'],
+    'Decisions requested by the manager':['经理请你决定'],
+    'Manager diagnosis':['经理诊断'],
     'Preparing a diagnosis':['正在准备诊断'],
     'Review recovery options':['查看恢复方案'],
     'Open the failed task':['打开失败任务'],
@@ -332,6 +333,9 @@
     finally {busy=false;buttons.forEach(b=>{if(b.isConnected)b.disabled=false;});if(currentView)controlButtons(currentView);}
   }
   function element(tag,text,className) {const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;}
+  function taskTitle(title) {
+    return title==='Plane task caretaker'||title==='Manager diagnosis'?t('Manager diagnosis'):title;
+  }
   function button(label,callback) {const b=element('button',t(label),'btn ghost');b.type='button';b.onclick=callback;return b;}
   function translate() {
     document.title=t(pageMode==='tasks'?'Simple task':'Workflows');
@@ -628,14 +632,14 @@
     list.replaceChildren();
     if(!result.tasks.length)emptyTable(list,5,'No tasks match these filters.');
     for(const row of result.tasks) {
-      const entry=element('tr'),name=element('td'),open=element('a',row.title||row.id);
+      const title=taskTitle(row.title),entry=element('tr'),name=element('td'),open=element('a',title||row.id);
       open.href=taskListUrl('/ui/tasks/'+encodeURIComponent(row.id));open.dataset.i18nSkip='';
       name.append(open,element('small',row.id,'wf-task-id mono'));
       const state=element('td');
       state.append(element('span',t(row.state),'pill neutral'));
       if(row.delete_after_epoch_ms)state.append(element('small',t('Delete after')+' '+new Date(row.delete_after_epoch_ms).toLocaleString(),'wf-task-id'));
       const actions=element('td'),buttons=element('div',undefined,'wf-history-actions');
-      renderTaskActions(buttons,row.id,row.title,{manageable:row.manageable,archived:view!=='current',deleteAfter:row.delete_after_epoch_ms});
+      renderTaskActions(buttons,row.id,title,{manageable:row.manageable,archived:view!=='current',deleteAfter:row.delete_after_epoch_ms});
       if(buttons.childElementCount)actions.append(buttons);
       entry.append(name,state,element('td',row.location||'—'),updatedCell(row.updated_ms),actions);list.append(entry);
     }
@@ -913,7 +917,8 @@
     if(pageMode==='tasks'||data.run.spec.simpleTask)$('[data-wf-amendment]').hidden=true;else renderAmendment(data);
     const member=data.member||{};$('[data-wf-assigned-member]').textContent=member.id?t('Assigned member snapshot')+': '+member.name+' · v'+member.revision+(member.state==='DRAINING'?' · '+t(['READY','BLOCKED'].includes(data.task?.state)?'Resume the selected member to claim this work.':'Current work continues.'):''):'';
     const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.taskDisplayState,data.activity?.attemptId,data.activity?.stale,data.report,data.failureCode,data.preparation,data.management]);if(stamp===signature)return;signature=stamp;
-    $('[data-wf-run-title]').textContent=run.spec.title;
+    const title=taskTitle(run.spec.title);
+    $('[data-wf-run-title]').textContent=title;
     const interrupted=data.taskDisplayState==='INTERRUPTED';
     const failure=$('[data-wf-failure]'),code=data.failureCode;
     failure.hidden=!code||run.state!=='FAILED';
@@ -935,7 +940,7 @@
       $('[data-wf-task-instruction]').textContent=run.spec.goal;
       $('[data-wf-task-location]').textContent=run.location?t('Working location')+' · '+run.location:'';
     }
-    renderTaskActions(management,run.id,run.spec.title,pageMode==='tasks'?data.management:null);
+    renderTaskActions(management,run.id,title,pageMode==='tasks'?data.management:null);
     if(pageMode==='tasks'&&data.management?.archived)management.prepend(element('span',t('Archived'),'pill neutral'));
     if(pageMode==='tasks'&&data.management?.deleteAfter)management.append(
       element('span',t('Delete after')+' '+new Date(data.management.deleteAfter).toLocaleString(),'help'));

@@ -11,7 +11,6 @@
   function node(tag,text,className){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;}
   function feedback(text,tone='info'){$('role-feedback').textContent=text;$('role-feedback').dataset.tone=tone;$('role-feedback').hidden=!text;}
   function signature(value){const sorted=x=>Array.isArray(x)?x.map(sorted):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,sorted(x[k])])):x;const d=clone(value);d.toolRequirements.sort();return JSON.stringify(sorted(d));}
-  function useUrl(ref){const q=new URLSearchParams({method:ref.id,revision:String(ref.revision)});return '/ui/configurations?'+q;}
   async function request(path,body){
     let response,data;
     try{response=await fetch('/api/r1/authority/execution-configurations/'+path,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name="csrf-token"]').content},body:JSON.stringify(body)});data=await response.json();}
@@ -25,7 +24,6 @@
     $('role-preview').textContent=previewBusy?'正在检查组合…':'预览组合角色';
     $('role-save').disabled=saveBusy||copyBusy||previewBusy||(!uncertain&&(!preview||Boolean(preview.reference)))||Boolean(uncertain&&!uncertain.checked);
     $('role-save').textContent=saveBusy?'正在保存…':uncertain?'重试保存原角色':'保存角色';
-    $('role-use').hidden=!preview?.reference||Boolean(uncertain);if(preview?.reference)$('role-use').href=useUrl(preview.reference);
     for(const b of document.querySelectorAll('[data-role-copy]'))b.disabled=locked||previewBusy;
     for(const b of document.querySelectorAll('[data-capability-save]'))b.disabled=locked||packBusy||Boolean(packPending);
     $('role-pack-import').disabled=locked||packBusy||draft?.steps.length>=8;
@@ -47,7 +45,7 @@
     const assets=available(kind);host.replaceChildren();
     for(const a of assets){const row=node('label'),input=document.createElement('input');input.type='checkbox';input.checked=chosen.some(r=>key(r)===key(a));input.addEventListener('change',()=>{change(input.checked?[...chosen,reference(a)]:chosen.filter(r=>key(r)!==key(a)));invalidate();renderStepsAndKnowledge();});row.append(input,node('span',assetLabel(a)+' · '+a.version));host.append(row);}
     for(const a of chosen.filter(r=>!assets.some(a=>key(a)===key(r)))){const row=node('label'),input=document.createElement('input');input.type='checkbox';input.checked=true;input.addEventListener('change',()=>{change(chosen.filter(r=>key(r)!==key(a)));invalidate();renderStepsAndKnowledge();});row.append(input,node('span','原引用当前不可用，请取消或重新选择：'+a.ref));host.append(row);}
-    if(!host.childElementCount)host.append(node('p',draft.repositoryRef?'没有可选资料；可先在任务配置页登记。':'先选择使用仓库。','help'));
+    if(!host.childElementCount)host.append(node('p',draft.repositoryRef?'当前仓库没有可选资料。':'先选择使用仓库。','help'));
   }
   function stepField(step,property,label,rows,max){const field=node('label',undefined,'field configuration-full');field.append(node('span',label));const input=document.createElement(rows?'textarea':'input');if(rows)input.rows=rows;input.maxLength=max;input.value=step[property];input.required=property!=='whenCondition';input.addEventListener('input',()=>{step[property]=input.value;invalidate();});field.append(input);return field;}
   function renderStepsAndKnowledge(){
@@ -129,10 +127,10 @@
     const d=p.definition,host=$('role-preview-result');host.replaceChildren(node('span',p.reference?'已保存，可选用':'待你核对','pill '+(p.reference?'ok':'info')),node('h3',d.name));
     const toolNames={MODEL:'模型',READ:'读取',SEARCH:'搜索',GIT:'Git',QUESTION:'问答',WRITE:'写入',COMMAND:'运行命令'};
     const detail=node('dl',undefined,'configuration-readout');for(const [label,value]of [['职责',d.goal],['仓库',d.repositoryRef],['最终产出',outputs[d.resultKind]],['整体交付',d.delivery],['参考知识',d.knowledge.map(a=>assetLabel(state.uiOptions.assets.find(x=>key(x)===key(a))||a)+' · '+a.version).join('、')||'未选用'],['工具需求',d.toolRequirements.map(t=>toolNames[t]||t).join('、')]])detail.append(node('dt',label),node('dd',value));host.append(detail);
-    const list=node('ol');for(const step of d.steps){const li=node('li');li.append(node('strong',step.title),node('p',step.skills.map(a=>assetLabel(state.uiOptions.assets.find(x=>key(x)===key(a))||a)).join('、')+'；'+(step.whenCondition||'始终执行')),node('p',step.instruction),node('p','完成：'+step.completion));list.append(li);}host.append(list,node('p','具体任务、模型和执行范围在准备任务时核对。','help'));sync();
+    const list=node('ol');for(const step of d.steps){const li=node('li');li.append(node('strong',step.title),node('p',step.skills.map(a=>assetLabel(state.uiOptions.assets.find(x=>key(x)===key(a))||a)).join('、')+'；'+(step.whenCondition||'始终执行')),node('p',step.instruction),node('p','完成：'+step.completion));list.append(li);}host.append(list);sync();
   }
   function renderSaved(){
-    const host=$('role-saved');host.replaceChildren();for(const item of state.roles||[]){const card=node('article',undefined,'configuration-record'),text=node('div'),actions=node('div',undefined,'configuration-form-actions');text.append(node('h3',item.name),node('p',item.repositoryRef+' · 版本 '+item.reference.revision+' · '+outputs[item.reference.resultKind]));const use=node('a','用于准备任务','btn ghost');use.href=useUrl(item.reference);const copy=node('button','复制并编辑','btn ghost');copy.type='button';copy.dataset.roleCopy='true';copy.addEventListener('click',()=>copyRole(item.reference));actions.append(use,copy);card.append(text,actions);host.append(card);}if(!host.childElementCount)host.append(node('p','还没有组合角色。默认模板仍可直接用于任务准备。','empty'));sync();
+    const host=$('role-saved');host.replaceChildren();for(const item of state.roles||[]){const card=node('article',undefined,'configuration-record'),text=node('div'),actions=node('div',undefined,'configuration-form-actions');text.append(node('h3',item.name),node('p',item.repositoryRef+' · 版本 '+item.reference.revision+' · '+outputs[item.reference.resultKind]));const copy=node('button','复制并编辑','btn ghost');copy.type='button';copy.dataset.roleCopy='true';copy.addEventListener('click',()=>copyRole(item.reference));actions.append(copy);card.append(text,actions);host.append(card);}if(!host.childElementCount)host.append(node('p','还没有已保存的组合角色。','empty'));sync();
   }
   async function copyRole(ref){if(copyBusy||saveBusy||previewBusy||uncertain)return;copyBusy=true;sync();try{const d=await request('state?kind=role',ref);draft={...d,id:uid('role'),revision:1,name:d.name.slice(0,116)+' 副本'};invalidate();renderDraft();feedback('已复制为新角色草稿；原版本及任务保持不变。');}catch(e){feedback(e.message,'error');}finally{copyBusy=false;sync();}}
   async function refresh(){
@@ -160,7 +158,7 @@
   });
   $('role-save').addEventListener('click',async()=>{
     if(saveBusy||previewBusy||copyBusy)return;
-    try{if(uncertain&&!uncertain.checked)throw new Error('请先刷新记录核对原保存结果。');if(!uncertain&&(!preview||signature(input())!==preview.sign))throw new Error('预览已失效，请重新预览。');const captured=clone(uncertain?uncertain.proposal:preview);saveBusy=true;sync();try{const ref=await request('candidates?kind=role',captured.definition);preview={...captured,reference:ref};uncertain=null;summary(preview);feedback('角色已保存。可以选用于任务准备，尚未执行任务。');try{await refresh();}catch(_){feedback('角色已保存，原引用已保留；记录刷新失败，可稍后再刷新。','warn');}}catch(e){if(e.uncertain)uncertain={proposal:captured,checked:false};throw e;}}catch(e){feedback(e.message,'error');}finally{saveBusy=false;sync();}
+    try{if(uncertain&&!uncertain.checked)throw new Error('请先刷新记录核对原保存结果。');if(!uncertain&&(!preview||signature(input())!==preview.sign))throw new Error('预览已失效，请重新预览。');const captured=clone(uncertain?uncertain.proposal:preview);saveBusy=true;sync();try{const ref=await request('candidates?kind=role',captured.definition);preview={...captured,reference:ref};uncertain=null;summary(preview);feedback('角色已保存。');try{await refresh();}catch(_){feedback('角色已保存，原引用已保留；记录刷新失败，可稍后再刷新。','warn');}}catch(e){if(e.uncertain)uncertain={proposal:captured,checked:false};throw e;}}catch(e){feedback(e.message,'error');}finally{saveBusy=false;sync();}
   });
   $('role-refresh').addEventListener('click',async()=>{if(saveBusy||copyBusy)return;try{await refresh();}catch(e){feedback(e.message,'error');}});
   if(document.querySelector('meta[name="configuration-owner"]').content)refresh().catch(e=>feedback(e.message,'error'));else sync();

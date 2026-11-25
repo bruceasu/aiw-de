@@ -21,7 +21,7 @@
     runPage.searchParams.set('execution', stored.executionId);
     link.href = runPage;
     link.hidden = false;
-    button.textContent = 'Refresh caretaker diagnosis';
+    button.textContent = 'Refresh diagnosis';
     const data = await jsonResponse(panel.dataset.executions + encodeURIComponent(stored.executionId), {cache: 'no-store'});
     report.textContent = data.report || '';
     report.hidden = !data.report;
@@ -30,7 +30,7 @@
     } else if (['FAILED', 'STOPPED', 'STOPPING', 'PAUSED', 'WAITING_USER'].includes(data.run.state) || data.taskDisplayState === 'INTERRUPTED') {
       status.textContent = 'The diagnosis needs attention. Open its execution for details.';
     } else {
-      status.textContent = 'Waiting for the caretaker Worker.';
+      status.textContent = 'Waiting for the diagnosis.';
       if (--remaining > 0) setTimeout(refresh, 3000);
     }
   }

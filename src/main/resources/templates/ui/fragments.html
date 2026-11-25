@@ -6,8 +6,7 @@
   <a th:if="${canOperate}" th:classappend="${active == 'tasks' ? 'active' : ''}" href="/ui/tasks">Simple task</a>
   <a th:classappend="${active == 'workflows' ? 'active' : ''}" href="/ui/workflows">Workflows</a>
   <a th:if="${canOperate}" th:classappend="${active == 'agent-factory' ? 'active' : ''}" href="/ui/agent-factory">Agent factory</a>
-  <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Workers</a>
-  <a th:if="${canOperate}" th:classappend="${active == 'configurations' ? 'active' : ''}" href="/ui/configurations">Professional task preparation</a>
+  <a th:classappend="${active == 'workers' ? 'active' : ''}" href="/ui/workers">Employees</a>
   <a th:classappend="${active == 'agents' ? 'active' : ''}" href="/ui/agents">Agent 管理</a>
   <a th:classappend="${active == 'authority' ? 'active' : ''}" href="/ui/authority">Agent 权限</a>
   <a th:if="${canOperate or canApprove}" th:classappend="${active == 'questions' ? 'active' : ''}" href="/ui/questions">Pending work</a>
@@ -30,7 +29,7 @@
   </dialog>
   <script src="/ui/preferences.js?v=zh-en-1" defer></script>
   <script src="/ui/console-translations.js?v=zh-en-1" defer></script>
-  <script src="/ui/i18n.js?v=zh-en-1" defer></script>
+  <script src="/ui/i18n.js?v=agent-roles-1" defer></script>
 </nav>
 <header class="topbar" th:fragment="topbar(title, subtitle)">
   <div><h1 th:text="${title}">Title</h1><p th:text="${subtitle}">Subtitle</p></div>

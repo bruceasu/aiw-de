@@ -6,6 +6,7 @@ This file is the root instruction source for this repository.
 Keep the active instruction set and execution budget small.
 
 - Always respond in Chinese.
+- Use 员工, 经理, and 秘书 for the three Agent roles. Use 经理 for system oversight and incident handling, and 秘书 for the user's personal representative. See [the glossary](docs/current-zh/14-GLOSSARY.md).
 - Write prompts in Easy English when asked to draft or edit prompts.
 - State facts, assumptions, and unverified behavior separately.
 

@@ -2,7 +2,7 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" th:content="${csrfToken}">
   <title>Workflows</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><link rel="stylesheet" href="/ui/workflows.css?v=wide-lists-1">
-  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=wide-lists-2" defer></script>
+  <script src="/ui/appearance.js"></script><script src="/ui/workflows.js?v=agent-roles-1" defer></script>
 </head>
 <body th:attr="data-wf-mode=${workflowMode},data-wf-admin=${canAdmin},data-wf-task-page=${taskPage},data-wf-task-execution=${taskExecution}"><div class="app"><aside th:replace="~{ui/fragments :: nav(${workflowMode})}"></aside><main class="main">
   <header th:replace="~{ui/fragments :: topbar(${workflowTitle},${workflowSubtitle})}"></header>
@@ -82,7 +82,7 @@
         <button type="button" class="btn ghost small-btn" data-wf-history-next data-wf-label="Next page">Next page</button>
       </div>
       <section data-wf-caretaker hidden>
-        <h3 data-wf-label="Decisions requested by the caretaker">Decisions requested by the caretaker</h3>
+        <h3 data-wf-label="Decisions requested by the manager">Decisions requested by the manager</h3>
         <div data-wf-caretaker-list aria-live="polite"></div>
       </section>
       <h3 data-wf-label="Plane schedules">Plane schedules</h3>

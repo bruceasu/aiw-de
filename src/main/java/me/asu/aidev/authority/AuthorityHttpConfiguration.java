@@ -31,7 +31,7 @@ public class AuthorityHttpConfiguration implements WebMvcConfigurer {
                 || path.equals("/agents/invitations")
                 || path.matches("/execution-policies/[^/]+/(pause|resume|revoke)") || path.matches("/execution-contexts/[^/]+/bind")
                 || path.matches("/execution-tasks/[^/]+/stopped")
-                || path.matches("/execution-configurations/(assets|candidates|propose|prepare|state|reconcile-plan)")
+                || path.matches("/execution-configurations/(assets|candidates|propose|state|reconcile-plan)")
                 || path.matches("/execution-runs/(bind|read|command|receipt)")
                 || path.matches("/execution-tool-approvals/(read|decide)")
                 || path.equals("/action-permissions") || path.equals("/action-permissions/batch") || path.equals("/action-permissions/state") || Set.of("/agent-factory/state","/agent-factory/settings").contains(path) || path.matches("/action-permissions/[^/]+/revoke")

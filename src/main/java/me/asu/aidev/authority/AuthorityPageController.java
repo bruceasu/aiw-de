@@ -60,8 +60,14 @@ public class AuthorityPageController {
         return "ui/questions";
     }
     @org.springframework.beans.factory.annotation.Autowired private me.asu.aidev.execution.config.ExecutionConfigurations configurations;
-    public String configurations(Model model) { return configurations(model,""); }
     @GetMapping("/ui/configurations") public String configurations(Model model,@org.springframework.web.bind.annotation.RequestParam(defaultValue="") String view) {
+        String template=switch(view) {
+            case "workbench" -> "ui/worker-workbench";
+            case "observations" -> "ui/execution-observations";
+            case "roles" -> "ui/roles";
+            default -> null;
+        };
+        if(template==null)return "redirect:/ui/tasks";
         String actor=Objects.requireNonNull(boundary.human(),"Authenticated human required");
         var owners=repo.jdbc().queryForList("SELECT id FROM authority_owner WHERE actor=?",String.class,actor);
         model.addAttribute("ownerId",owners.size()==1?owners.getFirst():"");
@@ -69,19 +75,19 @@ public class AuthorityPageController {
                 "SELECT p.plan_id FROM execution_policy p JOIN authority_owner o ON o.id=p.owner_id WHERE o.actor=? ORDER BY p.plan_id",String.class,actor));
         model.addAttribute("categories",configurations.categories());
         model.addAttribute("methods",configurations.catalogue().methods());
-        return view.equals("workbench")?"ui/worker-workbench":view.equals("observations")?"ui/execution-observations":view.equals("roles")?"ui/roles":"ui/configurations";
+        return template;
     }
     private final AuthorityRepository repo;private final AuthorityBoundary boundary;
     private final me.asu.aidev.workflow.application.WorkflowPlanService plans;
     private final ExecutionAccounting accounting;
+    @org.springframework.beans.factory.annotation.Value("${aidev.manager.automatic-diagnosis:true}")
+    private boolean managerAutomaticDiagnosis = true;
     public AuthorityPageController(AuthorityRepository repo,AuthorityBoundary boundary,me.asu.aidev.workflow.application.WorkflowPlanService plans,ExecutionAccounting accounting) { this.repo=repo;this.boundary=boundary;this.plans=plans;this.accounting=accounting; }
     @GetMapping("/ui/agent-factory") public String agentFactory() {
         Objects.requireNonNull(boundary.human(),"Authenticated human required");
         return "ui/agent-factory";
     }
     @GetMapping("/ui/authority") public String authorityPage(Model model) {
-    @org.springframework.beans.factory.annotation.Value("${aidev.manager.automatic-diagnosis:true}")
-    private boolean managerAutomaticDiagnosis = true;
         return page(model);
     }
     /** Keep the existing plan-management bookmark. */

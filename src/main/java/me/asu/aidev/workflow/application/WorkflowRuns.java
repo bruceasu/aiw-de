@@ -460,7 +460,7 @@ public class WorkflowRuns {
         String digest=AuthorityRepository.hash(db.encode(List.of(task,attempt)));
         var previous=replay(actor,request,digest);if(previous!=null)return previous;
         String instruction=WorkflowEditorService.CARETAKER_PROMPT;
-        var spec=new Spec("Plane task caretaker",instruction,"diagnose",List.of(
+        var spec=new Spec("Manager diagnosis",instruction,"diagnose",List.of(
                 new Node("diagnose","Diagnose task failure",Kind.TASK,instruction,null,Map.of(),null,Assignment.GENERAL,List.of())),List.of(evidence),List.of(),false,true);
         return start(request,digest,null,0,spec,"",null,null,null,0,task);
     }

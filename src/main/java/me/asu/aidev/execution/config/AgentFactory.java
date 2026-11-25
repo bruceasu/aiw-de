@@ -32,9 +32,6 @@ public class AgentFactory {
                 .filter(p->Set.of("openai-agents","codex-app-server").contains(p.profile().runtime())
                     && me.asu.aidev.workflow.application.RecommendationProfiles.compatible(p.profile())).toList();
     }
-    @Transactional public Preparation prepare(Intent intent) {
-        boundary.lock();String owner=configurations.currentOwner();return prepareAuthorized(intent,owner);
-    }
     /** Called only by a platform plan consumer after its own version/control checks. */
     @Transactional public Preparation prepareAuthorized(Intent intent,String owner) {
         boundary.lock();var policies=repo.jdbc().queryForList("SELECT owner_id FROM execution_policy WHERE plan_id=?",intent.planId());

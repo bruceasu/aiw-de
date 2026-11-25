@@ -2,6 +2,14 @@
 
 **AI Worker: Digital Employee**：项目全称，正文简称 **AI Worker**，中文主题为“数字员工”。平台协调数字员工协作；单个 **Worker** 指执行进程；**控制平面（Control Plane）** 指 Java 管理服务；**Web Console** 指浏览器管理界面。
 
+## Agent 角色
+
+- **员工（Employee）** 执行任务的 Agent。Worker 是承载执行的进程。
+- **经理（Manager）** 管理 Control Plane 和员工，掌握全系统运行状况，巡察系统并处理阻塞，负责许愿池。
+- **秘书（Secretary）** 用户的代理人，在用户授权范围内代办事项。
+
+## 平台术语
+
 **Control Plane**：Java 应用，拥有 Lifecycle/Scheduling/Authority。
 
 **Worker**：外部进程，声明 Capability 并 Pull Task。
