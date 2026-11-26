@@ -2,6 +2,7 @@ package me.asu.aidev.workflow.protocol.http;
 
 import jakarta.servlet.http.HttpSession;
 import java.util.*;
+import me.asu.aidev.execution.config.ManagerProfileSelection;
 import me.asu.aidev.webconsole.security.WebConsoleSecurityService;
 import me.asu.aidev.workflow.application.WorkflowRuns;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,8 @@ public class WorkflowConsole {
     private me.asu.aidev.execution.skills.SkillFiles platformSkills;
     @org.springframework.beans.factory.annotation.Autowired
     private me.asu.aidev.execution.config.AgentFactorySettings factory;
+    @org.springframework.beans.factory.annotation.Autowired
+    private ManagerProfileSelection manager;
     public WorkflowConsole(WorkflowRuns workflows,WebConsoleSecurityService security) {this.workflows=workflows;this.security=security;}
     public record Save(String id,long version,WorkflowRuns.Spec spec) {}
     public record Start(String requestId,String definitionId,long version,String input,String location) {}
@@ -46,12 +49,16 @@ public class WorkflowConsole {
     @GetMapping("/api/r1/workflows/runtime-profiles") @ResponseBody public Object runtimeProfiles(HttpSession session) {
         security.requireOperator(session);
         return factory.runtimeProfiles().items().stream().filter(p->p.enabled()).map(p->Map.of(
-                "id",p.id(),"version",p.version(),"model",p.settings().model(),"runtime",p.settings().runtime())).toList();
+                "id",p.id(),"displayName",p.label(),"version",p.version(),"model",p.settings().model(),"runtime",p.settings().runtime())).toList();
     }
     @GetMapping("/ui/skills") public String skillsPage() {return "ui/platform-skills";}
     @GetMapping("/api/r1/workflows/skills") @ResponseBody public Object skills(HttpSession session) {
         security.requireOperator(session);
         return platformSkills.catalogue(security.actor(session));
+    }
+    @GetMapping("/api/r1/workflows/skills/builtin") @ResponseBody public Object builtinSkills(HttpSession session) {
+        security.requireOperator(session);
+        return platformSkills.builtinCatalogue();
     }
     @GetMapping("/api/r1/workflows/skills/{ref}/versions") @ResponseBody public Object skillVersions(HttpSession session,@PathVariable String ref) {
         security.requireOperator(session);
@@ -61,6 +68,11 @@ public class WorkflowConsole {
             @RequestBody me.asu.aidev.execution.skills.SkillFiles.CatalogueEdit edit) {
         security.requireOperator(session);
         return platformSkills.saveCatalogue(security.actor(session),edit);
+    }
+    @PostMapping("/api/r1/workflows/skills/manager-review") @ResponseBody public Object reviewSkill(HttpSession session,
+            @RequestBody ManagerProfileSelection.SkillDraft draft) {
+        security.requireOperator(session);
+        return manager.reviewSkill(security.actor(session),draft);
     }
     @GetMapping("/ui/tasks") public String tasks(@RequestParam(required=false) String execution, Model model,HttpSession session) {
         return execution==null||execution.isBlank()?taskPage(model,"list",null):taskDetail(execution,model,session);
@@ -78,7 +90,7 @@ public class WorkflowConsole {
     }
     private String page(Model model,String mode) {
         model.addAttribute("page",mode);model.addAttribute("workflowMode",mode);
-        model.addAttribute("workflowTitle",mode.equals("tasks")?"Simple task":"Workflows");
+        model.addAttribute("workflowTitle",mode.equals("tasks")?"Tasks":"Workflows");
         model.addAttribute("workflowSubtitle",mode.equals("tasks")?"Describe the work and follow its execution.":"Edit a reusable workflow and follow each execution.");
         return "ui/workflows";
     }

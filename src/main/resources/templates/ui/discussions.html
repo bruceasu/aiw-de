@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="csrf-token" th:content="${csrfToken}"><title>Discussions · AIW</title>
+  <link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css">
+  <script src="/ui/appearance.js"></script><script src="/ui/discussions.js?v=clarification-1" defer></script>
+</head>
+<body><div class="app">
+  <nav th:replace="~{ui/fragments :: nav('discussions')}"></nav>
+  <main class="main"><div class="content">
+    <p id="discussion-status" class="help" role="status"></p>
+    <section class="card console-list">
+      <form id="discussion-search" class="console-list-toolbar">
+        <label class="field">Search discussions<input name="q" type="search" maxlength="160"></label>
+        <button class="btn ghost" type="submit">Search</button>
+        <a id="discussion-all" class="btn ghost" href="/ui/discussions" hidden>All discussions</a>
+        <button id="discussion-new" class="btn primary" type="button">New discussion</button>
+      </form>
+      <div class="table-wrap"><table aria-label="Discussions">
+        <thead><tr><th scope="col">Topic</th><th scope="col">Status</th><th scope="col">Updated</th></tr></thead>
+        <tbody id="discussion-list"></tbody>
+      </table></div>
+      <div class="form-actions"><button id="discussion-previous" type="button" class="btn ghost">Previous page</button><button id="discussion-next" type="button" class="btn ghost">Next page</button></div>
+    </section>
+    <form id="discussion-create" hidden>
+      <p class="help" role="status"></p>
+      <label class="field">Topic<input name="title" required maxlength="160"></label>
+      <label class="field">Message<textarea name="body" required rows="8" maxlength="16000"></textarea></label>
+      <button type="submit" class="btn primary">Create discussion</button>
+    </form>
+    <section id="discussion-detail" hidden>
+      <a id="discussion-wish" href="/ui/goals" hidden>Open related wish</a>
+      <div id="discussion-posts"></div>
+      <p class="help" role="status"></p>
+      <div id="discussion-clarification" hidden>
+        <p id="discussion-clarification-state" class="help"></p>
+        <button id="discussion-delegate" type="button" class="btn ghost">Delegate clarification to my secretary</button>
+        <button id="discussion-withdraw" type="button" class="btn ghost" hidden>Withdraw delegation</button>
+      </div>
+      <form id="discussion-reply">
+        <label class="field">Reply<textarea name="body" required rows="5" maxlength="16000"></textarea></label>
+        <div class="form-actions"><button type="submit" class="btn primary">Post reply</button><button id="discussion-close" type="button" class="btn ghost">Close discussion</button></div>
+      </form>
+    </section>
+  </div></main>
+</div></body></html>

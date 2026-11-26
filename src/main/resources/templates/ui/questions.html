@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" th:content="${csrfToken}"><meta name="question-can-operate" th:content="${questionCanOperate}"><meta name="question-can-approve" th:content="${questionCanApprove}"><meta name="question-accounting-enforced" th:content="${questionAccountingEnforced}">
-<title>Pending work · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/questions.css?v=inbox-1"><script src="/ui/pending-inbox.js" defer></script><script src="/ui/questions.js?v=inbox-1" defer></script><script src="/ui/question-controls.js?v=inbox-1" defer></script></head>
+<title>Pending work · AIW:DE</title><link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css"><script src="/ui/appearance.js"></script><link rel="stylesheet" href="/ui/questions.css?v=module-windows-1"><script src="/ui/pending-inbox.js?v=list-1" defer></script><script src="/ui/questions.js?v=module-windows-1" defer></script><script src="/ui/question-controls.js?v=inbox-1" defer></script></head>
 <body><div class="app question-page"><nav th:replace="~{ui/fragments :: nav('questions')}"></nav><main class="main">
 <header th:replace="~{ui/fragments :: topbar('Pending work','Review requests and open the exact execution record.')}"></header>
 <div class="content question-content">
-<section class="card" data-pending-inbox>
-  <h2>Pending decisions and replies</h2>
+<section class="card console-list" data-pending-inbox>
+  <h2 data-console-icon="questions">Pending decisions and replies</h2>
   <p class="help">Workflow questions, Worker questions and fixed-operation requests are shown together. Each source shows up to 100 records. Opening a record does not approve or execute anything.</p>
-  <div class="form-grid"><label class="field"><span>Show pending records</span><select data-pending-filter><option value="all">All visible records</option><option value="action">I can respond</option><option value="waiting">Decided or waiting for acknowledgement</option></select></label><label class="field"><span>Search pending records</span><input type="search" data-pending-search></label><button class="btn ghost" type="button" data-pending-refresh>Refresh pending records</button></div>
-  <p class="help" data-pending-status role="status" data-i18n-skip></p><div class="question-content" data-pending-records data-i18n-skip></div>
+  <div class="console-list-toolbar"><label class="field"><span>Show pending records</span><select data-pending-filter><option value="all">All visible records</option><option value="action">I can respond</option><option value="waiting">Decided or waiting for acknowledgement</option></select></label><label class="field"><span>Search pending records</span><input type="search" data-pending-search></label><button class="btn ghost" type="button" data-pending-refresh>Refresh pending records</button></div>
+  <p class="help" data-pending-status role="status" data-i18n-skip></p><div class="table-wrap"><table aria-label="Pending work"><thead><tr><th scope="col">Record</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead><tbody data-pending-records data-i18n-skip></tbody></table></div>
 </section>
 <details id="question-workbench"><summary>Question details and execution controls</summary><div class="question-content">
 <section class="question-heading"><div><span class="question-eyebrow">人工协作</span><h2>先处理需要你决定的事</h2><p>控制台、秘书和已绑定的私聊共用同一问题。回答会保留原文，是否继续工作以正式状态为准。</p></div><a th:if="${canOperate}" href="/ui/tasks/new" class="btn ghost">新建任务</a></section>
@@ -22,7 +22,7 @@
 <noscript><p class="callout warn-callout">此页需要 JavaScript 读取问题和提交回答。</p></noscript>
 <section id="question-panel-inbox" role="tabpanel" aria-labelledby="question-tab-inbox" data-question-panel="inbox">
 <div class="question-inbox"><section class="card question-list-pane"><h2>工作问题</h2><div class="question-filters"><label class="field">查看范围<select id="question-filter"><option value="open">待回答</option><option value="waiting">等待推进</option><option value="history">处理记录</option><option value="all">全部问题</option></select></label><label class="field">查找问题<input id="question-search" type="search" placeholder="问题文字或任务编号"></label></div><div id="question-list" class="question-list"><p class="empty">先选择一个计划，再查看需要处理的问题。</p></div></section>
-<section id="question-detail" class="card question-detail" aria-label="选中问题详情"><p class="empty">在左侧选择一个问题，阅读详情并回答。</p></section></div>
+<section id="question-detail" class="card question-detail" aria-label="选中问题详情" hidden></section></div>
 </section>
 <section id="question-panel-controls" role="tabpanel" aria-labelledby="question-tab-controls" data-question-panel="controls" hidden>
 <section class="card"><div class="section-title"><h2>当前工作状态</h2><span id="question-policy-state" class="pill neutral">尚未读取</span></div><p id="question-policy-note" class="help">先读取计划，再决定是否需要人工控制。</p><div class="question-control-grid"><article><h3>暂停新工作</h3><p>停止新领取和推进。在途工作仍可按已有授权收尾。</p><button type="button" class="btn ghost" data-control="pause" disabled>暂停新工作</button></article><article><h3>恢复推进</h3><p>解除人工暂停，仍按现有范围和前置条件继续。</p><button type="button" class="btn ghost" data-control="resume" disabled>恢复推进</button></article><article><h3>取消此计划的执行</h3><p>请求停止在途工作。需要实际停止确认，不会自动回滚或重放。</p><button type="button" class="btn warn-btn" data-control="cancel" disabled>取消执行…</button></article></div></section>

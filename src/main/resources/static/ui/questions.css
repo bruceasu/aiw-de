@@ -17,7 +17,7 @@
 .question-navigation button{border:0;background:transparent;border-radius:4px;color:var(--muted);font:inherit;font-size:13px;padding:11px 14px;white-space:nowrap;cursor:pointer}
 .question-navigation [aria-selected=true]{background:var(--panel);color:var(--accent)}
 .question-navigation span{font-size:10px;margin-left:8px;color:var(--muted)}
-.question-inbox{display:grid;grid-template-columns:minmax(270px,1fr) minmax(0,2fr);gap:20px;align-items:start}
+.question-inbox{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
 .question-page .card h2{font-size:16px;margin-top:0}
 .question-page .card h3{font-size:14px;line-height:1.6}
 .question-filters{display:grid;gap:14px;margin:20px 0}

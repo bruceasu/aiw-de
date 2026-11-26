@@ -16,6 +16,7 @@ public class SkillFiles {
     public record MemberRevision(int version,String content) {}
     public static final String CATALOGUE_CAPABILITY="platform-skill-catalog-v1";
     public record CatalogueVersion(String ref,int version,boolean enabled,String title,String content,String digest,long createdMs) {}
+    public record BuiltinCatalogueEntry(String ref,String version,String content,boolean copyable) {}
     public record CatalogueEdit(String ref,int expectedVersion,boolean enabled,String title,String content) {}
     @org.springframework.beans.factory.annotation.Autowired private AuthorityBoundary boundary;
     private final AuthorityRepository repo;
@@ -80,6 +81,13 @@ public class SkillFiles {
     }
     public boolean managed(String task) { return repo.jdbc().queryForObject("SELECT COUNT(*) FROM execution_task_skills WHERE task_id=?",Long.class,task)>0; }
     public List<String> available() { return builtin.keySet().stream().sorted().toList(); }
+    public List<BuiltinCatalogueEntry> builtinCatalogue() {
+        return available().stream().map(ref->{
+            var skill=builtin.get(ref);
+            boolean copyable=skill.files().stream().allMatch(file->Set.of("SKILL.md","LICENSE.txt").contains(file.path()));
+            return new BuiltinCatalogueEntry(ref,skill.assetVersion(),defaultText(ref),copyable);
+        }).toList();
+    }
     private static final String PLATFORM_REF="custom-[a-z][a-z0-9-]{0,63}";
     public static boolean platformReference(String ref) {return ref!=null&&ref.matches(PLATFORM_REF+"(?:@[1-9][0-9]{0,9})?");}
     public static String referenceId(String selection) {return selection.split("@",2)[0];}

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>System overview · AIW:DE</title>
+  <link rel="stylesheet" href="/ui/console.css">
+  <link rel="stylesheet" href="/ui/appearance.css">
+  <script src="/ui/appearance.js"></script>
+</head>
+<body><div class="app">
+  <nav th:replace="~{ui/fragments :: nav('desktop')}"></nav>
+  <main class="main">
+    <header th:replace="~{ui/fragments :: topbar('System overview','Manager inspection')}"></header>
+    <div class="content desktop-overview">
+      <div class="section-title"><h2>Fleet capacity</h2><a href="/ui">Refresh</a></div>
+      <section class="grid desktop-metrics" aria-label="Fleet capacity">
+        <a class="card desktop-metric-link" href="/ui/workers">
+          <div class="metric-label">Active Workers</div><div class="metric" th:text="${fleet.workers.active}">0</div>
+        </a>
+        <a class="card desktop-metric-link" href="/ui/system">
+          <div class="metric-label">Claimable capacity</div><div class="metric" th:text="${fleet.workers.availableClaimCapacity}">0</div>
+        </a>
+        <a class="card desktop-metric-link" href="/ui/workers#fleet-ready">
+          <div class="metric-label">Ready tasks</div><div class="metric" th:text="${fleet.backlog.ready}">0</div>
+        </a>
+        <a class="card desktop-metric-link" href="/ui/workers#fleet-ready">
+          <div class="metric-label">Blocked tasks</div><div class="metric" th:text="${fleet.backlog.blocked}">0</div>
+        </a>
+      </section>
+      <section class="card" th:if="${canOperate or canApprove}">
+        <h2>Pending work</h2>
+        <div class="page-actions desktop-pending-actions">
+          <a class="btn ghost" href="/ui/questions">Pending approvals</a>
+          <a class="btn ghost" th:if="${canOperate}" href="/ui/tasks?state=WAITING_USER">Tasks waiting for input</a>
+          <a class="btn ghost" th:if="${canOperate}" href="/ui/tasks?state=WAITING_MEMBER">Tasks waiting for configuration</a>
+        </div>
+      </section>
+    </div>
+  </main>
+</div></body>
+</html>

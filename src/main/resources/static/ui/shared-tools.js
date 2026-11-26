@@ -37,19 +37,35 @@
       if (revision !== loadVersion) return;
       pages = cursors;
       after = page.next;
+      byId('tools-page').textContent = String(pages.length);
       list.replaceChildren();
       byId('tools-empty').hidden = Boolean(page.items.length);
       for (const tool of page.items) {
         const row = list.insertRow();
-        cell(row, tool.title + ' · ' + tool.id);
+        const name = cell(row, ''), title = document.createElement('strong'), identity = document.createElement('small');
+        title.dataset.consoleIcon = 'tools';
+        title.dataset.i18nSkip = '';
+        title.textContent = tool.title;
+        identity.textContent = tool.id + ' · v' + tool.revision;
+        name.append(title, identity);
         cell(row, tool.kind);
         cell(row, [tool.httpMethod, tool.operation].filter(Boolean).join(' '));
-        cell(row, (tool.enabled ? '已启用' : '已停用') + ' · v' + tool.revision);
-        const details = document.createElement('details');
-        const summary = document.createElement('summary'), content = document.createElement('pre');
-        summary.textContent = '查看';
-        content.textContent = [tool.description, JSON.stringify(tool.inputSchema, null, 2)].filter(Boolean).join('\n\n');
-        details.append(summary, content);
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.dataset.status = tool.enabled ? 'ACTIVE' : 'OFFLINE';
+        badge.textContent = tool.enabled ? '已启用' : '已停用';
+        cell(row, '').append(badge);
+        const details = document.createElement('button');
+        details.type = 'button';
+        details.className = 'btn ghost small-btn';
+        details.textContent = '查看详情';
+        details.onclick = () => {
+          byId('tool-detail-title').textContent = tool.title;
+          byId('tool-detail-description').textContent = tool.description || '';
+          byId('tool-detail-schema').textContent = JSON.stringify(tool.inputSchema, null, 2);
+          const view=byId('tool-detail');view.hidden=false;
+          window.aiwDesktopWindow?.open(view,{title:tool.title,recordTitle:true,icon:'tools',onClose:()=>{view.hidden=true;}});
+        };
         cell(row, '').append(details);
         if (form) {
           const edit = document.createElement('button');
@@ -91,8 +107,12 @@
     fields.enabled.checked = tool?.enabled ?? false;
     fields.kind.onchange();
     byId('tool-editor-title').textContent = tool ? '编辑 ' + tool.title : '登记工具';
-    byId('tool-editor').hidden = false;
-    (tool ? fields.title : fields.id).focus();
+    const editor=byId('tool-editor'),focus=tool?fields.title:fields.id;
+    editor.hidden=false;
+    byId('tool-editor-status').textContent='';
+    const canClose=()=>!form.querySelector('button[type="submit"]').disabled;
+    window.aiwDesktopWindow?.open(editor,{title:byId('tool-editor-title').textContent,icon:'tools',focus,canClose,canMinimize:canClose,onClose:()=>{editor.hidden=true;}});
+    focus.focus();
   }
 
   search.onsubmit = event => {
@@ -110,7 +130,13 @@
       byId('tool-operation-label').textContent = http ? 'HTTP 操作标识' : 'MCP 工具名称';
     };
     byId('new-tool').onclick = () => { ++editorVersion; showEditor(null); };
-    byId('tool-cancel').onclick = () => { ++editorVersion; byId('tool-editor').hidden = true; };
+    byId('tool-cancel').onclick = () => {
+      if(form.querySelector('button[type="submit"]').disabled)return;
+      ++editorVersion;
+      const editor=byId('tool-editor');
+      window.aiwDesktopWindow?.close(editor);
+      editor.hidden=true;
+    };
     form.onsubmit = async event => {
       event.preventDefault();
       const fields = form.elements, revision = editorVersion, button = event.submitter;
@@ -126,9 +152,13 @@
           inputSchema, enabled: fields.enabled.checked
         });
         status.textContent = '已保存 ' + entry.tool.id + ' v' + entry.tool.revision;
-        if (revision === editorVersion) byId('tool-editor').hidden = true;
+        if (revision === editorVersion) {
+          const editor=byId('tool-editor');
+          window.aiwDesktopWindow?.close(editor);
+          editor.hidden=true;
+        }
         await load(['']);
-      } catch (error) { status.textContent = error.message; }
+      } catch (error) { byId('tool-editor-status').textContent = error.message; }
       finally { button.disabled = false; }
     };
   }

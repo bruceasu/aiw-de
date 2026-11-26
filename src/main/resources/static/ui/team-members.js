@@ -7,6 +7,8 @@
   const openSkillPanels=new Set();
   const words={
     'Team members':['团队成员'],'Create in Agent factory':['到 Agent 工厂创建'],'Create member':['创建成员'],'Create team member':['创建团队成员'],'Refresh members':['刷新成员'],
+    'Team member':['员工'],'Status':['状态'],'Skills':['技能'],'Active work':['当前任务'],'Search members':['搜索员工'],
+    'No matching members':['没有匹配的员工'],'Close details':['关闭详情'],
     'A team member is a stable specialist identity with responsibilities and Skills. A Worker is the running process that performs a task; creating a member does not start a process or grant tools.':['团队成员是长期保留的专业角色身份，包含职责和 Skills。Worker 是实际执行任务的运行进程；创建成员不会启动进程，也不会授予工具权限。'],
     'Optional model preferences':['可选的模型偏好'],
     'Platform Skills (up to 8)':['平台 Skills（最多 8 项）'],
@@ -31,6 +33,7 @@
     'Open execution':['查看执行'],'No assigned work in this snapshot':['当前快照没有关联工作'],'No members in this list':['此列表暂无成员'],
     'Execution history (latest 100)':['执行历史（最近 100 条）'],'No execution history':['暂无关联的执行历史'],'Current work shown':['当前快照中已显示的工作'],
     'RUNNING':['执行中'],'PAUSED':['后续步骤已暂停'],'WAITING_USER':['待你回答'],'STOPPING':['等待停止确认'],'STOPPED':['已停止'],'COMPLETED':['已完成'],'FAILED':['需要处理'],
+    'READY':['待领取'],'BLOCKED':['已阻塞'],'WAITING_MEMBER':['等待匹配员工'],'WAITING_INPUT':['等待补充信息'],'CANCELLED':['已取消'],
     'Member saved':['成员已保存'],'Saving member…':['正在保存成员…'],'Member saved. Refresh the list to display it.':['成员已保存。请刷新列表查看。'],'State updated':['成员状态已更新'],'Connection issue; process state is unconfirmed':['连接异常；进程状态尚未确认'],
     'Could not load members':['无法读取成员，请检查登录与连接'],
     'Request outcome is unknown. Refresh to check the original member before retrying.':['请求结果尚未确认。请先刷新核对原成员，再决定是否重试。'],
@@ -49,8 +52,19 @@
     'Default model (blank inherits)':['默认模型（留空继承）'],
     'Default effort (explicit override)':['默认强度（手动覆盖）'],
     'API default':['API 默认值'],
+    'default':['默认','Default'],'none':['关闭推理','None'],'minimal':['极低','Minimal'],'low':['低','Low'],'medium':['中','Medium'],
+    'high':['高','High'],'xhigh':['很高','Very high'],'max':['最高','Maximum'],
     'Invalid member model name':['成员模型名称格式无效'],
     'Invalid member effort':['成员推理强度无效'],
+    'Invalid member runtime profile.':['员工运行配置标识无效。'],
+    'Select an enabled member runtime profile.':['请选择已启用的员工运行配置。'],
+    'Select up to eight distinct execution capability labels.':['最多填写 8 个不同的执行能力标签。'],
+    'Select up to eight enabled platform Skills':['请选择最多 8 项已启用的平台 Skills'],
+    'Choose one version of each platform Skill':['每项平台 Skill 只能选择一个版本'],
+    'Stored member Skill revision is corrupted':['员工 Skill 版本记录已损坏'],
+    'Invalid Skill version':['Skill 版本无效'],
+    'Member profile is too large':['员工资料超过大小限制'],
+    'Reference files must contain valid UTF-8 text.':['参考文件必须是有效的 UTF-8 文本。'],
     'Unavailable profile; explicitly reselect':['方案已失效，请明确重新选择'],
     'Registered profiles changed; explicitly reselect before saving':['已注册方案已变化，请明确重新选择后再保存'],
     'Select up to eight text sources totaling 512 KiB':['任务与成员资料合计最多 8 项、512 KiB'],
@@ -76,12 +90,13 @@
     'Select an execution assigned to this member':['请选择此成员实际参与过的执行'],
     'This member has no recorded result in that execution yet':['这次执行中尚无此成员的结果记录'],
   };
-  const t=x=>(window.aiwI18n?.locale==='zh' && words[x]?.[0])||x;
+  const t=x=>words[x]?.[window.aiwI18n?.locale==='zh'?0:1]||window.aiwI18n?.t(x)||x;
   const node=(tag,value,cls)=>{const n=document.createElement(tag);if(value!=null)n.textContent=value;if(cls)n.className=cls;return n;};
   const raw=(tag,value,cls)=>{const n=node(tag,value,cls);n.dataset.i18nSkip='';return n;};
-  let data=null,editing=null,busy=false,loading=false,references=[],experiences=[];const histories=new Map();
+  let data=null,editing=null,detailId=null,busy=false,loading=false,references=[],experiences=[];const histories=new Map();
   function translate(){host.querySelectorAll('[data-team-label]').forEach(n=>n.textContent=t(n.dataset.teamLabel));}
-  function status(value){$('[data-team-status]').textContent=t(value);}
+  let statusMessage='';
+  function status(value){statusMessage=value;$('[data-team-status]').textContent=t(value);}
   function controls(){host.querySelectorAll('button').forEach(b=>b.disabled=busy||loading);$('[data-team-fields]').disabled=busy||loading;}
   async function request(path='',body){
     let response;
@@ -94,12 +109,39 @@
   async function act(work){if(busy||loading)return;busy=true;controls();try{await work();}catch(error){status(error.message);}finally{busy=false;controls();}}
   function button(label,callback){const b=node('button',t(label),'btn ghost');b.type='button';b.onclick=()=>act(callback);return b;}
   function render(){
-    if(!data)return;const list=$('[data-team-list]');list.replaceChildren();
-    for(const member of data.members){
+    if(!data)return;
+    const list=$('[data-team-list]'),detail=$('[data-team-detail]');
+    const search=$('[data-team-search]').value.trim().toLocaleLowerCase();
+    const members=data.members.filter(member=>[member.name,member.purpose,...member.skills].some(value=>value.toLocaleLowerCase().includes(search)));
+    const selected=data.members.find(member=>member.id===detailId);
+    list.replaceChildren();
+    for(const member of members){
+      const row=list.insertRow(),name=button(member.name,()=>{
+        detailId=member.id;
+        render();
+        if(window.aiwDesktopWindow)window.aiwDesktopWindow.open(detail,{title:member.name,recordTitle:true,icon:'workers',onClose:()=>{detailId=null;render();}});
+        else detail.focus();
+      });
+      name.textContent=member.name;
+      name.dataset.i18nSkip='';name.dataset.consoleIcon='workers';name.classList.add('small-btn');
+      name.setAttribute('aria-expanded',String(member.id===detailId));
+      row.insertCell().append(name);
+      const badge=node('span',t(member.state),'badge');badge.dataset.status=member.state;
+      row.insertCell().append(badge);
+      row.insertCell().textContent=member.skills.join(' · ')||'—';
+      row.insertCell().textContent=String(data.work.filter(work=>work.member_id===member.id).length);
+    }
+    if(!members.length){
+      const cell=list.insertRow().insertCell();cell.colSpan=4;cell.className='empty';
+      cell.textContent=t(search?'No matching members':'No members in this list');
+    }
+    detail.replaceChildren();detail.hidden=!selected;detail.tabIndex=-1;
+    for(const member of selected?[selected]:[]){
       const card=node('article',null,'team-card'),heading=node('div',null,'workers-heading');
       let mark=0;for(const char of member.id)mark=(mark*31+char.charCodeAt(0))>>>0;
       const avatar=raw('span',[...member.name].slice(0,2).join(''),'team-avatar');avatar.dataset.shape=String(mark%4);heading.append(avatar,raw('h3',member.name),node('span',t(member.state),'pill neutral'));card.append(heading,raw('p',member.purpose.length>300?member.purpose.slice(0,300)+'…':member.purpose),raw('p',member.skills.join(' · '),'help'));
-      card.append(raw('p',member.model?[member.model,member.effort].filter(Boolean).join(' · '):t('Inherit task or Worker default'),'help'));
+      card.append(member.model?raw('p',[member.model,t(member.effort)].filter(Boolean).join(' · '),'help'):
+        node('p',t('Inherit task or Worker default'),'help'));
       const skillPanel=node('details',null,'team-skill-panel');skillPanel.append(node('summary',t('Skill versions')));
       if(!member.skills.length)skillPanel.append(node('p',t('No Skills configured'),'help'));
       for(const skill of member.skills){
@@ -125,11 +167,12 @@
         actions.append(button('Edit',()=>edit(member.id)),button(member.state==='ACTIVE'?'Stop accepting work':'Resume accepting work',()=>change(member,member.state==='ACTIVE'?'stop':'resume')),
           button('Dissolve member',()=>change(member,'archive')));
       }
-      actions.append(button('Execution history (latest 100)',async()=>{histories.set(member.id,{rows:await request('/'+encodeURIComponent(member.id)+'/history'),open:true});render();}),button('Export profile and notes',()=>exportMember(member.id)));card.append(actions);
-      if(histories.has(member.id)){const history=histories.get(member.id),details=node('details');details.open=history.open;details.ontoggle=()=>history.open=details.open;details.append(node('summary',t('Execution history (latest 100)')));for(const run of history.rows){const link=raw('a',t(run.state)+' · '+(run.title||run.id));link.href='/ui/workflows?execution='+encodeURIComponent(run.id);details.append(link,node('br'));}if(!history.rows.length)details.append(node('p',t('No execution history'),'help'));card.append(details);}list.append(card);
+      actions.append(button('Execution history (latest 100)',async()=>{histories.set(member.id,{rows:await request('/'+encodeURIComponent(member.id)+'/history'),open:true});render();}),button('Export profile and notes',()=>exportMember(member.id)),button('Close details',()=>{window.aiwDesktopWindow?.close(detail);detailId=null;render();$('[data-team-search]').focus();}));card.append(actions);
+      if(histories.has(member.id)){const history=histories.get(member.id),details=node('details');details.open=history.open;details.ontoggle=()=>history.open=details.open;details.append(node('summary',t('Execution history (latest 100)')));for(const run of history.rows){const link=raw('a',t(run.state)+' · '+(run.title||run.id));link.href='/ui/workflows?execution='+encodeURIComponent(run.id);details.append(link,node('br'));}if(!history.rows.length)details.append(node('p',t('No execution history'),'help'));card.append(details);}detail.append(card);
     }
-    if(!data.members.length)list.append(node('p',t('No members in this list'),'empty'));controls();
+    controls();
   }
+  $('[data-team-search]').oninput=render;
   async function openSkillHistory(member,ref,version){
     const base='/'+encodeURIComponent(member)+'/skills/'+encodeURIComponent(ref)+'/versions',history=await request(base),selected=version??history.currentVersion;
     const content=await request(base+'/'+selected),previous=selected>0?await request(base+'/'+(selected-1)):null;
@@ -177,26 +220,45 @@
     form.elements.requiredCapabilities.value=(settings.requiredCapabilities||[]).join(', ');
     const runtime=form.elements.runtimeProfile;
     runtime.replaceChildren(new Option(t('Inherit task or Worker default'),''));
-    for(const id of new Set([...(data.runtimeProfiles||[]),settings.runtimeProfile].filter(Boolean)))runtime.add(new Option(id,id));
+    for(const id of new Set([...(data.runtimeProfiles||[]),settings.runtimeProfile].filter(Boolean)))runtime.add(new Option(data.runtimeProfileNames?.[id]||id,id));
     runtime.value=settings.runtimeProfile||'';
     modelOptions(settings.allowedProfiles||[]);
     references=[...(settings.knowledge||[])];experiences=(settings.experience||[]).map(item=>({...item}));renderReferences();renderExperience();$('[data-team-files]').value='';
     const source=$('[data-team-experience-source]');source.replaceChildren(new Option(t('Select an assigned execution'),''));
     if(profile.revision>0)request('/'+encodeURIComponent(profile.id)+'/history').then(runs=>{if(editing!==profile)return;for(const run of runs)source.add(new Option(run.title||run.id,run.id));}).catch(error=>status(error.message));
-    const choice=$('[data-team-skills]');choice.replaceChildren();for(const id of new Set([...(data.workflowSkills||data.skills),...profile.skills])){const option=new Option(id,id);option.selected=profile.skills.includes(id);choice.add(option);}requestAnimationFrame(()=>form.elements.name.focus());
+    const choice=$('[data-team-skills]');choice.replaceChildren();for(const id of new Set([...(data.workflowSkills||data.skills),...profile.skills])){const option=new Option(id,id);option.selected=profile.skills.includes(id);choice.add(option);}
+    if(window.aiwDesktopWindow){
+      const feedback=$('[data-team-status]'),marker=document.createComment('team feedback');
+      feedback.before(marker);form.prepend(feedback);
+      window.aiwDesktopWindow.open(form,{title:profile.name||'Create team member',recordTitle:Boolean(profile.name),icon:'workers',focus:form.elements.name,
+        canClose:()=>!busy,canMinimize:()=>!busy,onClose:()=>{marker.replaceWith(feedback);editing=null;form.hidden=true;}});
+    }else requestAnimationFrame(()=>form.elements.name.focus());
   }
-  async function edit(id){if(editing&&!window.confirm(t('Discard unsaved edits?')))return;show(await request('/'+encodeURIComponent(id)));}
+  async function edit(id){
+    if(editing&&!window.confirm(t('Discard unsaved edits?')))return;
+    const profile=await request('/'+encodeURIComponent(id));
+    window.aiwDesktopWindow?.close(form);
+    show(profile);
+  }
   const sameModel=(a,b)=>a?.id===b?.id&&['provider','runtime','model','effort','fast','level'].every(key=>a?.profile?.[key]===b?.profile?.[key]);
   const selectedModels=()=>[...form.elements.allowedProfiles.selectedOptions].map(option=>option.memberModel);
   function modelOptions(saved){
     const current=data?.modelProfiles||[],choices=[...current,...saved.filter(item=>!current.some(value=>sameModel(item,value)))];form.elements.allowedProfiles.replaceChildren();
-    choices.forEach((item,index)=>{const available=current.some(value=>sameModel(item,value));const option=new Option(item.profile.provider+' / '+item.profile.runtime+' · '+item.profile.model+' · '+item.profile.effort+(available?'':' · '+t('Unavailable profile; explicitly reselect')),String(index));option.memberModel=item;option.selected=saved.some(value=>sameModel(item,value));form.elements.allowedProfiles.add(option);});
+    choices.forEach((item,index)=>{const available=current.some(value=>sameModel(item,value));const option=new Option(item.profile.provider+' / '+item.profile.runtime+' · '+item.profile.model+' · '+t(item.profile.effort)+(available?'':' · '+t('Unavailable profile; explicitly reselect')),String(index));option.dataset.i18nSkip='';option.memberModel=item;option.selected=saved.some(value=>sameModel(item,value));form.elements.allowedProfiles.add(option);});
   }
   function renderReferences(){const target=$('[data-team-references]');target.replaceChildren();references.forEach((item,index)=>{const row=node('div',null,'record-actions');row.append(raw('span',item.title),button('Remove reference',()=>{references.splice(index,1);renderReferences();}));target.append(row);});}
   function renderExperience(){const target=$('[data-team-experience]');target.replaceChildren();experiences.forEach((item,index)=>{const row=node('div',null,'field'),input=raw('textarea');input.value=item.text;input.maxLength=2000;input.required=true;input.setAttribute('aria-label',t('Review and correct this experience'));input.oninput=()=>item.text=input.value;const link=raw('a',item.sourceRun);link.href='/ui/workflows?execution='+encodeURIComponent(item.sourceRun);link.target='_blank';link.rel='noopener';row.append(link,input,button('Remove experience',()=>{experiences.splice(index,1);renderExperience();}));target.append(row);});}
   $('[data-team-files]').onchange=()=>act(async()=>{
     const files=[...$('[data-team-files]').files];if(files.length+references.length>6||files.some(file=>file.size>131072))throw new Error('Select up to six UTF-8 reference files, each at most 128 KiB');
-    const added=[];for(const file of files){const content=new TextDecoder('utf-8',{fatal:true}).decode(await file.arrayBuffer());if(!content.trim()||content.includes('\0'))throw new Error('Select up to six UTF-8 reference files, each at most 128 KiB');added.push({kind:'knowledge',title:file.name.slice(0,160),content,digest:null});}
+    const added=[];
+    for(const file of files){
+      const bytes=await file.arrayBuffer();
+      let content;
+      try{content=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}
+      catch(error){if(!(error instanceof TypeError))throw error;throw new Error('Reference files must contain valid UTF-8 text.');}
+      if(!content.trim()||content.includes('\0'))throw new Error('Reference files must contain valid UTF-8 text.');
+      added.push({kind:'knowledge',title:file.name.slice(0,160),content,digest:null});
+    }
     references.push(...added);renderReferences();$('[data-team-files]').value='';
   });
   $('[data-team-quote]').onclick=()=>act(async()=>{
@@ -213,11 +275,28 @@
   async function exportMember(id){const exported=await request('/'+encodeURIComponent(id)+'/export'),url=URL.createObjectURL(new Blob([JSON.stringify(exported,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download=id+'.json';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   $('[data-team-new]').hidden=!factory;$('[data-team-archive-filter]').hidden=factory;
   if(factory){const link=host.querySelector('a[href="/ui/agent-factory"]');link.href='/ui/workers';link.dataset.teamLabel='Open team';}
-  $('[data-team-new]').onclick=()=>act(async()=>{if(editing&&!window.confirm(t('Discard unsaved edits?')))return;if(!data)await load();show({id:'member-'+crypto.randomUUID(),revision:0,name:'',purpose:'',skills:[],notes:''});});
-  $('[data-team-cancel]').onclick=()=>{editing=null;form.hidden=true;};
+  $('[data-team-new]').onclick=()=>act(async()=>{
+    if(window.aiwDesktopWindow?.has(form)){window.aiwDesktopWindow.open(form,{});return;}
+    if(editing&&!window.confirm(t('Discard unsaved edits?')))return;
+    if(!data)await load();show({id:'member-'+crypto.randomUUID(),revision:0,name:'',purpose:'',skills:[],notes:''});
+  });
+  $('[data-team-cancel]').onclick=()=>{window.aiwDesktopWindow?.close(form);editing=null;form.hidden=true;};
   $('[data-team-refresh]').onclick=()=>act(load);$('[data-team-archived]').onchange=()=>act(load);
   form.onsubmit=event=>{event.preventDefault();act(async()=>{const selected=[...$('[data-team-skills]').selectedOptions].map(o=>o.value),allowed=selectedModels();if(selected.length>8)throw new Error('Select up to eight registered platform Skills');if(allowed.some(item=>!(data.modelProfiles||[]).some(current=>sameModel(item,current))))throw new Error('Registered profiles changed; explicitly reselect before saving');status('Saving member…');await request('',{id:editing.id,revision:editing.revision,name:form.elements.name.value,purpose:form.elements.purpose.value,skills:selected,notes:form.elements.notes.value,settings:{model:form.elements.model.value,effort:form.elements.effort.value,allowedProfiles:allowed,knowledge:references,experience:experiences,
-    runtimeProfile:form.elements.runtimeProfile.value,acceptance:form.elements.acceptance.value,requiredCapabilities:form.elements.requiredCapabilities.value.split(',').map(value=>value.trim()).filter(Boolean)}});editing=null;form.hidden=true;status('Member saved');try{await load();}catch(_){status('Member saved. Refresh the list to display it.');}});};
-  window.addEventListener('aiw:locale-changed',()=>{translate();render();if(editing)modelOptions(selectedModels());renderReferences();renderExperience();const source=$('[data-team-experience-source]');if(source.options[0])source.options[0].textContent=t('Select an assigned execution');});translate();act(load);
+    runtimeProfile:form.elements.runtimeProfile.value,acceptance:form.elements.acceptance.value,requiredCapabilities:form.elements.requiredCapabilities.value.split(',').map(value=>value.trim()).filter(Boolean)}});window.aiwDesktopWindow?.close(form);editing=null;form.hidden=true;status('Member saved');try{await load();}catch(_){status('Member saved. Refresh the list to display it.');}});};
+  function applyLanguage(){
+    translate();
+    status(statusMessage);
+    render();
+    if(editing)modelOptions(selectedModels());
+    const runtime=form.elements.runtimeProfile.options[0],source=$('[data-team-experience-source]').options[0];
+    if(runtime?.value==='')runtime.textContent=t('Inherit task or Worker default');
+    if(source?.value==='')source.textContent=t('Select an assigned execution');
+    renderReferences();
+    renderExperience();
+  }
+  window.addEventListener('aiw:i18n-ready',applyLanguage,{once:true});
+  window.addEventListener('aiw:locale-changed',applyLanguage);
+  translate();act(load);
   const timer=setInterval(()=>{if(!document.hidden&&!editing&&!busy&&!loading)act(load);},8000);window.addEventListener('pagehide',()=>clearInterval(timer));
 })();

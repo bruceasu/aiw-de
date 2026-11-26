@@ -37,8 +37,8 @@ In Agent factory, choose the connection, model and execution method. API keys ca
 
 The factory starts local Workers when needed. A remote Worker manages its own model connection and cannot assume access to credential files on the Plane device. If work fails, inspect the reason and existing results before choosing retry or repair.
 
-- Use Simple task for a direct request and explicitly start it.
-- Use Wish Pool to clarify an idea or optional source attachment with a specialist, save confirmed requirements and generate a workflow draft.
+- Use Tasks for a direct request and explicitly start it.
+- Describe the outcome in Wish Pool and choose **Send to the manager**. The manager suggests a next step and asks for any missing information. Use **Supporting materials and discussion** to review attachments.
 - Use Workflows for task, LLM decision and human-question nodes. Review the draft before starting business work.
 - Use Workers to observe actual work, and Pending work for questions and approvals. Stopping new claims lets current work continue. Marking a Worker offline does not terminate its remote process.
 

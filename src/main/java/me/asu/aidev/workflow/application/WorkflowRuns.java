@@ -160,7 +160,7 @@ public class WorkflowRuns {
             if(simpleTask) {
                 var node=nodes.getFirst();
                 if(nodes.size()!=1||node.kind()!=Kind.TASK||node.next()!=null)
-                    throw new IllegalArgumentException("A simple task needs one task and no exits");
+                    throw new IllegalArgumentException("A task must have exactly one execution node and no exits");
             } else if(nodes.stream().noneMatch(n->n.kind()==Kind.END)) {
                 throw new IllegalArgumentException("An end node is required");
             }
@@ -253,15 +253,17 @@ public class WorkflowRuns {
     }
     @Transactional public Definition save(String id,long version,Spec spec) {
         String actor=actor();Objects.requireNonNull(spec,"Workflow required");
+        boundary.lock();
         if(spec.simpleTask())throw new IllegalArgumentException("A reusable workflow must have a business flow");
         if(spec.nodes().stream().anyMatch(n->!n.requiredCheckIds().isEmpty()))
-            throw new IllegalArgumentException("Required command checks are currently supported on simple tasks");
+            throw new IllegalArgumentException("Required command checks are available for tasks created from the Tasks page");
         spec=new Spec(spec.title(),spec.goal(),spec.entry(),spec.nodes().stream().map(n->{
             if(n.assignment()!=null||n.kind()!=Kind.TASK&&n.kind()!=Kind.DECISION)return n;
             return new Node(n.key(),n.title(),n.kind(),n.instruction(),n.next(),n.branches(),n.memberId(),
                     n.memberId()==null?Assignment.GENERAL:Assignment.MEMBER,n.requiredSkills(),n.workspaceTools(),n.requiredCheckIds(),n.acceptance(),n.rule(),n.runtimeProfile(),n.runtimeProfileCandidates(),n.sharedTools());
         }).toList(),spec.sources(),spec.commands(),spec.autonomousShell());
         for(var node:spec.nodes()){team.requirements(actor,node.requiredSkills());if(node.memberId()!=null)team.get(actor,node.memberId());}
+        validateProfileReferences(spec);
         if(id==null) {
             if(version!=0) throw new IllegalArgumentException("New workflow has version zero");
             id="WF-"+UUID.randomUUID();
@@ -271,6 +273,15 @@ public class WorkflowRuns {
         if(db.jdbc().update("UPDATE workflow_definition SET spec_json=?,version=version+1,updated_ms=? WHERE id=? AND actor=? AND version=?",
                 db.encode(spec),System.currentTimeMillis(),id,actor,version)!=1) throw new IllegalStateException("Workflow changed; reload before saving");
         return new Definition(id,version+1,spec);
+    }
+    void validateProfileReferences(Spec spec) {
+        if(runtimeProfiles==null)return;
+        var references=new LinkedHashSet<String>();
+        for(var node:spec.nodes()) {
+            if(node.runtimeProfile()!=null)references.add(node.runtimeProfile());
+            references.addAll(node.runtimeProfileCandidates());
+        }
+        runtimeProfiles.requireRegistered(references);
     }
     public List<Definition> definitions() {
         return db.jdbc().query("SELECT id,version,spec_json FROM workflow_definition WHERE actor=? ORDER BY updated_ms DESC LIMIT 100",
@@ -371,7 +382,7 @@ public class WorkflowRuns {
     @Transactional public void manageFinishedTask(String id,String action) {
         var run=load(id,true);
         if(!finishedSimpleTask(run)||hasUnfinishedTasks(id))
-            throw new IllegalStateException("Only finished simple tasks with no active work can be managed from task history");
+            throw new IllegalStateException("Only finished tasks with no active work can be managed from task history");
         var service=archives.getObject();
         switch(action) {
             case "archive" -> archiveTask(run,service);

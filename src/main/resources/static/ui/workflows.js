@@ -176,11 +176,13 @@
     'INPUT_RECEIVED':['收到补充'], 'INPUT_CONTEXT':['加入上下文'],
     'INPUT_RESERVED':['准备使用补充'], 'INPUT_APPLIED':['补充已生效'], 'INPUT_UNKNOWN':['补充生效结果未确认'],
     'This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.':['当前版本处理只读文本任务与判断，不修改文件、不实际退款或发送消息。'],
-    'Library':['工作区'], 'Simple task':['简单任务'], 'New workflow':['新建工作流'],
+    'Library':['工作区'], 'Tasks':['任务'], 'New workflow':['新建工作流'],
     'Task history':['任务历史'], 'Search tasks':['检索任务'], 'View':['视图'], 'Status':['状态'],
     'New task':['新建任务'], 'Back to task list':['返回任务列表'], 'Back to workflow list':['返回工作流列表'], 'Working location':['工作目录'],
     'Updated':['更新时间'], 'Actions':['操作'], 'Archived':['已归档'],
-    'Only finished simple tasks with no active work can be managed from task history':['任务仍有未结束的工作或租约，暂时无法归档或删除。'],
+    'Only finished tasks with no active work can be managed from task history':['任务仍有未结束的工作或租约，暂时无法归档或删除。'],
+    'A task must have exactly one execution node and no exits':['任务须包含一个执行节点，且不能设置出口。'],
+    'Required command checks are available for tasks created from the Tasks page':['从「任务」页面新建的任务支持必需命令检查。'],
     'Add a step':['添加步骤'], 'Workflow diagram':['业务流程图'], 'Step activity':['步骤记录'],
     'Select a step to edit it. Drag an output dot to connect steps.':['点击步骤编辑属性，拖动输出端连接步骤。'],
     'Agent task':['Agent 任务'], 'Field rule':['字段规则'], 'Field name':['字段名'], 'Expected value':['预期值'],
@@ -196,7 +198,7 @@
     'Task archived.':['任务已归档。'], 'Deletion scheduled.':['已安排删除。'], 'Deletion cancelled.':['已撤销删除。'],
     'Delete after':['计划删除时间'],
     'Delete task?':['删除任务？'],
-    'This task will move to Pending deletion. You can cancel within 30 days. After that it disappears from Simple tasks. Audit, usage and delivery records are retained.':['任务将移入「待删除」。30 天内可以撤销，到期后会从「简单任务」移除，后台保留审计、模型用量和交付记录。'],
+    'This task will move to Pending deletion. You can cancel within 30 days. After that it disappears from the task list. Audit, usage and delivery records are retained.':['任务将移入「待删除」。30 天内可以撤销，到期后会从任务列表移除，后台保留审计、模型用量和交付记录。'],
     'Creating task…':['正在创建任务…'],
     'Task created.':['任务已创建。'],
     'Task created, but its details could not be loaded.':['任务已创建，但暂时无法加载详情。'],
@@ -229,7 +231,7 @@
     'Read the verified upstream report from the latest preparation step. Check the exact JSON keys and every value against the input. If the report or required data is missing, choose revise. State the missing or incorrect field in the reason. Use accept only when all checks pass.':['读取最近一次生成步骤的已校验交接报告。逐字段核对 JSON 键和值是否与原输入相符。报告或必要资料缺失时选 revise，说明缺失或错误的字段。所有检查通过才选 accept。'],
     'Read the checks in the execution timeline. Supply a correction if you want to generate and verify a fresh result, or close this run without acceptance.':['查看执行时间线中的验收说明。可补充修正要求后重新生成和验证，也可结束本次工作。'],
     'Executions':['执行记录'], 'Refresh':['刷新'], 'Workflow definition':['工作流定义'],
-    'Workflows':['工作流'], 'Describe a simple task or run a reusable workflow.':['直接处理简单任务，或运行可复用的工作流。'],
+    'Workflows':['工作流'], 'Create a task or run a reusable workflow.':['创建任务，或运行可复用的工作流。'],
     'Text tasks use the same executor as workflow nodes. No Git repository is required.':['文本任务与工作流节点共用执行能力，无须 Git 仓库。'],
     'What should be done?':['需要做什么？'], 'Working location (optional)':['工作位置（可选）'],
     'Run task':['执行任务'], 'Name':['名称'], 'Goal and completion conditions':['目标与完成条件'],
@@ -283,9 +285,12 @@
   };
   const t = value => {
     const locale = window.aiwI18n?.locale || document.documentElement.lang;
-    return words[value]?.[locale?.startsWith('zh') ? 0 : 1] || value;
+    return words[value]?.[locale?.startsWith('zh') ? 0 : 1] || window.aiwI18n?.t(value) || value;
   };
-  const status = message => { $('[data-wf-status]').textContent = message; };
+  const status = message => {
+    const modalStatus = $('.desktop-window[open] [data-wf-window-status]');
+    (modalStatus || $('[data-wf-status]')).textContent = message;
+  };
   let definitions=[], teamSkills=[], teamMembers=[], factoryProfiles=[], taskSources=[], taskSkills=[], editing=null, selectedRun=null, currentView=null, savedSpec='', busy=false, signature='', selectedNodeKey=null;
   let sharedTools=[], taskSharedTools=[];
   let toolDecision=null;
@@ -319,6 +324,7 @@
     const fileTask=taskForm.elements.workspaceTools.checked;
     taskForm.elements.autonomousShell.disabled=!fileTask;
     taskForm.elements.commands.disabled=!fileTask;
+    taskForm.querySelector('[data-wf-aiw-commands]').disabled=!fileTask;
     $('[data-wf-schedule-task]').hidden=fileTask;
     const container=$('[data-wf-check-options]');
     const selected=new Set([...container.querySelectorAll('input:checked')].map(input=>input.value));
@@ -337,6 +343,26 @@
     }
   }
   taskForm.elements.commands.addEventListener('input',renderTaskFileOptions);
+  function addAiwCommand(id,argv) {
+    const profiles=commands(taskForm.elements.commands).filter(profile=>profile?.id!==id);
+    profiles.push({id,argv,cwd:'.',permissionProfile:'aiw-project-read',timeoutMs:15000,
+      outputBytes:65536,memoryBytes:268435456,processLimit:8});
+    taskForm.elements.commands.value=JSON.stringify(profiles,null,2);
+    if(teamSkills.includes('aiw-project-read')&&!taskSkills.includes('aiw-project-read')){
+      taskSkills.push('aiw-project-read');
+      renderSkillPicker($('[data-wf-skills]'),taskSkills,values=>taskSkills=values);
+    }
+    renderTaskFileOptions();
+  }
+  $('[data-wf-aiw-skills]').onclick=()=>act(async()=>{
+    addAiwCommand('aiw-skill-list',['aiw','pkg','skill','list','--json']);
+  });
+  $('[data-wf-aiw-issue]').onclick=()=>act(async()=>{
+    const field=taskForm.elements.aiwIssueId;
+    const issue=field.value.trim().toUpperCase();
+    if(!/^ISSUE-[0-9]{5,15}$/.test(issue)){field.focus();throw new Error(t('Enter an AIW Issue ID such as ISSUE-00001.'));}
+    addAiwCommand('aiw-issue-show',['aiw','issue','show',issue,'--json']);
+  });
   taskForm.elements.workspaceTools.addEventListener('change',renderTaskFileOptions);
   window.addEventListener('aiw:locale-changed',renderTaskFileOptions);
   renderTaskFileOptions();
@@ -350,9 +376,54 @@
   function taskTitle(title) {
     return title==='Plane task caretaker'||title==='Manager diagnosis'?t('Manager diagnosis'):title;
   }
+  function workWindow(section,title,icon,onClose,focus) {
+    if(!section.querySelector('[data-wf-window-status]')){
+      const message=element('p',undefined,'help');
+      message.dataset.wfWindowStatus='';message.setAttribute('role','status');
+      section.prepend(message);
+    }
+    const recordTitle=section.matches('[data-wf-run]')||section.matches('[data-wf-editor]')&&Boolean(editing?.id);
+    window.aiwDesktopWindow.open(section,{title,recordTitle,icon,onClose,focus,container:$('.main>.content'),canClose:()=>!busy,canMinimize:()=>!busy});
+  }
+  function showNewTask() {
+    const section=$('[data-wf-task]');
+    if(window.aiwDesktopWindow.has(section)){
+      workWindow(section,t('New task'),'tasks');
+      return;
+    }
+    section.prepend($('[data-wf-member-status]'));
+    section.append($('[data-wf-schedule-editor]'));
+    section.hidden=false;
+    workWindow(section,t('New task'),'tasks',()=>{
+      section.hidden=true;
+      if(taskPage==='new')location.assign(taskListUrl());
+    },taskForm.elements.instruction);
+    status('');
+    loadMembers();
+    loadProfiles().catch(error=>status(t(error.message)));
+    if(document.body.dataset.wfAdmin==='true')loadSharedTools().catch(error=>status(t(error.message)));
+  }
+  function openEditorWindow(definition) {
+    const section=$('[data-wf-editor]'),desktop=window.aiwDesktopWindow;
+    if(desktop?.has(section)){
+      if((definition?.id||null)===(editing?.id||null)){workWindow(section,'','');return;}
+      if(!window.confirm(t('Discard unsaved edits?')))return;
+      desktop.close(section);
+    }
+    showEditor(definition);
+    if(!desktop)return;
+    $('.wf-library').hidden=false;
+    workWindow(section,definition?.spec.title||t('New workflow'),'workflows',()=>{
+      editing=null;panel('');
+      if(new URLSearchParams(location.search).has('definition')){
+        history.replaceState(null,'','/ui/workflows');
+        window.dispatchEvent(new Event('aiw:desktop-location'));
+      }
+    },$('[data-wf-title]'));
+  }
   function button(label,callback) {const b=element('button',t(label),'btn ghost');b.type='button';b.onclick=callback;return b;}
   function translate() {
-    document.title=t(pageMode==='tasks'?'Simple task':'Workflows');
+    document.title=t(pageMode==='tasks'?'Tasks':'Workflows');
     $$('[data-wf-label]').forEach(e=>e.textContent=t(e.dataset.wfLabel));
     $$('[data-wf-new], [data-wf-sample], [data-wf-refresh], [data-wf-save], [data-wf-start], [data-wf-control]').forEach(e=>{
       e.dataset.wfOriginal ||= e.textContent;e.textContent=t(e.dataset.wfOriginal);
@@ -588,7 +659,7 @@
           if(node.runtimeProfileCandidates){
             profile.setCustomValidity(node.runtimeProfileCandidates.length?'':t('Select at least one candidate runtime profile.'));
             const picker=element('div',undefined,'wf-skill-picker');
-            const available=new Map(factoryProfiles.map(item=>[item.id,item.id+' · '+item.model]));
+            const available=new Map(factoryProfiles.map(item=>[item.id,(item.displayName||item.id)+' · '+item.model]));
             for(const id of node.runtimeProfileCandidates)if(!available.has(id))available.set(id,id);
             for(const [id,label] of available){
               const box=element('input');box.type='checkbox';box.checked=node.runtimeProfileCandidates.includes(id);
@@ -717,13 +788,14 @@
   function updateTaskListUrl() {
     window.history.replaceState(null,'',taskListUrl());
     $('[data-wf-new-task]').href=taskListUrl('/ui/tasks/new');
+    window.dispatchEvent(new Event('aiw:desktop-location'));
   }
   function emptyTable(host,columns,label) {
     const row=element('tr'),cell=element('td',t(label),'empty');
     cell.colSpan=columns;row.append(cell);host.append(row);
   }
   function updatedCell(value) {
-    const cell=element('td'),date=new Date(value),time=element('time',date.toLocaleString());
+    const cell=element('td'),date=new Date(value),time=element('time',date.toLocaleString(window.aiwI18n?.locale||undefined));
     time.dateTime=date.toISOString();cell.append(time);return cell;
   }
   async function refreshTaskHistory() {
@@ -746,9 +818,14 @@
     for(const row of result.tasks) {
       const title=taskTitle(row.title),entry=element('tr'),name=element('td'),open=element('a',title||row.id);
       open.href=taskListUrl('/ui/tasks/'+encodeURIComponent(row.id));open.dataset.i18nSkip='';
+      open.className='record-name';open.dataset.consoleIcon='tasks';
+      open.addEventListener('click',event=>{
+        if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||!window.aiwDesktopWindow)return;
+        event.preventDefault();act(()=>openRun(row.id));
+      });
       name.append(open,element('small',row.id,'wf-task-id mono'));
       const state=element('td');
-      state.append(element('span',t(row.state),'pill neutral'));
+      const badge=element('span',t(row.state),'badge');badge.dataset.status=row.state;state.append(badge);
       if(row.delete_after_epoch_ms)state.append(element('small',t('Delete after')+' '+new Date(row.delete_after_epoch_ms).toLocaleString(),'wf-task-id'));
       const actions=element('td'),buttons=element('div',undefined,'wf-history-actions');
       renderTaskActions(buttons,row.id,title,{manageable:row.manageable,archived:view!=='current',deleteAfter:row.delete_after_epoch_ms});
@@ -759,6 +836,7 @@
     $('[data-wf-history-page]').textContent=String(result.page);
     $('[data-wf-history-prev]').disabled=result.page===1;
     $('[data-wf-history-next]').disabled=!result.hasMore;
+    window.dispatchEvent(new Event('aiw:desktop-content'));
   }
   function renderTaskActions(host,id,title,management) {
     host.replaceChildren();
@@ -779,7 +857,7 @@
       if(busy)return;
       busy=true;
       try {
-        if(!await window.aiwConfirm(t('This task will move to Pending deletion. You can cancel within 30 days. After that it disappears from Simple tasks. Audit, usage and delivery records are retained.'),{
+        if(!await window.aiwConfirm(t('This task will move to Pending deletion. You can cancel within 30 days. After that it disappears from the task list. Audit, usage and delivery records are retained.'),{
           title:t('Delete task?'),target,acceptLabel:t('Delete'),danger:true
         }))return;
       } finally {busy=false;}
@@ -788,7 +866,7 @@
       await api('/tasks/'+encodeURIComponent(id)+'/history',{action});
       status(t(({archive:'Task archived.','schedule-delete':'Deletion scheduled.','undo-delete':'Deletion cancelled.'})[action]));
       if(taskPage==='list')await refreshTaskHistory();
-      else {signature='';await refreshRun();}
+      if(selectedRun===id){signature='';await refreshRun();}
     });
   }
   async function library() {
@@ -809,8 +887,14 @@
       const row=element('tr'),name=element('td'),actions=element('td'),controls=element('div',undefined,'wf-history-actions');
       const link=element('a',definition.spec.title);
       link.href='/ui/workflows?definition='+encodeURIComponent(definition.id);link.dataset.i18nSkip='';
+      link.className='record-name';link.dataset.consoleIcon='workflows';
+      link.addEventListener('click',event=>{
+        if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||!window.aiwDesktopWindow)return;
+        event.preventDefault();
+        openEditorWindow(definition);
+      });
       name.append(link);
-      controls.append(button('Make a copy',()=>showEditor({id:null,version:0,spec:definition.spec})),
+      controls.append(button('Make a copy',()=>openEditorWindow({id:null,version:0,spec:definition.spec})),
         button('Schedule',()=>act(()=>arrange(definition.spec))));
       actions.append(controls);row.append(name,actions);list.append(row);
     }
@@ -819,7 +903,12 @@
     for(const run of data.executions){
       const row=element('tr'),name=element('td'),state=element('td'),link=element('a',run.title||run.id);
       link.href='/ui/workflows?execution='+encodeURIComponent(run.id);link.dataset.i18nSkip='';
-      name.append(link);state.append(element('span',t(run.state),'pill neutral'));
+      link.addEventListener('click',event=>{
+        if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||!window.aiwDesktopWindow)return;
+        event.preventDefault();act(()=>openRun(run.id));
+      });
+      link.className='record-name';link.dataset.consoleIcon='workflows';
+      const badge=element('span',t(run.state),'badge');badge.dataset.status=run.state;name.append(link);state.append(badge);
       row.append(name,state,updatedCell(run.updated_ms));runs.append(row);
     }
     loadMembers();
@@ -876,7 +965,7 @@
   }
   function profileOptions(select,current=''){
     select.replaceChildren(new Option(t('Factory default'),''));
-    for(const profile of factoryProfiles)select.add(new Option(profile.id+' · '+profile.model,profile.id));
+    for(const profile of factoryProfiles)select.add(new Option((profile.displayName||profile.id)+' · '+profile.model,profile.id));
     if(current&&!factoryProfiles.some(p=>p.id===current))select.add(new Option(current,current));
     select.value=current;
   }
@@ -895,13 +984,31 @@
   function assignment(value){return {assignment:['AUTO','GENERAL'].includes(value)?value:'MEMBER',memberId:['AUTO','GENERAL'].includes(value)?null:value};}
   let selectedRunStep=null;
   async function openRun(id) {
-    if(pageMode==='tasks'&&taskPage!=='detail'){
+    if(pageMode==='tasks'&&(taskPage==='new'||taskPage!=='detail'&&!window.aiwDesktopWindow)){
       window.location.assign(taskListUrl('/ui/tasks/'+encodeURIComponent(id)));
       return;
     }
+    const section=$('[data-wf-run]'),editor=$('[data-wf-editor]');
+    const onDesktop=window.aiwDesktopWindow;
+    if(onDesktop?.has(section)){
+      if(selectedRun===id){workWindow(section,'','');return;}
+      onDesktop.close(section);
+    }
+    if(onDesktop?.has(editor))onDesktop.close(editor);
+    if(onDesktop?.has($('[data-wf-task]')))onDesktop.close($('[data-wf-task]'));
     if(id!==taskExecution)preparingGoal=null;
     selectedRun=id;selectedRunStep=null;signature='';panel('run');
     await refreshRun();
+    if(!onDesktop||selectedRun!==id||section.hidden)return;
+    if(pageMode==='workflows')$('.wf-library').hidden=false;
+    const title=$('[data-wf-run-title]').textContent||id;
+    const href=pageMode==='tasks'?taskListUrl('/ui/tasks/'+encodeURIComponent(id)):'/ui/workflows?execution='+encodeURIComponent(id);
+    window.dispatchEvent(new CustomEvent('aiw:desktop-record',{detail:{href,title}}));
+    workWindow(section,title,pageMode,()=>{
+      selectedRun=null;currentView=null;signature='';panel('');
+      if(taskPage==='detail')location.assign(taskListUrl());
+      else if(pageMode==='workflows'&&route.has('execution'))location.assign('/ui/workflows');
+    });
   }
   function renderRunStep(run,key) {
     const host=$('[data-wf-run-node]'),node=run.spec.nodes.find(item=>item.key===key);
@@ -1049,6 +1156,8 @@
     const run=data.run,taskState=data.task?{id:data.task.id,state:data.task.state,instruction:data.task.instruction}:null,stamp=JSON.stringify([run,taskState,data.taskDisplayState,data.activity?.attemptId,data.activity?.stale,data.report,data.failureCode,data.preparation,data.management,data.taskCapabilities]);if(stamp===signature)return;signature=stamp;
     const title=taskTitle(run.spec.title);
     $('[data-wf-run-title]').textContent=title;
+    if(taskPage==='detail'||route.get('execution')===run.id)
+      requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('aiw:desktop-content', {detail:{title}})));
     const profile=data.runtimeProfile;
     $('[data-wf-runtime-profile]').textContent=profile?.id?t('Runtime profile')+' · '+profile.id+' v'+profile.version+' · '+profile.model:'';
     const grants=$('[data-wf-shared-tool-grants]');
@@ -1139,6 +1248,7 @@
       await library();const definition=await api('/definitions/'+encodeURIComponent(result.workflowId));
       showEditor(definition);preparingGoal=null;
       history.replaceState(null,'','/ui/workflows?definition='+encodeURIComponent(result.workflowId));
+      window.dispatchEvent(new Event('aiw:desktop-location'));
     }
   }
   async function control(action,answer) {
@@ -1230,7 +1340,7 @@
       catch(error) { status(t('Task created, but its details could not be loaded.')+' '+t(error.message)); }
     });
   };
-  $$('[data-wf-new]').forEach(b=>b.onclick=()=>showEditor());
+  $$('[data-wf-new]').forEach(b=>b.onclick=()=>openEditorWindow());
   $('[data-wf-sample]').onclick=example;
   $('[data-wf-verify-sample]').onclick=verificationExample;
   $('[data-wf-refresh]').onclick=()=>act(async()=>{signature='';importAttempted=false;await refreshRun();await library();});
@@ -1315,10 +1425,18 @@
     await api('/schedules',{requestId:scheduleRequest,spec:scheduleSpec,repeat:form.get('repeat'),zone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',firstAt:new Date(form.get('firstAt')).getTime()});
     $('[data-wf-schedule-editor]').hidden=true;scheduleSpec=null;
     if(pageMode==='tasks'&&taskPage==='new')window.location.assign(taskListUrl());
-    else await library();
+    else {
+      window.aiwDesktopWindow?.close($('[data-wf-task]'));
+      await library();
+    }
   });};
   window.addEventListener('aiw:locale-changed',()=>{translate();const member=$('[data-wf-member]');memberOptions(member,member.value);renderSources($('[data-wf-task-sources]'),taskSources,values=>taskSources=values);if(editing)renderSources($('[data-wf-definition-sources]'),editing.spec.sources||[],values=>editing.spec.sources=values);signature='';$('[data-wf-usage]').dataset.stamp='';$('[data-wf-amendment]').dataset.stamp='';if(editing){renderNodes();redraw();}act(async()=>{await library();await refreshRun();});});
   if(pageMode==='tasks'&&taskPage==='list') {
+    $('[data-wf-new-task]').addEventListener('click',event=>{
+      if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey||!window.aiwDesktopWindow)return;
+      event.preventDefault();
+      if(!busy)showNewTask();
+    });
     const search=$('[data-wf-history-search]'),view=$('[data-wf-history-view]'),state=$('[data-wf-history-state]');
     search.value=(route.get('q')||'').slice(0,160);
     if([...view.options].some(option=>option.value===route.get('view')))view.value=route.get('view');
@@ -1347,19 +1465,22 @@
   if(pageMode==='tasks') {
     const back=$('[data-wf-back]');if(back)back.href=taskListUrl();
     if(taskPage==='new') {
-      panel('task');$('[data-wf-task]').append($('[data-wf-schedule-editor]'));loadMembers();
+      window.addEventListener('DOMContentLoaded',()=>{
+        if(window.aiwDesktopWindow)showNewTask();
+        else {panel('task');$('[data-wf-task]').append($('[data-wf-schedule-editor]'));loadMembers();}
+      },{once:true});
     } else if(taskPage==='detail') {
-      act(()=>openRun(taskExecution));
+      window.addEventListener('DOMContentLoaded',()=>act(()=>openRun(taskExecution)),{once:true});
     } else {
       panel('');library().catch(error=>{if(!busy&&!selectedRun)status(t(error.message));});
     }
   } else {
     panel('');
-    act(async()=>{
+    window.addEventListener('DOMContentLoaded',()=>act(async()=>{
       if(route.get('execution'))await openRun(route.get('execution'));
-      else if(route.get('definition'))showEditor(await api('/definitions/'+encodeURIComponent(route.get('definition'))));
+      else if(route.get('definition'))openEditorWindow(await api('/definitions/'+encodeURIComponent(route.get('definition'))));
       await library();
-    });
+    }),{once:true});
   }
   setInterval(()=>{if(selectedRun&&!busy&&!document.hidden&&!(preparingGoal&&importAttempted))act(refreshRun);},4000);
   if(pageMode!=='tasks'||taskPage==='list'){

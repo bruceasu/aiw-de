@@ -30,6 +30,14 @@ public class FactoryTaskProfiles implements WorkerTaskClaimPolicy {
         return state.items().stream().filter(p->p.enabled()&&p.id().equals(id)).findFirst()
                 .orElseThrow(()->new IllegalArgumentException("Runtime profile unavailable: "+id));
     }
+    public void requireRegistered(java.util.Set<String> references) {
+        if(references.isEmpty())return;
+        var registered=factory.runtimeProfiles().items().stream()
+                .map(AgentFactorySettings.RuntimeProfile::id).collect(java.util.stream.Collectors.toSet());
+        references.stream().filter(id->!registered.contains(id)).findFirst().ifPresent(id->{
+            throw new IllegalArgumentException("Runtime profile unavailable: "+id);
+        });
+    }
 
     public void bind(String task,AgentFactorySettings.RuntimeProfile profile) {
         if(profile!=null)db.jdbc().update("INSERT INTO workflow_task_runtime(task_id,profile_json) VALUES(?,?)",

@@ -51,3 +51,4 @@
 .wf-node-dialog .workspace-confirm__body{max-height:calc(86vh - 140px);overflow:auto}
 .wf-content .command-json{min-height:120px;font:12px/1.55 var(--font-mono,Consolas,monospace)}
 @media(max-width:700px){.wf-content .wf-editor-toolbar{align-items:flex-start;flex-direction:column}.wf-node-dialog .workspace-confirm__body{max-height:calc(82vh - 140px)}}
+.wf-task-history-table thead th { position: sticky; top: 0; }

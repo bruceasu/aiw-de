@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class GoalDiscussionService {
+    @org.springframework.beans.factory.annotation.Autowired private DiscussionBoard board;
     @org.springframework.beans.factory.annotation.Autowired
     private me.asu.aidev.execution.config.ManagedWorkerProvisioner provisioner;
     @org.springframework.beans.factory.annotation.Autowired
@@ -171,6 +172,7 @@ public class GoalDiscussionService {
         var messages = new ArrayList<>(draft.content().messages());
         messages.add(new Message(requestId, "assistant", report.summary(), r.revision(), draft.revision() != r.revision()+1));
         repo.save(draft, draft.title(), new Content(draft.content().body(), draft.content().missing(), draft.content().backend(), draft.content().knowledgeIds(), List.copyOf(messages)), false, false);
+        board.employeeReply(actor,goal,requestId,report.summary());
         return new Reply(requestId, "RECEIVED", "Suggestion recorded; edit the goal explicitly to apply it");
     }
     public List<String> requests(String goal, String actor) {

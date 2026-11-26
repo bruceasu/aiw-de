@@ -69,6 +69,7 @@ public class WorkflowSchedules {
             return view(existing.getFirst());
         }
         if(input.firstAt()<=System.currentTimeMillis())throw new IllegalArgumentException("Choose a future first time");
+        workflows.validateProfileReferences(input.spec());
         var first=Instant.ofEpochMilli(input.firstAt()).atZone(zone);
         repo.jdbc().update("""
             INSERT INTO workflow_schedule(id,actor,owner_id,request_digest,spec_json,repeat_kind,zone_id,local_time,weekday,next_ms,state,message,version,updated_ms)
@@ -97,6 +98,9 @@ public class WorkflowSchedules {
         long now=System.currentTimeMillis(),due=number(row,"next_ms");
         String previous=(String)row.get("last_execution");
         boolean checked=previous!=null&&"FAILED".equals(executionState(previous))&&!unfinished(previous);
+        if(Set.of("resume","reschedule","run-now").contains(input.action())
+                ||"skip".equals(input.action())&&!"ONCE".equals(row.get("repeat_kind")))
+            workflows.validateProfileReferences(repo.decode((String)row.get("spec_json"),WorkflowRuns.Spec.class));
         switch(input.action()) {
             case "pause" -> changed(row,"PAUSED",due,"Automatic starts paused; current execution continues",AuthorityRepository.flag(row.get("failure_checked")));
             case "stop" -> changed(row,"STOPPED",due,"Arrangement disabled; current execution is unchanged",false);

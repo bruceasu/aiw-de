@@ -270,7 +270,7 @@
       for (const [value, label] of [["en", "English"], ["zh", "简体中文"]]) language.add(new Option(label, value));
       language.value = window.aiwI18n?.locale || "en"; controls.append(language);
     }
-    const host = document.querySelector("#personal-app [data-appearance-controls]") || document.querySelector(".topbar-actions") || document.querySelector(".topbar");
+    const host = document.querySelector("#personal-app [data-appearance-controls], .desktop-indicators") || document.querySelector(".topbar-actions, .topbar");
     if (host) host.append(controls); else { controls.classList.add("appearance-floating"); document.body.append(controls); }
     const dialog = element("dialog", "appearance-dialog");
     dialog.setAttribute("aria-labelledby", "appearance-title");

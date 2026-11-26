@@ -95,6 +95,7 @@ const viewInfo = {
   overview: ["工作总览", "查看你的工作、安排与待处理请求"],
   work: ["工作与安排", "记录私人工作，马上执行或按需定时"],
   chat: ["私人对话", "直接说出需要帮助的事，秘书会判断是否建立工作。"],
+  bbs: ["平台讨论", "浏览你的讨论主题，处理委托给秘书的澄清。"],
   policies: ["代理策略", "管理已确认的私人策略及关联授权"],
   platform: ["平台协作", "预览并确认需要提交给平台的内容"],
   records: ["私人资料", "整理草稿、模板与待办"],
@@ -160,6 +161,7 @@ function switchView(name, focus = false) {
   });
   [byId("page-title").textContent, byId("page-description").textContent] = viewInfo[name];
   history.replaceState(null, "", "#" + name);
+  if (name === "bbs" && csrf) loadBbs();
 }
 function revealNavTab(tab) {
   if (!matchMedia("(max-width: 800px)").matches) return;
@@ -884,6 +886,7 @@ async function refresh() {
   if (byId("work-detail").open) updateWorkDetailNotice(); else render();
   showSession(true);
   byId("pairing-status").hidden = true;
+  if (!byId("view-bbs").hidden && bbsPage === null) loadBbs();
   return true;
 }
 async function post(route, data, refreshState = true) {
@@ -905,6 +908,86 @@ async function assistantOperation(route, data, message) {
     feedback(refreshed ? result.note || result.report?.message || message : "操作已返回结果，请刷新列表查看最新状态。", refreshed ? "ok" : "warn");
   } catch (error) { feedback(errorMessage(error), "error"); }
 }
+
+let bbsPage = null, bbsSelected = null, bbsReceipt = null, bbsBusy = false;
+const bbsSearch = byId("bbs-search"), bbsAnswer = byId("bbs-answer");
+function bbsStatus(message) { byId("bbs-status").textContent = message; }
+async function bbsAction(action) {
+  if (bbsBusy) return;
+  bbsBusy = true;
+  bbsStatus("");
+  try { await action(); }
+  catch (error) { bbsStatus(errorMessage(error)); }
+  finally { bbsBusy = false; }
+}
+async function renderBbs(page) {
+  const {result} = await post("bbs-list", {q:bbsSearch.elements.q.value.trim(),page}, false);
+  bbsPage = page;
+  for (const [target, rows, emptyText] of [
+    ["bbs-assignments", result.assignments, "目前没有委托给秘书的澄清。"],
+    ["bbs-topics", result.items, "没有匹配的讨论主题。"]
+  ]) {
+    const entries = rows.map(row => {
+      const item = button(row.title, () => bbsAction(() => openBbs(row.threadId || row.id)));
+      item.dataset.i18nSkip = "";
+      return item;
+    });
+    byId(target).replaceChildren(...(entries.length ? entries : [node("p", "help", emptyText)]));
+  }
+  byId("bbs-previous").disabled = page === 0;
+  byId("bbs-next").disabled = !result.hasMore;
+}
+function loadBbs(page = 0) { return bbsAction(() => renderBbs(page)); }
+async function openBbs(threadId) {
+  const {result} = await post("bbs-detail", {threadId}, false);
+  const item = result.clarification;
+  const delegationId = result.topic.closed || item?.answerId ? null : item?.delegationId;
+  if (bbsSelected?.threadId !== threadId || bbsSelected?.delegationId !== delegationId) {
+    bbsAnswer.reset();
+    bbsReceipt = null;
+  }
+  bbsSelected = {threadId, delegationId};
+  byId("bbs-title").textContent = result.topic.title;
+  byId("bbs-title").dataset.i18nSkip = "";
+  const roles = {USER:"用户",MANAGER:"经理",EMPLOYEE:"员工",SECRETARY:"秘书"};
+  byId("bbs-posts").replaceChildren(...result.posts.map(post => {
+    const entry = node("article", "card");
+    const body = node("pre", "help", post.body);
+    body.style.whiteSpace = "pre-wrap";
+    body.dataset.i18nSkip = "";
+    entry.append(node("h3", "", roles[post.role] || post.role),body);
+    return entry;
+  }));
+  byId("bbs-detail").hidden = false;
+  bbsAnswer.hidden = !delegationId;
+}
+bbsSearch.onsubmit = event => {event.preventDefault();loadBbs();};
+byId("bbs-previous").onclick = () => loadBbs(bbsPage - 1);
+byId("bbs-next").onclick = () => loadBbs(bbsPage + 1);
+byId("bbs-draft").onclick = () => bbsAction(async () => {
+  if (!bbsSelected?.delegationId) return;
+  bbsStatus("秘书正在起草答复…");
+  const existing = bbsAnswer.elements.body.value;
+  const {result} = await post("bbs-draft", {...bbsSelected,notes:bbsAnswer.elements.notes.value}, false);
+  if (bbsAnswer.elements.body.value === existing) {
+    bbsAnswer.elements.body.value = result.draft;
+    bbsStatus("请核对答复，确认后回传。");
+  } else bbsStatus("你的答复已编辑，请核对后回传。");
+});
+bbsAnswer.onsubmit = event => {
+  event.preventDefault();
+  bbsAction(async () => {
+    if (!bbsSelected?.delegationId) return;
+    const body = bbsAnswer.elements.body.value.trim();
+    if (!body) throw new Error("请填写澄清答复。");
+    if (bbsReceipt && bbsReceipt.body !== body) throw new Error("原答复结果待核对，请重新打开主题刷新状态。");
+    bbsReceipt ||= {requestId:crypto.randomUUID(),body};
+    await post("bbs-answer", {...bbsSelected,...bbsReceipt}, false);
+    await openBbs(bbsSelected.threadId);
+    await renderBbs(bbsPage || 0);
+    bbsStatus("澄清答复已回传到平台讨论。");
+  });
+};
 
 let modelLoginBusy = false;
 let modelAuthorizationUrl = "";

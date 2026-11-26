@@ -10,10 +10,15 @@
   const drafts=new Map();
   let data=null,telegram=null,ready=false,reading=false,busy=false,pending=null,sequence=0,selected=null,confirmation=null;
   function node(tag,text,className) { const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n; }
-  function message(text,tone='info') { $('question-status').textContent=text;$('question-status').dataset.tone=tone;$('question-status').hidden=!text; }
+  function message(text,tone='info') {
+    for(const output of [$('question-status'),$('question-detail-status')].filter(Boolean)){
+      output.textContent=text;output.dataset.tone=tone;output.hidden=!text;
+    }
+  }
   function readout(values) { const dl=node('dl',undefined,'question-readout');for(const [key,value] of values){dl.append(node('dt',key),node('dd',value??'未记录'));}return dl; }
   function number(value) { return safe(value)?String(value):'超出页面可精确显示范围'; }
   function showTab(name,focus=false) {
+    if(name!=='inbox')window.aiwDesktopWindow?.close($('question-detail'));
     document.querySelectorAll('[data-question-tab]').forEach(tab=>{const active=tab.dataset.questionTab===name;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;if(active&&focus)tab.focus();});
     document.querySelectorAll('[data-question-panel]').forEach(panel=>{panel.hidden=panel.dataset.questionPanel!==name;});
   }
@@ -61,17 +66,26 @@
   }
   function renderInbox() {
     const host=$('question-list'),detail=$('question-detail');host.replaceChildren();
-    if(!data){host.append(node('p',$('question-plan').value?'当前计划尚未成功读取。':'先选择一个计划，再查看需要处理的问题。','empty'));detail.replaceChildren(node('p','在问题列表中选择一项，阅读详情并回答。','empty'));return;}
+    if(!data){host.append(node('p',$('question-plan').value?'当前计划尚未成功读取。':'先选择一个计划，再查看需要处理的问题。','empty'));window.aiwDesktopWindow?.close(detail);detail.hidden=true;return;}
     const filter=$('question-filter').value,search=$('question-search').value.trim().toLowerCase();
     const questions=data.questions.filter(q=>(filter==='all'||filter==='open'&&q.state==='OPEN'||filter==='waiting'&&q.state==='ANSWERED'||filter==='history'&&['APPLIED','SUPERSEDED'].includes(q.state))&&[q.question,q.source.taskId,q.questionId].join(' ').toLowerCase().includes(search));
-    if(!questions.some(q=>q.questionId===selected))selected=questions[0]?.questionId||null;
-    for(const q of questions){const button=node('button',undefined,'question-item');button.type='button';button.setAttribute('aria-current',String(q.questionId===selected));button.append(node('span',states[q.state]||'状态待核对','pill '+(q.state==='OPEN'?'warn':'neutral')),node('strong',q.question.length>110?q.question.slice(0,110)+'…':q.question),node('small',(q.kind==='AUTHORIZATION'?'授权申请':'工作问题')+(q.source.taskId?' · '+q.source.taskId:'')));button.addEventListener('click',()=>{selected=q.questionId;renderInbox();sync();});host.append(button);}
+    if(!data.questions.some(q=>q.questionId===selected))selected=null;
+    for(const q of questions){const button=node('button',undefined,'question-item');button.type='button';button.setAttribute('aria-current',String(q.questionId===selected));button.append(node('span',states[q.state]||'状态待核对','pill '+(q.state==='OPEN'?'warn':'neutral')),node('strong',q.question.length>110?q.question.slice(0,110)+'…':q.question),node('small',(q.kind==='AUTHORIZATION'?'授权申请':'工作问题')+(q.source.taskId?' · '+q.source.taskId:'')));button.addEventListener('click',()=>presentQuestion(q));host.append(button);}
     if(!questions.length)host.append(node('p',search?'没有匹配的问题。':'此分类暂无问题。可切换范围查看已回答或处理记录。','empty'));
-    const q=questions.find(item=>item.questionId===selected);if(q)renderQuestion(q);else detail.replaceChildren(node('p','当前没有选中的问题。','empty'));
+    const q=data.questions.find(item=>item.questionId===selected);
+    if(q)renderQuestion(q);else {window.aiwDesktopWindow?.close(detail);detail.hidden=true;}
+  }
+  function presentQuestion(q) {
+    selected=q.questionId;renderInbox();sync();
+    const detail=$('question-detail');detail.hidden=false;
+    window.aiwDesktopWindow?.open(detail,{title:'问题详情',icon:'questions',container:$('question-workbench'),canClose:()=>!busy,canMinimize:()=>!busy,
+      onClose:()=>{selected=null;detail.hidden=true;renderInbox();}});
   }
   function paragraph(host,title,text) { if(!text)return;host.append(node('h3',title),node('p',text,'question-text')); }
   function renderQuestion(q) {
     const host=$('question-detail');host.replaceChildren(node('span',states[q.state]||'状态待核对','pill '+(q.state==='OPEN'?'warn':'neutral')),node('h2',q.question));
+    const status=node('p',$('question-status').textContent,'question-feedback');
+    status.id='question-detail-status';status.dataset.tone=$('question-status').dataset.tone;status.hidden=!status.textContent;status.setAttribute('role','status');host.prepend(status);
     if(q.kind==='AUTHORIZATION'&&q.authorization){const a=q.authorization;host.append(readout([['申请维度',dimensions[a.dimension]||'不支持的维度'],['增加量',number(a.amount)],['累计上限',number(a.cumulativeCeiling)],...(a.loopId?[['循环',a.loopId]]:[])]));host.append(node('p','批准只针对这份具体申请，不授予其它动作权限。','help'));}
     else {paragraph(host,'必要上下文',q.context);paragraph(host,'回答要求',q.answerRequirements);}
     if(q.answer){paragraph(host,'已记录的原始回答',q.kind==='AUTHORIZATION'?({APPROVE:'批准此申请',REJECT:'拒绝此申请'})[q.answer.rawAnswer]||q.answer.rawAnswer:q.answer.rawAnswer);host.append(node('p',(q.answer.delegated?'秘书提交':'人类提交')+' · '+(({CONSOLE:'控制台',TELEGRAM:'Telegram 私聊',PERSONAL:'个人秘书'})[q.answer.channel]||q.answer.channel||'来源未记录')+' · '+q.answer.actor,'help'));}
@@ -157,7 +171,7 @@
   $('question-release').addEventListener('click',()=>{if(!pending?.checked||!ready||busy||reading)return;pending=null;message('已结束此次人工核对。请按当前正式状态继续，不会自动重放原操作。','warn');render();});
   $('question-plan').addEventListener('change',()=>{++sequence;data=null;telegram=null;ready=false;reading=false;selected=null;message('');render();if($('question-plan').value)readCurrent();});
   $('question-filter').addEventListener('change',()=>{renderInbox();sync();});$('question-search').addEventListener('input',()=>{renderInbox();sync();});
-  function openQuestion(id) {if(!data?.questions.some(q=>q.questionId===id))return;selected=id;$('question-filter').value='all';$('question-search').value='';showTab('inbox');renderInbox();sync();}
+  function openQuestion(id) {const q=data?.questions.find(item=>item.questionId===id);if(!q)return;$('question-filter').value='all';$('question-search').value='';showTab('inbox');presentQuestion(q);}
   window.QuestionUI=Object.freeze({$,node,flag,safe,number,readout,message,dimensions,canOperate,canApprove,enforced,writable,write,confirm,showTab,openQuestion,get data(){return data;},get telegram(){return telegram;},get pending(){return pending;},get busy(){return busy;},get reading(){return reading;}});
   render();
   const requestedParams=new URLSearchParams(location.search);

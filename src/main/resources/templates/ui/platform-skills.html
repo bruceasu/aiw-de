@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" th:content="${csrfToken}"><title>平台 Skills</title>
   <link rel="stylesheet" href="/ui/console.css"><link rel="stylesheet" href="/ui/appearance.css">
-  <script src="/ui/appearance.js"></script><script src="/ui/platform-skills.js" defer></script>
+  <script src="/ui/appearance.js"></script><script src="/ui/platform-skills.js?v=builtin-skills-1" defer></script>
 </head>
 <body><div class="app">
   <nav th:replace="~{ui/fragments :: nav('skills')}"></nav>
@@ -12,15 +12,35 @@
     <header th:replace="~{ui/fragments :: topbar('平台 Skills','维护可复用的任务说明，并查看派发可用版本。')}"></header>
     <div class="content">
       <p id="skill-status" class="help" role="status"></p>
-      <section class="card">
+      <section class="card console-list" id="skill-catalogue">
+        <div class="section-title"><h2 data-console-icon="skills">Skills 列表</h2><div class="form-actions"><button type="button" class="btn ghost" id="skill-reload">刷新</button><button type="button" class="btn primary" id="skill-new">新建 Skill</button></div></div>
+        <div class="console-list-toolbar">
+          <label class="field">搜索<input type="search" id="skill-search" maxlength="160" placeholder="名称或标识"></label>
+          <label class="field">状态<select id="skill-filter"><option value="">全部</option><option value="builtin">Built-in</option><option value="enabled">启用</option><option value="disabled">停用</option></select></label>
+        </div>
+        <div class="table-wrap"><table aria-label="Skills 列表">
+          <thead><tr><th scope="col">名称</th><th scope="col">版本</th><th scope="col">状态</th><th scope="col">更新</th></tr></thead>
+          <tbody id="skill-list"></tbody>
+        </table></div>
+      </section>
+      <section id="skill-detail" hidden>
+      <div class="form-actions"><button type="button" class="btn ghost" id="skill-back">返回 Skills 列表</button></div>
+      <section class="card section">
+        <h2 id="skill-heading"></h2>
         <form id="skill-edit">
-          <label class="field">已保存的 Skill<select id="skill-choice"><option value="">新建 Skill</option></select></label>
           <label class="field">标识<input name="ref" pattern="custom-[a-z][a-z0-9-]{0,63}" maxlength="71" placeholder="custom-document-check" required></label>
           <label class="field">名称<input name="title" maxlength="160" required></label>
           <label class="field">说明<textarea name="content" rows="14" maxlength="131072" required></textarea></label>
-          <label class="field"><span><input name="enabled" type="checkbox" checked> 启用</span></label>
-          <div class="form-actions"><button class="btn primary">保存新版</button><button type="button" class="btn ghost" id="skill-reload">刷新</button></div>
+          <label class="field" id="skill-enabled-field"><span><input name="enabled" type="checkbox" checked> 启用</span></label>
+          <div class="form-actions" id="skill-edit-actions"><button class="btn primary" type="submit">保存新版</button><button class="btn ghost" type="button" id="skill-manager-review">Ask the manager to improve this Skill</button></div>
+          <div id="skill-builtin-actions" hidden><button type="button" class="btn ghost" id="skill-copy">Copy as a custom Skill</button></div>
+          <section id="skill-manager-result" hidden class="section">
+            <h3>Manager advice</h3><pre id="skill-manager-advice" class="mission-fulltext" data-i18n-skip></pre>
+            <h3>Proposed Skill draft</h3><pre id="skill-manager-draft" class="task-report" data-i18n-skip></pre>
+            <button type="button" class="btn ghost" id="skill-manager-apply">Use this draft</button>
+          </section>
         </form>
+      </section>
       </section>
       <section class="card section" id="skill-history" hidden><h2>版本历史</h2>
         <label class="field">选择版本<select id="skill-versions"></select></label>

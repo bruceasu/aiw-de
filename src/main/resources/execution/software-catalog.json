@@ -188,6 +188,87 @@
       "ref": "delegation-planning",
       "repositoryRef": null,
       "version": "delegation-planning-v1"
+    },
+    {
+      "content": "---\nname: skill-creator\ndescription: Create a new reusable Agent Skill from a defined task and examples. Use when asked to draft a Skill or decide which files its package needs.\n---\n\n# Skill Creator\n\nAdapted for AIW from the OpenAI Codex skill-creator Skill. The bundled license\nis in LICENSE.txt.\n\n## Define the job\n\n1. Identify the outcome, target runtime, typical requests, needed inputs, and\n   a result the user can check. Ask about an unknown only when it changes the\n   Skill's behavior, compatibility, or authority.\n2. Choose a short lowercase name with hyphens. Write a description that says\n   what the Skill does and when to use it. Add a boundary when a nearby request\n   could otherwise trigger it by mistake.\n3. Write a focused SKILL.md with name and description in YAML front matter.\n   Explain the decisions, steps, inputs, and completion checks that matter.\n   Keep optional detail out of the main path.\n\n## Build the smallest useful package\n\n- Keep all guidance in SKILL.md when it fits. Add a reference only when a\n  separate document helps a specific branch of the work. Link that document\n  and say when to read it.\n- Add a script only when a repeatable operation needs it and the target runtime\n  has a permitted way to run it. State its inputs, expected output, and failure\n  behavior. Supply assets only when they are used in the result.\n- Platform Skills saved through the catalogue editor contain a single\n  SKILL.md. Keep such drafts self-contained. Confirm package support before\n  proposing separate files for another delivery path.\n- A Skill describes work. It does not grant file access, tools, permissions,\n  installation, or publication rights.\n\n## Check and deliver\n\nCheck the front matter, links, required inputs, output, and stopping\nconditions. Choose a representative request that should use the Skill and\none nearby request that should not. If authorized, try them and record the\nobservations. Report structural checks separately from runtime results.\n\nReturn the draft and any necessary file contents in the assigned output\nformat. Write to a workspace only when the task grants that access.\n",
+      "digest": "e39fd1324b41184daf17f6a478e6455841554de2dd27ddb57849246e1b7e6680",
+      "kind": "skill",
+      "ownerId": null,
+      "ref": "skill-creator",
+      "repositoryRef": null,
+      "version": "skill-creator-v1"
+    },
+    {
+      "content": "---\nname: writing-great-skills\ndescription: Review, improve, or adapt an Agent Skill for clear triggers, useful instructions, runtime compatibility, and testable results.\n---\n\n# Writing Great Skills\n\nAdapted from the AIW repository's writing-great-skills guide.\n\n## Choose the mode\n\n- **Review:** Report concrete findings from the supplied Skill and give\n  specific changes. Keep the supplied Skill unchanged unless asked to edit it.\n- **Improve:** Fix the demonstrated problem and preserve unrelated behavior.\n- **Adapt:** Preserve the task and result while changing platform-specific\n  parts. Call out any required capability the target platform lacks.\n\n## Make the instructions useful\n\n1. Read the supplied Skill and relevant references. Identify the trigger,\n   inputs, output, authority limits, and completion conditions. Use examples\n   of real requests to spot ambiguous boundaries.\n2. Keep instructions that change decisions, carry useful context, or protect\n   a real constraint. Match the level of detail to the risk. Replace vague\n   advice with concrete actions and keep significant exceptions.\n3. Keep routing and shared constraints in the entry file. Move substantial\n   conditional material to a reference when the delivery format supports it.\n   Say when to read each reference. Keep a catalogue-only Skill self-contained.\n4. Preserve required metadata, valid references, and real permissions. Mark\n   unresolved facts and unsupported features instead of guessing.\n\n## Report what was checked\n\nFor each finding, identify the relevant passage, its effect on work, and a\nspecific change. For an edit, include the revised content. Check scope,\nmetadata, references, permissions, and completion evidence.\n\nWhen authorized, compare the revised Skill on a normal request and a nearby\nrequest where the Skill should not trigger. Record actual observations and\nchecks still pending. Static review can establish structure and consistency.\nClaims about execution quality or trigger accuracy need runtime evidence.\n",
+      "digest": "8e7424f616c5c840f5ab78e02201a0c18b56086df751e2fa41df883525e3002a",
+      "kind": "skill",
+      "ownerId": null,
+      "ref": "writing-great-skills",
+      "repositoryRef": null,
+      "version": "writing-great-skills-v1"
+    },
+    {
+      "content": "---\nname: openspec-explore\ndescription: Clarify a proposed change using the project's current specifications and implementation. Use before drafting or approving a change.\n---\n\n# Openspec Explore\n\nRead the closest stable specs in openspec/specs and inspect the relevant implementation.\n\nDescribe current behavior, intended behavior, affected callers, and decisions still open.\n\nTrace each material claim to a spec or code location.\n\nUse examples to expose uncertainty.\n\nReturn options and questions.\n\nKeep exploration read-only.\n\nMethod adapted for AIW from [upstream](https://github.com/Fission-AI/OpenSpec/blob/main/docs-lab/reference/skills.md).\n",
+      "digest": "b348f53e93ebda52fea33ed64f183f7ebff21f65fa49d437ba9352a3772fe33b",
+      "kind": "skill",
+      "ownerId": null,
+      "ref": "openspec-explore",
+      "repositoryRef": null,
+      "version": "openspec-explore-v1"
+    },
+    {
+      "content": "---\nname: openspec-change\ndescription: Prepare or maintain OpenSpec change artifacts when the project requests a proposed, approved, or completed specification change.\n---\n\n# Openspec Change\n\nRead the existing change and stable specs.\n\nWhen explicitly asked to propose, record the reason, scope, observable requirements, scenarios, engineering decisions and tasks using the project format.\n\nDuring implementation trace each task to its requirements and preserve unrelated behavior.\n\nBefore syncing or archiving, check the implementation and recorded verification against the delta and obtain the existing release or archive authorization.\n\nKeep the numbered FD as the source of truth for AIW engineering status.\n\nMethod adapted for AIW from [upstream](https://github.com/Fission-AI/OpenSpec/blob/main/docs/workflows.md).\n",
+      "digest": "a2773a973d2c307381139c43afcac73cdbdf14064e1cf3dbb0b89643be1a17ba",
+      "kind": "skill",
+      "ownerId": null,
+      "ref": "openspec-change",
+      "repositoryRef": null,
+      "version": "openspec-change-v1"
+    },
+    {
+      "content": "---\nname: systematic-debugging\ndescription: Investigate an unexpected failure by reproducing it and tracing its cause before changing code.\n---\n\n# Systematic Debugging\n\nCapture the observed behavior, expected behavior, environment and smallest known failing input.\n\nTrace the failing value or state backwards across boundaries.\n\nCompare a working path with the failing one, then choose an observation that would disprove the leading hypothesis.\n\nAfter the cause is supported, make a focused fix and verify the original failure and nearby supported cases within the task budget.\n\nReport missing evidence and untested paths.\n\nMethod adapted for AIW from [upstream](https://github.com/obra/superpowers/tree/main/skills/systematic-debugging).\n",
+      "digest": "f6e96ac96ba200507b29d5374d65c5c030caae5f5f5cf7cc801f9f64d31fa5a0",
+      "kind": "skill",
+      "ownerId": null,
+      "ref": "systematic-debugging",
+      "repositoryRef": null,
+      "version": "systematic-debugging-v1"
+    },
+    {
+      "content": "---\nname: verification-before-completion\ndescription: Check the evidence behind a claim that work is complete, fixed, or ready to hand off.\n---\n\n# Verification Before Completion\n\nList the claims required for this handoff.\n\nFor each one identify a current, relevant observation and its scope.\n\nUse the authorized check on the current change when possible.\n\nRead the complete outcome, including exit status and skipped cases.\n\nRecord what the check established and what remains unknown.\n\nSource inspection, compilation, behavior tests and deployment are separate observations.\n\nMethod adapted for AIW from [upstream](https://github.com/obra/superpowers/tree/main/skills/verification-before-completion).\n",
+      "digest": "871ea359bd776cb13ebef8cc6c26e310ddf1a96178d828a79a1bb9f7c63e7a67",
+      "kind": "skill",
+      "ownerId": null,
+      "ref": "verification-before-completion",
+      "repositoryRef": null,
+      "version": "verification-before-completion-v1"
+    },
+    {
+      "content": "---\nname: product-office-hours\ndescription: Clarify a proposed product change by examining the user, problem, alternatives and smallest useful outcome.\n---\n\n# Product Office Hours\n\nAsk for a concrete user, their current workaround, the trigger and the consequence of doing nothing.\n\nSeparate observed demand from assumptions.\n\nCompare the smallest useful version with plausible alternatives and agree on a measure of success.\n\nReturn the narrowed scope, open decisions and the next thing to learn.\n\nDo not start implementation during discovery.\n\nMethod adapted for AIW from [upstream](https://github.com/garrytan/gstack).\n",
+      "digest": "0b6ad91cc22d5fbddc8acee5f27145cf9476174a5a7a7ccd12d2991add9db692",
+      "kind": "skill",
+      "ownerId": null,
+      "ref": "product-office-hours",
+      "repositoryRef": null,
+      "version": "product-office-hours-v1"
+    },
+    {
+      "content": "---\nname: scenario-qa\ndescription: Evaluate an application change through realistic user journeys and record reproducible results.\n---\n\n# Scenario Qa\n\nSelect the impacted journeys, roles and data states.\n\nInclude the normal path and realistic failure or recovery paths.\n\nUse a disposable environment and authorized browser or API tools.\n\nRecord inputs, actions, expected and actual results, and evidence for each finding.\n\nIf runtime is unavailable, deliver the scenarios as unexecuted.\n\nChanges to code require the task to include fixing the findings.\n\nMethod adapted for AIW from [upstream](https://github.com/garrytan/gstack).\n",
+      "digest": "dae2cfcae717316a0115b26d904c26a72b843e22161731d30bf738e225f6db10",
+      "kind": "skill",
+      "ownerId": null,
+      "ref": "scenario-qa",
+      "repositoryRef": null,
+      "version": "scenario-qa-v1"
+    },
+    {
+      "content": "---\nname: aiw-project-read\ndescription: Read AIW Issue records or list available AIW Skills using read-only task commands in a configured project workspace.\n---\n\n# Aiw Project Read\n\nUse this Skill for a supplied Issue ID or to inspect the installed AIW tool's available Skill catalogue.\n\nRequest a task-scoped command for aiw issue show ISSUE-00001 --json, substituting the Issue ID, or aiw pkg skill list --json.\n\nRun only the declared command through run_command.\n\nReport the Issue ID, status and approval status, or the matching Skill metadata, from the JSON response.\n\nIf AIW is missing or the project cannot be identified, report the error.\n\nKeep worktree changes, Skill installation and lifecycle transitions outside this read-only task.\n",
+      "digest": "1315414e00d2d05c13261f3c95b0c76dc39c1ef315bbda0573099f5de59d114a",
+      "kind": "skill",
+      "ownerId": null,
+      "ref": "aiw-project-read",
+      "repositoryRef": null,
+      "version": "aiw-project-read-v1"
     }
   ],
   "methods": [
