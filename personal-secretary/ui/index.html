@@ -11,6 +11,7 @@
 <button type="button" id="tab-overview" role="tab" aria-controls="view-overview" aria-selected="true" data-view-target="overview"><span class="nav-icon" aria-hidden="true">▦</span>工作总览</button>
 <button type="button" id="tab-work" role="tab" aria-controls="view-work" aria-selected="false" tabindex="-1" data-view-target="work"><span class="nav-icon" aria-hidden="true">□</span>工作与安排</button>
 <button type="button" id="tab-chat" role="tab" aria-controls="view-chat" aria-selected="false" tabindex="-1" data-view-target="chat"><span class="nav-icon" aria-hidden="true">◌</span>私人对话</button>
+<button type="button" id="tab-bbs" role="tab" aria-controls="view-bbs" aria-selected="false" tabindex="-1" data-view-target="bbs"><span class="nav-icon" aria-hidden="true">▤</span>平台讨论</button>
 <button type="button" id="tab-policies" role="tab" aria-controls="view-policies" aria-selected="false" tabindex="-1" data-advanced hidden data-view-target="policies"><span class="nav-icon" aria-hidden="true">◇</span>代理策略</button>
 <button type="button" id="tab-platform" role="tab" aria-controls="view-platform" aria-selected="false" tabindex="-1" data-advanced hidden data-view-target="platform"><span class="nav-icon" aria-hidden="true">⇄</span>平台协作</button>
 <button type="button" id="tab-records" role="tab" aria-controls="view-records" aria-selected="false" tabindex="-1" data-view-target="records"><span class="nav-icon" aria-hidden="true">≡</span>私人资料</button>
@@ -52,6 +53,23 @@
 <section class="card"><span class="step-label">02 · 核对原文与摘要</span><h2>Send requirements to the wish pool</h2><p class="help">Only your confirmed selection is sent. It becomes a wish draft; no plan starts.</p><p id="goal-wish-link"></p><form class="form-grid" data-route="goal-submit"><label class="field">原请求 ID<input name="requestId" required readonly></label><label class="field full">确认原文<textarea name="projectionJson" required readonly></textarea></label><label class="field">确认摘要<input name="digest" required readonly></label><button class="btn primary" type="submit" disabled data-projection-submit>确认原文与摘要，提交目标提案</button></form></section>
 <section class="card"><span class="step-label">03 · 查看原回执</span><h2>查询提案回执</h2><form class="form-grid" data-route="goal-receipt"><label class="field">原请求 ID<input name="requestId" required></label><button class="btn primary" type="submit">仅查询原回执</button></form><p class="help">UNKNOWN 或重启留下的 SENDING 状态只查询原 ID；即使返回 404，也不会自动重发。确认提交后保存到许愿池，不会启动工作。</p></section>
 </details>
+</section>
+<section id="view-bbs" class="view" role="tabpanel" aria-labelledby="tab-bbs" data-view="bbs" hidden>
+  <section class="card"><h2>委托给秘书的澄清</h2><div id="bbs-assignments" class="record-list"></div></section>
+  <section class="card"><h2>讨论主题</h2>
+    <form id="bbs-search" class="form-grid"><label class="field">搜索讨论<input name="q" type="search" maxlength="160"></label><button class="btn ghost" type="submit">搜索或刷新</button></form>
+    <div id="bbs-topics" class="record-list"></div>
+    <button type="button" id="bbs-previous" class="btn ghost" disabled>上一页</button><button type="button" id="bbs-next" class="btn ghost" disabled>下一页</button>
+  </section>
+  <p id="bbs-status" class="form-feedback" role="status"></p>
+  <section id="bbs-detail" class="card" hidden><h2 id="bbs-title"></h2><div id="bbs-posts" class="record-list"></div>
+    <form id="bbs-answer" class="form-grid" hidden>
+      <label class="field full">只提供与此问题有关的事实<textarea name="notes" maxlength="4000" rows="3"></textarea></label>
+      <button id="bbs-draft" type="button" class="btn ghost">请秘书起草答复</button>
+      <label class="field full">澄清答复<textarea name="body" maxlength="4000" rows="5" required></textarea></label>
+      <button type="submit" class="btn primary">回传澄清答复</button>
+    </form>
+  </section>
 </section>
 <section id="view-records" class="view" role="tabpanel" aria-labelledby="tab-records" data-view="records" hidden>
 <div class="panel-heading"><h2>私人资料</h2><p>保存草稿、可复用模板和待办；这些内容保留在当前个人服务中。</p></div>

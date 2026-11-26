@@ -1,6 +1,38 @@
 (() => {
   const shell = document.querySelector('.desktop-shell');
   if (!shell) return;
+  const clock = document.querySelector('[data-sidebar-clock]');
+  if (clock) {
+    const date = document.querySelector('[data-sidebar-date]');
+    const container = clock.closest('[data-clock-container]');
+    let clockPreferences = window.aiwPreferences?.get() || { showTime: true, showDate: true };
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const pad = value => String(value).padStart(2, '0');
+    const updateClock = () => {
+      const now = new Date();
+      clock.hidden = !clockPreferences.showTime;
+      if (date) date.hidden = !clockPreferences.showDate;
+      if (container) container.hidden = !clockPreferences.showTime && !clockPreferences.showDate;
+      clock.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      clock.dateTime = now.toISOString();
+      clock.title = zone;
+      if (date) {
+        date.textContent = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} · ${zone}`;
+        date.title = date.textContent;
+      }
+    };
+    let clockTimer = null;
+    const stopClock = () => { clearInterval(clockTimer); clockTimer = null; };
+    const startClock = () => {
+      updateClock();
+      if (!document.hidden && clockTimer === null && (clockPreferences.showTime || clockPreferences.showDate)) clockTimer = setInterval(updateClock, clockPreferences.showTime ? 1000 : 60000);
+    };
+    document.addEventListener('visibilitychange', () => { if (document.hidden) stopClock(); else startClock(); });
+    window.addEventListener('aiw:preferences-changed', event => { clockPreferences = event.detail; stopClock(); startClock(); });
+    window.addEventListener('pagehide', stopClock);
+    window.addEventListener('pageshow', startClock);
+    startClock();
+  }
   const strip = shell.querySelector('[data-desktop-tabs]');
   const menu = shell.querySelector('[data-desktop-menu]');
   const routes = new Map([...menu.querySelectorAll('.desktop-menu-items > a')].map(link => [link.pathname, link]));
@@ -36,8 +68,8 @@
           break;
         }
       }
-    } else if (path === '/ui/skills' || path === '/ui/goals') {
-      const name = path === '/ui/skills' ? 'skill' : 'goal';
+    } else if (path === '/ui/skills' || path === '/ui/goals' || path === '/ui/discussions') {
+      const name = path === '/ui/skills' ? 'skill' : path === '/ui/goals' ? 'goal' : 'wish';
       const value = url.searchParams.get(name);
       if (identifier.test(value || '')) {
         search.set(name, value);

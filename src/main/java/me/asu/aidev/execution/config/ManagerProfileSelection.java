@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -20,11 +21,13 @@ import me.asu.aidev.authority.AuthorityRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/** Makes a bounded model-only recommendation; applying it is an independent task submission. */
+/** Runs bounded, model-only manager requests. */
 @Service
 public class ManagerProfileSelection {
     public record Request(String task,List<String> candidates) {}
     public record Result(String requestId,String profileId,long version,String reason) {}
+    public record SkillDraft(String title,String content,String language) {}
+    public record Assessment(String requestId,String kind,String advice,String content) {}
     private record Output(String requestId,String profileId,String reason) {}
     private static class InferenceFailure extends IllegalStateException {
         InferenceFailure(String reason) {super(reason);}
@@ -65,21 +68,17 @@ public class ManagerProfileSelection {
             repo.audit(target,null,id,actor,"MANAGER_SELECTION_RECORDED",candidate.id());
             return new Result(id,candidate.id(),candidate.version(),"Only one enabled candidate matches.");
         }
-        var manager=profiles.items().stream().filter(p->p.enabled()&&p.id().equals(profiles.managerDefaultId())).findFirst()
-                .orElseThrow(()->new IllegalStateException("Configure an enabled manager profile."));
+        var manager=managerProfile(profiles);
         var settings=manager.settings();
-        if(settings.credentialRef()!=null)
-            throw new IllegalStateException("Select a manager profile that uses local Codex or a local API key.");
         byte[] request=repo.encode(Map.of("requestId",id,"task",input.task(),"candidates",candidates.stream().map(p->Map.of(
                 "id",p.id(),"runtime",p.settings().runtime(),"model",p.settings().model(),"effort",p.settings().effort(),
                 "provider",p.settings().apiProvider(),"protocol",p.settings().apiProtocol())).toList(),
-                "settings",Map.of("provider",settings.runtime(),"model",settings.model(),"effort",settings.effort(),
-                        "executable",settings.executable(),"apiProvider",settings.apiProvider(),"apiProtocol",settings.apiProtocol()))).getBytes(StandardCharsets.UTF_8);
+                "settings",modelSettings(settings))).getBytes(StandardCharsets.UTF_8);
         if(request.length>32768)throw new IllegalArgumentException("Manager input is too large.");
         if(!running.tryAcquire())throw new IllegalStateException("The manager is already evaluating another request.");
         try {
             repo.audit(target,null,id,actor,"MANAGER_SELECTION_REQUESTED",manager.id());
-            Output output=invoke(settings.python(),request);
+            Output output=invoke(settings.python(),request,Output.class);
             if(!id.equals(output.requestId())||output.reason()==null||output.reason().isBlank()||output.reason().length()>512)
                 throw new IllegalStateException("Invalid manager response.");
             var selected=candidates.stream().filter(p->p.id().equals(output.profileId())).findFirst()
@@ -97,7 +96,63 @@ public class ManagerProfileSelection {
         }
     }
 
-    private Output invoke(String python,byte[] request) {
+    public Assessment assessWish(String actor,String wishId,String title,String body,String missing,String answers,String language) {
+        if(body==null||body.isBlank())throw new IllegalArgumentException("Describe your wish before asking the manager.");
+        return assess(actor,"GOAL:"+wishId,"wish",language,Map.of("title",title,"body",body,"openQuestions",missing,"clarificationAnswers",answers));
+    }
+
+    public Assessment reviewSkill(String actor,SkillDraft draft) {
+        if(draft==null||draft.title()==null||draft.title().isBlank()||draft.title().length()>160
+                ||draft.content()==null||draft.content().isBlank())
+            throw new IllegalArgumentException("Enter the Skill name and draft before asking the manager.");
+        if(draft.content().length()>32768)
+            throw new IllegalArgumentException("Manager input is too large. Shorten the draft and try again.");
+        return assess(actor,"PLATFORM_SKILLS","skill",draft.language(),Map.of("title",draft.title(),"content",draft.content()));
+    }
+
+    private Assessment assess(String actor,String target,String mode,String language,Map<String,String> draft) {
+        var manager=managerProfile(factory.runtimeProfiles());
+        var settings=manager.settings();
+        String id=UUID.randomUUID().toString();
+        byte[] request=repo.encode(Map.of("requestId",id,"mode",mode,"draft",draft,
+                "language","zh".equals(language)?"Chinese":"English","settings",modelSettings(settings)))
+                .getBytes(StandardCharsets.UTF_8);
+        if(request.length>32768)throw new IllegalArgumentException("Manager input is too large. Shorten the draft and try again.");
+        if(!running.tryAcquire())throw new IllegalStateException("The manager is already evaluating another request.");
+        try {
+            repo.audit(target,null,id,actor,"MANAGER_ADVICE_REQUESTED",mode+" "+manager.id());
+            var output=invoke(settings.python(),request,Assessment.class);
+            boolean validDraft=mode.equals("skill")
+                    ? "SKILL".equals(output.kind())&&output.content()!=null&&!output.content().isBlank()
+                    : output.content()==null&&output.kind()!=null
+                        &&Set.of("WORKFLOW","SKILL","TASK","MIXED","NEEDS_CLARIFICATION").contains(output.kind());
+            if(!id.equals(output.requestId())||output.advice()==null||output.advice().isBlank()||output.advice().length()>4000
+                    ||!validDraft)
+                throw new IllegalStateException("Invalid manager response.");
+            repo.audit(target,null,id,actor,"MANAGER_ADVICE_RECORDED",mode+" "+output.kind());
+            return output;
+        } catch(RuntimeException failure) {
+            repo.audit(target,null,id,actor,"MANAGER_ADVICE_FAILED",failure instanceof InferenceFailure?failure.getMessage():"Invalid or unavailable manager response.");
+            throw failure;
+        } finally {
+            running.release();
+        }
+    }
+
+    private AgentFactorySettings.RuntimeProfile managerProfile(AgentFactorySettings.RuntimeProfiles profiles) {
+        var manager=profiles.items().stream().filter(p->p.enabled()&&p.id().equals(profiles.managerDefaultId())).findFirst()
+                .orElseThrow(()->new IllegalStateException("Configure an enabled manager profile."));
+        if(manager.settings().credentialRef()!=null)
+            throw new IllegalStateException("Select a manager profile that uses local Codex or a local API key.");
+        return manager;
+    }
+
+    private Map<String,String> modelSettings(AgentFactorySettings.Settings settings) {
+        return Map.of("provider",settings.runtime(),"model",settings.model(),"effort",settings.effort(),
+                "executable",settings.executable(),"apiProvider",settings.apiProvider(),"apiProtocol",settings.apiProtocol());
+    }
+
+    private <T> T invoke(String python,byte[] request,Class<T> responseType) {
         stopModelProcesses();
         Path directory=null;
         try {
@@ -114,7 +169,7 @@ public class ManagerProfileSelection {
             remainingProcesses.add(process.toHandle());
             var read=new FutureTask<>(()->{
                 try(var stdin=process.getOutputStream()){stdin.write(request);}
-                return process.getInputStream().readNBytes(16385);
+                return process.getInputStream().readNBytes(32769);
             });
             Thread.ofVirtual().start(read);
             long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(125);
@@ -130,9 +185,9 @@ public class ManagerProfileSelection {
                     if(System.nanoTime()>=deadline)throw waiting;
                 }
             }
-            if(result.length>16384||!process.waitFor(2,TimeUnit.SECONDS)||process.exitValue()!=0)
+            if(result.length>32768||!process.waitFor(2,TimeUnit.SECONDS)||process.exitValue()!=0)
                 throw new IllegalStateException("The manager did not return a usable recommendation.");
-            var output=repo.decode(new String(result,StandardCharsets.UTF_8),Output.class);
+            var output=repo.decode(new String(result,StandardCharsets.UTF_8),responseType);
             if(output==null)throw new IllegalStateException("The manager returned an empty recommendation.");
             return output;
         } catch(TimeoutException failure) {

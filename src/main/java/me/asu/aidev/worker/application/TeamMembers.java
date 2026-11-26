@@ -213,10 +213,14 @@ public class TeamMembers implements TaskClaimPolicy {
               JOIN workflow_execution r ON r.id=a.run_id JOIN worker_team_member m ON m.id=a.member_id
              WHERE m.actor=? AND r.state NOT IN ('COMPLETED','STOPPED') ORDER BY r.updated_ms DESC,r.id LIMIT 200
             """,actor);
-        return Map.of("members",members,"work",work,"runs",runs,"limit",100,"workLimit",200,"skills",skills.available(),
+        var profileNames=new LinkedHashMap<String,String>();
+        if(factory!=null)factory.getObject().runtimeProfiles().items().stream().filter(p->p.enabled())
+                .forEach(p->profileNames.put(p.id(),p.label()));
+        var result=new LinkedHashMap<>(Map.of("members",members,"work",work,"runs",runs,"limit",100,"workLimit",200,"skills",skills.available(),
                 "workflowSkills",skills.available(actor),"modelProfiles",models==null?List.of():models.approved(TaskType.EXTERNAL_WORK),
-                "runtimeProfiles",factory==null?List.of():factory.getObject().runtimeProfiles().items().stream()
-                        .filter(p->p.enabled()).map(p->p.id()).toList(),"observedAt",System.currentTimeMillis());
+                "runtimeProfiles",List.copyOf(profileNames.keySet()),"observedAt",System.currentTimeMillis()));
+        result.put("runtimeProfileNames",profileNames);
+        return result;
     }
     @Transactional public Profile save(String actor,Save input) {
         if(input==null||input.revision()<0)throw new IllegalArgumentException("Member input and revision required");id(input.id());boundary.lock();

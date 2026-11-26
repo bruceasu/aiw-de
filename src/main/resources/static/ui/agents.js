@@ -112,7 +112,7 @@ document.querySelectorAll('[data-agent-detail]').forEach(details=>{
     if(!window.aiwDesktopWindow)return;
     event.preventDefault();
     const title=details.closest('[data-agent-id]').dataset.agentId;
-    window.aiwDesktopWindow.open(content,{title,icon:'agents',container:details.parentElement});
+    window.aiwDesktopWindow.open(content,{title,recordTitle:true,icon:'agents',container:details.parentElement});
   });
 });
 document.querySelectorAll("[data-control-agent]").forEach(form => form.addEventListener("submit", async event => {

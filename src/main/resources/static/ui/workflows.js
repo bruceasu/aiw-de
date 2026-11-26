@@ -176,11 +176,13 @@
     'INPUT_RECEIVED':['收到补充'], 'INPUT_CONTEXT':['加入上下文'],
     'INPUT_RESERVED':['准备使用补充'], 'INPUT_APPLIED':['补充已生效'], 'INPUT_UNKNOWN':['补充生效结果未确认'],
     'This version handles read-only text tasks and decisions. It does not modify files, issue refunds or send messages.':['当前版本处理只读文本任务与判断，不修改文件、不实际退款或发送消息。'],
-    'Library':['工作区'], 'Simple task':['简单任务'], 'New workflow':['新建工作流'],
+    'Library':['工作区'], 'Tasks':['任务'], 'New workflow':['新建工作流'],
     'Task history':['任务历史'], 'Search tasks':['检索任务'], 'View':['视图'], 'Status':['状态'],
     'New task':['新建任务'], 'Back to task list':['返回任务列表'], 'Back to workflow list':['返回工作流列表'], 'Working location':['工作目录'],
     'Updated':['更新时间'], 'Actions':['操作'], 'Archived':['已归档'],
-    'Only finished simple tasks with no active work can be managed from task history':['任务仍有未结束的工作或租约，暂时无法归档或删除。'],
+    'Only finished tasks with no active work can be managed from task history':['任务仍有未结束的工作或租约，暂时无法归档或删除。'],
+    'A task must have exactly one execution node and no exits':['任务须包含一个执行节点，且不能设置出口。'],
+    'Required command checks are available for tasks created from the Tasks page':['从「任务」页面新建的任务支持必需命令检查。'],
     'Add a step':['添加步骤'], 'Workflow diagram':['业务流程图'], 'Step activity':['步骤记录'],
     'Select a step to edit it. Drag an output dot to connect steps.':['点击步骤编辑属性，拖动输出端连接步骤。'],
     'Agent task':['Agent 任务'], 'Field rule':['字段规则'], 'Field name':['字段名'], 'Expected value':['预期值'],
@@ -196,7 +198,7 @@
     'Task archived.':['任务已归档。'], 'Deletion scheduled.':['已安排删除。'], 'Deletion cancelled.':['已撤销删除。'],
     'Delete after':['计划删除时间'],
     'Delete task?':['删除任务？'],
-    'This task will move to Pending deletion. You can cancel within 30 days. After that it disappears from Simple tasks. Audit, usage and delivery records are retained.':['任务将移入「待删除」。30 天内可以撤销，到期后会从「简单任务」移除，后台保留审计、模型用量和交付记录。'],
+    'This task will move to Pending deletion. You can cancel within 30 days. After that it disappears from the task list. Audit, usage and delivery records are retained.':['任务将移入「待删除」。30 天内可以撤销，到期后会从任务列表移除，后台保留审计、模型用量和交付记录。'],
     'Creating task…':['正在创建任务…'],
     'Task created.':['任务已创建。'],
     'Task created, but its details could not be loaded.':['任务已创建，但暂时无法加载详情。'],
@@ -229,7 +231,7 @@
     'Read the verified upstream report from the latest preparation step. Check the exact JSON keys and every value against the input. If the report or required data is missing, choose revise. State the missing or incorrect field in the reason. Use accept only when all checks pass.':['读取最近一次生成步骤的已校验交接报告。逐字段核对 JSON 键和值是否与原输入相符。报告或必要资料缺失时选 revise，说明缺失或错误的字段。所有检查通过才选 accept。'],
     'Read the checks in the execution timeline. Supply a correction if you want to generate and verify a fresh result, or close this run without acceptance.':['查看执行时间线中的验收说明。可补充修正要求后重新生成和验证，也可结束本次工作。'],
     'Executions':['执行记录'], 'Refresh':['刷新'], 'Workflow definition':['工作流定义'],
-    'Workflows':['工作流'], 'Describe a simple task or run a reusable workflow.':['直接处理简单任务，或运行可复用的工作流。'],
+    'Workflows':['工作流'], 'Create a task or run a reusable workflow.':['创建任务，或运行可复用的工作流。'],
     'Text tasks use the same executor as workflow nodes. No Git repository is required.':['文本任务与工作流节点共用执行能力，无须 Git 仓库。'],
     'What should be done?':['需要做什么？'], 'Working location (optional)':['工作位置（可选）'],
     'Run task':['执行任务'], 'Name':['名称'], 'Goal and completion conditions':['目标与完成条件'],
@@ -283,7 +285,7 @@
   };
   const t = value => {
     const locale = window.aiwI18n?.locale || document.documentElement.lang;
-    return words[value]?.[locale?.startsWith('zh') ? 0 : 1] || value;
+    return words[value]?.[locale?.startsWith('zh') ? 0 : 1] || window.aiwI18n?.t(value) || value;
   };
   const status = message => {
     const modalStatus = $('.desktop-window[open] [data-wf-window-status]');
@@ -322,6 +324,7 @@
     const fileTask=taskForm.elements.workspaceTools.checked;
     taskForm.elements.autonomousShell.disabled=!fileTask;
     taskForm.elements.commands.disabled=!fileTask;
+    taskForm.querySelector('[data-wf-aiw-commands]').disabled=!fileTask;
     $('[data-wf-schedule-task]').hidden=fileTask;
     const container=$('[data-wf-check-options]');
     const selected=new Set([...container.querySelectorAll('input:checked')].map(input=>input.value));
@@ -340,6 +343,26 @@
     }
   }
   taskForm.elements.commands.addEventListener('input',renderTaskFileOptions);
+  function addAiwCommand(id,argv) {
+    const profiles=commands(taskForm.elements.commands).filter(profile=>profile?.id!==id);
+    profiles.push({id,argv,cwd:'.',permissionProfile:'aiw-project-read',timeoutMs:15000,
+      outputBytes:65536,memoryBytes:268435456,processLimit:8});
+    taskForm.elements.commands.value=JSON.stringify(profiles,null,2);
+    if(teamSkills.includes('aiw-project-read')&&!taskSkills.includes('aiw-project-read')){
+      taskSkills.push('aiw-project-read');
+      renderSkillPicker($('[data-wf-skills]'),taskSkills,values=>taskSkills=values);
+    }
+    renderTaskFileOptions();
+  }
+  $('[data-wf-aiw-skills]').onclick=()=>act(async()=>{
+    addAiwCommand('aiw-skill-list',['aiw','pkg','skill','list','--json']);
+  });
+  $('[data-wf-aiw-issue]').onclick=()=>act(async()=>{
+    const field=taskForm.elements.aiwIssueId;
+    const issue=field.value.trim().toUpperCase();
+    if(!/^ISSUE-[0-9]{5,15}$/.test(issue)){field.focus();throw new Error(t('Enter an AIW Issue ID such as ISSUE-00001.'));}
+    addAiwCommand('aiw-issue-show',['aiw','issue','show',issue,'--json']);
+  });
   taskForm.elements.workspaceTools.addEventListener('change',renderTaskFileOptions);
   window.addEventListener('aiw:locale-changed',renderTaskFileOptions);
   renderTaskFileOptions();
@@ -359,7 +382,8 @@
       message.dataset.wfWindowStatus='';message.setAttribute('role','status');
       section.prepend(message);
     }
-    window.aiwDesktopWindow.open(section,{title,icon,onClose,focus,container:$('.main>.content'),canClose:()=>!busy,canMinimize:()=>!busy});
+    const recordTitle=section.matches('[data-wf-run]')||section.matches('[data-wf-editor]')&&Boolean(editing?.id);
+    window.aiwDesktopWindow.open(section,{title,recordTitle,icon,onClose,focus,container:$('.main>.content'),canClose:()=>!busy,canMinimize:()=>!busy});
   }
   function showNewTask() {
     const section=$('[data-wf-task]');
@@ -399,7 +423,7 @@
   }
   function button(label,callback) {const b=element('button',t(label),'btn ghost');b.type='button';b.onclick=callback;return b;}
   function translate() {
-    document.title=t(pageMode==='tasks'?'Simple task':'Workflows');
+    document.title=t(pageMode==='tasks'?'Tasks':'Workflows');
     $$('[data-wf-label]').forEach(e=>e.textContent=t(e.dataset.wfLabel));
     $$('[data-wf-new], [data-wf-sample], [data-wf-refresh], [data-wf-save], [data-wf-start], [data-wf-control]').forEach(e=>{
       e.dataset.wfOriginal ||= e.textContent;e.textContent=t(e.dataset.wfOriginal);
@@ -635,7 +659,7 @@
           if(node.runtimeProfileCandidates){
             profile.setCustomValidity(node.runtimeProfileCandidates.length?'':t('Select at least one candidate runtime profile.'));
             const picker=element('div',undefined,'wf-skill-picker');
-            const available=new Map(factoryProfiles.map(item=>[item.id,item.id+' · '+item.model]));
+            const available=new Map(factoryProfiles.map(item=>[item.id,(item.displayName||item.id)+' · '+item.model]));
             for(const id of node.runtimeProfileCandidates)if(!available.has(id))available.set(id,id);
             for(const [id,label] of available){
               const box=element('input');box.type='checkbox';box.checked=node.runtimeProfileCandidates.includes(id);
@@ -771,7 +795,7 @@
     cell.colSpan=columns;row.append(cell);host.append(row);
   }
   function updatedCell(value) {
-    const cell=element('td'),date=new Date(value),time=element('time',date.toLocaleString());
+    const cell=element('td'),date=new Date(value),time=element('time',date.toLocaleString(window.aiwI18n?.locale||undefined));
     time.dateTime=date.toISOString();cell.append(time);return cell;
   }
   async function refreshTaskHistory() {
@@ -833,7 +857,7 @@
       if(busy)return;
       busy=true;
       try {
-        if(!await window.aiwConfirm(t('This task will move to Pending deletion. You can cancel within 30 days. After that it disappears from Simple tasks. Audit, usage and delivery records are retained.'),{
+        if(!await window.aiwConfirm(t('This task will move to Pending deletion. You can cancel within 30 days. After that it disappears from the task list. Audit, usage and delivery records are retained.'),{
           title:t('Delete task?'),target,acceptLabel:t('Delete'),danger:true
         }))return;
       } finally {busy=false;}
@@ -941,7 +965,7 @@
   }
   function profileOptions(select,current=''){
     select.replaceChildren(new Option(t('Factory default'),''));
-    for(const profile of factoryProfiles)select.add(new Option(profile.id+' · '+profile.model,profile.id));
+    for(const profile of factoryProfiles)select.add(new Option((profile.displayName||profile.id)+' · '+profile.model,profile.id));
     if(current&&!factoryProfiles.some(p=>p.id===current))select.add(new Option(current,current));
     select.value=current;
   }

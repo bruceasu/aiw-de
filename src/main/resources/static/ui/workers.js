@@ -47,7 +47,7 @@
     'STOPPING':['等待 Worker 停止确认'],'SETTLED':['本次执行已结束'],'BROKEN':['通道异常'],
     'CLAIMED':['已领取'],'WAITING_INPUT':['等待输入'],'DRAINING':['不再领取新任务'],'ACTIVE':['可领取任务'],'OFFLINE':['已标记离线'],
   };
-  const t=x=>(window.aiwI18n?.locale==='zh' && words[x]?.[0])||x;
+  const t=x=>(window.aiwI18n?.locale==='zh' && words[x]?.[0])||window.aiwI18n?.t(x)||x;
   const text=(tag,value,cls)=>{const n=document.createElement(tag);if(value!=null)n.textContent=value;if(cls)n.className=cls;return n;};
   const date=x=>x?new Date(x).toLocaleString(window.aiwI18n?.locale||undefined):t('Not recorded');
   const number=x=>Number.isSafeInteger(x)?x.toLocaleString(window.aiwI18n?.locale||undefined):t('Not recorded');

@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import me.asu.aidev.ai.application.AiProfileCatalog;
+import me.asu.aidev.authority.AuthorityGrantService;
 import me.asu.aidev.authority.AuthorityRepository;
 import me.asu.aidev.authority.AuthorityBoundary;
 import me.asu.aidev.work.domain.*;
@@ -21,6 +23,52 @@ import static org.mockito.Mockito.*;
 
 class FactoryTaskProfilesTest {
     @TempDir Path temp;
+
+    @Test void renamingAndDeletingProfilesPreservesExistingTaskSnapshots() {
+        var jdbc=new JdbcTemplate(new DriverManagerDataSource("jdbc:sqlite:"+temp.resolve("catalog.db")));
+        jdbc.execute("CREATE TABLE authority_audit(id TEXT, target_key TEXT, grant_id TEXT, action_id TEXT, actor TEXT, event TEXT, detail TEXT, created_ms INTEGER)");
+        jdbc.execute("CREATE TABLE worker_team_member(state TEXT, settings_json TEXT)");
+        jdbc.execute("CREATE TABLE workflow_definition(spec_json TEXT)");
+        jdbc.execute("CREATE TABLE workflow_execution(id TEXT, state TEXT, run_json TEXT)");
+        jdbc.execute("CREATE TABLE worker_team_assignment(run_id TEXT, profile_json TEXT)");
+        jdbc.execute("CREATE TABLE workflow_schedule(state TEXT, spec_json TEXT)");
+        jdbc.execute("CREATE TABLE workflow_task_runtime(task_id TEXT PRIMARY KEY, profile_json TEXT)");
+        var repo=new AuthorityRepository(jdbc);
+        var catalogue=mock(AiProfileCatalog.class);
+        when(catalogue.approved(TaskType.EXTERNAL_WORK)).thenReturn(List.of());
+        var factory=new AgentFactorySettings(repo,mock(AuthorityBoundary.class),mock(AuthorityGrantService.class),catalogue);
+        var settings=profile("fast_text",1,"openai","responses","fast-model",null,null).settings();
+        factory.saveProfile(new AgentFactorySettings.ProfileChange("initial","fast_text",settings,true,true,true));
+        var original=factory.runtimeProfiles();
+        var tasks=new FactoryTaskProfiles(factory,repo);
+        var existing=task("already-dispatched");
+        tasks.bind(existing.id().value(),tasks.resolve("fast_text"));
+
+        factory.renameProfile(new AgentFactorySettings.ProfileRename(original.revision(),"fast_text","Quick response"));
+        var renamed=factory.runtimeProfiles();
+        assertThat(renamed.items().getFirst().label()).isEqualTo("Quick response");
+        assertThat(renamed.items().getFirst().version()).isEqualTo(1);
+        assertThat(renamed.defaultId()).isEqualTo("fast_text");
+        assertThat(tasks.read(existing)).isEqualTo(original.items().getFirst());
+        assertThatThrownBy(()->factory.deleteProfile(new AgentFactorySettings.ProfileDelete(original.revision(),"fast_text")))
+                .isInstanceOf(IllegalStateException.class);
+
+        var delete=new AgentFactorySettings.ProfileDelete(renamed.revision(),"fast_text");
+        jdbc.update("INSERT INTO workflow_definition VALUES(?)","{\"nodes\":[{\"runtimeProfileCandidates\":[\"fast_text\"]}]}");
+        assertThatThrownBy(()->factory.deleteProfile(delete))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("saved workflow");
+        jdbc.update("DELETE FROM workflow_definition");
+        jdbc.update("INSERT INTO workflow_execution VALUES(?,?,?)","old","COMPLETED","{\"runtimeProfile\":\"fast_text\"}");
+        factory.deleteProfile(delete);
+        var empty=factory.runtimeProfiles();
+        assertThat(empty.items()).isEmpty();
+        assertThat(empty.defaultId()).isNull();
+        assertThat(empty.managerDefaultId()).isNull();
+        assertThat(tasks.read(existing)).isEqualTo(original.items().getFirst());
+
+        factory.saveProfile(new AgentFactorySettings.ProfileChange(empty.revision(),"fast_text",settings,true,true,true));
+        assertThat(tasks.resolve("fast_text").version()).isEqualTo(2);
+    }
 
     @Test void nodesPinTheirOwnProfilesAndContinuationRetainsOriginalConnection() {
         var jdbc=new JdbcTemplate(new DriverManagerDataSource("jdbc:sqlite:"+temp.resolve("profiles.db")));

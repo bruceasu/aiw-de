@@ -40,7 +40,10 @@
   function open(content, options) {
     const current = windows.get(content);
     if (current) {
-      if (options.title) current.title.textContent = options.title;
+      if (options.title) {
+        current.title.textContent = options.title;
+        current.title.toggleAttribute('data-i18n-skip', Boolean(options.recordTitle));
+      }
       show(current);
       return;
     }
@@ -52,6 +55,7 @@
     title.id = 'desktop-window-' + (++nextId);
     title.tabIndex = -1;
     title.textContent = options.title;
+    title.toggleAttribute('data-i18n-skip', Boolean(options.recordTitle));
     if (options.icon) title.dataset.consoleIcon = options.icon;
     dialog.setAttribute('aria-labelledby', title.id);
     const actions = document.createElement('div');
@@ -63,6 +67,12 @@
     const entry = { dialog, title, options, anchor, trigger: document.activeElement, restore: null, lifecycle: new AbortController() };
     windows.set(content, entry);
     let closing = false;
+    function labelRestore() {
+      if (!entry.restore) return;
+      entry.restore.textContent = title.textContent;
+      entry.restore.setAttribute('aria-label', translate('Restore window') + ' · ' + title.textContent);
+      entry.restore.title = translate('Restore window');
+    }
     const requestClose = async () => {
       if(closing||options.canClose?.()===false)return;
       closing=true;
@@ -74,7 +84,8 @@
       dialog.close();
       entry.restore = button('Restore window', title.textContent, () => show(entry));
       entry.restore.className = 'btn ghost small-btn';
-      entry.restore.setAttribute('aria-label', translate('Restore window') + ' · ' + title.textContent);
+      entry.restore.dataset.i18nSkip = '';
+      labelRestore();
       tray.append(entry.restore);
       tray.hidden = false;
       entry.restore.focus();
@@ -95,6 +106,7 @@
     body.append(content);
     host.append(dialog);
     dialog.addEventListener('cancel', event => { event.preventDefault(); requestClose(); });
+    window.addEventListener('aiw:locale-changed', labelRestore, { signal:entry.lifecycle.signal });
 
     let drag = null;
     function position(x,y) {

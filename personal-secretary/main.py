@@ -318,6 +318,14 @@ def serve(runtime, host, port, public_origin=None, open_browser=True, open_deskt
                                 result = runtime.runs.events(data.get("runId"))
                         except ValueError as error:
                             raise PersonalChatError("SECRETARY_OPERATION_REJECTED", str(error)) from None
+                    elif self.path in {"/api/bbs-list", "/api/bbs-detail", "/api/bbs-draft", "/api/bbs-answer"}:
+                        from discussions import handle
+                        try:
+                            result = handle(runtime, self.path.removeprefix("/api/"), data)
+                        except PersonalChatError:
+                            raise
+                        except ValueError as error:
+                            raise PersonalChatError("BBS_OPERATION_REJECTED", str(error)) from None
                     elif self.path == "/api/settings":
                         try:
                             result = runtime.settings.save(data)

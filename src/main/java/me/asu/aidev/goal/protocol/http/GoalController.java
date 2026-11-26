@@ -4,6 +4,7 @@ import jakarta.servlet.http.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import com.fasterxml.jackson.core.type.TypeReference;
+import me.asu.aidev.execution.config.ManagerProfileSelection;
 import me.asu.aidev.goal.application.*;
 import me.asu.aidev.goal.domain.GoalData.*;
 import me.asu.aidev.goal.jdbc.GoalRepository;
@@ -20,11 +21,14 @@ public class GoalController {
     private final GoalAttachments attachments;
     private final GoalPlans plans;
     private final WebConsoleSecurityService security;
+    @org.springframework.beans.factory.annotation.Autowired private ManagerProfileSelection manager;
+    @org.springframework.beans.factory.annotation.Autowired private DiscussionBoard board;
     public GoalController(GoalRepository repo, GoalDiscussionService discussion, GoalAttachments attachments, GoalPlans plans, WebConsoleSecurityService security) {
         this.repo = repo; this.discussion = discussion; this.attachments = attachments; this.plans = plans; this.security = security;
     }
     private String actor(HttpSession session) { security.requireOperator(session); return security.actor(session); }
     public record Revision(long revision, boolean confirmed) {}
+    public record ManagerReview(long revision,String language) {}
     public record WorkflowRequest(long revision,boolean restart) {}
     // Spring MVC uses Jackson 3. Expose plain JSON values instead of Jackson 2 tree beans.
     public record VersionResponse(String id, String goalId, long sourceRevision, Map<String,Object> snapshot,
@@ -63,6 +67,17 @@ public class GoalController {
     }
     @PostMapping("/api/r1/goals/{id}/messages") @ResponseBody public Object send(@PathVariable String id, @RequestBody GoalDiscussionService.Send request, HttpSession session) {
         return discussion.send(id, actor(session), request);
+    }
+    @PostMapping("/api/r1/goals/{id}/manager-review") @ResponseBody public Object review(@PathVariable String id,
+            @RequestBody ManagerReview request,HttpSession session) {
+        String actor=actor(session);
+        var draft=repo.get(id,actor);
+        if(draft.deleted()||draft.revision()!=request.revision())
+            throw new IllegalStateException("The wish changed. Reload it before asking the manager.");
+        var answers=board.answers(actor,id);
+        var assessment=manager.assessWish(actor,id,draft.title(),draft.content().body(),draft.content().missing(),answers,request.language());
+        if("NEEDS_CLARIFICATION".equals(assessment.kind()))board.managerClarification(repo,draft,assessment.advice(),answers);
+        return assessment;
     }
     @PostMapping("/api/r1/goals/{id}/replies/{request}") @ResponseBody public Object reply(@PathVariable String id, @PathVariable String request, HttpSession session) {
         return discussion.reply(request, id, actor(session));

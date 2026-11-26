@@ -23,6 +23,14 @@ public class AgentFactorySettingsController {
         if(raw.length()>16384)throw new IllegalArgumentException("运行配置过长。");
         return settings.saveProfile(repo.decode(raw,AgentFactorySettings.ProfileChange.class));
     }
+    @PostMapping("/profiles/rename") public Object renameProfile(@RequestBody String raw) {
+        if(raw.length()>1024)throw new IllegalArgumentException("运行配置过长。");
+        return settings.renameProfile(repo.decode(raw,AgentFactorySettings.ProfileRename.class));
+    }
+    @PostMapping("/profiles/delete") public Object deleteProfile(@RequestBody String raw) {
+        if(raw.length()>1024)throw new IllegalArgumentException("运行配置过长。");
+        return settings.deleteProfile(repo.decode(raw,AgentFactorySettings.ProfileDelete.class));
+    }
     @PostMapping("/profile-recommendation") public Object recommend(@RequestBody String raw) {
         if(raw.length()>32768)throw new IllegalArgumentException("选型请求过长。");
         return manager.choose(repo.decode(raw,ManagerProfileSelection.Request.class));

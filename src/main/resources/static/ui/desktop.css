@@ -90,7 +90,8 @@
 .desktop-overview .section-title { margin-bottom: 0; }
 .desktop-overview .desktop-pending-actions { justify-content: flex-start; margin-bottom: 0; }
 @media(max-width: 760px) {
-  .desktop-dock, .desktop-indicators .sidebar-clock, .desktop-indicators>a { display: none; }
+  .desktop-dock, .desktop-indicators>a { display: none; }
+  .desktop-indicators .sidebar-clock > span { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .app:has(>.desktop-shell)>.main { padding-bottom: 0; }
   .desktop-indicators .sidebar-preferences span { display: none; }
 }

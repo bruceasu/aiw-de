@@ -27,7 +27,12 @@ class BundledSoftwareCatalogueTest {
 
     @Test void changedBuiltinSkillAssetsMatchTheirPackagedFiles() throws Exception {
         var configurations = new ExecutionConfigurations(repository, null, null, null);
-        for (String ref : List.of("coding-work-package-executor", "engineering-artifact-protocol")) {
+        var skills = new SkillFiles(repository);
+        assertThat(skills.builtinCatalogue()).extracting(SkillFiles.BuiltinCatalogueEntry::ref)
+                .contains("skill-creator", "writing-great-skills");
+        for (String ref : List.of("coding-work-package-executor", "engineering-artifact-protocol", "skill-creator", "writing-great-skills",
+                "openspec-explore","openspec-change","systematic-debugging","verification-before-completion",
+                "product-office-hours","scenario-qa","aiw-project-read")) {
             var asset = configurations.catalogue().assets().stream()
                     .filter(a -> a.kind().equals("skill") && a.ref().equals(ref)).findFirst().orElseThrow();
             try (var stream = getClass().getResourceAsStream("/worker-skills/" + ref + "/SKILL.md")) {

@@ -44,6 +44,7 @@
         const row = list.insertRow();
         const name = cell(row, ''), title = document.createElement('strong'), identity = document.createElement('small');
         title.dataset.consoleIcon = 'tools';
+        title.dataset.i18nSkip = '';
         title.textContent = tool.title;
         identity.textContent = tool.id + ' · v' + tool.revision;
         name.append(title, identity);
@@ -63,7 +64,7 @@
           byId('tool-detail-description').textContent = tool.description || '';
           byId('tool-detail-schema').textContent = JSON.stringify(tool.inputSchema, null, 2);
           const view=byId('tool-detail');view.hidden=false;
-          window.aiwDesktopWindow?.open(view,{title:tool.title,icon:'tools',onClose:()=>{view.hidden=true;}});
+          window.aiwDesktopWindow?.open(view,{title:tool.title,recordTitle:true,icon:'tools',onClose:()=>{view.hidden=true;}});
         };
         cell(row, '').append(details);
         if (form) {

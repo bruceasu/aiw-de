@@ -117,7 +117,21 @@
     ],
     "delegation-planning": [
       "SKILL.md"
-    ]
+    ],
+    "skill-creator": [
+      "LICENSE.txt",
+      "SKILL.md"
+    ],
+    "writing-great-skills": [
+      "SKILL.md"
+    ],
+    "openspec-explore": ["SKILL.md"],
+    "openspec-change": ["SKILL.md"],
+    "systematic-debugging": ["SKILL.md"],
+    "verification-before-completion": ["SKILL.md"],
+    "product-office-hours": ["SKILL.md"],
+    "scenario-qa": ["SKILL.md"],
+    "aiw-project-read": ["SKILL.md"]
   },
   "profiles": {
     "general-work": ["engineering-artifact-protocol"],

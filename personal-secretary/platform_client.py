@@ -141,6 +141,12 @@ class PlatformClient:
 
     def request(self, path, body=None):
         operation = path.split("?", 1)[0]
+        discussion = body is None and operation in {"/discussions", "/discussions/topics"}
+        if operation.startswith("/discussions/") and operation != "/discussions/topics":
+            identity = operation.removeprefix("/discussions/").removesuffix("/replies")
+            canonical = str(uuid.UUID(identity))
+            discussion = (operation == "/discussions/" + canonical and body is None
+                          or operation == "/discussions/" + canonical + "/replies" and body is not None)
         delegation = operation in {"/task-delegations", "/task-delegations/options"}
         if operation.startswith("/task-delegations/") and operation != "/task-delegations/options":
             delegation = operation == "/task-delegations/" + str(uuid.UUID(operation.removeprefix("/task-delegations/")))
@@ -158,7 +164,7 @@ class PlatformClient:
             identity = operation.removeprefix("/professional-tasks/").removesuffix("/continue")
             professional_continue = identity == str(uuid.UUID(identity)) and body == {}
         if operation not in {"/professional-tasks", "/professional-tasks/options", "/professional-tasks/diagnostics", "/sessions", "/connection-state", "/identity", "/grants", "/action-permissions", "/plan-overview", "/permission-questions", "/permission-actions/prepare", "/state", "/management-state", "/actions", "/coordination", "/restrictions", "/questions", "/question-replies", "/goal-proposals", "/personal-plans", "/messages"} and not operation.startswith("/receipts/") and not permission_receipt and not goal_receipt and not plan_receipt and not professional_receipt and not professional_continue and not message_ack and not certificate_rotation:
-            if not delegation:
+            if not delegation and not discussion:
                 raise ValueError("Unknown platform operation")
         payload = None if body is None else encode(body).encode()
         if payload is not None and len(payload) > 32768:

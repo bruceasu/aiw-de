@@ -20,8 +20,8 @@
     'One setting for all floating windows. Default: 61.8%.': '所有浮动窗口统一设置，默认不透明度为 61.8%。',
     'Display language': '界面语言',
     'Date and time': '日期与时间',
-    'Show sidebar time': '显示侧栏时间',
-    'Show sidebar date and time zone': '显示侧栏日期与时区',
+    'Show time in the top bar': '在顶栏显示时间',
+    'Show date and time zone in the top bar': '在顶栏显示日期与时区',
     'Motion': '动画效果',
     'Enable animations': '启用动画',
     'System reduced motion settings always take precedence.': '优先遵循系统的“减少动态效果”设置。',
@@ -1108,7 +1108,7 @@
   "Source records who proposed the graph, not approval. Draft graph tasks and delegated factory tasks are tracked separately.": "来源记录步骤图的提出者，不代表批准。草案步骤与委派工厂任务分别记录。"
 });
 
-  const attrNames = ['placeholder', 'aria-label', 'title', 'alt', 'data-confirm'];
+  const attrNames = ['placeholder', 'aria-label', 'aria-description', 'aria-valuetext', 'title', 'alt', 'data-confirm', 'label'];
   const originals = new WeakMap();
   const rendered = new WeakMap();
   const attrOriginals = new WeakMap();
@@ -1145,6 +1145,7 @@
   });
 
   const translateText = value => {
+    if (typeof value !== 'string') return value;
     if (consoleLookup.has(value)) return consoleLookup.get(value)[locale];
     const filterPrefix = 'A changed file uses a Git filter and requires a manual merge:';
     if (value.startsWith(filterPrefix + ' ') && consoleLookup.has(filterPrefix))
@@ -1192,6 +1193,7 @@
   const visit = node => {
     if (node.parentElement?.closest('[data-i18n-skip],script,style,textarea,pre,code')) return;
     if (node.nodeType === Node.TEXT_NODE) {
+      if (!node.nodeValue.trim()) return;
       if (!originals.has(node) || (rendered.has(node) && rendered.get(node) !== node.nodeValue)) originals.set(node, node.nodeValue);
       const original = originals.get(node);
       const leading = original.match(/^\s*/)?.[0] || '';
@@ -1217,17 +1219,10 @@
     for (const child of node.childNodes) visit(child);
   };
   const apply = () => {
-    const title = document.querySelector('title');
-    if (title && !attrOriginals.has(title)) attrOriginals.set(title, { text: title.textContent });
-    if (title && !('text' in attrOriginals.get(title))) attrOriginals.get(title).text = title.textContent;
     document.documentElement.lang = locale === 'zh' ? 'zh-CN' : locale;
     visit(document.documentElement);
     const selector = document.querySelector('#console-locale');
     if (selector) selector.value = locale;
-    if (title) {
-      const saved = attrOriginals.get(title);
-      title.textContent = translateText(saved.text);
-    }
   };
   const notify = () => window.dispatchEvent(new CustomEvent('aiw:locale-changed', { detail: { locale } }));
   const setLocale = value => {

@@ -5,6 +5,11 @@
   const byId = id => document.getElementById(id);
   const fields = byId("factory-fields"), save = byId("factory-save"), status = byId("factory-status");
   const profileChoice=byId("factory-profile-choice"),profileId=byId("factory-profile-id");
+  const profileDetail=byId("factory-profile-detail"),renamePanel=byId("factory-profile-rename");
+  const profileStatus=byId("factory-profile-status");
+  const renameForm=renamePanel.querySelector("form"),renameName=renameForm.elements.displayName;
+  const renameError=renameForm.querySelector("[role=alert]"),renameSave=renameForm.querySelector("[type=submit]");
+  let renaming=null, deleting=false;
   let profiles={revision:"initial",defaultId:null,managerDefaultId:null,items:[]};
   const runtime = form.elements.runtime, mode = byId("factory-auth-mode"), credential = byId("factory-credential");
   const apiProvider = form.elements.apiProvider, apiProtocol = form.elements.apiProtocol;
@@ -303,7 +308,7 @@
     cell.colSpan=columns;cell.className="empty";cell.textContent=t(message);
   }
   function openProfile(id) {
-    const detail=byId("factory-profile-detail");
+    const detail=profileDetail;
     if(window.aiwDesktopWindow?.has(detail)&&id===profileChoice.value){window.aiwDesktopWindow.open(detail,{});return;}
     window.aiwDesktopWindow?.close(detail);
     detail.open=true;
@@ -312,7 +317,8 @@
     if(window.aiwDesktopWindow){
       const marker=document.createComment("factory status");
       status.before(marker);detail.prepend(status);
-      window.aiwDesktopWindow.open(detail,{title:id||t("新建运行配置"),icon:"agent-factory",focus:profileId,
+      const profile=profiles.items.find(item=>item.id===id);
+      window.aiwDesktopWindow.open(detail,{title:profile?(profile.displayName||id):"新建运行配置",recordTitle:Boolean(id),icon:"agent-factory",focus:profileId,
         canClose:()=>!fields.disabled,canMinimize:()=>!fields.disabled,onClose:()=>{marker.replaceWith(status);detail.open=false;}});
     }
     profileId.focus();
@@ -321,19 +327,96 @@
     const rows=byId("factory-profiles");
     rows.replaceChildren();
     for(const profile of profiles.items) {
-      const row=rows.insertRow(),name=button(profile.id,()=>openProfile(profile.id));
+      const row=rows.insertRow(),name=button("",()=>openProfile(profile.id));
+      name.textContent=profile.displayName||profile.id;
+      name.dataset.i18nSkip="";
       name.dataset.consoleIcon="agent-factory";
       name.dataset.profileId=profile.id;
-      row.insertCell().append(name,document.createTextNode(" v"+profile.version));
+      const nameCell=row.insertCell();
+      nameCell.append(name,document.createTextNode(" v"+profile.version));
+      if(profile.displayName&&profile.displayName!==profile.id){
+        const identifier=document.createElement("small");
+        identifier.className="muted";
+        identifier.dataset.i18nSkip="";
+        identifier.textContent=profile.id;
+        nameCell.append(document.createElement("br"),identifier);
+      }
       row.insertCell().textContent=profile.settings.model;
       row.insertCell().append(stateBadge(profile.enabled?"ACTIVE":"OFFLINE",profile.enabled?"已启用":"已停用"));
       const labels=[];
       if(profile.id===profiles.defaultId)labels.push(t("任务默认"));
       if(profile.id===profiles.managerDefaultId)labels.push(t("经理默认"));
       row.insertCell().textContent=labels.join(" · ")||"—";
+      const actions=document.createElement("div");
+      actions.className="row-actions";
+      const remove=button("Delete profile",()=>deleteProfile(profile));
+      remove.classList.replace("ghost","danger");
+      actions.append(button("Rename profile",()=>openRename(profile)),remove);
+      row.insertCell().append(actions);
     }
-    if(!profiles.items.length)emptyRow(rows,4,"暂无运行配置。");
+    if(!profiles.items.length)emptyRow(rows,5,"暂无运行配置。");
     byId("factory-profile-new").disabled=false;
+  }
+  function refreshAfterProfileChange(result) {
+    const selected=profileChoice.value;
+    if(window.aiwDesktopWindow.has(profileDetail)
+        && (!selected||result.runtimeProfiles.items.some(item=>item.id===selected))){
+      profiles=result.runtimeProfiles;
+      renderProfiles();
+      return;
+    }
+    window.aiwDesktopWindow.close(profileDetail);
+    loadProfiles(result.runtimeProfiles,result.runtimeProfiles.items.some(item=>item.id===selected)?selected:undefined);
+    showSavedSettings(result.runtimeProfiles.items.find(item=>item.id===profileChoice.value)?.settings,new URLSearchParams());
+  }
+  function openRename(profile) {
+    if(window.aiwDesktopWindow.has(renamePanel)){
+      window.aiwDesktopWindow.open(renamePanel,{});
+      return;
+    }
+    renaming={id:profile.id,expectedRevision:profiles.revision};
+    renameName.value=profile.displayName||profile.id;
+    renameError.hidden=true;
+    renamePanel.hidden=false;
+    window.aiwDesktopWindow.open(renamePanel,{title:t("Rename profile"),icon:"agent-factory",focus:renameName,
+      canClose:()=>!renameSave.disabled,canMinimize:()=>!renameSave.disabled,onClose:()=>{renamePanel.hidden=true;}});
+  }
+  renameForm.querySelector("[type=button]").addEventListener("click",()=>{
+    if(!renameSave.disabled)window.aiwDesktopWindow.close(renamePanel);
+  });
+  renameForm.addEventListener("submit",async event=>{
+    event.preventDefault();
+    if(renameSave.disabled)return;
+    renameError.hidden=true;
+    renameSave.disabled=true;
+    try {
+      const result=await call(factoryRoot,"profiles/rename",{...renaming,displayName:renameName.value});
+      refreshAfterProfileChange(result);
+      window.aiwDesktopWindow.close(renamePanel);
+      profileStatus.textContent=t("Profile renamed.");
+      profileStatus.hidden=false;
+    } catch(error) {
+      renameError.textContent=error.message;
+      renameError.hidden=false;
+    } finally { renameSave.disabled=false; }
+  });
+  async function deleteProfile(profile) {
+    if(deleting)return;
+    deleting=true;
+    const expectedRevision=profiles.revision;
+    try {
+      const message=profiles.items.length===1?"Delete the last runtime profile? This also clears the task and manager defaults.":"Delete this runtime profile?";
+      if(!await window.aiwConfirm(t(message),{title:t("Delete profile"),target:profile.displayName||profile.id,
+        acceptLabel:t("Delete profile"),danger:true}))return;
+      const result=await call(factoryRoot,"profiles/delete",{id:profile.id,expectedRevision});
+      refreshAfterProfileChange(result);
+      profileStatus.textContent=t("Profile deleted.");
+      profileStatus.hidden=false;
+    } catch(error) {
+      profileStatus.textContent=error.message;
+      profileStatus.hidden=false;
+    }
+    finally { deleting=false; }
   }
   function settingsInput() {
     return { runtime: runtime.value, model: modelInput.value.trim(), effort: form.elements.effort.value,
@@ -351,7 +434,7 @@
     profiles=state;
     profileChoice.replaceChildren(new Option(t("新建运行配置"),""));
     for(const profile of profiles.items) {
-      const labels=[profile.id,"v"+profile.version];
+      const labels=[profile.displayName||profile.id,"v"+profile.version];
       if(!profile.enabled)labels.push(t("已停用"));
       if(profile.id===profiles.defaultId)labels.push(t("任务默认"));
       if(profile.id===profiles.managerDefaultId)labels.push(t("经理默认"));
